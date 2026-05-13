@@ -17,11 +17,13 @@ import (
 const probeTimeout = 8 * time.Second
 
 type ProbeResult struct {
-	OK          bool     `json:"ok"`
-	Message     string   `json:"message"`
-	Endpoint    string   `json:"endpoint"`
-	ModelCount  int      `json:"modelCount"`
-	ModelSample []string `json:"modelSample"`
+	OK           bool     `json:"ok"`
+	Message      string   `json:"message"`
+	Endpoint     string   `json:"endpoint"`
+	ModelCount   int      `json:"modelCount"`
+	ModelSample  []string `json:"modelSample"`
+	Capabilities []string `json:"capabilities"`
+	Warnings     []string `json:"warnings"`
 }
 
 type Client struct {
@@ -66,9 +68,11 @@ func (c *Client) Probe(ctx context.Context, settings storage.LLMSettings) (Probe
 
 	if response.StatusCode < 200 || response.StatusCode > 299 {
 		return ProbeResult{
-			OK:       false,
-			Message:  fmt.Sprintf("Provider returned HTTP %d", response.StatusCode),
-			Endpoint: endpoint,
+			OK:           false,
+			Message:      fmt.Sprintf("Provider returned HTTP %d", response.StatusCode),
+			Endpoint:     endpoint,
+			Capabilities: []string{},
+			Warnings:     []string{},
 		}, nil
 	}
 
@@ -90,11 +94,13 @@ func (c *Client) Probe(ctx context.Context, settings storage.LLMSettings) (Probe
 	}
 
 	return ProbeResult{
-		OK:          true,
-		Message:     message,
-		Endpoint:    endpoint,
-		ModelCount:  len(modelIDs),
-		ModelSample: sampleModels(modelIDs),
+		OK:           true,
+		Message:      message,
+		Endpoint:     endpoint,
+		ModelCount:   len(modelIDs),
+		ModelSample:  sampleModels(modelIDs),
+		Capabilities: inferCapabilities(modelIDs),
+		Warnings:     inferWarnings(settings.Model, modelIDs),
 	}, nil
 }
 
@@ -121,6 +127,72 @@ func sampleModels(modelIDs []string) []string {
 		return modelIDs
 	}
 	return modelIDs[:5]
+}
+
+func inferCapabilities(modelIDs []string) []string {
+	if len(modelIDs) == 0 {
+		return []string{}
+	}
+
+	capabilities := []string{"model-list"}
+	hasChat := false
+	hasEmbeddings := false
+	hasVision := false
+	hasReranking := false
+
+	for _, modelID := range modelIDs {
+		normalized := strings.ToLower(modelID)
+		if containsAny(normalized, "gpt", "chat", "instruct", "llama", "mistral", "gemma", "qwen", "deepseek", "claude") {
+			hasChat = true
+		}
+		if containsAny(normalized, "embed", "embedding", "bge-m3", "nomic-embed") {
+			hasEmbeddings = true
+		}
+		if containsAny(normalized, "vision", "vl", "llava", "gpt-4o", "omni") {
+			hasVision = true
+		}
+		if containsAny(normalized, "rerank", "reranker") {
+			hasReranking = true
+		}
+	}
+
+	if hasChat {
+		capabilities = append(capabilities, "chat-completions")
+	}
+	if hasEmbeddings {
+		capabilities = append(capabilities, "embeddings")
+	}
+	if hasVision {
+		capabilities = append(capabilities, "vision")
+	}
+	if hasReranking {
+		capabilities = append(capabilities, "reranking")
+	}
+
+	return capabilities
+}
+
+func inferWarnings(configuredModel string, modelIDs []string) []string {
+	if strings.TrimSpace(configuredModel) == "" || len(modelIDs) == 0 {
+		return []string{}
+	}
+
+	for _, modelID := range modelIDs {
+		if modelID == configuredModel {
+			return []string{}
+		}
+	}
+
+	return []string{"Configured model was not returned by the provider."}
+}
+
+func containsAny(value string, needles ...string) bool {
+	for _, needle := range needles {
+		if strings.Contains(value, needle) {
+			return true
+		}
+	}
+	return false
 }
 
 type modelsResponse struct {

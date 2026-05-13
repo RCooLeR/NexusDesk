@@ -40,6 +40,7 @@ func TestProbeConnectsToOpenAICompatibleModelsEndpoint(t *testing.T) {
 	if len(result.ModelSample) != 2 || result.ModelSample[0] != "alpha" {
 		t.Fatalf("unexpected model sample: %#v", result.ModelSample)
 	}
+	assertCapability(t, result.Capabilities, "model-list")
 }
 
 func TestProbeReturnsNonOKForProviderStatusError(t *testing.T) {
@@ -62,6 +63,9 @@ func TestProbeReturnsNonOKForProviderStatusError(t *testing.T) {
 	if result.Message == "" {
 		t.Fatal("expected message")
 	}
+	if result.Capabilities == nil || result.Warnings == nil {
+		t.Fatal("expected non-nil capability and warning slices")
+	}
 }
 
 func TestModelsEndpointHandlesExistingModelsPath(t *testing.T) {
@@ -73,4 +77,42 @@ func TestModelsEndpointHandlesExistingModelsPath(t *testing.T) {
 	if endpoint != "http://localhost:11434/v1/models" {
 		t.Fatalf("unexpected endpoint: %s", endpoint)
 	}
+}
+
+func TestProbeInfersCapabilitiesFromModelIDs(t *testing.T) {
+	server := httptest.NewServer(http.HandlerFunc(func(response http.ResponseWriter, request *http.Request) {
+		response.Header().Set("Content-Type", "application/json")
+		_, _ = response.Write([]byte(`{"data":[{"id":"gpt-4o-mini"},{"id":"text-embedding-3-small"},{"id":"bge-reranker"}]}`))
+	}))
+	defer server.Close()
+
+	client := NewClient()
+	result, err := client.Probe(context.Background(), storage.LLMSettings{
+		BaseURL: server.URL + "/v1",
+		Model:   "missing-model",
+	})
+	if err != nil {
+		t.Fatalf("Probe returned error: %v", err)
+	}
+
+	assertCapability(t, result.Capabilities, "chat-completions")
+	assertCapability(t, result.Capabilities, "embeddings")
+	assertCapability(t, result.Capabilities, "vision")
+	assertCapability(t, result.Capabilities, "reranking")
+
+	if len(result.Warnings) != 1 {
+		t.Fatalf("expected configured model warning, got %#v", result.Warnings)
+	}
+}
+
+func assertCapability(t *testing.T, capabilities []string, expected string) {
+	t.Helper()
+
+	for _, capability := range capabilities {
+		if capability == expected {
+			return
+		}
+	}
+
+	t.Fatalf("expected capability %q in %#v", expected, capabilities)
 }

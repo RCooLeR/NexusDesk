@@ -41,6 +41,8 @@ This tracker reflects the repository as it exists today and keeps planned work s
 - [x] Agent panel includes a branded LLM provider settings form.
 - [x] LLM connection probe exists at `app/internal/llm/`.
 - [x] Agent panel can test an OpenAI-compatible `/models` endpoint.
+- [x] LLM probe infers model-list, chat, embedding, vision, and reranking capability hints from provider model IDs.
+- [x] LLM probe warns when the configured model is not returned by the provider.
 - [x] Helper services placeholder exists at `services/docker-compose.yml`.
 - [x] Repository ignore rules exist in `.gitignore`.
 - [x] Current and target directory structures are documented separately.
@@ -72,7 +74,7 @@ This tracker reflects the repository as it exists today and keeps planned work s
 - [x] Add recent workspace remove/clear actions.
 - [x] Add local settings storage for LLM provider configuration.
 - [x] Add LLM connection test.
-- [ ] Add LLM capability detection beyond model listing.
+- [x] Add LLM capability detection beyond model listing.
 - [ ] Mask or migrate API keys into OS credential storage before production release.
 - [ ] Split brand-aware shell sections into smaller rail, navigator, workbench pane, agent panel, and timeline components when they need behavior.
 - [ ] Add first reusable button, icon button, card, and status badge components.

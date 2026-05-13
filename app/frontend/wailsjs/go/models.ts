@@ -6,6 +6,8 @@ export namespace llm {
 	    endpoint: string;
 	    modelCount: number;
 	    modelSample: string[];
+	    capabilities: string[];
+	    warnings: string[];
 	
 	    static createFrom(source: any = {}) {
 	        return new ProbeResult(source);
@@ -18,6 +20,8 @@ export namespace llm {
 	        this.endpoint = source["endpoint"];
 	        this.modelCount = source["modelCount"];
 	        this.modelSample = source["modelSample"];
+	        this.capabilities = source["capabilities"];
+	        this.warnings = source["warnings"];
 	    }
 	}
 

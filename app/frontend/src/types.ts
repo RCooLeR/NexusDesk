@@ -63,6 +63,8 @@ export type LLMProbeResult = {
     endpoint: string;
     modelCount: number;
     modelSample: string[];
+    capabilities: string[];
+    warnings: string[];
 };
 
 export type ToolEvent = {

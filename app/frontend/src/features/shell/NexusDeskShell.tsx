@@ -600,7 +600,17 @@ export function NexusDeskShell({
                             <div className={probeResult.ok ? 'probe-result ok' : 'probe-result failed'}>
                                 <strong>{probeResult.ok ? 'Connection ready' : 'Connection issue'}</strong>
                                 <span>{probeResult.endpoint}</span>
+                                {probeResult.capabilities.length > 0 && (
+                                    <div className="probe-capabilities">
+                                        {probeResult.capabilities.map((capability) => (
+                                            <small key={capability}>{capability}</small>
+                                        ))}
+                                    </div>
+                                )}
                                 {probeResult.modelSample.length > 0 && <small>{probeResult.modelSample.join(', ')}</small>}
+                                {probeResult.warnings.map((warning) => (
+                                    <small className="probe-warning" key={warning}>{warning}</small>
+                                ))}
                             </div>
                         )}
                     </div>
