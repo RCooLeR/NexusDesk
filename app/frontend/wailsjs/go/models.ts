@@ -1,5 +1,23 @@
 export namespace artifact {
 
+	export class MarkdownArtifactRequest {
+	    title: string;
+	    content: string;
+	    contextRelPath: string;
+	    source: string;
+
+	    static createFrom(source: any = {}) {
+	        return new MarkdownArtifactRequest(source);
+	    }
+
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.title = source["title"];
+	        this.content = source["content"];
+	        this.contextRelPath = source["contextRelPath"];
+	        this.source = source["source"];
+	    }
+	}
 	export class MarkdownReport {
 	    relPath: string;
 	    name: string;

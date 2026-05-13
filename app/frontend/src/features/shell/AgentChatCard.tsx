@@ -7,11 +7,14 @@ type AgentChatCardProps = {
     chatPrompt: string;
     chatStatus: string;
     contextPackPaths: string[];
+    canSaveLatestAssistantArtifact: boolean;
+    isSavingChatArtifact: boolean;
     isSendingPrompt: boolean;
     onChatPromptChange: (value: string) => void;
     onClearChatHistory: () => void;
     onClearContextPack: () => void;
     onRemoveContextPath: (relPath: string) => void;
+    onSaveLatestAssistantArtifact: () => void;
     onSendPrompt: () => void;
 };
 
@@ -20,11 +23,14 @@ export function AgentChatCard({
     chatPrompt,
     chatStatus,
     contextPackPaths,
+    canSaveLatestAssistantArtifact,
+    isSavingChatArtifact,
     isSendingPrompt,
     onChatPromptChange,
     onClearChatHistory,
     onClearContextPack,
     onRemoveContextPath,
+    onSaveLatestAssistantArtifact,
     onSendPrompt,
 }: AgentChatCardProps) {
     return (
@@ -34,9 +40,19 @@ export function AgentChatCard({
                     <strong>Conversation</strong>
                     <small>{chatStatus}</small>
                 </div>
-                {chatMessages.length > 0 && (
-                    <Button onClick={onClearChatHistory} variant="subtle">Clear</Button>
-                )}
+                <div className="chat-header-actions">
+                    <Button
+                        disabled={!canSaveLatestAssistantArtifact || isSavingChatArtifact}
+                        onClick={onSaveLatestAssistantArtifact}
+                        title="Save latest assistant answer as a Markdown artifact"
+                        variant="subtle"
+                    >
+                        {isSavingChatArtifact ? 'Saving...' : 'Save answer'}
+                    </Button>
+                    {chatMessages.length > 0 && (
+                        <Button onClick={onClearChatHistory} variant="subtle">Clear</Button>
+                    )}
+                </div>
             </div>
             <div className="chat-thread">
                 {chatMessages.length === 0 ? (

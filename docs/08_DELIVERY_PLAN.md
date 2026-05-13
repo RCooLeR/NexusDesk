@@ -67,6 +67,7 @@ Deliverables:
 - reload selected preview from disk: implemented
 - explain selected text/code preview through chat: implemented
 - create Markdown report artifact from selected preview: implemented
+- save latest assistant answer as Markdown artifact: implemented
 - artifact browser for generated Markdown reports: implemented
 - frontend build smoke check: implemented
 
@@ -106,6 +107,7 @@ Current status:
 - Persistent chat history works through local JSON config.
 - Monaco, richer document extraction/OCR, and SQLite persistence are still planned.
 - Markdown report artifacts can be created under `.nexusdesk/artifacts/` without overwriting existing files.
+- Latest assistant answers can be saved as Markdown artifacts under `.nexusdesk/artifacts/` with their chat context recorded as metadata.
 - The workbench lists generated Markdown artifacts and can reselect visible report files from that list.
 - The frontend has a smoke check for the built entrypoint, generated Wails bindings, and core shell functionality markers.
 - Monaco, richer document extraction/OCR, richer approval dialogs, DuckDB SQL, and SQLite persistence are still planned.
@@ -122,6 +124,7 @@ Deliverables:
 - document summary tool
 - artifact manager: first Markdown artifact list implemented
 - create Markdown report tool: first controlled artifact flow implemented
+- create chat answer artifact tool: first controlled artifact flow implemented
 - create text/code file tool with approval: first edit flow implemented
 - overwrite protection: first diff/apply flow implemented
 - tool call timeline in chat
@@ -133,7 +136,7 @@ Exit criteria:
 
 - AI can create a report artifact from selected source files
 - user can approve or reject text file writes after reviewing a diff
-- generated artifacts are linked to conversations and source context
+- generated artifacts are linked to conversations and source context: first chat-answer artifact flow implemented
 
 ## Phase 3: Excel, CSV, And Charts
 

@@ -1177,6 +1177,13 @@ button:disabled {
     padding: 0 8px;
 }
 
+.chat-header-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    justify-content: flex-end;
+}
+
 .chat-thread {
     display: grid;
     align-content: start;

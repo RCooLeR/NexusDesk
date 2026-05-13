@@ -9,13 +9,16 @@ type AgentPanelProps = {
     chatPrompt: string;
     chatStatus: string;
     contextPackPaths: string[];
+    canSaveLatestAssistantArtifact: boolean;
     isSavingSettings: boolean;
+    isSavingChatArtifact: boolean;
     isSendingPrompt: boolean;
     isTestingConnection: boolean;
     onChatPromptChange: (value: string) => void;
     onClearChatHistory: () => void;
     onClearContextPack: () => void;
     onRemoveContextPath: (relPath: string) => void;
+    onSaveLatestAssistantArtifact: () => void;
     onSaveSettings: () => void;
     onSendPrompt: () => void;
     onSettingsDraftChange: (field: keyof LLMSettings, value: string) => void;
@@ -32,13 +35,16 @@ export function AgentPanel({
     chatPrompt,
     chatStatus,
     contextPackPaths,
+    canSaveLatestAssistantArtifact,
     isSavingSettings,
+    isSavingChatArtifact,
     isSendingPrompt,
     isTestingConnection,
     onChatPromptChange,
     onClearChatHistory,
     onClearContextPack,
     onRemoveContextPath,
+    onSaveLatestAssistantArtifact,
     onSaveSettings,
     onSendPrompt,
     onSettingsDraftChange,
@@ -63,11 +69,14 @@ export function AgentPanel({
                 chatPrompt={chatPrompt}
                 chatStatus={chatStatus}
                 contextPackPaths={contextPackPaths}
+                canSaveLatestAssistantArtifact={canSaveLatestAssistantArtifact}
+                isSavingChatArtifact={isSavingChatArtifact}
                 isSendingPrompt={isSendingPrompt}
                 onChatPromptChange={onChatPromptChange}
                 onClearChatHistory={onClearChatHistory}
                 onClearContextPack={onClearContextPack}
                 onRemoveContextPath={onRemoveContextPath}
+                onSaveLatestAssistantArtifact={onSaveLatestAssistantArtifact}
                 onSendPrompt={onSendPrompt}
             />
 

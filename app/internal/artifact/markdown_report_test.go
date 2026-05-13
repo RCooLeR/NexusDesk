@@ -103,6 +103,72 @@ func TestCreateMarkdownReportSkipsNonTextExcerpt(t *testing.T) {
 	}
 }
 
+func TestCreateGeneratedMarkdownWritesAssistantResponse(t *testing.T) {
+	root := t.TempDir()
+	now := time.Date(2026, 5, 13, 12, 30, 0, 0, time.UTC)
+
+	report, err := CreateGeneratedMarkdown(root, MarkdownArtifactRequest{
+		Title:          "Architecture Notes",
+		Content:        "## Summary\n\n- Keep the shell small.",
+		ContextRelPath: "docs/08_DELIVERY_PLAN.md",
+		Source:         "NexusDesk chat",
+	}, now)
+	if err != nil {
+		t.Fatalf("CreateGeneratedMarkdown returned error: %v", err)
+	}
+
+	if report.RelPath != ".nexusdesk/artifacts/architecture-notes-20260513-123000.md" {
+		t.Fatalf("unexpected generated artifact rel path: %s", report.RelPath)
+	}
+
+	content, err := os.ReadFile(filepath.Join(root, filepath.FromSlash(report.RelPath)))
+	if err != nil {
+		t.Fatalf("ReadFile failed: %v", err)
+	}
+
+	text := string(content)
+	if !strings.Contains(text, "# Architecture Notes") {
+		t.Fatalf("expected generated artifact title, got %q", text)
+	}
+	if !strings.Contains(text, "- Context: `docs/08_DELIVERY_PLAN.md`") {
+		t.Fatalf("expected context metadata, got %q", text)
+	}
+	if !strings.Contains(text, "## Summary\n\n- Keep the shell small.") {
+		t.Fatalf("expected assistant markdown content, got %q", text)
+	}
+}
+
+func TestCreateGeneratedMarkdownRejectsEmptyResponse(t *testing.T) {
+	_, err := CreateGeneratedMarkdown(t.TempDir(), MarkdownArtifactRequest{
+		Title:   "Empty",
+		Content: "  \n\t",
+	}, time.Date(2026, 5, 13, 12, 30, 0, 0, time.UTC))
+	if err == nil {
+		t.Fatal("expected empty generated artifact to fail")
+	}
+}
+
+func TestCreateGeneratedMarkdownTruncatesLargeResponse(t *testing.T) {
+	root := t.TempDir()
+	now := time.Date(2026, 5, 13, 12, 30, 0, 0, time.UTC)
+
+	report, err := CreateGeneratedMarkdown(root, MarkdownArtifactRequest{
+		Title:   "Large Answer",
+		Content: strings.Repeat("a", generatedArtifactContentLimit+10),
+	}, now)
+	if err != nil {
+		t.Fatalf("CreateGeneratedMarkdown returned error: %v", err)
+	}
+
+	content, err := os.ReadFile(filepath.Join(root, filepath.FromSlash(report.RelPath)))
+	if err != nil {
+		t.Fatalf("ReadFile failed: %v", err)
+	}
+	if !strings.Contains(string(content), "Response content was truncated") {
+		t.Fatalf("expected truncation note, got %q", string(content))
+	}
+}
+
 func TestListReturnsMarkdownArtifactsNewestFirst(t *testing.T) {
 	root := t.TempDir()
 	firstTime := time.Date(2026, 5, 13, 12, 30, 0, 0, time.UTC)

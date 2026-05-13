@@ -17,6 +17,7 @@ const checks = [
             'pinProjectContext',
             'openTabs',
             'listenForChatStream',
+            'CreateChatMarkdownArtifact',
         ],
     },
     {
@@ -33,7 +34,7 @@ const checks = [
     },
     {
         file: 'src/features/shell/AgentChatCard.tsx',
-        terms: ['ChatMessageContent', 'chat-card-header', 'textarea', 'context-pack-list', 'onRemoveContextPath', 'Clear pack'],
+        terms: ['ChatMessageContent', 'chat-card-header', 'Save answer', 'textarea', 'context-pack-list', 'onRemoveContextPath', 'Clear pack'],
     },
     {
         file: 'src/features/shell/ChatMessageContent.tsx',
@@ -55,7 +56,7 @@ const checks = [
     },
     {
         file: 'wailsjs/go/main/App.d.ts',
-        terms: ['AskLLMContextPack', 'PreviewFileWrite', 'ProfileDataset'],
+        terms: ['AskLLMContextPack', 'PreviewFileWrite', 'ProfileDataset', 'CreateChatMarkdownArtifact'],
     },
     {
         file: 'dist/index.html',

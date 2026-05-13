@@ -21,6 +21,8 @@ export function ClearChatHistory():Promise<Array<storage.ChatMessage>>;
 
 export function ClearRecentWorkspaces():Promise<Array<storage.RecentWorkspace>>;
 
+export function CreateChatMarkdownArtifact(arg1:artifact.MarkdownArtifactRequest):Promise<artifact.MarkdownReport>;
+
 export function CreateMarkdownReport(arg1:string):Promise<artifact.MarkdownReport>;
 
 export function GetChatHistory():Promise<Array<storage.ChatMessage>>;

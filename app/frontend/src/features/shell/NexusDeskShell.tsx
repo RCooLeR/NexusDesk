@@ -8,6 +8,7 @@ import {
     AskLLMStreamContextPack,
     ClearRecentWorkspaces,
     ClearChatHistory,
+    CreateChatMarkdownArtifact,
     CreateMarkdownReport,
     GetChatHistory,
     ListDatasetProfiles,
@@ -105,6 +106,7 @@ export function NexusDeskShell({
     const [isSearchingWorkspace, setIsSearchingWorkspace] = useState(false);
     const [isSendingPrompt, setIsSendingPrompt] = useState(false);
     const [isCreatingReport, setIsCreatingReport] = useState(false);
+    const [isSavingChatArtifact, setIsSavingChatArtifact] = useState(false);
     const [isProfilingDataset, setIsProfilingDataset] = useState(false);
     const [isEditingFile, setIsEditingFile] = useState(false);
     const [isPreviewingWrite, setIsPreviewingWrite] = useState(false);
@@ -137,6 +139,10 @@ export function NexusDeskShell({
 
         return workspace.nodes.filter((node) => isWorkspaceNodeVisible(node, expandedDirectories));
     }, [expandedDirectories, workspace]);
+
+    const canSaveLatestAssistantArtifact = useMemo(() => {
+        return Boolean(latestAssistantMessage(chatMessages)) && !isSendingPrompt;
+    }, [chatMessages, isSendingPrompt]);
 
     function pushToolEvent(title: string, detail: string) {
         setLocalToolEvents((current) => [
@@ -887,6 +893,50 @@ export function NexusDeskShell({
         }
     }
 
+    async function saveLatestAssistantArtifact() {
+        if (!workspace) {
+            setChatStatus('Open a workspace before saving answers as artifacts.');
+            return;
+        }
+
+        const latest = latestAssistantMessage(chatMessages);
+        if (!latest) {
+            setChatStatus('No assistant answer is ready to save yet.');
+            return;
+        }
+
+        setIsSavingChatArtifact(true);
+        setChatStatus('Saving latest assistant answer as Markdown...');
+
+        try {
+            const report: MarkdownReport = await CreateChatMarkdownArtifact({
+                title: latestAssistantArtifactTitle(chatMessages),
+                content: latest.content,
+                contextRelPath: latest.contextRelPath,
+                source: 'NexusDesk chat',
+            });
+            const result = await RefreshWorkspace();
+            if (result.selected) {
+                onWorkspaceChange(result.snapshot);
+                await refreshArtifacts();
+                setExpandedDirectories((current) => reconcileExpandedDirectories(current, result.snapshot, findWorkspaceNode(result.snapshot, report.relPath)));
+                await selectWorkspaceFile(result.snapshot, report.relPath);
+                setWorkspaceStatus(`${report.name} saved in .nexusdesk/artifacts.`);
+            }
+            setChatStatus(`${report.name} saved as a Markdown artifact.`);
+            pushToolEvent('Answer saved', report.relPath);
+        } catch (error) {
+            const message = error instanceof Error ? error.message : '';
+            if (message.includes('undefined') || message.includes('window')) {
+                setChatStatus('Saving chat artifacts is available in the desktop runtime.');
+                return;
+            }
+            setChatStatus(message || 'Could not save the assistant answer.');
+        } finally {
+            setIsSavingChatArtifact(false);
+        }
+    }
+
     async function profileSelectedDataset() {
         if (!workspace || !filePreview) {
             setWorkspaceStatus('Open a workspace and select a dataset before profiling.');
@@ -1106,13 +1156,16 @@ export function NexusDeskShell({
                 chatPrompt={chatPrompt}
                 chatStatus={chatStatus}
                 contextPackPaths={contextPackPaths}
+                canSaveLatestAssistantArtifact={canSaveLatestAssistantArtifact}
                 isSavingSettings={isSavingSettings}
+                isSavingChatArtifact={isSavingChatArtifact}
                 isSendingPrompt={isSendingPrompt}
                 isTestingConnection={isTestingConnection}
                 onChatPromptChange={setChatPrompt}
                 onClearChatHistory={() => void clearChatHistory()}
                 onClearContextPack={() => setContextPackPaths([])}
                 onRemoveContextPath={removeContextPath}
+                onSaveLatestAssistantArtifact={() => void saveLatestAssistantArtifact()}
                 onSaveSettings={() => void saveLLMSettings()}
                 onSendPrompt={() => void sendPrompt()}
                 onSettingsDraftChange={updateSettingsDraft}
@@ -1129,6 +1182,37 @@ export function NexusDeskShell({
 
 function findWorkspaceNode(snapshot: WorkspaceSnapshot, relPath: string) {
     return snapshot.nodes.find((node) => node.relPath === relPath) ?? null;
+}
+
+function latestAssistantMessage(messages: ChatMessage[]) {
+    return [...messages].reverse().find((message) => message.role === 'assistant' && message.content.trim()) ?? null;
+}
+
+function latestAssistantArtifactTitle(messages: ChatMessage[]) {
+    const assistantIndex = findLatestAssistantIndex(messages);
+    if (assistantIndex === -1) {
+        return 'Assistant response';
+    }
+
+    const prompt = messages
+        .slice(0, assistantIndex)
+        .reverse()
+        .find((message) => message.role === 'user' && message.content.trim())?.content.trim();
+    if (!prompt) {
+        return 'Assistant response';
+    }
+
+    return `Assistant response - ${prompt.replace(/\s+/g, ' ').slice(0, 64)}`;
+}
+
+function findLatestAssistantIndex(messages: ChatMessage[]) {
+    for (let index = messages.length - 1; index >= 0; index -= 1) {
+        const message = messages[index];
+        if (message.role === 'assistant' && message.content.trim()) {
+            return index;
+        }
+    }
+    return -1;
 }
 
 function createRequestId() {

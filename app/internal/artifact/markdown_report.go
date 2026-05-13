@@ -9,11 +9,13 @@ import (
 	"sort"
 	"strings"
 	"time"
+	"unicode/utf8"
 
 	"NexusDesk/internal/workspace"
 )
 
 const reportContentLimit = 12 * 1024
+const generatedArtifactContentLimit = 64 * 1024
 const artifactDirRelPath = ".nexusdesk/artifacts"
 
 type MarkdownReport struct {
@@ -22,6 +24,13 @@ type MarkdownReport struct {
 	Path    string `json:"path"`
 	Message string `json:"message"`
 	Size    int64  `json:"size"`
+}
+
+type MarkdownArtifactRequest struct {
+	Title          string `json:"title"`
+	Content        string `json:"content"`
+	ContextRelPath string `json:"contextRelPath"`
+	Source         string `json:"source"`
 }
 
 type WorkspaceArtifact struct {
@@ -80,6 +89,60 @@ func CreateMarkdownReport(root string, source workspace.FilePreview, now time.Ti
 		Name:    name,
 		Path:    path,
 		Message: "Markdown report artifact created inside the workspace.",
+		Size:    info.Size(),
+	}, nil
+}
+
+func CreateGeneratedMarkdown(root string, request MarkdownArtifactRequest, now time.Time) (MarkdownReport, error) {
+	if strings.TrimSpace(root) == "" {
+		return MarkdownReport{}, errors.New("open a workspace before creating artifacts")
+	}
+	if strings.TrimSpace(request.Content) == "" {
+		return MarkdownReport{}, errors.New("assistant response is empty")
+	}
+
+	absRoot, err := filepath.Abs(root)
+	if err != nil {
+		return MarkdownReport{}, err
+	}
+
+	artifactDir := filepath.Join(absRoot, filepath.FromSlash(artifactDirRelPath))
+	if err := os.MkdirAll(artifactDir, 0o755); err != nil {
+		return MarkdownReport{}, err
+	}
+
+	name := generatedArtifactFileName(request, now)
+	path := filepath.Join(artifactDir, name)
+	if err := ensureInsideRoot(absRoot, path); err != nil {
+		return MarkdownReport{}, err
+	}
+
+	content := buildGeneratedMarkdown(request, now)
+	file, err := os.OpenFile(path, os.O_WRONLY|os.O_CREATE|os.O_EXCL, 0o644)
+	if err != nil {
+		return MarkdownReport{}, err
+	}
+	defer file.Close()
+
+	if _, err := file.WriteString(content); err != nil {
+		return MarkdownReport{}, err
+	}
+
+	info, err := file.Stat()
+	if err != nil {
+		return MarkdownReport{}, err
+	}
+
+	relPath, err := filepath.Rel(absRoot, path)
+	if err != nil {
+		return MarkdownReport{}, err
+	}
+
+	return MarkdownReport{
+		RelPath: filepath.ToSlash(relPath),
+		Name:    name,
+		Path:    path,
+		Message: "Assistant response artifact created inside the workspace.",
 		Size:    info.Size(),
 	}, nil
 }
@@ -159,6 +222,20 @@ func reportFileName(source workspace.FilePreview, now time.Time) string {
 	return fmt.Sprintf("%s-%s.md", slug, now.UTC().Format("20060102-150405"))
 }
 
+func generatedArtifactFileName(request MarkdownArtifactRequest, now time.Time) string {
+	base := strings.TrimSpace(request.Title)
+	if base == "" {
+		base = "assistant-response"
+	}
+
+	slug := slugify(base)
+	if slug == "" {
+		slug = "assistant-response"
+	}
+
+	return fmt.Sprintf("%s-%s.md", slug, now.UTC().Format("20060102-150405"))
+}
+
 func buildMarkdownReport(source workspace.FilePreview, now time.Time) string {
 	var builder strings.Builder
 
@@ -223,6 +300,46 @@ func buildMarkdownReport(source workspace.FilePreview, now time.Time) string {
 	return builder.String()
 }
 
+func buildGeneratedMarkdown(request MarkdownArtifactRequest, now time.Time) string {
+	var builder strings.Builder
+
+	title := strings.TrimSpace(request.Title)
+	if title == "" {
+		title = "Assistant Response"
+	}
+	source := strings.TrimSpace(request.Source)
+	if source == "" {
+		source = "Assistant response"
+	}
+
+	content := truncateValidUTF8(request.Content, generatedArtifactContentLimit)
+
+	builder.WriteString("# ")
+	builder.WriteString(escapeMarkdownLine(title))
+	builder.WriteString("\n\n")
+	builder.WriteString("- Generated: ")
+	builder.WriteString(now.UTC().Format(time.RFC3339))
+	builder.WriteString("\n")
+	builder.WriteString("- Source: ")
+	builder.WriteString(escapeMarkdownLine(source))
+	builder.WriteString("\n")
+	if strings.TrimSpace(request.ContextRelPath) != "" {
+		builder.WriteString("- Context: `")
+		builder.WriteString(strings.ReplaceAll(request.ContextRelPath, "`", "'"))
+		builder.WriteString("`\n")
+	}
+	builder.WriteString("\n")
+	builder.WriteString(content)
+	if !strings.HasSuffix(content, "\n") {
+		builder.WriteString("\n")
+	}
+	if len(request.Content) > len(content) {
+		builder.WriteString("\n_Response content was truncated._\n")
+	}
+
+	return builder.String()
+}
+
 func slugify(value string) string {
 	value = strings.ToLower(value)
 	value = nonSlugCharacters.ReplaceAllString(value, "-")
@@ -238,6 +355,21 @@ func slugify(value string) string {
 
 func escapeMarkdownLine(value string) string {
 	return strings.ReplaceAll(value, "\n", " ")
+}
+
+func truncateValidUTF8(content string, maxBytes int) string {
+	if maxBytes <= 0 {
+		return ""
+	}
+	if len(content) <= maxBytes {
+		return content
+	}
+
+	truncated := content[:maxBytes]
+	for !utf8.ValidString(truncated) && len(truncated) > 0 {
+		truncated = truncated[:len(truncated)-1]
+	}
+	return truncated
 }
 
 func ensureInsideRoot(root string, target string) error {

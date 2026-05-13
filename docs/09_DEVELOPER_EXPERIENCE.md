@@ -77,7 +77,7 @@ The shell is now mostly orchestration. Feature panels own stable presentation, w
 
 - `app/frontend/src/components/ui.tsx` contains reusable UI atoms such as buttons, cards, status badges, and branded state panels.
 - `app/frontend/src/features/shell/NexusDeskShell.tsx` owns the composed desktop workbench state.
-- `app/frontend/src/features/shell/AgentChatCard.tsx` owns the expanded chat presentation, full conversation scroll area, multiline prompt composer, context pack list, and delegates provider calls/history actions back to the shell.
+- `app/frontend/src/features/shell/AgentChatCard.tsx` owns the expanded chat presentation, full conversation scroll area, multiline prompt composer, context pack list, save-answer action surface, and delegates provider calls/history/artifact actions back to the shell.
 - `app/frontend/src/features/shell/ChatMessageContent.tsx` renders safe dependency-free Markdown-style chat content, including headings, lists, tables, code fences, inline code, and bold text.
 - `app/frontend/src/features/shell/LLMSettingsCard.tsx` owns the provider settings form and delegates persistence/probe actions back to the shell.
 - `app/frontend/src/features/shell/ToolTimeline.tsx` owns the visible tool event timeline presentation.
@@ -94,7 +94,7 @@ The shell is now mostly orchestration. Feature panels own stable presentation, w
 
 ## Artifact Creation
 
-`app/internal/artifact/` owns deterministic artifact writes and listing. The first flow creates timestamped Markdown reports under `.nexusdesk/artifacts/` from the selected preview, uses exclusive file creation to avoid overwrites, and returns the new workspace-relative path so the UI can refresh and select it. The workbench also lists Markdown artifacts from that folder so generated outputs remain visible after creation.
+`app/internal/artifact/` owns deterministic artifact writes and listing. The first flows create timestamped Markdown reports from selected previews and timestamped Markdown artifacts from assistant answers under `.nexusdesk/artifacts/`, use exclusive file creation to avoid overwrites, and return the new workspace-relative path so the UI can refresh and select it. Saved assistant answers preserve the model's Markdown and include source/context metadata before the generated body. The workbench lists Markdown artifacts from that folder so generated outputs remain visible after creation.
 
 ## File Writes
 

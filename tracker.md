@@ -100,6 +100,7 @@ This tracker reflects the repository as it exists today and keeps planned work s
 - [x] Context packs show individual pinned files and can remove one file at a time.
 - [x] Workspace chat history is persisted through `app/internal/storage/chat_history.go`.
 - [x] Report button creates timestamped Markdown artifacts under `.nexusdesk/artifacts/`.
+- [x] Latest assistant chat answers can be saved as Markdown artifacts under `.nexusdesk/artifacts/`.
 - [x] Markdown report artifacts are created without overwriting existing files.
 - [x] Text file edits use a preview/apply flow with a diff before workspace writes.
 - [x] Workbench artifact browser lists generated Markdown artifacts.
@@ -165,6 +166,7 @@ This tracker reflects the repository as it exists today and keeps planned work s
 - [x] Migrate API keys into OS credential storage before production release.
 - [x] Add first Markdown report artifact creation flow.
 - [x] Add first artifact browser for generated Markdown reports.
+- [x] Add first chat answer to Markdown artifact flow.
 - [x] Add approved text file write flow with diff preview.
 - [x] Split brand-aware shell sections into smaller rail, navigator, workbench pane, agent panel, and timeline components when they need behavior.
 - [x] Add first reusable button, icon button, and status badge components.
@@ -182,6 +184,8 @@ This tracker reflects the repository as it exists today and keeps planned work s
 `app/internal/workspace/` owns safe workspace scanning. It should keep ignore rules, depth limits, entry limits, and path safety close to the backend instead of trusting frontend filtering.
 
 `app/internal/workspace/context.go` owns directory and project context expansion for chat. It accepts selected files, selected directories, and `.` for the workspace root, then expands them into a capped list of previewable text/document/data files while preserving scanner ignore rules and symlink/path traversal protections.
+
+`app/internal/artifact/` owns deterministic Markdown artifact writes and listing. Source reports and saved assistant answers are written under `.nexusdesk/artifacts/` with timestamped names and exclusive creation, so generated outputs stay separate from source files.
 
 `app/internal/storage/` owns local app persistence. Recent workspaces and non-secret LLM settings currently use small JSON files in the user's config directory; LLM API keys are kept in a sidecar credential blob protected by the OS where available.
 
