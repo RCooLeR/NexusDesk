@@ -1,7 +1,7 @@
 .app-shell {
     min-height: 100vh;
     display: grid;
-    grid-template-columns: 56px minmax(220px, 280px) minmax(460px, 1fr) minmax(300px, 360px);
+    grid-template-columns: 56px minmax(220px, var(--navigator-width, 280px)) 6px minmax(460px, 1fr) minmax(300px, 360px);
     background: var(--nd-page);
     color: #111827;
 }
@@ -65,6 +65,17 @@
 
 .navigator {
     padding: 20px 16px;
+}
+
+.navigator-resizer {
+    background: transparent;
+    border-right: 1px solid var(--nd-border);
+    cursor: col-resize;
+    min-width: 6px;
+}
+
+.navigator-resizer:hover {
+    background: rgba(56, 189, 248, 0.16);
 }
 
 .topbar h2,
@@ -777,11 +788,11 @@ button:disabled {
 
 @media (max-width: 1100px) {
     .app-shell {
-        grid-template-columns: 52px minmax(210px, 250px) 1fr;
+        grid-template-columns: 52px minmax(210px, var(--navigator-width, 250px)) 6px 1fr;
     }
 
     .agent-panel {
-        grid-column: 2 / 4;
+        grid-column: 2 / 5;
         border-top: 1px solid var(--nd-border);
         border-left: 0;
     }
@@ -800,6 +811,10 @@ button:disabled {
     .navigator,
     .agent-panel {
         border: 0;
+    }
+
+    .navigator-resizer {
+        display: none;
     }
 
     .topbar,

@@ -3,6 +3,7 @@ package workspace
 import (
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 )
 
@@ -33,6 +34,41 @@ func TestScanReturnsSafeWorkspaceSnapshot(t *testing.T) {
 	assertContains(t, snapshot.Nodes, "data/report.csv", "data")
 	assertNotContains(t, snapshot.Nodes, "node_modules/pkg/index.js")
 	assertNotContains(t, snapshot.Nodes, ".git/config")
+}
+
+func TestScanReturnsFilesystemTreeOrder(t *testing.T) {
+	root := t.TempDir()
+
+	writeFile(t, root, "zeta.txt", "z")
+	writeFile(t, root, "app/main.go", "package main")
+	writeFile(t, root, "app/internal/run.go", "package internal")
+	writeFile(t, root, "app/README.md", "app")
+	writeFile(t, root, "docs/guide.md", "docs")
+
+	snapshot, err := Scan(root, ScanOptions{MaxDepth: 4, MaxEntries: 20})
+	if err != nil {
+		t.Fatalf("Scan returned error: %v", err)
+	}
+
+	got := make([]string, 0, len(snapshot.Nodes))
+	for _, node := range snapshot.Nodes {
+		got = append(got, node.RelPath)
+	}
+
+	want := []string{
+		"app",
+		"app/internal",
+		"app/internal/run.go",
+		"app/main.go",
+		"app/README.md",
+		"docs",
+		"docs/guide.md",
+		"zeta.txt",
+	}
+
+	if strings.Join(got, "\n") != strings.Join(want, "\n") {
+		t.Fatalf("unexpected tree order:\n%s", strings.Join(got, "\n"))
+	}
 }
 
 func TestScanHonorsDepthAndEntryLimit(t *testing.T) {

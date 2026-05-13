@@ -41,6 +41,8 @@ This tracker reflects the repository as it exists today and keeps planned work s
 - [x] Workspace refresh preserves the selected file when it still exists.
 - [x] Workspace open/refresh auto-loads a preview for the selected or first file node.
 - [x] Workspace navigator renders indexed nodes as an expandable tree.
+- [x] Workspace navigator uses filesystem tree ordering instead of depth-grouped ordering.
+- [x] Workspace navigator width can be resized with a drag handle.
 - [x] Expanded workspace directories are reconciled and preserved across refreshes.
 - [x] Backend remembers the selected workspace root for the session.
 - [x] Refresh action rescans the active workspace through `RefreshWorkspace`.

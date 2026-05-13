@@ -56,6 +56,7 @@ The current app implements the first safe workspace slice:
 
 - `app/internal/workspace/scanner.go` scans an approved workspace root.
 - The scanner skips noisy folders, symlinks, deep listings, and oversized result sets.
+- The scanner returns nodes in filesystem tree order so descendants stay grouped under their parent directories.
 - The frontend renders indexed nodes as an expandable tree and preserves expanded directories across refreshes.
 - `app/internal/workspace/preview.go` reads selected files only through a rooted relative path.
 - File previews reject traversal, symlinks, binary or non-UTF-8 content, and oversized previews.

@@ -1,4 +1,5 @@
 import {useEffect, useMemo, useState} from 'react';
+import type {CSSProperties, MouseEvent as ReactMouseEvent} from 'react';
 import {
     AskLLM,
     AskLLMStream,
@@ -44,6 +45,9 @@ type NexusDeskShellProps = {
 };
 
 const chatStreamEventName = 'nexusdesk:chat-stream';
+const navigatorMinWidth = 220;
+const navigatorMaxWidth = 460;
+const railWidth = 56;
 
 export function NexusDeskShell({
     state,
@@ -71,6 +75,7 @@ export function NexusDeskShell({
     const [chatMessages, setChatMessages] = useState<ChatMessage[]>([]);
     const [chatStatus, setChatStatus] = useState('Select text context and ask the assistant.');
     const [isSendingPrompt, setIsSendingPrompt] = useState(false);
+    const [navigatorWidth, setNavigatorWidth] = useState(280);
 
     useEffect(() => {
         setSettingsDraft(llmSettings);
@@ -551,8 +556,28 @@ export function NexusDeskShell({
         }));
     }
 
+    function startNavigatorResize(event: ReactMouseEvent<HTMLDivElement>) {
+        event.preventDefault();
+
+        function resize(moveEvent: MouseEvent) {
+            setNavigatorWidth(clamp(moveEvent.clientX - railWidth, navigatorMinWidth, navigatorMaxWidth));
+        }
+
+        function stopResize() {
+            document.body.style.cursor = '';
+            document.body.style.userSelect = '';
+            window.removeEventListener('mousemove', resize);
+            window.removeEventListener('mouseup', stopResize);
+        }
+
+        document.body.style.cursor = 'col-resize';
+        document.body.style.userSelect = 'none';
+        window.addEventListener('mousemove', resize);
+        window.addEventListener('mouseup', stopResize);
+    }
+
     return (
-        <div className="app-shell">
+        <div className="app-shell" style={{'--navigator-width': `${navigatorWidth}px`} as CSSProperties}>
             <WorkspaceRail />
 
             <WorkspaceNavigator
@@ -574,6 +599,13 @@ export function NexusDeskShell({
                 workspaceItems={state.workspaceItems}
                 workspaceNodes={workspaceNodes}
                 workspaceStatus={workspaceStatus}
+            />
+
+            <div
+                aria-label="Resize workspace navigator"
+                className="navigator-resizer"
+                onMouseDown={startNavigatorResize}
+                role="separator"
             />
 
             <WorkbenchPanel
@@ -617,4 +649,8 @@ function createRequestId() {
 
 function isWailsRuntimeAvailable() {
     return typeof window !== 'undefined' && 'runtime' in window;
+}
+
+function clamp(value: number, min: number, max: number) {
+    return Math.min(Math.max(value, min), max);
 }

@@ -125,18 +125,57 @@ func Scan(root string, options ScanOptions) (WorkspaceSnapshot, error) {
 	}
 
 	sort.SliceStable(snapshot.Nodes, func(i, j int) bool {
-		left := snapshot.Nodes[i]
-		right := snapshot.Nodes[j]
-		if left.Depth != right.Depth {
-			return left.Depth < right.Depth
-		}
-		if left.Kind != right.Kind {
-			return left.Kind == "directory"
-		}
-		return strings.ToLower(left.RelPath) < strings.ToLower(right.RelPath)
+		return compareFileNodes(snapshot.Nodes[i], snapshot.Nodes[j]) < 0
 	})
 
 	return snapshot, nil
+}
+
+func compareFileNodes(left FileNode, right FileNode) int {
+	leftParts := strings.Split(left.RelPath, "/")
+	rightParts := strings.Split(right.RelPath, "/")
+
+	limit := len(leftParts)
+	if len(rightParts) < limit {
+		limit = len(rightParts)
+	}
+
+	for index := 0; index < limit; index += 1 {
+		leftPart := strings.ToLower(leftParts[index])
+		rightPart := strings.ToLower(rightParts[index])
+		if leftPart == rightPart {
+			continue
+		}
+
+		leftIsDir := nodePartIsDirectory(left, index, leftParts)
+		rightIsDir := nodePartIsDirectory(right, index, rightParts)
+		if leftIsDir != rightIsDir {
+			if leftIsDir {
+				return -1
+			}
+			return 1
+		}
+		if leftPart < rightPart {
+			return -1
+		}
+		return 1
+	}
+
+	if len(leftParts) < len(rightParts) {
+		return -1
+	}
+	if len(leftParts) > len(rightParts) {
+		return 1
+	}
+
+	return strings.Compare(strings.ToLower(left.RelPath), strings.ToLower(right.RelPath))
+}
+
+func nodePartIsDirectory(node FileNode, index int, parts []string) bool {
+	if index < len(parts)-1 {
+		return true
+	}
+	return node.Kind == "directory"
 }
 
 func shouldIgnore(relPath string, entry fs.DirEntry) bool {
