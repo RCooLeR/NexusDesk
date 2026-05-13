@@ -25,6 +25,14 @@ The current app uses small JSON files in the user's config directory while SQLit
 
 These stores live behind `app/internal/storage/` so the later SQLite migration can keep the same app-level boundaries.
 
+## Frontend Structure
+
+The shell is being split only as behavior stabilizes:
+
+- `app/frontend/src/components/ui.tsx` contains reusable UI atoms such as buttons, cards, status badges, and branded state panels.
+- `app/frontend/src/features/shell/NexusDeskShell.tsx` owns the composed desktop workbench state.
+- `app/frontend/src/features/shell/AgentChatCard.tsx` owns the chat card presentation and delegates provider calls/history actions back to the shell.
+
 ## Goals
 
 NexusDesk should be easy to run, easy to test, easy to reason about, and hard to accidentally make unsafe.

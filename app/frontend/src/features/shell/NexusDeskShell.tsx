@@ -28,6 +28,7 @@ import type {
     WorkspaceOpenResult,
     WorkspaceSnapshot,
 } from '../../types';
+import {AgentChatCard} from './AgentChatCard';
 
 type NexusDeskShellProps = {
     state: StartupState;
@@ -713,46 +714,15 @@ export function NexusDeskShell({
                     <span>{state.tagline}</span>
                 </header>
 
-                <div className="chat-card">
-                    <div className="chat-thread">
-                        {chatMessages.length === 0 ? (
-                            <div className="assistant-message">
-                                <strong>NexusDesk</strong>
-                                <p>Ready to connect a model, read selected files, and turn source context into auditable work.</p>
-                            </div>
-                        ) : (
-                            chatMessages.slice(-4).map((message, index) => (
-                                <div className={message.role === 'user' ? 'user-message' : 'assistant-message'} key={`${message.role}-${index}-${message.content}`}>
-                                    <strong>{message.role === 'user' ? 'You' : 'NexusDesk'}</strong>
-                                    <p>{message.content}</p>
-                                    {message.contextRelPath && <small>{message.contextRelPath}</small>}
-                                </div>
-                            ))
-                        )}
-                    </div>
-                    {chatMessages.length > 0 && (
-                        <div className="chat-actions">
-                            <Button onClick={() => void clearChatHistory()} variant="subtle">Clear chat</Button>
-                        </div>
-                    )}
-                    <div className="prompt-box">
-                        <input
-                            aria-label="Ask about the workspace"
-                            onChange={(event) => setChatPrompt(event.target.value)}
-                            onKeyDown={(event) => {
-                                if (event.key === 'Enter') {
-                                    void sendPrompt();
-                                }
-                            }}
-                            placeholder="Ask about the workspace..."
-                            value={chatPrompt}
-                        />
-                        <Button disabled={isSendingPrompt} onClick={() => void sendPrompt()} title="Send prompt" variant="primary">
-                            {isSendingPrompt ? 'Sending...' : 'Send'}
-                        </Button>
-                    </div>
-                    <small className="chat-status">{chatStatus}</small>
-                </div>
+                <AgentChatCard
+                    chatMessages={chatMessages}
+                    chatPrompt={chatPrompt}
+                    chatStatus={chatStatus}
+                    isSendingPrompt={isSendingPrompt}
+                    onChatPromptChange={setChatPrompt}
+                    onClearChatHistory={() => void clearChatHistory()}
+                    onSendPrompt={() => void sendPrompt()}
+                />
 
                 <section className="settings-card">
                     <div className="pane-title">

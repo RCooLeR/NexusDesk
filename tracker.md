@@ -20,8 +20,10 @@ This tracker reflects the repository as it exists today and keeps planned work s
 - [x] Runtime brand asset mapping lives in `app/frontend/src/brand/assets.ts`.
 - [x] Browser-safe fallback startup state lives in `app/frontend/src/data/startupState.ts`.
 - [x] First reusable button, icon button, and status badge components live in `app/frontend/src/components/ui.tsx`.
+- [x] First reusable card component lives in `app/frontend/src/components/ui.tsx`.
 - [x] Reusable branded empty, loading, and inline alert states live in `app/frontend/src/components/ui.tsx`.
 - [x] Shell layout is split into `app/frontend/src/features/shell/NexusDeskShell.tsx`.
+- [x] Agent chat card is split into `app/frontend/src/features/shell/AgentChatCard.tsx`.
 - [x] Workspace scanner package exists at `app/internal/workspace/`.
 - [x] Scanner skips noisy folders, symlinks, and oversized/deep listings.
 - [x] Workspace file preview is implemented in `app/internal/workspace/preview.go`.
@@ -93,7 +95,7 @@ This tracker reflects the repository as it exists today and keeps planned work s
 - [ ] Migrate API keys into OS credential storage before production release.
 - [ ] Split brand-aware shell sections into smaller rail, navigator, workbench pane, agent panel, and timeline components when they need behavior.
 - [x] Add first reusable button, icon button, and status badge components.
-- [ ] Add first reusable card component when panel extraction starts.
+- [x] Add first reusable card component when panel extraction starts.
 - [ ] Add backend module layout only when implementation files are created.
 - [ ] Split the workbench UI into feature components once behavior lands.
 - [ ] Replace the services placeholder with real development/test services when needed.

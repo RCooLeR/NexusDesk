@@ -171,6 +171,12 @@ button:disabled {
     background: var(--nd-warning-bg);
 }
 
+.ui-card {
+    background: var(--nd-panel);
+    border: 1px solid var(--nd-border);
+    border-radius: var(--nd-radius-sm);
+}
+
 .state-panel {
     min-height: 220px;
     display: grid;
@@ -436,7 +442,6 @@ button:disabled {
 
 .editor-pane,
 .status-pane,
-.chat-card,
 .timeline {
     background: var(--nd-panel);
     border: 1px solid var(--nd-border);

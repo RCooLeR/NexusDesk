@@ -15,6 +15,11 @@ type StatusBadgeProps = {
     tone?: 'neutral' | 'warning' | 'success';
 };
 
+type CardProps = {
+    children: ReactNode;
+    className?: string;
+};
+
 type StateTone = 'neutral' | 'warning' | 'danger';
 
 type StateProps = {
@@ -53,6 +58,10 @@ export function IconButton({children, className = '', label, title, type = 'butt
 
 export function StatusBadge({children, tone = 'neutral'}: StatusBadgeProps) {
     return <span className={mergeClassNames('status-badge', `status-badge-${tone}`)}>{children}</span>;
+}
+
+export function Card({children, className = ''}: CardProps) {
+    return <section className={mergeClassNames('ui-card', className)}>{children}</section>;
 }
 
 export function EmptyState({detail, iconSrc, title, tone = 'neutral'}: StateProps) {
