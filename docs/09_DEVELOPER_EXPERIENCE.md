@@ -15,6 +15,16 @@ Run Go commands from `app/`, frontend commands from `app/frontend/`, and Wails b
 
 When Wails regenerates frontend bindings, `app/frontend/wailsjs/go/models.ts` can pick up whitespace-only changes. Clean those before committing if `git diff --check` reports trailing whitespace.
 
+## Current Local Persistence
+
+The current app uses small JSON files in the user's config directory while SQLite is still pending:
+
+- `recent-workspaces.json`
+- `llm-settings.json`
+- `chat-history.json`
+
+These stores live behind `app/internal/storage/` so the later SQLite migration can keep the same app-level boundaries.
+
 ## Goals
 
 NexusDesk should be easy to run, easy to test, easy to reason about, and hard to accidentally make unsafe.

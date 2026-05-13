@@ -49,6 +49,7 @@ const chatContextMaxBytes = 16 * 1024
 type App struct {
 	ctx           context.Context
 	llmClient     *llm.Client
+	chatStore     *storage.ChatHistoryStore
 	llmStore      *storage.LLMSettingsStore
 	recentStore   *storage.RecentWorkspaceStore
 	workspaceMu   sync.RWMutex
@@ -58,6 +59,7 @@ type App struct {
 func NewApp() *App {
 	return &App{
 		llmClient:   llm.NewClient(),
+		chatStore:   storage.NewDefaultChatHistoryStore(),
 		llmStore:    storage.NewDefaultLLMSettingsStore(),
 		recentStore: storage.NewDefaultRecentWorkspaceStore(),
 	}
@@ -184,6 +186,24 @@ func (a *App) TestLLMConnection(settings storage.LLMSettings) (llm.ProbeResult, 
 	return a.llmClient.Probe(context.Background(), resolvedSettings)
 }
 
+func (a *App) GetChatHistory() ([]storage.ChatMessage, error) {
+	root := a.getWorkspaceRoot()
+	if root == "" {
+		return []storage.ChatMessage{}, nil
+	}
+
+	return a.chatStore.List(root)
+}
+
+func (a *App) ClearChatHistory() ([]storage.ChatMessage, error) {
+	root := a.getWorkspaceRoot()
+	if root == "" {
+		return []storage.ChatMessage{}, nil
+	}
+
+	return a.chatStore.Clear(root)
+}
+
 func (a *App) AskLLM(prompt string, relPath string) (llm.ChatResult, error) {
 	settings, err := a.llmStore.Get()
 	if err != nil {
@@ -208,7 +228,28 @@ func (a *App) AskLLM(prompt string, relPath string) (llm.ChatResult, error) {
 		chatRequest.ContextContent = contextPreview.Content
 	}
 
-	return a.llmClient.Chat(context.Background(), resolvedSettings, chatRequest)
+	result, err := a.llmClient.Chat(context.Background(), resolvedSettings, chatRequest)
+	if err != nil {
+		return llm.ChatResult{}, err
+	}
+
+	root := a.getWorkspaceRoot()
+	if root != "" {
+		_, err = a.chatStore.AppendPair(root, storage.ChatMessage{
+			Role:           "user",
+			Content:        prompt,
+			ContextRelPath: chatRequest.ContextRelPath,
+		}, storage.ChatMessage{
+			Role:           "assistant",
+			Content:        result.Message,
+			ContextRelPath: result.ContextRelPath,
+		})
+		if err != nil {
+			return llm.ChatResult{}, err
+		}
+	}
+
+	return result, nil
 }
 
 func (a *App) previewChatContext(relPath string) (workspace.FilePreview, error) {

@@ -7,7 +7,11 @@ import {workspace} from '../models';
 
 export function AskLLM(arg1:string,arg2:string):Promise<llm.ChatResult>;
 
+export function ClearChatHistory():Promise<Array<storage.ChatMessage>>;
+
 export function ClearRecentWorkspaces():Promise<Array<storage.RecentWorkspace>>;
+
+export function GetChatHistory():Promise<Array<storage.ChatMessage>>;
 
 export function GetLLMSettings():Promise<storage.LLMSettings>;
 

@@ -74,6 +74,13 @@ export type LLMChatResult = {
     contextRelPath: string;
 };
 
+export type ChatMessage = {
+    role: string;
+    content: string;
+    contextRelPath: string;
+    createdAt: string;
+};
+
 export type ToolEvent = {
     time: string;
     title: string;

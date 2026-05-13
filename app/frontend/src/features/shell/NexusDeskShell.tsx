@@ -3,6 +3,8 @@ import type {ChangeEvent} from 'react';
 import {
     AskLLM,
     ClearRecentWorkspaces,
+    ClearChatHistory,
+    GetChatHistory,
     GetRecentWorkspaces,
     OpenWorkspace,
     ReadWorkspaceFile,
@@ -15,6 +17,7 @@ import {
 import {brandAssets, capabilityIconByTitle, railItems, workspaceIconByName} from '../../brand/assets';
 import {Button, EmptyState, IconButton, InlineAlert, LoadingState, StatusBadge} from '../../components/ui';
 import type {
+    ChatMessage,
     FileNode,
     FilePreview,
     LLMChatResult,
@@ -34,12 +37,6 @@ type NexusDeskShellProps = {
     onWorkspaceChange: (workspace: WorkspaceSnapshot) => void;
     onRecentWorkspacesChange: (workspaces: RecentWorkspace[]) => void;
     onLLMSettingsChange: (settings: LLMSettings) => void;
-};
-
-type ChatMessage = {
-    content: string;
-    contextRelPath?: string;
-    role: 'assistant' | 'user';
 };
 
 const fileIconByType: Record<string, string> = {
@@ -261,6 +258,7 @@ export function NexusDeskShell({
         const selectedNode = selectNodeAfterWorkspaceUpdate(result.snapshot);
 
         onWorkspaceChange(result.snapshot);
+        await refreshChatHistory();
         setExpandedDirectories((current) => reconcileExpandedDirectories(current, result.snapshot, selectedNode));
         if (selectedNode) {
             setActiveFile(selectedNode.relPath);
@@ -337,6 +335,28 @@ export function NexusDeskShell({
             onRecentWorkspacesChange(await GetRecentWorkspaces());
         } catch {
             onRecentWorkspacesChange([]);
+        }
+    }
+
+    async function refreshChatHistory() {
+        try {
+            const messages = await GetChatHistory();
+            setChatMessages(messages);
+            setChatStatus(messages.length > 0 ? `${messages.length} saved chat messages loaded.` : 'Select text context and ask the assistant.');
+        } catch {
+            setChatMessages([]);
+            setChatStatus('Chat history is available in the desktop runtime.');
+        }
+    }
+
+    async function clearChatHistory() {
+        try {
+            const messages = await ClearChatHistory();
+            setChatMessages(messages);
+            setChatStatus('Chat history cleared for this workspace.');
+        } catch (error) {
+            const message = error instanceof Error ? error.message : '';
+            setChatStatus(message || 'Could not clear chat history.');
         }
     }
 
@@ -447,19 +467,24 @@ export function NexusDeskShell({
         const contextRelPath = filePreview?.content ? filePreview.relPath : '';
         setIsSendingPrompt(true);
         setChatStatus(contextRelPath ? `Sending with ${contextRelPath} as context...` : 'Sending without selected file context...');
-        setChatMessages((current) => [...current, {content: prompt, contextRelPath, role: 'user'}]);
+        setChatMessages((current) => [...current, {content: prompt, contextRelPath, createdAt: new Date().toISOString(), role: 'user'}]);
         setChatPrompt('');
 
         try {
             const result: LLMChatResult = await AskLLM(prompt, contextRelPath);
-            setChatMessages((current) => [
-                ...current,
-                {
-                    content: result.message,
-                    contextRelPath: result.contextRelPath,
-                    role: 'assistant',
-                },
-            ]);
+            if (workspace) {
+                await refreshChatHistory();
+            } else {
+                setChatMessages((current) => [
+                    ...current,
+                    {
+                        content: result.message,
+                        contextRelPath: result.contextRelPath,
+                        createdAt: new Date().toISOString(),
+                        role: 'assistant',
+                    },
+                ]);
+            }
             setChatStatus(result.contextRelPath ? `Answered with ${result.contextRelPath}.` : `Answered by ${result.model}.`);
         } catch (error) {
             const message = error instanceof Error ? error.message : '';
@@ -471,6 +496,8 @@ export function NexusDeskShell({
                 ...current,
                 {
                     content: message || 'The provider did not return a usable chat response.',
+                    contextRelPath: '',
+                    createdAt: new Date().toISOString(),
                     role: 'assistant',
                 },
             ]);
@@ -703,6 +730,11 @@ export function NexusDeskShell({
                             ))
                         )}
                     </div>
+                    {chatMessages.length > 0 && (
+                        <div className="chat-actions">
+                            <Button onClick={() => void clearChatHistory()} variant="subtle">Clear chat</Button>
+                        </div>
+                    )}
                     <div className="prompt-box">
                         <input
                             aria-label="Ask about the workspace"

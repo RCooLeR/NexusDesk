@@ -565,6 +565,22 @@ button:disabled {
     gap: 8px;
 }
 
+.chat-actions {
+    display: flex;
+    justify-content: flex-end;
+}
+
+.chat-actions button {
+    border: 1px solid #ccd5e1;
+    border-radius: var(--nd-radius-sm);
+    background: var(--nd-panel);
+    color: #475467;
+    cursor: pointer;
+    font-size: 11px;
+    min-height: 28px;
+    padding: 0 8px;
+}
+
 .settings-card {
     background: var(--nd-panel);
     border: 1px solid var(--nd-border);

@@ -173,7 +173,25 @@ export namespace main {
 }
 
 export namespace storage {
-	
+
+	export class ChatMessage {
+	    role: string;
+	    content: string;
+	    contextRelPath: string;
+	    createdAt: string;
+
+	    static createFrom(source: any = {}) {
+	        return new ChatMessage(source);
+	    }
+
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.role = source["role"];
+	        this.content = source["content"];
+	        this.contextRelPath = source["contextRelPath"];
+	        this.createdAt = source["createdAt"];
+	    }
+	}
 	export class LLMSettings {
 	    providerName: string;
 	    baseUrl: string;

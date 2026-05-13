@@ -6,8 +6,16 @@ export function AskLLM(arg1, arg2) {
   return window['go']['main']['App']['AskLLM'](arg1, arg2);
 }
 
+export function ClearChatHistory() {
+  return window['go']['main']['App']['ClearChatHistory']();
+}
+
 export function ClearRecentWorkspaces() {
   return window['go']['main']['App']['ClearRecentWorkspaces']();
+}
+
+export function GetChatHistory() {
+  return window['go']['main']['App']['GetChatHistory']();
 }
 
 export function GetLLMSettings() {

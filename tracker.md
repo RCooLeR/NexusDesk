@@ -52,6 +52,7 @@ This tracker reflects the repository as it exists today and keeps planned work s
 - [x] Non-streaming OpenAI-compatible chat is implemented in `app/internal/llm/chat.go`.
 - [x] Agent panel can send prompts through `AskLLM`.
 - [x] Selected workspace text previews can be attached as bounded chat context.
+- [x] Workspace chat history is persisted through `app/internal/storage/chat_history.go`.
 - [x] Helper services placeholder exists at `services/docker-compose.yml`.
 - [x] Repository ignore rules exist in `.gitignore`.
 - [x] Current and target directory structures are documented separately.
@@ -86,7 +87,7 @@ This tracker reflects the repository as it exists today and keeps planned work s
 - [x] Add LLM connection test.
 - [x] Add LLM capability detection beyond model listing.
 - [x] Add first non-streaming chat call with selected text context.
-- [ ] Persist chat history per workspace.
+- [x] Persist chat history per workspace.
 - [ ] Add streaming chat responses.
 - [x] Mask API keys before they leave the backend settings store.
 - [ ] Migrate API keys into OS credential storage before production release.

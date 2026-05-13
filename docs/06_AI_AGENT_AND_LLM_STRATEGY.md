@@ -85,10 +85,11 @@ Current implementation:
 - The probe returns model count, a small model sample, capability hints, and configured-model warnings.
 - `app/internal/llm/chat.go` sends non-streaming OpenAI-compatible `/chat/completions` requests.
 - `AskLLM` in `app/app.go` resolves saved settings and attaches selected workspace text context server-side.
+- `app/internal/storage/chat_history.go` persists bounded chat history per workspace in local JSON config.
 
 Capability hints are currently inferred from model IDs. They are useful for readiness signals, but they are not a substitute for provider-native capability metadata.
 
-The current chat implementation requires an explicit configured model. It includes at most a bounded selected text preview as context and does not yet store chat history, stream responses, call tools, or build multi-file context packs.
+The current chat implementation requires an explicit configured model. It includes at most a bounded selected text preview as context and does not yet stream responses, call tools, or build multi-file context packs.
 
 ## Agent Modes
 
@@ -246,7 +247,7 @@ Current implementation:
 - one user prompt maps to one non-streaming provider request
 - no tool loop is active yet
 - selected file context is read through the same rooted preview boundary as the source preview pane
-- chat messages are held in frontend memory only
+- chat history is persisted per workspace in local JSON config
 
 ## Prompt Contracts
 
