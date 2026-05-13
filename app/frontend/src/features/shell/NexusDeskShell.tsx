@@ -166,6 +166,7 @@ export function NexusDeskShell({
                     kind: 'unsupported',
                     fileType: node.fileType,
                     content: '',
+                    text: '',
                     encoding: '',
                     truncated: false,
                     message: 'File previews are available in the desktop runtime.',
@@ -179,6 +180,7 @@ export function NexusDeskShell({
                 kind: 'unsupported',
                 fileType: node.fileType,
                 content: '',
+                text: '',
                 encoding: '',
                 truncated: false,
                 message: message || 'Could not preview this file.',
@@ -196,6 +198,7 @@ export function NexusDeskShell({
             kind: 'directory',
             fileType: node.fileType,
             content: '',
+            text: '',
             encoding: '',
             truncated: false,
             message: 'Select a file inside this folder to preview its contents.',
@@ -640,7 +643,7 @@ export function NexusDeskShell({
     }
 
     function selectedTextContextRelPath() {
-        if (filePreview?.kind === 'file' && filePreview.content) {
+        if ((filePreview?.kind === 'file' && filePreview.content) || (filePreview?.kind === 'pdf' && filePreview.text)) {
             return filePreview.relPath;
         }
         return '';

@@ -55,6 +55,7 @@ type FilePreview struct {
 	Kind      string        `json:"kind"`
 	FileType  string        `json:"fileType"`
 	Content   string        `json:"content"`
+	Text      string        `json:"text"`
 	Encoding  string        `json:"encoding"`
 	Table     *TablePreview `json:"table,omitempty"`
 	Truncated bool          `json:"truncated"`
@@ -130,7 +131,11 @@ func Preview(root string, relPath string, options PreviewOptions) (FilePreview, 
 
 		preview.Kind = "pdf"
 		preview.Content = content
+		preview.Text = extractPDFText(absTarget, defaultPreviewMaxBytes)
 		preview.Message = "PDF preview rendered from the approved workspace root."
+		if preview.Text != "" {
+			preview.Message = "PDF preview rendered with extracted text context."
+		}
 		return preview, nil
 	}
 
@@ -171,6 +176,7 @@ func Preview(root string, relPath string, options PreviewOptions) (FilePreview, 
 	}
 
 	preview.Content = string(normalized)
+	preview.Text = preview.Content
 	preview.Encoding = encoding
 	preview.Truncated = truncated
 	if strings.EqualFold(filepath.Ext(info.Name()), ".csv") {

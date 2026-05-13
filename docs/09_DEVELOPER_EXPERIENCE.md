@@ -31,7 +31,7 @@ These stores live behind `app/internal/storage/` so the later SQLite migration c
 
 ## Workspace Previews
 
-`app/internal/workspace/preview.go` keeps text previews rooted and size-limited, decodes UTF-8, UTF-16, and Windows-1251 text variants, parses CSV files into bounded table previews with lightweight column profiles from a larger capped sample, and renders common image/PDF files as capped data URLs for inline display. Chat context accepts text previews and converts selected CSV previews into a structured profile plus bounded sample, so binary, image, and PDF content is not sent to the model as source text.
+`app/internal/workspace/preview.go` keeps text previews rooted and size-limited, decodes UTF-8, UTF-16, and Windows-1251 text variants, parses CSV files into bounded table previews with lightweight column profiles from a larger capped sample, and renders common image/PDF files as capped data URLs for inline display. PDFs also expose simple embedded text extraction when available. Chat context accepts text previews, extracted PDF text, and structured CSV profiles plus bounded samples, so binary payloads and data URLs are not sent to the model as source text.
 
 `app/frontend/src/features/shell/HighlightedCode.tsx` provides dependency-free lightweight highlighting for common code/data text previews until Monaco lands.
 

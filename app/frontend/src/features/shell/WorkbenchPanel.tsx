@@ -54,7 +54,9 @@ export function WorkbenchPanel({
     writeProposal,
     workspace,
 }: WorkbenchPanelProps) {
-    const canExplainContext = Boolean(workspace && filePreview?.kind === 'file' && filePreview.content);
+    const canExplainContext = Boolean(
+        workspace && ((filePreview?.kind === 'file' && filePreview.content) || (filePreview?.kind === 'pdf' && filePreview.text))
+    );
     const canEditContext = Boolean(workspace && filePreview?.kind === 'file' && filePreview.content && !filePreview.table);
 
     return (
@@ -107,6 +109,12 @@ export function WorkbenchPanel({
                                     <div className="document-preview">
                                         <iframe src={filePreview.content} title={filePreview.name} />
                                     </div>
+                                    {filePreview.text && (
+                                        <div className="document-text-preview">
+                                            <strong>Extracted text</strong>
+                                            <p>{filePreview.text}</p>
+                                        </div>
+                                    )}
                                 </>
                             ) : filePreview?.table ? (
                                 <>

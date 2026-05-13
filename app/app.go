@@ -387,6 +387,10 @@ func (a *App) previewChatContext(relPath string) (workspace.FilePreview, error) 
 	if contextPreview.Content == "" {
 		return workspace.FilePreview{}, errors.New("selected file cannot be sent as text context")
 	}
+	if contextPreview.Kind == "pdf" && strings.TrimSpace(contextPreview.Text) != "" {
+		contextPreview.Content = contextPreview.Text
+		return contextPreview, nil
+	}
 	if contextPreview.Kind != "file" {
 		return workspace.FilePreview{}, errors.New("selected file context must be a text preview")
 	}

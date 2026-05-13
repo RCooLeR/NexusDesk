@@ -37,6 +37,7 @@ This tracker reflects the repository as it exists today and keeps planned work s
 - [x] File previews are rooted, traversal-checked, symlink-aware, size-limited, and UTF-8/text-only.
 - [x] Common workspace images render as bounded inline previews.
 - [x] Workspace PDFs render as bounded inline previews.
+- [x] Workspace PDFs expose simple embedded text extraction when available.
 - [x] UTF-8 BOM and UTF-16 text previews are decoded.
 - [x] BOM-less UTF-16 and Windows-1251 Cyrillic text previews are decoded.
 - [x] Source preview headers show file type, decoded encoding, size, and truncation status when available.
@@ -78,6 +79,7 @@ This tracker reflects the repository as it exists today and keeps planned work s
 - [x] Explain button sends a grounded explanation prompt for selected text/code previews.
 - [x] Agent panel streams partial assistant responses through `nexusdesk:chat-stream` Wails events.
 - [x] Selected workspace text previews can be attached as bounded chat context without sending image/PDF data URLs.
+- [x] Selected PDFs with extracted text can be attached as chat context without sending PDF data URLs.
 - [x] Selected CSV previews send a structured column profile and bounded sample as chat context.
 - [x] Workspace chat history is persisted through `app/internal/storage/chat_history.go`.
 - [x] Report button creates timestamped Markdown artifacts under `.nexusdesk/artifacts/`.

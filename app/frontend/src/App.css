@@ -635,6 +635,28 @@ button:disabled {
     background: #ffffff;
 }
 
+.document-text-preview {
+    max-height: 140px;
+    overflow: auto;
+    border-top: 1px solid var(--nd-border-soft);
+    background: #fbfdff;
+    padding: 10px 14px;
+}
+
+.document-text-preview strong {
+    display: block;
+    margin-bottom: 5px;
+    color: #1f2937;
+    font-size: 12px;
+}
+
+.document-text-preview p {
+    margin: 0;
+    color: #475467;
+    font-size: 12px;
+    line-height: 1.45;
+}
+
 .csv-preview {
     min-height: 0;
     overflow: auto;

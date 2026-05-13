@@ -317,7 +317,7 @@ func TestPreviewTruncatesCSVTableRows(t *testing.T) {
 func TestPreviewReturnsPDFDataURL(t *testing.T) {
 	root := t.TempDir()
 	path := filepath.Join(root, "brief.pdf")
-	if err := os.WriteFile(path, []byte("%PDF-1.7"), 0o644); err != nil {
+	if err := os.WriteFile(path, []byte("%PDF-1.7\nBT (Hello PDF) Tj ET"), 0o644); err != nil {
 		t.Fatalf("WriteFile failed: %v", err)
 	}
 
@@ -331,6 +331,9 @@ func TestPreviewReturnsPDFDataURL(t *testing.T) {
 	}
 	if !strings.HasPrefix(preview.Content, "data:application/pdf;base64,") {
 		t.Fatalf("expected PDF data URL, got %q", preview.Content)
+	}
+	if preview.Text != "Hello PDF" {
+		t.Fatalf("expected extracted PDF text, got %q", preview.Text)
 	}
 }
 

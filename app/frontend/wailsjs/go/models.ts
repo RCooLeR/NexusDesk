@@ -370,6 +370,7 @@ export namespace workspace {
 	    kind: string;
 	    fileType: string;
 	    content: string;
+	    text: string;
 	    encoding: string;
 	    table?: TablePreview;
 	    truncated: boolean;
@@ -387,6 +388,7 @@ export namespace workspace {
 	        this.kind = source["kind"];
 	        this.fileType = source["fileType"];
 	        this.content = source["content"];
+	        this.text = source["text"];
 	        this.encoding = source["encoding"];
 	        this.table = this.convertValues(source["table"], TablePreview);
 	        this.truncated = source["truncated"];
