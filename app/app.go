@@ -3,8 +3,10 @@ package main
 import (
 	"context"
 	"errors"
+	"os"
 	"sync"
 
+	"NexusDesk/internal/storage"
 	"NexusDesk/internal/workspace"
 	"github.com/wailsapp/wails/v2/pkg/runtime"
 )
@@ -43,12 +45,15 @@ type WorkspaceOpenResult struct {
 
 type App struct {
 	ctx           context.Context
+	recentStore   *storage.RecentWorkspaceStore
 	workspaceMu   sync.RWMutex
 	workspaceRoot string
 }
 
 func NewApp() *App {
-	return &App{}
+	return &App{
+		recentStore: storage.NewDefaultRecentWorkspaceStore(),
+	}
 }
 
 func (a *App) startup(ctx context.Context) {
@@ -106,17 +111,15 @@ func (a *App) SelectWorkspace() (WorkspaceOpenResult, error) {
 		return WorkspaceOpenResult{Selected: false}, nil
 	}
 
-	snapshot, err := workspace.Scan(root, workspace.ScanOptions{})
-	if err != nil {
-		return WorkspaceOpenResult{}, err
+	return a.openWorkspace(root)
+}
+
+func (a *App) OpenWorkspace(root string) (WorkspaceOpenResult, error) {
+	if root == "" {
+		return WorkspaceOpenResult{Selected: false}, nil
 	}
 
-	a.setWorkspaceRoot(snapshot.Root)
-
-	return WorkspaceOpenResult{
-		Selected: true,
-		Snapshot: snapshot,
-	}, nil
+	return a.openWorkspace(root)
 }
 
 func (a *App) RefreshWorkspace() (WorkspaceOpenResult, error) {
@@ -127,6 +130,35 @@ func (a *App) RefreshWorkspace() (WorkspaceOpenResult, error) {
 
 	snapshot, err := workspace.Scan(root, workspace.ScanOptions{})
 	if err != nil {
+		return WorkspaceOpenResult{}, err
+	}
+
+	return WorkspaceOpenResult{
+		Selected: true,
+		Snapshot: snapshot,
+	}, nil
+}
+
+func (a *App) GetRecentWorkspaces() ([]storage.RecentWorkspace, error) {
+	return a.recentStore.List()
+}
+
+func (a *App) openWorkspace(root string) (WorkspaceOpenResult, error) {
+	info, err := os.Stat(root)
+	if err != nil {
+		return WorkspaceOpenResult{}, err
+	}
+	if !info.IsDir() {
+		return WorkspaceOpenResult{}, errors.New("workspace root must be a directory")
+	}
+
+	snapshot, err := workspace.Scan(root, workspace.ScanOptions{})
+	if err != nil {
+		return WorkspaceOpenResult{}, err
+	}
+
+	a.setWorkspaceRoot(snapshot.Root)
+	if _, err := a.recentStore.Add(snapshot.Root); err != nil {
 		return WorkspaceOpenResult{}, err
 	}
 

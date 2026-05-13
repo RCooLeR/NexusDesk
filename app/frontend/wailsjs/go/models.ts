@@ -125,6 +125,27 @@ export namespace main {
 
 }
 
+export namespace storage {
+	
+	export class RecentWorkspace {
+	    name: string;
+	    path: string;
+	    lastOpened: string;
+	
+	    static createFrom(source: any = {}) {
+	        return new RecentWorkspace(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.name = source["name"];
+	        this.path = source["path"];
+	        this.lastOpened = source["lastOpened"];
+	    }
+	}
+
+}
+
 export namespace workspace {
 	
 	export class FileNode {

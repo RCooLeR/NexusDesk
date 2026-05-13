@@ -1,12 +1,14 @@
 import {useMemo, useState} from 'react';
-import {RefreshWorkspace, SelectWorkspace} from '../../../wailsjs/go/main/App';
+import {GetRecentWorkspaces, OpenWorkspace, RefreshWorkspace, SelectWorkspace} from '../../../wailsjs/go/main/App';
 import {brandAssets, capabilityIconByTitle, railItems, workspaceIconByName} from '../../brand/assets';
-import type {FileNode, StartupState, WorkspaceSnapshot} from '../../types';
+import type {FileNode, RecentWorkspace, StartupState, WorkspaceOpenResult, WorkspaceSnapshot} from '../../types';
 
 type NexusDeskShellProps = {
     state: StartupState;
     workspace: WorkspaceSnapshot | null;
+    recentWorkspaces: RecentWorkspace[];
     onWorkspaceChange: (workspace: WorkspaceSnapshot) => void;
+    onRecentWorkspacesChange: (workspaces: RecentWorkspace[]) => void;
 };
 
 const fileIconByType: Record<string, string> = {
@@ -18,7 +20,13 @@ const fileIconByType: Record<string, string> = {
     file: brandAssets.icons.documents,
 };
 
-export function NexusDeskShell({state, workspace, onWorkspaceChange}: NexusDeskShellProps) {
+export function NexusDeskShell({
+    state,
+    workspace,
+    recentWorkspaces,
+    onWorkspaceChange,
+    onRecentWorkspacesChange,
+}: NexusDeskShellProps) {
     const [activeFile, setActiveFile] = useState('docs/08_DELIVERY_PLAN.md');
     const [workspaceStatus, setWorkspaceStatus] = useState('No workspace opened yet.');
     const [isOpeningWorkspace, setIsOpeningWorkspace] = useState(false);
@@ -48,14 +56,11 @@ export function NexusDeskShell({state, workspace, onWorkspaceChange}: NexusDeskS
 
         try {
             const result = await SelectWorkspace();
-            if (!result.selected) {
+            if (!applyWorkspaceResult(result, 'indexed')) {
                 setWorkspaceStatus('Workspace selection cancelled.');
                 return;
             }
-
-            onWorkspaceChange(result.snapshot);
-            setActiveFile(result.snapshot.nodes[0]?.relPath ?? result.snapshot.name);
-            setWorkspaceStatus(`${result.snapshot.nodes.length} items indexed from ${result.snapshot.name}.`);
+            await refreshRecentWorkspaces();
         } catch (error) {
             const message = error instanceof Error ? error.message : '';
             if (message.includes('undefined') || message.includes('window')) {
@@ -63,6 +68,27 @@ export function NexusDeskShell({state, workspace, onWorkspaceChange}: NexusDeskS
                 return;
             }
             setWorkspaceStatus(message || 'Workspace picker is available in the desktop runtime.');
+        } finally {
+            setIsOpeningWorkspace(false);
+        }
+    }
+
+    async function reopenWorkspace(recentWorkspace: RecentWorkspace) {
+        setIsOpeningWorkspace(true);
+        setWorkspaceStatus(`Opening ${recentWorkspace.name}...`);
+
+        try {
+            const result = await OpenWorkspace(recentWorkspace.path);
+            if (applyWorkspaceResult(result, 'indexed')) {
+                await refreshRecentWorkspaces();
+            }
+        } catch (error) {
+            const message = error instanceof Error ? error.message : '';
+            if (message.includes('undefined') || message.includes('window')) {
+                setWorkspaceStatus('Recent workspaces are available in the desktop runtime.');
+                return;
+            }
+            setWorkspaceStatus(message || `Could not open ${recentWorkspace.name}.`);
         } finally {
             setIsOpeningWorkspace(false);
         }
@@ -79,16 +105,10 @@ export function NexusDeskShell({state, workspace, onWorkspaceChange}: NexusDeskS
 
         try {
             const result = await RefreshWorkspace();
-            if (!result.selected) {
+            if (!applyWorkspaceResult(result, 'refreshed')) {
                 setWorkspaceStatus('Open a workspace before refreshing.');
                 return;
             }
-
-            onWorkspaceChange(result.snapshot);
-            if (!result.snapshot.nodes.some((node) => node.relPath === activeFile)) {
-                setActiveFile(result.snapshot.nodes[0]?.relPath ?? result.snapshot.name);
-            }
-            setWorkspaceStatus(`${result.snapshot.nodes.length} items refreshed from ${result.snapshot.name}.`);
         } catch (error) {
             const message = error instanceof Error ? error.message : '';
             if (message.includes('undefined') || message.includes('window')) {
@@ -98,6 +118,27 @@ export function NexusDeskShell({state, workspace, onWorkspaceChange}: NexusDeskS
             setWorkspaceStatus(message || 'Workspace refresh failed.');
         } finally {
             setIsRefreshingWorkspace(false);
+        }
+    }
+
+    function applyWorkspaceResult(result: WorkspaceOpenResult, verb: 'indexed' | 'refreshed') {
+        if (!result.selected) {
+            return false;
+        }
+
+        onWorkspaceChange(result.snapshot);
+        if (!result.snapshot.nodes.some((node) => node.relPath === activeFile)) {
+            setActiveFile(result.snapshot.nodes[0]?.relPath ?? result.snapshot.name);
+        }
+        setWorkspaceStatus(`${result.snapshot.nodes.length} items ${verb} from ${result.snapshot.name}.`);
+        return true;
+    }
+
+    async function refreshRecentWorkspaces() {
+        try {
+            onRecentWorkspacesChange(await GetRecentWorkspaces());
+        } catch {
+            onRecentWorkspacesChange([]);
         }
     }
 
@@ -148,6 +189,23 @@ export function NexusDeskShell({state, workspace, onWorkspaceChange}: NexusDeskS
                 </div>
 
                 <div className="tree-list">
+                    {!workspace && recentWorkspaces.length > 0 && (
+                        <div className="recent-list">
+                            <div className="section-label">Recent</div>
+                            {recentWorkspaces.slice(0, 4).map((recentWorkspace) => (
+                                <button
+                                    key={recentWorkspace.path}
+                                    className="recent-item"
+                                    onClick={() => reopenWorkspace(recentWorkspace)}
+                                    disabled={isOpeningWorkspace}
+                                >
+                                    <strong>{recentWorkspace.name}</strong>
+                                    <small>{recentWorkspace.path}</small>
+                                </button>
+                            ))}
+                        </div>
+                    )}
+
                     {workspace ? (
                         <>
                             <div className="workspace-summary">

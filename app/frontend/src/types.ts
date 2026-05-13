@@ -32,6 +32,12 @@ export type WorkspaceOpenResult = {
     snapshot: WorkspaceSnapshot;
 };
 
+export type RecentWorkspace = {
+    name: string;
+    path: string;
+    lastOpened: string;
+};
+
 export type ToolEvent = {
     time: string;
     title: string;
