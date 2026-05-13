@@ -1,6 +1,8 @@
+import {useState} from 'react';
 import {brandAssets, capabilityIconByTitle} from '../../brand/assets';
 import {Button, EmptyState, InlineAlert, LoadingState, StatusBadge} from '../../components/ui';
 import type {Capability, DatasetProfile, DatasetQueryResult, FilePreview, FileWriteProposal, TablePreview, WorkspaceArtifact, WorkspaceSnapshot} from '../../types';
+import {ChatMessageContent} from './ChatMessageContent';
 import {HighlightedCode} from './HighlightedCode';
 
 type WorkbenchPanelProps = {
@@ -82,6 +84,7 @@ export function WorkbenchPanel({
     writeProposal,
     workspace,
 }: WorkbenchPanelProps) {
+    const [markdownViewMode, setMarkdownViewMode] = useState<'source' | 'rendered'>('source');
     const canExplainContext = Boolean(
         workspace && (
             (filePreview?.kind === 'file' && filePreview.content) ||
@@ -91,6 +94,7 @@ export function WorkbenchPanel({
     );
     const canEditContext = Boolean(workspace && filePreview?.kind === 'file' && filePreview.content && !filePreview.table);
     const canProfileDataset = Boolean(workspace && filePreview?.fileType === 'data');
+    const canRenderMarkdown = Boolean(filePreview?.kind === 'file' && filePreview.content && isMarkdownFile(filePreview.name));
 
     return (
         <main className="workbench">
@@ -153,7 +157,25 @@ export function WorkbenchPanel({
                                 </div>
                             ))}
                         </div>
-                        <small>{selectedMeta}</small>
+                        <div className="editor-tab-actions">
+                            {canRenderMarkdown && (
+                                <div className="markdown-view-toggle" aria-label="Markdown view mode">
+                                    <button
+                                        className={markdownViewMode !== 'rendered' ? 'active' : ''}
+                                        onClick={() => setMarkdownViewMode('source')}
+                                    >
+                                        Source
+                                    </button>
+                                    <button
+                                        className={markdownViewMode === 'rendered' ? 'active' : ''}
+                                        onClick={() => setMarkdownViewMode('rendered')}
+                                    >
+                                        Preview
+                                    </button>
+                                </div>
+                            )}
+                            <small>{selectedMeta}</small>
+                        </div>
                     </div>
                     {workspace ? (
                         <div className="file-preview" aria-label="Workspace file preview">
@@ -205,6 +227,13 @@ export function WorkbenchPanel({
                                     onPreview={onPreviewFileWrite}
                                     proposal={writeProposal}
                                 />
+                            ) : filePreview?.content && markdownViewMode === 'rendered' && isMarkdownFile(filePreview.name) ? (
+                                <>
+                                    {filePreview.message && <InlineAlert>{filePreview.message}</InlineAlert>}
+                                    <div className="markdown-document-preview">
+                                        <ChatMessageContent content={filePreview.content} />
+                                    </div>
+                                </>
                             ) : filePreview?.content ? (
                                 <>
                                     {filePreview.message && <InlineAlert>{filePreview.message}</InlineAlert>}
@@ -280,6 +309,10 @@ export function WorkbenchPanel({
             </section>
         </main>
     );
+}
+
+function isMarkdownFile(fileName: string) {
+    return /\.mdx?$/i.test(fileName);
 }
 
 function DatasetQueryPanel({

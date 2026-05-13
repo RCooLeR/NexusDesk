@@ -54,6 +54,7 @@ This tracker reflects the repository as it exists today and keeps planned work s
 - [x] Frontend switches from scaffold preview to indexed workspace nodes after folder selection.
 - [x] Center workbench pane previews selected workspace text files.
 - [x] Center workbench pane keeps recently opened previews in closeable editor tabs.
+- [x] Markdown files in the editor can switch between source and rendered preview.
 - [x] Workspace refresh preserves the selected file when it still exists.
 - [x] Workspace open/refresh auto-loads a preview for the selected or first file node.
 - [x] Preview button reloads the selected workspace preview from disk.
@@ -154,6 +155,7 @@ This tracker reflects the repository as it exists today and keeps planned work s
 - [x] Add streaming chat responses.
 - [x] Add first pinned multi-file context pack for chat.
 - [x] Add closeable editor tabs for multiple opened file previews.
+- [x] Add a source/rendered preview switch for Markdown editor tabs.
 - [x] Replace the compact chat input with a readable conversation panel and multiline prompt composer.
 - [x] Add safe dependency-free Markdown-style rendering for chat responses.
 - [x] Add individual context pack file removal.
