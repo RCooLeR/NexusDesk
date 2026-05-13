@@ -85,23 +85,21 @@ export function NexusDeskShell({
     }
 
     async function selectWorkspaceNode(node: FileNode) {
-        setActiveFile(node.relPath);
-        setFilePreview(null);
+        await previewWorkspaceNode(node, true);
+    }
+
+    async function previewWorkspaceNode(node: FileNode, updateActiveFile: boolean) {
+        if (updateActiveFile) {
+            setActiveFile(node.relPath);
+        }
 
         if (node.kind === 'directory') {
-            setFilePreview({
-                relPath: node.relPath,
-                name: node.name,
-                kind: 'directory',
-                fileType: node.fileType,
-                content: '',
-                truncated: false,
-                message: 'Select a file inside this folder to preview its contents.',
-                size: 0,
-            });
+            setIsLoadingPreview(false);
+            setFilePreview(createDirectoryPreview(node));
             return;
         }
 
+        setFilePreview(null);
         setIsLoadingPreview(true);
         try {
             const preview = await ReadWorkspaceFile(node.relPath);
@@ -136,13 +134,26 @@ export function NexusDeskShell({
         }
     }
 
+    function createDirectoryPreview(node: FileNode): FilePreview {
+        return {
+            relPath: node.relPath,
+            name: node.name,
+            kind: 'directory',
+            fileType: node.fileType,
+            content: '',
+            truncated: false,
+            message: 'Select a file inside this folder to preview its contents.',
+            size: 0,
+        };
+    }
+
     async function openWorkspace() {
         setIsOpeningWorkspace(true);
         setWorkspaceStatus('Waiting for folder selection...');
 
         try {
             const result = await SelectWorkspace();
-            if (!applyWorkspaceResult(result, 'indexed')) {
+            if (!(await applyWorkspaceResult(result, 'indexed'))) {
                 setWorkspaceStatus('Workspace selection cancelled.');
                 return;
             }
@@ -165,7 +176,7 @@ export function NexusDeskShell({
 
         try {
             const result = await OpenWorkspace(recentWorkspace.path);
-            if (applyWorkspaceResult(result, 'indexed')) {
+            if (await applyWorkspaceResult(result, 'indexed')) {
                 await refreshRecentWorkspaces();
             }
         } catch (error) {
@@ -191,7 +202,7 @@ export function NexusDeskShell({
 
         try {
             const result = await RefreshWorkspace();
-            if (!applyWorkspaceResult(result, 'refreshed')) {
+            if (!(await applyWorkspaceResult(result, 'refreshed'))) {
                 setWorkspaceStatus('Open a workspace before refreshing.');
                 return;
             }
@@ -207,18 +218,32 @@ export function NexusDeskShell({
         }
     }
 
-    function applyWorkspaceResult(result: WorkspaceOpenResult, verb: 'indexed' | 'refreshed') {
+    async function applyWorkspaceResult(result: WorkspaceOpenResult, verb: 'indexed' | 'refreshed') {
         if (!result.selected) {
             return false;
         }
 
+        const selectedNode = selectNodeAfterWorkspaceUpdate(result.snapshot);
+
         onWorkspaceChange(result.snapshot);
-        setFilePreview(null);
-        if (!result.snapshot.nodes.some((node) => node.relPath === activeFile)) {
-            setActiveFile(result.snapshot.nodes[0]?.relPath ?? result.snapshot.name);
+        if (selectedNode) {
+            setActiveFile(selectedNode.relPath);
+            await previewWorkspaceNode(selectedNode, false);
+        } else {
+            setActiveFile(result.snapshot.name);
+            setFilePreview(null);
         }
         setWorkspaceStatus(`${result.snapshot.nodes.length} items ${verb} from ${result.snapshot.name}.`);
         return true;
+    }
+
+    function selectNodeAfterWorkspaceUpdate(snapshot: WorkspaceSnapshot) {
+        const previousSelection = snapshot.nodes.find((node) => node.relPath === activeFile);
+        if (previousSelection) {
+            return previousSelection;
+        }
+
+        return snapshot.nodes.find((node) => node.kind === 'file') ?? snapshot.nodes[0] ?? null;
     }
 
     async function refreshRecentWorkspaces() {

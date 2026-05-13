@@ -27,6 +27,8 @@ This tracker reflects the repository as it exists today and keeps planned work s
 - [x] Desktop workspace picker is bound through `SelectWorkspace`.
 - [x] Frontend switches from scaffold preview to indexed workspace nodes after folder selection.
 - [x] Center workbench pane previews selected workspace text files.
+- [x] Workspace refresh preserves the selected file when it still exists.
+- [x] Workspace open/refresh auto-loads a preview for the selected or first file node.
 - [x] Backend remembers the selected workspace root for the session.
 - [x] Refresh action rescans the active workspace through `RefreshWorkspace`.
 - [x] Recent workspace store exists at `app/internal/storage/`.
@@ -65,7 +67,8 @@ This tracker reflects the repository as it exists today and keeps planned work s
 - [x] Add safe text file preview for selected workspace files.
 - [x] Persist recent workspaces locally.
 - [x] Add refresh behavior for the currently opened workspace.
-- [ ] Preserve selected file and expanded tree state across refreshes.
+- [x] Preserve selected file across refreshes.
+- [ ] Add expandable tree state once nested tree rendering replaces the flat indexed list.
 - [x] Add recent workspace remove/clear actions.
 - [x] Add local settings storage for LLM provider configuration.
 - [x] Add LLM connection test.
