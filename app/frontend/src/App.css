@@ -560,6 +560,11 @@ button:disabled {
     gap: 12px;
 }
 
+.chat-thread {
+    display: grid;
+    gap: 8px;
+}
+
 .settings-card {
     background: var(--nd-panel);
     border: 1px solid var(--nd-border);
@@ -683,11 +688,26 @@ button:disabled {
     color: #9a3412;
 }
 
-.assistant-message {
+.assistant-message,
+.user-message {
     background: var(--nd-panel-soft);
     border: 1px solid var(--nd-border-soft);
     border-radius: var(--nd-radius-sm);
     padding: 12px;
+}
+
+.user-message {
+    background: #eef4ff;
+    border-color: #c7d7fe;
+}
+
+.assistant-message small,
+.user-message small,
+.chat-status {
+    display: block;
+    margin-top: 6px;
+    color: var(--nd-muted-text);
+    font-size: 12px;
 }
 
 .prompt-box {
@@ -697,6 +717,16 @@ button:disabled {
     min-height: 42px;
     padding: 4px 4px 4px 12px;
     color: var(--nd-muted-text);
+}
+
+.prompt-box input {
+    min-width: 0;
+    width: 100%;
+    border: 0;
+    background: transparent;
+    color: #111827;
+    font: inherit;
+    outline: none;
 }
 
 .timeline {

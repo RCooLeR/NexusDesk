@@ -1,6 +1,7 @@
 import {useEffect, useMemo, useState} from 'react';
 import type {ChangeEvent} from 'react';
 import {
+    AskLLM,
     ClearRecentWorkspaces,
     GetRecentWorkspaces,
     OpenWorkspace,
@@ -16,6 +17,7 @@ import {Button, EmptyState, IconButton, InlineAlert, LoadingState, StatusBadge} 
 import type {
     FileNode,
     FilePreview,
+    LLMChatResult,
     LLMProbeResult,
     LLMSettings,
     RecentWorkspace,
@@ -32,6 +34,12 @@ type NexusDeskShellProps = {
     onWorkspaceChange: (workspace: WorkspaceSnapshot) => void;
     onRecentWorkspacesChange: (workspaces: RecentWorkspace[]) => void;
     onLLMSettingsChange: (settings: LLMSettings) => void;
+};
+
+type ChatMessage = {
+    content: string;
+    contextRelPath?: string;
+    role: 'assistant' | 'user';
 };
 
 const fileIconByType: Record<string, string> = {
@@ -65,6 +73,10 @@ export function NexusDeskShell({
     const [isSavingSettings, setIsSavingSettings] = useState(false);
     const [isTestingConnection, setIsTestingConnection] = useState(false);
     const [probeResult, setProbeResult] = useState<LLMProbeResult | null>(null);
+    const [chatPrompt, setChatPrompt] = useState('');
+    const [chatMessages, setChatMessages] = useState<ChatMessage[]>([]);
+    const [chatStatus, setChatStatus] = useState('Select text context and ask the assistant.');
+    const [isSendingPrompt, setIsSendingPrompt] = useState(false);
 
     useEffect(() => {
         setSettingsDraft(llmSettings);
@@ -425,6 +437,49 @@ export function NexusDeskShell({
         }
     }
 
+    async function sendPrompt() {
+        const prompt = chatPrompt.trim();
+        if (!prompt) {
+            setChatStatus('Write a prompt before sending.');
+            return;
+        }
+
+        const contextRelPath = filePreview?.content ? filePreview.relPath : '';
+        setIsSendingPrompt(true);
+        setChatStatus(contextRelPath ? `Sending with ${contextRelPath} as context...` : 'Sending without selected file context...');
+        setChatMessages((current) => [...current, {content: prompt, contextRelPath, role: 'user'}]);
+        setChatPrompt('');
+
+        try {
+            const result: LLMChatResult = await AskLLM(prompt, contextRelPath);
+            setChatMessages((current) => [
+                ...current,
+                {
+                    content: result.message,
+                    contextRelPath: result.contextRelPath,
+                    role: 'assistant',
+                },
+            ]);
+            setChatStatus(result.contextRelPath ? `Answered with ${result.contextRelPath}.` : `Answered by ${result.model}.`);
+        } catch (error) {
+            const message = error instanceof Error ? error.message : '';
+            if (message.includes('undefined') || message.includes('window')) {
+                setChatStatus('Chat is available in the desktop runtime.');
+                return;
+            }
+            setChatMessages((current) => [
+                ...current,
+                {
+                    content: message || 'The provider did not return a usable chat response.',
+                    role: 'assistant',
+                },
+            ]);
+            setChatStatus(message || 'Chat request failed.');
+        } finally {
+            setIsSendingPrompt(false);
+        }
+    }
+
     return (
         <div className="app-shell">
             <aside className="workspace-rail">
@@ -632,14 +687,39 @@ export function NexusDeskShell({
                 </header>
 
                 <div className="chat-card">
-                    <div className="assistant-message">
-                        <strong>NexusDesk</strong>
-                        <p>Ready to connect a model, read selected files, and turn source context into auditable work.</p>
+                    <div className="chat-thread">
+                        {chatMessages.length === 0 ? (
+                            <div className="assistant-message">
+                                <strong>NexusDesk</strong>
+                                <p>Ready to connect a model, read selected files, and turn source context into auditable work.</p>
+                            </div>
+                        ) : (
+                            chatMessages.slice(-4).map((message, index) => (
+                                <div className={message.role === 'user' ? 'user-message' : 'assistant-message'} key={`${message.role}-${index}-${message.content}`}>
+                                    <strong>{message.role === 'user' ? 'You' : 'NexusDesk'}</strong>
+                                    <p>{message.content}</p>
+                                    {message.contextRelPath && <small>{message.contextRelPath}</small>}
+                                </div>
+                            ))
+                        )}
                     </div>
                     <div className="prompt-box">
-                        <span>Ask about the workspace...</span>
-                        <Button title="Send prompt" variant="primary">Send</Button>
+                        <input
+                            aria-label="Ask about the workspace"
+                            onChange={(event) => setChatPrompt(event.target.value)}
+                            onKeyDown={(event) => {
+                                if (event.key === 'Enter') {
+                                    void sendPrompt();
+                                }
+                            }}
+                            placeholder="Ask about the workspace..."
+                            value={chatPrompt}
+                        />
+                        <Button disabled={isSendingPrompt} onClick={() => void sendPrompt()} title="Send prompt" variant="primary">
+                            {isSendingPrompt ? 'Sending...' : 'Send'}
+                        </Button>
                     </div>
+                    <small className="chat-status">{chatStatus}</small>
                 </div>
 
                 <section className="settings-card">

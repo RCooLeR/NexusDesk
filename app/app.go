@@ -44,6 +44,8 @@ type WorkspaceOpenResult struct {
 	Snapshot workspace.WorkspaceSnapshot `json:"snapshot"`
 }
 
+const chatContextMaxBytes = 16 * 1024
+
 type App struct {
 	ctx           context.Context
 	llmClient     *llm.Client
@@ -180,6 +182,50 @@ func (a *App) TestLLMConnection(settings storage.LLMSettings) (llm.ProbeResult, 
 	}
 
 	return a.llmClient.Probe(context.Background(), resolvedSettings)
+}
+
+func (a *App) AskLLM(prompt string, relPath string) (llm.ChatResult, error) {
+	settings, err := a.llmStore.Get()
+	if err != nil {
+		return llm.ChatResult{}, err
+	}
+
+	resolvedSettings, err := a.llmStore.ResolveForUse(settings)
+	if err != nil {
+		return llm.ChatResult{}, err
+	}
+
+	chatRequest := llm.ChatRequest{
+		Prompt: prompt,
+	}
+
+	if relPath != "" {
+		contextPreview, err := a.previewChatContext(relPath)
+		if err != nil {
+			return llm.ChatResult{}, err
+		}
+		chatRequest.ContextRelPath = contextPreview.RelPath
+		chatRequest.ContextContent = contextPreview.Content
+	}
+
+	return a.llmClient.Chat(context.Background(), resolvedSettings, chatRequest)
+}
+
+func (a *App) previewChatContext(relPath string) (workspace.FilePreview, error) {
+	root := a.getWorkspaceRoot()
+	if root == "" {
+		return workspace.FilePreview{}, errors.New("open a workspace before sending selected file context")
+	}
+
+	contextPreview, err := workspace.Preview(root, relPath, workspace.PreviewOptions{MaxBytes: chatContextMaxBytes})
+	if err != nil {
+		return workspace.FilePreview{}, err
+	}
+	if contextPreview.Content == "" {
+		return workspace.FilePreview{}, errors.New("selected file cannot be sent as text context")
+	}
+
+	return contextPreview, nil
 }
 
 func (a *App) openWorkspace(root string) (WorkspaceOpenResult, error) {

@@ -1,5 +1,23 @@
 export namespace llm {
-	
+
+	export class ChatResult {
+	    message: string;
+	    model: string;
+	    endpoint: string;
+	    contextRelPath: string;
+
+	    static createFrom(source: any = {}) {
+	        return new ChatResult(source);
+	    }
+
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.message = source["message"];
+	        this.model = source["model"];
+	        this.endpoint = source["endpoint"];
+	        this.contextRelPath = source["contextRelPath"];
+	    }
+	}
 	export class ProbeResult {
 	    ok: boolean;
 	    message: string;

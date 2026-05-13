@@ -67,6 +67,13 @@ export type LLMProbeResult = {
     warnings: string[];
 };
 
+export type LLMChatResult = {
+    message: string;
+    model: string;
+    endpoint: string;
+    contextRelPath: string;
+};
+
 export type ToolEvent = {
     time: string;
     title: string;

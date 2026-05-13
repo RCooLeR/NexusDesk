@@ -41,9 +41,9 @@ Deliverables:
 - LLM settings screen: implemented
 - LLM connection test for OpenAI-compatible `/models`: implemented
 - LLM capability hints from provider model IDs: implemented
-- chat with configured LLM URL
+- non-streaming chat with configured OpenAI-compatible LLM URL: implemented
 - chat history per workspace
-- read selected file into chat context
+- read selected text file into chat context: implemented
 
 Exit criteria:
 
@@ -59,7 +59,8 @@ Current status:
 - Text preview stays inside the approved workspace root and refuses binary/unsafe paths.
 - Recent workspaces and LLM settings persist locally.
 - API keys are masked before leaving backend settings storage, but OS credential storage is still pending.
-- Chat, context packaging, Monaco, image/PDF previews, and SQLite persistence are still planned.
+- Non-streaming chat works with the configured model and optional selected file context.
+- Persistent chat history, multi-file context packaging, Monaco, image/PDF previews, and SQLite persistence are still planned.
 
 ## Phase 2: Files, Documents, And Artifacts
 

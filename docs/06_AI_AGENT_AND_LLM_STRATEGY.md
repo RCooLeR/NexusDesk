@@ -83,8 +83,12 @@ Current implementation:
 - OS credential storage is still planned before production release.
 - `app/internal/llm/probe.go` tests OpenAI-compatible `/models` endpoints.
 - The probe returns model count, a small model sample, capability hints, and configured-model warnings.
+- `app/internal/llm/chat.go` sends non-streaming OpenAI-compatible `/chat/completions` requests.
+- `AskLLM` in `app/app.go` resolves saved settings and attaches selected workspace text context server-side.
 
 Capability hints are currently inferred from model IDs. They are useful for readiness signals, but they are not a substitute for provider-native capability metadata.
+
+The current chat implementation requires an explicit configured model. It includes at most a bounded selected text preview as context and does not yet store chat history, stream responses, call tools, or build multi-file context packs.
 
 ## Agent Modes
 
@@ -236,6 +240,13 @@ Loop limits:
 - max output size per tool
 - max retries after tool failure
 - stop if the model repeats the same failed action
+
+Current implementation:
+
+- one user prompt maps to one non-streaming provider request
+- no tool loop is active yet
+- selected file context is read through the same rooted preview boundary as the source preview pane
+- chat messages are held in frontend memory only
 
 ## Prompt Contracts
 
