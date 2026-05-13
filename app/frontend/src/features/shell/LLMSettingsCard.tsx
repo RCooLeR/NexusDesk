@@ -2,6 +2,17 @@ import type {ChangeEvent} from 'react';
 import {Button, Card} from '../../components/ui';
 import type {LLMProbeResult, LLMSettings} from '../../types';
 
+const recommendedModelOptions = [
+    {id: 'qwen3:4b-instruct', label: 'Qwen3 4B Instruct - fast local'},
+    {id: 'qwen3:8b', label: 'Qwen3 8B - balanced'},
+    {id: 'qwen3.5:9b', label: 'Qwen3.5 9B - workspace chat'},
+    {id: 'phi4:14b', label: 'Phi-4 14B - reasoning'},
+    {id: 'phi4-reasoning:14b', label: 'Phi-4 Reasoning 14B - deep reasoning'},
+    {id: 'gpt-oss:20b', label: 'GPT-OSS 20B - strong general'},
+    {id: 'mistral-small3.2:latest', label: 'Mistral Small 3.2 - long context'},
+    {id: 'gemma4:26b', label: 'Gemma 4 26B - max local'},
+];
+
 type LLMSettingsCardProps = {
     isSavingSettings: boolean;
     isTestingConnection: boolean;
@@ -24,8 +35,10 @@ export function LLMSettingsCard({
     settingsStatus,
 }: LLMSettingsCardProps) {
     function updateField(field: keyof LLMSettings) {
-        return (event: ChangeEvent<HTMLInputElement>) => onSettingsDraftChange(field, event.target.value);
+        return (event: ChangeEvent<HTMLInputElement | HTMLSelectElement>) => onSettingsDraftChange(field, event.target.value);
     }
+
+    const hasCustomModel = settingsDraft.model !== '' && !recommendedModelOptions.some((option) => option.id === settingsDraft.model);
 
     return (
         <Card className="settings-card">
@@ -44,7 +57,13 @@ export function LLMSettingsCard({
                 </label>
                 <label>
                     <span>Model</span>
-                    <input value={settingsDraft.model} onChange={updateField('model')} placeholder="Optional" />
+                    <select value={settingsDraft.model} onChange={updateField('model')}>
+                        <option value="">Select model...</option>
+                        {hasCustomModel && <option value={settingsDraft.model}>{settingsDraft.model} - current custom</option>}
+                        {recommendedModelOptions.map((option) => (
+                            <option key={option.id} value={option.id}>{option.label}</option>
+                        ))}
+                    </select>
                 </label>
                 <label>
                     <span>API Key</span>

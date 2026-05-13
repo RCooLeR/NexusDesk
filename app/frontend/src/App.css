@@ -955,10 +955,12 @@ button:disabled {
     font-weight: 700;
 }
 
-.settings-form input {
+.settings-form input,
+.settings-form select {
     width: 100%;
     border: 1px solid #cbd5e1;
     border-radius: var(--nd-radius-sm);
+    background: var(--nd-pure-white);
     color: #111827;
     font: inherit;
     min-height: 34px;
@@ -966,7 +968,8 @@ button:disabled {
     padding: 0 10px;
 }
 
-.settings-form input:focus {
+.settings-form input:focus,
+.settings-form select:focus {
     border-color: var(--nd-sky-blue);
     box-shadow: 0 0 0 3px rgba(56, 189, 248, 0.14);
 }

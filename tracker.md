@@ -69,6 +69,7 @@ This tracker reflects the repository as it exists today and keeps planned work s
 - [x] LLM settings store exists at `app/internal/storage/llm_settings.go`.
 - [x] LLM provider settings are persisted to local JSON config.
 - [x] LLM API keys are stored in a sidecar credential blob protected by the OS where available.
+- [x] LLM settings include a curated local model dropdown capped at 26B parameters.
 - [x] Saved LLM API keys are redacted before settings are returned to the UI.
 - [x] Redacted LLM API keys are resolved only inside backend test/save flows that need the stored secret.
 - [x] Agent panel includes a branded LLM provider settings form.
@@ -132,6 +133,7 @@ This tracker reflects the repository as it exists today and keeps planned work s
 - [x] Add local settings storage for LLM provider configuration.
 - [x] Add LLM connection test.
 - [x] Add LLM capability detection beyond model listing.
+- [x] Add recommended local model choices to settings.
 - [x] Add first non-streaming chat call with selected text context.
 - [x] Persist chat history per workspace.
 - [x] Add streaming chat responses.

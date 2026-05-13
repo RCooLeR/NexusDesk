@@ -30,6 +30,10 @@ LLM API keys are not written into `llm-settings.json`. They are saved in a sidec
 
 `AskLLMStream` emits `nexusdesk:chat-stream` Wails events while `app/internal/llm/chat.go` reads OpenAI-compatible server-sent response chunks. The frontend listens in `NexusDeskShell.tsx`, updates the in-flight assistant message per `delta`, then replaces it with the final persisted response or refreshed workspace chat history when the request completes.
 
+## Local Models
+
+The default local endpoint is `http://localhost:11434/v1`, targeting the `rcooler-ollama` Docker container on this workstation. The settings card recommends only local models at 26B parameters or below: `qwen3:4b-instruct`, `qwen3:8b`, `qwen3.5:9b`, `phi4:14b`, `phi4-reasoning:14b`, `gpt-oss:20b`, `mistral-small3.2:latest`, and `gemma4:26b`.
+
 ## Workspace Previews
 
 `app/internal/workspace/preview.go` keeps text previews rooted and size-limited, decodes UTF-8, UTF-16, and Windows-1251 text variants, parses CSV files into bounded table previews with lightweight column profiles from a larger capped sample, and renders common image/PDF files as capped data URLs for inline display. PDFs also expose simple embedded text extraction when available. Chat context accepts text previews, extracted PDF text, and structured CSV profiles plus bounded samples, so binary payloads and data URLs are not sent to the model as source text.

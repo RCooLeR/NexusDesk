@@ -45,7 +45,7 @@ func DefaultLLMSettings() LLMSettings {
 	return LLMSettings{
 		ProviderName: "Local OpenAI-compatible",
 		BaseURL:      "http://localhost:11434/v1",
-		Model:        "",
+		Model:        "qwen3:8b",
 		APIKey:       "",
 	}
 }

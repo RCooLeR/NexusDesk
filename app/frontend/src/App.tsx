@@ -8,7 +8,7 @@ import './App.css';
 const fallbackLLMSettings: LLMSettings = {
     providerName: 'Local OpenAI-compatible',
     baseUrl: 'http://localhost:11434/v1',
-    model: '',
+    model: 'qwen3:8b',
     apiKey: '',
     updatedAt: '',
 };

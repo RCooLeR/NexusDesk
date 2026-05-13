@@ -48,6 +48,7 @@ Deliverables:
 - UTF-8 BOM, UTF-16, and Windows-1251 text decoding: implemented
 - Monaco editor integration
 - LLM settings screen: implemented
+- recommended local model dropdown capped at 26B: implemented
 - LLM connection test for OpenAI-compatible `/models`: implemented
 - LLM capability hints from provider model IDs: implemented
 - streaming chat with configured OpenAI-compatible LLM URL: implemented
@@ -81,6 +82,7 @@ Current status:
 - PDF previews render inline as capped data URLs from inside the approved workspace root.
 - Recent workspaces and LLM settings persist locally.
 - API keys are masked before leaving backend settings storage and saved in OS-protected credential blobs where available.
+- The LLM settings form defaults to `qwen3:8b` and offers installed local model choices no larger than 26B.
 - Streaming chat works with the configured model and optional selected file context.
 - CSV context is sent as a structured profile plus bounded row sample instead of only raw preview text.
 - Multiple text, CSV, and extracted-PDF previews can be pinned into a bounded context pack for chat.

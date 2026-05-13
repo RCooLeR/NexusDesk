@@ -22,6 +22,9 @@ func TestLLMSettingsStoreReturnsDefaultsWhenMissing(t *testing.T) {
 	if settings.BaseURL != "http://localhost:11434/v1" {
 		t.Fatalf("unexpected default base URL: %s", settings.BaseURL)
 	}
+	if settings.Model != "qwen3:8b" {
+		t.Fatalf("unexpected default model: %s", settings.Model)
+	}
 }
 
 func TestLLMSettingsStoreSavesAndReadsSettings(t *testing.T) {

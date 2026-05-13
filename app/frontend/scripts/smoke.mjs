@@ -16,6 +16,10 @@ const checks = [
         ],
     },
     {
+        file: 'src/features/shell/LLMSettingsCard.tsx',
+        terms: ['recommendedModelOptions', 'qwen3:8b', 'gpt-oss:20b', 'gemma4:26b', '<select'],
+    },
+    {
         file: 'src/features/shell/WorkbenchPanel.tsx',
         terms: ['onPinContext', 'onApplyFileWrite', 'onProfileDataset', 'file-write-editor'],
     },

@@ -73,6 +73,19 @@ Users should be able to configure:
 }
 ```
 
+The settings UI should offer a short recommended-model dropdown for local Ollama-style providers while preserving the same stored model string used by custom OpenAI-compatible endpoints. The current recommended set intentionally stays at 26B parameters or below:
+
+```text
+qwen3:4b-instruct
+qwen3:8b
+qwen3.5:9b
+phi4:14b
+phi4-reasoning:14b
+gpt-oss:20b
+mistral-small3.2:latest
+gemma4:26b
+```
+
 Capabilities should be explicit. The app should not assume every model supports tool calling, vision, embeddings, or image generation.
 
 Current implementation:
@@ -80,6 +93,7 @@ Current implementation:
 - `app/internal/storage/llm_settings.go` stores provider name, base URL, and model in local JSON config.
 - Saved API keys are stored in a sidecar credential blob protected by the OS where available and are redacted before settings are returned to the frontend.
 - When the frontend sends the redacted API key marker back, the backend resolves the stored secret only for save/test flows that need it.
+- The frontend settings card exposes a curated local model dropdown capped at 26B parameters.
 - `app/internal/llm/probe.go` tests OpenAI-compatible `/models` endpoints.
 - The probe returns model count, a small model sample, capability hints, and configured-model warnings.
 - `app/internal/llm/chat.go` sends OpenAI-compatible `/chat/completions` requests, including streaming responses through server-sent `data:` chunks.
