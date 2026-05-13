@@ -77,10 +77,9 @@ Capabilities should be explicit. The app should not assume every model supports 
 
 Current implementation:
 
-- `app/internal/storage/llm_settings.go` stores provider name, base URL, model, and API key in local JSON config.
-- Saved API keys are redacted before settings are returned to the frontend.
+- `app/internal/storage/llm_settings.go` stores provider name, base URL, and model in local JSON config.
+- Saved API keys are stored in a sidecar credential blob protected by the OS where available and are redacted before settings are returned to the frontend.
 - When the frontend sends the redacted API key marker back, the backend resolves the stored secret only for save/test flows that need it.
-- OS credential storage is still planned before production release.
 - `app/internal/llm/probe.go` tests OpenAI-compatible `/models` endpoints.
 - The probe returns model count, a small model sample, capability hints, and configured-model warnings.
 - `app/internal/llm/chat.go` sends OpenAI-compatible `/chat/completions` requests, including streaming responses through server-sent `data:` chunks.

@@ -30,6 +30,7 @@ Deliverables:
 - Wails desktop app shell: implemented
 - frontend layout with project tree, editor area, and chat panel: implemented
 - local JSON app config for recent workspaces and LLM settings: implemented
+- OS-protected API key credential storage: implemented
 - local SQLite app database: planned
 - controlled Markdown artifact writer: implemented
 - workspace open/recent workspaces: implemented
@@ -78,7 +79,7 @@ Current status:
 - Common image previews render inline as capped data URLs from inside the approved workspace root.
 - PDF previews render inline as capped data URLs from inside the approved workspace root.
 - Recent workspaces and LLM settings persist locally.
-- API keys are masked before leaving backend settings storage, but OS credential storage is still pending.
+- API keys are masked before leaving backend settings storage and saved in OS-protected credential blobs where available.
 - Streaming chat works with the configured model and optional selected file context.
 - CSV context is sent as a structured profile plus bounded row sample instead of only raw preview text.
 - Multiple text, CSV, and extracted-PDF previews can be pinned into a bounded context pack for chat.

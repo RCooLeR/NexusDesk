@@ -1,6 +1,7 @@
 package storage
 
 import (
+	"encoding/base64"
 	"encoding/json"
 	"errors"
 	"net/url"
@@ -12,6 +13,7 @@ import (
 )
 
 const RedactedAPIKey = "********"
+const storedAPIKeyReference = "__nexusdesk_os_credential_store__"
 
 type LLMSettings struct {
 	ProviderName string `json:"providerName"`
@@ -56,6 +58,15 @@ func (s *LLMSettingsStore) Get() (LLMSettings, error) {
 	if err != nil {
 		return LLMSettings{}, err
 	}
+	if settings.APIKey == storedAPIKeyReference {
+		secret, err := s.readAPIKeySecret()
+		if err != nil {
+			return LLMSettings{}, err
+		}
+		if secret == "" {
+			settings.APIKey = ""
+		}
+	}
 
 	return redactLLMSettings(settings), nil
 }
@@ -65,16 +76,29 @@ func (s *LLMSettingsStore) Save(settings LLMSettings) (LLMSettings, error) {
 	defer s.mu.Unlock()
 
 	settings = normalizeLLMSettings(settings)
+	apiKey := settings.APIKey
 	if settings.APIKey == RedactedAPIKey {
-		existing, err := s.read()
+		existingAPIKey, err := s.existingAPIKey()
 		if err != nil {
 			return LLMSettings{}, err
 		}
-		settings.APIKey = existing.APIKey
+		apiKey = existingAPIKey
 	}
 
 	if err := validateLLMSettings(settings); err != nil {
 		return LLMSettings{}, err
+	}
+
+	if apiKey != "" {
+		if err := s.writeAPIKeySecret(apiKey); err != nil {
+			return LLMSettings{}, err
+		}
+		settings.APIKey = storedAPIKeyReference
+	} else {
+		if err := s.deleteAPIKeySecret(); err != nil {
+			return LLMSettings{}, err
+		}
+		settings.APIKey = ""
 	}
 
 	settings.UpdatedAt = time.Now().UTC().Format(time.RFC3339)
@@ -100,16 +124,16 @@ func (s *LLMSettingsStore) ResolveForUse(settings LLMSettings) (LLMSettings, err
 	defer s.mu.Unlock()
 
 	settings = normalizeLLMSettings(settings)
-	if settings.APIKey != RedactedAPIKey {
+	if settings.APIKey != RedactedAPIKey && settings.APIKey != storedAPIKeyReference {
 		return settings, nil
 	}
 
-	existing, err := s.read()
+	apiKey, err := s.existingAPIKey()
 	if err != nil {
 		return LLMSettings{}, err
 	}
 
-	settings.APIKey = existing.APIKey
+	settings.APIKey = apiKey
 	return settings, nil
 }
 
@@ -128,6 +152,70 @@ func (s *LLMSettingsStore) read() (LLMSettings, error) {
 	}
 
 	return normalizeLLMSettings(settings), nil
+}
+
+func (s *LLMSettingsStore) existingAPIKey() (string, error) {
+	secret, err := s.readAPIKeySecret()
+	if err != nil {
+		return "", err
+	}
+	if secret != "" {
+		return secret, nil
+	}
+
+	existing, err := s.read()
+	if err != nil {
+		return "", err
+	}
+	if existing.APIKey == storedAPIKeyReference || existing.APIKey == RedactedAPIKey {
+		return "", nil
+	}
+	return existing.APIKey, nil
+}
+
+func (s *LLMSettingsStore) apiKeySecretPath() string {
+	return s.path + ".secret"
+}
+
+func (s *LLMSettingsStore) readAPIKeySecret() (string, error) {
+	data, err := os.ReadFile(s.apiKeySecretPath())
+	if os.IsNotExist(err) {
+		return "", nil
+	}
+	if err != nil {
+		return "", err
+	}
+
+	encrypted, err := base64.StdEncoding.DecodeString(strings.TrimSpace(string(data)))
+	if err != nil {
+		return "", err
+	}
+
+	plain, err := unprotectSecret(encrypted)
+	if err != nil {
+		return "", err
+	}
+	return string(plain), nil
+}
+
+func (s *LLMSettingsStore) writeAPIKeySecret(apiKey string) error {
+	protected, err := protectSecret([]byte(apiKey))
+	if err != nil {
+		return err
+	}
+	if err := os.MkdirAll(filepath.Dir(s.apiKeySecretPath()), 0o755); err != nil {
+		return err
+	}
+	encoded := base64.StdEncoding.EncodeToString(protected)
+	return os.WriteFile(s.apiKeySecretPath(), []byte(encoded+"\n"), 0o600)
+}
+
+func (s *LLMSettingsStore) deleteAPIKeySecret() error {
+	err := os.Remove(s.apiKeySecretPath())
+	if os.IsNotExist(err) {
+		return nil
+	}
+	return err
 }
 
 func normalizeLLMSettings(settings LLMSettings) LLMSettings {

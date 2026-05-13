@@ -23,7 +23,7 @@ The current app uses small JSON files in the user's config directory while SQLit
 - `llm-settings.json`
 - `chat-history.json`
 
-These stores live behind `app/internal/storage/` so the later SQLite migration can keep the same app-level boundaries.
+LLM API keys are not written into `llm-settings.json`. They are saved in a sidecar credential blob protected by the OS where available, while the JSON settings file keeps only a storage marker. These stores live behind `app/internal/storage/` so the later SQLite migration can keep the same app-level boundaries.
 
 ## Chat Streaming
 

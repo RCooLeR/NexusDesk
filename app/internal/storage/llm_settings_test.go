@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 )
 
@@ -24,7 +25,8 @@ func TestLLMSettingsStoreReturnsDefaultsWhenMissing(t *testing.T) {
 }
 
 func TestLLMSettingsStoreSavesAndReadsSettings(t *testing.T) {
-	store := NewLLMSettingsStore(filepath.Join(t.TempDir(), "settings.json"))
+	path := filepath.Join(t.TempDir(), "settings.json")
+	store := NewLLMSettingsStore(path)
 
 	saved, err := store.Save(LLMSettings{
 		ProviderName: "Test Provider",
@@ -57,6 +59,18 @@ func TestLLMSettingsStoreSavesAndReadsSettings(t *testing.T) {
 	if read.APIKey != RedactedAPIKey {
 		t.Fatal("expected API key to be redacted")
 	}
+
+	rawData, err := os.ReadFile(path)
+	if err != nil {
+		t.Fatalf("ReadFile failed: %v", err)
+	}
+	if strings.Contains(string(rawData), "secret") {
+		t.Fatal("expected raw settings file to avoid storing the API key")
+	}
+	raw := readRawLLMSettings(t, path)
+	if raw.APIKey != storedAPIKeyReference {
+		t.Fatalf("expected settings to reference OS credential storage, got %q", raw.APIKey)
+	}
 }
 
 func TestLLMSettingsStorePreservesRedactedAPIKeyOnSave(t *testing.T) {
@@ -86,8 +100,15 @@ func TestLLMSettingsStorePreservesRedactedAPIKeyOnSave(t *testing.T) {
 	}
 
 	raw := readRawLLMSettings(t, path)
-	if raw.APIKey != "secret" {
-		t.Fatalf("expected stored secret to be preserved, got %q", raw.APIKey)
+	if raw.APIKey != storedAPIKeyReference {
+		t.Fatalf("expected settings to keep secret reference, got %q", raw.APIKey)
+	}
+	secret, err := store.readAPIKeySecret()
+	if err != nil {
+		t.Fatalf("readAPIKeySecret failed: %v", err)
+	}
+	if secret != "secret" {
+		t.Fatalf("expected stored secret to be preserved, got %q", secret)
 	}
 }
 
@@ -145,6 +166,13 @@ func TestLLMSettingsStoreClearsAPIKeyWhenBlankIsSaved(t *testing.T) {
 	raw := readRawLLMSettings(t, path)
 	if raw.APIKey != "" {
 		t.Fatalf("expected stored key to be cleared, got %q", raw.APIKey)
+	}
+	secret, err := store.readAPIKeySecret()
+	if err != nil {
+		t.Fatalf("readAPIKeySecret failed: %v", err)
+	}
+	if secret != "" {
+		t.Fatalf("expected credential secret to be cleared, got %q", secret)
 	}
 }
 

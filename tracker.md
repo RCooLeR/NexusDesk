@@ -67,6 +67,7 @@ This tracker reflects the repository as it exists today and keeps planned work s
 - [x] Recent workspaces can be removed individually or cleared.
 - [x] LLM settings store exists at `app/internal/storage/llm_settings.go`.
 - [x] LLM provider settings are persisted to local JSON config.
+- [x] LLM API keys are stored in a sidecar credential blob protected by the OS where available.
 - [x] Saved LLM API keys are redacted before settings are returned to the UI.
 - [x] Redacted LLM API keys are resolved only inside backend test/save flows that need the stored secret.
 - [x] Agent panel includes a branded LLM provider settings form.
@@ -136,7 +137,7 @@ This tracker reflects the repository as it exists today and keeps planned work s
 - [x] Add first pinned multi-file context pack for chat.
 - [x] Wire topbar Preview and Explain actions to real workspace/chat behavior.
 - [x] Mask API keys before they leave the backend settings store.
-- [ ] Migrate API keys into OS credential storage before production release.
+- [x] Migrate API keys into OS credential storage before production release.
 - [x] Add first Markdown report artifact creation flow.
 - [x] Add first artifact browser for generated Markdown reports.
 - [x] Add approved text file write flow with diff preview.
@@ -154,7 +155,7 @@ This tracker reflects the repository as it exists today and keeps planned work s
 
 `app/internal/workspace/` owns safe workspace scanning. It should keep ignore rules, depth limits, entry limits, and path safety close to the backend instead of trusting frontend filtering.
 
-`app/internal/storage/` owns local app persistence. Recent workspaces and LLM settings currently use small JSON files in the user's config directory; settings storage can build on the same boundary until SQLite or OS credential storage is introduced.
+`app/internal/storage/` owns local app persistence. Recent workspaces and non-secret LLM settings currently use small JSON files in the user's config directory; LLM API keys are kept in a sidecar credential blob protected by the OS where available.
 
 `services/` is reserved for Docker Compose or supporting development services. It should not contain runtime app state; local service data belongs in ignored folders such as `services/data/`.
 
