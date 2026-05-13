@@ -1,0 +1,3 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="128" height="128" viewBox="0 0 128 128" role="img" aria-label="NexusDesk code icon"><defs><linearGradient id="g" x1="0" y1="0" x2="128" y2="128"><stop offset="0%" stop-color="#7C3AED"/><stop offset="55%" stop-color="#2563EB"/><stop offset="100%" stop-color="#38BDF8"/></linearGradient></defs><rect width="128" height="128" fill="none"/><path d="M46 38 L24 64 L46 90" fill="none" stroke="url(#g)" stroke-width="10" stroke-linecap="round" stroke-linejoin="round"/>
+        <path d="M82 38 L104 64 L82 90" fill="none" stroke="url(#g)" stroke-width="10" stroke-linecap="round" stroke-linejoin="round"/>
+        <path d="M70 30 L56 98" fill="none" stroke="url(#g)" stroke-width="8" stroke-linecap="round"/></svg>

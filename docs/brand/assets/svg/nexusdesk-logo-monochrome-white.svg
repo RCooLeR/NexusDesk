@@ -1,0 +1,14 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="512" height="512" viewBox="0 0 512 512" role="img" aria-label="NexusDesk monochrome symbol">
+    <g>
+      <g opacity="0.75" transform="rotate(-24 256 256)">
+        <ellipse cx="256" cy="256" rx="210" ry="78" fill="none" stroke="#FFFFFF" stroke-width="18" stroke-linecap="round"/>
+        <circle cx="67" cy="256" r="22" fill="#FFFFFF"/>
+        <circle cx="256" cy="178" r="18" fill="#FFFFFF"/>
+        <circle cx="466" cy="256" r="18" fill="#FFFFFF"/>
+        <circle cx="256" cy="334" r="20" fill="#FFFFFF"/>
+      </g>
+      <path d="M128 106 H193 V404 H128 Z" fill="#FFFFFF"/>
+      <path d="M321 106 H386 V404 H321 Z" fill="#FFFFFF"/>
+      <path d="M184 106 H247 L382 404 H319 Z" fill="#FFFFFF"/>
+    </g>
+    </svg>

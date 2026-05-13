@@ -1,0 +1,53 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="850" height="210" viewBox="0 0 850 210" role="img" aria-label="NexusDesk wordmark">
+    
+    <defs>
+      <linearGradient id="ringGrad" x1="0" y1="0" x2="512" y2="512" gradientUnits="userSpaceOnUse">
+        <stop offset="0%" stop-color="#7C3AED"/>
+        <stop offset="48%" stop-color="#2563EB"/>
+        <stop offset="100%" stop-color="#38BDF8"/>
+      </linearGradient>
+      <linearGradient id="ringGrad2" x1="0" y1="512" x2="512" y2="0" gradientUnits="userSpaceOnUse">
+        <stop offset="0%" stop-color="#7C3AED"/>
+        <stop offset="50%" stop-color="#2563EB"/>
+        <stop offset="100%" stop-color="#38BDF8"/>
+      </linearGradient>
+      <linearGradient id="silverGrad" x1="90" y1="80" x2="380" y2="420" gradientUnits="userSpaceOnUse">
+        <stop offset="0%" stop-color="#FFFFFF"/>
+        <stop offset="28%" stop-color="#F8FAFC"/>
+        <stop offset="57%" stop-color="#D1D5DB"/>
+        <stop offset="100%" stop-color="#FFFFFF"/>
+      </linearGradient>
+      <linearGradient id="darkNGrad" x1="90" y1="80" x2="380" y2="420" gradientUnits="userSpaceOnUse">
+        <stop offset="0%" stop-color="#111827"/>
+        <stop offset="100%" stop-color="#0B0F1F"/>
+      </linearGradient>
+      <linearGradient id="deskGrad" x1="0" y1="0" x2="360" y2="0" gradientUnits="userSpaceOnUse">
+        <stop offset="0%" stop-color="#7C3AED"/>
+        <stop offset="52%" stop-color="#2563EB"/>
+        <stop offset="100%" stop-color="#38BDF8"/>
+      </linearGradient>
+      <linearGradient id="appBg" x1="0" y1="0" x2="512" y2="512" gradientUnits="userSpaceOnUse">
+        <stop offset="0%" stop-color="#151B3A"/>
+        <stop offset="56%" stop-color="#0B0F1F"/>
+        <stop offset="100%" stop-color="#050814"/>
+      </linearGradient>
+      <filter id="softGlow" x="-50%" y="-50%" width="200%" height="200%">
+        <feGaussianBlur stdDeviation="7" result="blur"/>
+        <feColorMatrix in="blur" type="matrix" values="0 0 0 0 0.49  0 0 0 0 0.23  0 0 0 0 0.93  0 0 0 0.65 0"/>
+        <feMerge>
+          <feMergeNode/>
+          <feMergeNode in="SourceGraphic"/>
+        </feMerge>
+      </filter>
+      <filter id="shadow" x="-30%" y="-30%" width="160%" height="160%">
+        <feDropShadow dx="0" dy="12" stdDeviation="16" flood-color="#000000" flood-opacity="0.24"/>
+      </filter>
+    </defs>
+    
+    <text x="0" y="95" font-family="Inter, Arial, Helvetica, sans-serif" font-size="92" font-weight="760" letter-spacing="-4">
+      <tspan fill="#FFFFFF">Nexus</tspan><tspan fill="url(#deskGrad)">Desk</tspan>
+    </text>
+    <text x="3" y="151" font-family="Inter, Arial, Helvetica, sans-serif" font-size="26" font-weight="450" fill="#CBD5E1" letter-spacing="0.3">
+      AI Workbench for Code, Data &amp; Ops
+    </text>
+    </svg>

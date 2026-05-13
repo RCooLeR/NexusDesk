@@ -1,0 +1,47 @@
+{
+  "brand": {
+    "name": "NexusDesk",
+    "tagline": "AI Workbench for Code, Data & Ops",
+    "personality": [
+      "intelligent",
+      "connected",
+      "precise",
+      "premium",
+      "local-first"
+    ]
+  },
+  "colors": {
+    "deepIndigo": "#0B0F1F",
+    "nexusViolet": "#7C3AED",
+    "electricBlue": "#2563EB",
+    "skyBlue": "#38BDF8",
+    "silver": "#D1D5DB",
+    "pureWhite": "#FFFFFF",
+    "charcoal": "#0F141B",
+    "mutedText": "#9CA3AF"
+  },
+  "typography": {
+    "primary": "Inter",
+    "fallback": "Arial, Helvetica, sans-serif",
+    "weights": [
+      "Regular 400",
+      "Medium 500",
+      "Semibold 600",
+      "Bold 700"
+    ]
+  },
+  "radii": {
+    "sm": "8px",
+    "md": "14px",
+    "lg": "24px",
+    "xl": "32px"
+  },
+  "logo": {
+    "clearspace": "Minimum clearspace equals the height of the N stem in the symbol.",
+    "minimumSizes": {
+      "horizontal": "160px wide digital",
+      "symbol": "24px digital",
+      "appIcon": "32px digital"
+    }
+  }
+}

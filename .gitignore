@@ -1,0 +1,54 @@
+# OS and editor noise
+.DS_Store
+Thumbs.db
+desktop.ini
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# Environment and local secrets
+.env
+.env.*
+!.env.example
+!.env.*.example
+
+# Logs and diagnostics
+*.log
+logs/
+*.tmp
+*.temp
+
+# Node / frontend
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+dist/
+.vite/
+.svelte-kit/
+
+# Go / Wails
+bin/
+coverage.out
+coverage/
+*.test
+frontend/dist/
+build/bin/
+app/build/bin/
+
+# Local app data and generated artifacts
+data/
+artifacts/
+workspace-cache/
+*.db
+*.db-shm
+*.db-wal
+*.sqlite
+*.sqlite3
+
+# Docker and service runtime state
+services/.env
+services/data/
+services/tmp/
