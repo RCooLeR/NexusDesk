@@ -53,6 +53,8 @@ Deliverables:
 - chat history per workspace: implemented with local JSON config
 - read selected text file into chat context: implemented
 - read selected CSV profile and sample into chat context: implemented
+- pin multiple selected previews into a bounded chat context pack: implemented
+- read extracted PDF text into chat context when available: implemented
 - reload selected preview from disk: implemented
 - explain selected text/code preview through chat: implemented
 - create Markdown report artifact from selected preview: implemented
@@ -79,12 +81,13 @@ Current status:
 - API keys are masked before leaving backend settings storage, but OS credential storage is still pending.
 - Streaming chat works with the configured model and optional selected file context.
 - CSV context is sent as a structured profile plus bounded row sample instead of only raw preview text.
+- Multiple text, CSV, and extracted-PDF previews can be pinned into a bounded context pack for chat.
 - The Preview button reloads the selected file, and the Explain button sends a grounded prompt for selected text/code previews.
 - Persistent chat history works through local JSON config.
-- Multi-file context packaging, Monaco, richer document extraction, and SQLite persistence are still planned.
+- Monaco, richer document extraction, and SQLite persistence are still planned.
 - Markdown report artifacts can be created under `.nexusdesk/artifacts/` without overwriting existing files.
 - The workbench lists generated Markdown artifacts and can reselect visible report files from that list.
-- Multi-file context packaging, Monaco, richer document extraction, richer approval dialogs, and SQLite persistence are still planned.
+- Monaco, richer document extraction, richer approval dialogs, and SQLite persistence are still planned.
 
 ## Phase 2: Files, Documents, And Artifacts
 

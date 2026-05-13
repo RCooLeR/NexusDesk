@@ -82,6 +82,7 @@ This tracker reflects the repository as it exists today and keeps planned work s
 - [x] Selected workspace text previews can be attached as bounded chat context without sending image/PDF data URLs.
 - [x] Selected PDFs with extracted text can be attached as chat context without sending PDF data URLs.
 - [x] Selected CSV previews send a structured column profile and bounded sample as chat context.
+- [x] Multiple selected source previews can be pinned into a bounded chat context pack.
 - [x] Workspace chat history is persisted through `app/internal/storage/chat_history.go`.
 - [x] Report button creates timestamped Markdown artifacts under `.nexusdesk/artifacts/`.
 - [x] Markdown report artifacts are created without overwriting existing files.
@@ -132,6 +133,7 @@ This tracker reflects the repository as it exists today and keeps planned work s
 - [x] Add first non-streaming chat call with selected text context.
 - [x] Persist chat history per workspace.
 - [x] Add streaming chat responses.
+- [x] Add first pinned multi-file context pack for chat.
 - [x] Wire topbar Preview and Explain actions to real workspace/chat behavior.
 - [x] Mask API keys before they leave the backend settings store.
 - [ ] Migrate API keys into OS credential storage before production release.

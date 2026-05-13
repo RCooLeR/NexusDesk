@@ -3,6 +3,7 @@ package main
 import (
 	"strings"
 	"testing"
+	"unicode/utf8"
 
 	"NexusDesk/internal/workspace"
 )
@@ -45,5 +46,25 @@ func TestBuildChatContextContentKeepsTextContent(t *testing.T) {
 
 	if content != "plain text" {
 		t.Fatalf("expected plain text context, got %q", content)
+	}
+}
+
+func TestCleanContextPathsDeduplicatesAndDropsEmptyValues(t *testing.T) {
+	paths := cleanContextPaths([]string{"a.md", "", "a.md", " b.md "})
+
+	if len(paths) != 2 || paths[0] != "a.md" || paths[1] != "b.md" {
+		t.Fatalf("unexpected context paths: %#v", paths)
+	}
+}
+
+func TestTruncateContextStringKeepsUTF8Valid(t *testing.T) {
+	content := "prefix кирилиця"
+	truncated := truncateContextString(content, len("prefix к")+1)
+
+	if !utf8.ValidString(truncated) {
+		t.Fatalf("expected valid UTF-8, got %q", truncated)
+	}
+	if len(truncated) > len("prefix к")+1 {
+		t.Fatalf("expected byte cap to be respected, got %d", len(truncated))
 	}
 }

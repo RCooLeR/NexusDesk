@@ -8,11 +8,13 @@ type AgentPanelProps = {
     chatMessages: ChatMessage[];
     chatPrompt: string;
     chatStatus: string;
+    contextPackPaths: string[];
     isSavingSettings: boolean;
     isSendingPrompt: boolean;
     isTestingConnection: boolean;
     onChatPromptChange: (value: string) => void;
     onClearChatHistory: () => void;
+    onClearContextPack: () => void;
     onSaveSettings: () => void;
     onSendPrompt: () => void;
     onSettingsDraftChange: (field: keyof LLMSettings, value: string) => void;
@@ -28,11 +30,13 @@ export function AgentPanel({
     chatMessages,
     chatPrompt,
     chatStatus,
+    contextPackPaths,
     isSavingSettings,
     isSendingPrompt,
     isTestingConnection,
     onChatPromptChange,
     onClearChatHistory,
+    onClearContextPack,
     onSaveSettings,
     onSendPrompt,
     onSettingsDraftChange,
@@ -56,9 +60,11 @@ export function AgentPanel({
                 chatMessages={chatMessages}
                 chatPrompt={chatPrompt}
                 chatStatus={chatStatus}
+                contextPackPaths={contextPackPaths}
                 isSendingPrompt={isSendingPrompt}
                 onChatPromptChange={onChatPromptChange}
                 onClearChatHistory={onClearChatHistory}
+                onClearContextPack={onClearContextPack}
                 onSendPrompt={onSendPrompt}
             />
 

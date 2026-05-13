@@ -5,9 +5,11 @@ type AgentChatCardProps = {
     chatMessages: ChatMessage[];
     chatPrompt: string;
     chatStatus: string;
+    contextPackPaths: string[];
     isSendingPrompt: boolean;
     onChatPromptChange: (value: string) => void;
     onClearChatHistory: () => void;
+    onClearContextPack: () => void;
     onSendPrompt: () => void;
 };
 
@@ -15,9 +17,11 @@ export function AgentChatCard({
     chatMessages,
     chatPrompt,
     chatStatus,
+    contextPackPaths,
     isSendingPrompt,
     onChatPromptChange,
     onClearChatHistory,
+    onClearContextPack,
     onSendPrompt,
 }: AgentChatCardProps) {
     return (
@@ -41,6 +45,13 @@ export function AgentChatCard({
             {chatMessages.length > 0 && (
                 <div className="chat-actions">
                     <Button onClick={onClearChatHistory} variant="subtle">Clear chat</Button>
+                </div>
+            )}
+            {contextPackPaths.length > 0 && (
+                <div className="context-pack-list">
+                    <strong>{contextPackPaths.length} pinned</strong>
+                    <span>{contextPackPaths.join(', ')}</span>
+                    <Button onClick={onClearContextPack} variant="subtle">Clear pack</Button>
                 </div>
             )}
             <div className="prompt-box">

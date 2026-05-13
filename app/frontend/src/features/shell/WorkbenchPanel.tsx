@@ -23,6 +23,7 @@ type WorkbenchPanelProps = {
     onExplainContext: () => void;
     onCreateReport: () => void;
     onFileDraftChange: (content: string) => void;
+    onPinContext: () => void;
     onPreviewFileWrite: () => void;
     onProfileDataset: () => void;
     onSelectArtifact: (artifact: WorkspaceArtifact) => void;
@@ -53,6 +54,7 @@ export function WorkbenchPanel({
     onExplainContext,
     onCreateReport,
     onFileDraftChange,
+    onPinContext,
     onPreviewFileWrite,
     onProfileDataset,
     onSelectArtifact,
@@ -81,6 +83,9 @@ export function WorkbenchPanel({
                     </Button>
                     <Button disabled={!canExplainContext || isSendingPrompt} onClick={onExplainContext}>
                         {isSendingPrompt ? 'Sending...' : 'Explain'}
+                    </Button>
+                    <Button disabled={!canExplainContext} onClick={onPinContext}>
+                        Pin
                     </Button>
                     <Button disabled={!canEditContext || isLoadingPreview} onClick={onStartFileEdit}>
                         Edit

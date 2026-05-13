@@ -3,7 +3,9 @@ import type {CSSProperties, MouseEvent as ReactMouseEvent} from 'react';
 import {
     ApplyFileWrite,
     AskLLM,
+    AskLLMContextPack,
     AskLLMStream,
+    AskLLMStreamContextPack,
     ClearRecentWorkspaces,
     ClearChatHistory,
     CreateMarkdownReport,
@@ -84,6 +86,7 @@ export function NexusDeskShell({
     const [chatPrompt, setChatPrompt] = useState('');
     const [chatMessages, setChatMessages] = useState<ChatMessage[]>([]);
     const [chatStatus, setChatStatus] = useState('Select text context and ask the assistant.');
+    const [contextPackPaths, setContextPackPaths] = useState<string[]>([]);
     const [artifacts, setArtifacts] = useState<WorkspaceArtifact[]>([]);
     const [datasetProfiles, setDatasetProfiles] = useState<DatasetProfile[]>([]);
     const [activeDatasetProfile, setActiveDatasetProfile] = useState<DatasetProfile | null>(null);
@@ -622,7 +625,9 @@ export function NexusDeskShell({
             return;
         }
 
-        const contextRelPath = selectedTextContextRelPath();
+        const selectedContextRelPath = selectedTextContextRelPath();
+        const contextPaths = contextPackPaths.length > 0 ? contextPackPaths : selectedContextRelPath ? [selectedContextRelPath] : [];
+        const contextRelPath = contextPaths.length > 1 ? `pack: ${contextPaths.join(', ')}` : contextPaths[0] ?? '';
         const requestId = createRequestId();
         const userMessage: ChatMessage = {content: prompt, contextRelPath, createdAt: new Date().toISOString(), role: 'user'};
         const assistantMessage: ChatMessage = {content: '', contextRelPath, createdAt: new Date().toISOString(), role: 'assistant'};
@@ -636,9 +641,13 @@ export function NexusDeskShell({
 
         const unsubscribe = listenForChatStream(requestId, assistantMessage.createdAt, contextRelPath);
         try {
-            const result: LLMChatResult = unsubscribe
-                ? await AskLLMStream(prompt, contextRelPath, requestId)
-                : await AskLLM(prompt, contextRelPath);
+            const result: LLMChatResult = contextPaths.length > 1
+                ? (unsubscribe
+                    ? await AskLLMStreamContextPack(prompt, contextPaths, requestId)
+                    : await AskLLMContextPack(prompt, contextPaths))
+                : (unsubscribe
+                    ? await AskLLMStream(prompt, contextPaths[0] ?? '', requestId)
+                    : await AskLLM(prompt, contextPaths[0] ?? ''));
             if (workspace) {
                 await refreshChatHistory();
             } else {
@@ -665,6 +674,16 @@ export function NexusDeskShell({
             return filePreview.relPath;
         }
         return '';
+    }
+
+    function pinSelectedContext() {
+        const relPath = selectedTextContextRelPath();
+        if (!relPath) {
+            setChatStatus('Select text, CSV, or extracted PDF context before pinning it.');
+            return;
+        }
+        setContextPackPaths((current) => current.includes(relPath) ? current : [...current, relPath]);
+        setChatStatus(`${relPath} pinned to the context pack.`);
     }
 
     async function createMarkdownReport() {
@@ -865,6 +884,7 @@ export function NexusDeskShell({
                 onCreateReport={() => void createMarkdownReport()}
                 onFileDraftChange={setFileDraft}
                 onExplainContext={() => void explainSelectedContext()}
+                onPinContext={pinSelectedContext}
                 onPreviewFileWrite={() => void previewFileWrite()}
                 onProfileDataset={() => void profileSelectedDataset()}
                 onSelectArtifact={(artifact) => void selectArtifact(artifact)}
@@ -879,11 +899,13 @@ export function NexusDeskShell({
                 chatMessages={chatMessages}
                 chatPrompt={chatPrompt}
                 chatStatus={chatStatus}
+                contextPackPaths={contextPackPaths}
                 isSavingSettings={isSavingSettings}
                 isSendingPrompt={isSendingPrompt}
                 isTestingConnection={isTestingConnection}
                 onChatPromptChange={setChatPrompt}
                 onClearChatHistory={() => void clearChatHistory()}
+                onClearContextPack={() => setContextPackPaths([])}
                 onSaveSettings={() => void saveLLMSettings()}
                 onSendPrompt={() => void sendPrompt()}
                 onSettingsDraftChange={updateSettingsDraft}

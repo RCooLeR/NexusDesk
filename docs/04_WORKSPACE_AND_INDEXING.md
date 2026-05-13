@@ -60,7 +60,7 @@ The current app implements the first safe workspace slice:
 - The frontend renders indexed nodes as an expandable tree and preserves expanded directories across refreshes.
 - `app/internal/workspace/preview.go` reads selected files only through a rooted relative path.
 - File previews reject traversal, symlinks, binary or unsupported text encoding content, and oversized previews.
-- Chat context uses the same rooted preview boundary and sends only selected text content.
+- Chat context uses the same rooted preview boundary and sends only selected text content or a bounded pack of pinned previews.
 - Workspace open/recent/refresh flows are bound through Wails methods on `app/app.go`.
 - Recent workspaces are stored in local JSON config through `app/internal/storage/recent_workspaces.go`.
 
@@ -158,6 +158,7 @@ Current implementation:
 - renders PDF files as capped inline data URLs and extracts simple embedded text when available
 - sends selected chat context with a smaller 16 KB cap
 - sends selected CSV chat context as a structured column profile plus bounded row sample
+- builds bounded multi-file context packs from pinned text, CSV, and extracted-PDF previews
 - trims partial UTF-8 characters at truncation boundaries
 - shows unsupported state for binary or unsupported text-encoding files
 - excludes image and PDF data URLs from text chat context, but allows extracted PDF text as context

@@ -9,6 +9,7 @@ import (
 	"strings"
 	"sync"
 	"time"
+	"unicode/utf8"
 
 	"NexusDesk/internal/artifact"
 	"NexusDesk/internal/dataset"
@@ -62,6 +63,8 @@ type ChatStreamEvent struct {
 
 const chatContextMaxBytes = 16 * 1024
 const chatCSVContextMaxRows = 20
+const chatContextPackMaxFiles = 6
+const chatContextPackMaxBytes = 32 * 1024
 const chatStreamEventName = "nexusdesk:chat-stream"
 
 type App struct {
@@ -282,7 +285,7 @@ func (a *App) ClearChatHistory() ([]storage.ChatMessage, error) {
 }
 
 func (a *App) AskLLM(prompt string, relPath string) (llm.ChatResult, error) {
-	chatRequest, settings, err := a.prepareChat(prompt, relPath)
+	chatRequest, settings, err := a.prepareChat(prompt, []string{relPath})
 	if err != nil {
 		return llm.ChatResult{}, err
 	}
@@ -300,7 +303,7 @@ func (a *App) AskLLM(prompt string, relPath string) (llm.ChatResult, error) {
 }
 
 func (a *App) AskLLMStream(prompt string, relPath string, requestID string) (llm.ChatResult, error) {
-	chatRequest, settings, err := a.prepareChat(prompt, relPath)
+	chatRequest, settings, err := a.prepareChat(prompt, []string{relPath})
 	if err != nil {
 		a.emitChatStreamEvent(ChatStreamEvent{RequestID: requestID, Type: "error", Message: err.Error()})
 		return llm.ChatResult{}, err
@@ -337,7 +340,58 @@ func (a *App) AskLLMStream(prompt string, relPath string, requestID string) (llm
 	return result, nil
 }
 
-func (a *App) prepareChat(prompt string, relPath string) (llm.ChatRequest, storage.LLMSettings, error) {
+func (a *App) AskLLMContextPack(prompt string, relPaths []string) (llm.ChatResult, error) {
+	chatRequest, settings, err := a.prepareChat(prompt, relPaths)
+	if err != nil {
+		return llm.ChatResult{}, err
+	}
+
+	result, err := a.llmClient.Chat(context.Background(), settings, chatRequest)
+	if err != nil {
+		return llm.ChatResult{}, err
+	}
+	if err := a.persistChatPair(prompt, chatRequest, result); err != nil {
+		return llm.ChatResult{}, err
+	}
+	return result, nil
+}
+
+func (a *App) AskLLMStreamContextPack(prompt string, relPaths []string, requestID string) (llm.ChatResult, error) {
+	chatRequest, settings, err := a.prepareChat(prompt, relPaths)
+	if err != nil {
+		a.emitChatStreamEvent(ChatStreamEvent{RequestID: requestID, Type: "error", Message: err.Error()})
+		return llm.ChatResult{}, err
+	}
+
+	result, err := a.llmClient.ChatStream(context.Background(), settings, chatRequest, func(delta string) error {
+		a.emitChatStreamEvent(ChatStreamEvent{
+			RequestID:      requestID,
+			Type:           "delta",
+			Delta:          delta,
+			ContextRelPath: chatRequest.ContextRelPath,
+		})
+		return nil
+	})
+	if err != nil {
+		a.emitChatStreamEvent(ChatStreamEvent{RequestID: requestID, Type: "error", Message: err.Error()})
+		return llm.ChatResult{}, err
+	}
+	if err := a.persistChatPair(prompt, chatRequest, result); err != nil {
+		a.emitChatStreamEvent(ChatStreamEvent{RequestID: requestID, Type: "error", Message: err.Error()})
+		return llm.ChatResult{}, err
+	}
+	a.emitChatStreamEvent(ChatStreamEvent{
+		RequestID:      requestID,
+		Type:           "done",
+		Message:        result.Message,
+		Model:          result.Model,
+		Endpoint:       result.Endpoint,
+		ContextRelPath: result.ContextRelPath,
+	})
+	return result, nil
+}
+
+func (a *App) prepareChat(prompt string, relPaths []string) (llm.ChatRequest, storage.LLMSettings, error) {
 	settings, err := a.llmStore.Get()
 	if err != nil {
 		return llm.ChatRequest{}, storage.LLMSettings{}, err
@@ -352,13 +406,21 @@ func (a *App) prepareChat(prompt string, relPath string) (llm.ChatRequest, stora
 		Prompt: prompt,
 	}
 
-	if relPath != "" {
-		contextPreview, err := a.previewChatContext(relPath)
+	contextPaths := cleanContextPaths(relPaths)
+	if len(contextPaths) == 1 {
+		contextPreview, err := a.previewChatContext(contextPaths[0])
 		if err != nil {
 			return llm.ChatRequest{}, storage.LLMSettings{}, err
 		}
 		chatRequest.ContextRelPath = contextPreview.RelPath
 		chatRequest.ContextContent = contextPreview.Content
+	} else if len(contextPaths) > 1 {
+		contextRelPath, contextContent, err := a.buildContextPack(contextPaths)
+		if err != nil {
+			return llm.ChatRequest{}, storage.LLMSettings{}, err
+		}
+		chatRequest.ContextRelPath = contextRelPath
+		chatRequest.ContextContent = contextContent
 	}
 
 	return chatRequest, resolvedSettings, nil
@@ -458,6 +520,71 @@ func buildChatContextContent(preview workspace.FilePreview) string {
 	}
 
 	return builder.String()
+}
+
+func (a *App) buildContextPack(relPaths []string) (string, string, error) {
+	if len(relPaths) > chatContextPackMaxFiles {
+		relPaths = relPaths[:chatContextPackMaxFiles]
+	}
+
+	var builder strings.Builder
+	usedPaths := []string{}
+	for _, relPath := range relPaths {
+		preview, err := a.previewChatContext(relPath)
+		if err != nil {
+			return "", "", err
+		}
+
+		entry := "\n\n# Workspace context: " + preview.RelPath + "\n\n" + preview.Content
+		remaining := chatContextPackMaxBytes - builder.Len()
+		if remaining <= 0 {
+			break
+		}
+		truncated := len(entry) > remaining
+		if truncated {
+			entry = truncateContextString(entry, remaining)
+		}
+
+		builder.WriteString(entry)
+		usedPaths = append(usedPaths, preview.RelPath)
+		if truncated {
+			builder.WriteString("\n\n_Context pack truncated._\n")
+			break
+		}
+	}
+	if len(usedPaths) == 0 {
+		return "", "", errors.New("context pack did not include usable text")
+	}
+	return "pack: " + strings.Join(usedPaths, ", "), strings.TrimSpace(builder.String()), nil
+}
+
+func truncateContextString(content string, maxBytes int) string {
+	if maxBytes <= 0 {
+		return ""
+	}
+	if len(content) <= maxBytes {
+		return content
+	}
+
+	truncated := content[:maxBytes]
+	for !utf8.ValidString(truncated) && len(truncated) > 0 {
+		truncated = truncated[:len(truncated)-1]
+	}
+	return truncated
+}
+
+func cleanContextPaths(relPaths []string) []string {
+	seen := map[string]bool{}
+	cleaned := []string{}
+	for _, relPath := range relPaths {
+		relPath = strings.TrimSpace(relPath)
+		if relPath == "" || seen[relPath] {
+			continue
+		}
+		seen[relPath] = true
+		cleaned = append(cleaned, relPath)
+	}
+	return cleaned
 }
 
 func (a *App) openWorkspace(root string) (WorkspaceOpenResult, error) {

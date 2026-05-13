@@ -11,7 +11,11 @@ export function ApplyFileWrite(arg1:workspace.FileWriteRequest):Promise<workspac
 
 export function AskLLM(arg1:string,arg2:string):Promise<llm.ChatResult>;
 
+export function AskLLMContextPack(arg1:string,arg2:Array<string>):Promise<llm.ChatResult>;
+
 export function AskLLMStream(arg1:string,arg2:string,arg3:string):Promise<llm.ChatResult>;
+
+export function AskLLMStreamContextPack(arg1:string,arg2:Array<string>,arg3:string):Promise<llm.ChatResult>;
 
 export function ClearChatHistory():Promise<Array<storage.ChatMessage>>;
 

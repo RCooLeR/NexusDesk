@@ -910,6 +910,34 @@ button:disabled {
     padding: 0 8px;
 }
 
+.context-pack-list {
+    border: 1px solid var(--nd-border-soft);
+    border-radius: var(--nd-radius-sm);
+    background: #fbfdff;
+    display: grid;
+    grid-template-columns: auto minmax(0, 1fr) auto;
+    gap: 8px;
+    align-items: center;
+    padding: 7px 8px;
+}
+
+.context-pack-list strong,
+.context-pack-list span {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.context-pack-list strong,
+.context-pack-list span,
+.context-pack-list button {
+    font-size: 11px;
+}
+
+.context-pack-list span {
+    color: var(--nd-muted-text);
+}
+
 .settings-form {
     display: grid;
     gap: 10px;
