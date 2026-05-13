@@ -37,6 +37,7 @@ This tracker reflects the repository as it exists today and keeps planned work s
 - [x] Common workspace images render as bounded inline previews.
 - [x] Workspace PDFs render as bounded inline previews.
 - [x] UTF-8 BOM and UTF-16 text previews are decoded.
+- [x] Source preview headers show file type, decoded encoding, size, and truncation status when available.
 - [x] Lightweight syntax highlighting exists at `app/frontend/src/features/shell/HighlightedCode.tsx`.
 - [x] Desktop workspace picker is bound through `SelectWorkspace`.
 - [x] Frontend switches from scaffold preview to indexed workspace nodes after folder selection.
@@ -46,6 +47,7 @@ This tracker reflects the repository as it exists today and keeps planned work s
 - [x] Workspace navigator renders indexed nodes as an expandable tree.
 - [x] Workspace navigator uses filesystem tree ordering instead of depth-grouped ordering.
 - [x] Workspace navigator width can be resized with a drag handle.
+- [x] App shell stays fixed to the window while long navigator, preview, chat, settings, and timeline content scroll inside their panels.
 - [x] Expanded workspace directories are reconciled and preserved across refreshes.
 - [x] Backend remembers the selected workspace root for the session.
 - [x] Refresh action rescans the active workspace through `RefreshWorkspace`.

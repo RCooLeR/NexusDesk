@@ -1,9 +1,11 @@
 .app-shell {
-    min-height: 100vh;
+    height: 100vh;
+    min-height: 0;
     display: grid;
     grid-template-columns: 56px minmax(220px, var(--navigator-width, 280px)) 6px minmax(460px, 1fr) minmax(300px, 360px);
     background: var(--nd-page);
     color: #111827;
+    overflow: hidden;
 }
 
 .workspace-rail {
@@ -14,6 +16,7 @@
     align-items: center;
     gap: 14px;
     padding: 14px 8px;
+    min-height: 0;
 }
 
 .brand-mark,
@@ -60,11 +63,15 @@
 .agent-panel {
     background: var(--nd-panel);
     border-right: 1px solid var(--nd-border);
+    min-height: 0;
     min-width: 0;
 }
 
 .navigator {
     padding: 20px 16px;
+    display: grid;
+    grid-template-rows: auto minmax(0, 1fr);
+    overflow: hidden;
 }
 
 .navigator-resizer {
@@ -270,7 +277,11 @@ button:disabled {
 
 .tree-list {
     display: grid;
+    align-content: start;
     gap: 6px;
+    min-height: 0;
+    overflow: auto;
+    padding-right: 2px;
 }
 
 .recent-list {
@@ -428,9 +439,11 @@ button:disabled {
 }
 
 .workbench {
+    min-height: 0;
     min-width: 0;
     display: grid;
     grid-template-rows: auto 1fr;
+    overflow: hidden;
 }
 
 .topbar {
@@ -443,11 +456,22 @@ button:disabled {
     padding: 14px 20px;
 }
 
+.topbar > div {
+    min-width: 0;
+}
+
+.topbar h2 {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
 .canvas-grid {
     min-height: 0;
     display: grid;
-    grid-template-rows: minmax(260px, 1fr) auto;
+    grid-template-rows: minmax(260px, 1fr) minmax(150px, 0.38fr);
     gap: 16px;
+    overflow: hidden;
     padding: 16px 20px 20px;
 }
 
@@ -456,6 +480,18 @@ button:disabled {
     background: var(--nd-panel);
     border: 1px solid var(--nd-border);
     border-radius: var(--nd-radius-sm);
+    min-height: 0;
+    overflow: hidden;
+}
+
+.editor-pane {
+    display: grid;
+    grid-template-rows: auto minmax(0, 1fr);
+}
+
+.status-pane {
+    display: grid;
+    grid-template-rows: auto minmax(0, 1fr);
 }
 
 .pane-title {
@@ -476,6 +512,7 @@ button:disabled {
     padding: 18px 14px;
     display: grid;
     gap: 10px;
+    overflow: auto;
 }
 
 .code-preview p {
@@ -559,7 +596,10 @@ button:disabled {
 .capability-list {
     display: grid;
     grid-template-columns: repeat(3, minmax(0, 1fr));
+    align-content: start;
     gap: 10px;
+    min-height: 0;
+    overflow: auto;
     padding: 12px;
 }
 
@@ -600,10 +640,10 @@ button:disabled {
     border-left: 1px solid var(--nd-border);
     padding: 20px 16px;
     display: grid;
-    grid-template-rows: auto auto auto 1fr;
+    grid-template-rows: auto minmax(180px, 0.8fr) minmax(260px, auto) minmax(120px, 1fr);
     gap: 16px;
     min-height: 0;
-    overflow-y: auto;
+    overflow: hidden;
 }
 
 .agent-symbol {
@@ -616,12 +656,24 @@ button:disabled {
 .chat-card {
     padding: 12px;
     display: grid;
+    grid-template-rows: minmax(0, 1fr) auto auto auto;
     gap: 12px;
+    min-height: 0;
+    overflow: hidden;
 }
 
 .chat-thread {
     display: grid;
+    align-content: start;
     gap: 8px;
+    min-height: 0;
+    overflow: auto;
+    padding-right: 2px;
+}
+
+.settings-card {
+    min-height: 0;
+    overflow: auto;
 }
 
 .chat-actions {
@@ -762,6 +814,7 @@ button:disabled {
     background: var(--nd-panel-soft);
     border: 1px solid var(--nd-border-soft);
     border-radius: var(--nd-radius-sm);
+    overflow-wrap: anywhere;
     padding: 12px;
 }
 
@@ -799,6 +852,13 @@ button:disabled {
 }
 
 .timeline {
+    display: grid;
+    grid-template-rows: auto minmax(0, 1fr);
+    min-height: 0;
+    overflow: hidden;
+}
+
+.timeline-items {
     min-height: 0;
     overflow: auto;
 }
@@ -819,21 +879,29 @@ button:disabled {
 @media (max-width: 1100px) {
     .app-shell {
         grid-template-columns: 52px minmax(210px, var(--navigator-width, 250px)) 6px 1fr;
+        grid-template-rows: minmax(0, 1fr) minmax(220px, 0.48fr);
+    }
+
+    .workspace-rail {
+        grid-row: 1 / 3;
     }
 
     .agent-panel {
         grid-column: 2 / 5;
         border-top: 1px solid var(--nd-border);
         border-left: 0;
+        grid-template-rows: auto minmax(180px, 0.9fr) minmax(240px, auto) minmax(120px, 1fr);
     }
 }
 
 @media (max-width: 760px) {
     .app-shell {
         grid-template-columns: 1fr;
+        grid-template-rows: auto minmax(160px, 0.28fr) minmax(0, 1fr) minmax(200px, 0.42fr);
     }
 
     .workspace-rail {
+        grid-row: auto;
         min-height: 56px;
         flex-direction: row;
     }
@@ -841,6 +909,10 @@ button:disabled {
     .navigator,
     .agent-panel {
         border: 0;
+    }
+
+    .navigator {
+        padding: 14px;
     }
 
     .navigator-resizer {

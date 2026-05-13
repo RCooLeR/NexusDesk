@@ -12,13 +12,15 @@ export function ToolTimeline({events}: ToolTimelineProps) {
                 <span>Tool Timeline</span>
                 <small>Visible by design</small>
             </div>
-            {events.map((event) => (
-                <div className="timeline-item" key={`${event.time}-${event.title}`}>
-                    <time>{event.time}</time>
-                    <strong>{event.title}</strong>
-                    <p>{event.detail}</p>
-                </div>
-            ))}
+            <div className="timeline-items">
+                {events.map((event) => (
+                    <div className="timeline-item" key={`${event.time}-${event.title}`}>
+                        <time>{event.time}</time>
+                        <strong>{event.title}</strong>
+                        <p>{event.detail}</p>
+                    </div>
+                ))}
+            </div>
         </Card>
     );
 }

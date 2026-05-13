@@ -84,11 +84,15 @@ export function NexusDeskShell({
 
     const selectedMeta = useMemo(() => {
         if (workspace) {
+            if (filePreview?.relPath === activeFile) {
+                return previewMeta(filePreview);
+            }
+
             return workspace.nodes.find((node) => node.relPath === activeFile)?.meta ?? workspace.root;
         }
 
         return state.workspaceItems.find((item) => activeFile.startsWith(item.name))?.meta ?? 'Selected planning source';
-    }, [activeFile, state.workspaceItems, workspace]);
+    }, [activeFile, filePreview, state.workspaceItems, workspace]);
 
     const workspaceNodes = useMemo(() => {
         if (!workspace) {
@@ -656,4 +660,32 @@ function isWailsRuntimeAvailable() {
 
 function clamp(value: number, min: number, max: number) {
     return Math.min(Math.max(value, min), max);
+}
+
+function previewMeta(preview: FilePreview) {
+    const details = [
+        preview.fileType,
+        preview.encoding,
+        preview.size > 0 ? formatBytes(preview.size) : '',
+        preview.truncated ? 'truncated' : '',
+    ].filter(Boolean);
+
+    return details.length > 0 ? details.join(' | ') : preview.name;
+}
+
+function formatBytes(size: number) {
+    if (size < 1024) {
+        return `${size} B`;
+    }
+
+    const units = ['KB', 'MB', 'GB'];
+    let value = size / 1024;
+    let unitIndex = 0;
+
+    while (value >= 1024 && unitIndex < units.length - 1) {
+        value /= 1024;
+        unitIndex += 1;
+    }
+
+    return `${value.toFixed(value >= 10 ? 0 : 1)} ${units[unitIndex]}`;
 }

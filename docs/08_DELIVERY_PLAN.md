@@ -34,6 +34,7 @@ Deliverables:
 - workspace open/recent workspaces: implemented
 - file tree with ignore rules: implemented
 - expandable tree state across refreshes: implemented
+- fixed-height desktop shell with panel-level scrolling: implemented
 - safe text/code file viewer: implemented
 - image preview: implemented
 - basic PDF preview: implemented
@@ -58,6 +59,7 @@ Current status:
 
 - The desktop shell builds on Windows through Wails.
 - The workspace browser can open, refresh, preview, and remember local folders.
+- The window shell stays fixed-height; long file trees, previews, chat, settings, and timelines scroll inside their own panels.
 - Text preview stays inside the approved workspace root and refuses binary/unsafe paths.
 - Common image previews render inline as capped data URLs from inside the approved workspace root.
 - PDF previews render inline as capped data URLs from inside the approved workspace root.
