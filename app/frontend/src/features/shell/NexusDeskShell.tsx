@@ -58,6 +58,7 @@ export function NexusDeskShell({
     const [isManagingRecent, setIsManagingRecent] = useState(false);
     const [filePreview, setFilePreview] = useState<FilePreview | null>(null);
     const [isLoadingPreview, setIsLoadingPreview] = useState(false);
+    const [expandedDirectories, setExpandedDirectories] = useState<Set<string>>(() => new Set());
     const [settingsDraft, setSettingsDraft] = useState<LLMSettings>(llmSettings);
     const [settingsStatus, setSettingsStatus] = useState('LLM provider not connected yet.');
     const [isSavingSettings, setIsSavingSettings] = useState(false);
@@ -77,7 +78,13 @@ export function NexusDeskShell({
         return state.workspaceItems.find((item) => activeFile.startsWith(item.name))?.meta ?? 'Selected planning source';
     }, [activeFile, state.workspaceItems, workspace]);
 
-    const workspaceNodes = useMemo(() => workspace?.nodes.slice(0, 80) ?? [], [workspace]);
+    const workspaceNodes = useMemo(() => {
+        if (!workspace) {
+            return [];
+        }
+
+        return workspace.nodes.filter((node) => isWorkspaceNodeVisible(node, expandedDirectories)).slice(0, 80);
+    }, [expandedDirectories, workspace]);
 
     function selectFallbackItem(name: string) {
         setActiveFile(`${name}/`);
@@ -85,7 +92,22 @@ export function NexusDeskShell({
     }
 
     async function selectWorkspaceNode(node: FileNode) {
+        if (node.kind === 'directory') {
+            toggleDirectory(node.relPath);
+        }
         await previewWorkspaceNode(node, true);
+    }
+
+    function toggleDirectory(relPath: string) {
+        setExpandedDirectories((current) => {
+            const next = new Set(current);
+            if (next.has(relPath)) {
+                next.delete(relPath);
+            } else {
+                next.add(relPath);
+            }
+            return next;
+        });
     }
 
     async function previewWorkspaceNode(node: FileNode, updateActiveFile: boolean) {
@@ -226,6 +248,7 @@ export function NexusDeskShell({
         const selectedNode = selectNodeAfterWorkspaceUpdate(result.snapshot);
 
         onWorkspaceChange(result.snapshot);
+        setExpandedDirectories((current) => reconcileExpandedDirectories(current, result.snapshot, selectedNode));
         if (selectedNode) {
             setActiveFile(selectedNode.relPath);
             await previewWorkspaceNode(selectedNode, false);
@@ -244,6 +267,56 @@ export function NexusDeskShell({
         }
 
         return snapshot.nodes.find((node) => node.kind === 'file') ?? snapshot.nodes[0] ?? null;
+    }
+
+    function reconcileExpandedDirectories(current: Set<string>, snapshot: WorkspaceSnapshot, selectedNode: FileNode | null) {
+        const directoryPaths = new Set(snapshot.nodes.filter((node) => node.kind === 'directory').map((node) => node.relPath));
+        const next = new Set<string>();
+
+        current.forEach((relPath) => {
+            if (directoryPaths.has(relPath)) {
+                next.add(relPath);
+            }
+        });
+
+        snapshot.nodes.forEach((node) => {
+            if (node.kind === 'directory' && node.depth === 1) {
+                next.add(node.relPath);
+            }
+        });
+
+        getAncestorDirectories(selectedNode).forEach((relPath) => {
+            if (directoryPaths.has(relPath)) {
+                next.add(relPath);
+            }
+        });
+
+        return next;
+    }
+
+    function getAncestorDirectories(node: FileNode | null) {
+        if (!node) {
+            return [];
+        }
+
+        const pathParts = node.relPath.split('/');
+        const ancestorCount = node.kind === 'directory' ? pathParts.length : pathParts.length - 1;
+        const ancestors: string[] = [];
+        for (let index = 1; index <= ancestorCount; index += 1) {
+            ancestors.push(pathParts.slice(0, index).join('/'));
+        }
+        return ancestors;
+    }
+
+    function isWorkspaceNodeVisible(node: FileNode, expanded: Set<string>) {
+        const pathParts = node.relPath.split('/');
+        for (let index = 1; index < pathParts.length; index += 1) {
+            const ancestor = pathParts.slice(0, index).join('/');
+            if (!expanded.has(ancestor)) {
+                return false;
+            }
+        }
+        return true;
     }
 
     async function refreshRecentWorkspaces() {
@@ -439,6 +512,9 @@ export function NexusDeskShell({
                                     onClick={() => void selectWorkspaceNode(node)}
                                     style={{paddingLeft: `${8 + Math.min(node.depth, 4) * 10}px`}}
                                 >
+                                    <span className="tree-disclosure">
+                                        {node.kind === 'directory' ? (expandedDirectories.has(node.relPath) ? '-' : '+') : ''}
+                                    </span>
                                     <span className={`file-glyph ${node.kind}`}>
                                         <img src={fileIconByType[node.fileType] ?? brandAssets.icons.documents} alt="" />
                                     </span>

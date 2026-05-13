@@ -281,8 +281,9 @@ button:disabled {
     background: transparent;
     border-radius: 8px;
     display: grid;
-    grid-template-columns: 34px 1fr;
-    gap: 10px;
+    grid-template-columns: 18px 30px 1fr;
+    gap: 8px;
+    align-items: center;
     padding: 9px;
     text-align: left;
     cursor: pointer;
@@ -304,6 +305,17 @@ button:disabled {
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
+}
+
+.tree-disclosure {
+    width: 18px;
+    height: 18px;
+    border-radius: 5px;
+    display: grid;
+    place-items: center;
+    color: #475467;
+    font-size: 12px;
+    font-weight: 800;
 }
 
 .file-glyph {
