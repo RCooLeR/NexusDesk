@@ -157,6 +157,14 @@ func (a *App) GetRecentWorkspaces() ([]storage.RecentWorkspace, error) {
 	return a.recentStore.List()
 }
 
+func (a *App) RemoveRecentWorkspace(path string) ([]storage.RecentWorkspace, error) {
+	return a.recentStore.Remove(path)
+}
+
+func (a *App) ClearRecentWorkspaces() ([]storage.RecentWorkspace, error) {
+	return a.recentStore.Clear()
+}
+
 func (a *App) GetLLMSettings() (storage.LLMSettings, error) {
 	return a.llmStore.Get()
 }

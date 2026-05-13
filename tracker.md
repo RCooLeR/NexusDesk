@@ -33,6 +33,7 @@ This tracker reflects the repository as it exists today and keeps planned work s
 - [x] Opened workspaces are persisted to local JSON config.
 - [x] Frontend loads and displays recent workspaces.
 - [x] Recent workspaces can be reopened through `OpenWorkspace`.
+- [x] Recent workspaces can be removed individually or cleared.
 - [x] LLM settings store exists at `app/internal/storage/llm_settings.go`.
 - [x] LLM provider settings are persisted to local JSON config.
 - [x] Agent panel includes a branded LLM provider settings form.
@@ -65,7 +66,7 @@ This tracker reflects the repository as it exists today and keeps planned work s
 - [x] Persist recent workspaces locally.
 - [x] Add refresh behavior for the currently opened workspace.
 - [ ] Preserve selected file and expanded tree state across refreshes.
-- [ ] Add recent workspace remove/clear actions.
+- [x] Add recent workspace remove/clear actions.
 - [x] Add local settings storage for LLM provider configuration.
 - [x] Add LLM connection test.
 - [ ] Add LLM capability detection beyond model listing.

@@ -1,9 +1,11 @@
 import {useEffect, useMemo, useState} from 'react';
 import type {ChangeEvent} from 'react';
 import {
+    ClearRecentWorkspaces,
     GetRecentWorkspaces,
     OpenWorkspace,
     ReadWorkspaceFile,
+    RemoveRecentWorkspace,
     RefreshWorkspace,
     SaveLLMSettings,
     SelectWorkspace,
@@ -53,6 +55,7 @@ export function NexusDeskShell({
     const [workspaceStatus, setWorkspaceStatus] = useState('No workspace opened yet.');
     const [isOpeningWorkspace, setIsOpeningWorkspace] = useState(false);
     const [isRefreshingWorkspace, setIsRefreshingWorkspace] = useState(false);
+    const [isManagingRecent, setIsManagingRecent] = useState(false);
     const [filePreview, setFilePreview] = useState<FilePreview | null>(null);
     const [isLoadingPreview, setIsLoadingPreview] = useState(false);
     const [settingsDraft, setSettingsDraft] = useState<LLMSettings>(llmSettings);
@@ -226,6 +229,46 @@ export function NexusDeskShell({
         }
     }
 
+    async function removeRecentWorkspace(recentWorkspace: RecentWorkspace) {
+        setIsManagingRecent(true);
+        setWorkspaceStatus(`Removing ${recentWorkspace.name} from recent workspaces...`);
+
+        try {
+            const nextWorkspaces = await RemoveRecentWorkspace(recentWorkspace.path);
+            onRecentWorkspacesChange(nextWorkspaces);
+            setWorkspaceStatus(`${recentWorkspace.name} removed from recent workspaces.`);
+        } catch (error) {
+            const message = error instanceof Error ? error.message : '';
+            if (message.includes('undefined') || message.includes('window')) {
+                setWorkspaceStatus('Recent workspace management is available in the desktop runtime.');
+                return;
+            }
+            setWorkspaceStatus(message || `Could not remove ${recentWorkspace.name}.`);
+        } finally {
+            setIsManagingRecent(false);
+        }
+    }
+
+    async function clearRecentWorkspaces() {
+        setIsManagingRecent(true);
+        setWorkspaceStatus('Clearing recent workspaces...');
+
+        try {
+            const nextWorkspaces = await ClearRecentWorkspaces();
+            onRecentWorkspacesChange(nextWorkspaces);
+            setWorkspaceStatus('Recent workspaces cleared.');
+        } catch (error) {
+            const message = error instanceof Error ? error.message : '';
+            if (message.includes('undefined') || message.includes('window')) {
+                setWorkspaceStatus('Recent workspace management is available in the desktop runtime.');
+                return;
+            }
+            setWorkspaceStatus(message || 'Could not clear recent workspaces.');
+        } finally {
+            setIsManagingRecent(false);
+        }
+    }
+
     function updateSettingsDraft(field: keyof LLMSettings) {
         return (event: ChangeEvent<HTMLInputElement>) => {
             setSettingsDraft((current) => ({
@@ -332,17 +375,28 @@ export function NexusDeskShell({
                 <div className="tree-list">
                     {!workspace && recentWorkspaces.length > 0 && (
                         <div className="recent-list">
-                            <div className="section-label">Recent</div>
+                            <div className="recent-list-header">
+                                <div className="section-label">Recent</div>
+                                <button onClick={clearRecentWorkspaces} disabled={isManagingRecent}>Clear</button>
+                            </div>
                             {recentWorkspaces.slice(0, 4).map((recentWorkspace) => (
-                                <button
-                                    key={recentWorkspace.path}
-                                    className="recent-item"
-                                    onClick={() => reopenWorkspace(recentWorkspace)}
-                                    disabled={isOpeningWorkspace}
-                                >
-                                    <strong>{recentWorkspace.name}</strong>
-                                    <small>{recentWorkspace.path}</small>
-                                </button>
+                                <div className="recent-row" key={recentWorkspace.path}>
+                                    <button
+                                        className="recent-item"
+                                        onClick={() => reopenWorkspace(recentWorkspace)}
+                                        disabled={isOpeningWorkspace}
+                                    >
+                                        <strong>{recentWorkspace.name}</strong>
+                                        <small>{recentWorkspace.path}</small>
+                                    </button>
+                                    <button
+                                        className="recent-remove"
+                                        onClick={() => void removeRecentWorkspace(recentWorkspace)}
+                                        disabled={isManagingRecent}
+                                    >
+                                        Remove
+                                    </button>
+                                </div>
                             ))}
                         </div>
                     )}

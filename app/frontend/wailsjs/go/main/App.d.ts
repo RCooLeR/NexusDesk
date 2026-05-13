@@ -5,6 +5,8 @@ import {main} from '../models';
 import {workspace} from '../models';
 import {llm} from '../models';
 
+export function ClearRecentWorkspaces():Promise<Array<storage.RecentWorkspace>>;
+
 export function GetLLMSettings():Promise<storage.LLMSettings>;
 
 export function GetRecentWorkspaces():Promise<Array<storage.RecentWorkspace>>;
@@ -16,6 +18,8 @@ export function OpenWorkspace(arg1:string):Promise<main.WorkspaceOpenResult>;
 export function ReadWorkspaceFile(arg1:string):Promise<workspace.FilePreview>;
 
 export function RefreshWorkspace():Promise<main.WorkspaceOpenResult>;
+
+export function RemoveRecentWorkspace(arg1:string):Promise<Array<storage.RecentWorkspace>>;
 
 export function SaveLLMSettings(arg1:storage.LLMSettings):Promise<storage.LLMSettings>;
 

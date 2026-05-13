@@ -195,6 +195,34 @@ button:disabled {
     text-transform: uppercase;
 }
 
+.recent-list-header,
+.recent-row {
+    display: grid;
+    gap: 8px;
+}
+
+.recent-list-header {
+    grid-template-columns: 1fr auto;
+    align-items: center;
+}
+
+.recent-list-header button,
+.recent-remove {
+    border: 1px solid #ccd5e1;
+    border-radius: var(--nd-radius-sm);
+    background: var(--nd-panel);
+    color: #475467;
+    cursor: pointer;
+    font-size: 11px;
+    min-height: 28px;
+    padding: 0 8px;
+}
+
+.recent-row {
+    grid-template-columns: minmax(0, 1fr) auto;
+    align-items: stretch;
+}
+
 .recent-item {
     border: 1px solid var(--nd-border-soft);
     border-radius: var(--nd-radius-sm);

@@ -82,6 +82,47 @@ func (s *RecentWorkspaceStore) Add(path string) ([]RecentWorkspace, error) {
 	return next, nil
 }
 
+func (s *RecentWorkspaceStore) Remove(path string) ([]RecentWorkspace, error) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	absPath, err := filepath.Abs(path)
+	if err != nil {
+		return nil, err
+	}
+
+	items, err := s.read()
+	if err != nil {
+		return nil, err
+	}
+
+	next := make([]RecentWorkspace, 0, len(items))
+	for _, item := range items {
+		if samePath(item.Path, absPath) {
+			continue
+		}
+		next = append(next, item)
+	}
+
+	if err := s.write(next); err != nil {
+		return nil, err
+	}
+
+	return next, nil
+}
+
+func (s *RecentWorkspaceStore) Clear() ([]RecentWorkspace, error) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	items := []RecentWorkspace{}
+	if err := s.write(items); err != nil {
+		return nil, err
+	}
+
+	return items, nil
+}
+
 func (s *RecentWorkspaceStore) read() ([]RecentWorkspace, error) {
 	data, err := os.ReadFile(s.path)
 	if os.IsNotExist(err) {
