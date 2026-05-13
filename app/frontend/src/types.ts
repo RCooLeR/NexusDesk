@@ -48,8 +48,18 @@ export type FilePreview = {
 export type TablePreview = {
     columns: string[];
     rows: string[][];
+    profiles: ColumnProfile[];
     totalRows: number;
     truncated: boolean;
+};
+
+export type ColumnProfile = {
+    name: string;
+    type: string;
+    missing: number;
+    distinct: number;
+    min?: string;
+    max?: string;
 };
 
 export type MarkdownReport = {

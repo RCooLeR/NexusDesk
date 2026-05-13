@@ -280,6 +280,28 @@ export namespace storage {
 
 export namespace workspace {
 
+	export class ColumnProfile {
+	    name: string;
+	    type: string;
+	    missing: number;
+	    distinct: number;
+	    min?: string;
+	    max?: string;
+
+	    static createFrom(source: any = {}) {
+	        return new ColumnProfile(source);
+	    }
+
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.name = source["name"];
+	        this.type = source["type"];
+	        this.missing = source["missing"];
+	        this.distinct = source["distinct"];
+	        this.min = source["min"];
+	        this.max = source["max"];
+	    }
+	}
 	export class FileNode {
 	    name: string;
 	    path: string;
@@ -307,6 +329,7 @@ export namespace workspace {
 	export class TablePreview {
 	    columns: string[];
 	    rows: string[][];
+	    profiles: ColumnProfile[];
 	    totalRows: number;
 	    truncated: boolean;
 
@@ -318,9 +341,28 @@ export namespace workspace {
 	        if ('string' === typeof source) source = JSON.parse(source);
 	        this.columns = source["columns"];
 	        this.rows = source["rows"];
+	        this.profiles = this.convertValues(source["profiles"], ColumnProfile);
 	        this.totalRows = source["totalRows"];
 	        this.truncated = source["truncated"];
 	    }
+
+		convertValues(a: any, classs: any, asMap: boolean = false): any {
+		    if (!a) {
+		        return a;
+		    }
+		    if (a.slice && a.map) {
+		        return (a as any[]).map(elem => this.convertValues(elem, classs));
+		    } else if ("object" === typeof a) {
+		        if (asMap) {
+		            for (const key of Object.keys(a)) {
+		                a[key] = new classs(a[key]);
+		            }
+		            return a;
+		        }
+		        return new classs(a);
+		    }
+		    return a;
+		}
 	}
 	export class FilePreview {
 	    relPath: string;

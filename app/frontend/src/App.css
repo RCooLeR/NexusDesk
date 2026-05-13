@@ -598,6 +598,51 @@ button:disabled {
     overflow: auto;
 }
 
+.csv-profile-strip {
+    display: flex;
+    gap: 8px;
+    overflow-x: auto;
+    border-bottom: 1px solid var(--nd-border-soft);
+    background: #ffffff;
+    padding: 10px;
+}
+
+.csv-profile {
+    min-width: 156px;
+    max-width: 220px;
+    border: 1px solid var(--nd-border-soft);
+    border-radius: var(--nd-radius-sm);
+    background: #fbfdff;
+    padding: 8px 10px;
+}
+
+.csv-profile strong,
+.csv-profile small {
+    display: block;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.csv-profile strong {
+    color: #0f172a;
+    font-size: 12px;
+}
+
+.csv-profile span {
+    display: inline-block;
+    margin: 5px 0 4px;
+    color: var(--nd-success);
+    font-size: 11px;
+    font-weight: 700;
+    text-transform: uppercase;
+}
+
+.csv-profile small {
+    color: var(--nd-muted);
+    font-size: 11px;
+}
+
 .csv-preview table {
     width: 100%;
     border-collapse: collapse;

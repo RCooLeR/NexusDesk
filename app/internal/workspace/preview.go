@@ -11,6 +11,7 @@ import (
 	"io/fs"
 	"os"
 	"path/filepath"
+	"strconv"
 	"strings"
 	"unicode"
 	"unicode/utf16"
@@ -30,10 +31,20 @@ type PreviewOptions struct {
 }
 
 type TablePreview struct {
-	Columns   []string   `json:"columns"`
-	Rows      [][]string `json:"rows"`
-	TotalRows int        `json:"totalRows"`
-	Truncated bool       `json:"truncated"`
+	Columns   []string        `json:"columns"`
+	Rows      [][]string      `json:"rows"`
+	Profiles  []ColumnProfile `json:"profiles"`
+	TotalRows int             `json:"totalRows"`
+	Truncated bool            `json:"truncated"`
+}
+
+type ColumnProfile struct {
+	Name     string `json:"name"`
+	Type     string `json:"type"`
+	Missing  int    `json:"missing"`
+	Distinct int    `json:"distinct"`
+	Min      string `json:"min,omitempty"`
+	Max      string `json:"max,omitempty"`
 }
 
 type FilePreview struct {
@@ -190,7 +201,7 @@ func parseCSVPreview(content string, maxRows int, maxColumns int) (TablePreview,
 		return TablePreview{}, nil
 	}
 
-	columns := trimRecordWidth(records[0], maxColumns)
+	columns := buildCSVColumns(records, maxColumns)
 	rows := make([][]string, 0, minInt(len(records)-1, maxRows))
 	totalRows := 0
 	for _, record := range records[1:] {
@@ -201,18 +212,109 @@ func parseCSVPreview(content string, maxRows int, maxColumns int) (TablePreview,
 		rows = append(rows, trimRecordWidth(record, maxColumns))
 	}
 
-	if len(columns) == 0 {
-		for index := range widestRecord(records, maxColumns) {
-			columns = append(columns, fmt.Sprintf("Column %d", index+1))
-		}
-	}
-
 	return TablePreview{
 		Columns:   columns,
 		Rows:      rows,
+		Profiles:  profileCSVColumns(columns, records[1:]),
 		TotalRows: totalRows,
 		Truncated: totalRows > len(rows) || recordsWiderThan(records, maxColumns),
 	}, nil
+}
+
+func buildCSVColumns(records [][]string, maxColumns int) []string {
+	columnCount := minInt(len(widestRecord(records, maxColumns)), maxColumns)
+	if columnCount == 0 {
+		return nil
+	}
+
+	columns := make([]string, 0, columnCount)
+	for index := 0; index < columnCount; index++ {
+		if index < len(records[0]) {
+			name := strings.TrimSpace(records[0][index])
+			if name != "" {
+				columns = append(columns, name)
+				continue
+			}
+		}
+		columns = append(columns, fmt.Sprintf("Column %d", index+1))
+	}
+
+	return columns
+}
+
+func profileCSVColumns(columns []string, records [][]string) []ColumnProfile {
+	profiles := make([]ColumnProfile, 0, len(columns))
+	for columnIndex, name := range columns {
+		values := make(map[string]struct{})
+		missing := 0
+		numericCount := 0
+		integerCount := 0
+		nonMissingCount := 0
+		var minValue float64
+		var maxValue float64
+		hasNumber := false
+
+		for _, record := range records {
+			value := ""
+			if columnIndex < len(record) {
+				value = strings.TrimSpace(record[columnIndex])
+			}
+			if value == "" {
+				missing++
+				continue
+			}
+
+			nonMissingCount++
+			values[value] = struct{}{}
+			number, err := strconv.ParseFloat(strings.ReplaceAll(value, ",", ""), 64)
+			if err != nil {
+				continue
+			}
+
+			numericCount++
+			if float64(int64(number)) == number {
+				integerCount++
+			}
+			if !hasNumber || number < minValue {
+				minValue = number
+			}
+			if !hasNumber || number > maxValue {
+				maxValue = number
+			}
+			hasNumber = true
+		}
+
+		profile := ColumnProfile{
+			Name:     name,
+			Type:     inferCSVColumnType(nonMissingCount, numericCount, integerCount),
+			Missing:  missing,
+			Distinct: len(values),
+		}
+		if hasNumber && numericCount == nonMissingCount {
+			profile.Min = formatCSVNumber(minValue)
+			profile.Max = formatCSVNumber(maxValue)
+		}
+		profiles = append(profiles, profile)
+	}
+
+	return profiles
+}
+
+func inferCSVColumnType(nonMissingCount int, numericCount int, integerCount int) string {
+	if nonMissingCount == 0 {
+		return "empty"
+	}
+	if numericCount == nonMissingCount {
+		if integerCount == nonMissingCount {
+			return "integer"
+		}
+		return "number"
+	}
+	return "text"
+}
+
+func formatCSVNumber(value float64) string {
+	return strconv.FormatFloat(value, 'f', -1, 64)
 }
 
 func trimRecordWidth(record []string, maxColumns int) []string {

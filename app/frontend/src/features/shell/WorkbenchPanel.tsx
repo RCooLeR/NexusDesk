@@ -159,6 +159,21 @@ export function WorkbenchPanel({
 function CsvTablePreview({table}: {table: TablePreview}) {
     return (
         <div className="csv-preview" aria-label="CSV table preview">
+            {table.profiles.length > 0 && (
+                <div className="csv-profile-strip" aria-label="CSV column profile">
+                    {table.profiles.map((profile, index) => (
+                        <div className="csv-profile" key={`${profile.name}-${index}`}>
+                            <strong>{profile.name || `Column ${index + 1}`}</strong>
+                            <span>{profile.type}</span>
+                            <small>
+                                {profile.distinct} distinct
+                                {profile.missing > 0 ? `, ${profile.missing} missing` : ''}
+                                {profile.min && profile.max ? `, ${profile.min}-${profile.max}` : ''}
+                            </small>
+                        </div>
+                    ))}
+                </div>
+            )}
             <table>
                 <thead>
                     <tr>

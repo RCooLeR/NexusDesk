@@ -201,7 +201,7 @@ func TestPreviewDecodesWindows1251Text(t *testing.T) {
 
 func TestPreviewParsesCSVTable(t *testing.T) {
 	root := t.TempDir()
-	writeFile(t, root, "data/report.csv", "name,value\nalpha,10\nbeta,20\n")
+	writeFile(t, root, "data/report.csv", "name,value,notes\nalpha,10,ready\nbeta,20,\n")
 
 	preview, err := Preview(root, "data/report.csv", PreviewOptions{})
 	if err != nil {
@@ -214,14 +214,52 @@ func TestPreviewParsesCSVTable(t *testing.T) {
 	if preview.Table.TotalRows != 2 {
 		t.Fatalf("expected 2 data rows, got %d", preview.Table.TotalRows)
 	}
-	if got := strings.Join(preview.Table.Columns, ","); got != "name,value" {
+	if got := strings.Join(preview.Table.Columns, ","); got != "name,value,notes" {
 		t.Fatalf("unexpected columns: %s", got)
 	}
 	if preview.Table.Rows[1][0] != "beta" {
 		t.Fatalf("expected second row beta, got %q", preview.Table.Rows[1][0])
 	}
+	if len(preview.Table.Profiles) != 3 {
+		t.Fatalf("expected 3 column profiles, got %d", len(preview.Table.Profiles))
+	}
+	if preview.Table.Profiles[1].Type != "integer" {
+		t.Fatalf("expected value column to be integer, got %q", preview.Table.Profiles[1].Type)
+	}
+	if preview.Table.Profiles[1].Min != "10" || preview.Table.Profiles[1].Max != "20" {
+		t.Fatalf("expected numeric range 10-20, got %s-%s", preview.Table.Profiles[1].Min, preview.Table.Profiles[1].Max)
+	}
+	if preview.Table.Profiles[2].Missing != 1 {
+		t.Fatalf("expected notes column to have 1 missing value, got %d", preview.Table.Profiles[2].Missing)
+	}
 	if preview.Content == "" {
 		t.Fatal("expected raw CSV content to remain available")
+	}
+}
+
+func TestPreviewProfilesCSVColumnsWithFallbackHeaders(t *testing.T) {
+	root := t.TempDir()
+	writeFile(t, root, "data/report.csv", ",amount\nalpha,1.5\nbeta,\n")
+
+	preview, err := Preview(root, "data/report.csv", PreviewOptions{})
+	if err != nil {
+		t.Fatalf("Preview returned error: %v", err)
+	}
+
+	if preview.Table == nil {
+		t.Fatal("expected CSV table preview")
+	}
+	if preview.Table.Columns[0] != "Column 1" {
+		t.Fatalf("expected fallback column name, got %q", preview.Table.Columns[0])
+	}
+	if preview.Table.Profiles[1].Type != "number" {
+		t.Fatalf("expected amount column to be number, got %q", preview.Table.Profiles[1].Type)
+	}
+	if preview.Table.Profiles[1].Missing != 1 {
+		t.Fatalf("expected amount column to have 1 missing value, got %d", preview.Table.Profiles[1].Missing)
+	}
+	if preview.Table.Profiles[1].Min != "1.5" || preview.Table.Profiles[1].Max != "1.5" {
+		t.Fatalf("expected numeric range 1.5-1.5, got %s-%s", preview.Table.Profiles[1].Min, preview.Table.Profiles[1].Max)
 	}
 }
 
