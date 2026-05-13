@@ -96,6 +96,7 @@ Current status:
 - CSV context is sent as a structured profile plus bounded row sample instead of only raw preview text.
 - CSV datasets can be queried with bounded text search or `column=value` filters.
 - Multiple text, CSV, and extracted-PDF previews can be pinned into a bounded context pack for chat.
+- Selected directories and the workspace root can be expanded into bounded streaming context packs.
 - Pinned context packs show individual files and support removing one file at a time.
 - The Preview button reloads the selected file, and the Explain button sends a grounded prompt for selected text/code previews.
 - Persistent chat history works through local JSON config.

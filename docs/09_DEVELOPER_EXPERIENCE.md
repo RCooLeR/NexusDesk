@@ -30,6 +30,8 @@ LLM API keys are not written into `llm-settings.json`. They are saved in a sidec
 
 `AskLLMStream` emits `nexusdesk:chat-stream` Wails events while `app/internal/llm/chat.go` reads OpenAI-compatible server-sent response chunks. The frontend listens in `NexusDeskShell.tsx`, updates the in-flight assistant message per `delta`, then replaces it with the final persisted response or refreshed workspace chat history when the request completes.
 
+Selected directories and the workspace root also flow through the same streaming path. `app/internal/workspace/context.go` expands a selected directory or `.` into a capped set of previewable files, then `app/app.go` builds a context pack with a small manifest and file sections. The current caps are 32 files and 96 KiB of packed context, with the same ignored-folder, symlink, path traversal, encoding, PDF text, DOCX text, and CSV-summary boundaries used by file previews.
+
 ## Local Models
 
 The default local endpoint is `http://localhost:11434/v1`, targeting the `rcooler-ollama` Docker container on this workstation. The settings card recommends only local models at 26B parameters or below: `qwen3:4b-instruct`, `qwen3:8b`, `qwen3.5:9b`, `phi4:14b`, `phi4-reasoning:14b`, `gpt-oss:20b`, `mistral-small3.2:latest`, and `gemma4:26b`.
@@ -58,6 +60,8 @@ For a healthy load, `/api/ps` should show nonzero `size_vram`, and the Ollama lo
 `app/internal/workspace/preview.go` keeps text previews rooted and size-limited, decodes UTF-8, UTF-16, and Windows-1251 text variants, parses CSV files into bounded table previews with lightweight column profiles from a larger capped sample, and renders common image/PDF files as capped data URLs for inline display. PDFs also expose simple embedded text extraction by page when available, and DOCX files expose basic body text extraction. Chat context accepts text previews, DOCX text, extracted PDF text, and structured CSV profiles plus bounded samples, so binary payloads and data URLs are not sent to the model as source text.
 
 `app/internal/workspace/search.go` owns the first workspace search pass. It searches path names and previewable text content inside the same ignore and depth boundaries as scanning. `app/internal/workspace/dataset_query.go` owns the first CSV query flow with bounded row results and simple `column=value` filters until a DuckDB SQL layer is added.
+
+`app/internal/workspace/context.go` owns directory/project context expansion. The UI can pin a selected directory or the workspace root, but the backend still decides which files are safe and useful enough to include.
 
 `app/frontend/src/features/shell/HighlightedCode.tsx` provides dependency-free lightweight highlighting for common code/data text previews until Monaco lands.
 

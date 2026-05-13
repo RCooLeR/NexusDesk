@@ -14,6 +14,7 @@ const checks = [
             'QueryDataset',
             'SearchWorkspace',
             'contextPackPaths',
+            'pinProjectContext',
             'listenForChatStream',
         ],
     },
@@ -23,7 +24,7 @@ const checks = [
     },
     {
         file: 'src/features/shell/WorkbenchPanel.tsx',
-        terms: ['onPinContext', 'onApplyFileWrite', 'onProfileDataset', 'DatasetQueryPanel', 'file-write-editor'],
+        terms: ['onPinContext', 'onPinProjectContext', 'onApplyFileWrite', 'onProfileDataset', 'DatasetQueryPanel', 'file-write-editor'],
     },
     {
         file: 'src/features/shell/WorkspaceNavigator.tsx',

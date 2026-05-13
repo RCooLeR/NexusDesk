@@ -6,6 +6,7 @@ import (
 	"errors"
 	"fmt"
 	"os"
+	"path/filepath"
 	"strings"
 	"sync"
 	"time"
@@ -63,8 +64,8 @@ type ChatStreamEvent struct {
 
 const chatContextMaxBytes = 16 * 1024
 const chatCSVContextMaxRows = 20
-const chatContextPackMaxFiles = 6
-const chatContextPackMaxBytes = 32 * 1024
+const chatContextPackMaxFiles = 32
+const chatContextPackMaxBytes = 96 * 1024
 const chatStreamEventName = "nexusdesk:chat-stream"
 
 type App struct {
@@ -424,14 +425,14 @@ func (a *App) prepareChat(prompt string, relPaths []string) (llm.ChatRequest, st
 	}
 
 	contextPaths := cleanContextPaths(relPaths)
-	if len(contextPaths) == 1 {
+	if len(contextPaths) == 1 && !a.contextPathRequiresPack(contextPaths[0]) {
 		contextPreview, err := a.previewChatContext(contextPaths[0])
 		if err != nil {
 			return llm.ChatRequest{}, storage.LLMSettings{}, err
 		}
 		chatRequest.ContextRelPath = contextPreview.RelPath
 		chatRequest.ContextContent = contextPreview.Content
-	} else if len(contextPaths) > 1 {
+	} else if len(contextPaths) > 0 {
 		contextRelPath, contextContent, err := a.buildContextPack(contextPaths)
 		if err != nil {
 			return llm.ChatRequest{}, storage.LLMSettings{}, err
@@ -540,16 +541,35 @@ func buildChatContextContent(preview workspace.FilePreview) string {
 }
 
 func (a *App) buildContextPack(relPaths []string) (string, string, error) {
-	if len(relPaths) > chatContextPackMaxFiles {
-		relPaths = relPaths[:chatContextPackMaxFiles]
+	root := a.getWorkspaceRoot()
+	if root == "" {
+		return "", "", errors.New("open a workspace before sending context packs")
+	}
+
+	collection, err := workspace.CollectContextFiles(root, relPaths, workspace.ContextCollectOptions{MaxFiles: chatContextPackMaxFiles})
+	if err != nil {
+		return "", "", err
 	}
 
 	var builder strings.Builder
 	usedPaths := []string{}
-	for _, relPath := range relPaths {
-		preview, err := a.previewChatContext(relPath)
+	builder.WriteString("Workspace context pack\n")
+	builder.WriteString("Requested roots: ")
+	builder.WriteString(strings.Join(collection.Roots, ", "))
+	builder.WriteString("\n")
+	builder.WriteString(fmt.Sprintf("Included files: %d", len(collection.Files)))
+	if collection.Truncated {
+		builder.WriteString(" (truncated)")
+	}
+	builder.WriteString("\n")
+
+	for _, file := range collection.Files {
+		preview, err := a.previewChatContext(file.RelPath)
 		if err != nil {
-			return "", "", err
+			if file.Required {
+				return "", "", err
+			}
+			continue
 		}
 
 		entry := "\n\n# Workspace context: " + preview.RelPath + "\n\n" + preview.Content
@@ -572,7 +592,39 @@ func (a *App) buildContextPack(relPaths []string) (string, string, error) {
 	if len(usedPaths) == 0 {
 		return "", "", errors.New("context pack did not include usable text")
 	}
-	return "pack: " + strings.Join(usedPaths, ", "), strings.TrimSpace(builder.String()), nil
+
+	contextLabel := buildContextLabel(collection.Roots, usedPaths)
+	return contextLabel, strings.TrimSpace(builder.String()), nil
+}
+
+func (a *App) contextPathRequiresPack(relPath string) bool {
+	trimmed := strings.TrimSpace(relPath)
+	if trimmed == "" || trimmed == "." || trimmed == "/" {
+		return true
+	}
+
+	root := a.getWorkspaceRoot()
+	if root == "" {
+		return false
+	}
+
+	target := filepath.Join(root, filepath.FromSlash(trimmed))
+	info, err := os.Lstat(target)
+	return err == nil && info.IsDir()
+}
+
+func buildContextLabel(roots []string, usedPaths []string) string {
+	if len(roots) == 1 {
+		if roots[0] == "." {
+			return fmt.Sprintf("project: %d files", len(usedPaths))
+		}
+		if len(usedPaths) == 1 && usedPaths[0] == roots[0] {
+			return usedPaths[0]
+		}
+		return fmt.Sprintf("dir: %s (%d files)", roots[0], len(usedPaths))
+	}
+
+	return fmt.Sprintf("pack: %d roots, %d files", len(roots), len(usedPaths))
 }
 
 func truncateContextString(content string, maxBytes int) string {

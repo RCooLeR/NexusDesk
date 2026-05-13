@@ -1,10 +1,13 @@
 package main
 
 import (
+	"os"
+	"path/filepath"
 	"strings"
 	"testing"
 	"unicode/utf8"
 
+	"NexusDesk/internal/storage"
 	"NexusDesk/internal/workspace"
 )
 
@@ -57,6 +60,53 @@ func TestCleanContextPathsDeduplicatesAndDropsEmptyValues(t *testing.T) {
 	}
 }
 
+func TestPrepareChatBuildsDirectoryContextPack(t *testing.T) {
+	root := t.TempDir()
+	writeAppTestFile(t, root, "src/main.go", "package main\n")
+	writeAppTestFile(t, root, "src/readme.md", "# Source\n")
+
+	app := NewApp()
+	app.llmStore = storage.NewLLMSettingsStore(filepath.Join(t.TempDir(), "llm-settings.json"))
+	app.setWorkspaceRoot(root)
+
+	request, _, err := app.prepareChat("explain this folder", []string{"src"})
+	if err != nil {
+		t.Fatalf("prepareChat returned error: %v", err)
+	}
+
+	if !strings.HasPrefix(request.ContextRelPath, "dir: src") {
+		t.Fatalf("expected directory context label, got %q", request.ContextRelPath)
+	}
+	if !strings.Contains(request.ContextContent, "Workspace context: src/main.go") {
+		t.Fatalf("expected main.go in context pack, got %q", request.ContextContent)
+	}
+	if !strings.Contains(request.ContextContent, "Workspace context: src/readme.md") {
+		t.Fatalf("expected readme.md in context pack, got %q", request.ContextContent)
+	}
+}
+
+func TestPrepareChatBuildsProjectContextPack(t *testing.T) {
+	root := t.TempDir()
+	writeAppTestFile(t, root, "README.md", "# Project\n")
+	writeAppTestFile(t, root, "app/main.go", "package main\n")
+
+	app := NewApp()
+	app.llmStore = storage.NewLLMSettingsStore(filepath.Join(t.TempDir(), "llm-settings.json"))
+	app.setWorkspaceRoot(root)
+
+	request, _, err := app.prepareChat("summarize project", []string{"."})
+	if err != nil {
+		t.Fatalf("prepareChat returned error: %v", err)
+	}
+
+	if !strings.HasPrefix(request.ContextRelPath, "project:") {
+		t.Fatalf("expected project context label, got %q", request.ContextRelPath)
+	}
+	if !strings.Contains(request.ContextContent, "Requested roots: .") {
+		t.Fatalf("expected project root manifest, got %q", request.ContextContent)
+	}
+}
+
 func TestTruncateContextStringKeepsUTF8Valid(t *testing.T) {
 	content := "prefix кирилиця"
 	truncated := truncateContextString(content, len("prefix к")+1)
@@ -66,5 +116,17 @@ func TestTruncateContextStringKeepsUTF8Valid(t *testing.T) {
 	}
 	if len(truncated) > len("prefix к")+1 {
 		t.Fatalf("expected byte cap to be respected, got %d", len(truncated))
+	}
+}
+
+func writeAppTestFile(t *testing.T, root string, relPath string, content string) {
+	t.Helper()
+
+	path := filepath.Join(root, filepath.FromSlash(relPath))
+	if err := os.MkdirAll(filepath.Dir(path), 0o755); err != nil {
+		t.Fatalf("MkdirAll failed: %v", err)
+	}
+	if err := os.WriteFile(path, []byte(content), 0o644); err != nil {
+		t.Fatalf("WriteFile failed: %v", err)
 	}
 }

@@ -92,6 +92,7 @@ This tracker reflects the repository as it exists today and keeps planned work s
 - [x] Selected PDFs with extracted text can be attached as chat context without sending PDF data URLs.
 - [x] Selected CSV previews send a structured column profile and bounded sample as chat context.
 - [x] Multiple selected source previews can be pinned into a bounded chat context pack.
+- [x] Selected directories and the workspace root can be expanded into bounded streaming chat context packs.
 - [x] Context packs show individual pinned files and can remove one file at a time.
 - [x] Workspace chat history is persisted through `app/internal/storage/chat_history.go`.
 - [x] Report button creates timestamped Markdown artifacts under `.nexusdesk/artifacts/`.
@@ -150,6 +151,7 @@ This tracker reflects the repository as it exists today and keeps planned work s
 - [x] Add streaming chat responses.
 - [x] Add first pinned multi-file context pack for chat.
 - [x] Add individual context pack file removal.
+- [x] Add bounded directory/project context packs for chat.
 - [x] Wire topbar Preview and Explain actions to real workspace/chat behavior.
 - [x] Mask API keys before they leave the backend settings store.
 - [x] Migrate API keys into OS credential storage before production release.
@@ -162,7 +164,7 @@ This tracker reflects the repository as it exists today and keeps planned work s
 - [ ] Add backend module layout only when implementation files are created.
 - [ ] Split the workbench UI into feature components once behavior lands.
 - [ ] Replace the services placeholder with real development/test services when needed.
-- [ ] Add an in-app Ollama runtime diagnostic that reports selected model, endpoint, and GPU/VRAM offload status.
+- [x] Add an in-app Ollama runtime diagnostic that reports selected model, endpoint, and GPU/VRAM offload status.
 - [x] Add automated frontend tests after interactive behavior exists.
 
 ## Directory Notes
@@ -170,6 +172,8 @@ This tracker reflects the repository as it exists today and keeps planned work s
 `app/` contains the Wails desktop app. The current backend is intentionally small; create `internal/` packages incrementally as real workspace, settings, storage, indexing, and agent code lands.
 
 `app/internal/workspace/` owns safe workspace scanning. It should keep ignore rules, depth limits, entry limits, and path safety close to the backend instead of trusting frontend filtering.
+
+`app/internal/workspace/context.go` owns directory and project context expansion for chat. It accepts selected files, selected directories, and `.` for the workspace root, then expands them into a capped list of previewable text/document/data files while preserving scanner ignore rules and symlink/path traversal protections.
 
 `app/internal/storage/` owns local app persistence. Recent workspaces and non-secret LLM settings currently use small JSON files in the user's config directory; LLM API keys are kept in a sidecar credential blob protected by the OS where available.
 

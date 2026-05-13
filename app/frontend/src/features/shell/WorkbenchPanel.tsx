@@ -28,6 +28,7 @@ type WorkbenchPanelProps = {
     onFileDraftChange: (content: string) => void;
     onDatasetQueryChange: (content: string) => void;
     onPinContext: () => void;
+    onPinProjectContext: () => void;
     onPreviewFileWrite: () => void;
     onProfileDataset: () => void;
     onQueryDataset: () => void;
@@ -64,6 +65,7 @@ export function WorkbenchPanel({
     onFileDraftChange,
     onDatasetQueryChange,
     onPinContext,
+    onPinProjectContext,
     onPreviewFileWrite,
     onProfileDataset,
     onQueryDataset,
@@ -75,7 +77,11 @@ export function WorkbenchPanel({
     workspace,
 }: WorkbenchPanelProps) {
     const canExplainContext = Boolean(
-        workspace && ((filePreview?.kind === 'file' && filePreview.content) || (filePreview?.kind === 'pdf' && filePreview.text))
+        workspace && (
+            (filePreview?.kind === 'file' && filePreview.content) ||
+            (filePreview?.kind === 'pdf' && filePreview.text) ||
+            filePreview?.kind === 'directory'
+        )
     );
     const canEditContext = Boolean(workspace && filePreview?.kind === 'file' && filePreview.content && !filePreview.table);
     const canProfileDataset = Boolean(workspace && filePreview?.fileType === 'data');
@@ -96,6 +102,9 @@ export function WorkbenchPanel({
                     </Button>
                     <Button disabled={!canExplainContext} onClick={onPinContext}>
                         Pin
+                    </Button>
+                    <Button disabled={!workspace} onClick={onPinProjectContext}>
+                        Project
                     </Button>
                     <Button disabled={!canEditContext || isLoadingPreview} onClick={onStartFileEdit}>
                         Edit

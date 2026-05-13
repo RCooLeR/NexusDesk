@@ -691,13 +691,13 @@ export function NexusDeskShell({
 
     async function explainSelectedContext() {
         if (!selectedTextContextRelPath()) {
-            setChatStatus('Select a text/code preview before asking for an explanation.');
+            setChatStatus('Select a text, extracted document, or directory context before asking for an explanation.');
             return;
         }
 
         const prompt = [
             `Explain ${filePreview?.relPath}.`,
-            'Cover the file purpose, important structures, notable dependencies, risks, and practical next steps.',
+            'Cover purpose, important structures, notable dependencies, risks, and practical next steps.',
         ].join(' ');
         await sendPromptText(prompt, false);
     }
@@ -758,18 +758,31 @@ export function NexusDeskShell({
         if ((filePreview?.kind === 'file' && filePreview.content) || (filePreview?.kind === 'pdf' && filePreview.text)) {
             return filePreview.relPath;
         }
+        if (filePreview?.kind === 'directory') {
+            return filePreview.relPath;
+        }
         return '';
     }
 
     function pinSelectedContext() {
         const relPath = selectedTextContextRelPath();
         if (!relPath) {
-            setChatStatus('Select text, CSV, or extracted PDF context before pinning it.');
+            setChatStatus('Select text, CSV, extracted PDF, or directory context before pinning it.');
             return;
         }
         setContextPackPaths((current) => current.includes(relPath) ? current : [...current, relPath]);
         setChatStatus(`${relPath} pinned to the context pack.`);
         pushToolEvent('Context pinned', relPath);
+    }
+
+    function pinProjectContext() {
+        if (!workspace) {
+            setChatStatus('Open a workspace before pinning project context.');
+            return;
+        }
+        setContextPackPaths((current) => current.includes('.') ? current : ['.', ...current]);
+        setChatStatus('Workspace root pinned to the context pack.');
+        pushToolEvent('Project context pinned', workspace.name);
     }
 
     function removeContextPath(relPath: string) {
@@ -1011,6 +1024,7 @@ export function NexusDeskShell({
                 onFileDraftChange={setFileDraft}
                 onExplainContext={() => void explainSelectedContext()}
                 onPinContext={pinSelectedContext}
+                onPinProjectContext={pinProjectContext}
                 onPreviewFileWrite={() => void previewFileWrite()}
                 onProfileDataset={() => void profileSelectedDataset()}
                 onQueryDataset={() => void querySelectedDataset()}

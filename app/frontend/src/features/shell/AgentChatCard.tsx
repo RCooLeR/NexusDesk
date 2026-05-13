@@ -57,8 +57,8 @@ export function AgentChatCard({
                     </div>
                     <div className="context-pack-items">
                         {contextPackPaths.map((relPath) => (
-                            <button key={relPath} onClick={() => onRemoveContextPath(relPath)} title={`Remove ${relPath}`}>
-                                <span>{relPath}</span>
+                            <button key={relPath} onClick={() => onRemoveContextPath(relPath)} title={`Remove ${contextLabel(relPath)}`}>
+                                <span>{contextLabel(relPath)}</span>
                                 <strong>x</strong>
                             </button>
                         ))}
@@ -84,4 +84,8 @@ export function AgentChatCard({
             <small className="chat-status">{chatStatus}</small>
         </Card>
     );
+}
+
+function contextLabel(relPath: string) {
+    return relPath === '.' ? 'Workspace root' : relPath;
 }
