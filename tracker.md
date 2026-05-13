@@ -14,6 +14,8 @@ This tracker reflects the repository as it exists today and keeps planned work s
 - [x] App shell uses NexusDesk symbol, horizontal logo, and domain icons.
 - [x] App styles use NexusDesk color/type tokens from `app/frontend/src/brand-tokens.css`.
 - [x] Wails app icon and Windows icon are sourced from the brand package.
+- [x] Windows taskbar icon is generated as a multi-size ICO from high-resolution brand PNGs.
+- [x] Icon generation script lives at `app/scripts/generate_windows_icon.py`.
 - [x] Frontend startup state types live in `app/frontend/src/types.ts`.
 - [x] Runtime brand asset mapping lives in `app/frontend/src/brand/assets.ts`.
 - [x] Browser-safe fallback startup state lives in `app/frontend/src/data/startupState.ts`.
@@ -41,6 +43,7 @@ This tracker reflects the repository as it exists today and keeps planned work s
 - [ ] Add branded empty, loading, approval, and error states.
 - [ ] Add visual regression screenshots once the first interactive flows exist.
 - [ ] Confirm final app icon pipeline for Windows/macOS/Linux packaging.
+- [ ] Add macOS/Linux icon generation checks when packaging those targets.
 
 ## Next Work
 
@@ -75,6 +78,7 @@ Run these from `app/` on this Windows workstation:
 
 ```powershell
 $env:NODE_OPTIONS='--use-system-ca --dns-result-order=ipv4first'
+python scripts/generate_windows_icon.py
 npm.cmd run build
 go test ./...
 wails build

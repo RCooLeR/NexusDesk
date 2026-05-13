@@ -21,6 +21,7 @@ Then run:
 
 ```powershell
 npm.cmd install --prefix frontend
+python scripts/generate_windows_icon.py
 npm.cmd run build --prefix frontend
 go test ./...
 wails build
