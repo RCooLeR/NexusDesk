@@ -1186,6 +1186,19 @@ button:disabled {
     padding: 2px 7px;
 }
 
+.probe-runtime {
+    border-top: 1px solid rgba(22, 101, 52, 0.16);
+    display: grid;
+    gap: 4px;
+    margin-top: 4px;
+    padding-top: 7px;
+}
+
+.probe-runtime-models {
+    display: grid;
+    gap: 3px;
+}
+
 .probe-warning {
     color: #9a3412;
 }

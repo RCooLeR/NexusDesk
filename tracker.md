@@ -75,6 +75,7 @@ This tracker reflects the repository as it exists today and keeps planned work s
 - [x] LLM provider settings are persisted to local JSON config.
 - [x] LLM API keys are stored in a sidecar credential blob protected by the OS where available.
 - [x] LLM settings include a curated local model dropdown capped at 26B parameters.
+- [x] Local `rcooler-ollama` runner is verified on `localhost:11434` with CUDA v12 GPU offload.
 - [x] Saved LLM API keys are redacted before settings are returned to the UI.
 - [x] Redacted LLM API keys are resolved only inside backend test/save flows that need the stored secret.
 - [x] Agent panel includes a branded LLM provider settings form.
@@ -100,6 +101,7 @@ This tracker reflects the repository as it exists today and keeps planned work s
 - [x] Tool timeline records real workspace, preview, search, profile, write, report, and chat actions.
 - [x] Artifact rows can select the generated report preview when visible in the workspace tree.
 - [x] Helper services placeholder exists at `services/docker-compose.yml`.
+- [x] Workstation Ollama Compose stack lives outside this repo at `../Llm/` and pins `OLLAMA_LLM_LIBRARY=cuda_v12`.
 - [x] Repository ignore rules exist in `.gitignore`.
 - [x] Current and target directory structures are documented separately.
 - [x] Production desktop build succeeds at `app/build/bin/app.exe`.
@@ -160,6 +162,7 @@ This tracker reflects the repository as it exists today and keeps planned work s
 - [ ] Add backend module layout only when implementation files are created.
 - [ ] Split the workbench UI into feature components once behavior lands.
 - [ ] Replace the services placeholder with real development/test services when needed.
+- [ ] Add an in-app Ollama runtime diagnostic that reports selected model, endpoint, and GPU/VRAM offload status.
 - [x] Add automated frontend tests after interactive behavior exists.
 
 ## Directory Notes
@@ -171,6 +174,8 @@ This tracker reflects the repository as it exists today and keeps planned work s
 `app/internal/storage/` owns local app persistence. Recent workspaces and non-secret LLM settings currently use small JSON files in the user's config directory; LLM API keys are kept in a sidecar credential blob protected by the OS where available.
 
 `services/` is reserved for Docker Compose or supporting development services. It should not contain runtime app state; local service data belongs in ignored folders such as `services/data/`.
+
+The current workstation LLM runner is the sibling Compose stack at `../Llm/`, not the placeholder under `services/`. Its `rcooler-ollama` service is exposed at `http://localhost:11434` and must keep `OLLAMA_LLM_LIBRARY=cuda_v12` so Ollama uses the CUDA 12 backend instead of falling back to CPU after attempting CUDA 13.
 
 `docs/` remains the source of truth for product direction, architecture, delivery phases, developer experience, and brand assets.
 
@@ -187,4 +192,12 @@ npm.cmd run build
 npm.cmd run smoke
 go test ./...
 wails build
+```
+
+Local Ollama GPU check from the sibling `../Llm/` directory:
+
+```powershell
+docker compose exec ollama nvidia-smi
+docker compose logs ollama | Select-String "offloaded|model weights|cuda_v12"
+Invoke-RestMethod http://localhost:11434/api/ps | ConvertTo-Json -Depth 10
 ```

@@ -17,13 +17,32 @@ import (
 const probeTimeout = 8 * time.Second
 
 type ProbeResult struct {
-	OK           bool     `json:"ok"`
-	Message      string   `json:"message"`
-	Endpoint     string   `json:"endpoint"`
-	ModelCount   int      `json:"modelCount"`
-	ModelSample  []string `json:"modelSample"`
-	Capabilities []string `json:"capabilities"`
-	Warnings     []string `json:"warnings"`
+	OK           bool           `json:"ok"`
+	Message      string         `json:"message"`
+	Endpoint     string         `json:"endpoint"`
+	ModelCount   int            `json:"modelCount"`
+	ModelSample  []string       `json:"modelSample"`
+	Capabilities []string       `json:"capabilities"`
+	Warnings     []string       `json:"warnings"`
+	Runtime      *RuntimeStatus `json:"runtime,omitempty"`
+}
+
+type RuntimeStatus struct {
+	Provider            string         `json:"provider"`
+	Endpoint            string         `json:"endpoint"`
+	Message             string         `json:"message"`
+	SelectedModel       string         `json:"selectedModel"`
+	SelectedModelLoaded bool           `json:"selectedModelLoaded"`
+	SelectedModelVRAM   int64          `json:"selectedModelVram"`
+	LoadedModels        []RuntimeModel `json:"loadedModels"`
+}
+
+type RuntimeModel struct {
+	Name          string `json:"name"`
+	Model         string `json:"model"`
+	Size          int64  `json:"size"`
+	SizeVRAM      int64  `json:"sizeVram"`
+	ContextLength int    `json:"contextLength"`
 }
 
 type Client struct {
@@ -93,15 +112,114 @@ func (c *Client) Probe(ctx context.Context, settings storage.LLMSettings) (Probe
 		message = "Connected, but no models were returned."
 	}
 
+	capabilities := inferCapabilities(modelIDs)
+	warnings := inferWarnings(settings.Model, modelIDs)
+	runtimeStatus, runtimeWarnings := c.probeOllamaRuntime(ctx, settings)
+	warnings = append(warnings, runtimeWarnings...)
+	if runtimeStatus != nil && runtimeStatus.SelectedModelLoaded && runtimeStatus.SelectedModelVRAM > 0 {
+		capabilities = append(capabilities, "gpu-offload")
+	}
+
 	return ProbeResult{
 		OK:           true,
 		Message:      message,
 		Endpoint:     endpoint,
 		ModelCount:   len(modelIDs),
 		ModelSample:  sampleModels(modelIDs),
-		Capabilities: inferCapabilities(modelIDs),
-		Warnings:     inferWarnings(settings.Model, modelIDs),
+		Capabilities: capabilities,
+		Warnings:     warnings,
+		Runtime:      runtimeStatus,
 	}, nil
+}
+
+func (c *Client) probeOllamaRuntime(ctx context.Context, settings storage.LLMSettings) (*RuntimeStatus, []string) {
+	endpoint, ok := ollamaRuntimeEndpoint(settings)
+	if !ok {
+		return nil, []string{}
+	}
+
+	request, err := http.NewRequestWithContext(ctx, http.MethodGet, endpoint, nil)
+	if err != nil {
+		return nil, []string{err.Error()}
+	}
+	request.Header.Set("Accept", "application/json")
+
+	response, err := c.httpClient.Do(request)
+	if err != nil {
+		return nil, []string{"Ollama runtime status is unavailable: " + err.Error()}
+	}
+	defer response.Body.Close()
+
+	if response.StatusCode < 200 || response.StatusCode > 299 {
+		return nil, []string{fmt.Sprintf("Ollama runtime status returned HTTP %d.", response.StatusCode)}
+	}
+
+	var payload ollamaPSResponse
+	if err := json.NewDecoder(response.Body).Decode(&payload); err != nil {
+		return nil, []string{"Ollama runtime status could not be decoded: " + err.Error()}
+	}
+
+	selectedModel := strings.TrimSpace(settings.Model)
+	status := &RuntimeStatus{
+		Provider:      "ollama",
+		Endpoint:      endpoint,
+		SelectedModel: selectedModel,
+		LoadedModels:  make([]RuntimeModel, 0, len(payload.Models)),
+	}
+
+	for _, model := range payload.Models {
+		runtimeModel := RuntimeModel{
+			Name:          model.Name,
+			Model:         model.Model,
+			Size:          model.Size,
+			SizeVRAM:      model.SizeVRAM,
+			ContextLength: model.ContextLength,
+		}
+		status.LoadedModels = append(status.LoadedModels, runtimeModel)
+		if selectedModel != "" && (model.Name == selectedModel || model.Model == selectedModel) {
+			status.SelectedModelLoaded = true
+			status.SelectedModelVRAM = model.SizeVRAM
+		}
+	}
+
+	warnings := []string{}
+	switch {
+	case len(status.LoadedModels) == 0:
+		status.Message = "No models are loaded in Ollama runtime yet."
+	case selectedModel == "":
+		status.Message = fmt.Sprintf("%d Ollama model(s) loaded.", len(status.LoadedModels))
+	case !status.SelectedModelLoaded:
+		status.Message = "Selected model is not loaded in Ollama runtime yet."
+	case status.SelectedModelVRAM > 0:
+		status.Message = "Selected model is loaded with GPU VRAM assigned."
+	default:
+		status.Message = "Selected model is loaded on CPU."
+		warnings = append(warnings, "Selected Ollama model is loaded on CPU (size_vram is 0).")
+	}
+
+	return status, warnings
+}
+
+func ollamaRuntimeEndpoint(settings storage.LLMSettings) (string, bool) {
+	parsed, err := url.Parse(strings.TrimSpace(settings.BaseURL))
+	if err != nil || parsed.Scheme == "" || parsed.Host == "" {
+		return "", false
+	}
+
+	provider := strings.ToLower(settings.ProviderName)
+	host := strings.ToLower(parsed.Hostname())
+	port := parsed.Port()
+	isLocalHost := host == "localhost" || host == "127.0.0.1" || host == "::1"
+	isOllama := strings.Contains(provider, "ollama") || (isLocalHost && port == "11434")
+	if !isOllama {
+		return "", false
+	}
+
+	parsed.Path = "/api/ps"
+	parsed.RawPath = ""
+	parsed.RawQuery = ""
+	parsed.Fragment = ""
+	return parsed.String(), true
 }
 
 func modelsEndpoint(baseURL string) (string, error) {
@@ -201,4 +319,16 @@ type modelsResponse struct {
 
 type modelInfo struct {
 	ID string `json:"id"`
+}
+
+type ollamaPSResponse struct {
+	Models []ollamaPSModel `json:"models"`
+}
+
+type ollamaPSModel struct {
+	Name          string `json:"name"`
+	Model         string `json:"model"`
+	Size          int64  `json:"size"`
+	SizeVRAM      int64  `json:"size_vram"`
+	ContextLength int    `json:"context_length"`
 }

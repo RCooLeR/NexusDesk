@@ -19,7 +19,7 @@ const checks = [
     },
     {
         file: 'src/features/shell/LLMSettingsCard.tsx',
-        terms: ['recommendedModelOptions', 'qwen3:8b', 'gpt-oss:20b', 'gemma4:26b', '<select'],
+        terms: ['recommendedModelOptions', 'qwen3:8b', 'gpt-oss:20b', 'gemma4:26b', '<select', 'probe-runtime'],
     },
     {
         file: 'src/features/shell/WorkbenchPanel.tsx',

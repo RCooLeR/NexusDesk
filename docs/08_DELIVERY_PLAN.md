@@ -91,6 +91,7 @@ Current status:
 - Recent workspaces and LLM settings persist locally.
 - API keys are masked before leaving backend settings storage and saved in OS-protected credential blobs where available.
 - The LLM settings form defaults to `qwen3:8b` and offers installed local model choices no larger than 26B.
+- The local `rcooler-ollama` endpoint on `localhost:11434` is verified with CUDA 12 GPU offload through the sibling `../Llm/` Compose stack.
 - Streaming chat works with the configured model and optional selected file context.
 - CSV context is sent as a structured profile plus bounded row sample instead of only raw preview text.
 - CSV datasets can be queried with bounded text search or `column=value` filters.
@@ -103,6 +104,7 @@ Current status:
 - The workbench lists generated Markdown artifacts and can reselect visible report files from that list.
 - The frontend has a smoke check for the built entrypoint, generated Wails bindings, and core shell functionality markers.
 - Monaco, richer document extraction/OCR, richer approval dialogs, DuckDB SQL, and SQLite persistence are still planned.
+- In-app Ollama runtime diagnostics for endpoint, selected model, and GPU/VRAM offload are still planned.
 
 ## Phase 2: Files, Documents, And Artifacts
 

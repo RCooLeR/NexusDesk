@@ -105,6 +105,74 @@ func TestProbeInfersCapabilitiesFromModelIDs(t *testing.T) {
 	}
 }
 
+func TestProbeReportsOllamaRuntimeGPUOffload(t *testing.T) {
+	server := httptest.NewServer(http.HandlerFunc(func(response http.ResponseWriter, request *http.Request) {
+		response.Header().Set("Content-Type", "application/json")
+		switch request.URL.Path {
+		case "/v1/models":
+			_, _ = response.Write([]byte(`{"data":[{"id":"qwen3:4b-instruct"}]}`))
+		case "/api/ps":
+			_, _ = response.Write([]byte(`{"models":[{"name":"qwen3:4b-instruct","model":"qwen3:4b-instruct","size":3571659904,"size_vram":3571659904,"context_length":4096}]}`))
+		default:
+			t.Fatalf("unexpected path: %s", request.URL.Path)
+		}
+	}))
+	defer server.Close()
+
+	client := NewClient()
+	result, err := client.Probe(context.Background(), storage.LLMSettings{
+		ProviderName: "Ollama",
+		BaseURL:      server.URL + "/v1",
+		Model:        "qwen3:4b-instruct",
+	})
+	if err != nil {
+		t.Fatalf("Probe returned error: %v", err)
+	}
+
+	if result.Runtime == nil {
+		t.Fatal("expected Ollama runtime status")
+	}
+	if !result.Runtime.SelectedModelLoaded {
+		t.Fatal("expected selected model to be loaded")
+	}
+	if result.Runtime.SelectedModelVRAM == 0 {
+		t.Fatal("expected selected model VRAM")
+	}
+	assertCapability(t, result.Capabilities, "gpu-offload")
+}
+
+func TestProbeWarnsWhenOllamaSelectedModelIsOnCPU(t *testing.T) {
+	server := httptest.NewServer(http.HandlerFunc(func(response http.ResponseWriter, request *http.Request) {
+		response.Header().Set("Content-Type", "application/json")
+		switch request.URL.Path {
+		case "/v1/models":
+			_, _ = response.Write([]byte(`{"data":[{"id":"qwen3:4b-instruct"}]}`))
+		case "/api/ps":
+			_, _ = response.Write([]byte(`{"models":[{"name":"qwen3:4b-instruct","model":"qwen3:4b-instruct","size":3571659904,"size_vram":0,"context_length":4096}]}`))
+		default:
+			t.Fatalf("unexpected path: %s", request.URL.Path)
+		}
+	}))
+	defer server.Close()
+
+	client := NewClient()
+	result, err := client.Probe(context.Background(), storage.LLMSettings{
+		ProviderName: "Ollama",
+		BaseURL:      server.URL + "/v1",
+		Model:        "qwen3:4b-instruct",
+	})
+	if err != nil {
+		t.Fatalf("Probe returned error: %v", err)
+	}
+
+	if result.Runtime == nil || result.Runtime.SelectedModelVRAM != 0 {
+		t.Fatalf("unexpected runtime status: %#v", result.Runtime)
+	}
+	if len(result.Warnings) == 0 {
+		t.Fatal("expected CPU offload warning")
+	}
+}
+
 func assertCapability(t *testing.T, capabilities []string, expected string) {
 	t.Helper()
 

@@ -102,6 +102,7 @@ Current implementation:
 - Workspace search and CSV row queries are deterministic backend tools, not model-side file access.
 - `AskLLMStream` emits `nexusdesk:chat-stream` Wails events so the frontend can render partial assistant responses before final history persistence completes.
 - `app/internal/storage/chat_history.go` persists bounded chat history per workspace in local JSON config.
+- The local workstation endpoint is backed by the sibling `../Llm/` Compose stack. Its `rcooler-ollama` container must use `OLLAMA_LLM_LIBRARY=cuda_v12`; otherwise Ollama may select CUDA 13, fail GPU initialization, and fall back to CPU with zero VRAM offload.
 
 Capability hints are currently inferred from model IDs. They are useful for readiness signals, but they are not a substitute for provider-native capability metadata.
 

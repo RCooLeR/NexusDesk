@@ -39,6 +39,7 @@ export function LLMSettingsCard({
     }
 
     const hasCustomModel = settingsDraft.model !== '' && !recommendedModelOptions.some((option) => option.id === settingsDraft.model);
+    const runtimeModels = probeResult?.runtime?.loadedModels ?? [];
 
     return (
         <Card className="settings-card">
@@ -96,6 +97,22 @@ export function LLMSettingsCard({
                                 ))}
                             </div>
                         )}
+                        {probeResult.runtime && (
+                            <div className="probe-runtime">
+                                <strong>Ollama runtime</strong>
+                                <span>{probeResult.runtime.message}</span>
+                                {runtimeModels.length > 0 && (
+                                    <div className="probe-runtime-models">
+                                        {runtimeModels.map((model) => (
+                                            <small key={model.name || model.model}>
+                                                {model.name || model.model}: {formatBytes(model.sizeVram)} VRAM
+                                                {model.contextLength > 0 ? `, ctx ${model.contextLength}` : ''}
+                                            </small>
+                                        ))}
+                                    </div>
+                                )}
+                            </div>
+                        )}
                         {probeResult.modelSample.length > 0 && <small>{probeResult.modelSample.join(', ')}</small>}
                         {probeResult.warnings.map((warning) => (
                             <small className="probe-warning" key={warning}>{warning}</small>
@@ -105,4 +122,20 @@ export function LLMSettingsCard({
             </div>
         </Card>
     );
+}
+
+function formatBytes(bytes: number) {
+    if (!Number.isFinite(bytes) || bytes <= 0) {
+        return '0 B';
+    }
+
+    const units = ['B', 'KiB', 'MiB', 'GiB'];
+    let value = bytes;
+    let unitIndex = 0;
+    while (value >= 1024 && unitIndex < units.length - 1) {
+        value /= 1024;
+        unitIndex += 1;
+    }
+
+    return `${value.toFixed(unitIndex === 0 ? 0 : 1)} ${units[unitIndex]}`;
 }

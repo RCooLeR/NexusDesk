@@ -34,6 +34,25 @@ LLM API keys are not written into `llm-settings.json`. They are saved in a sidec
 
 The default local endpoint is `http://localhost:11434/v1`, targeting the `rcooler-ollama` Docker container on this workstation. The settings card recommends only local models at 26B parameters or below: `qwen3:4b-instruct`, `qwen3:8b`, `qwen3.5:9b`, `phi4:14b`, `phi4-reasoning:14b`, `gpt-oss:20b`, `mistral-small3.2:latest`, and `gemma4:26b`.
 
+The current workstation runner is the sibling Compose stack at `../Llm/`. Keep the `ollama` service pinned to Ollama's CUDA 12 backend:
+
+```powershell
+OLLAMA_LLM_LIBRARY=cuda_v12
+```
+
+Without that pin, the current `ollama/ollama:latest` image can choose its CUDA 13 backend, fail with `CUDA driver version is insufficient for CUDA runtime version`, and silently load models on CPU with `size_vram: 0`.
+
+GPU verification:
+
+```powershell
+cd ..\Llm
+docker compose exec ollama nvidia-smi
+docker compose logs ollama | Select-String "cuda_v12|offloaded|model weights"
+Invoke-RestMethod http://localhost:11434/api/ps | ConvertTo-Json -Depth 10
+```
+
+For a healthy load, `/api/ps` should show nonzero `size_vram`, and the Ollama logs should include `offloaded ... layers to GPU` plus `model weights device=CUDA0`.
+
 ## Workspace Previews
 
 `app/internal/workspace/preview.go` keeps text previews rooted and size-limited, decodes UTF-8, UTF-16, and Windows-1251 text variants, parses CSV files into bounded table previews with lightweight column profiles from a larger capped sample, and renders common image/PDF files as capped data URLs for inline display. PDFs also expose simple embedded text extraction by page when available, and DOCX files expose basic body text extraction. Chat context accepts text previews, DOCX text, extracted PDF text, and structured CSV profiles plus bounded samples, so binary payloads and data URLs are not sent to the model as source text.

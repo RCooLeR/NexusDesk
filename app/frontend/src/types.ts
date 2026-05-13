@@ -154,6 +154,25 @@ export type LLMProbeResult = {
     modelSample: string[];
     capabilities: string[];
     warnings: string[];
+    runtime?: LLMRuntimeStatus;
+};
+
+export type LLMRuntimeStatus = {
+    provider: string;
+    endpoint: string;
+    message: string;
+    selectedModel: string;
+    selectedModelLoaded: boolean;
+    selectedModelVram: number;
+    loadedModels: LLMRuntimeModel[];
+};
+
+export type LLMRuntimeModel = {
+    name: string;
+    model: string;
+    size: number;
+    sizeVram: number;
+    contextLength: number;
 };
 
 export type LLMChatResult = {
