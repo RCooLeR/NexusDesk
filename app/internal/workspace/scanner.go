@@ -161,11 +161,15 @@ func shouldIgnore(relPath string, entry fs.DirEntry) bool {
 }
 
 func detectFileType(entry fs.DirEntry) string {
-	if entry.IsDir() {
+	return detectFileTypeName(entry.Name(), entry.IsDir())
+}
+
+func detectFileTypeName(name string, isDir bool) string {
+	if isDir {
 		return "folder"
 	}
 
-	switch strings.ToLower(filepath.Ext(entry.Name())) {
+	switch strings.ToLower(filepath.Ext(name)) {
 	case ".go", ".js", ".jsx", ".ts", ".tsx", ".css", ".html", ".json", ".yaml", ".yml", ".md", ".sql":
 		return "code"
 	case ".csv", ".xlsx", ".xls", ".parquet":

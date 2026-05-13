@@ -3,6 +3,7 @@ import type {ChangeEvent} from 'react';
 import {
     GetRecentWorkspaces,
     OpenWorkspace,
+    ReadWorkspaceFile,
     RefreshWorkspace,
     SaveLLMSettings,
     SelectWorkspace,
@@ -11,6 +12,7 @@ import {
 import {brandAssets, capabilityIconByTitle, railItems, workspaceIconByName} from '../../brand/assets';
 import type {
     FileNode,
+    FilePreview,
     LLMProbeResult,
     LLMSettings,
     RecentWorkspace,
@@ -51,6 +53,8 @@ export function NexusDeskShell({
     const [workspaceStatus, setWorkspaceStatus] = useState('No workspace opened yet.');
     const [isOpeningWorkspace, setIsOpeningWorkspace] = useState(false);
     const [isRefreshingWorkspace, setIsRefreshingWorkspace] = useState(false);
+    const [filePreview, setFilePreview] = useState<FilePreview | null>(null);
+    const [isLoadingPreview, setIsLoadingPreview] = useState(false);
     const [settingsDraft, setSettingsDraft] = useState<LLMSettings>(llmSettings);
     const [settingsStatus, setSettingsStatus] = useState('LLM provider not connected yet.');
     const [isSavingSettings, setIsSavingSettings] = useState(false);
@@ -74,10 +78,59 @@ export function NexusDeskShell({
 
     function selectFallbackItem(name: string) {
         setActiveFile(`${name}/`);
+        setFilePreview(null);
     }
 
-    function selectWorkspaceNode(node: FileNode) {
+    async function selectWorkspaceNode(node: FileNode) {
         setActiveFile(node.relPath);
+        setFilePreview(null);
+
+        if (node.kind === 'directory') {
+            setFilePreview({
+                relPath: node.relPath,
+                name: node.name,
+                kind: 'directory',
+                fileType: node.fileType,
+                content: '',
+                truncated: false,
+                message: 'Select a file inside this folder to preview its contents.',
+                size: 0,
+            });
+            return;
+        }
+
+        setIsLoadingPreview(true);
+        try {
+            const preview = await ReadWorkspaceFile(node.relPath);
+            setFilePreview(preview);
+        } catch (error) {
+            const message = error instanceof Error ? error.message : '';
+            if (message.includes('undefined') || message.includes('window')) {
+                setFilePreview({
+                    relPath: node.relPath,
+                    name: node.name,
+                    kind: 'unsupported',
+                    fileType: node.fileType,
+                    content: '',
+                    truncated: false,
+                    message: 'File previews are available in the desktop runtime.',
+                    size: 0,
+                });
+                return;
+            }
+            setFilePreview({
+                relPath: node.relPath,
+                name: node.name,
+                kind: 'unsupported',
+                fileType: node.fileType,
+                content: '',
+                truncated: false,
+                message: message || 'Could not preview this file.',
+                size: 0,
+            });
+        } finally {
+            setIsLoadingPreview(false);
+        }
     }
 
     async function openWorkspace() {
@@ -157,6 +210,7 @@ export function NexusDeskShell({
         }
 
         onWorkspaceChange(result.snapshot);
+        setFilePreview(null);
         if (!result.snapshot.nodes.some((node) => node.relPath === activeFile)) {
             setActiveFile(result.snapshot.nodes[0]?.relPath ?? result.snapshot.name);
         }
@@ -303,7 +357,7 @@ export function NexusDeskShell({
                                 <button
                                     key={node.relPath}
                                     className={activeFile === node.relPath ? 'tree-item selected' : 'tree-item'}
-                                    onClick={() => selectWorkspaceNode(node)}
+                                    onClick={() => void selectWorkspaceNode(node)}
                                     style={{paddingLeft: `${8 + Math.min(node.depth, 4) * 10}px`}}
                                 >
                                     <span className={`file-glyph ${node.kind}`}>
@@ -361,13 +415,30 @@ export function NexusDeskShell({
                             <span>Source Preview</span>
                             <small>{selectedMeta}</small>
                         </div>
-                        <div className="code-preview" aria-label="NexusDesk workflow preview">
-                            <p><span>01</span>Open a workspace root.</p>
-                            <p><span>02</span>Index files, datasets, docs, and metadata.</p>
-                            <p><span>03</span>Ask the agent with selected source context.</p>
-                            <p><span>04</span>Approve writes, Docker actions, and database mutations.</p>
-                            <p><span>05</span>Save reports, charts, diffs, and generated configs as artifacts.</p>
-                        </div>
+                        {workspace ? (
+                            <div className="file-preview" aria-label="Workspace file preview">
+                                {isLoadingPreview ? (
+                                    <div className="preview-empty">Loading preview...</div>
+                                ) : filePreview?.content ? (
+                                    <>
+                                        {filePreview.message && <div className="preview-banner">{filePreview.message}</div>}
+                                        <pre>{filePreview.content}</pre>
+                                    </>
+                                ) : (
+                                    <div className="preview-empty">
+                                        {filePreview?.message ?? 'Select a file from the workspace tree to preview it here.'}
+                                    </div>
+                                )}
+                            </div>
+                        ) : (
+                            <div className="code-preview" aria-label="NexusDesk workflow preview">
+                                <p><span>01</span>Open a workspace root.</p>
+                                <p><span>02</span>Index files, datasets, docs, and metadata.</p>
+                                <p><span>03</span>Ask the agent with selected source context.</p>
+                                <p><span>04</span>Approve writes, Docker actions, and database mutations.</p>
+                                <p><span>05</span>Save reports, charts, diffs, and generated configs as artifacts.</p>
+                            </div>
+                        )}
                     </article>
 
                     <article className="status-pane">

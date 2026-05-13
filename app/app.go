@@ -144,6 +144,15 @@ func (a *App) RefreshWorkspace() (WorkspaceOpenResult, error) {
 	}, nil
 }
 
+func (a *App) ReadWorkspaceFile(relPath string) (workspace.FilePreview, error) {
+	root := a.getWorkspaceRoot()
+	if root == "" {
+		return workspace.FilePreview{}, errors.New("open a workspace before reading files")
+	}
+
+	return workspace.Preview(root, relPath, workspace.PreviewOptions{})
+}
+
 func (a *App) GetRecentWorkspaces() ([]storage.RecentWorkspace, error) {
 	return a.recentStore.List()
 }

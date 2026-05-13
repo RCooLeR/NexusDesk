@@ -217,6 +217,32 @@ export namespace workspace {
 	        this.meta = source["meta"];
 	    }
 	}
+	export class FilePreview {
+	    relPath: string;
+	    name: string;
+	    kind: string;
+	    fileType: string;
+	    content: string;
+	    truncated: boolean;
+	    message: string;
+	    size: number;
+
+	    static createFrom(source: any = {}) {
+	        return new FilePreview(source);
+	    }
+
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.relPath = source["relPath"];
+	        this.name = source["name"];
+	        this.kind = source["kind"];
+	        this.fileType = source["fileType"];
+	        this.content = source["content"];
+	        this.truncated = source["truncated"];
+	        this.message = source["message"];
+	        this.size = source["size"];
+	    }
+	}
 	export class WorkspaceSnapshot {
 	    root: string;
 	    name: string;
@@ -255,4 +281,3 @@ export namespace workspace {
 	}
 
 }
-

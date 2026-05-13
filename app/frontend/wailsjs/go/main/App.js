@@ -18,6 +18,10 @@ export function OpenWorkspace(arg1) {
   return window['go']['main']['App']['OpenWorkspace'](arg1);
 }
 
+export function ReadWorkspaceFile(arg1) {
+  return window['go']['main']['App']['ReadWorkspaceFile'](arg1);
+}
+
 export function RefreshWorkspace() {
   return window['go']['main']['App']['RefreshWorkspace']();
 }

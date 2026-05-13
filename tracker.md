@@ -22,8 +22,11 @@ This tracker reflects the repository as it exists today and keeps planned work s
 - [x] Shell layout is split into `app/frontend/src/features/shell/NexusDeskShell.tsx`.
 - [x] Workspace scanner package exists at `app/internal/workspace/`.
 - [x] Scanner skips noisy folders, symlinks, and oversized/deep listings.
+- [x] Workspace file preview is implemented in `app/internal/workspace/preview.go`.
+- [x] File previews are rooted, traversal-checked, symlink-aware, size-limited, and UTF-8/text-only.
 - [x] Desktop workspace picker is bound through `SelectWorkspace`.
 - [x] Frontend switches from scaffold preview to indexed workspace nodes after folder selection.
+- [x] Center workbench pane previews selected workspace text files.
 - [x] Backend remembers the selected workspace root for the session.
 - [x] Refresh action rescans the active workspace through `RefreshWorkspace`.
 - [x] Recent workspace store exists at `app/internal/storage/`.
@@ -58,6 +61,7 @@ This tracker reflects the repository as it exists today and keeps planned work s
 
 - [x] Add a safe workspace folder picker.
 - [x] Build a real file tree from approved workspace roots.
+- [x] Add safe text file preview for selected workspace files.
 - [x] Persist recent workspaces locally.
 - [x] Add refresh behavior for the currently opened workspace.
 - [ ] Preserve selected file and expanded tree state across refreshes.

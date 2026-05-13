@@ -363,6 +363,41 @@ button:disabled {
     text-align: center;
 }
 
+.file-preview {
+    min-height: 0;
+    height: 100%;
+    display: grid;
+    grid-template-rows: auto 1fr;
+}
+
+.file-preview pre {
+    margin: 0;
+    overflow: auto;
+    padding: 16px;
+    color: #1f2937;
+    font: 13px/1.55 "Cascadia Code", "Consolas", monospace;
+    white-space: pre-wrap;
+    word-break: break-word;
+}
+
+.preview-banner {
+    border-bottom: 1px solid var(--nd-border-soft);
+    background: #f8fafc;
+    color: #475467;
+    font-size: 12px;
+    padding: 9px 14px;
+}
+
+.preview-empty {
+    min-height: 220px;
+    display: grid;
+    place-items: center;
+    color: var(--nd-muted-text);
+    font-size: 14px;
+    padding: 24px;
+    text-align: center;
+}
+
 .capability-list {
     display: grid;
     grid-template-columns: repeat(3, minmax(0, 1fr));

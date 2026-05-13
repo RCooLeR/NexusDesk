@@ -32,6 +32,17 @@ export type WorkspaceOpenResult = {
     snapshot: WorkspaceSnapshot;
 };
 
+export type FilePreview = {
+    relPath: string;
+    name: string;
+    kind: string;
+    fileType: string;
+    content: string;
+    truncated: boolean;
+    message: string;
+    size: number;
+};
+
 export type RecentWorkspace = {
     name: string;
     path: string;
