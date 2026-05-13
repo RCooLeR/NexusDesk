@@ -145,6 +145,11 @@ button {
     font: inherit;
 }
 
+button:disabled {
+    cursor: progress;
+    opacity: 0.72;
+}
+
 .primary-action,
 .topbar-actions button,
 .prompt-box button {
@@ -172,6 +177,28 @@ button {
 .tree-list {
     display: grid;
     gap: 6px;
+}
+
+.workspace-summary {
+    border: 1px solid var(--nd-border-soft);
+    border-radius: var(--nd-radius-sm);
+    background: var(--nd-panel-soft);
+    padding: 10px 12px;
+    margin-bottom: 4px;
+}
+
+.workspace-summary strong,
+.workspace-summary small {
+    display: block;
+}
+
+.workspace-summary small {
+    margin-top: 3px;
+    color: var(--nd-muted-text);
+    font-size: 12px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
 }
 
 .tree-item {

@@ -1,6 +1,12 @@
 package main
 
-import "context"
+import (
+	"context"
+	"errors"
+
+	"NexusDesk/internal/workspace"
+	"github.com/wailsapp/wails/v2/pkg/runtime"
+)
 
 type Capability struct {
 	Title       string `json:"title"`
@@ -24,9 +30,14 @@ type StartupState struct {
 	ProductName    string          `json:"productName"`
 	Tagline        string          `json:"tagline"`
 	BuildStage     string          `json:"buildStage"`
-	Capabilities   []Capability   `json:"capabilities"`
+	Capabilities   []Capability    `json:"capabilities"`
 	WorkspaceItems []WorkspaceItem `json:"workspaceItems"`
 	ToolEvents     []ToolEvent     `json:"toolEvents"`
+}
+
+type WorkspaceOpenResult struct {
+	Selected bool                        `json:"selected"`
+	Snapshot workspace.WorkspaceSnapshot `json:"snapshot"`
 }
 
 type App struct {
@@ -74,4 +85,31 @@ func (a *App) GetStartupState() StartupState {
 			{Time: "then", Title: "LLM settings", Detail: "Store provider URL, model, key, and capabilities."},
 		},
 	}
+}
+
+func (a *App) SelectWorkspace() (WorkspaceOpenResult, error) {
+	if a.ctx == nil {
+		return WorkspaceOpenResult{}, errors.New("application is not ready")
+	}
+
+	root, err := runtime.OpenDirectoryDialog(a.ctx, runtime.OpenDialogOptions{
+		Title: "Open NexusDesk Workspace",
+	})
+	if err != nil {
+		return WorkspaceOpenResult{}, err
+	}
+
+	if root == "" {
+		return WorkspaceOpenResult{Selected: false}, nil
+	}
+
+	snapshot, err := workspace.Scan(root, workspace.ScanOptions{})
+	if err != nil {
+		return WorkspaceOpenResult{}, err
+	}
+
+	return WorkspaceOpenResult{
+		Selected: true,
+		Snapshot: snapshot,
+	}, nil
 }

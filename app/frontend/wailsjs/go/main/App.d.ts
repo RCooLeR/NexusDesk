@@ -3,3 +3,5 @@
 import {main} from '../models';
 
 export function GetStartupState():Promise<main.StartupState>;
+
+export function SelectWorkspace():Promise<main.WorkspaceOpenResult>;

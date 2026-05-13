@@ -10,6 +10,28 @@ export type WorkspaceItem = {
     meta: string;
 };
 
+export type FileNode = {
+    name: string;
+    path: string;
+    relPath: string;
+    kind: string;
+    fileType: string;
+    depth: number;
+    meta: string;
+};
+
+export type WorkspaceSnapshot = {
+    root: string;
+    name: string;
+    nodes: FileNode[];
+    truncated: boolean;
+};
+
+export type WorkspaceOpenResult = {
+    selected: boolean;
+    snapshot: WorkspaceSnapshot;
+};
+
 export type ToolEvent = {
     time: string;
     title: string;

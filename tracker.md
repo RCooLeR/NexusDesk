@@ -18,6 +18,10 @@ This tracker reflects the repository as it exists today and keeps planned work s
 - [x] Runtime brand asset mapping lives in `app/frontend/src/brand/assets.ts`.
 - [x] Browser-safe fallback startup state lives in `app/frontend/src/data/startupState.ts`.
 - [x] Shell layout is split into `app/frontend/src/features/shell/NexusDeskShell.tsx`.
+- [x] Workspace scanner package exists at `app/internal/workspace/`.
+- [x] Scanner skips noisy folders, symlinks, and oversized/deep listings.
+- [x] Desktop workspace picker is bound through `SelectWorkspace`.
+- [x] Frontend switches from scaffold preview to indexed workspace nodes after folder selection.
 - [x] Helper services placeholder exists at `services/docker-compose.yml`.
 - [x] Repository ignore rules exist in `.gitignore`.
 - [x] Current and target directory structures are documented separately.
@@ -38,8 +42,10 @@ This tracker reflects the repository as it exists today and keeps planned work s
 
 ## Next Work
 
-- [ ] Add a safe workspace folder picker.
-- [ ] Build a real file tree from approved workspace roots.
+- [x] Add a safe workspace folder picker.
+- [x] Build a real file tree from approved workspace roots.
+- [ ] Persist recent workspaces locally.
+- [ ] Add refresh behavior for the currently opened workspace.
 - [ ] Add local settings storage for LLM provider configuration.
 - [ ] Split brand-aware shell sections into smaller rail, navigator, workbench pane, agent panel, and timeline components when they need behavior.
 - [ ] Add first reusable button, icon button, card, and status badge components.
@@ -51,6 +57,8 @@ This tracker reflects the repository as it exists today and keeps planned work s
 ## Directory Notes
 
 `app/` contains the Wails desktop app. The current backend is intentionally small; create `internal/` packages incrementally as real workspace, settings, storage, indexing, and agent code lands.
+
+`app/internal/workspace/` owns safe workspace scanning. It should keep ignore rules, depth limits, entry limits, and path safety close to the backend instead of trusting frontend filtering.
 
 `services/` is reserved for Docker Compose or supporting development services. It should not contain runtime app state; local service data belongs in ignored folders such as `services/data/`.
 

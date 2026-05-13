@@ -5,3 +5,7 @@
 export function GetStartupState() {
   return window['go']['main']['App']['GetStartupState']();
 }
+
+export function SelectWorkspace() {
+  return window['go']['main']['App']['SelectWorkspace']();
+}
