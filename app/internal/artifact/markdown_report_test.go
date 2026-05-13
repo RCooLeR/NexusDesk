@@ -102,3 +102,52 @@ func TestCreateMarkdownReportSkipsNonTextExcerpt(t *testing.T) {
 		t.Fatalf("did not expect PDF data URL in report, got %q", string(content))
 	}
 }
+
+func TestListReturnsMarkdownArtifactsNewestFirst(t *testing.T) {
+	root := t.TempDir()
+	firstTime := time.Date(2026, 5, 13, 12, 30, 0, 0, time.UTC)
+	secondTime := firstTime.Add(time.Minute)
+
+	firstReport, err := CreateMarkdownReport(root, workspace.FilePreview{Name: "first.md"}, firstTime)
+	if err != nil {
+		t.Fatalf("CreateMarkdownReport first failed: %v", err)
+	}
+	secondReport, err := CreateMarkdownReport(root, workspace.FilePreview{Name: "second.md"}, secondTime)
+	if err != nil {
+		t.Fatalf("CreateMarkdownReport second failed: %v", err)
+	}
+	if err := os.Chtimes(firstReport.Path, firstTime, firstTime); err != nil {
+		t.Fatalf("Chtimes first failed: %v", err)
+	}
+	if err := os.Chtimes(secondReport.Path, secondTime, secondTime); err != nil {
+		t.Fatalf("Chtimes second failed: %v", err)
+	}
+	if err := os.WriteFile(filepath.Join(root, ".nexusdesk", "artifacts", "ignored.txt"), []byte("ignore"), 0o644); err != nil {
+		t.Fatalf("WriteFile failed: %v", err)
+	}
+
+	artifacts, err := List(root)
+	if err != nil {
+		t.Fatalf("List returned error: %v", err)
+	}
+
+	if len(artifacts) != 2 {
+		t.Fatalf("expected 2 markdown artifacts, got %d", len(artifacts))
+	}
+	if artifacts[0].Name != "second-20260513-123100.md" {
+		t.Fatalf("expected newest artifact first, got %s", artifacts[0].Name)
+	}
+	if artifacts[0].RelPath != ".nexusdesk/artifacts/second-20260513-123100.md" {
+		t.Fatalf("unexpected artifact rel path: %s", artifacts[0].RelPath)
+	}
+}
+
+func TestListReturnsEmptyWhenArtifactDirectoryIsMissing(t *testing.T) {
+	artifacts, err := List(t.TempDir())
+	if err != nil {
+		t.Fatalf("List returned error: %v", err)
+	}
+	if len(artifacts) != 0 {
+		t.Fatalf("expected no artifacts, got %d", len(artifacts))
+	}
+}

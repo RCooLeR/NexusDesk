@@ -77,6 +77,8 @@ This tracker reflects the repository as it exists today and keeps planned work s
 - [x] Workspace chat history is persisted through `app/internal/storage/chat_history.go`.
 - [x] Report button creates timestamped Markdown artifacts under `.nexusdesk/artifacts/`.
 - [x] Markdown report artifacts are created without overwriting existing files.
+- [x] Workbench artifact browser lists generated Markdown artifacts.
+- [x] Artifact rows can select the generated report preview when visible in the workspace tree.
 - [x] Helper services placeholder exists at `services/docker-compose.yml`.
 - [x] Repository ignore rules exist in `.gitignore`.
 - [x] Current and target directory structures are documented separately.
@@ -120,6 +122,7 @@ This tracker reflects the repository as it exists today and keeps planned work s
 - [x] Mask API keys before they leave the backend settings store.
 - [ ] Migrate API keys into OS credential storage before production release.
 - [x] Add first Markdown report artifact creation flow.
+- [x] Add first artifact browser for generated Markdown reports.
 - [x] Split brand-aware shell sections into smaller rail, navigator, workbench pane, agent panel, and timeline components when they need behavior.
 - [x] Add first reusable button, icon button, and status badge components.
 - [x] Add first reusable card component when panel extraction starts.

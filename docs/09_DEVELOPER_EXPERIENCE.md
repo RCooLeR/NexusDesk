@@ -55,7 +55,7 @@ The shell is now mostly orchestration. Feature panels own stable presentation, w
 
 ## Artifact Creation
 
-`app/internal/artifact/` owns deterministic artifact writes. The first flow creates timestamped Markdown reports under `.nexusdesk/artifacts/` from the selected preview, uses exclusive file creation to avoid overwrites, and returns the new workspace-relative path so the UI can refresh and select it.
+`app/internal/artifact/` owns deterministic artifact writes and listing. The first flow creates timestamped Markdown reports under `.nexusdesk/artifacts/` from the selected preview, uses exclusive file creation to avoid overwrites, and returns the new workspace-relative path so the UI can refresh and select it. The workbench also lists Markdown artifacts from that folder so generated outputs remain visible after creation.
 
 ## Goals
 

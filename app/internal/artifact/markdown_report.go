@@ -6,6 +6,7 @@ import (
 	"os"
 	"path/filepath"
 	"regexp"
+	"sort"
 	"strings"
 	"time"
 
@@ -13,6 +14,7 @@ import (
 )
 
 const reportContentLimit = 12 * 1024
+const artifactDirRelPath = ".nexusdesk/artifacts"
 
 type MarkdownReport struct {
 	RelPath string `json:"relPath"`
@@ -20,6 +22,15 @@ type MarkdownReport struct {
 	Path    string `json:"path"`
 	Message string `json:"message"`
 	Size    int64  `json:"size"`
+}
+
+type WorkspaceArtifact struct {
+	RelPath    string `json:"relPath"`
+	Name       string `json:"name"`
+	Path       string `json:"path"`
+	Kind       string `json:"kind"`
+	Size       int64  `json:"size"`
+	ModifiedAt string `json:"modifiedAt"`
 }
 
 func CreateMarkdownReport(root string, source workspace.FilePreview, now time.Time) (MarkdownReport, error) {
@@ -32,7 +43,7 @@ func CreateMarkdownReport(root string, source workspace.FilePreview, now time.Ti
 		return MarkdownReport{}, err
 	}
 
-	reportDir := filepath.Join(absRoot, ".nexusdesk", "artifacts")
+	reportDir := filepath.Join(absRoot, filepath.FromSlash(artifactDirRelPath))
 	if err := os.MkdirAll(reportDir, 0o755); err != nil {
 		return MarkdownReport{}, err
 	}
@@ -71,6 +82,67 @@ func CreateMarkdownReport(root string, source workspace.FilePreview, now time.Ti
 		Message: "Markdown report artifact created inside the workspace.",
 		Size:    info.Size(),
 	}, nil
+}
+
+func List(root string) ([]WorkspaceArtifact, error) {
+	if strings.TrimSpace(root) == "" {
+		return []WorkspaceArtifact{}, nil
+	}
+
+	absRoot, err := filepath.Abs(root)
+	if err != nil {
+		return nil, err
+	}
+
+	artifactDir := filepath.Join(absRoot, filepath.FromSlash(artifactDirRelPath))
+	entries, err := os.ReadDir(artifactDir)
+	if errors.Is(err, os.ErrNotExist) {
+		return []WorkspaceArtifact{}, nil
+	}
+	if err != nil {
+		return nil, err
+	}
+
+	artifacts := make([]WorkspaceArtifact, 0, len(entries))
+	for _, entry := range entries {
+		if entry.IsDir() {
+			continue
+		}
+		if strings.ToLower(filepath.Ext(entry.Name())) != ".md" {
+			continue
+		}
+
+		path := filepath.Join(artifactDir, entry.Name())
+		if err := ensureInsideRoot(absRoot, path); err != nil {
+			return nil, err
+		}
+		info, err := entry.Info()
+		if err != nil {
+			continue
+		}
+		relPath, err := filepath.Rel(absRoot, path)
+		if err != nil {
+			return nil, err
+		}
+
+		artifacts = append(artifacts, WorkspaceArtifact{
+			RelPath:    filepath.ToSlash(relPath),
+			Name:       entry.Name(),
+			Path:       path,
+			Kind:       "markdown-report",
+			Size:       info.Size(),
+			ModifiedAt: info.ModTime().UTC().Format(time.RFC3339),
+		})
+	}
+
+	sort.SliceStable(artifacts, func(i, j int) bool {
+		if artifacts[i].ModifiedAt == artifacts[j].ModifiedAt {
+			return artifacts[i].Name < artifacts[j].Name
+		}
+		return artifacts[i].ModifiedAt > artifacts[j].ModifiedAt
+	})
+
+	return artifacts, nil
 }
 
 func reportFileName(source workspace.FilePreview, now time.Time) string {

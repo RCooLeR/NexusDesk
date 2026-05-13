@@ -52,6 +52,15 @@ export type MarkdownReport = {
     size: number;
 };
 
+export type WorkspaceArtifact = {
+    relPath: string;
+    name: string;
+    path: string;
+    kind: string;
+    size: number;
+    modifiedAt: string;
+};
+
 export type RecentWorkspace = {
     name: string;
     path: string;

@@ -38,6 +38,10 @@ export function GetStartupState() {
   return window['go']['main']['App']['GetStartupState']();
 }
 
+export function ListArtifacts() {
+  return window['go']['main']['App']['ListArtifacts']();
+}
+
 export function OpenWorkspace(arg1) {
   return window['go']['main']['App']['OpenWorkspace'](arg1);
 }

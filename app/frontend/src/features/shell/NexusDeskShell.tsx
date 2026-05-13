@@ -8,6 +8,7 @@ import {
     CreateMarkdownReport,
     GetChatHistory,
     GetRecentWorkspaces,
+    ListArtifacts,
     OpenWorkspace,
     ReadWorkspaceFile,
     RemoveRecentWorkspace,
@@ -28,6 +29,7 @@ import type {
     MarkdownReport,
     RecentWorkspace,
     StartupState,
+    WorkspaceArtifact,
     WorkspaceOpenResult,
     WorkspaceSnapshot,
 } from '../../types';
@@ -76,6 +78,7 @@ export function NexusDeskShell({
     const [chatPrompt, setChatPrompt] = useState('');
     const [chatMessages, setChatMessages] = useState<ChatMessage[]>([]);
     const [chatStatus, setChatStatus] = useState('Select text context and ask the assistant.');
+    const [artifacts, setArtifacts] = useState<WorkspaceArtifact[]>([]);
     const [isSendingPrompt, setIsSendingPrompt] = useState(false);
     const [isCreatingReport, setIsCreatingReport] = useState(false);
     const [navigatorWidth, setNavigatorWidth] = useState(280);
@@ -271,6 +274,7 @@ export function NexusDeskShell({
 
         onWorkspaceChange(result.snapshot);
         await refreshChatHistory();
+        await refreshArtifacts();
         setExpandedDirectories((current) => reconcileExpandedDirectories(current, result.snapshot, selectedNode));
         if (selectedNode) {
             setActiveFile(selectedNode.relPath);
@@ -375,6 +379,14 @@ export function NexusDeskShell({
             onRecentWorkspacesChange(await GetRecentWorkspaces());
         } catch {
             onRecentWorkspacesChange([]);
+        }
+    }
+
+    async function refreshArtifacts() {
+        try {
+            setArtifacts(await ListArtifacts());
+        } catch {
+            setArtifacts([]);
         }
     }
 
@@ -579,6 +591,7 @@ export function NexusDeskShell({
             const result = await RefreshWorkspace();
             if (result.selected) {
                 onWorkspaceChange(result.snapshot);
+                await refreshArtifacts();
                 setExpandedDirectories((current) => reconcileExpandedDirectories(current, result.snapshot, findWorkspaceNode(result.snapshot, report.relPath)));
                 await selectWorkspaceFile(result.snapshot, report.relPath);
                 setWorkspaceStatus(`${report.name} created in .nexusdesk/artifacts.`);
@@ -595,6 +608,22 @@ export function NexusDeskShell({
         } finally {
             setIsCreatingReport(false);
         }
+    }
+
+    async function selectArtifact(artifact: WorkspaceArtifact) {
+        if (!workspace) {
+            setWorkspaceStatus('Open a workspace before selecting artifacts.');
+            return;
+        }
+
+        const node = findWorkspaceNode(workspace, artifact.relPath);
+        if (!node) {
+            setWorkspaceStatus(`${artifact.name} is not visible in the current workspace tree. Refresh the workspace to reveal it.`);
+            return;
+        }
+
+        await selectWorkspaceFile(workspace, artifact.relPath);
+        setWorkspaceStatus(`${artifact.name} selected from artifacts.`);
     }
 
     function listenForChatStream(requestId: string, assistantCreatedAt: string, fallbackContextRelPath: string) {
@@ -707,6 +736,7 @@ export function NexusDeskShell({
 
             <WorkbenchPanel
                 activeFile={activeFile}
+                artifacts={artifacts}
                 capabilities={state.capabilities}
                 filePreview={filePreview}
                 isCreatingReport={isCreatingReport}
@@ -714,6 +744,7 @@ export function NexusDeskShell({
                 isSendingPrompt={isSendingPrompt}
                 onCreateReport={() => void createMarkdownReport()}
                 onExplainContext={() => void explainSelectedContext()}
+                onSelectArtifact={(artifact) => void selectArtifact(artifact)}
                 onRefreshPreview={() => void refreshSelectedPreview()}
                 selectedMeta={selectedMeta}
                 workspace={workspace}

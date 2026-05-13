@@ -24,6 +24,8 @@ export function GetRecentWorkspaces():Promise<Array<storage.RecentWorkspace>>;
 
 export function GetStartupState():Promise<main.StartupState>;
 
+export function ListArtifacts():Promise<Array<artifact.WorkspaceArtifact>>;
+
 export function OpenWorkspace(arg1:string):Promise<main.WorkspaceOpenResult>;
 
 export function ReadWorkspaceFile(arg1:string):Promise<workspace.FilePreview>;

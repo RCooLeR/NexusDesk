@@ -20,6 +20,28 @@ export namespace artifact {
 	        this.size = source["size"];
 	    }
 	}
+	export class WorkspaceArtifact {
+	    relPath: string;
+	    name: string;
+	    path: string;
+	    kind: string;
+	    size: number;
+	    modifiedAt: string;
+
+	    static createFrom(source: any = {}) {
+	        return new WorkspaceArtifact(source);
+	    }
+
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.relPath = source["relPath"];
+	        this.name = source["name"];
+	        this.path = source["path"];
+	        this.kind = source["kind"];
+	        this.size = source["size"];
+	        this.modifiedAt = source["modifiedAt"];
+	    }
+	}
 
 }
 

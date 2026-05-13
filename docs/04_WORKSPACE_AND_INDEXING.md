@@ -159,6 +159,7 @@ Current implementation:
 - shows unsupported state for binary or non-UTF-8 files
 - excludes image and PDF previews from text chat context
 - creates Markdown report artifacts under `.nexusdesk/artifacts/` from selected previews
+- lists generated Markdown artifacts from `.nexusdesk/artifacts/`
 - does not yet persist line-aware chunks or citations
 
 ### Markdown

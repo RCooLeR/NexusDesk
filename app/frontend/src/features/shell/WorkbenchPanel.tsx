@@ -1,10 +1,11 @@
 import {brandAssets, capabilityIconByTitle} from '../../brand/assets';
 import {Button, EmptyState, InlineAlert, LoadingState, StatusBadge} from '../../components/ui';
-import type {Capability, FilePreview, WorkspaceSnapshot} from '../../types';
+import type {Capability, FilePreview, WorkspaceArtifact, WorkspaceSnapshot} from '../../types';
 import {HighlightedCode} from './HighlightedCode';
 
 type WorkbenchPanelProps = {
     activeFile: string;
+    artifacts: WorkspaceArtifact[];
     capabilities: Capability[];
     filePreview: FilePreview | null;
     isSendingPrompt: boolean;
@@ -12,6 +13,7 @@ type WorkbenchPanelProps = {
     isLoadingPreview: boolean;
     onExplainContext: () => void;
     onCreateReport: () => void;
+    onSelectArtifact: (artifact: WorkspaceArtifact) => void;
     onRefreshPreview: () => void;
     selectedMeta: string;
     workspace: WorkspaceSnapshot | null;
@@ -19,6 +21,7 @@ type WorkbenchPanelProps = {
 
 export function WorkbenchPanel({
     activeFile,
+    artifacts,
     capabilities,
     filePreview,
     isSendingPrompt,
@@ -26,6 +29,7 @@ export function WorkbenchPanel({
     isLoadingPreview,
     onExplainContext,
     onCreateReport,
+    onSelectArtifact,
     onRefreshPreview,
     selectedMeta,
     workspace,
@@ -107,19 +111,40 @@ export function WorkbenchPanel({
 
                 <article className="status-pane">
                     <div className="pane-title">
-                        <span>MVP Capabilities</span>
-                        <small>Phase 1 focus</small>
+                        <span>{workspace ? 'Artifacts' : 'MVP Capabilities'}</span>
+                        <small>{workspace ? `${artifacts.length} generated` : 'Phase 1 focus'}</small>
                     </div>
-                    <div className="capability-list">
-                        {capabilities.map((capability) => (
-                            <div className="capability-card" key={capability.title}>
-                                <img src={capabilityIconByTitle[capability.title] ?? brandAssets.icons.ai} alt="" />
-                                <strong>{capability.title}</strong>
-                                <p>{capability.description}</p>
-                                <StatusBadge tone="warning">{capability.status}</StatusBadge>
-                            </div>
-                        ))}
-                    </div>
+                    {workspace ? (
+                        <div className="artifact-list">
+                            {artifacts.length === 0 ? (
+                                <EmptyState
+                                    detail="Create a report to add the first workspace artifact."
+                                    iconSrc={brandAssets.icons.documents}
+                                    title="No artifacts yet"
+                                />
+                            ) : artifacts.map((artifact) => (
+                                <button className="artifact-item" key={artifact.relPath} onClick={() => onSelectArtifact(artifact)}>
+                                    <img src={brandAssets.icons.documents} alt="" />
+                                    <span>
+                                        <strong>{artifact.name}</strong>
+                                        <small>{artifact.relPath}</small>
+                                    </span>
+                                    <StatusBadge tone="warning">{artifact.kind}</StatusBadge>
+                                </button>
+                            ))}
+                        </div>
+                    ) : (
+                        <div className="capability-list">
+                            {capabilities.map((capability) => (
+                                <div className="capability-card" key={capability.title}>
+                                    <img src={capabilityIconByTitle[capability.title] ?? brandAssets.icons.ai} alt="" />
+                                    <strong>{capability.title}</strong>
+                                    <p>{capability.description}</p>
+                                    <StatusBadge tone="warning">{capability.status}</StatusBadge>
+                                </div>
+                            ))}
+                        </div>
+                    )}
                 </article>
             </section>
         </main>

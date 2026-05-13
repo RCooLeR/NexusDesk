@@ -51,6 +51,7 @@ Deliverables:
 - reload selected preview from disk: implemented
 - explain selected text/code preview through chat: implemented
 - create Markdown report artifact from selected preview: implemented
+- artifact browser for generated Markdown reports: implemented
 
 Exit criteria:
 
@@ -75,6 +76,7 @@ Current status:
 - Persistent chat history works through local JSON config.
 - Multi-file context packaging, Monaco, richer document extraction, and SQLite persistence are still planned.
 - Markdown report artifacts can be created under `.nexusdesk/artifacts/` without overwriting existing files.
+- The workbench lists generated Markdown artifacts and can reselect visible report files from that list.
 - Multi-file context packaging, Monaco, richer document extraction, approval dialogs, and SQLite persistence are still planned.
 
 ## Phase 2: Files, Documents, And Artifacts
@@ -86,14 +88,14 @@ Deliverables:
 - Markdown/text extraction
 - PDF text extraction where available
 - document summary tool
-- artifact manager
+- artifact manager: first Markdown artifact list implemented
 - create Markdown report tool: first controlled artifact flow implemented
 - create text/code file tool with approval
 - overwrite protection
 - tool call timeline in chat
 - approval dialog
 - file diff preview for edits
-- artifact browser
+- artifact browser: first Markdown report browser implemented
 
 Exit criteria:
 

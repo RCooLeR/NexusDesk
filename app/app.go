@@ -191,6 +191,10 @@ func (a *App) CreateMarkdownReport(relPath string) (artifact.MarkdownReport, err
 	return artifact.CreateMarkdownReport(root, source, time.Now())
 }
 
+func (a *App) ListArtifacts() ([]artifact.WorkspaceArtifact, error) {
+	return artifact.List(a.getWorkspaceRoot())
+}
+
 func (a *App) GetRecentWorkspaces() ([]storage.RecentWorkspace, error) {
 	return a.recentStore.List()
 }
