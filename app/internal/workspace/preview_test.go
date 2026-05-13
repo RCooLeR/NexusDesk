@@ -1,6 +1,7 @@
 package workspace
 
 import (
+	"fmt"
 	"os"
 	"path/filepath"
 	"strings"
@@ -260,6 +261,31 @@ func TestPreviewProfilesCSVColumnsWithFallbackHeaders(t *testing.T) {
 	}
 	if preview.Table.Profiles[1].Min != "1.5" || preview.Table.Profiles[1].Max != "1.5" {
 		t.Fatalf("expected numeric range 1.5-1.5, got %s-%s", preview.Table.Profiles[1].Min, preview.Table.Profiles[1].Max)
+	}
+}
+
+func TestPreviewProfilesCSVBeyondVisibleTextPreview(t *testing.T) {
+	root := t.TempDir()
+	var builder strings.Builder
+	builder.WriteString("name,value\n")
+	for index := 0; index < 120; index++ {
+		builder.WriteString(fmt.Sprintf("row%03d,%d\n", index, index))
+	}
+	writeFile(t, root, "data/report.csv", builder.String())
+
+	preview, err := Preview(root, "data/report.csv", PreviewOptions{MaxBytes: 32})
+	if err != nil {
+		t.Fatalf("Preview returned error: %v", err)
+	}
+
+	if preview.Table == nil {
+		t.Fatal("expected CSV table preview")
+	}
+	if preview.Table.Profiles[1].Max != "119" {
+		t.Fatalf("expected profile to include rows beyond text preview, got max %q", preview.Table.Profiles[1].Max)
+	}
+	if !preview.Truncated {
+		t.Fatal("expected text preview to stay truncated")
 	}
 }
 

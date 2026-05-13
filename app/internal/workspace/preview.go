@@ -25,6 +25,8 @@ const defaultImagePreviewMaxBytes = 2 * 1024 * 1024
 const defaultDocumentPreviewMaxBytes = 8 * 1024 * 1024
 const csvPreviewMaxRows = 50
 const csvPreviewMaxColumns = 30
+const csvProfileMaxRows = 1000
+const csvProfileMaxBytes = 1024 * 1024
 
 type PreviewOptions struct {
 	MaxBytes int
@@ -175,6 +177,10 @@ func Preview(root string, relPath string, options PreviewOptions) (FilePreview, 
 		table, err := parseCSVPreview(preview.Content, csvPreviewMaxRows, csvPreviewMaxColumns)
 		if err == nil && len(table.Columns) > 0 {
 			preview.Table = &table
+			profiles, err := profileCSVFile(absTarget, csvProfileMaxBytes, csvProfileMaxRows, csvPreviewMaxColumns)
+			if err == nil && len(profiles) > 0 {
+				preview.Table.Profiles = profiles
+			}
 			preview.Message = fmt.Sprintf("CSV table preview loaded with %d rows.", table.TotalRows)
 			if table.Truncated || truncated {
 				preview.Message = "CSV table preview truncated to keep the app responsive."
@@ -191,9 +197,7 @@ func Preview(root string, relPath string, options PreviewOptions) (FilePreview, 
 }
 
 func parseCSVPreview(content string, maxRows int, maxColumns int) (TablePreview, error) {
-	reader := csv.NewReader(strings.NewReader(content))
-	reader.FieldsPerRecord = -1
-	records, err := reader.ReadAll()
+	records, err := readCSVRecords(content, 0)
 	if err != nil {
 		return TablePreview{}, err
 	}
@@ -219,6 +223,50 @@ func parseCSVPreview(content string, maxRows int, maxColumns int) (TablePreview,
 		TotalRows: totalRows,
 		Truncated: totalRows > len(rows) || recordsWiderThan(records, maxColumns),
 	}, nil
+}
+
+func profileCSVFile(path string, maxBytes int, maxRows int, maxColumns int) ([]ColumnProfile, error) {
+	content, _, err := readPreviewContent(path, maxBytes)
+	if err != nil {
+		return nil, err
+	}
+
+	normalized, _, ok := normalizePreviewText(content)
+	if !ok || isLikelyBinary(normalized) {
+		return nil, errors.New("csv profile content is not previewable text")
+	}
+
+	records, err := readCSVRecords(string(normalized), maxRows+1)
+	if err != nil {
+		return nil, err
+	}
+	if len(records) == 0 {
+		return nil, nil
+	}
+
+	columns := buildCSVColumns(records, maxColumns)
+	return profileCSVColumns(columns, records[1:]), nil
+}
+
+func readCSVRecords(content string, maxRecords int) ([][]string, error) {
+	reader := csv.NewReader(strings.NewReader(content))
+	reader.FieldsPerRecord = -1
+	records := [][]string{}
+	for maxRecords <= 0 || len(records) < maxRecords {
+		record, err := reader.Read()
+		if errors.Is(err, io.EOF) {
+			break
+		}
+		if err != nil {
+			if len(records) > 0 {
+				break
+			}
+			return nil, err
+		}
+		records = append(records, record)
+	}
+
+	return records, nil
 }
 
 func buildCSVColumns(records [][]string, maxColumns int) []string {

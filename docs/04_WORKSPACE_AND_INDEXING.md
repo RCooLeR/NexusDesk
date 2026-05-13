@@ -152,7 +152,7 @@ Current implementation:
 
 - previews UTF-8 text/code within a 64 KB default cap
 - decodes UTF-8 with BOM, UTF-16 LE/BE with or without BOM, and Windows-1251 Cyrillic text previews
-- parses CSV files into bounded table previews with lightweight column profiles
+- parses CSV files into bounded table previews with lightweight column profiles from a larger capped CSV sample
 - renders common image files as capped inline data URLs
 - renders PDF files as capped inline data URLs
 - sends selected chat context with a smaller 16 KB cap
@@ -202,8 +202,8 @@ For Excel and CSV:
 - count rows and columns
 - sample rows
 - render a bounded CSV table preview
-- infer column types, missing values, distinct counts, and numeric ranges for the previewed CSV window
-- expand profiling beyond the bounded preview window
+- infer column types, missing values, distinct counts, and numeric ranges from a larger capped CSV sample
+- expand profiling beyond the current capped sample with persistent dataset profiles
 - optionally load tables into DuckDB
 - never send whole large workbooks directly to the LLM
 
