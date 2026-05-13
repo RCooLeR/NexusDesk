@@ -1,7 +1,9 @@
 package workspace
 
 import (
+	"bytes"
 	"encoding/base64"
+	"encoding/binary"
 	"errors"
 	"fmt"
 	"io"
@@ -9,11 +11,13 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+	"unicode/utf16"
 	"unicode/utf8"
 )
 
 const defaultPreviewMaxBytes = 64 * 1024
 const defaultImagePreviewMaxBytes = 2 * 1024 * 1024
+const defaultDocumentPreviewMaxBytes = 8 * 1024 * 1024
 
 type PreviewOptions struct {
 	MaxBytes int
@@ -25,6 +29,7 @@ type FilePreview struct {
 	Kind      string `json:"kind"`
 	FileType  string `json:"fileType"`
 	Content   string `json:"content"`
+	Encoding  string `json:"encoding"`
 	Truncated bool   `json:"truncated"`
 	Message   string `json:"message"`
 	Size      int64  `json:"size"`
@@ -85,8 +90,32 @@ func Preview(root string, relPath string, options PreviewOptions) (FilePreview, 
 		return preview, nil
 	}
 
+	if strings.EqualFold(filepath.Ext(info.Name()), ".pdf") {
+		content, err := readBinaryDataURLContent(absTarget, info.Size(), binaryPreviewLimit(options.MaxBytes, defaultDocumentPreviewMaxBytes), "application/pdf")
+		if err != nil {
+			return FilePreview{}, err
+		}
+		if content == "" {
+			preview.Kind = "unsupported"
+			preview.Message = "PDF is too large to preview inline."
+			return preview, nil
+		}
+
+		preview.Kind = "pdf"
+		preview.Content = content
+		preview.Message = "PDF preview rendered from the approved workspace root."
+		return preview, nil
+	}
+
 	if preview.FileType == "image" {
-		content, err := readImagePreviewContent(absTarget, info.Size(), imagePreviewLimit(options.MaxBytes))
+		mimeType, ok := imageMimeType(absTarget)
+		if !ok {
+			preview.Kind = "unsupported"
+			preview.Message = "Image type is not supported for inline preview."
+			return preview, nil
+		}
+
+		content, err := readBinaryDataURLContent(absTarget, info.Size(), binaryPreviewLimit(options.MaxBytes, defaultImagePreviewMaxBytes), mimeType)
 		if err != nil {
 			return FilePreview{}, err
 		}
@@ -107,7 +136,7 @@ func Preview(root string, relPath string, options PreviewOptions) (FilePreview, 
 		return FilePreview{}, err
 	}
 
-	normalized, ok := normalizePreviewText(content)
+	normalized, encoding, ok := normalizePreviewText(content)
 	if !ok || isLikelyBinary(normalized) {
 		preview.Kind = "unsupported"
 		preview.Message = "Binary or non-UTF-8 files are not previewed yet."
@@ -115,9 +144,12 @@ func Preview(root string, relPath string, options PreviewOptions) (FilePreview, 
 	}
 
 	preview.Content = string(normalized)
+	preview.Encoding = encoding
 	preview.Truncated = truncated
 	if truncated {
 		preview.Message = "Preview truncated to keep the app responsive."
+	} else if encoding != "utf-8" {
+		preview.Message = fmt.Sprintf("Decoded as %s.", encoding)
 	}
 
 	return preview, nil
@@ -166,9 +198,9 @@ func previewLimit(maxBytes int) int {
 	return maxBytes
 }
 
-func imagePreviewLimit(maxBytes int) int {
+func binaryPreviewLimit(maxBytes int, defaultMaxBytes int) int {
 	if maxBytes <= 0 {
-		return defaultImagePreviewMaxBytes
+		return defaultMaxBytes
 	}
 	return maxBytes
 }
@@ -192,7 +224,7 @@ func readPreviewContent(path string, maxBytes int) ([]byte, bool, error) {
 	return content[:maxBytes], true, nil
 }
 
-func readImagePreviewContent(path string, size int64, maxBytes int) (string, error) {
+func readBinaryDataURLContent(path string, size int64, maxBytes int, mimeType string) (string, error) {
 	if size > int64(maxBytes) {
 		return "", nil
 	}
@@ -202,11 +234,6 @@ func readImagePreviewContent(path string, size int64, maxBytes int) (string, err
 		return "", err
 	}
 	if len(content) > maxBytes {
-		return "", nil
-	}
-
-	mimeType, ok := imageMimeType(path)
-	if !ok {
 		return "", nil
 	}
 
@@ -246,21 +273,68 @@ func isLikelyBinary(content []byte) bool {
 	return false
 }
 
-func normalizePreviewText(content []byte) ([]byte, bool) {
+func normalizePreviewText(content []byte) ([]byte, string, bool) {
+	if bytes.HasPrefix(content, []byte{0xef, 0xbb, 0xbf}) {
+		content = bytes.TrimPrefix(content, []byte{0xef, 0xbb, 0xbf})
+	}
 	if utf8.Valid(content) {
-		return content, true
+		return content, "utf-8", true
+	}
+
+	if decoded, ok := decodeUTF16(content); ok {
+		return decoded.content, decoded.encoding, true
 	}
 
 	trimmed := content
 	for i := 0; i < utf8.UTFMax-1; i++ {
 		if len(trimmed) == 0 {
-			return nil, false
+			return nil, "", false
 		}
 		trimmed = trimmed[:len(trimmed)-1]
 		if utf8.Valid(trimmed) {
-			return trimmed, true
+			return trimmed, "utf-8", true
 		}
 	}
 
-	return nil, false
+	return nil, "", false
+}
+
+type decodedText struct {
+	content  []byte
+	encoding string
+}
+
+func decodeUTF16(content []byte) (decodedText, bool) {
+	var byteOrder binary.ByteOrder
+	encoding := ""
+
+	switch {
+	case bytes.HasPrefix(content, []byte{0xff, 0xfe}):
+		byteOrder = binary.LittleEndian
+		encoding = "utf-16le"
+		content = content[2:]
+	case bytes.HasPrefix(content, []byte{0xfe, 0xff}):
+		byteOrder = binary.BigEndian
+		encoding = "utf-16be"
+		content = content[2:]
+	default:
+		return decodedText{}, false
+	}
+
+	if len(content) < 2 {
+		return decodedText{encoding: encoding}, true
+	}
+	if len(content)%2 != 0 {
+		content = content[:len(content)-1]
+	}
+
+	values := make([]uint16, 0, len(content)/2)
+	for index := 0; index < len(content); index += 2 {
+		values = append(values, byteOrder.Uint16(content[index:index+2]))
+	}
+
+	return decodedText{
+		content:  []byte(string(utf16.Decode(values))),
+		encoding: encoding,
+	}, true
 }

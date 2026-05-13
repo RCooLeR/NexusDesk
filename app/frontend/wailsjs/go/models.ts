@@ -26,11 +26,11 @@ export namespace llm {
 	    modelSample: string[];
 	    capabilities: string[];
 	    warnings: string[];
-	
+
 	    static createFrom(source: any = {}) {
 	        return new ProbeResult(source);
 	    }
-	
+
 	    constructor(source: any = {}) {
 	        if ('string' === typeof source) source = JSON.parse(source);
 	        this.ok = source["ok"];
@@ -46,16 +46,16 @@ export namespace llm {
 }
 
 export namespace main {
-	
+
 	export class Capability {
 	    title: string;
 	    description: string;
 	    status: string;
-	
+
 	    static createFrom(source: any = {}) {
 	        return new Capability(source);
 	    }
-	
+
 	    constructor(source: any = {}) {
 	        if ('string' === typeof source) source = JSON.parse(source);
 	        this.title = source["title"];
@@ -67,11 +67,11 @@ export namespace main {
 	    time: string;
 	    title: string;
 	    detail: string;
-	
+
 	    static createFrom(source: any = {}) {
 	        return new ToolEvent(source);
 	    }
-	
+
 	    constructor(source: any = {}) {
 	        if ('string' === typeof source) source = JSON.parse(source);
 	        this.time = source["time"];
@@ -83,11 +83,11 @@ export namespace main {
 	    name: string;
 	    kind: string;
 	    meta: string;
-	
+
 	    static createFrom(source: any = {}) {
 	        return new WorkspaceItem(source);
 	    }
-	
+
 	    constructor(source: any = {}) {
 	        if ('string' === typeof source) source = JSON.parse(source);
 	        this.name = source["name"];
@@ -102,11 +102,11 @@ export namespace main {
 	    capabilities: Capability[];
 	    workspaceItems: WorkspaceItem[];
 	    toolEvents: ToolEvent[];
-	
+
 	    static createFrom(source: any = {}) {
 	        return new StartupState(source);
 	    }
-	
+
 	    constructor(source: any = {}) {
 	        if ('string' === typeof source) source = JSON.parse(source);
 	        this.productName = source["productName"];
@@ -116,7 +116,7 @@ export namespace main {
 	        this.workspaceItems = this.convertValues(source["workspaceItems"], WorkspaceItem);
 	        this.toolEvents = this.convertValues(source["toolEvents"], ToolEvent);
 	    }
-	
+
 		convertValues(a: any, classs: any, asMap: boolean = false): any {
 		    if (!a) {
 		        return a;
@@ -135,22 +135,22 @@ export namespace main {
 		    return a;
 		}
 	}
-	
-	
+
+
 	export class WorkspaceOpenResult {
 	    selected: boolean;
 	    snapshot: workspace.WorkspaceSnapshot;
-	
+
 	    static createFrom(source: any = {}) {
 	        return new WorkspaceOpenResult(source);
 	    }
-	
+
 	    constructor(source: any = {}) {
 	        if ('string' === typeof source) source = JSON.parse(source);
 	        this.selected = source["selected"];
 	        this.snapshot = this.convertValues(source["snapshot"], workspace.WorkspaceSnapshot);
 	    }
-	
+
 		convertValues(a: any, classs: any, asMap: boolean = false): any {
 		    if (!a) {
 		        return a;
@@ -198,11 +198,11 @@ export namespace storage {
 	    model: string;
 	    apiKey: string;
 	    updatedAt: string;
-	
+
 	    static createFrom(source: any = {}) {
 	        return new LLMSettings(source);
 	    }
-	
+
 	    constructor(source: any = {}) {
 	        if ('string' === typeof source) source = JSON.parse(source);
 	        this.providerName = source["providerName"];
@@ -216,11 +216,11 @@ export namespace storage {
 	    name: string;
 	    path: string;
 	    lastOpened: string;
-	
+
 	    static createFrom(source: any = {}) {
 	        return new RecentWorkspace(source);
 	    }
-	
+
 	    constructor(source: any = {}) {
 	        if ('string' === typeof source) source = JSON.parse(source);
 	        this.name = source["name"];
@@ -232,7 +232,7 @@ export namespace storage {
 }
 
 export namespace workspace {
-	
+
 	export class FileNode {
 	    name: string;
 	    path: string;
@@ -241,11 +241,11 @@ export namespace workspace {
 	    fileType: string;
 	    depth: number;
 	    meta: string;
-	
+
 	    static createFrom(source: any = {}) {
 	        return new FileNode(source);
 	    }
-	
+
 	    constructor(source: any = {}) {
 	        if ('string' === typeof source) source = JSON.parse(source);
 	        this.name = source["name"];
@@ -263,6 +263,7 @@ export namespace workspace {
 	    kind: string;
 	    fileType: string;
 	    content: string;
+	    encoding: string;
 	    truncated: boolean;
 	    message: string;
 	    size: number;
@@ -278,6 +279,7 @@ export namespace workspace {
 	        this.kind = source["kind"];
 	        this.fileType = source["fileType"];
 	        this.content = source["content"];
+	        this.encoding = source["encoding"];
 	        this.truncated = source["truncated"];
 	        this.message = source["message"];
 	        this.size = source["size"];
@@ -288,11 +290,11 @@ export namespace workspace {
 	    name: string;
 	    nodes: FileNode[];
 	    truncated: boolean;
-	
+
 	    static createFrom(source: any = {}) {
 	        return new WorkspaceSnapshot(source);
 	    }
-	
+
 	    constructor(source: any = {}) {
 	        if ('string' === typeof source) source = JSON.parse(source);
 	        this.root = source["root"];
@@ -300,7 +302,7 @@ export namespace workspace {
 	        this.nodes = this.convertValues(source["nodes"], FileNode);
 	        this.truncated = source["truncated"];
 	    }
-	
+
 		convertValues(a: any, classs: any, asMap: boolean = false): any {
 		    if (!a) {
 		        return a;

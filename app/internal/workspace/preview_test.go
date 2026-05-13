@@ -135,3 +135,64 @@ func TestPreviewTrimsPartialUTF8RuneAtLimit(t *testing.T) {
 		t.Fatalf("expected valid prefix, got %q", preview.Content)
 	}
 }
+
+func TestPreviewDecodesUTF16LEText(t *testing.T) {
+	root := t.TempDir()
+	path := filepath.Join(root, "notes.txt")
+	content := []byte{0xff, 0xfe, 'h', 0x00, 'i', 0x00}
+	if err := os.WriteFile(path, content, 0o644); err != nil {
+		t.Fatalf("WriteFile failed: %v", err)
+	}
+
+	preview, err := Preview(root, "notes.txt", PreviewOptions{})
+	if err != nil {
+		t.Fatalf("Preview returned error: %v", err)
+	}
+
+	if preview.Content != "hi" {
+		t.Fatalf("expected decoded UTF-16 content, got %q", preview.Content)
+	}
+	if preview.Encoding != "utf-16le" {
+		t.Fatalf("expected utf-16le encoding, got %q", preview.Encoding)
+	}
+}
+
+func TestPreviewReturnsPDFDataURL(t *testing.T) {
+	root := t.TempDir()
+	path := filepath.Join(root, "brief.pdf")
+	if err := os.WriteFile(path, []byte("%PDF-1.7"), 0o644); err != nil {
+		t.Fatalf("WriteFile failed: %v", err)
+	}
+
+	preview, err := Preview(root, "brief.pdf", PreviewOptions{})
+	if err != nil {
+		t.Fatalf("Preview returned error: %v", err)
+	}
+
+	if preview.Kind != "pdf" {
+		t.Fatalf("expected PDF preview, got %s", preview.Kind)
+	}
+	if !strings.HasPrefix(preview.Content, "data:application/pdf;base64,") {
+		t.Fatalf("expected PDF data URL, got %q", preview.Content)
+	}
+}
+
+func TestPreviewRejectsOversizedPDF(t *testing.T) {
+	root := t.TempDir()
+	path := filepath.Join(root, "large.pdf")
+	if err := os.WriteFile(path, []byte("%PDF-1.7"), 0o644); err != nil {
+		t.Fatalf("WriteFile failed: %v", err)
+	}
+
+	preview, err := Preview(root, "large.pdf", PreviewOptions{MaxBytes: 2})
+	if err != nil {
+		t.Fatalf("Preview returned error: %v", err)
+	}
+
+	if preview.Kind != "unsupported" {
+		t.Fatalf("expected oversized PDF to be unsupported, got %s", preview.Kind)
+	}
+	if preview.Content != "" {
+		t.Fatalf("expected oversized PDF content to be empty, got %q", preview.Content)
+	}
+}

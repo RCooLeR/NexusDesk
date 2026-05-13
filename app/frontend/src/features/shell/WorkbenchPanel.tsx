@@ -1,6 +1,7 @@
 import {brandAssets, capabilityIconByTitle} from '../../brand/assets';
 import {Button, EmptyState, InlineAlert, LoadingState, StatusBadge} from '../../components/ui';
 import type {Capability, FilePreview, WorkspaceSnapshot} from '../../types';
+import {HighlightedCode} from './HighlightedCode';
 
 type WorkbenchPanelProps = {
     activeFile: string;
@@ -54,10 +55,17 @@ export function WorkbenchPanel({
                                         <img src={filePreview.content} alt={filePreview.name} />
                                     </div>
                                 </>
+                            ) : filePreview?.kind === 'pdf' && filePreview.content ? (
+                                <>
+                                    {filePreview.message && <InlineAlert>{filePreview.message}</InlineAlert>}
+                                    <div className="document-preview">
+                                        <iframe src={filePreview.content} title={filePreview.name} />
+                                    </div>
+                                </>
                             ) : filePreview?.content ? (
                                 <>
                                     {filePreview.message && <InlineAlert>{filePreview.message}</InlineAlert>}
-                                    <pre>{filePreview.content}</pre>
+                                    <HighlightedCode content={filePreview.content} fileName={filePreview.name} />
                                 </>
                             ) : (
                                 <EmptyState

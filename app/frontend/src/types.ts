@@ -38,6 +38,7 @@ export type FilePreview = {
     kind: string;
     fileType: string;
     content: string;
+    encoding?: string;
     truncated: boolean;
     message: string;
     size: number;

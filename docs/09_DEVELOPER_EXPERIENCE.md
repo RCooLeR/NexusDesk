@@ -31,7 +31,9 @@ These stores live behind `app/internal/storage/` so the later SQLite migration c
 
 ## Workspace Previews
 
-`app/internal/workspace/preview.go` keeps text previews rooted and size-limited, and renders common image files as capped data URLs for inline display. Chat context still accepts only text previews, so binary/image content is not sent to the model as source text.
+`app/internal/workspace/preview.go` keeps text previews rooted and size-limited, decodes UTF-8/UTF-16 text variants, and renders common image/PDF files as capped data URLs for inline display. Chat context still accepts only text previews, so binary, image, and PDF content is not sent to the model as source text.
+
+`app/frontend/src/features/shell/HighlightedCode.tsx` provides dependency-free lightweight highlighting for common code/data text previews until Monaco lands.
 
 ## Frontend Structure
 
