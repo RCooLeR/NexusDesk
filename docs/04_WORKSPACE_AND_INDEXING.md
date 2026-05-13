@@ -156,6 +156,7 @@ Current implementation:
 - renders common image files as capped inline data URLs
 - renders PDF files as capped inline data URLs
 - sends selected chat context with a smaller 16 KB cap
+- sends selected CSV chat context as a structured column profile plus bounded row sample
 - trims partial UTF-8 characters at truncation boundaries
 - shows unsupported state for binary or unsupported text-encoding files
 - excludes image and PDF previews from text chat context

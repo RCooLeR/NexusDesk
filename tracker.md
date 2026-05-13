@@ -78,6 +78,7 @@ This tracker reflects the repository as it exists today and keeps planned work s
 - [x] Explain button sends a grounded explanation prompt for selected text/code previews.
 - [x] Agent panel streams partial assistant responses through `nexusdesk:chat-stream` Wails events.
 - [x] Selected workspace text previews can be attached as bounded chat context without sending image/PDF data URLs.
+- [x] Selected CSV previews send a structured column profile and bounded sample as chat context.
 - [x] Workspace chat history is persisted through `app/internal/storage/chat_history.go`.
 - [x] Report button creates timestamped Markdown artifacts under `.nexusdesk/artifacts/`.
 - [x] Markdown report artifacts are created without overwriting existing files.
@@ -114,6 +115,7 @@ This tracker reflects the repository as it exists today and keeps planned work s
 - [x] Add first bounded CSV table preview.
 - [x] Add first bounded CSV column profiles.
 - [x] Expand CSV profiling beyond the visible preview window with a larger capped sample.
+- [x] Send structured CSV summaries as selected chat context.
 - [x] Persist recent workspaces locally.
 - [x] Add refresh behavior for the currently opened workspace.
 - [x] Preserve selected file across refreshes.

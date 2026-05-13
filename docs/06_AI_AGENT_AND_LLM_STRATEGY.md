@@ -90,7 +90,7 @@ Current implementation:
 
 Capability hints are currently inferred from model IDs. They are useful for readiness signals, but they are not a substitute for provider-native capability metadata.
 
-The current chat implementation requires an explicit configured model. It includes at most a bounded selected text preview as context and streams response text when the configured provider supports OpenAI-compatible streaming. The Explain action uses that same selected text/code preview boundary to send a deterministic explanation prompt. It does not yet call tools or build multi-file context packs.
+The current chat implementation requires an explicit configured model. It includes at most a bounded selected text preview as context, sends selected CSV files as a structured column profile plus bounded row sample, and streams response text when the configured provider supports OpenAI-compatible streaming. The Explain action uses that same selected text/code preview boundary to send a deterministic explanation prompt. It does not yet call tools or build multi-file context packs.
 
 ## Agent Modes
 

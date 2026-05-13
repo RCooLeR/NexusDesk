@@ -2,8 +2,11 @@ package main
 
 import (
 	"context"
+	"encoding/csv"
 	"errors"
+	"fmt"
 	"os"
+	"strings"
 	"sync"
 	"time"
 
@@ -57,6 +60,7 @@ type ChatStreamEvent struct {
 }
 
 const chatContextMaxBytes = 16 * 1024
+const chatCSVContextMaxRows = 20
 const chatStreamEventName = "nexusdesk:chat-stream"
 
 type App struct {
@@ -369,7 +373,52 @@ func (a *App) previewChatContext(relPath string) (workspace.FilePreview, error) 
 		return workspace.FilePreview{}, errors.New("selected file context must be a text preview")
 	}
 
+	contextPreview.Content = buildChatContextContent(contextPreview)
+	if strings.TrimSpace(contextPreview.Content) == "" {
+		return workspace.FilePreview{}, errors.New("selected file cannot be sent as text context")
+	}
+
 	return contextPreview, nil
+}
+
+func buildChatContextContent(preview workspace.FilePreview) string {
+	if preview.Table == nil {
+		return preview.Content
+	}
+
+	var builder strings.Builder
+	builder.WriteString("CSV context summary\n\n")
+	builder.WriteString("Columns:\n")
+	for _, profile := range preview.Table.Profiles {
+		builder.WriteString("- ")
+		builder.WriteString(profile.Name)
+		builder.WriteString(": ")
+		builder.WriteString(profile.Type)
+		builder.WriteString(fmt.Sprintf(", distinct=%d, missing=%d", profile.Distinct, profile.Missing))
+		if profile.Min != "" || profile.Max != "" {
+			builder.WriteString(", range=")
+			builder.WriteString(profile.Min)
+			builder.WriteString("..")
+			builder.WriteString(profile.Max)
+		}
+		builder.WriteString("\n")
+	}
+
+	builder.WriteString("\nSample rows:\n")
+	csvWriter := csv.NewWriter(&builder)
+	_ = csvWriter.Write(preview.Table.Columns)
+	for index, row := range preview.Table.Rows {
+		if index >= chatCSVContextMaxRows {
+			break
+		}
+		_ = csvWriter.Write(row)
+	}
+	csvWriter.Flush()
+	if preview.Table.Truncated || len(preview.Table.Rows) > chatCSVContextMaxRows {
+		builder.WriteString("\nCSV context sample was truncated.\n")
+	}
+
+	return builder.String()
 }
 
 func (a *App) openWorkspace(root string) (WorkspaceOpenResult, error) {
