@@ -549,6 +549,49 @@ button:disabled {
     word-break: break-word;
 }
 
+.file-write-editor {
+    min-height: 0;
+    display: grid;
+    grid-template-rows: auto minmax(160px, 0.62fr) minmax(120px, 0.38fr);
+    overflow: hidden;
+}
+
+.write-toolbar {
+    display: flex;
+    gap: 8px;
+    border-bottom: 1px solid var(--nd-border-soft);
+    padding: 10px 14px;
+}
+
+.write-toolbar button {
+    border: 1px solid #ccd5e1;
+    border-radius: var(--nd-radius-sm);
+    background: var(--nd-panel);
+    color: #1f2937;
+    cursor: pointer;
+    min-height: 32px;
+    padding: 0 10px;
+}
+
+.file-write-editor textarea {
+    width: 100%;
+    min-height: 0;
+    border: 0;
+    border-bottom: 1px solid var(--nd-border-soft);
+    color: #1f2937;
+    font: 13px/1.55 "Cascadia Code", "Consolas", monospace;
+    outline: none;
+    padding: 14px 16px;
+    resize: none;
+}
+
+.write-diff {
+    min-height: 0;
+    display: grid;
+    grid-template-rows: auto minmax(0, 1fr);
+    overflow: hidden;
+}
+
 .syntax-comment {
     color: #64748b;
 }

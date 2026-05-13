@@ -96,8 +96,8 @@ Deliverables:
 - document summary tool
 - artifact manager: first Markdown artifact list implemented
 - create Markdown report tool: first controlled artifact flow implemented
-- create text/code file tool with approval
-- overwrite protection
+- create text/code file tool with approval: first edit flow implemented
+- overwrite protection: first diff/apply flow implemented
 - tool call timeline in chat
 - approval dialog
 - file diff preview for edits
@@ -106,7 +106,7 @@ Deliverables:
 Exit criteria:
 
 - AI can create a report artifact from selected source files
-- user can approve or reject file writes
+- user can approve or reject text file writes after reviewing a diff
 - generated artifacts are linked to conversations and source context
 
 ## Phase 3: Excel, CSV, And Charts

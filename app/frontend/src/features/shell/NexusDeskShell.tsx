@@ -1,6 +1,7 @@
 import {useEffect, useMemo, useState} from 'react';
 import type {CSSProperties, MouseEvent as ReactMouseEvent} from 'react';
 import {
+    ApplyFileWrite,
     AskLLM,
     AskLLMStream,
     ClearRecentWorkspaces,
@@ -10,6 +11,7 @@ import {
     GetRecentWorkspaces,
     ListArtifacts,
     OpenWorkspace,
+    PreviewFileWrite,
     ReadWorkspaceFile,
     RemoveRecentWorkspace,
     RefreshWorkspace,
@@ -23,6 +25,7 @@ import type {
     ChatMessage,
     FileNode,
     FilePreview,
+    FileWriteProposal,
     LLMChatResult,
     LLMProbeResult,
     LLMSettings,
@@ -81,6 +84,11 @@ export function NexusDeskShell({
     const [artifacts, setArtifacts] = useState<WorkspaceArtifact[]>([]);
     const [isSendingPrompt, setIsSendingPrompt] = useState(false);
     const [isCreatingReport, setIsCreatingReport] = useState(false);
+    const [isEditingFile, setIsEditingFile] = useState(false);
+    const [isPreviewingWrite, setIsPreviewingWrite] = useState(false);
+    const [isApplyingWrite, setIsApplyingWrite] = useState(false);
+    const [fileDraft, setFileDraft] = useState('');
+    const [writeProposal, setWriteProposal] = useState<FileWriteProposal | null>(null);
     const [navigatorWidth, setNavigatorWidth] = useState(280);
 
     useEffect(() => {
@@ -136,6 +144,7 @@ export function NexusDeskShell({
         if (updateActiveFile) {
             setActiveFile(node.relPath);
         }
+        clearFileWriteDraft();
 
         if (node.kind === 'directory') {
             setIsLoadingPreview(false);
@@ -192,6 +201,67 @@ export function NexusDeskShell({
             message: 'Select a file inside this folder to preview its contents.',
             size: 0,
         };
+    }
+
+    function startFileEdit() {
+        if (!filePreview || filePreview.kind !== 'file') {
+            setWorkspaceStatus('Select a text file before editing.');
+            return;
+        }
+        setFileDraft(filePreview.content);
+        setWriteProposal(null);
+        setIsEditingFile(true);
+    }
+
+    function clearFileWriteDraft() {
+        setIsEditingFile(false);
+        setFileDraft('');
+        setWriteProposal(null);
+        setIsPreviewingWrite(false);
+        setIsApplyingWrite(false);
+    }
+
+    async function previewFileWrite() {
+        if (!workspace || !filePreview) {
+            setWorkspaceStatus('Open a workspace and select a file before previewing writes.');
+            return;
+        }
+
+        setIsPreviewingWrite(true);
+        try {
+            const proposal = await PreviewFileWrite({relPath: filePreview.relPath, content: fileDraft});
+            setWriteProposal(proposal);
+            setWorkspaceStatus(proposal.message);
+        } catch (error) {
+            const message = error instanceof Error ? error.message : '';
+            setWorkspaceStatus(message || 'Could not preview file write.');
+        } finally {
+            setIsPreviewingWrite(false);
+        }
+    }
+
+    async function applyFileWrite() {
+        if (!workspace || !filePreview || !writeProposal) {
+            setWorkspaceStatus('Preview the file write before applying it.');
+            return;
+        }
+
+        setIsApplyingWrite(true);
+        try {
+            const proposal = await ApplyFileWrite({relPath: filePreview.relPath, content: fileDraft});
+            const result = await RefreshWorkspace();
+            if (result.selected) {
+                onWorkspaceChange(result.snapshot);
+                await selectWorkspaceFile(result.snapshot, proposal.relPath);
+            }
+            clearFileWriteDraft();
+            setWorkspaceStatus(proposal.message);
+        } catch (error) {
+            const message = error instanceof Error ? error.message : '';
+            setWorkspaceStatus(message || 'Could not apply file write.');
+        } finally {
+            setIsApplyingWrite(false);
+        }
     }
 
     async function openWorkspace() {
@@ -738,15 +808,25 @@ export function NexusDeskShell({
                 activeFile={activeFile}
                 artifacts={artifacts}
                 capabilities={state.capabilities}
+                fileDraft={fileDraft}
                 filePreview={filePreview}
                 isCreatingReport={isCreatingReport}
+                isEditingFile={isEditingFile}
+                isApplyingWrite={isApplyingWrite}
                 isLoadingPreview={isLoadingPreview}
+                isPreviewingWrite={isPreviewingWrite}
                 isSendingPrompt={isSendingPrompt}
+                onApplyFileWrite={() => void applyFileWrite()}
+                onCancelFileEdit={clearFileWriteDraft}
                 onCreateReport={() => void createMarkdownReport()}
+                onFileDraftChange={setFileDraft}
                 onExplainContext={() => void explainSelectedContext()}
+                onPreviewFileWrite={() => void previewFileWrite()}
                 onSelectArtifact={(artifact) => void selectArtifact(artifact)}
+                onStartFileEdit={startFileEdit}
                 onRefreshPreview={() => void refreshSelectedPreview()}
                 selectedMeta={selectedMeta}
+                writeProposal={writeProposal}
                 workspace={workspace}
             />
 

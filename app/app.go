@@ -174,6 +174,24 @@ func (a *App) ReadWorkspaceFile(relPath string) (workspace.FilePreview, error) {
 	return workspace.Preview(root, relPath, workspace.PreviewOptions{})
 }
 
+func (a *App) PreviewFileWrite(request workspace.FileWriteRequest) (workspace.FileWriteProposal, error) {
+	root := a.getWorkspaceRoot()
+	if root == "" {
+		return workspace.FileWriteProposal{}, errors.New("open a workspace before previewing file writes")
+	}
+
+	return workspace.PreviewFileWrite(root, request)
+}
+
+func (a *App) ApplyFileWrite(request workspace.FileWriteRequest) (workspace.FileWriteProposal, error) {
+	root := a.getWorkspaceRoot()
+	if root == "" {
+		return workspace.FileWriteProposal{}, errors.New("open a workspace before applying file writes")
+	}
+
+	return workspace.ApplyFileWrite(root, request)
+}
+
 func (a *App) CreateMarkdownReport(relPath string) (artifact.MarkdownReport, error) {
 	root := a.getWorkspaceRoot()
 	if root == "" {

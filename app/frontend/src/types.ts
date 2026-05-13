@@ -45,6 +45,20 @@ export type FilePreview = {
     size: number;
 };
 
+export type FileWriteRequest = {
+    relPath: string;
+    content: string;
+};
+
+export type FileWriteProposal = {
+    relPath: string;
+    name: string;
+    action: string;
+    diff: string;
+    size: number;
+    message: string;
+};
+
 export type TablePreview = {
     columns: string[];
     rows: string[][];

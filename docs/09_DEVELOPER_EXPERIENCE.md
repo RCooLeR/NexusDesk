@@ -57,6 +57,10 @@ The shell is now mostly orchestration. Feature panels own stable presentation, w
 
 `app/internal/artifact/` owns deterministic artifact writes and listing. The first flow creates timestamped Markdown reports under `.nexusdesk/artifacts/` from the selected preview, uses exclusive file creation to avoid overwrites, and returns the new workspace-relative path so the UI can refresh and select it. The workbench also lists Markdown artifacts from that folder so generated outputs remain visible after creation.
 
+## File Writes
+
+`app/internal/workspace/write.go` owns the first text write approval boundary. The frontend can draft edits for the selected text file, request a diff preview, and only then apply the write through a rooted workspace method. Direct writes to `.nexusdesk/`, traversal paths, symlinks, directories, oversized previews, and binary existing files are rejected before apply.
+
 ## Goals
 
 NexusDesk should be easy to run, easy to test, easy to reason about, and hard to accidentally make unsafe.

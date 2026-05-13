@@ -1,21 +1,31 @@
 import {brandAssets, capabilityIconByTitle} from '../../brand/assets';
 import {Button, EmptyState, InlineAlert, LoadingState, StatusBadge} from '../../components/ui';
-import type {Capability, FilePreview, TablePreview, WorkspaceArtifact, WorkspaceSnapshot} from '../../types';
+import type {Capability, FilePreview, FileWriteProposal, TablePreview, WorkspaceArtifact, WorkspaceSnapshot} from '../../types';
 import {HighlightedCode} from './HighlightedCode';
 
 type WorkbenchPanelProps = {
     activeFile: string;
     artifacts: WorkspaceArtifact[];
     capabilities: Capability[];
+    fileDraft: string;
     filePreview: FilePreview | null;
+    isApplyingWrite: boolean;
+    isEditingFile: boolean;
     isSendingPrompt: boolean;
     isCreatingReport: boolean;
     isLoadingPreview: boolean;
+    isPreviewingWrite: boolean;
+    onApplyFileWrite: () => void;
+    onCancelFileEdit: () => void;
     onExplainContext: () => void;
     onCreateReport: () => void;
+    onFileDraftChange: (content: string) => void;
+    onPreviewFileWrite: () => void;
     onSelectArtifact: (artifact: WorkspaceArtifact) => void;
     onRefreshPreview: () => void;
+    onStartFileEdit: () => void;
     selectedMeta: string;
+    writeProposal: FileWriteProposal | null;
     workspace: WorkspaceSnapshot | null;
 };
 
@@ -23,18 +33,29 @@ export function WorkbenchPanel({
     activeFile,
     artifacts,
     capabilities,
+    fileDraft,
     filePreview,
+    isApplyingWrite,
+    isEditingFile,
     isSendingPrompt,
     isCreatingReport,
     isLoadingPreview,
+    isPreviewingWrite,
+    onApplyFileWrite,
+    onCancelFileEdit,
     onExplainContext,
     onCreateReport,
+    onFileDraftChange,
+    onPreviewFileWrite,
     onSelectArtifact,
     onRefreshPreview,
+    onStartFileEdit,
     selectedMeta,
+    writeProposal,
     workspace,
 }: WorkbenchPanelProps) {
     const canExplainContext = Boolean(workspace && filePreview?.kind === 'file' && filePreview.content);
+    const canEditContext = Boolean(workspace && filePreview?.kind === 'file' && filePreview.content && !filePreview.table);
 
     return (
         <main className="workbench">
@@ -49,6 +70,9 @@ export function WorkbenchPanel({
                     </Button>
                     <Button disabled={!canExplainContext || isSendingPrompt} onClick={onExplainContext}>
                         {isSendingPrompt ? 'Sending...' : 'Explain'}
+                    </Button>
+                    <Button disabled={!canEditContext || isLoadingPreview} onClick={onStartFileEdit}>
+                        Edit
                     </Button>
                     <Button disabled={!workspace || isCreatingReport} onClick={onCreateReport}>
                         {isCreatingReport ? 'Creating...' : 'Report'}
@@ -89,6 +113,17 @@ export function WorkbenchPanel({
                                     {filePreview.message && <InlineAlert>{filePreview.message}</InlineAlert>}
                                     <CsvTablePreview table={filePreview.table} />
                                 </>
+                            ) : isEditingFile ? (
+                                <FileWriteEditor
+                                    draft={fileDraft}
+                                    isApplying={isApplyingWrite}
+                                    isPreviewing={isPreviewingWrite}
+                                    onApply={onApplyFileWrite}
+                                    onCancel={onCancelFileEdit}
+                                    onChange={onFileDraftChange}
+                                    onPreview={onPreviewFileWrite}
+                                    proposal={writeProposal}
+                                />
                             ) : filePreview?.content ? (
                                 <>
                                     {filePreview.message && <InlineAlert>{filePreview.message}</InlineAlert>}
@@ -153,6 +188,54 @@ export function WorkbenchPanel({
                 </article>
             </section>
         </main>
+    );
+}
+
+function FileWriteEditor({
+    draft,
+    isApplying,
+    isPreviewing,
+    onApply,
+    onCancel,
+    onChange,
+    onPreview,
+    proposal,
+}: {
+    draft: string;
+    isApplying: boolean;
+    isPreviewing: boolean;
+    onApply: () => void;
+    onCancel: () => void;
+    onChange: (content: string) => void;
+    onPreview: () => void;
+    proposal: FileWriteProposal | null;
+}) {
+    return (
+        <div className="file-write-editor">
+            <div className="write-toolbar">
+                <Button disabled={isPreviewing || isApplying} onClick={onPreview}>
+                    {isPreviewing ? 'Previewing...' : 'Preview diff'}
+                </Button>
+                <Button disabled={!proposal || isApplying} onClick={onApply}>
+                    {isApplying ? 'Applying...' : 'Apply'}
+                </Button>
+                <Button disabled={isApplying} onClick={onCancel} variant="subtle">
+                    Cancel
+                </Button>
+            </div>
+            <textarea
+                aria-label="File write draft"
+                onChange={(event) => onChange(event.target.value)}
+                spellCheck={false}
+                value={draft}
+            />
+            {proposal && (
+                <div className="write-diff">
+                    <InlineAlert>{proposal.message}</InlineAlert>
+                    <HighlightedCode content={proposal.diff} fileName={`${proposal.name}.diff`} />
+                </div>
+            )}
+        </div>
     );
 }
 
