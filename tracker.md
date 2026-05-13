@@ -40,6 +40,8 @@ This tracker reflects the repository as it exists today and keeps planned work s
 - [x] Recent workspaces can be removed individually or cleared.
 - [x] LLM settings store exists at `app/internal/storage/llm_settings.go`.
 - [x] LLM provider settings are persisted to local JSON config.
+- [x] Saved LLM API keys are redacted before settings are returned to the UI.
+- [x] Redacted LLM API keys are resolved only inside backend test/save flows that need the stored secret.
 - [x] Agent panel includes a branded LLM provider settings form.
 - [x] LLM connection probe exists at `app/internal/llm/`.
 - [x] Agent panel can test an OpenAI-compatible `/models` endpoint.
@@ -77,7 +79,8 @@ This tracker reflects the repository as it exists today and keeps planned work s
 - [x] Add local settings storage for LLM provider configuration.
 - [x] Add LLM connection test.
 - [x] Add LLM capability detection beyond model listing.
-- [ ] Mask or migrate API keys into OS credential storage before production release.
+- [x] Mask API keys before they leave the backend settings store.
+- [ ] Migrate API keys into OS credential storage before production release.
 - [ ] Split brand-aware shell sections into smaller rail, navigator, workbench pane, agent panel, and timeline components when they need behavior.
 - [ ] Add first reusable button, icon button, card, and status badge components.
 - [ ] Add backend module layout only when implementation files are created.

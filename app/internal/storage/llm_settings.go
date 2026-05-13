@@ -11,6 +11,8 @@ import (
 	"time"
 )
 
+const RedactedAPIKey = "********"
+
 type LLMSettings struct {
 	ProviderName string `json:"providerName"`
 	BaseURL      string `json:"baseUrl"`
@@ -50,20 +52,12 @@ func (s *LLMSettingsStore) Get() (LLMSettings, error) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
-	data, err := os.ReadFile(s.path)
-	if os.IsNotExist(err) {
-		return DefaultLLMSettings(), nil
-	}
+	settings, err := s.read()
 	if err != nil {
 		return LLMSettings{}, err
 	}
 
-	settings := DefaultLLMSettings()
-	if err := json.Unmarshal(data, &settings); err != nil {
-		return LLMSettings{}, err
-	}
-
-	return normalizeLLMSettings(settings), nil
+	return redactLLMSettings(settings), nil
 }
 
 func (s *LLMSettingsStore) Save(settings LLMSettings) (LLMSettings, error) {
@@ -71,6 +65,14 @@ func (s *LLMSettingsStore) Save(settings LLMSettings) (LLMSettings, error) {
 	defer s.mu.Unlock()
 
 	settings = normalizeLLMSettings(settings)
+	if settings.APIKey == RedactedAPIKey {
+		existing, err := s.read()
+		if err != nil {
+			return LLMSettings{}, err
+		}
+		settings.APIKey = existing.APIKey
+	}
+
 	if err := validateLLMSettings(settings); err != nil {
 		return LLMSettings{}, err
 	}
@@ -90,7 +92,42 @@ func (s *LLMSettingsStore) Save(settings LLMSettings) (LLMSettings, error) {
 		return LLMSettings{}, err
 	}
 
+	return redactLLMSettings(settings), nil
+}
+
+func (s *LLMSettingsStore) ResolveForUse(settings LLMSettings) (LLMSettings, error) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	settings = normalizeLLMSettings(settings)
+	if settings.APIKey != RedactedAPIKey {
+		return settings, nil
+	}
+
+	existing, err := s.read()
+	if err != nil {
+		return LLMSettings{}, err
+	}
+
+	settings.APIKey = existing.APIKey
 	return settings, nil
+}
+
+func (s *LLMSettingsStore) read() (LLMSettings, error) {
+	data, err := os.ReadFile(s.path)
+	if os.IsNotExist(err) {
+		return DefaultLLMSettings(), nil
+	}
+	if err != nil {
+		return LLMSettings{}, err
+	}
+
+	settings := DefaultLLMSettings()
+	if err := json.Unmarshal(data, &settings); err != nil {
+		return LLMSettings{}, err
+	}
+
+	return normalizeLLMSettings(settings), nil
 }
 
 func normalizeLLMSettings(settings LLMSettings) LLMSettings {
@@ -103,6 +140,14 @@ func normalizeLLMSettings(settings LLMSettings) LLMSettings {
 		settings.ProviderName = "OpenAI-compatible"
 	}
 
+	return settings
+}
+
+func redactLLMSettings(settings LLMSettings) LLMSettings {
+	settings = normalizeLLMSettings(settings)
+	if settings.APIKey != "" {
+		settings.APIKey = RedactedAPIKey
+	}
 	return settings
 }
 

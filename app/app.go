@@ -174,7 +174,12 @@ func (a *App) SaveLLMSettings(settings storage.LLMSettings) (storage.LLMSettings
 }
 
 func (a *App) TestLLMConnection(settings storage.LLMSettings) (llm.ProbeResult, error) {
-	return a.llmClient.Probe(context.Background(), settings)
+	resolvedSettings, err := a.llmStore.ResolveForUse(settings)
+	if err != nil {
+		return llm.ProbeResult{}, err
+	}
+
+	return a.llmClient.Probe(context.Background(), resolvedSettings)
 }
 
 func (a *App) openWorkspace(root string) (WorkspaceOpenResult, error) {
