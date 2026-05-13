@@ -13,7 +13,6 @@ import {
     SelectWorkspace,
     TestLLMConnection,
 } from '../../../wailsjs/go/main/App';
-import {brandAssets} from '../../brand/assets';
 import type {
     ChatMessage,
     FileNode,
@@ -26,9 +25,7 @@ import type {
     WorkspaceOpenResult,
     WorkspaceSnapshot,
 } from '../../types';
-import {AgentChatCard} from './AgentChatCard';
-import {LLMSettingsCard} from './LLMSettingsCard';
-import {ToolTimeline} from './ToolTimeline';
+import {AgentPanel} from './AgentPanel';
 import {WorkbenchPanel} from './WorkbenchPanel';
 import {WorkspaceNavigator} from './WorkspaceNavigator';
 import {WorkspaceRail} from './WorkspaceRail';
@@ -534,37 +531,25 @@ export function NexusDeskShell({
                 workspace={workspace}
             />
 
-            <aside className="agent-panel">
-                <header>
-                    <img className="agent-symbol" src={brandAssets.symbolDark} alt="" />
-                    <p className="eyebrow">Agent</p>
-                    <h2>Grounded Assistant</h2>
-                    <span>{state.tagline}</span>
-                </header>
-
-                <AgentChatCard
-                    chatMessages={chatMessages}
-                    chatPrompt={chatPrompt}
-                    chatStatus={chatStatus}
-                    isSendingPrompt={isSendingPrompt}
-                    onChatPromptChange={setChatPrompt}
-                    onClearChatHistory={() => void clearChatHistory()}
-                    onSendPrompt={() => void sendPrompt()}
-                />
-
-                <LLMSettingsCard
-                    isSavingSettings={isSavingSettings}
-                    isTestingConnection={isTestingConnection}
-                    onSaveSettings={() => void saveLLMSettings()}
-                    onSettingsDraftChange={updateSettingsDraft}
-                    onTestConnection={() => void testLLMConnection()}
-                    probeResult={probeResult}
-                    settingsDraft={settingsDraft}
-                    settingsStatus={settingsStatus}
-                />
-
-                <ToolTimeline events={state.toolEvents} />
-            </aside>
+            <AgentPanel
+                chatMessages={chatMessages}
+                chatPrompt={chatPrompt}
+                chatStatus={chatStatus}
+                isSavingSettings={isSavingSettings}
+                isSendingPrompt={isSendingPrompt}
+                isTestingConnection={isTestingConnection}
+                onChatPromptChange={setChatPrompt}
+                onClearChatHistory={() => void clearChatHistory()}
+                onSaveSettings={() => void saveLLMSettings()}
+                onSendPrompt={() => void sendPrompt()}
+                onSettingsDraftChange={updateSettingsDraft}
+                onTestConnection={() => void testLLMConnection()}
+                probeResult={probeResult}
+                settingsDraft={settingsDraft}
+                settingsStatus={settingsStatus}
+                tagline={state.tagline}
+                toolEvents={state.toolEvents}
+            />
         </div>
     );
 }
