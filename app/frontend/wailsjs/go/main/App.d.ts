@@ -5,6 +5,7 @@ import {llm} from '../models';
 import {storage} from '../models';
 import {artifact} from '../models';
 import {main} from '../models';
+import {dataset} from '../models';
 
 export function ApplyFileWrite(arg1:workspace.FileWriteRequest):Promise<workspace.FileWriteProposal>;
 
@@ -28,9 +29,13 @@ export function GetStartupState():Promise<main.StartupState>;
 
 export function ListArtifacts():Promise<Array<artifact.WorkspaceArtifact>>;
 
+export function ListDatasetProfiles():Promise<Array<dataset.Profile>>;
+
 export function OpenWorkspace(arg1:string):Promise<main.WorkspaceOpenResult>;
 
 export function PreviewFileWrite(arg1:workspace.FileWriteRequest):Promise<workspace.FileWriteProposal>;
+
+export function ProfileDataset(arg1:string):Promise<dataset.Profile>;
 
 export function ReadWorkspaceFile(arg1:string):Promise<workspace.FilePreview>;
 

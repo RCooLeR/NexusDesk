@@ -8,10 +8,12 @@ import {
     ClearChatHistory,
     CreateMarkdownReport,
     GetChatHistory,
+    ListDatasetProfiles,
     GetRecentWorkspaces,
     ListArtifacts,
     OpenWorkspace,
     PreviewFileWrite,
+    ProfileDataset,
     ReadWorkspaceFile,
     RemoveRecentWorkspace,
     RefreshWorkspace,
@@ -23,6 +25,7 @@ import {EventsOn} from '../../../wailsjs/runtime/runtime';
 import type {
     ChatStreamEvent,
     ChatMessage,
+    DatasetProfile,
     FileNode,
     FilePreview,
     FileWriteProposal,
@@ -82,8 +85,11 @@ export function NexusDeskShell({
     const [chatMessages, setChatMessages] = useState<ChatMessage[]>([]);
     const [chatStatus, setChatStatus] = useState('Select text context and ask the assistant.');
     const [artifacts, setArtifacts] = useState<WorkspaceArtifact[]>([]);
+    const [datasetProfiles, setDatasetProfiles] = useState<DatasetProfile[]>([]);
+    const [activeDatasetProfile, setActiveDatasetProfile] = useState<DatasetProfile | null>(null);
     const [isSendingPrompt, setIsSendingPrompt] = useState(false);
     const [isCreatingReport, setIsCreatingReport] = useState(false);
+    const [isProfilingDataset, setIsProfilingDataset] = useState(false);
     const [isEditingFile, setIsEditingFile] = useState(false);
     const [isPreviewingWrite, setIsPreviewingWrite] = useState(false);
     const [isApplyingWrite, setIsApplyingWrite] = useState(false);
@@ -157,6 +163,7 @@ export function NexusDeskShell({
         try {
             const preview = await ReadWorkspaceFile(node.relPath);
             setFilePreview(preview);
+            setActiveDatasetProfile(datasetProfiles.find((profile) => profile.relPath === node.relPath) ?? null);
         } catch (error) {
             const message = error instanceof Error ? error.message : '';
             if (message.includes('undefined') || message.includes('window')) {
@@ -348,6 +355,7 @@ export function NexusDeskShell({
         onWorkspaceChange(result.snapshot);
         await refreshChatHistory();
         await refreshArtifacts();
+        await refreshDatasetProfiles();
         setExpandedDirectories((current) => reconcileExpandedDirectories(current, result.snapshot, selectedNode));
         if (selectedNode) {
             setActiveFile(selectedNode.relPath);
@@ -460,6 +468,16 @@ export function NexusDeskShell({
             setArtifacts(await ListArtifacts());
         } catch {
             setArtifacts([]);
+        }
+    }
+
+    async function refreshDatasetProfiles() {
+        try {
+            const profiles = await ListDatasetProfiles();
+            setDatasetProfiles(profiles);
+            setActiveDatasetProfile((current) => profiles.find((profile) => profile.relPath === current?.relPath) ?? current);
+        } catch {
+            setDatasetProfiles([]);
         }
     }
 
@@ -683,6 +701,26 @@ export function NexusDeskShell({
         }
     }
 
+    async function profileSelectedDataset() {
+        if (!workspace || !filePreview) {
+            setWorkspaceStatus('Open a workspace and select a dataset before profiling.');
+            return;
+        }
+
+        setIsProfilingDataset(true);
+        try {
+            const profile = await ProfileDataset(filePreview.relPath);
+            await refreshDatasetProfiles();
+            setActiveDatasetProfile(profile);
+            setWorkspaceStatus(profile.message);
+        } catch (error) {
+            const message = error instanceof Error ? error.message : '';
+            setWorkspaceStatus(message || 'Could not profile this dataset.');
+        } finally {
+            setIsProfilingDataset(false);
+        }
+    }
+
     async function selectArtifact(artifact: WorkspaceArtifact) {
         if (!workspace) {
             setWorkspaceStatus('Open a workspace before selecting artifacts.');
@@ -811,9 +849,12 @@ export function NexusDeskShell({
                 activeFile={activeFile}
                 artifacts={artifacts}
                 capabilities={state.capabilities}
+                datasetProfiles={datasetProfiles}
+                activeDatasetProfile={activeDatasetProfile}
                 fileDraft={fileDraft}
                 filePreview={filePreview}
                 isCreatingReport={isCreatingReport}
+                isProfilingDataset={isProfilingDataset}
                 isEditingFile={isEditingFile}
                 isApplyingWrite={isApplyingWrite}
                 isLoadingPreview={isLoadingPreview}
@@ -825,6 +866,7 @@ export function NexusDeskShell({
                 onFileDraftChange={setFileDraft}
                 onExplainContext={() => void explainSelectedContext()}
                 onPreviewFileWrite={() => void previewFileWrite()}
+                onProfileDataset={() => void profileSelectedDataset()}
                 onSelectArtifact={(artifact) => void selectArtifact(artifact)}
                 onStartFileEdit={startFileEdit}
                 onRefreshPreview={() => void refreshSelectedPreview()}

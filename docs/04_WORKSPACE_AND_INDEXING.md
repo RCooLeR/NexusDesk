@@ -153,6 +153,7 @@ Current implementation:
 - previews UTF-8 text/code within a 64 KB default cap
 - decodes UTF-8 with BOM, UTF-16 LE/BE with or without BOM, and Windows-1251 Cyrillic text previews
 - parses CSV files into bounded table previews with lightweight column profiles from a larger capped CSV sample
+- persists first dataset profiles for CSV files and XLSX workbook sheet metadata under `.nexusdesk/datasets/`
 - renders common image files as capped inline data URLs
 - renders PDF files as capped inline data URLs and extracts simple embedded text when available
 - sends selected chat context with a smaller 16 KB cap
@@ -204,7 +205,8 @@ For Excel and CSV:
 - sample rows
 - render a bounded CSV table preview
 - infer column types, missing values, distinct counts, and numeric ranges from a larger capped CSV sample
-- expand profiling beyond the current capped sample with persistent dataset profiles
+- persist CSV profiles and XLSX sheet metadata in the workspace
+- expand profiling beyond the current capped sample with richer dataset profiles
 - optionally load tables into DuckDB
 - never send whole large workbooks directly to the LLM
 

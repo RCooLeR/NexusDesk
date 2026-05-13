@@ -35,7 +35,11 @@ These stores live behind `app/internal/storage/` so the later SQLite migration c
 
 `app/frontend/src/features/shell/HighlightedCode.tsx` provides dependency-free lightweight highlighting for common code/data text previews until Monaco lands.
 
-The workbench topbar now has functional Preview and Explain actions. Preview reloads the selected workspace node from disk, and Explain sends a predefined grounded prompt only when the selected preview is text/code content.
+## Dataset Profiles
+
+`app/internal/dataset/` owns the first persistent dataset profile pass. CSV files reuse the workspace preview profiles and XLSX files expose workbook sheet names, then profiles are stored under `.nexusdesk/datasets/profiles.json` inside the active workspace.
+
+The workbench topbar now has functional Preview, Explain, Edit, Report, and Profile actions. Preview reloads the selected workspace node from disk, Explain sends a predefined grounded prompt when text context is available, Edit uses the diff/apply write flow, Report creates a Markdown artifact, and Profile persists CSV/XLSX dataset metadata.
 
 ## Frontend Structure
 

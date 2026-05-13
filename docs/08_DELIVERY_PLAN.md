@@ -40,6 +40,7 @@ Deliverables:
 - bounded CSV table preview: implemented
 - bounded CSV column profiles: implemented
 - larger capped CSV profile sample: implemented
+- persistent CSV/XLSX dataset profiles: first implementation
 - image preview: implemented
 - basic PDF preview: implemented
 - lightweight syntax highlighting: implemented
@@ -83,7 +84,7 @@ Current status:
 - Multi-file context packaging, Monaco, richer document extraction, and SQLite persistence are still planned.
 - Markdown report artifacts can be created under `.nexusdesk/artifacts/` without overwriting existing files.
 - The workbench lists generated Markdown artifacts and can reselect visible report files from that list.
-- Multi-file context packaging, Monaco, richer document extraction, approval dialogs, and SQLite persistence are still planned.
+- Multi-file context packaging, Monaco, richer document extraction, richer approval dialogs, and SQLite persistence are still planned.
 
 ## Phase 2: Files, Documents, And Artifacts
 
@@ -120,7 +121,7 @@ Deliverables:
 - CSV table preview: implemented
 - bounded CSV column profiles: implemented
 - larger capped CSV profile sample: implemented
-- dataset profiles beyond the preview window
+- dataset profiles beyond the preview window: first CSV/XLSX profile store implemented
 - structured CSV chat context: implemented
 - DuckDB local analytics
 - query dataset tool

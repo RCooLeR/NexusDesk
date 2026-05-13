@@ -45,6 +45,57 @@ export namespace artifact {
 
 }
 
+export namespace dataset {
+
+	export class Profile {
+	    relPath: string;
+	    name: string;
+	    kind: string;
+	    rows: number;
+	    columns: number;
+	    sheets: string[];
+	    profiles: workspace.ColumnProfile[];
+	    updatedAt: string;
+	    message: string;
+
+	    static createFrom(source: any = {}) {
+	        return new Profile(source);
+	    }
+
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.relPath = source["relPath"];
+	        this.name = source["name"];
+	        this.kind = source["kind"];
+	        this.rows = source["rows"];
+	        this.columns = source["columns"];
+	        this.sheets = source["sheets"];
+	        this.profiles = this.convertValues(source["profiles"], workspace.ColumnProfile);
+	        this.updatedAt = source["updatedAt"];
+	        this.message = source["message"];
+	    }
+
+		convertValues(a: any, classs: any, asMap: boolean = false): any {
+		    if (!a) {
+		        return a;
+		    }
+		    if (a.slice && a.map) {
+		        return (a as any[]).map(elem => this.convertValues(elem, classs));
+		    } else if ("object" === typeof a) {
+		        if (asMap) {
+		            for (const key of Object.keys(a)) {
+		                a[key] = new classs(a[key]);
+		            }
+		            return a;
+		        }
+		        return new classs(a);
+		    }
+		    return a;
+		}
+	}
+
+}
+
 export namespace llm {
 
 	export class ChatResult {

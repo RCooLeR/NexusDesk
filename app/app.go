@@ -11,6 +11,7 @@ import (
 	"time"
 
 	"NexusDesk/internal/artifact"
+	"NexusDesk/internal/dataset"
 	"NexusDesk/internal/llm"
 	"NexusDesk/internal/storage"
 	"NexusDesk/internal/workspace"
@@ -215,6 +216,22 @@ func (a *App) CreateMarkdownReport(relPath string) (artifact.MarkdownReport, err
 
 func (a *App) ListArtifacts() ([]artifact.WorkspaceArtifact, error) {
 	return artifact.List(a.getWorkspaceRoot())
+}
+
+func (a *App) ProfileDataset(relPath string) (dataset.Profile, error) {
+	root := a.getWorkspaceRoot()
+	if root == "" {
+		return dataset.Profile{}, errors.New("open a workspace before profiling datasets")
+	}
+	return dataset.Build(root, relPath)
+}
+
+func (a *App) ListDatasetProfiles() ([]dataset.Profile, error) {
+	root := a.getWorkspaceRoot()
+	if root == "" {
+		return []dataset.Profile{}, nil
+	}
+	return dataset.List(root)
 }
 
 func (a *App) GetRecentWorkspaces() ([]storage.RecentWorkspace, error) {

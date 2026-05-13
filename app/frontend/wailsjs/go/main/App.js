@@ -46,12 +46,20 @@ export function ListArtifacts() {
   return window['go']['main']['App']['ListArtifacts']();
 }
 
+export function ListDatasetProfiles() {
+  return window['go']['main']['App']['ListDatasetProfiles']();
+}
+
 export function OpenWorkspace(arg1) {
   return window['go']['main']['App']['OpenWorkspace'](arg1);
 }
 
 export function PreviewFileWrite(arg1) {
   return window['go']['main']['App']['PreviewFileWrite'](arg1);
+}
+
+export function ProfileDataset(arg1) {
+  return window['go']['main']['App']['ProfileDataset'](arg1);
 }
 
 export function ReadWorkspaceFile(arg1) {

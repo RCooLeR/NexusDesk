@@ -44,6 +44,7 @@ This tracker reflects the repository as it exists today and keeps planned work s
 - [x] CSV previews parse bounded rows/columns into a table while keeping raw text content available for chat context.
 - [x] CSV previews show bounded column profiles with inferred type, missing count, distinct count, and numeric ranges.
 - [x] CSV profile stats read a larger bounded file sample than the visible text preview.
+- [x] Dataset profiles persist CSV profiles and XLSX sheet metadata under `.nexusdesk/datasets/`.
 - [x] Lightweight syntax highlighting exists at `app/frontend/src/features/shell/HighlightedCode.tsx`.
 - [x] Desktop workspace picker is bound through `SelectWorkspace`.
 - [x] Frontend switches from scaffold preview to indexed workspace nodes after folder selection.
@@ -118,6 +119,7 @@ This tracker reflects the repository as it exists today and keeps planned work s
 - [x] Add first bounded CSV table preview.
 - [x] Add first bounded CSV column profiles.
 - [x] Expand CSV profiling beyond the visible preview window with a larger capped sample.
+- [x] Persist first CSV/XLSX dataset profiles in the workspace.
 - [x] Send structured CSV summaries as selected chat context.
 - [x] Persist recent workspaces locally.
 - [x] Add refresh behavior for the currently opened workspace.

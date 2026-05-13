@@ -1,18 +1,21 @@
 import {brandAssets, capabilityIconByTitle} from '../../brand/assets';
 import {Button, EmptyState, InlineAlert, LoadingState, StatusBadge} from '../../components/ui';
-import type {Capability, FilePreview, FileWriteProposal, TablePreview, WorkspaceArtifact, WorkspaceSnapshot} from '../../types';
+import type {Capability, DatasetProfile, FilePreview, FileWriteProposal, TablePreview, WorkspaceArtifact, WorkspaceSnapshot} from '../../types';
 import {HighlightedCode} from './HighlightedCode';
 
 type WorkbenchPanelProps = {
     activeFile: string;
+    activeDatasetProfile: DatasetProfile | null;
     artifacts: WorkspaceArtifact[];
     capabilities: Capability[];
+    datasetProfiles: DatasetProfile[];
     fileDraft: string;
     filePreview: FilePreview | null;
     isApplyingWrite: boolean;
     isEditingFile: boolean;
     isSendingPrompt: boolean;
     isCreatingReport: boolean;
+    isProfilingDataset: boolean;
     isLoadingPreview: boolean;
     isPreviewingWrite: boolean;
     onApplyFileWrite: () => void;
@@ -21,6 +24,7 @@ type WorkbenchPanelProps = {
     onCreateReport: () => void;
     onFileDraftChange: (content: string) => void;
     onPreviewFileWrite: () => void;
+    onProfileDataset: () => void;
     onSelectArtifact: (artifact: WorkspaceArtifact) => void;
     onRefreshPreview: () => void;
     onStartFileEdit: () => void;
@@ -31,14 +35,17 @@ type WorkbenchPanelProps = {
 
 export function WorkbenchPanel({
     activeFile,
+    activeDatasetProfile,
     artifacts,
     capabilities,
+    datasetProfiles,
     fileDraft,
     filePreview,
     isApplyingWrite,
     isEditingFile,
     isSendingPrompt,
     isCreatingReport,
+    isProfilingDataset,
     isLoadingPreview,
     isPreviewingWrite,
     onApplyFileWrite,
@@ -47,6 +54,7 @@ export function WorkbenchPanel({
     onCreateReport,
     onFileDraftChange,
     onPreviewFileWrite,
+    onProfileDataset,
     onSelectArtifact,
     onRefreshPreview,
     onStartFileEdit,
@@ -58,6 +66,7 @@ export function WorkbenchPanel({
         workspace && ((filePreview?.kind === 'file' && filePreview.content) || (filePreview?.kind === 'pdf' && filePreview.text))
     );
     const canEditContext = Boolean(workspace && filePreview?.kind === 'file' && filePreview.content && !filePreview.table);
+    const canProfileDataset = Boolean(workspace && filePreview?.fileType === 'data');
 
     return (
         <main className="workbench">
@@ -78,6 +87,9 @@ export function WorkbenchPanel({
                     </Button>
                     <Button disabled={!workspace || isCreatingReport} onClick={onCreateReport}>
                         {isCreatingReport ? 'Creating...' : 'Report'}
+                    </Button>
+                    <Button disabled={!canProfileDataset || isProfilingDataset} onClick={onProfileDataset}>
+                        {isProfilingDataset ? 'Profiling...' : 'Profile'}
                     </Button>
                 </div>
             </header>
@@ -159,11 +171,12 @@ export function WorkbenchPanel({
 
                 <article className="status-pane">
                     <div className="pane-title">
-                        <span>{workspace ? 'Artifacts' : 'MVP Capabilities'}</span>
-                        <small>{workspace ? `${artifacts.length} generated` : 'Phase 1 focus'}</small>
+                        <span>{workspace ? 'Artifacts & Data' : 'MVP Capabilities'}</span>
+                        <small>{workspace ? `${artifacts.length} artifacts / ${datasetProfiles.length} profiles` : 'Phase 1 focus'}</small>
                     </div>
                     {workspace ? (
                         <div className="artifact-list">
+                            {activeDatasetProfile && <DatasetProfileSummary profile={activeDatasetProfile} />}
                             {artifacts.length === 0 ? (
                                 <EmptyState
                                     detail="Create a report to add the first workspace artifact."
@@ -196,6 +209,20 @@ export function WorkbenchPanel({
                 </article>
             </section>
         </main>
+    );
+}
+
+function DatasetProfileSummary({profile}: {profile: DatasetProfile}) {
+    return (
+        <div className="dataset-profile-summary">
+            <strong>{profile.name}</strong>
+            <small>{profile.kind}</small>
+            {profile.kind === 'csv' ? (
+                <p>{profile.rows} rows, {profile.columns} columns</p>
+            ) : (
+                <p>{profile.sheets.length} sheets: {profile.sheets.join(', ')}</p>
+            )}
+        </div>
     );
 }
 

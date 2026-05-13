@@ -754,6 +754,36 @@ button:disabled {
     padding: 12px;
 }
 
+.dataset-profile-summary {
+    border: 1px solid rgba(34, 197, 94, 0.22);
+    border-radius: var(--nd-radius-sm);
+    background: #ecfdf5;
+    display: grid;
+    gap: 4px;
+    padding: 10px;
+}
+
+.dataset-profile-summary strong,
+.dataset-profile-summary small,
+.dataset-profile-summary p {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.dataset-profile-summary small {
+    color: #166534;
+    font-size: 11px;
+    font-weight: 700;
+    text-transform: uppercase;
+}
+
+.dataset-profile-summary p {
+    margin: 0;
+    color: #475467;
+    font-size: 12px;
+}
+
 .artifact-item {
     border: 1px solid var(--nd-border-soft);
     border-radius: var(--nd-radius-sm);

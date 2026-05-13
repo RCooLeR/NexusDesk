@@ -94,6 +94,18 @@ export type WorkspaceArtifact = {
     modifiedAt: string;
 };
 
+export type DatasetProfile = {
+    relPath: string;
+    name: string;
+    kind: string;
+    rows: number;
+    columns: number;
+    sheets: string[];
+    profiles: ColumnProfile[];
+    updatedAt: string;
+    message: string;
+};
+
 export type RecentWorkspace = {
     name: string;
     path: string;
