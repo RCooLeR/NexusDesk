@@ -29,6 +29,7 @@ import type {
 } from '../../types';
 import {AgentChatCard} from './AgentChatCard';
 import {LLMSettingsCard} from './LLMSettingsCard';
+import {ToolTimeline} from './ToolTimeline';
 
 type NexusDeskShellProps = {
     state: StartupState;
@@ -733,19 +734,7 @@ export function NexusDeskShell({
                     settingsStatus={settingsStatus}
                 />
 
-                <section className="timeline">
-                    <div className="pane-title">
-                        <span>Tool Timeline</span>
-                        <small>Visible by design</small>
-                    </div>
-                    {state.toolEvents.map((event) => (
-                        <div className="timeline-item" key={`${event.time}-${event.title}`}>
-                            <time>{event.time}</time>
-                            <strong>{event.title}</strong>
-                            <p>{event.detail}</p>
-                        </div>
-                    ))}
-                </section>
+                <ToolTimeline events={state.toolEvents} />
             </aside>
         </div>
     );

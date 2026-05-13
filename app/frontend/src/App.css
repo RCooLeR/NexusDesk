@@ -441,8 +441,7 @@ button:disabled {
 }
 
 .editor-pane,
-.status-pane,
-.timeline {
+.status-pane {
     background: var(--nd-panel);
     border: 1px solid var(--nd-border);
     border-radius: var(--nd-radius-sm);
