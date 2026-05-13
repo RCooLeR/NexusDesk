@@ -56,6 +56,7 @@ type FilePreview struct {
 	FileType  string        `json:"fileType"`
 	Content   string        `json:"content"`
 	Text      string        `json:"text"`
+	Pages     []TextPage    `json:"pages,omitempty"`
 	Encoding  string        `json:"encoding"`
 	Table     *TablePreview `json:"table,omitempty"`
 	Truncated bool          `json:"truncated"`
@@ -131,11 +132,28 @@ func Preview(root string, relPath string, options PreviewOptions) (FilePreview, 
 
 		preview.Kind = "pdf"
 		preview.Content = content
-		preview.Text = extractPDFText(absTarget, defaultPreviewMaxBytes)
+		preview.Pages = extractPDFPages(absTarget, defaultPreviewMaxBytes)
+		preview.Text = joinTextPages(preview.Pages)
 		preview.Message = "PDF preview rendered from the approved workspace root."
 		if preview.Text != "" {
 			preview.Message = "PDF preview rendered with extracted text context."
 		}
+		return preview, nil
+	}
+
+	if strings.EqualFold(filepath.Ext(info.Name()), ".docx") {
+		text, err := extractDOCXText(absTarget, defaultPreviewMaxBytes)
+		if err != nil || strings.TrimSpace(text) == "" {
+			preview.Kind = "unsupported"
+			preview.Message = "DOCX text could not be extracted yet."
+			return preview, nil
+		}
+
+		preview.Content = text
+		preview.Text = text
+		preview.Encoding = "docx"
+		preview.Truncated = len(text) >= defaultPreviewMaxBytes
+		preview.Message = "DOCX text extracted from the approved workspace root."
 		return preview, nil
 	}
 

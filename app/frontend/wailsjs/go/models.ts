@@ -353,6 +353,30 @@ export namespace workspace {
 	        this.max = source["max"];
 	    }
 	}
+	export class DatasetQueryResult {
+	    relPath: string;
+	    query: string;
+	    columns: string[];
+	    rows: string[][];
+	    totalRows: number;
+	    matchedRows: number;
+	    message: string;
+
+	    static createFrom(source: any = {}) {
+	        return new DatasetQueryResult(source);
+	    }
+
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.relPath = source["relPath"];
+	        this.query = source["query"];
+	        this.columns = source["columns"];
+	        this.rows = source["rows"];
+	        this.totalRows = source["totalRows"];
+	        this.matchedRows = source["matchedRows"];
+	        this.message = source["message"];
+	    }
+	}
 	export class FileNode {
 	    name: string;
 	    path: string;
@@ -415,6 +439,20 @@ export namespace workspace {
 		    return a;
 		}
 	}
+	export class TextPage {
+	    page: number;
+	    text: string;
+
+	    static createFrom(source: any = {}) {
+	        return new TextPage(source);
+	    }
+
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.page = source["page"];
+	        this.text = source["text"];
+	    }
+	}
 	export class FilePreview {
 	    relPath: string;
 	    name: string;
@@ -422,6 +460,7 @@ export namespace workspace {
 	    fileType: string;
 	    content: string;
 	    text: string;
+	    pages?: TextPage[];
 	    encoding: string;
 	    table?: TablePreview;
 	    truncated: boolean;
@@ -440,6 +479,7 @@ export namespace workspace {
 	        this.fileType = source["fileType"];
 	        this.content = source["content"];
 	        this.text = source["text"];
+	        this.pages = this.convertValues(source["pages"], TextPage);
 	        this.encoding = source["encoding"];
 	        this.table = this.convertValues(source["table"], TablePreview);
 	        this.truncated = source["truncated"];
@@ -501,6 +541,31 @@ export namespace workspace {
 	        this.content = source["content"];
 	    }
 	}
+	export class SearchResult {
+	    relPath: string;
+	    name: string;
+	    kind: string;
+	    fileType: string;
+	    matchType: string;
+	    line: number;
+	    snippet: string;
+
+	    static createFrom(source: any = {}) {
+	        return new SearchResult(source);
+	    }
+
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.relPath = source["relPath"];
+	        this.name = source["name"];
+	        this.kind = source["kind"];
+	        this.fileType = source["fileType"];
+	        this.matchType = source["matchType"];
+	        this.line = source["line"];
+	        this.snippet = source["snippet"];
+	    }
+	}
+
 
 	export class WorkspaceSnapshot {
 	    root: string;

@@ -70,6 +70,10 @@ export function ProfileDataset(arg1) {
   return window['go']['main']['App']['ProfileDataset'](arg1);
 }
 
+export function QueryDataset(arg1, arg2) {
+  return window['go']['main']['App']['QueryDataset'](arg1, arg2);
+}
+
 export function ReadWorkspaceFile(arg1) {
   return window['go']['main']['App']['ReadWorkspaceFile'](arg1);
 }
@@ -84,6 +88,10 @@ export function RemoveRecentWorkspace(arg1) {
 
 export function SaveLLMSettings(arg1) {
   return window['go']['main']['App']['SaveLLMSettings'](arg1);
+}
+
+export function SearchWorkspace(arg1) {
+  return window['go']['main']['App']['SearchWorkspace'](arg1);
 }
 
 export function SelectWorkspace() {

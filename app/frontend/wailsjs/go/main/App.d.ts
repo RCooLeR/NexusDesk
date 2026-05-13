@@ -41,6 +41,8 @@ export function PreviewFileWrite(arg1:workspace.FileWriteRequest):Promise<worksp
 
 export function ProfileDataset(arg1:string):Promise<dataset.Profile>;
 
+export function QueryDataset(arg1:string,arg2:string):Promise<workspace.DatasetQueryResult>;
+
 export function ReadWorkspaceFile(arg1:string):Promise<workspace.FilePreview>;
 
 export function RefreshWorkspace():Promise<main.WorkspaceOpenResult>;
@@ -48,6 +50,8 @@ export function RefreshWorkspace():Promise<main.WorkspaceOpenResult>;
 export function RemoveRecentWorkspace(arg1:string):Promise<Array<storage.RecentWorkspace>>;
 
 export function SaveLLMSettings(arg1:storage.LLMSettings):Promise<storage.LLMSettings>;
+
+export function SearchWorkspace(arg1:string):Promise<Array<workspace.SearchResult>>;
 
 export function SelectWorkspace():Promise<main.WorkspaceOpenResult>;
 

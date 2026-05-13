@@ -169,6 +169,15 @@ func (a *App) RefreshWorkspace() (WorkspaceOpenResult, error) {
 	}, nil
 }
 
+func (a *App) SearchWorkspace(query string) ([]workspace.SearchResult, error) {
+	root := a.getWorkspaceRoot()
+	if root == "" {
+		return []workspace.SearchResult{}, errors.New("open a workspace before searching")
+	}
+
+	return workspace.Search(root, query, workspace.SearchOptions{})
+}
+
 func (a *App) ReadWorkspaceFile(relPath string) (workspace.FilePreview, error) {
 	root := a.getWorkspaceRoot()
 	if root == "" {
@@ -235,6 +244,14 @@ func (a *App) ListDatasetProfiles() ([]dataset.Profile, error) {
 		return []dataset.Profile{}, nil
 	}
 	return dataset.List(root)
+}
+
+func (a *App) QueryDataset(relPath string, query string) (workspace.DatasetQueryResult, error) {
+	root := a.getWorkspaceRoot()
+	if root == "" {
+		return workspace.DatasetQueryResult{}, errors.New("open a workspace before querying datasets")
+	}
+	return workspace.QueryCSV(root, relPath, query)
 }
 
 func (a *App) GetRecentWorkspaces() ([]storage.RecentWorkspace, error) {
