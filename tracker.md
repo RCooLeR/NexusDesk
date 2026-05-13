@@ -28,6 +28,7 @@ This tracker reflects the repository as it exists today and keeps planned work s
 - [x] Tool timeline is split into `app/frontend/src/features/shell/ToolTimeline.tsx`.
 - [x] Workspace navigator is split into `app/frontend/src/features/shell/WorkspaceNavigator.tsx`.
 - [x] Workbench panel is split into `app/frontend/src/features/shell/WorkbenchPanel.tsx`.
+- [x] Workspace rail is split into `app/frontend/src/features/shell/WorkspaceRail.tsx`.
 - [x] Workspace scanner package exists at `app/internal/workspace/`.
 - [x] Scanner skips noisy folders, symlinks, and oversized/deep listings.
 - [x] Workspace file preview is implemented in `app/internal/workspace/preview.go`.

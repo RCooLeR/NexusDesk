@@ -13,7 +13,7 @@ import {
     SelectWorkspace,
     TestLLMConnection,
 } from '../../../wailsjs/go/main/App';
-import {brandAssets, railItems} from '../../brand/assets';
+import {brandAssets} from '../../brand/assets';
 import type {
     ChatMessage,
     FileNode,
@@ -31,6 +31,7 @@ import {LLMSettingsCard} from './LLMSettingsCard';
 import {ToolTimeline} from './ToolTimeline';
 import {WorkbenchPanel} from './WorkbenchPanel';
 import {WorkspaceNavigator} from './WorkspaceNavigator';
+import {WorkspaceRail} from './WorkspaceRail';
 
 type NexusDeskShellProps = {
     state: StartupState;
@@ -501,21 +502,7 @@ export function NexusDeskShell({
 
     return (
         <div className="app-shell">
-            <aside className="workspace-rail">
-                <div className="brand-mark" aria-label="NexusDesk">
-                    <img src={brandAssets.symbolSilver} alt="" />
-                </div>
-                {railItems.map((item) => (
-                    <button
-                        key={item.label}
-                        className={item.active ? 'rail-button active' : 'rail-button'}
-                        title={item.label}
-                        aria-label={item.label}
-                    >
-                        <img src={item.icon} alt="" />
-                    </button>
-                ))}
-            </aside>
+            <WorkspaceRail />
 
             <WorkspaceNavigator
                 activeFile={activeFile}

@@ -36,6 +36,7 @@ The shell is being split only as behavior stabilizes:
 - `app/frontend/src/features/shell/ToolTimeline.tsx` owns the visible tool event timeline presentation.
 - `app/frontend/src/features/shell/WorkspaceNavigator.tsx` owns the workspace lockup, recent workspace list, fallback scaffold list, and indexed workspace tree presentation.
 - `app/frontend/src/features/shell/WorkbenchPanel.tsx` owns the active context topbar, source preview presentation, fallback workflow preview, and capability cards.
+- `app/frontend/src/features/shell/WorkspaceRail.tsx` owns the compact branded rail and mode icons.
 
 ## Goals
 
