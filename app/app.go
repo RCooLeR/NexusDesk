@@ -5,7 +5,9 @@ import (
 	"errors"
 	"os"
 	"sync"
+	"time"
 
+	"NexusDesk/internal/artifact"
 	"NexusDesk/internal/llm"
 	"NexusDesk/internal/storage"
 	"NexusDesk/internal/workspace"
@@ -166,6 +168,27 @@ func (a *App) ReadWorkspaceFile(relPath string) (workspace.FilePreview, error) {
 	}
 
 	return workspace.Preview(root, relPath, workspace.PreviewOptions{})
+}
+
+func (a *App) CreateMarkdownReport(relPath string) (artifact.MarkdownReport, error) {
+	root := a.getWorkspaceRoot()
+	if root == "" {
+		return artifact.MarkdownReport{}, errors.New("open a workspace before creating reports")
+	}
+
+	source := workspace.FilePreview{
+		RelPath: relPath,
+		Name:    "workspace-report",
+	}
+	if relPath != "" {
+		preview, err := workspace.Preview(root, relPath, workspace.PreviewOptions{MaxBytes: chatContextMaxBytes})
+		if err != nil {
+			return artifact.MarkdownReport{}, err
+		}
+		source = preview
+	}
+
+	return artifact.CreateMarkdownReport(root, source, time.Now())
 }
 
 func (a *App) GetRecentWorkspaces() ([]storage.RecentWorkspace, error) {

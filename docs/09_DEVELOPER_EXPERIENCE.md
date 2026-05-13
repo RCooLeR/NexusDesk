@@ -51,6 +51,10 @@ The shell is now mostly orchestration. Feature panels own stable presentation, w
 
 `App.css` keeps the desktop shell fixed to the window and pushes overflow into the interactive surfaces that actually need it: workspace tree, source preview, capability list, chat thread, provider settings, and tool timeline.
 
+## Artifact Creation
+
+`app/internal/artifact/` owns deterministic artifact writes. The first flow creates timestamped Markdown reports under `.nexusdesk/artifacts/` from the selected preview, uses exclusive file creation to avoid overwrites, and returns the new workspace-relative path so the UI can refresh and select it.
+
 ## Goals
 
 NexusDesk should be easy to run, easy to test, easy to reason about, and hard to accidentally make unsafe.

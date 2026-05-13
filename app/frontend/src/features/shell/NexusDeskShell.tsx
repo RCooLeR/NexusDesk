@@ -5,6 +5,7 @@ import {
     AskLLMStream,
     ClearRecentWorkspaces,
     ClearChatHistory,
+    CreateMarkdownReport,
     GetChatHistory,
     GetRecentWorkspaces,
     OpenWorkspace,
@@ -24,6 +25,7 @@ import type {
     LLMChatResult,
     LLMProbeResult,
     LLMSettings,
+    MarkdownReport,
     RecentWorkspace,
     StartupState,
     WorkspaceOpenResult,
@@ -75,6 +77,7 @@ export function NexusDeskShell({
     const [chatMessages, setChatMessages] = useState<ChatMessage[]>([]);
     const [chatStatus, setChatStatus] = useState('Select text context and ask the assistant.');
     const [isSendingPrompt, setIsSendingPrompt] = useState(false);
+    const [isCreatingReport, setIsCreatingReport] = useState(false);
     const [navigatorWidth, setNavigatorWidth] = useState(280);
 
     useEffect(() => {
@@ -287,6 +290,18 @@ export function NexusDeskShell({
         }
 
         return snapshot.nodes.find((node) => node.kind === 'file') ?? snapshot.nodes[0] ?? null;
+    }
+
+    async function selectWorkspaceFile(snapshot: WorkspaceSnapshot, relPath: string) {
+        const node = findWorkspaceNode(snapshot, relPath);
+        if (!node) {
+            setActiveFile(relPath);
+            setFilePreview(null);
+            return;
+        }
+
+        setActiveFile(node.relPath);
+        await previewWorkspaceNode(node, false);
     }
 
     function reconcileExpandedDirectories(current: Set<string>, snapshot: WorkspaceSnapshot, selectedNode: FileNode | null) {
@@ -507,6 +522,39 @@ export function NexusDeskShell({
         }
     }
 
+    async function createMarkdownReport() {
+        if (!workspace) {
+            setWorkspaceStatus('Open a workspace before creating reports.');
+            return;
+        }
+
+        const sourceRelPath = filePreview?.relPath ?? '';
+        setIsCreatingReport(true);
+        setWorkspaceStatus(sourceRelPath ? `Creating report from ${sourceRelPath}...` : 'Creating workspace report...');
+
+        try {
+            const report: MarkdownReport = await CreateMarkdownReport(sourceRelPath);
+            const result = await RefreshWorkspace();
+            if (result.selected) {
+                onWorkspaceChange(result.snapshot);
+                setExpandedDirectories((current) => reconcileExpandedDirectories(current, result.snapshot, findWorkspaceNode(result.snapshot, report.relPath)));
+                await selectWorkspaceFile(result.snapshot, report.relPath);
+                setWorkspaceStatus(`${report.name} created in .nexusdesk/artifacts.`);
+            } else {
+                setWorkspaceStatus(report.message);
+            }
+        } catch (error) {
+            const message = error instanceof Error ? error.message : '';
+            if (message.includes('undefined') || message.includes('window')) {
+                setWorkspaceStatus('Report creation is available in the desktop runtime.');
+                return;
+            }
+            setWorkspaceStatus(message || 'Could not create report artifact.');
+        } finally {
+            setIsCreatingReport(false);
+        }
+    }
+
     function listenForChatStream(requestId: string, assistantCreatedAt: string, fallbackContextRelPath: string) {
         if (!isWailsRuntimeAvailable()) {
             return null;
@@ -619,7 +667,9 @@ export function NexusDeskShell({
                 activeFile={activeFile}
                 capabilities={state.capabilities}
                 filePreview={filePreview}
+                isCreatingReport={isCreatingReport}
                 isLoadingPreview={isLoadingPreview}
+                onCreateReport={() => void createMarkdownReport()}
                 selectedMeta={selectedMeta}
                 workspace={workspace}
             />
@@ -645,6 +695,10 @@ export function NexusDeskShell({
             />
         </div>
     );
+}
+
+function findWorkspaceNode(snapshot: WorkspaceSnapshot, relPath: string) {
+    return snapshot.nodes.find((node) => node.relPath === relPath) ?? null;
 }
 
 function createRequestId() {

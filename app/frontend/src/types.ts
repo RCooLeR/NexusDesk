@@ -44,6 +44,14 @@ export type FilePreview = {
     size: number;
 };
 
+export type MarkdownReport = {
+    relPath: string;
+    name: string;
+    path: string;
+    message: string;
+    size: number;
+};
+
 export type RecentWorkspace = {
     name: string;
     path: string;

@@ -158,6 +158,7 @@ Current implementation:
 - trims partial UTF-8 characters at truncation boundaries
 - shows unsupported state for binary or non-UTF-8 files
 - excludes image and PDF previews from text chat context
+- creates Markdown report artifacts under `.nexusdesk/artifacts/` from selected previews
 - does not yet persist line-aware chunks or citations
 
 ### Markdown
@@ -168,7 +169,7 @@ For Markdown:
 - preserve lists and tables
 - keep code blocks separate
 - build a heading path for each chunk
-- allow generated reports to use Markdown as default output
+- expand generated report flows beyond the starter Markdown artifact
 
 ### PDF
 

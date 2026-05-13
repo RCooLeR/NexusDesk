@@ -31,6 +31,7 @@ Deliverables:
 - frontend layout with project tree, editor area, and chat panel: implemented
 - local JSON app config for recent workspaces and LLM settings: implemented
 - local SQLite app database: planned
+- controlled Markdown artifact writer: implemented
 - workspace open/recent workspaces: implemented
 - file tree with ignore rules: implemented
 - expandable tree state across refreshes: implemented
@@ -47,6 +48,7 @@ Deliverables:
 - streaming chat with configured OpenAI-compatible LLM URL: implemented
 - chat history per workspace: implemented with local JSON config
 - read selected text file into chat context: implemented
+- create Markdown report artifact from selected preview: implemented
 
 Exit criteria:
 
@@ -69,6 +71,8 @@ Current status:
 - Streaming chat works with the configured model and optional selected file context.
 - Persistent chat history works through local JSON config.
 - Multi-file context packaging, Monaco, richer document extraction, and SQLite persistence are still planned.
+- Markdown report artifacts can be created under `.nexusdesk/artifacts/` without overwriting existing files.
+- Multi-file context packaging, Monaco, richer document extraction, approval dialogs, and SQLite persistence are still planned.
 
 ## Phase 2: Files, Documents, And Artifacts
 
@@ -80,7 +84,7 @@ Deliverables:
 - PDF text extraction where available
 - document summary tool
 - artifact manager
-- create Markdown report tool
+- create Markdown report tool: first controlled artifact flow implemented
 - create text/code file tool with approval
 - overwrite protection
 - tool call timeline in chat

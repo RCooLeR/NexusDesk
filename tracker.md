@@ -31,6 +31,7 @@ This tracker reflects the repository as it exists today and keeps planned work s
 - [x] Workspace rail is split into `app/frontend/src/features/shell/WorkspaceRail.tsx`.
 - [x] Agent panel is split into `app/frontend/src/features/shell/AgentPanel.tsx`.
 - [x] Workspace scanner package exists at `app/internal/workspace/`.
+- [x] Artifact writer package exists at `app/internal/artifact/`.
 - [x] Scanner skips noisy folders, symlinks, and oversized/deep listings.
 - [x] Workspace file preview is implemented in `app/internal/workspace/preview.go`.
 - [x] File previews are rooted, traversal-checked, symlink-aware, size-limited, and UTF-8/text-only.
@@ -72,6 +73,8 @@ This tracker reflects the repository as it exists today and keeps planned work s
 - [x] Agent panel streams partial assistant responses through `nexusdesk:chat-stream` Wails events.
 - [x] Selected workspace text previews can be attached as bounded chat context.
 - [x] Workspace chat history is persisted through `app/internal/storage/chat_history.go`.
+- [x] Report button creates timestamped Markdown artifacts under `.nexusdesk/artifacts/`.
+- [x] Markdown report artifacts are created without overwriting existing files.
 - [x] Helper services placeholder exists at `services/docker-compose.yml`.
 - [x] Repository ignore rules exist in `.gitignore`.
 - [x] Current and target directory structures are documented separately.
@@ -113,6 +116,7 @@ This tracker reflects the repository as it exists today and keeps planned work s
 - [x] Add streaming chat responses.
 - [x] Mask API keys before they leave the backend settings store.
 - [ ] Migrate API keys into OS credential storage before production release.
+- [x] Add first Markdown report artifact creation flow.
 - [x] Split brand-aware shell sections into smaller rail, navigator, workbench pane, agent panel, and timeline components when they need behavior.
 - [x] Add first reusable button, icon button, and status badge components.
 - [x] Add first reusable card component when panel extraction starts.

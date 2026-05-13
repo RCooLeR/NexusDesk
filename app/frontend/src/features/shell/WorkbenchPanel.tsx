@@ -8,6 +8,8 @@ type WorkbenchPanelProps = {
     capabilities: Capability[];
     filePreview: FilePreview | null;
     isLoadingPreview: boolean;
+    isCreatingReport: boolean;
+    onCreateReport: () => void;
     selectedMeta: string;
     workspace: WorkspaceSnapshot | null;
 };
@@ -17,6 +19,8 @@ export function WorkbenchPanel({
     capabilities,
     filePreview,
     isLoadingPreview,
+    isCreatingReport,
+    onCreateReport,
     selectedMeta,
     workspace,
 }: WorkbenchPanelProps) {
@@ -30,7 +34,9 @@ export function WorkbenchPanel({
                 <div className="topbar-actions">
                     <Button>Preview</Button>
                     <Button>Explain</Button>
-                    <Button>Report</Button>
+                    <Button disabled={!workspace || isCreatingReport} onClick={onCreateReport}>
+                        {isCreatingReport ? 'Creating...' : 'Report'}
+                    </Button>
                 </div>
             </header>
 

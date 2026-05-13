@@ -18,6 +18,10 @@ export function ClearRecentWorkspaces() {
   return window['go']['main']['App']['ClearRecentWorkspaces']();
 }
 
+export function CreateMarkdownReport(arg1) {
+  return window['go']['main']['App']['CreateMarkdownReport'](arg1);
+}
+
 export function GetChatHistory() {
   return window['go']['main']['App']['GetChatHistory']();
 }

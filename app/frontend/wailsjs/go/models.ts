@@ -1,3 +1,28 @@
+export namespace artifact {
+
+	export class MarkdownReport {
+	    relPath: string;
+	    name: string;
+	    path: string;
+	    message: string;
+	    size: number;
+
+	    static createFrom(source: any = {}) {
+	        return new MarkdownReport(source);
+	    }
+
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.relPath = source["relPath"];
+	        this.name = source["name"];
+	        this.path = source["path"];
+	        this.message = source["message"];
+	        this.size = source["size"];
+	    }
+	}
+
+}
+
 export namespace llm {
 
 	export class ChatResult {
