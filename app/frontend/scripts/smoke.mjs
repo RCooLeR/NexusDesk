@@ -33,7 +33,11 @@ const checks = [
     },
     {
         file: 'src/features/shell/AgentChatCard.tsx',
-        terms: ['chat-card-header', 'textarea', 'context-pack-list', 'onRemoveContextPath', 'Clear pack'],
+        terms: ['ChatMessageContent', 'chat-card-header', 'textarea', 'context-pack-list', 'onRemoveContextPath', 'Clear pack'],
+    },
+    {
+        file: 'src/features/shell/ChatMessageContent.tsx',
+        terms: ['parseMarkdownBlocks', 'ChatTable', 'chat-markdown', 'chat-code-block'],
     },
     {
         file: 'src/App.css',
@@ -43,6 +47,8 @@ const checks = [
             '.navigator-resizer',
             '.file-preview',
             '.context-pack-list',
+            '.chat-markdown',
+            '.chat-table',
             '.file-write-editor',
             '.dataset-profile-summary',
         ],

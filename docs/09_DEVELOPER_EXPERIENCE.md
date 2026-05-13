@@ -78,6 +78,7 @@ The shell is now mostly orchestration. Feature panels own stable presentation, w
 - `app/frontend/src/components/ui.tsx` contains reusable UI atoms such as buttons, cards, status badges, and branded state panels.
 - `app/frontend/src/features/shell/NexusDeskShell.tsx` owns the composed desktop workbench state.
 - `app/frontend/src/features/shell/AgentChatCard.tsx` owns the expanded chat presentation, full conversation scroll area, multiline prompt composer, context pack list, and delegates provider calls/history actions back to the shell.
+- `app/frontend/src/features/shell/ChatMessageContent.tsx` renders safe dependency-free Markdown-style chat content, including headings, lists, tables, code fences, inline code, and bold text.
 - `app/frontend/src/features/shell/LLMSettingsCard.tsx` owns the provider settings form and delegates persistence/probe actions back to the shell.
 - `app/frontend/src/features/shell/ToolTimeline.tsx` owns the visible tool event timeline presentation.
 - `app/frontend/src/features/shell/WorkspaceNavigator.tsx` owns the workspace lockup, search controls, recent workspace list, fallback scaffold list, and indexed workspace tree presentation, with aligned rows inside the resizable sidebar. `NexusDeskShell.tsx` owns the resizable navigator width state.

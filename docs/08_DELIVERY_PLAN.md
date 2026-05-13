@@ -101,6 +101,7 @@ Current status:
 - The Preview button reloads the selected file, and the Explain button sends a grounded prompt for selected text/code previews.
 - The workbench keeps recently opened previews in closeable editor tabs so several files can stay loaded while browsing.
 - The chat panel has an expanded conversation area, full visible history, context pack list, and multiline prompt composer.
+- Chat responses render common Markdown structures, including tables and code blocks, instead of flattening formatted model output into one paragraph.
 - Persistent chat history works through local JSON config.
 - Monaco, richer document extraction/OCR, and SQLite persistence are still planned.
 - Markdown report artifacts can be created under `.nexusdesk/artifacts/` without overwriting existing files.

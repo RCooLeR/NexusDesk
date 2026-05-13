@@ -1044,8 +1044,7 @@ button:disabled {
 }
 
 .capability-card p,
-.timeline-item p,
-.assistant-message p {
+.timeline-item p {
     margin: 0;
     color: #475467;
     font-size: 13px;
@@ -1357,6 +1356,127 @@ button:disabled {
     margin-top: 6px;
     color: var(--nd-muted-text);
     font-size: 12px;
+}
+
+.chat-markdown {
+    display: grid;
+    gap: 9px;
+    margin-top: 6px;
+    min-width: 0;
+}
+
+.chat-markdown p,
+.chat-markdown ul,
+.chat-markdown ol,
+.chat-markdown h3,
+.chat-markdown h4,
+.chat-markdown h5 {
+    margin: 0;
+}
+
+.chat-markdown p,
+.chat-markdown li,
+.chat-markdown td,
+.chat-markdown th {
+    color: #475467;
+    font-size: 13px;
+    line-height: 1.5;
+}
+
+.chat-markdown h3,
+.chat-markdown h4,
+.chat-markdown h5 {
+    color: #111827;
+    font-weight: 800;
+    letter-spacing: 0;
+    line-height: 1.25;
+}
+
+.chat-markdown h3 {
+    font-size: 15px;
+}
+
+.chat-markdown h4,
+.chat-markdown h5 {
+    font-size: 14px;
+}
+
+.chat-markdown ul,
+.chat-markdown ol {
+    display: grid;
+    gap: 4px;
+    padding-left: 20px;
+}
+
+.chat-markdown code {
+    border: 1px solid #d8e1ef;
+    border-radius: 5px;
+    background: #f8fafc;
+    color: #1d4ed8;
+    font: 12px/1.4 "Cascadia Code", "Consolas", monospace;
+    padding: 1px 4px;
+}
+
+.chat-code-block {
+    margin: 0;
+    border: 1px solid #d8e1ef;
+    border-radius: var(--nd-radius-sm);
+    background: #0f172a;
+    color: #e5e7eb;
+    display: grid;
+    gap: 6px;
+    max-width: 100%;
+    overflow: auto;
+    padding: 10px 12px;
+}
+
+.chat-code-block span {
+    color: #93c5fd;
+    font-size: 11px;
+    font-weight: 700;
+    text-transform: uppercase;
+}
+
+.chat-code-block code {
+    border: 0;
+    background: transparent;
+    color: inherit;
+    font: 12px/1.55 "Cascadia Code", "Consolas", monospace;
+    padding: 0;
+    white-space: pre;
+}
+
+.chat-table-wrap {
+    max-width: 100%;
+    overflow: auto;
+}
+
+.chat-table {
+    width: 100%;
+    min-width: 420px;
+    border-collapse: collapse;
+    background: #ffffff;
+    font-size: 12px;
+}
+
+.chat-table th,
+.chat-table td {
+    border: 1px solid var(--nd-border-soft);
+    padding: 7px 8px;
+    text-align: left;
+    vertical-align: top;
+}
+
+.chat-table th {
+    background: #f8fafc;
+    color: #1f2937;
+    font-weight: 800;
+}
+
+.chat-markdown-empty {
+    margin: 6px 0 0;
+    color: var(--nd-muted-text);
+    font-size: 13px;
 }
 
 .prompt-box {

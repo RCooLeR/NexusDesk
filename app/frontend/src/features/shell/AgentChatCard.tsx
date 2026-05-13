@@ -1,5 +1,6 @@
 import {Button, Card} from '../../components/ui';
 import type {ChatMessage} from '../../types';
+import {ChatMessageContent} from './ChatMessageContent';
 
 type AgentChatCardProps = {
     chatMessages: ChatMessage[];
@@ -41,13 +42,13 @@ export function AgentChatCard({
                 {chatMessages.length === 0 ? (
                     <div className="assistant-message">
                         <strong>NexusDesk</strong>
-                        <p>Ready to connect a model, read selected files, and turn source context into auditable work.</p>
+                        <ChatMessageContent content="Ready to connect a model, read selected files, and turn source context into auditable work." />
                     </div>
                 ) : (
                     chatMessages.map((message, index) => (
                         <div className={message.role === 'user' ? 'user-message' : 'assistant-message'} key={`${message.role}-${message.createdAt}-${index}`}>
                             <strong>{message.role === 'user' ? 'You' : 'NexusDesk'}</strong>
-                            <p>{message.content || 'Receiving response...'}</p>
+                            <ChatMessageContent content={message.content} />
                             {message.contextRelPath && <small>{message.contextRelPath}</small>}
                         </div>
                     ))
