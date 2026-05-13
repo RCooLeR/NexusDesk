@@ -60,6 +60,7 @@ Deliverables:
 - explain selected text/code preview through chat: implemented
 - create Markdown report artifact from selected preview: implemented
 - artifact browser for generated Markdown reports: implemented
+- frontend build smoke check: implemented
 
 Exit criteria:
 
@@ -88,6 +89,7 @@ Current status:
 - Monaco, richer document extraction, and SQLite persistence are still planned.
 - Markdown report artifacts can be created under `.nexusdesk/artifacts/` without overwriting existing files.
 - The workbench lists generated Markdown artifacts and can reselect visible report files from that list.
+- The frontend has a smoke check for the built entrypoint, generated Wails bindings, and core shell functionality markers.
 - Monaco, richer document extraction, richer approval dialogs, and SQLite persistence are still planned.
 
 ## Phase 2: Files, Documents, And Artifacts

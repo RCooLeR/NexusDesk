@@ -46,6 +46,7 @@ This tracker reflects the repository as it exists today and keeps planned work s
 - [x] CSV profile stats read a larger bounded file sample than the visible text preview.
 - [x] Dataset profiles persist CSV profiles and XLSX sheet metadata under `.nexusdesk/datasets/`.
 - [x] Lightweight syntax highlighting exists at `app/frontend/src/features/shell/HighlightedCode.tsx`.
+- [x] Frontend smoke script exists at `app/frontend/scripts/smoke.mjs`.
 - [x] Desktop workspace picker is bound through `SelectWorkspace`.
 - [x] Frontend switches from scaffold preview to indexed workspace nodes after folder selection.
 - [x] Center workbench pane previews selected workspace text files.
@@ -147,7 +148,7 @@ This tracker reflects the repository as it exists today and keeps planned work s
 - [ ] Add backend module layout only when implementation files are created.
 - [ ] Split the workbench UI into feature components once behavior lands.
 - [ ] Replace the services placeholder with real development/test services when needed.
-- [ ] Add automated frontend tests after interactive behavior exists.
+- [x] Add automated frontend tests after interactive behavior exists.
 
 ## Directory Notes
 
@@ -171,6 +172,7 @@ Run these from `app/` on this Windows workstation:
 $env:NODE_OPTIONS='--use-system-ca --dns-result-order=ipv4first'
 python scripts/generate_windows_icon.py
 npm.cmd run build
+npm.cmd run smoke
 go test ./...
 wails build
 ```

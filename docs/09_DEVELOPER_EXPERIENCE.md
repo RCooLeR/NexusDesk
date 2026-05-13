@@ -8,6 +8,7 @@ On the current Windows workstation, use this loop after backend, frontend, bindi
 $env:NODE_OPTIONS='--use-system-ca --dns-result-order=ipv4first'
 go test ./...
 npm.cmd run build
+npm.cmd run smoke
 wails build
 ```
 
@@ -56,6 +57,10 @@ The shell is now mostly orchestration. Feature panels own stable presentation, w
 - `app/frontend/src/features/shell/AgentPanel.tsx` composes the grounded assistant header, chat card, provider settings, and tool timeline.
 
 `App.css` keeps the desktop shell fixed to the window and pushes overflow into the interactive surfaces that actually need it: workspace tree, source preview, capability list, chat thread, provider settings, and tool timeline.
+
+## Frontend Smoke Checks
+
+`app/frontend/scripts/smoke.mjs` checks that the built frontend and key shell source files still expose the main MVP functionality: Wails bindings, context packs, file write flow, dataset profiling, resizable navigator styling, and the production `dist/index.html` entrypoint. Run it after `npm.cmd run build`.
 
 ## Artifact Creation
 
