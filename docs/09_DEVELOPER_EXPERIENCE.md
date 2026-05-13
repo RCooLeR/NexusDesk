@@ -77,11 +77,11 @@ The shell is now mostly orchestration. Feature panels own stable presentation, w
 
 - `app/frontend/src/components/ui.tsx` contains reusable UI atoms such as buttons, cards, status badges, and branded state panels.
 - `app/frontend/src/features/shell/NexusDeskShell.tsx` owns the composed desktop workbench state.
-- `app/frontend/src/features/shell/AgentChatCard.tsx` owns the chat card presentation and delegates provider calls/history actions back to the shell.
+- `app/frontend/src/features/shell/AgentChatCard.tsx` owns the expanded chat presentation, full conversation scroll area, multiline prompt composer, context pack list, and delegates provider calls/history actions back to the shell.
 - `app/frontend/src/features/shell/LLMSettingsCard.tsx` owns the provider settings form and delegates persistence/probe actions back to the shell.
 - `app/frontend/src/features/shell/ToolTimeline.tsx` owns the visible tool event timeline presentation.
 - `app/frontend/src/features/shell/WorkspaceNavigator.tsx` owns the workspace lockup, search controls, recent workspace list, fallback scaffold list, and indexed workspace tree presentation, with aligned rows inside the resizable sidebar. `NexusDeskShell.tsx` owns the resizable navigator width state.
-- `app/frontend/src/features/shell/WorkbenchPanel.tsx` owns the active context topbar, source preview presentation, dataset query panel, fallback workflow preview, and capability cards.
+- `app/frontend/src/features/shell/WorkbenchPanel.tsx` owns the active context topbar, closeable editor tab strip, source preview/editor presentation, dataset query panel, fallback workflow preview, and capability cards.
 - `app/frontend/src/features/shell/WorkspaceRail.tsx` owns the compact branded rail and mode icons.
 - `app/frontend/src/features/shell/AgentPanel.tsx` composes the grounded assistant header, chat card, provider settings, and tool timeline.
 

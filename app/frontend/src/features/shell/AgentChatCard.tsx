@@ -28,6 +28,15 @@ export function AgentChatCard({
 }: AgentChatCardProps) {
     return (
         <Card className="chat-card">
+            <div className="chat-card-header">
+                <div>
+                    <strong>Conversation</strong>
+                    <small>{chatStatus}</small>
+                </div>
+                {chatMessages.length > 0 && (
+                    <Button onClick={onClearChatHistory} variant="subtle">Clear</Button>
+                )}
+            </div>
             <div className="chat-thread">
                 {chatMessages.length === 0 ? (
                     <div className="assistant-message">
@@ -35,7 +44,7 @@ export function AgentChatCard({
                         <p>Ready to connect a model, read selected files, and turn source context into auditable work.</p>
                     </div>
                 ) : (
-                    chatMessages.slice(-4).map((message, index) => (
+                    chatMessages.map((message, index) => (
                         <div className={message.role === 'user' ? 'user-message' : 'assistant-message'} key={`${message.role}-${message.createdAt}-${index}`}>
                             <strong>{message.role === 'user' ? 'You' : 'NexusDesk'}</strong>
                             <p>{message.content || 'Receiving response...'}</p>
@@ -44,11 +53,6 @@ export function AgentChatCard({
                     ))
                 )}
             </div>
-            {chatMessages.length > 0 && (
-                <div className="chat-actions">
-                    <Button onClick={onClearChatHistory} variant="subtle">Clear chat</Button>
-                </div>
-            )}
             {contextPackPaths.length > 0 && (
                 <div className="context-pack-list">
                     <div className="context-pack-heading">
@@ -66,22 +70,22 @@ export function AgentChatCard({
                 </div>
             )}
             <div className="prompt-box">
-                <input
+                <textarea
                     aria-label="Ask about the workspace"
                     onChange={(event) => onChatPromptChange(event.target.value)}
                     onKeyDown={(event) => {
-                        if (event.key === 'Enter') {
+                        if (event.key === 'Enter' && (event.ctrlKey || event.metaKey)) {
                             onSendPrompt();
                         }
                     }}
                     placeholder="Ask about the workspace..."
+                    rows={4}
                     value={chatPrompt}
                 />
                 <Button disabled={isSendingPrompt} onClick={onSendPrompt} title="Send prompt" variant="primary">
                     {isSendingPrompt ? 'Sending...' : 'Send'}
                 </Button>
             </div>
-            <small className="chat-status">{chatStatus}</small>
         </Card>
     );
 }

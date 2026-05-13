@@ -53,6 +53,7 @@ This tracker reflects the repository as it exists today and keeps planned work s
 - [x] Desktop workspace picker is bound through `SelectWorkspace`.
 - [x] Frontend switches from scaffold preview to indexed workspace nodes after folder selection.
 - [x] Center workbench pane previews selected workspace text files.
+- [x] Center workbench pane keeps recently opened previews in closeable editor tabs.
 - [x] Workspace refresh preserves the selected file when it still exists.
 - [x] Workspace open/refresh auto-loads a preview for the selected or first file node.
 - [x] Preview button reloads the selected workspace preview from disk.
@@ -86,6 +87,7 @@ This tracker reflects the repository as it exists today and keeps planned work s
 - [x] Non-streaming OpenAI-compatible chat is implemented in `app/internal/llm/chat.go`.
 - [x] Streaming OpenAI-compatible chat is implemented in `app/internal/llm/chat.go`.
 - [x] Agent panel can send prompts through `AskLLM`.
+- [x] Agent chat uses a larger conversation layout with full visible history and a multiline composer.
 - [x] Explain button sends a grounded explanation prompt for selected text/code previews.
 - [x] Agent panel streams partial assistant responses through `nexusdesk:chat-stream` Wails events.
 - [x] Selected workspace text previews can be attached as bounded chat context without sending image/PDF data URLs.
@@ -150,6 +152,8 @@ This tracker reflects the repository as it exists today and keeps planned work s
 - [x] Persist chat history per workspace.
 - [x] Add streaming chat responses.
 - [x] Add first pinned multi-file context pack for chat.
+- [x] Add closeable editor tabs for multiple opened file previews.
+- [x] Replace the compact chat input with a readable conversation panel and multiline prompt composer.
 - [x] Add individual context pack file removal.
 - [x] Add bounded directory/project context packs for chat.
 - [x] Wire topbar Preview and Explain actions to real workspace/chat behavior.

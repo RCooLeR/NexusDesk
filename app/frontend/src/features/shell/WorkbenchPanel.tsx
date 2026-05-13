@@ -32,9 +32,12 @@ type WorkbenchPanelProps = {
     onPreviewFileWrite: () => void;
     onProfileDataset: () => void;
     onQueryDataset: () => void;
+    onCloseTab: (relPath: string) => void;
+    onSelectTab: (relPath: string) => void;
     onSelectArtifact: (artifact: WorkspaceArtifact) => void;
     onRefreshPreview: () => void;
     onStartFileEdit: () => void;
+    openTabs: FilePreview[];
     selectedMeta: string;
     writeProposal: FileWriteProposal | null;
     workspace: WorkspaceSnapshot | null;
@@ -69,9 +72,12 @@ export function WorkbenchPanel({
     onPreviewFileWrite,
     onProfileDataset,
     onQueryDataset,
+    onCloseTab,
+    onSelectTab,
     onSelectArtifact,
     onRefreshPreview,
     onStartFileEdit,
+    openTabs,
     selectedMeta,
     writeProposal,
     workspace,
@@ -120,8 +126,33 @@ export function WorkbenchPanel({
 
             <section className="canvas-grid">
                 <article className="editor-pane">
-                    <div className="pane-title">
-                        <span>Source Preview</span>
+                    <div className="editor-tabs">
+                        <div className="tab-strip" role="tablist" aria-label="Open files">
+                            {openTabs.length === 0 ? (
+                                <span className="empty-tabs">No open files</span>
+                            ) : openTabs.map((tab) => (
+                                <div
+                                    aria-selected={activeFile === tab.relPath}
+                                    className={activeFile === tab.relPath ? 'editor-tab active' : 'editor-tab'}
+                                    key={tab.relPath}
+                                    onClick={() => onSelectTab(tab.relPath)}
+                                    role="tab"
+                                    title={tab.relPath}
+                                >
+                                    <span>{tab.name}</span>
+                                    <small>{tab.kind === 'pdf' ? 'pdf' : tab.fileType}</small>
+                                    <button
+                                        aria-label={`Close ${tab.name}`}
+                                        onClick={(event) => {
+                                            event.stopPropagation();
+                                            onCloseTab(tab.relPath);
+                                        }}
+                                    >
+                                        x
+                                    </button>
+                                </div>
+                            ))}
+                        </div>
                         <small>{selectedMeta}</small>
                     </div>
                     {workspace ? (

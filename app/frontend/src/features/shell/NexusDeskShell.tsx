@@ -81,6 +81,7 @@ export function NexusDeskShell({
     const [isRefreshingWorkspace, setIsRefreshingWorkspace] = useState(false);
     const [isManagingRecent, setIsManagingRecent] = useState(false);
     const [filePreview, setFilePreview] = useState<FilePreview | null>(null);
+    const [openTabs, setOpenTabs] = useState<FilePreview[]>([]);
     const [isLoadingPreview, setIsLoadingPreview] = useState(false);
     const [expandedDirectories, setExpandedDirectories] = useState<Set<string>>(() => new Set());
     const [settingsDraft, setSettingsDraft] = useState<LLMSettings>(llmSettings);
@@ -177,7 +178,8 @@ export function NexusDeskShell({
 
         if (node.kind === 'directory') {
             setIsLoadingPreview(false);
-            setFilePreview(createDirectoryPreview(node));
+            const directoryPreview = createDirectoryPreview(node);
+            setFilePreview(directoryPreview);
             return;
         }
 
@@ -186,12 +188,13 @@ export function NexusDeskShell({
         try {
             const preview = await ReadWorkspaceFile(node.relPath);
             setFilePreview(preview);
+            upsertOpenTab(preview);
             setActiveDatasetProfile(datasetProfiles.find((profile) => profile.relPath === node.relPath) ?? null);
             pushToolEvent('Preview loaded', node.relPath);
         } catch (error) {
             const message = error instanceof Error ? error.message : '';
             if (message.includes('undefined') || message.includes('window')) {
-                setFilePreview({
+                const fallbackPreview: FilePreview = {
                     relPath: node.relPath,
                     name: node.name,
                     kind: 'unsupported',
@@ -202,10 +205,12 @@ export function NexusDeskShell({
                     truncated: false,
                     message: 'File previews are available in the desktop runtime.',
                     size: 0,
-                });
+                };
+                setFilePreview(fallbackPreview);
+                upsertOpenTab(fallbackPreview);
                 return;
             }
-            setFilePreview({
+            const failedPreview: FilePreview = {
                 relPath: node.relPath,
                 name: node.name,
                 kind: 'unsupported',
@@ -216,7 +221,9 @@ export function NexusDeskShell({
                 truncated: false,
                 message: message || 'Could not preview this file.',
                 size: 0,
-            });
+            };
+            setFilePreview(failedPreview);
+            upsertOpenTab(failedPreview);
         } finally {
             setIsLoadingPreview(false);
         }
@@ -379,10 +386,14 @@ export function NexusDeskShell({
             return false;
         }
 
+        const rootChanged = workspace?.root !== result.snapshot.root;
         const selectedNode = selectNodeAfterWorkspaceUpdate(result.snapshot);
 
         onWorkspaceChange(result.snapshot);
         setWorkspaceSearchResults([]);
+        if (rootChanged) {
+            setOpenTabs([]);
+        }
         await refreshChatHistory();
         await refreshArtifacts();
         await refreshDatasetProfiles();
@@ -417,6 +428,57 @@ export function NexusDeskShell({
 
         setActiveFile(node.relPath);
         await previewWorkspaceNode(node, false);
+    }
+
+    function upsertOpenTab(preview: FilePreview) {
+        if (!preview.relPath || preview.kind === 'directory') {
+            return;
+        }
+
+        setOpenTabs((current) => {
+            const existing = current.findIndex((tab) => tab.relPath === preview.relPath);
+            if (existing === -1) {
+                return [...current, preview].slice(-8);
+            }
+            return current.map((tab, index) => index === existing ? preview : tab);
+        });
+    }
+
+    function selectOpenTab(relPath: string) {
+        const tab = openTabs.find((current) => current.relPath === relPath);
+        if (!tab) {
+            return;
+        }
+        clearFileWriteDraft();
+        setActiveFile(tab.relPath);
+        setFilePreview(tab);
+        setActiveDatasetProfile(datasetProfiles.find((profile) => profile.relPath === tab.relPath) ?? null);
+    }
+
+    function closeOpenTab(relPath: string) {
+        const tabIndex = openTabs.findIndex((tab) => tab.relPath === relPath);
+        if (tabIndex === -1) {
+            return;
+        }
+
+        const nextTabs = openTabs.filter((tab) => tab.relPath !== relPath);
+        setOpenTabs(nextTabs);
+        if (activeFile !== relPath) {
+            return;
+        }
+
+        clearFileWriteDraft();
+        const nextTab = nextTabs[Math.max(0, tabIndex - 1)] ?? nextTabs[0] ?? null;
+        if (!nextTab) {
+            setFilePreview(null);
+            setActiveFile(workspace?.name ?? '');
+            setActiveDatasetProfile(null);
+            return;
+        }
+
+        setActiveFile(nextTab.relPath);
+        setFilePreview(nextTab);
+        setActiveDatasetProfile(datasetProfiles.find((profile) => profile.relPath === nextTab.relPath) ?? null);
     }
 
     async function refreshSelectedPreview() {
@@ -1028,9 +1090,12 @@ export function NexusDeskShell({
                 onPreviewFileWrite={() => void previewFileWrite()}
                 onProfileDataset={() => void profileSelectedDataset()}
                 onQueryDataset={() => void querySelectedDataset()}
+                onCloseTab={closeOpenTab}
+                onSelectTab={selectOpenTab}
                 onSelectArtifact={(artifact) => void selectArtifact(artifact)}
                 onStartFileEdit={startFileEdit}
                 onRefreshPreview={() => void refreshSelectedPreview()}
+                openTabs={openTabs}
                 selectedMeta={selectedMeta}
                 writeProposal={writeProposal}
                 workspace={workspace}

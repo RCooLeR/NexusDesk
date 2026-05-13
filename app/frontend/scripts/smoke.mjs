@@ -15,6 +15,7 @@ const checks = [
             'SearchWorkspace',
             'contextPackPaths',
             'pinProjectContext',
+            'openTabs',
             'listenForChatStream',
         ],
     },
@@ -24,7 +25,7 @@ const checks = [
     },
     {
         file: 'src/features/shell/WorkbenchPanel.tsx',
-        terms: ['onPinContext', 'onPinProjectContext', 'onApplyFileWrite', 'onProfileDataset', 'DatasetQueryPanel', 'file-write-editor'],
+        terms: ['editor-tabs', 'onSelectTab', 'onCloseTab', 'onPinProjectContext', 'DatasetQueryPanel', 'file-write-editor'],
     },
     {
         file: 'src/features/shell/WorkspaceNavigator.tsx',
@@ -32,7 +33,7 @@ const checks = [
     },
     {
         file: 'src/features/shell/AgentChatCard.tsx',
-        terms: ['context-pack-list', 'onRemoveContextPath', 'Clear pack'],
+        terms: ['chat-card-header', 'textarea', 'context-pack-list', 'onRemoveContextPath', 'Clear pack'],
     },
     {
         file: 'src/App.css',
