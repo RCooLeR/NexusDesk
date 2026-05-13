@@ -15,6 +15,7 @@ import {
     GetRecentWorkspaces,
     ListArtifacts,
     OpenWorkspace,
+    PreviewChatContextPack,
     PreviewFileWrite,
     ProfileDataset,
     QueryDataset,
@@ -30,6 +31,7 @@ import {EventsOn} from '../../../wailsjs/runtime/runtime';
 import type {
     ChatStreamEvent,
     ChatMessage,
+    ContextPreview,
     DatasetProfile,
     DatasetQueryResult,
     FileNode,
@@ -94,6 +96,7 @@ export function NexusDeskShell({
     const [chatMessages, setChatMessages] = useState<ChatMessage[]>([]);
     const [chatStatus, setChatStatus] = useState('Select text context and ask the assistant.');
     const [contextPackPaths, setContextPackPaths] = useState<string[]>([]);
+    const [contextPackPreview, setContextPackPreview] = useState<ContextPreview | null>(null);
     const [localToolEvents, setLocalToolEvents] = useState<ToolEvent[]>(state.toolEvents);
     const [artifacts, setArtifacts] = useState<WorkspaceArtifact[]>([]);
     const [datasetProfiles, setDatasetProfiles] = useState<DatasetProfile[]>([]);
@@ -119,6 +122,39 @@ export function NexusDeskShell({
         setSettingsDraft(llmSettings);
         setSettingsStatus(llmSettings.updatedAt ? 'LLM settings loaded from local config.' : 'LLM provider not connected yet.');
     }, [llmSettings]);
+
+    useEffect(() => {
+        if (!workspace || contextPackPaths.length === 0) {
+            setContextPackPreview(null);
+            return;
+        }
+
+        let cancelled = false;
+        async function previewContextPack() {
+            try {
+                const preview = await PreviewChatContextPack(contextPackPaths);
+                if (!cancelled) {
+                    setContextPackPreview(preview);
+                }
+            } catch (error) {
+                if (!cancelled) {
+                    const message = error instanceof Error ? error.message : 'Context pack preview is unavailable.';
+                    setContextPackPreview({
+                        roots: contextPackPaths,
+                        files: [],
+                        fileCount: 0,
+                        truncated: false,
+                        message,
+                    });
+                }
+            }
+        }
+
+        void previewContextPack();
+        return () => {
+            cancelled = true;
+        };
+    }, [contextPackPaths, workspace]);
 
     const selectedMeta = useMemo(() => {
         if (workspace) {
@@ -780,9 +816,12 @@ export function NexusDeskShell({
         const selectedContextRelPath = selectedTextContextRelPath();
         const contextPaths = contextPackPaths.length > 0 ? contextPackPaths : selectedContextRelPath ? [selectedContextRelPath] : [];
         const contextRelPath = contextPaths.length > 1 ? `pack: ${contextPaths.join(', ')}` : contextPaths[0] ?? '';
+        const sourcePaths = contextPackPreview && contextPackPaths.length > 0
+            ? contextPackPreview.files.map((file) => file.relPath)
+            : sourcePathsFromContext(contextRelPath);
         const requestId = createRequestId();
-        const userMessage: ChatMessage = {content: prompt, contextRelPath, createdAt: new Date().toISOString(), role: 'user'};
-        const assistantMessage: ChatMessage = {content: '', contextRelPath, createdAt: new Date().toISOString(), role: 'assistant'};
+        const userMessage: ChatMessage = {content: prompt, contextRelPath, sourcePaths, createdAt: new Date().toISOString(), role: 'user'};
+        const assistantMessage: ChatMessage = {content: '', contextRelPath, sourcePaths, createdAt: new Date().toISOString(), role: 'assistant'};
 
         setIsSendingPrompt(true);
         setChatStatus(contextRelPath ? `Streaming with ${contextRelPath} as context...` : 'Streaming without selected file context...');
@@ -803,18 +842,18 @@ export function NexusDeskShell({
             if (workspace) {
                 await refreshChatHistory();
             } else {
-                replaceChatMessage(assistantMessage.createdAt, result.message, result.contextRelPath);
+                replaceChatMessage(assistantMessage.createdAt, result.message, result.contextRelPath, result.sourcePaths);
             }
             setChatStatus(result.contextRelPath ? `Answered with ${result.contextRelPath}.` : `Answered by ${result.model}.`);
             pushToolEvent('Chat completed', result.contextRelPath || result.model);
         } catch (error) {
             const message = error instanceof Error ? error.message : '';
             if (message.includes('undefined') || message.includes('window')) {
-                replaceChatMessage(assistantMessage.createdAt, 'Chat is available in the desktop runtime.', '');
+                replaceChatMessage(assistantMessage.createdAt, 'Chat is available in the desktop runtime.', '', []);
                 setChatStatus('Chat is available in the desktop runtime.');
                 return;
             }
-            replaceChatMessage(assistantMessage.createdAt, message || 'The provider did not return a usable chat response.', '');
+            replaceChatMessage(assistantMessage.createdAt, message || 'The provider did not return a usable chat response.', '', []);
             setChatStatus(message || 'Chat request failed.');
         } finally {
             unsubscribe?.();
@@ -913,7 +952,10 @@ export function NexusDeskShell({
                 title: latestAssistantArtifactTitle(chatMessages),
                 content: latest.content,
                 contextRelPath: latest.contextRelPath,
+                prompt: latestUserPromptForAssistant(chatMessages),
+                model: settingsDraft.model,
                 source: 'NexusDesk chat',
+                sourcePaths: latest.sourcePaths && latest.sourcePaths.length > 0 ? latest.sourcePaths : sourcePathsFromContext(latest.contextRelPath),
             });
             const result = await RefreshWorkspace();
             if (result.selected) {
@@ -1006,13 +1048,13 @@ export function NexusDeskShell({
                 }
 
                 if (event.type === 'delta') {
-                    appendChatDelta(assistantCreatedAt, event.delta, event.contextRelPath || fallbackContextRelPath);
+                    appendChatDelta(assistantCreatedAt, event.delta, event.contextRelPath || fallbackContextRelPath, event.sourcePaths);
                 }
                 if (event.type === 'done') {
-                    replaceChatMessage(assistantCreatedAt, event.message, event.contextRelPath || fallbackContextRelPath);
+                    replaceChatMessage(assistantCreatedAt, event.message, event.contextRelPath || fallbackContextRelPath, event.sourcePaths);
                 }
                 if (event.type === 'error') {
-                    replaceChatMessage(assistantCreatedAt, event.message || 'Streaming response failed.', '');
+                    replaceChatMessage(assistantCreatedAt, event.message || 'Streaming response failed.', '', []);
                 }
             });
         } catch {
@@ -1020,7 +1062,7 @@ export function NexusDeskShell({
         }
     }
 
-    function appendChatDelta(createdAt: string, delta: string, contextRelPath: string) {
+    function appendChatDelta(createdAt: string, delta: string, contextRelPath: string, sourcePaths?: string[]) {
         if (!delta) {
             return;
         }
@@ -1033,11 +1075,12 @@ export function NexusDeskShell({
                 ...message,
                 content: `${message.content}${delta}`,
                 contextRelPath,
+                sourcePaths: sourcePaths && sourcePaths.length > 0 ? sourcePaths : message.sourcePaths,
             };
         }));
     }
 
-    function replaceChatMessage(createdAt: string, content: string, contextRelPath: string) {
+    function replaceChatMessage(createdAt: string, content: string, contextRelPath: string, sourcePaths?: string[]) {
         setChatMessages((current) => current.map((message) => {
             if (message.createdAt !== createdAt) {
                 return message;
@@ -1046,6 +1089,7 @@ export function NexusDeskShell({
                 ...message,
                 content,
                 contextRelPath,
+                sourcePaths: sourcePaths && sourcePaths.length > 0 ? sourcePaths : message.sourcePaths,
             };
         }));
     }
@@ -1155,6 +1199,7 @@ export function NexusDeskShell({
                 chatMessages={chatMessages}
                 chatPrompt={chatPrompt}
                 chatStatus={chatStatus}
+                contextPackPreview={contextPackPreview}
                 contextPackPaths={contextPackPaths}
                 canSaveLatestAssistantArtifact={canSaveLatestAssistantArtifact}
                 isSavingSettings={isSavingSettings}
@@ -1194,15 +1239,27 @@ function latestAssistantArtifactTitle(messages: ChatMessage[]) {
         return 'Assistant response';
     }
 
-    const prompt = messages
-        .slice(0, assistantIndex)
-        .reverse()
-        .find((message) => message.role === 'user' && message.content.trim())?.content.trim();
+    const prompt = latestUserPromptBefore(messages, assistantIndex);
     if (!prompt) {
         return 'Assistant response';
     }
 
     return `Assistant response - ${prompt.replace(/\s+/g, ' ').slice(0, 64)}`;
+}
+
+function latestUserPromptForAssistant(messages: ChatMessage[]) {
+    const assistantIndex = findLatestAssistantIndex(messages);
+    if (assistantIndex === -1) {
+        return '';
+    }
+    return latestUserPromptBefore(messages, assistantIndex);
+}
+
+function latestUserPromptBefore(messages: ChatMessage[], index: number) {
+    return messages
+        .slice(0, index)
+        .reverse()
+        .find((message) => message.role === 'user' && message.content.trim())?.content.trim() ?? '';
 }
 
 function findLatestAssistantIndex(messages: ChatMessage[]) {
@@ -1213,6 +1270,24 @@ function findLatestAssistantIndex(messages: ChatMessage[]) {
         }
     }
     return -1;
+}
+
+function sourcePathsFromContext(contextRelPath: string) {
+    if (!contextRelPath) {
+        return [];
+    }
+    if (contextRelPath.startsWith('pack: ')) {
+        return contextRelPath
+            .slice('pack: '.length)
+            .split(',')
+            .map((path) => path.trim())
+            .filter(Boolean);
+    }
+    const dirMatch = contextRelPath.match(/^dir: (.+) \(\d+ files\)$/);
+    if (dirMatch) {
+        return [dirMatch[1]];
+    }
+    return [contextRelPath];
 }
 
 function createRequestId() {

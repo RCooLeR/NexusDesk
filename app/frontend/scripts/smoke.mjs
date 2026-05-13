@@ -18,6 +18,7 @@ const checks = [
             'openTabs',
             'listenForChatStream',
             'CreateChatMarkdownArtifact',
+            'PreviewChatContextPack',
         ],
     },
     {
@@ -34,7 +35,7 @@ const checks = [
     },
     {
         file: 'src/features/shell/AgentChatCard.tsx',
-        terms: ['ChatMessageContent', 'chat-card-header', 'Save answer', 'textarea', 'context-pack-list', 'onRemoveContextPath', 'Clear pack'],
+        terms: ['ChatMessageContent', 'chat-card-header', 'Save answer', 'textarea', 'context-pack-list', 'context-pack-preview', 'onRemoveContextPath', 'Clear pack'],
     },
     {
         file: 'src/features/shell/ChatMessageContent.tsx',
@@ -48,6 +49,7 @@ const checks = [
             '.navigator-resizer',
             '.file-preview',
             '.context-pack-list',
+            '.context-pack-preview',
             '.chat-markdown',
             '.chat-table',
             '.file-write-editor',
@@ -56,7 +58,7 @@ const checks = [
     },
     {
         file: 'wailsjs/go/main/App.d.ts',
-        terms: ['AskLLMContextPack', 'PreviewFileWrite', 'ProfileDataset', 'CreateChatMarkdownArtifact'],
+        terms: ['AskLLMContextPack', 'PreviewFileWrite', 'ProfileDataset', 'CreateChatMarkdownArtifact', 'PreviewChatContextPack'],
     },
     {
         file: 'dist/index.html',

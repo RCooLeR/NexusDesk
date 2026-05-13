@@ -19,16 +19,18 @@ import (
 const chatTimeout = 5 * time.Minute
 
 type ChatRequest struct {
-	Prompt         string `json:"prompt"`
-	ContextRelPath string `json:"contextRelPath"`
-	ContextContent string `json:"contextContent"`
+	Prompt         string   `json:"prompt"`
+	ContextRelPath string   `json:"contextRelPath"`
+	ContextContent string   `json:"contextContent"`
+	SourcePaths    []string `json:"sourcePaths"`
 }
 
 type ChatResult struct {
-	Message        string `json:"message"`
-	Model          string `json:"model"`
-	Endpoint       string `json:"endpoint"`
-	ContextRelPath string `json:"contextRelPath"`
+	Message        string   `json:"message"`
+	Model          string   `json:"model"`
+	Endpoint       string   `json:"endpoint"`
+	ContextRelPath string   `json:"contextRelPath"`
+	SourcePaths    []string `json:"sourcePaths"`
 }
 
 func (c *Client) Chat(ctx context.Context, settings storage.LLMSettings, chatRequest ChatRequest) (ChatResult, error) {
@@ -105,6 +107,7 @@ func (c *Client) chat(ctx context.Context, settings storage.LLMSettings, chatReq
 			Model:          settings.Model,
 			Endpoint:       endpoint,
 			ContextRelPath: strings.TrimSpace(chatRequest.ContextRelPath),
+			SourcePaths:    append([]string{}, chatRequest.SourcePaths...),
 		}, nil
 	}
 
@@ -122,6 +125,7 @@ func (c *Client) chat(ctx context.Context, settings storage.LLMSettings, chatReq
 		Model:          settings.Model,
 		Endpoint:       endpoint,
 		ContextRelPath: strings.TrimSpace(chatRequest.ContextRelPath),
+		SourcePaths:    append([]string{}, chatRequest.SourcePaths...),
 	}, nil
 }
 

@@ -32,6 +32,10 @@ LLM API keys are not written into `llm-settings.json`. They are saved in a sidec
 
 Selected directories and the workspace root also flow through the same streaming path. `app/internal/workspace/context.go` expands a selected directory or `.` into a capped set of previewable files, then `app/app.go` builds a context pack with a small manifest and file sections. The current caps are 32 files and 96 KiB of packed context, with the same ignored-folder, symlink, path traversal, encoding, PDF text, DOCX text, and CSV-summary boundaries used by file previews.
 
+The chat panel previews pinned context packs by calling `PreviewChatContextPack`, which uses the same backend collector as the send path. That keeps the visible file list aligned with what the model will actually receive, including truncation warnings when caps are reached.
+
+Chat history stores the source paths attached to each user/assistant pair so saved answer artifacts can use the answer's original context instead of whatever happens to be pinned later.
+
 ## Local Models
 
 The default local endpoint is `http://localhost:11434/v1`, targeting the `rcooler-ollama` Docker container on this workstation. The settings card recommends only local models at 26B parameters or below: `qwen3:4b-instruct`, `qwen3:8b`, `qwen3.5:9b`, `phi4:14b`, `phi4-reasoning:14b`, `gpt-oss:20b`, `mistral-small3.2:latest`, and `gemma4:26b`.
@@ -61,7 +65,7 @@ For a healthy load, `/api/ps` should show nonzero `size_vram`, and the Ollama lo
 
 `app/internal/workspace/search.go` owns the first workspace search pass. It searches path names and previewable text content inside the same ignore and depth boundaries as scanning. `app/internal/workspace/dataset_query.go` owns the first CSV query flow with bounded row results and simple `column=value` filters until a DuckDB SQL layer is added.
 
-`app/internal/workspace/context.go` owns directory/project context expansion. The UI can pin a selected directory or the workspace root, but the backend still decides which files are safe and useful enough to include.
+`app/internal/workspace/context.go` owns directory/project context expansion and context-pack previews. The UI can pin a selected directory or the workspace root, but the backend still decides which files are safe and useful enough to include.
 
 `app/frontend/src/features/shell/HighlightedCode.tsx` provides dependency-free lightweight highlighting for common code/data text previews until Monaco lands.
 
@@ -94,7 +98,7 @@ The shell is now mostly orchestration. Feature panels own stable presentation, w
 
 ## Artifact Creation
 
-`app/internal/artifact/` owns deterministic artifact writes and listing. The first flows create timestamped Markdown reports from selected previews and timestamped Markdown artifacts from assistant answers under `.nexusdesk/artifacts/`, use exclusive file creation to avoid overwrites, and return the new workspace-relative path so the UI can refresh and select it. Saved assistant answers preserve the model's Markdown and include source/context metadata before the generated body. The workbench lists Markdown artifacts from that folder so generated outputs remain visible after creation.
+`app/internal/artifact/` owns deterministic artifact writes, provenance sidecars, and listing. The first flows create timestamped Markdown reports from selected previews and timestamped Markdown artifacts from assistant answers under `.nexusdesk/artifacts/`, use exclusive file creation to avoid overwrites, and return the new workspace-relative path so the UI can refresh and select it. Each Markdown artifact also gets a sibling `.meta.json` file with kind, source, source paths, prompt, model, context path, and creation timestamp when available. Saved assistant answers preserve the model's Markdown and include source/context metadata before the generated body. The workbench lists Markdown artifacts from that folder so generated outputs remain visible after creation.
 
 ## File Writes
 

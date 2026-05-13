@@ -1,6 +1,7 @@
 package artifact
 
 import (
+	"encoding/json"
 	"os"
 	"path/filepath"
 	"strings"
@@ -42,6 +43,14 @@ func TestCreateMarkdownReportWritesInsideArtifactDirectory(t *testing.T) {
 	}
 	if !strings.Contains(text, "hello report") {
 		t.Fatalf("expected source excerpt, got %q", text)
+	}
+
+	metadata := readTestMetadata(t, root, report.RelPath)
+	if metadata.Kind != "markdown-report" {
+		t.Fatalf("unexpected metadata kind: %s", metadata.Kind)
+	}
+	if len(metadata.SourcePaths) != 1 || metadata.SourcePaths[0] != "docs/notes.md" {
+		t.Fatalf("unexpected metadata source paths: %#v", metadata.SourcePaths)
 	}
 }
 
@@ -111,7 +120,10 @@ func TestCreateGeneratedMarkdownWritesAssistantResponse(t *testing.T) {
 		Title:          "Architecture Notes",
 		Content:        "## Summary\n\n- Keep the shell small.",
 		ContextRelPath: "docs/08_DELIVERY_PLAN.md",
+		Prompt:         "Summarize the architecture",
+		Model:          "qwen3:8b",
 		Source:         "NexusDesk chat",
+		SourcePaths:    []string{"docs/08_DELIVERY_PLAN.md"},
 	}, now)
 	if err != nil {
 		t.Fatalf("CreateGeneratedMarkdown returned error: %v", err)
@@ -135,6 +147,20 @@ func TestCreateGeneratedMarkdownWritesAssistantResponse(t *testing.T) {
 	}
 	if !strings.Contains(text, "## Summary\n\n- Keep the shell small.") {
 		t.Fatalf("expected assistant markdown content, got %q", text)
+	}
+
+	metadata := readTestMetadata(t, root, report.RelPath)
+	if metadata.Kind != "chat-answer" {
+		t.Fatalf("unexpected metadata kind: %s", metadata.Kind)
+	}
+	if metadata.Prompt != "Summarize the architecture" {
+		t.Fatalf("unexpected metadata prompt: %s", metadata.Prompt)
+	}
+	if metadata.Model != "qwen3:8b" {
+		t.Fatalf("unexpected metadata model: %s", metadata.Model)
+	}
+	if len(metadata.SourcePaths) != 1 || metadata.SourcePaths[0] != "docs/08_DELIVERY_PLAN.md" {
+		t.Fatalf("unexpected metadata source paths: %#v", metadata.SourcePaths)
 	}
 }
 
@@ -174,11 +200,11 @@ func TestListReturnsMarkdownArtifactsNewestFirst(t *testing.T) {
 	firstTime := time.Date(2026, 5, 13, 12, 30, 0, 0, time.UTC)
 	secondTime := firstTime.Add(time.Minute)
 
-	firstReport, err := CreateMarkdownReport(root, workspace.FilePreview{Name: "first.md"}, firstTime)
+	firstReport, err := CreateMarkdownReport(root, workspace.FilePreview{Name: "first.md", RelPath: "first.md"}, firstTime)
 	if err != nil {
 		t.Fatalf("CreateMarkdownReport first failed: %v", err)
 	}
-	secondReport, err := CreateMarkdownReport(root, workspace.FilePreview{Name: "second.md"}, secondTime)
+	secondReport, err := CreateMarkdownReport(root, workspace.FilePreview{Name: "second.md", RelPath: "second.md"}, secondTime)
 	if err != nil {
 		t.Fatalf("CreateMarkdownReport second failed: %v", err)
 	}
@@ -206,6 +232,12 @@ func TestListReturnsMarkdownArtifactsNewestFirst(t *testing.T) {
 	if artifacts[0].RelPath != ".nexusdesk/artifacts/second-20260513-123100.md" {
 		t.Fatalf("unexpected artifact rel path: %s", artifacts[0].RelPath)
 	}
+	if artifacts[0].Summary != "second.md" {
+		t.Fatalf("expected artifact summary from metadata, got %q", artifacts[0].Summary)
+	}
+	if artifacts[0].Source != "selected preview" {
+		t.Fatalf("expected artifact source from metadata, got %q", artifacts[0].Source)
+	}
 }
 
 func TestListReturnsEmptyWhenArtifactDirectoryIsMissing(t *testing.T) {
@@ -216,4 +248,20 @@ func TestListReturnsEmptyWhenArtifactDirectoryIsMissing(t *testing.T) {
 	if len(artifacts) != 0 {
 		t.Fatalf("expected no artifacts, got %d", len(artifacts))
 	}
+}
+
+func readTestMetadata(t *testing.T, root string, relPath string) ArtifactMetadata {
+	t.Helper()
+
+	artifactPath := filepath.Join(root, filepath.FromSlash(relPath))
+	content, err := os.ReadFile(artifactMetadataPath(artifactPath))
+	if err != nil {
+		t.Fatalf("ReadFile metadata failed: %v", err)
+	}
+
+	var metadata ArtifactMetadata
+	if err := json.Unmarshal(content, &metadata); err != nil {
+		t.Fatalf("Unmarshal metadata failed: %v", err)
+	}
+	return metadata
 }

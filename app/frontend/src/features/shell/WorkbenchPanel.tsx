@@ -287,7 +287,8 @@ export function WorkbenchPanel({
                                     <img src={brandAssets.icons.documents} alt="" />
                                     <span>
                                         <strong>{artifact.name}</strong>
-                                        <small>{artifact.relPath}</small>
+                                        <small>{artifact.summary || artifact.source || artifact.relPath}</small>
+                                        {artifact.model && <small>{artifact.model}</small>}
                                     </span>
                                     <StatusBadge tone="warning">{artifact.kind}</StatusBadge>
                                 </button>

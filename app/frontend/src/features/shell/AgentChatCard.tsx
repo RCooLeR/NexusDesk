@@ -1,11 +1,12 @@
 import {Button, Card} from '../../components/ui';
-import type {ChatMessage} from '../../types';
+import type {ChatMessage, ContextPreview} from '../../types';
 import {ChatMessageContent} from './ChatMessageContent';
 
 type AgentChatCardProps = {
     chatMessages: ChatMessage[];
     chatPrompt: string;
     chatStatus: string;
+    contextPackPreview: ContextPreview | null;
     contextPackPaths: string[];
     canSaveLatestAssistantArtifact: boolean;
     isSavingChatArtifact: boolean;
@@ -22,6 +23,7 @@ export function AgentChatCard({
     chatMessages,
     chatPrompt,
     chatStatus,
+    contextPackPreview,
     contextPackPaths,
     canSaveLatestAssistantArtifact,
     isSavingChatArtifact,
@@ -84,6 +86,23 @@ export function AgentChatCard({
                             </button>
                         ))}
                     </div>
+                    {contextPackPreview && (
+                        <div className="context-pack-preview">
+                            <small>
+                                {contextPackPreview.message}
+                            </small>
+                            {contextPackPreview.files.length > 0 && (
+                                <ul>
+                                    {contextPackPreview.files.slice(0, 8).map((file) => (
+                                        <li key={file.relPath}>{file.relPath}</li>
+                                    ))}
+                                    {contextPackPreview.files.length > 8 && (
+                                        <li>{contextPackPreview.files.length - 8} more files</li>
+                                    )}
+                                </ul>
+                            )}
+                        </div>
+                    )}
                 </div>
             )}
             <div className="prompt-box">

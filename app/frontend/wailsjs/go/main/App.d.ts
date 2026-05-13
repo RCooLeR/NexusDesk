@@ -39,6 +39,8 @@ export function ListDatasetProfiles():Promise<Array<dataset.Profile>>;
 
 export function OpenWorkspace(arg1:string):Promise<main.WorkspaceOpenResult>;
 
+export function PreviewChatContextPack(arg1:Array<string>):Promise<workspace.ContextPreview>;
+
 export function PreviewFileWrite(arg1:workspace.FileWriteRequest):Promise<workspace.FileWriteProposal>;
 
 export function ProfileDataset(arg1:string):Promise<dataset.Profile>;

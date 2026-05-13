@@ -1,6 +1,7 @@
 package artifact
 
 import (
+	"encoding/json"
 	"errors"
 	"fmt"
 	"os"
@@ -27,10 +28,24 @@ type MarkdownReport struct {
 }
 
 type MarkdownArtifactRequest struct {
-	Title          string `json:"title"`
-	Content        string `json:"content"`
-	ContextRelPath string `json:"contextRelPath"`
-	Source         string `json:"source"`
+	Title          string   `json:"title"`
+	Content        string   `json:"content"`
+	ContextRelPath string   `json:"contextRelPath"`
+	Prompt         string   `json:"prompt"`
+	Model          string   `json:"model"`
+	Source         string   `json:"source"`
+	SourcePaths    []string `json:"sourcePaths"`
+}
+
+type ArtifactMetadata struct {
+	Kind           string   `json:"kind"`
+	Title          string   `json:"title"`
+	Source         string   `json:"source"`
+	SourcePaths    []string `json:"sourcePaths"`
+	ContextRelPath string   `json:"contextRelPath"`
+	Prompt         string   `json:"prompt"`
+	Model          string   `json:"model"`
+	CreatedAt      string   `json:"createdAt"`
 }
 
 type WorkspaceArtifact struct {
@@ -40,6 +55,9 @@ type WorkspaceArtifact struct {
 	Kind       string `json:"kind"`
 	Size       int64  `json:"size"`
 	ModifiedAt string `json:"modifiedAt"`
+	Source     string `json:"source"`
+	Summary    string `json:"summary"`
+	Model      string `json:"model"`
 }
 
 func CreateMarkdownReport(root string, source workspace.FilePreview, now time.Time) (MarkdownReport, error) {
@@ -71,6 +89,17 @@ func CreateMarkdownReport(root string, source workspace.FilePreview, now time.Ti
 	defer file.Close()
 
 	if _, err := file.WriteString(content); err != nil {
+		return MarkdownReport{}, err
+	}
+
+	if err := writeArtifactMetadata(absRoot, path, ArtifactMetadata{
+		Kind:           "markdown-report",
+		Title:          "Report: " + source.Name,
+		Source:         "selected preview",
+		SourcePaths:    cleanMetadataPaths([]string{source.RelPath}),
+		ContextRelPath: source.RelPath,
+		CreatedAt:      now.UTC().Format(time.RFC3339),
+	}); err != nil {
 		return MarkdownReport{}, err
 	}
 
@@ -125,6 +154,19 @@ func CreateGeneratedMarkdown(root string, request MarkdownArtifactRequest, now t
 	defer file.Close()
 
 	if _, err := file.WriteString(content); err != nil {
+		return MarkdownReport{}, err
+	}
+
+	if err := writeArtifactMetadata(absRoot, path, ArtifactMetadata{
+		Kind:           "chat-answer",
+		Title:          generatedArtifactTitle(request),
+		Source:         fallbackString(request.Source, "NexusDesk chat"),
+		SourcePaths:    cleanMetadataPaths(request.SourcePaths),
+		ContextRelPath: request.ContextRelPath,
+		Prompt:         request.Prompt,
+		Model:          request.Model,
+		CreatedAt:      now.UTC().Format(time.RFC3339),
+	}); err != nil {
 		return MarkdownReport{}, err
 	}
 
@@ -187,14 +229,18 @@ func List(root string) ([]WorkspaceArtifact, error) {
 		if err != nil {
 			return nil, err
 		}
+		metadata := readArtifactMetadata(path)
 
 		artifacts = append(artifacts, WorkspaceArtifact{
 			RelPath:    filepath.ToSlash(relPath),
 			Name:       entry.Name(),
 			Path:       path,
-			Kind:       "markdown-report",
+			Kind:       fallbackString(metadata.Kind, "markdown-report"),
 			Size:       info.Size(),
 			ModifiedAt: info.ModTime().UTC().Format(time.RFC3339),
+			Source:     metadata.Source,
+			Summary:    artifactSummary(metadata),
+			Model:      metadata.Model,
 		})
 	}
 
@@ -223,10 +269,7 @@ func reportFileName(source workspace.FilePreview, now time.Time) string {
 }
 
 func generatedArtifactFileName(request MarkdownArtifactRequest, now time.Time) string {
-	base := strings.TrimSpace(request.Title)
-	if base == "" {
-		base = "assistant-response"
-	}
+	base := generatedArtifactTitle(request)
 
 	slug := slugify(base)
 	if slug == "" {
@@ -234,6 +277,14 @@ func generatedArtifactFileName(request MarkdownArtifactRequest, now time.Time) s
 	}
 
 	return fmt.Sprintf("%s-%s.md", slug, now.UTC().Format("20060102-150405"))
+}
+
+func generatedArtifactTitle(request MarkdownArtifactRequest) string {
+	base := strings.TrimSpace(request.Title)
+	if base == "" {
+		base = "Assistant Response"
+	}
+	return base
 }
 
 func buildMarkdownReport(source workspace.FilePreview, now time.Time) string {
@@ -338,6 +389,84 @@ func buildGeneratedMarkdown(request MarkdownArtifactRequest, now time.Time) stri
 	}
 
 	return builder.String()
+}
+
+func writeArtifactMetadata(root string, artifactPath string, metadata ArtifactMetadata) error {
+	metadataPath := artifactMetadataPath(artifactPath)
+	if err := ensureInsideRoot(root, metadataPath); err != nil {
+		return err
+	}
+
+	payload, err := json.MarshalIndent(metadata, "", "  ")
+	if err != nil {
+		return err
+	}
+	payload = append(payload, '\n')
+
+	file, err := os.OpenFile(metadataPath, os.O_WRONLY|os.O_CREATE|os.O_EXCL, 0o644)
+	if err != nil {
+		return err
+	}
+	defer file.Close()
+
+	_, err = file.Write(payload)
+	return err
+}
+
+func readArtifactMetadata(artifactPath string) ArtifactMetadata {
+	content, err := os.ReadFile(artifactMetadataPath(artifactPath))
+	if err != nil {
+		return ArtifactMetadata{}
+	}
+
+	var metadata ArtifactMetadata
+	if err := json.Unmarshal(content, &metadata); err != nil {
+		return ArtifactMetadata{}
+	}
+	return metadata
+}
+
+func artifactMetadataPath(artifactPath string) string {
+	extension := filepath.Ext(artifactPath)
+	return strings.TrimSuffix(artifactPath, extension) + ".meta.json"
+}
+
+func artifactSummary(metadata ArtifactMetadata) string {
+	if len(metadata.SourcePaths) > 0 {
+		if len(metadata.SourcePaths) == 1 {
+			return metadata.SourcePaths[0]
+		}
+		return fmt.Sprintf("%d source paths", len(metadata.SourcePaths))
+	}
+	if metadata.ContextRelPath != "" {
+		return metadata.ContextRelPath
+	}
+	if metadata.Prompt != "" {
+		return strings.TrimSpace(escapeMarkdownLine(metadata.Prompt))
+	}
+	return ""
+}
+
+func cleanMetadataPaths(paths []string) []string {
+	cleaned := []string{}
+	seen := map[string]bool{}
+	for _, path := range paths {
+		path = strings.TrimSpace(path)
+		if path == "" || seen[path] {
+			continue
+		}
+		seen[path] = true
+		cleaned = append(cleaned, path)
+	}
+	return cleaned
+}
+
+func fallbackString(value string, fallback string) string {
+	value = strings.TrimSpace(value)
+	if value == "" {
+		return fallback
+	}
+	return value
 }
 
 func slugify(value string) string {

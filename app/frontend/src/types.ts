@@ -98,6 +98,22 @@ export type WorkspaceArtifact = {
     kind: string;
     size: number;
     modifiedAt: string;
+    source: string;
+    summary: string;
+    model: string;
+};
+
+export type ContextPreviewFile = {
+    relPath: string;
+    required: boolean;
+};
+
+export type ContextPreview = {
+    roots: string[];
+    files: ContextPreviewFile[];
+    fileCount: number;
+    truncated: boolean;
+    message: string;
 };
 
 export type DatasetProfile = {
@@ -180,6 +196,7 @@ export type LLMChatResult = {
     model: string;
     endpoint: string;
     contextRelPath: string;
+    sourcePaths: string[];
 };
 
 export type ChatStreamEvent = {
@@ -190,12 +207,14 @@ export type ChatStreamEvent = {
     model: string;
     endpoint: string;
     contextRelPath: string;
+    sourcePaths: string[];
 };
 
 export type ChatMessage = {
     role: string;
     content: string;
     contextRelPath: string;
+    sourcePaths?: string[];
     createdAt: string;
 };
 

@@ -53,13 +53,14 @@ type WorkspaceOpenResult struct {
 }
 
 type ChatStreamEvent struct {
-	RequestID      string `json:"requestId"`
-	Type           string `json:"type"`
-	Delta          string `json:"delta"`
-	Message        string `json:"message"`
-	Model          string `json:"model"`
-	Endpoint       string `json:"endpoint"`
-	ContextRelPath string `json:"contextRelPath"`
+	RequestID      string   `json:"requestId"`
+	Type           string   `json:"type"`
+	Delta          string   `json:"delta"`
+	Message        string   `json:"message"`
+	Model          string   `json:"model"`
+	Endpoint       string   `json:"endpoint"`
+	ContextRelPath string   `json:"contextRelPath"`
+	SourcePaths    []string `json:"sourcePaths"`
 }
 
 const chatContextMaxBytes = 16 * 1024
@@ -362,6 +363,7 @@ func (a *App) AskLLMStream(prompt string, relPath string, requestID string) (llm
 		Model:          result.Model,
 		Endpoint:       result.Endpoint,
 		ContextRelPath: result.ContextRelPath,
+		SourcePaths:    result.SourcePaths,
 	})
 
 	return result, nil
@@ -414,8 +416,18 @@ func (a *App) AskLLMStreamContextPack(prompt string, relPaths []string, requestI
 		Model:          result.Model,
 		Endpoint:       result.Endpoint,
 		ContextRelPath: result.ContextRelPath,
+		SourcePaths:    result.SourcePaths,
 	})
 	return result, nil
+}
+
+func (a *App) PreviewChatContextPack(relPaths []string) (workspace.ContextPreview, error) {
+	root := a.getWorkspaceRoot()
+	if root == "" {
+		return workspace.ContextPreview{}, errors.New("open a workspace before previewing context packs")
+	}
+
+	return workspace.PreviewContextFiles(root, relPaths, workspace.ContextCollectOptions{MaxFiles: chatContextPackMaxFiles})
 }
 
 func (a *App) prepareChat(prompt string, relPaths []string) (llm.ChatRequest, storage.LLMSettings, error) {
@@ -441,13 +453,15 @@ func (a *App) prepareChat(prompt string, relPaths []string) (llm.ChatRequest, st
 		}
 		chatRequest.ContextRelPath = contextPreview.RelPath
 		chatRequest.ContextContent = contextPreview.Content
+		chatRequest.SourcePaths = []string{contextPreview.RelPath}
 	} else if len(contextPaths) > 0 {
-		contextRelPath, contextContent, err := a.buildContextPack(contextPaths)
+		contextRelPath, contextContent, sourcePaths, err := a.buildContextPack(contextPaths)
 		if err != nil {
 			return llm.ChatRequest{}, storage.LLMSettings{}, err
 		}
 		chatRequest.ContextRelPath = contextRelPath
 		chatRequest.ContextContent = contextContent
+		chatRequest.SourcePaths = sourcePaths
 	}
 
 	return chatRequest, resolvedSettings, nil
@@ -460,10 +474,12 @@ func (a *App) persistChatPair(prompt string, chatRequest llm.ChatRequest, result
 			Role:           "user",
 			Content:        prompt,
 			ContextRelPath: chatRequest.ContextRelPath,
+			SourcePaths:    chatRequest.SourcePaths,
 		}, storage.ChatMessage{
 			Role:           "assistant",
 			Content:        result.Message,
 			ContextRelPath: result.ContextRelPath,
+			SourcePaths:    result.SourcePaths,
 		})
 		if err != nil {
 			return err
@@ -549,15 +565,15 @@ func buildChatContextContent(preview workspace.FilePreview) string {
 	return builder.String()
 }
 
-func (a *App) buildContextPack(relPaths []string) (string, string, error) {
+func (a *App) buildContextPack(relPaths []string) (string, string, []string, error) {
 	root := a.getWorkspaceRoot()
 	if root == "" {
-		return "", "", errors.New("open a workspace before sending context packs")
+		return "", "", nil, errors.New("open a workspace before sending context packs")
 	}
 
 	collection, err := workspace.CollectContextFiles(root, relPaths, workspace.ContextCollectOptions{MaxFiles: chatContextPackMaxFiles})
 	if err != nil {
-		return "", "", err
+		return "", "", nil, err
 	}
 
 	var builder strings.Builder
@@ -576,7 +592,7 @@ func (a *App) buildContextPack(relPaths []string) (string, string, error) {
 		preview, err := a.previewChatContext(file.RelPath)
 		if err != nil {
 			if file.Required {
-				return "", "", err
+				return "", "", nil, err
 			}
 			continue
 		}
@@ -599,11 +615,11 @@ func (a *App) buildContextPack(relPaths []string) (string, string, error) {
 		}
 	}
 	if len(usedPaths) == 0 {
-		return "", "", errors.New("context pack did not include usable text")
+		return "", "", nil, errors.New("context pack did not include usable text")
 	}
 
 	contextLabel := buildContextLabel(collection.Roots, usedPaths)
-	return contextLabel, strings.TrimSpace(builder.String()), nil
+	return contextLabel, strings.TrimSpace(builder.String()), usedPaths, nil
 }
 
 func (a *App) contextPathRequiresPack(relPath string) bool {

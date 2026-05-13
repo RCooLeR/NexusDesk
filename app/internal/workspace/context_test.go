@@ -63,6 +63,45 @@ func TestCollectContextFilesCapsExpandedDirectories(t *testing.T) {
 	}
 }
 
+func TestPreviewContextFilesSummarizesExpandedFiles(t *testing.T) {
+	root := t.TempDir()
+	writeTestFile(t, root, "docs/a.md", "a")
+	writeTestFile(t, root, "docs/b.md", "b")
+
+	preview, err := PreviewContextFiles(root, []string{"docs"}, ContextCollectOptions{MaxFiles: 10})
+	if err != nil {
+		t.Fatalf("PreviewContextFiles returned error: %v", err)
+	}
+
+	if preview.FileCount != 2 {
+		t.Fatalf("expected 2 preview files, got %d", preview.FileCount)
+	}
+	if preview.Message != "Context pack will include 2 files." {
+		t.Fatalf("unexpected preview message: %s", preview.Message)
+	}
+	if len(preview.Files) != 2 || preview.Files[0].RelPath != "docs/a.md" || preview.Files[1].RelPath != "docs/b.md" {
+		t.Fatalf("unexpected preview files: %#v", preview.Files)
+	}
+}
+
+func TestPreviewContextFilesReportsTruncation(t *testing.T) {
+	root := t.TempDir()
+	writeTestFile(t, root, "a.md", "a")
+	writeTestFile(t, root, "b.md", "b")
+
+	preview, err := PreviewContextFiles(root, []string{"."}, ContextCollectOptions{MaxFiles: 1})
+	if err != nil {
+		t.Fatalf("PreviewContextFiles returned error: %v", err)
+	}
+
+	if !preview.Truncated {
+		t.Fatal("expected preview truncation")
+	}
+	if preview.Message != "Context pack will include 1 file. Some matching files were skipped by safety or size limits." {
+		t.Fatalf("unexpected preview message: %s", preview.Message)
+	}
+}
+
 func writeTestFile(t *testing.T, root string, relPath string, content string) {
 	t.Helper()
 

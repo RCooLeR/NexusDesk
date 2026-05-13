@@ -63,6 +63,7 @@ Deliverables:
 - read selected CSV profile and sample into chat context: implemented
 - pin multiple selected previews into a bounded chat context pack: implemented
 - remove individual pinned context files: implemented
+- preview backend-selected context pack files before sending chat: implemented
 - read extracted PDF text into chat context when available: implemented
 - reload selected preview from disk: implemented
 - explain selected text/code preview through chat: implemented
@@ -108,6 +109,7 @@ Current status:
 - Monaco, richer document extraction/OCR, and SQLite persistence are still planned.
 - Markdown report artifacts can be created under `.nexusdesk/artifacts/` without overwriting existing files.
 - Latest assistant answers can be saved as Markdown artifacts under `.nexusdesk/artifacts/` with their chat context recorded as metadata.
+- Markdown artifacts now write sidecar provenance metadata with source, prompt, model, source paths, and creation timestamp.
 - The workbench lists generated Markdown artifacts and can reselect visible report files from that list.
 - The frontend has a smoke check for the built entrypoint, generated Wails bindings, and core shell functionality markers.
 - Monaco, richer document extraction/OCR, richer approval dialogs, DuckDB SQL, and SQLite persistence are still planned.
@@ -123,6 +125,7 @@ Deliverables:
 - PDF text extraction where available
 - document summary tool
 - artifact manager: first Markdown artifact list implemented
+- artifact provenance sidecars: first implementation
 - create Markdown report tool: first controlled artifact flow implemented
 - create chat answer artifact tool: first controlled artifact flow implemented
 - create text/code file tool with approval: first edit flow implemented
@@ -136,7 +139,7 @@ Exit criteria:
 
 - AI can create a report artifact from selected source files
 - user can approve or reject text file writes after reviewing a diff
-- generated artifacts are linked to conversations and source context: first chat-answer artifact flow implemented
+- generated artifacts are linked to conversations and source context: first sidecar provenance flow implemented
 
 ## Phase 3: Excel, CSV, And Charts
 

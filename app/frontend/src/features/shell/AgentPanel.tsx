@@ -1,5 +1,5 @@
 import {brandAssets} from '../../brand/assets';
-import type {ChatMessage, LLMProbeResult, LLMSettings, ToolEvent} from '../../types';
+import type {ChatMessage, ContextPreview, LLMProbeResult, LLMSettings, ToolEvent} from '../../types';
 import {AgentChatCard} from './AgentChatCard';
 import {LLMSettingsCard} from './LLMSettingsCard';
 import {ToolTimeline} from './ToolTimeline';
@@ -8,6 +8,7 @@ type AgentPanelProps = {
     chatMessages: ChatMessage[];
     chatPrompt: string;
     chatStatus: string;
+    contextPackPreview: ContextPreview | null;
     contextPackPaths: string[];
     canSaveLatestAssistantArtifact: boolean;
     isSavingSettings: boolean;
@@ -34,6 +35,7 @@ export function AgentPanel({
     chatMessages,
     chatPrompt,
     chatStatus,
+    contextPackPreview,
     contextPackPaths,
     canSaveLatestAssistantArtifact,
     isSavingSettings,
@@ -68,6 +70,7 @@ export function AgentPanel({
                 chatMessages={chatMessages}
                 chatPrompt={chatPrompt}
                 chatStatus={chatStatus}
+                contextPackPreview={contextPackPreview}
                 contextPackPaths={contextPackPaths}
                 canSaveLatestAssistantArtifact={canSaveLatestAssistantArtifact}
                 isSavingChatArtifact={isSavingChatArtifact}

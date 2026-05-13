@@ -2,6 +2,7 @@ package workspace
 
 import (
 	"errors"
+	"fmt"
 	"io/fs"
 	"os"
 	"path/filepath"
@@ -28,6 +29,19 @@ type ContextCollection struct {
 	Files     []ContextFile
 	Roots     []string
 	Truncated bool
+}
+
+type ContextPreviewFile struct {
+	RelPath  string `json:"relPath"`
+	Required bool   `json:"required"`
+}
+
+type ContextPreview struct {
+	Roots     []string             `json:"roots"`
+	Files     []ContextPreviewFile `json:"files"`
+	FileCount int                  `json:"fileCount"`
+	Truncated bool                 `json:"truncated"`
+	Message   string               `json:"message"`
 }
 
 func CollectContextFiles(root string, relPaths []string, options ContextCollectOptions) (ContextCollection, error) {
@@ -104,6 +118,41 @@ func CollectContextFiles(root string, relPaths []string, options ContextCollectO
 	}
 
 	return collection, nil
+}
+
+func PreviewContextFiles(root string, relPaths []string, options ContextCollectOptions) (ContextPreview, error) {
+	collection, err := CollectContextFiles(root, relPaths, options)
+	if err != nil {
+		return ContextPreview{}, err
+	}
+
+	files := make([]ContextPreviewFile, 0, len(collection.Files))
+	for _, file := range collection.Files {
+		files = append(files, ContextPreviewFile{
+			RelPath:  file.RelPath,
+			Required: file.Required,
+		})
+	}
+
+	message := "Context pack will include " + pluralizeFileCount(len(files)) + "."
+	if collection.Truncated {
+		message += " Some matching files were skipped by safety or size limits."
+	}
+
+	return ContextPreview{
+		Roots:     collection.Roots,
+		Files:     files,
+		FileCount: len(files),
+		Truncated: collection.Truncated,
+		Message:   message,
+	}, nil
+}
+
+func pluralizeFileCount(count int) string {
+	if count == 1 {
+		return "1 file"
+	}
+	return fmt.Sprintf("%d files", count)
 }
 
 func appendContextFile(collection *ContextCollection, seen map[string]bool, file ContextFile, maxFiles int) bool {

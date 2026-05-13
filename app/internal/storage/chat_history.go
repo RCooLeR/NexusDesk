@@ -14,10 +14,11 @@ import (
 const chatHistoryLimit = 100
 
 type ChatMessage struct {
-	Role           string `json:"role"`
-	Content        string `json:"content"`
-	ContextRelPath string `json:"contextRelPath"`
-	CreatedAt      string `json:"createdAt"`
+	Role           string   `json:"role"`
+	Content        string   `json:"content"`
+	ContextRelPath string   `json:"contextRelPath"`
+	SourcePaths    []string `json:"sourcePaths"`
+	CreatedAt      string   `json:"createdAt"`
 }
 
 type ChatHistoryStore struct {
@@ -128,11 +129,26 @@ func normalizeChatMessage(message ChatMessage, fallbackRole string, fallbackCrea
 	}
 	message.Content = strings.TrimSpace(message.Content)
 	message.ContextRelPath = strings.TrimSpace(message.ContextRelPath)
+	message.SourcePaths = cleanChatSourcePaths(message.SourcePaths)
 	message.CreatedAt = strings.TrimSpace(message.CreatedAt)
 	if message.CreatedAt == "" {
 		message.CreatedAt = fallbackCreatedAt
 	}
 	return message
+}
+
+func cleanChatSourcePaths(paths []string) []string {
+	cleaned := []string{}
+	seen := map[string]bool{}
+	for _, path := range paths {
+		path = strings.TrimSpace(path)
+		if path == "" || seen[path] {
+			continue
+		}
+		seen[path] = true
+		cleaned = append(cleaned, path)
+	}
+	return cleaned
 }
 
 func cloneChatMessages(messages []ChatMessage) []ChatMessage {

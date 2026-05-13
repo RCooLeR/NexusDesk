@@ -66,6 +66,10 @@ export function OpenWorkspace(arg1) {
   return window['go']['main']['App']['OpenWorkspace'](arg1);
 }
 
+export function PreviewChatContextPack(arg1) {
+  return window['go']['main']['App']['PreviewChatContextPack'](arg1);
+}
+
 export function PreviewFileWrite(arg1) {
   return window['go']['main']['App']['PreviewFileWrite'](arg1);
 }
