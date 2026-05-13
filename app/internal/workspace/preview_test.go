@@ -157,6 +157,48 @@ func TestPreviewDecodesUTF16LEText(t *testing.T) {
 	}
 }
 
+func TestPreviewDecodesUTF16LETextWithoutBOM(t *testing.T) {
+	root := t.TempDir()
+	path := filepath.Join(root, "notes.txt")
+	content := []byte{'h', 0x00, 'i', 0x00, '\n', 0x00}
+	if err := os.WriteFile(path, content, 0o644); err != nil {
+		t.Fatalf("WriteFile failed: %v", err)
+	}
+
+	preview, err := Preview(root, "notes.txt", PreviewOptions{})
+	if err != nil {
+		t.Fatalf("Preview returned error: %v", err)
+	}
+
+	if preview.Content != "hi\n" {
+		t.Fatalf("expected decoded UTF-16 content, got %q", preview.Content)
+	}
+	if preview.Encoding != "utf-16le" {
+		t.Fatalf("expected utf-16le encoding, got %q", preview.Encoding)
+	}
+}
+
+func TestPreviewDecodesWindows1251Text(t *testing.T) {
+	root := t.TempDir()
+	path := filepath.Join(root, "notes.txt")
+	content := []byte{0xcf, 0xf0, 0xe8, 0xe2, 0xe5, 0xf2}
+	if err := os.WriteFile(path, content, 0o644); err != nil {
+		t.Fatalf("WriteFile failed: %v", err)
+	}
+
+	preview, err := Preview(root, "notes.txt", PreviewOptions{})
+	if err != nil {
+		t.Fatalf("Preview returned error: %v", err)
+	}
+
+	if preview.Content != "Привет" {
+		t.Fatalf("expected decoded Windows-1251 content, got %q", preview.Content)
+	}
+	if preview.Encoding != "windows-1251" {
+		t.Fatalf("expected windows-1251 encoding, got %q", preview.Encoding)
+	}
+}
+
 func TestPreviewReturnsPDFDataURL(t *testing.T) {
 	root := t.TempDir()
 	path := filepath.Join(root, "brief.pdf")

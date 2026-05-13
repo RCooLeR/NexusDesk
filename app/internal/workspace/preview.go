@@ -11,8 +11,11 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+	"unicode"
 	"unicode/utf16"
 	"unicode/utf8"
+
+	"golang.org/x/text/encoding/charmap"
 )
 
 const defaultPreviewMaxBytes = 64 * 1024
@@ -139,7 +142,7 @@ func Preview(root string, relPath string, options PreviewOptions) (FilePreview, 
 	normalized, encoding, ok := normalizePreviewText(content)
 	if !ok || isLikelyBinary(normalized) {
 		preview.Kind = "unsupported"
-		preview.Message = "Binary or non-UTF-8 files are not previewed yet."
+		preview.Message = "Binary or unsupported text encoding files are not previewed yet."
 		return preview, nil
 	}
 
@@ -277,12 +280,13 @@ func normalizePreviewText(content []byte) ([]byte, string, bool) {
 	if bytes.HasPrefix(content, []byte{0xef, 0xbb, 0xbf}) {
 		content = bytes.TrimPrefix(content, []byte{0xef, 0xbb, 0xbf})
 	}
-	if utf8.Valid(content) {
-		return content, "utf-8", true
-	}
 
 	if decoded, ok := decodeUTF16(content); ok {
 		return decoded.content, decoded.encoding, true
+	}
+
+	if utf8.Valid(content) {
+		return content, "utf-8", true
 	}
 
 	trimmed := content
@@ -296,6 +300,10 @@ func normalizePreviewText(content []byte) ([]byte, string, bool) {
 		}
 	}
 
+	if decoded, ok := decodeWindows1251(content); ok {
+		return decoded, "windows-1251", true
+	}
+
 	return nil, "", false
 }
 
@@ -305,19 +313,8 @@ type decodedText struct {
 }
 
 func decodeUTF16(content []byte) (decodedText, bool) {
-	var byteOrder binary.ByteOrder
-	encoding := ""
-
-	switch {
-	case bytes.HasPrefix(content, []byte{0xff, 0xfe}):
-		byteOrder = binary.LittleEndian
-		encoding = "utf-16le"
-		content = content[2:]
-	case bytes.HasPrefix(content, []byte{0xfe, 0xff}):
-		byteOrder = binary.BigEndian
-		encoding = "utf-16be"
-		content = content[2:]
-	default:
+	byteOrder, encoding, content, ok := detectUTF16ByteOrder(content)
+	if !ok {
 		return decodedText{}, false
 	}
 
@@ -333,8 +330,90 @@ func decodeUTF16(content []byte) (decodedText, bool) {
 		values = append(values, byteOrder.Uint16(content[index:index+2]))
 	}
 
-	return decodedText{
-		content:  []byte(string(utf16.Decode(values))),
-		encoding: encoding,
-	}, true
+	decoded := []byte(string(utf16.Decode(values)))
+	if !isMostlyPrintableText(decoded) {
+		return decodedText{}, false
+	}
+
+	return decodedText{content: decoded, encoding: encoding}, true
+}
+
+func detectUTF16ByteOrder(content []byte) (binary.ByteOrder, string, []byte, bool) {
+	switch {
+	case bytes.HasPrefix(content, []byte{0xff, 0xfe}):
+		return binary.LittleEndian, "utf-16le", content[2:], true
+	case bytes.HasPrefix(content, []byte{0xfe, 0xff}):
+		return binary.BigEndian, "utf-16be", content[2:], true
+	}
+
+	if len(content) < 4 {
+		return nil, "", nil, false
+	}
+
+	evenZeros := 0
+	oddZeros := 0
+	for index, value := range content {
+		if value != 0 {
+			continue
+		}
+		if index%2 == 0 {
+			evenZeros++
+		} else {
+			oddZeros++
+		}
+	}
+
+	pairs := len(content) / 2
+	if oddZeros*100 >= pairs*60 && evenZeros*100 <= pairs*10 {
+		return binary.LittleEndian, "utf-16le", content, true
+	}
+	if evenZeros*100 >= pairs*60 && oddZeros*100 <= pairs*10 {
+		return binary.BigEndian, "utf-16be", content, true
+	}
+
+	return nil, "", nil, false
+}
+
+func decodeWindows1251(content []byte) ([]byte, bool) {
+	if bytes.Contains(content, []byte{0}) {
+		return nil, false
+	}
+
+	decoded, err := charmap.Windows1251.NewDecoder().Bytes(content)
+	if err != nil {
+		return nil, false
+	}
+	if !containsCyrillic(decoded) || !isMostlyPrintableText(decoded) {
+		return nil, false
+	}
+
+	return decoded, true
+}
+
+func containsCyrillic(content []byte) bool {
+	count := 0
+	for _, value := range string(content) {
+		if unicode.Is(unicode.Cyrillic, value) {
+			count++
+		}
+	}
+
+	return count >= 2
+}
+
+func isMostlyPrintableText(content []byte) bool {
+	if len(content) == 0 {
+		return true
+	}
+
+	printable := 0
+	total := 0
+	for _, value := range string(content) {
+		total++
+		if value == '\n' || value == '\r' || value == '\t' || unicode.IsPrint(value) {
+			printable++
+		}
+	}
+
+	return total > 0 && printable*100/total >= 90
 }

@@ -39,7 +39,7 @@ Deliverables:
 - image preview: implemented
 - basic PDF preview: implemented
 - lightweight syntax highlighting: implemented
-- UTF-8 BOM and UTF-16 text decoding: implemented
+- UTF-8 BOM, UTF-16, and Windows-1251 text decoding: implemented
 - Monaco editor integration
 - LLM settings screen: implemented
 - LLM connection test for OpenAI-compatible `/models`: implemented
@@ -61,6 +61,7 @@ Current status:
 - The workspace browser can open, refresh, preview, and remember local folders.
 - The window shell stays fixed-height; long file trees, previews, chat, settings, and timelines scroll inside their own panels.
 - Text preview stays inside the approved workspace root and refuses binary/unsafe paths.
+- Text preview decodes common UTF-8, UTF-16, and Windows-1251 Cyrillic files.
 - Common image previews render inline as capped data URLs from inside the approved workspace root.
 - PDF previews render inline as capped data URLs from inside the approved workspace root.
 - Recent workspaces and LLM settings persist locally.

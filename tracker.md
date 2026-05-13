@@ -37,6 +37,7 @@ This tracker reflects the repository as it exists today and keeps planned work s
 - [x] Common workspace images render as bounded inline previews.
 - [x] Workspace PDFs render as bounded inline previews.
 - [x] UTF-8 BOM and UTF-16 text previews are decoded.
+- [x] BOM-less UTF-16 and Windows-1251 Cyrillic text previews are decoded.
 - [x] Source preview headers show file type, decoded encoding, size, and truncation status when available.
 - [x] Lightweight syntax highlighting exists at `app/frontend/src/features/shell/HighlightedCode.tsx`.
 - [x] Desktop workspace picker is bound through `SelectWorkspace`.

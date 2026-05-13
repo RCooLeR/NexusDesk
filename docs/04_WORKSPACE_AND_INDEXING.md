@@ -59,7 +59,7 @@ The current app implements the first safe workspace slice:
 - The scanner returns nodes in filesystem tree order so descendants stay grouped under their parent directories.
 - The frontend renders indexed nodes as an expandable tree and preserves expanded directories across refreshes.
 - `app/internal/workspace/preview.go` reads selected files only through a rooted relative path.
-- File previews reject traversal, symlinks, binary or non-UTF-8 content, and oversized previews.
+- File previews reject traversal, symlinks, binary or unsupported text encoding content, and oversized previews.
 - Chat context uses the same rooted preview boundary and sends only selected text content.
 - Workspace open/recent/refresh flows are bound through Wails methods on `app/app.go`.
 - Recent workspaces are stored in local JSON config through `app/internal/storage/recent_workspaces.go`.
@@ -151,7 +151,7 @@ For text and code files:
 Current implementation:
 
 - previews UTF-8 text/code within a 64 KB default cap
-- decodes UTF-8 with BOM and UTF-16 LE/BE with BOM for text previews
+- decodes UTF-8 with BOM, UTF-16 LE/BE with or without BOM, and Windows-1251 Cyrillic text previews
 - renders common image files as capped inline data URLs
 - renders PDF files as capped inline data URLs
 - sends selected chat context with a smaller 16 KB cap
