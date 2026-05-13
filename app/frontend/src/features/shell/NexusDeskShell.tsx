@@ -1,14 +1,30 @@
-import {useMemo, useState} from 'react';
-import {GetRecentWorkspaces, OpenWorkspace, RefreshWorkspace, SelectWorkspace} from '../../../wailsjs/go/main/App';
+import {useEffect, useMemo, useState} from 'react';
+import type {ChangeEvent} from 'react';
+import {
+    GetRecentWorkspaces,
+    OpenWorkspace,
+    RefreshWorkspace,
+    SaveLLMSettings,
+    SelectWorkspace,
+} from '../../../wailsjs/go/main/App';
 import {brandAssets, capabilityIconByTitle, railItems, workspaceIconByName} from '../../brand/assets';
-import type {FileNode, RecentWorkspace, StartupState, WorkspaceOpenResult, WorkspaceSnapshot} from '../../types';
+import type {
+    FileNode,
+    LLMSettings,
+    RecentWorkspace,
+    StartupState,
+    WorkspaceOpenResult,
+    WorkspaceSnapshot,
+} from '../../types';
 
 type NexusDeskShellProps = {
     state: StartupState;
     workspace: WorkspaceSnapshot | null;
     recentWorkspaces: RecentWorkspace[];
+    llmSettings: LLMSettings;
     onWorkspaceChange: (workspace: WorkspaceSnapshot) => void;
     onRecentWorkspacesChange: (workspaces: RecentWorkspace[]) => void;
+    onLLMSettingsChange: (settings: LLMSettings) => void;
 };
 
 const fileIconByType: Record<string, string> = {
@@ -24,13 +40,23 @@ export function NexusDeskShell({
     state,
     workspace,
     recentWorkspaces,
+    llmSettings,
     onWorkspaceChange,
     onRecentWorkspacesChange,
+    onLLMSettingsChange,
 }: NexusDeskShellProps) {
     const [activeFile, setActiveFile] = useState('docs/08_DELIVERY_PLAN.md');
     const [workspaceStatus, setWorkspaceStatus] = useState('No workspace opened yet.');
     const [isOpeningWorkspace, setIsOpeningWorkspace] = useState(false);
     const [isRefreshingWorkspace, setIsRefreshingWorkspace] = useState(false);
+    const [settingsDraft, setSettingsDraft] = useState<LLMSettings>(llmSettings);
+    const [settingsStatus, setSettingsStatus] = useState('LLM provider not connected yet.');
+    const [isSavingSettings, setIsSavingSettings] = useState(false);
+
+    useEffect(() => {
+        setSettingsDraft(llmSettings);
+        setSettingsStatus(llmSettings.updatedAt ? 'LLM settings loaded from local config.' : 'LLM provider not connected yet.');
+    }, [llmSettings]);
 
     const selectedMeta = useMemo(() => {
         if (workspace) {
@@ -139,6 +165,36 @@ export function NexusDeskShell({
             onRecentWorkspacesChange(await GetRecentWorkspaces());
         } catch {
             onRecentWorkspacesChange([]);
+        }
+    }
+
+    function updateSettingsDraft(field: keyof LLMSettings) {
+        return (event: ChangeEvent<HTMLInputElement>) => {
+            setSettingsDraft((current) => ({
+                ...current,
+                [field]: event.target.value,
+            }));
+        };
+    }
+
+    async function saveLLMSettings() {
+        setIsSavingSettings(true);
+        setSettingsStatus('Saving LLM settings...');
+
+        try {
+            const saved = await SaveLLMSettings(settingsDraft);
+            onLLMSettingsChange(saved);
+            setSettingsDraft(saved);
+            setSettingsStatus('LLM settings saved locally.');
+        } catch (error) {
+            const message = error instanceof Error ? error.message : '';
+            if (message.includes('undefined') || message.includes('window')) {
+                setSettingsStatus('LLM settings save is available in the desktop runtime.');
+                return;
+            }
+            setSettingsStatus(message || 'Could not save LLM settings.');
+        } finally {
+            setIsSavingSettings(false);
         }
     }
 
@@ -320,6 +376,42 @@ export function NexusDeskShell({
                         <button title="Send prompt">Send</button>
                     </div>
                 </div>
+
+                <section className="settings-card">
+                    <div className="pane-title">
+                        <span>LLM Provider</span>
+                        <small>Local config</small>
+                    </div>
+                    <div className="settings-form">
+                        <label>
+                            <span>Provider</span>
+                            <input value={settingsDraft.providerName} onChange={updateSettingsDraft('providerName')} />
+                        </label>
+                        <label>
+                            <span>Base URL</span>
+                            <input value={settingsDraft.baseUrl} onChange={updateSettingsDraft('baseUrl')} />
+                        </label>
+                        <label>
+                            <span>Model</span>
+                            <input value={settingsDraft.model} onChange={updateSettingsDraft('model')} placeholder="Optional" />
+                        </label>
+                        <label>
+                            <span>API Key</span>
+                            <input
+                                value={settingsDraft.apiKey}
+                                onChange={updateSettingsDraft('apiKey')}
+                                placeholder="Optional"
+                                type="password"
+                            />
+                        </label>
+                        <div className="settings-actions">
+                            <small>{settingsStatus}</small>
+                            <button onClick={saveLLMSettings} disabled={isSavingSettings}>
+                                {isSavingSettings ? 'Saving...' : 'Save'}
+                            </button>
+                        </div>
+                    </div>
+                </section>
 
                 <section className="timeline">
                     <div className="pane-title">

@@ -38,6 +38,14 @@ export type RecentWorkspace = {
     lastOpened: string;
 };
 
+export type LLMSettings = {
+    providerName: string;
+    baseUrl: string;
+    model: string;
+    apiKey: string;
+    updatedAt: string;
+};
+
 export type ToolEvent = {
     time: string;
     title: string;

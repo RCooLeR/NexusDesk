@@ -45,6 +45,7 @@ type WorkspaceOpenResult struct {
 
 type App struct {
 	ctx           context.Context
+	llmStore      *storage.LLMSettingsStore
 	recentStore   *storage.RecentWorkspaceStore
 	workspaceMu   sync.RWMutex
 	workspaceRoot string
@@ -52,6 +53,7 @@ type App struct {
 
 func NewApp() *App {
 	return &App{
+		llmStore:    storage.NewDefaultLLMSettingsStore(),
 		recentStore: storage.NewDefaultRecentWorkspaceStore(),
 	}
 }
@@ -141,6 +143,14 @@ func (a *App) RefreshWorkspace() (WorkspaceOpenResult, error) {
 
 func (a *App) GetRecentWorkspaces() ([]storage.RecentWorkspace, error) {
 	return a.recentStore.List()
+}
+
+func (a *App) GetLLMSettings() (storage.LLMSettings, error) {
+	return a.llmStore.Get()
+}
+
+func (a *App) SaveLLMSettings(settings storage.LLMSettings) (storage.LLMSettings, error) {
+	return a.llmStore.Save(settings)
 }
 
 func (a *App) openWorkspace(root string) (WorkspaceOpenResult, error) {

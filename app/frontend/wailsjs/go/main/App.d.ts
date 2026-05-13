@@ -3,6 +3,8 @@
 import {storage} from '../models';
 import {main} from '../models';
 
+export function GetLLMSettings():Promise<storage.LLMSettings>;
+
 export function GetRecentWorkspaces():Promise<Array<storage.RecentWorkspace>>;
 
 export function GetStartupState():Promise<main.StartupState>;
@@ -10,5 +12,7 @@ export function GetStartupState():Promise<main.StartupState>;
 export function OpenWorkspace(arg1:string):Promise<main.WorkspaceOpenResult>;
 
 export function RefreshWorkspace():Promise<main.WorkspaceOpenResult>;
+
+export function SaveLLMSettings(arg1:storage.LLMSettings):Promise<storage.LLMSettings>;
 
 export function SelectWorkspace():Promise<main.WorkspaceOpenResult>;

@@ -127,6 +127,26 @@ export namespace main {
 
 export namespace storage {
 	
+	export class LLMSettings {
+	    providerName: string;
+	    baseUrl: string;
+	    model: string;
+	    apiKey: string;
+	    updatedAt: string;
+	
+	    static createFrom(source: any = {}) {
+	        return new LLMSettings(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.providerName = source["providerName"];
+	        this.baseUrl = source["baseUrl"];
+	        this.model = source["model"];
+	        this.apiKey = source["apiKey"];
+	        this.updatedAt = source["updatedAt"];
+	    }
+	}
 	export class RecentWorkspace {
 	    name: string;
 	    path: string;

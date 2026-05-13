@@ -30,6 +30,9 @@ This tracker reflects the repository as it exists today and keeps planned work s
 - [x] Opened workspaces are persisted to local JSON config.
 - [x] Frontend loads and displays recent workspaces.
 - [x] Recent workspaces can be reopened through `OpenWorkspace`.
+- [x] LLM settings store exists at `app/internal/storage/llm_settings.go`.
+- [x] LLM provider settings are persisted to local JSON config.
+- [x] Agent panel includes a branded LLM provider settings form.
 - [x] Helper services placeholder exists at `services/docker-compose.yml`.
 - [x] Repository ignore rules exist in `.gitignore`.
 - [x] Current and target directory structures are documented separately.
@@ -57,7 +60,9 @@ This tracker reflects the repository as it exists today and keeps planned work s
 - [x] Add refresh behavior for the currently opened workspace.
 - [ ] Preserve selected file and expanded tree state across refreshes.
 - [ ] Add recent workspace remove/clear actions.
-- [ ] Add local settings storage for LLM provider configuration.
+- [x] Add local settings storage for LLM provider configuration.
+- [ ] Add LLM connection test and capability detection.
+- [ ] Mask or migrate API keys into OS credential storage before production release.
 - [ ] Split brand-aware shell sections into smaller rail, navigator, workbench pane, agent panel, and timeline components when they need behavior.
 - [ ] Add first reusable button, icon button, card, and status badge components.
 - [ ] Add backend module layout only when implementation files are created.
@@ -71,7 +76,7 @@ This tracker reflects the repository as it exists today and keeps planned work s
 
 `app/internal/workspace/` owns safe workspace scanning. It should keep ignore rules, depth limits, entry limits, and path safety close to the backend instead of trusting frontend filtering.
 
-`app/internal/storage/` owns local app persistence. Recent workspaces currently use a small JSON file in the user's config directory; settings storage can build on the same boundary until SQLite is introduced.
+`app/internal/storage/` owns local app persistence. Recent workspaces and LLM settings currently use small JSON files in the user's config directory; settings storage can build on the same boundary until SQLite or OS credential storage is introduced.
 
 `services/` is reserved for Docker Compose or supporting development services. It should not contain runtime app state; local service data belongs in ignored folders such as `services/data/`.
 
