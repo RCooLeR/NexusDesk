@@ -46,6 +46,7 @@ This tracker reflects the repository as it exists today and keeps planned work s
 - [x] Center workbench pane previews selected workspace text files.
 - [x] Workspace refresh preserves the selected file when it still exists.
 - [x] Workspace open/refresh auto-loads a preview for the selected or first file node.
+- [x] Preview button reloads the selected workspace preview from disk.
 - [x] Workspace navigator renders indexed nodes as an expandable tree.
 - [x] Workspace navigator uses filesystem tree ordering instead of depth-grouped ordering.
 - [x] Workspace navigator width can be resized with a drag handle.
@@ -70,8 +71,9 @@ This tracker reflects the repository as it exists today and keeps planned work s
 - [x] Non-streaming OpenAI-compatible chat is implemented in `app/internal/llm/chat.go`.
 - [x] Streaming OpenAI-compatible chat is implemented in `app/internal/llm/chat.go`.
 - [x] Agent panel can send prompts through `AskLLM`.
+- [x] Explain button sends a grounded explanation prompt for selected text/code previews.
 - [x] Agent panel streams partial assistant responses through `nexusdesk:chat-stream` Wails events.
-- [x] Selected workspace text previews can be attached as bounded chat context.
+- [x] Selected workspace text previews can be attached as bounded chat context without sending image/PDF data URLs.
 - [x] Workspace chat history is persisted through `app/internal/storage/chat_history.go`.
 - [x] Report button creates timestamped Markdown artifacts under `.nexusdesk/artifacts/`.
 - [x] Markdown report artifacts are created without overwriting existing files.
@@ -114,6 +116,7 @@ This tracker reflects the repository as it exists today and keeps planned work s
 - [x] Add first non-streaming chat call with selected text context.
 - [x] Persist chat history per workspace.
 - [x] Add streaming chat responses.
+- [x] Wire topbar Preview and Explain actions to real workspace/chat behavior.
 - [x] Mask API keys before they leave the backend settings store.
 - [ ] Migrate API keys into OS credential storage before production release.
 - [x] Add first Markdown report artifact creation flow.

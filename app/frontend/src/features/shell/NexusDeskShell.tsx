@@ -304,6 +304,22 @@ export function NexusDeskShell({
         await previewWorkspaceNode(node, false);
     }
 
+    async function refreshSelectedPreview() {
+        if (!workspace) {
+            setWorkspaceStatus('Open a workspace before refreshing a preview.');
+            return;
+        }
+
+        const node = findWorkspaceNode(workspace, activeFile);
+        if (!node) {
+            setWorkspaceStatus(`${activeFile} is not available in the current workspace tree.`);
+            return;
+        }
+
+        await previewWorkspaceNode(node, false);
+        setWorkspaceStatus(`${node.relPath} preview reloaded.`);
+    }
+
     function reconcileExpandedDirectories(current: Set<string>, snapshot: WorkspaceSnapshot, selectedNode: FileNode | null) {
         const directoryPaths = new Set(snapshot.nodes.filter((node) => node.kind === 'directory').map((node) => node.relPath));
         const next = new Set<string>();
@@ -480,13 +496,30 @@ export function NexusDeskShell({
     }
 
     async function sendPrompt() {
-        const prompt = chatPrompt.trim();
+        await sendPromptText(chatPrompt, true);
+    }
+
+    async function explainSelectedContext() {
+        if (!selectedTextContextRelPath()) {
+            setChatStatus('Select a text/code preview before asking for an explanation.');
+            return;
+        }
+
+        const prompt = [
+            `Explain ${filePreview?.relPath}.`,
+            'Cover the file purpose, important structures, notable dependencies, risks, and practical next steps.',
+        ].join(' ');
+        await sendPromptText(prompt, false);
+    }
+
+    async function sendPromptText(rawPrompt: string, clearComposer: boolean) {
+        const prompt = rawPrompt.trim();
         if (!prompt) {
             setChatStatus('Write a prompt before sending.');
             return;
         }
 
-        const contextRelPath = filePreview?.content ? filePreview.relPath : '';
+        const contextRelPath = selectedTextContextRelPath();
         const requestId = createRequestId();
         const userMessage: ChatMessage = {content: prompt, contextRelPath, createdAt: new Date().toISOString(), role: 'user'};
         const assistantMessage: ChatMessage = {content: '', contextRelPath, createdAt: new Date().toISOString(), role: 'assistant'};
@@ -494,7 +527,9 @@ export function NexusDeskShell({
         setIsSendingPrompt(true);
         setChatStatus(contextRelPath ? `Streaming with ${contextRelPath} as context...` : 'Streaming without selected file context...');
         setChatMessages((current) => [...current, userMessage, assistantMessage]);
-        setChatPrompt('');
+        if (clearComposer) {
+            setChatPrompt('');
+        }
 
         const unsubscribe = listenForChatStream(requestId, assistantMessage.createdAt, contextRelPath);
         try {
@@ -520,6 +555,13 @@ export function NexusDeskShell({
             unsubscribe?.();
             setIsSendingPrompt(false);
         }
+    }
+
+    function selectedTextContextRelPath() {
+        if (filePreview?.kind === 'file' && filePreview.content) {
+            return filePreview.relPath;
+        }
+        return '';
     }
 
     async function createMarkdownReport() {
@@ -669,7 +711,10 @@ export function NexusDeskShell({
                 filePreview={filePreview}
                 isCreatingReport={isCreatingReport}
                 isLoadingPreview={isLoadingPreview}
+                isSendingPrompt={isSendingPrompt}
                 onCreateReport={() => void createMarkdownReport()}
+                onExplainContext={() => void explainSelectedContext()}
+                onRefreshPreview={() => void refreshSelectedPreview()}
                 selectedMeta={selectedMeta}
                 workspace={workspace}
             />

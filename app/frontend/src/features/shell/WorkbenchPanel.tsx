@@ -7,9 +7,12 @@ type WorkbenchPanelProps = {
     activeFile: string;
     capabilities: Capability[];
     filePreview: FilePreview | null;
-    isLoadingPreview: boolean;
+    isSendingPrompt: boolean;
     isCreatingReport: boolean;
+    isLoadingPreview: boolean;
+    onExplainContext: () => void;
     onCreateReport: () => void;
+    onRefreshPreview: () => void;
     selectedMeta: string;
     workspace: WorkspaceSnapshot | null;
 };
@@ -18,12 +21,17 @@ export function WorkbenchPanel({
     activeFile,
     capabilities,
     filePreview,
-    isLoadingPreview,
+    isSendingPrompt,
     isCreatingReport,
+    isLoadingPreview,
+    onExplainContext,
     onCreateReport,
+    onRefreshPreview,
     selectedMeta,
     workspace,
 }: WorkbenchPanelProps) {
+    const canExplainContext = Boolean(workspace && filePreview?.kind === 'file' && filePreview.content);
+
     return (
         <main className="workbench">
             <header className="topbar">
@@ -32,8 +40,12 @@ export function WorkbenchPanel({
                     <h2>{activeFile}</h2>
                 </div>
                 <div className="topbar-actions">
-                    <Button>Preview</Button>
-                    <Button>Explain</Button>
+                    <Button disabled={!workspace || isLoadingPreview} onClick={onRefreshPreview}>
+                        {isLoadingPreview ? 'Loading...' : 'Preview'}
+                    </Button>
+                    <Button disabled={!canExplainContext || isSendingPrompt} onClick={onExplainContext}>
+                        {isSendingPrompt ? 'Sending...' : 'Explain'}
+                    </Button>
                     <Button disabled={!workspace || isCreatingReport} onClick={onCreateReport}>
                         {isCreatingReport ? 'Creating...' : 'Report'}
                     </Button>

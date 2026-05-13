@@ -48,6 +48,8 @@ Deliverables:
 - streaming chat with configured OpenAI-compatible LLM URL: implemented
 - chat history per workspace: implemented with local JSON config
 - read selected text file into chat context: implemented
+- reload selected preview from disk: implemented
+- explain selected text/code preview through chat: implemented
 - create Markdown report artifact from selected preview: implemented
 
 Exit criteria:
@@ -69,6 +71,7 @@ Current status:
 - Recent workspaces and LLM settings persist locally.
 - API keys are masked before leaving backend settings storage, but OS credential storage is still pending.
 - Streaming chat works with the configured model and optional selected file context.
+- The Preview button reloads the selected file, and the Explain button sends a grounded prompt for selected text/code previews.
 - Persistent chat history works through local JSON config.
 - Multi-file context packaging, Monaco, richer document extraction, and SQLite persistence are still planned.
 - Markdown report artifacts can be created under `.nexusdesk/artifacts/` without overwriting existing files.

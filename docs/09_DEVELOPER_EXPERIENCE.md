@@ -35,6 +35,8 @@ These stores live behind `app/internal/storage/` so the later SQLite migration c
 
 `app/frontend/src/features/shell/HighlightedCode.tsx` provides dependency-free lightweight highlighting for common code/data text previews until Monaco lands.
 
+The workbench topbar now has functional Preview and Explain actions. Preview reloads the selected workspace node from disk, and Explain sends a predefined grounded prompt only when the selected preview is text/code content.
+
 ## Frontend Structure
 
 The shell is now mostly orchestration. Feature panels own stable presentation, while `NexusDeskShell.tsx` keeps workspace, preview, provider, and chat state wiring close to the Wails bindings:
