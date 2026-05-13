@@ -36,6 +36,8 @@ Deliverables:
 - workspace open/recent workspaces: implemented
 - file tree with ignore rules: implemented
 - file tree scans up to 10 workspace levels by default: implemented
+- workspace path/content search: implemented
+- workspace tree expand/collapse controls: implemented
 - expandable tree state across refreshes: implemented
 - fixed-height desktop shell with panel-level scrolling: implemented
 - safe text/code file viewer: implemented
@@ -43,8 +45,11 @@ Deliverables:
 - bounded CSV column profiles: implemented
 - larger capped CSV profile sample: implemented
 - persistent CSV/XLSX dataset profiles: first implementation
+- bounded CSV query/filter flow: first implementation
 - image preview: implemented
 - basic PDF preview: implemented
+- PDF page text extraction: first implementation
+- DOCX body text extraction: first implementation
 - lightweight syntax highlighting: implemented
 - UTF-8 BOM, UTF-16, and Windows-1251 text decoding: implemented
 - Monaco editor integration
@@ -57,6 +62,7 @@ Deliverables:
 - read selected text file into chat context: implemented
 - read selected CSV profile and sample into chat context: implemented
 - pin multiple selected previews into a bounded chat context pack: implemented
+- remove individual pinned context files: implemented
 - read extracted PDF text into chat context when available: implemented
 - reload selected preview from disk: implemented
 - explain selected text/code preview through chat: implemented
@@ -74,26 +80,29 @@ Exit criteria:
 Current status:
 
 - The desktop shell builds on Windows through Wails.
-- The workspace browser can open, refresh, preview, and remember local folders, scanning up to 10 levels deep by default.
+- The workspace browser can open, refresh, preview, remember, search, and expand/collapse local folders, scanning up to 10 levels deep by default.
 - The window shell stays fixed-height; long file trees, previews, chat, settings, and timelines scroll inside their own panels.
 - Text preview stays inside the approved workspace root and refuses binary/unsafe paths.
 - Text preview decodes common UTF-8, UTF-16, and Windows-1251 Cyrillic files.
 - CSV files render as bounded table previews with lightweight column profiles from a larger capped sample while retaining raw text for selected chat context.
 - Common image previews render inline as capped data URLs from inside the approved workspace root.
-- PDF previews render inline as capped data URLs from inside the approved workspace root.
+- PDF previews render inline as capped data URLs from inside the approved workspace root and expose extracted text by page when available.
+- DOCX files expose extracted body text when the document XML is readable.
 - Recent workspaces and LLM settings persist locally.
 - API keys are masked before leaving backend settings storage and saved in OS-protected credential blobs where available.
 - The LLM settings form defaults to `qwen3:8b` and offers installed local model choices no larger than 26B.
 - Streaming chat works with the configured model and optional selected file context.
 - CSV context is sent as a structured profile plus bounded row sample instead of only raw preview text.
+- CSV datasets can be queried with bounded text search or `column=value` filters.
 - Multiple text, CSV, and extracted-PDF previews can be pinned into a bounded context pack for chat.
+- Pinned context packs show individual files and support removing one file at a time.
 - The Preview button reloads the selected file, and the Explain button sends a grounded prompt for selected text/code previews.
 - Persistent chat history works through local JSON config.
-- Monaco, richer document extraction, and SQLite persistence are still planned.
+- Monaco, richer document extraction/OCR, and SQLite persistence are still planned.
 - Markdown report artifacts can be created under `.nexusdesk/artifacts/` without overwriting existing files.
 - The workbench lists generated Markdown artifacts and can reselect visible report files from that list.
 - The frontend has a smoke check for the built entrypoint, generated Wails bindings, and core shell functionality markers.
-- Monaco, richer document extraction, richer approval dialogs, and SQLite persistence are still planned.
+- Monaco, richer document extraction/OCR, richer approval dialogs, DuckDB SQL, and SQLite persistence are still planned.
 
 ## Phase 2: Files, Documents, And Artifacts
 

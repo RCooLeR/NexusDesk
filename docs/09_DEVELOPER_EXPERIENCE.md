@@ -36,7 +36,9 @@ The default local endpoint is `http://localhost:11434/v1`, targeting the `rcoole
 
 ## Workspace Previews
 
-`app/internal/workspace/preview.go` keeps text previews rooted and size-limited, decodes UTF-8, UTF-16, and Windows-1251 text variants, parses CSV files into bounded table previews with lightweight column profiles from a larger capped sample, and renders common image/PDF files as capped data URLs for inline display. PDFs also expose simple embedded text extraction when available. Chat context accepts text previews, extracted PDF text, and structured CSV profiles plus bounded samples, so binary payloads and data URLs are not sent to the model as source text.
+`app/internal/workspace/preview.go` keeps text previews rooted and size-limited, decodes UTF-8, UTF-16, and Windows-1251 text variants, parses CSV files into bounded table previews with lightweight column profiles from a larger capped sample, and renders common image/PDF files as capped data URLs for inline display. PDFs also expose simple embedded text extraction by page when available, and DOCX files expose basic body text extraction. Chat context accepts text previews, DOCX text, extracted PDF text, and structured CSV profiles plus bounded samples, so binary payloads and data URLs are not sent to the model as source text.
+
+`app/internal/workspace/search.go` owns the first workspace search pass. It searches path names and previewable text content inside the same ignore and depth boundaries as scanning. `app/internal/workspace/dataset_query.go` owns the first CSV query flow with bounded row results and simple `column=value` filters until a DuckDB SQL layer is added.
 
 `app/frontend/src/features/shell/HighlightedCode.tsx` provides dependency-free lightweight highlighting for common code/data text previews until Monaco lands.
 
@@ -44,7 +46,7 @@ The default local endpoint is `http://localhost:11434/v1`, targeting the `rcoole
 
 `app/internal/dataset/` owns the first persistent dataset profile pass. CSV files reuse the workspace preview profiles and XLSX files expose workbook sheet names, then profiles are stored under `.nexusdesk/datasets/profiles.json` inside the active workspace.
 
-The workbench topbar now has functional Preview, Explain, Edit, Report, and Profile actions. Preview reloads the selected workspace node from disk, Explain sends a predefined grounded prompt when text context is available, Edit uses the diff/apply write flow, Report creates a Markdown artifact, and Profile persists CSV/XLSX dataset metadata.
+The workbench topbar now has functional Preview, Explain, Edit, Report, and Profile actions. Preview reloads the selected workspace node from disk, Explain sends a predefined grounded prompt when text context is available, Edit uses the diff/apply write flow, Report creates a Markdown artifact, and Profile persists CSV/XLSX dataset metadata. The dataset panel can run a bounded CSV row query for the selected table.
 
 ## Frontend Structure
 
@@ -55,16 +57,16 @@ The shell is now mostly orchestration. Feature panels own stable presentation, w
 - `app/frontend/src/features/shell/AgentChatCard.tsx` owns the chat card presentation and delegates provider calls/history actions back to the shell.
 - `app/frontend/src/features/shell/LLMSettingsCard.tsx` owns the provider settings form and delegates persistence/probe actions back to the shell.
 - `app/frontend/src/features/shell/ToolTimeline.tsx` owns the visible tool event timeline presentation.
-- `app/frontend/src/features/shell/WorkspaceNavigator.tsx` owns the workspace lockup, recent workspace list, fallback scaffold list, and indexed workspace tree presentation, with aligned rows inside the resizable sidebar. `NexusDeskShell.tsx` owns the resizable navigator width state.
-- `app/frontend/src/features/shell/WorkbenchPanel.tsx` owns the active context topbar, source preview presentation, fallback workflow preview, and capability cards.
+- `app/frontend/src/features/shell/WorkspaceNavigator.tsx` owns the workspace lockup, search controls, recent workspace list, fallback scaffold list, and indexed workspace tree presentation, with aligned rows inside the resizable sidebar. `NexusDeskShell.tsx` owns the resizable navigator width state.
+- `app/frontend/src/features/shell/WorkbenchPanel.tsx` owns the active context topbar, source preview presentation, dataset query panel, fallback workflow preview, and capability cards.
 - `app/frontend/src/features/shell/WorkspaceRail.tsx` owns the compact branded rail and mode icons.
 - `app/frontend/src/features/shell/AgentPanel.tsx` composes the grounded assistant header, chat card, provider settings, and tool timeline.
 
-`App.css` keeps the desktop shell fixed to the window and pushes overflow into the interactive surfaces that actually need it: workspace tree, source preview, capability list, chat thread, provider settings, and tool timeline.
+`App.css` keeps the desktop shell fixed to the window and pushes overflow into the interactive surfaces that actually need it: workspace tree/search results, source preview, dataset query results, capability list, chat thread, provider settings, and tool timeline.
 
 ## Frontend Smoke Checks
 
-`app/frontend/scripts/smoke.mjs` checks that the built frontend and key shell source files still expose the main MVP functionality: Wails bindings, context packs, file write flow, dataset profiling, resizable navigator styling, and the production `dist/index.html` entrypoint. Run it after `npm.cmd run build`.
+`app/frontend/scripts/smoke.mjs` checks that the built frontend and key shell source files still expose the main MVP functionality: Wails bindings, search, context packs, file write flow, dataset profiling/querying, resizable navigator styling, and the production `dist/index.html` entrypoint. Run it after `npm.cmd run build`.
 
 ## Artifact Creation
 

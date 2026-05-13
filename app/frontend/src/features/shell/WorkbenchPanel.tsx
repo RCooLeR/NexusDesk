@@ -1,6 +1,6 @@
 import {brandAssets, capabilityIconByTitle} from '../../brand/assets';
 import {Button, EmptyState, InlineAlert, LoadingState, StatusBadge} from '../../components/ui';
-import type {Capability, DatasetProfile, FilePreview, FileWriteProposal, TablePreview, WorkspaceArtifact, WorkspaceSnapshot} from '../../types';
+import type {Capability, DatasetProfile, DatasetQueryResult, FilePreview, FileWriteProposal, TablePreview, WorkspaceArtifact, WorkspaceSnapshot} from '../../types';
 import {HighlightedCode} from './HighlightedCode';
 
 type WorkbenchPanelProps = {
@@ -9,6 +9,8 @@ type WorkbenchPanelProps = {
     artifacts: WorkspaceArtifact[];
     capabilities: Capability[];
     datasetProfiles: DatasetProfile[];
+    datasetQuery: string;
+    datasetQueryResult: DatasetQueryResult | null;
     fileDraft: string;
     filePreview: FilePreview | null;
     isApplyingWrite: boolean;
@@ -16,6 +18,7 @@ type WorkbenchPanelProps = {
     isSendingPrompt: boolean;
     isCreatingReport: boolean;
     isProfilingDataset: boolean;
+    isQueryingDataset: boolean;
     isLoadingPreview: boolean;
     isPreviewingWrite: boolean;
     onApplyFileWrite: () => void;
@@ -23,9 +26,11 @@ type WorkbenchPanelProps = {
     onExplainContext: () => void;
     onCreateReport: () => void;
     onFileDraftChange: (content: string) => void;
+    onDatasetQueryChange: (content: string) => void;
     onPinContext: () => void;
     onPreviewFileWrite: () => void;
     onProfileDataset: () => void;
+    onQueryDataset: () => void;
     onSelectArtifact: (artifact: WorkspaceArtifact) => void;
     onRefreshPreview: () => void;
     onStartFileEdit: () => void;
@@ -40,6 +45,8 @@ export function WorkbenchPanel({
     artifacts,
     capabilities,
     datasetProfiles,
+    datasetQuery,
+    datasetQueryResult,
     fileDraft,
     filePreview,
     isApplyingWrite,
@@ -47,6 +54,7 @@ export function WorkbenchPanel({
     isSendingPrompt,
     isCreatingReport,
     isProfilingDataset,
+    isQueryingDataset,
     isLoadingPreview,
     isPreviewingWrite,
     onApplyFileWrite,
@@ -54,9 +62,11 @@ export function WorkbenchPanel({
     onExplainContext,
     onCreateReport,
     onFileDraftChange,
+    onDatasetQueryChange,
     onPinContext,
     onPreviewFileWrite,
     onProfileDataset,
+    onQueryDataset,
     onSelectArtifact,
     onRefreshPreview,
     onStartFileEdit,
@@ -129,7 +139,13 @@ export function WorkbenchPanel({
                                     {filePreview.text && (
                                         <div className="document-text-preview">
                                             <strong>Extracted text</strong>
-                                            <p>{filePreview.text}</p>
+                                            {filePreview.pages && filePreview.pages.length > 0 ? (
+                                                filePreview.pages.map((page) => (
+                                                    <p key={page.page}><strong>Page {page.page}</strong> {page.text}</p>
+                                                ))
+                                            ) : (
+                                                <p>{filePreview.text}</p>
+                                            )}
                                         </div>
                                     )}
                                 </>
@@ -182,6 +198,15 @@ export function WorkbenchPanel({
                     {workspace ? (
                         <div className="artifact-list">
                             {activeDatasetProfile && <DatasetProfileSummary profile={activeDatasetProfile} />}
+                            {(activeDatasetProfile || filePreview?.table) && (
+                                <DatasetQueryPanel
+                                    query={datasetQuery}
+                                    result={datasetQueryResult}
+                                    isQuerying={isQueryingDataset}
+                                    onChange={onDatasetQueryChange}
+                                    onQuery={onQueryDataset}
+                                />
+                            )}
                             {artifacts.length === 0 ? (
                                 <EmptyState
                                     detail="Create a report to add the first workspace artifact."
@@ -214,6 +239,54 @@ export function WorkbenchPanel({
                 </article>
             </section>
         </main>
+    );
+}
+
+function DatasetQueryPanel({
+    query,
+    result,
+    isQuerying,
+    onChange,
+    onQuery,
+}: {
+    query: string;
+    result: DatasetQueryResult | null;
+    isQuerying: boolean;
+    onChange: (value: string) => void;
+    onQuery: () => void;
+}) {
+    return (
+        <div className="dataset-query-panel">
+            <strong>Dataset Query</strong>
+            <div className="dataset-query-row">
+                <input
+                    aria-label="Dataset query"
+                    onChange={(event) => onChange(event.target.value)}
+                    onKeyDown={(event) => {
+                        if (event.key === 'Enter') {
+                            onQuery();
+                        }
+                    }}
+                    placeholder="Search rows or use column=value"
+                    value={query}
+                />
+                <Button disabled={isQuerying} onClick={onQuery} variant="subtle">
+                    {isQuerying ? 'Querying...' : 'Run'}
+                </Button>
+            </div>
+            {result && (
+                <div className="dataset-query-result">
+                    <small>{result.message}</small>
+                    <CsvTablePreview table={{
+                        columns: result.columns,
+                        rows: result.rows,
+                        profiles: [],
+                        totalRows: result.matchedRows,
+                        truncated: result.rows.length < result.matchedRows,
+                    }} />
+                </div>
+            )}
+        </div>
     );
 }
 

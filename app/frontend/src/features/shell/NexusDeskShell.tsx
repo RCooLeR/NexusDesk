@@ -16,10 +16,12 @@ import {
     OpenWorkspace,
     PreviewFileWrite,
     ProfileDataset,
+    QueryDataset,
     ReadWorkspaceFile,
     RemoveRecentWorkspace,
     RefreshWorkspace,
     SaveLLMSettings,
+    SearchWorkspace,
     SelectWorkspace,
     TestLLMConnection,
 } from '../../../wailsjs/go/main/App';
@@ -28,6 +30,7 @@ import type {
     ChatStreamEvent,
     ChatMessage,
     DatasetProfile,
+    DatasetQueryResult,
     FileNode,
     FilePreview,
     FileWriteProposal,
@@ -37,7 +40,9 @@ import type {
     MarkdownReport,
     RecentWorkspace,
     StartupState,
+    ToolEvent,
     WorkspaceArtifact,
+    WorkspaceSearchResult,
     WorkspaceOpenResult,
     WorkspaceSnapshot,
 } from '../../types';
@@ -87,9 +92,16 @@ export function NexusDeskShell({
     const [chatMessages, setChatMessages] = useState<ChatMessage[]>([]);
     const [chatStatus, setChatStatus] = useState('Select text context and ask the assistant.');
     const [contextPackPaths, setContextPackPaths] = useState<string[]>([]);
+    const [localToolEvents, setLocalToolEvents] = useState<ToolEvent[]>(state.toolEvents);
     const [artifacts, setArtifacts] = useState<WorkspaceArtifact[]>([]);
     const [datasetProfiles, setDatasetProfiles] = useState<DatasetProfile[]>([]);
     const [activeDatasetProfile, setActiveDatasetProfile] = useState<DatasetProfile | null>(null);
+    const [datasetQuery, setDatasetQuery] = useState('');
+    const [datasetQueryResult, setDatasetQueryResult] = useState<DatasetQueryResult | null>(null);
+    const [isQueryingDataset, setIsQueryingDataset] = useState(false);
+    const [workspaceSearchQuery, setWorkspaceSearchQuery] = useState('');
+    const [workspaceSearchResults, setWorkspaceSearchResults] = useState<WorkspaceSearchResult[]>([]);
+    const [isSearchingWorkspace, setIsSearchingWorkspace] = useState(false);
     const [isSendingPrompt, setIsSendingPrompt] = useState(false);
     const [isCreatingReport, setIsCreatingReport] = useState(false);
     const [isProfilingDataset, setIsProfilingDataset] = useState(false);
@@ -122,8 +134,15 @@ export function NexusDeskShell({
             return [];
         }
 
-        return workspace.nodes.filter((node) => isWorkspaceNodeVisible(node, expandedDirectories)).slice(0, 80);
+        return workspace.nodes.filter((node) => isWorkspaceNodeVisible(node, expandedDirectories));
     }, [expandedDirectories, workspace]);
+
+    function pushToolEvent(title: string, detail: string) {
+        setLocalToolEvents((current) => [
+            {time: new Date().toLocaleTimeString(), title, detail},
+            ...current,
+        ].slice(0, 12));
+    }
 
     function selectFallbackItem(name: string) {
         setActiveFile(`${name}/`);
@@ -154,6 +173,7 @@ export function NexusDeskShell({
             setActiveFile(node.relPath);
         }
         clearFileWriteDraft();
+        setDatasetQueryResult(null);
 
         if (node.kind === 'directory') {
             setIsLoadingPreview(false);
@@ -167,6 +187,7 @@ export function NexusDeskShell({
             const preview = await ReadWorkspaceFile(node.relPath);
             setFilePreview(preview);
             setActiveDatasetProfile(datasetProfiles.find((profile) => profile.relPath === node.relPath) ?? null);
+            pushToolEvent('Preview loaded', node.relPath);
         } catch (error) {
             const message = error instanceof Error ? error.message : '';
             if (message.includes('undefined') || message.includes('window')) {
@@ -245,6 +266,7 @@ export function NexusDeskShell({
             const proposal = await PreviewFileWrite({relPath: filePreview.relPath, content: fileDraft});
             setWriteProposal(proposal);
             setWorkspaceStatus(proposal.message);
+            pushToolEvent('Write preview', proposal.relPath);
         } catch (error) {
             const message = error instanceof Error ? error.message : '';
             setWorkspaceStatus(message || 'Could not preview file write.');
@@ -269,6 +291,7 @@ export function NexusDeskShell({
             }
             clearFileWriteDraft();
             setWorkspaceStatus(proposal.message);
+            pushToolEvent('File write applied', proposal.relPath);
         } catch (error) {
             const message = error instanceof Error ? error.message : '';
             setWorkspaceStatus(message || 'Could not apply file write.');
@@ -288,6 +311,7 @@ export function NexusDeskShell({
                 return;
             }
             await refreshRecentWorkspaces();
+            pushToolEvent('Workspace opened', result.snapshot.name);
         } catch (error) {
             const message = error instanceof Error ? error.message : '';
             if (message.includes('undefined') || message.includes('window')) {
@@ -308,6 +332,7 @@ export function NexusDeskShell({
             const result = await OpenWorkspace(recentWorkspace.path);
             if (await applyWorkspaceResult(result, 'indexed')) {
                 await refreshRecentWorkspaces();
+                pushToolEvent('Workspace reopened', result.snapshot.name);
             }
         } catch (error) {
             const message = error instanceof Error ? error.message : '';
@@ -336,6 +361,7 @@ export function NexusDeskShell({
                 setWorkspaceStatus('Open a workspace before refreshing.');
                 return;
             }
+            pushToolEvent('Workspace refreshed', result.snapshot.name);
         } catch (error) {
             const message = error instanceof Error ? error.message : '';
             if (message.includes('undefined') || message.includes('window')) {
@@ -356,6 +382,7 @@ export function NexusDeskShell({
         const selectedNode = selectNodeAfterWorkspaceUpdate(result.snapshot);
 
         onWorkspaceChange(result.snapshot);
+        setWorkspaceSearchResults([]);
         await refreshChatHistory();
         await refreshArtifacts();
         await refreshDatasetProfiles();
@@ -406,6 +433,60 @@ export function NexusDeskShell({
 
         await previewWorkspaceNode(node, false);
         setWorkspaceStatus(`${node.relPath} preview reloaded.`);
+    }
+
+    async function searchWorkspace() {
+        if (!workspace) {
+            setWorkspaceStatus('Open a workspace before searching.');
+            return;
+        }
+        const query = workspaceSearchQuery.trim();
+        if (!query) {
+            setWorkspaceSearchResults([]);
+            return;
+        }
+
+        setIsSearchingWorkspace(true);
+        setWorkspaceStatus(`Searching ${workspace.name}...`);
+        try {
+            const results = await SearchWorkspace(query);
+            setWorkspaceSearchResults(results);
+            setWorkspaceStatus(`${results.length} workspace matches for "${query}".`);
+            pushToolEvent('Workspace search', `${results.length} matches for ${query}`);
+        } catch (error) {
+            const message = error instanceof Error ? error.message : '';
+            setWorkspaceStatus(message || 'Workspace search failed.');
+        } finally {
+            setIsSearchingWorkspace(false);
+        }
+    }
+
+    async function selectSearchResult(result: WorkspaceSearchResult) {
+        if (!workspace) {
+            return;
+        }
+        const node = findWorkspaceNode(workspace, result.relPath);
+        if (!node) {
+            setWorkspaceStatus(`${result.relPath} is not visible in the current workspace tree.`);
+            return;
+        }
+        setExpandedDirectories((current) => {
+            const next = new Set(current);
+            getAncestorDirectories(node).forEach((relPath) => next.add(relPath));
+            return next;
+        });
+        await selectWorkspaceNode(node);
+    }
+
+    function expandAllDirectories() {
+        if (!workspace) {
+            return;
+        }
+        setExpandedDirectories(new Set(workspace.nodes.filter((node) => node.kind === 'directory').map((node) => node.relPath)));
+    }
+
+    function collapseAllDirectories() {
+        setExpandedDirectories(new Set());
     }
 
     function reconcileExpandedDirectories(current: Set<string>, snapshot: WorkspaceSnapshot, selectedNode: FileNode | null) {
@@ -500,6 +581,7 @@ export function NexusDeskShell({
             const messages = await ClearChatHistory();
             setChatMessages(messages);
             setChatStatus('Chat history cleared for this workspace.');
+            pushToolEvent('Chat cleared', 'Workspace chat history reset.');
         } catch (error) {
             const message = error instanceof Error ? error.message : '';
             setChatStatus(message || 'Could not clear chat history.');
@@ -563,6 +645,7 @@ export function NexusDeskShell({
             setSettingsDraft(saved);
             setProbeResult(null);
             setSettingsStatus('LLM settings saved locally.');
+            pushToolEvent('LLM settings saved', saved.model || saved.baseUrl);
         } catch (error) {
             const message = error instanceof Error ? error.message : '';
             if (message.includes('undefined') || message.includes('window')) {
@@ -589,6 +672,7 @@ export function NexusDeskShell({
             } else {
                 setSettingsStatus(result.message || 'Provider did not accept the request.');
             }
+            pushToolEvent('LLM connection tested', result.message);
         } catch (error) {
             const message = error instanceof Error ? error.message : '';
             if (message.includes('undefined') || message.includes('window')) {
@@ -654,6 +738,7 @@ export function NexusDeskShell({
                 replaceChatMessage(assistantMessage.createdAt, result.message, result.contextRelPath);
             }
             setChatStatus(result.contextRelPath ? `Answered with ${result.contextRelPath}.` : `Answered by ${result.model}.`);
+            pushToolEvent('Chat completed', result.contextRelPath || result.model);
         } catch (error) {
             const message = error instanceof Error ? error.message : '';
             if (message.includes('undefined') || message.includes('window')) {
@@ -684,6 +769,12 @@ export function NexusDeskShell({
         }
         setContextPackPaths((current) => current.includes(relPath) ? current : [...current, relPath]);
         setChatStatus(`${relPath} pinned to the context pack.`);
+        pushToolEvent('Context pinned', relPath);
+    }
+
+    function removeContextPath(relPath: string) {
+        setContextPackPaths((current) => current.filter((path) => path !== relPath));
+        setChatStatus(`${relPath} removed from the context pack.`);
     }
 
     async function createMarkdownReport() {
@@ -705,6 +796,7 @@ export function NexusDeskShell({
                 setExpandedDirectories((current) => reconcileExpandedDirectories(current, result.snapshot, findWorkspaceNode(result.snapshot, report.relPath)));
                 await selectWorkspaceFile(result.snapshot, report.relPath);
                 setWorkspaceStatus(`${report.name} created in .nexusdesk/artifacts.`);
+                pushToolEvent('Report created', report.relPath);
             } else {
                 setWorkspaceStatus(report.message);
             }
@@ -732,11 +824,32 @@ export function NexusDeskShell({
             await refreshDatasetProfiles();
             setActiveDatasetProfile(profile);
             setWorkspaceStatus(profile.message);
+            pushToolEvent('Dataset profiled', profile.relPath);
         } catch (error) {
             const message = error instanceof Error ? error.message : '';
             setWorkspaceStatus(message || 'Could not profile this dataset.');
         } finally {
             setIsProfilingDataset(false);
+        }
+    }
+
+    async function querySelectedDataset() {
+        if (!workspace || !filePreview) {
+            setWorkspaceStatus('Open a workspace and select a CSV dataset before querying.');
+            return;
+        }
+
+        setIsQueryingDataset(true);
+        try {
+            const result = await QueryDataset(filePreview.relPath, datasetQuery);
+            setDatasetQueryResult(result);
+            setWorkspaceStatus(result.message);
+            pushToolEvent('Dataset queried', `${result.relPath}: ${result.query || 'first rows'}`);
+        } catch (error) {
+            const message = error instanceof Error ? error.message : '';
+            setWorkspaceStatus(message || 'Could not query this dataset.');
+        } finally {
+            setIsQueryingDataset(false);
         }
     }
 
@@ -840,20 +953,29 @@ export function NexusDeskShell({
                 activeFile={activeFile}
                 buildStage={state.buildStage}
                 expandedDirectories={expandedDirectories}
+                isSearchingWorkspace={isSearchingWorkspace}
                 isManagingRecent={isManagingRecent}
                 isOpeningWorkspace={isOpeningWorkspace}
                 isRefreshingWorkspace={isRefreshingWorkspace}
                 onClearRecentWorkspaces={() => void clearRecentWorkspaces()}
+                onClearWorkspaceSearch={() => setWorkspaceSearchResults([])}
+                onCollapseAllDirectories={collapseAllDirectories}
+                onExpandAllDirectories={expandAllDirectories}
                 onOpenWorkspace={() => void openWorkspace()}
                 onRefreshWorkspace={() => void refreshWorkspace()}
                 onRemoveRecentWorkspace={(recentWorkspace) => void removeRecentWorkspace(recentWorkspace)}
                 onReopenWorkspace={(recentWorkspace) => void reopenWorkspace(recentWorkspace)}
+                onSearchWorkspace={() => void searchWorkspace()}
                 onSelectFallbackItem={selectFallbackItem}
+                onSelectSearchResult={(result) => void selectSearchResult(result)}
                 onSelectWorkspaceNode={(node) => void selectWorkspaceNode(node)}
+                onWorkspaceSearchQueryChange={setWorkspaceSearchQuery}
                 recentWorkspaces={recentWorkspaces}
                 workspace={workspace}
                 workspaceItems={state.workspaceItems}
                 workspaceNodes={workspaceNodes}
+                workspaceSearchQuery={workspaceSearchQuery}
+                workspaceSearchResults={workspaceSearchResults}
                 workspaceStatus={workspaceStatus}
             />
 
@@ -869,11 +991,14 @@ export function NexusDeskShell({
                 artifacts={artifacts}
                 capabilities={state.capabilities}
                 datasetProfiles={datasetProfiles}
+                datasetQuery={datasetQuery}
+                datasetQueryResult={datasetQueryResult}
                 activeDatasetProfile={activeDatasetProfile}
                 fileDraft={fileDraft}
                 filePreview={filePreview}
                 isCreatingReport={isCreatingReport}
                 isProfilingDataset={isProfilingDataset}
+                isQueryingDataset={isQueryingDataset}
                 isEditingFile={isEditingFile}
                 isApplyingWrite={isApplyingWrite}
                 isLoadingPreview={isLoadingPreview}
@@ -882,11 +1007,13 @@ export function NexusDeskShell({
                 onApplyFileWrite={() => void applyFileWrite()}
                 onCancelFileEdit={clearFileWriteDraft}
                 onCreateReport={() => void createMarkdownReport()}
+                onDatasetQueryChange={setDatasetQuery}
                 onFileDraftChange={setFileDraft}
                 onExplainContext={() => void explainSelectedContext()}
                 onPinContext={pinSelectedContext}
                 onPreviewFileWrite={() => void previewFileWrite()}
                 onProfileDataset={() => void profileSelectedDataset()}
+                onQueryDataset={() => void querySelectedDataset()}
                 onSelectArtifact={(artifact) => void selectArtifact(artifact)}
                 onStartFileEdit={startFileEdit}
                 onRefreshPreview={() => void refreshSelectedPreview()}
@@ -906,6 +1033,7 @@ export function NexusDeskShell({
                 onChatPromptChange={setChatPrompt}
                 onClearChatHistory={() => void clearChatHistory()}
                 onClearContextPack={() => setContextPackPaths([])}
+                onRemoveContextPath={removeContextPath}
                 onSaveSettings={() => void saveLLMSettings()}
                 onSendPrompt={() => void sendPrompt()}
                 onSettingsDraftChange={updateSettingsDraft}
@@ -914,7 +1042,7 @@ export function NexusDeskShell({
                 settingsDraft={settingsDraft}
                 settingsStatus={settingsStatus}
                 tagline={state.tagline}
-                toolEvents={state.toolEvents}
+                toolEvents={localToolEvents}
             />
         </div>
     );

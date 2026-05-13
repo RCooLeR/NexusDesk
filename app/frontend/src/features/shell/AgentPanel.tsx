@@ -15,6 +15,7 @@ type AgentPanelProps = {
     onChatPromptChange: (value: string) => void;
     onClearChatHistory: () => void;
     onClearContextPack: () => void;
+    onRemoveContextPath: (relPath: string) => void;
     onSaveSettings: () => void;
     onSendPrompt: () => void;
     onSettingsDraftChange: (field: keyof LLMSettings, value: string) => void;
@@ -37,6 +38,7 @@ export function AgentPanel({
     onChatPromptChange,
     onClearChatHistory,
     onClearContextPack,
+    onRemoveContextPath,
     onSaveSettings,
     onSendPrompt,
     onSettingsDraftChange,
@@ -65,6 +67,7 @@ export function AgentPanel({
                 onChatPromptChange={onChatPromptChange}
                 onClearChatHistory={onClearChatHistory}
                 onClearContextPack={onClearContextPack}
+                onRemoveContextPath={onRemoveContextPath}
                 onSendPrompt={onSendPrompt}
             />
 

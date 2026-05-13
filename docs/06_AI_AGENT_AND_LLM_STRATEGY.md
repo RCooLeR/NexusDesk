@@ -99,12 +99,13 @@ Current implementation:
 - `app/internal/llm/chat.go` sends OpenAI-compatible `/chat/completions` requests, including streaming responses through server-sent `data:` chunks.
 - `AskLLM` and `AskLLMStream` in `app/app.go` resolve saved settings and attach selected workspace text context server-side.
 - `AskLLMContextPack` and `AskLLMStreamContextPack` build a bounded multi-file context pack from pinned previews.
+- Workspace search and CSV row queries are deterministic backend tools, not model-side file access.
 - `AskLLMStream` emits `nexusdesk:chat-stream` Wails events so the frontend can render partial assistant responses before final history persistence completes.
 - `app/internal/storage/chat_history.go` persists bounded chat history per workspace in local JSON config.
 
 Capability hints are currently inferred from model IDs. They are useful for readiness signals, but they are not a substitute for provider-native capability metadata.
 
-The current chat implementation requires an explicit configured model. It includes either a bounded selected text preview or a bounded pinned context pack, sends selected CSV files as a structured column profile plus bounded row sample, sends extracted PDF text when available, and streams response text when the configured provider supports OpenAI-compatible streaming. The Explain action uses that same selected text/code/PDF preview boundary to send a deterministic explanation prompt. It does not yet call tools.
+The current chat implementation requires an explicit configured model. It includes either a bounded selected text preview or a bounded pinned context pack, sends selected CSV files as a structured column profile plus bounded row sample, sends DOCX text and extracted PDF text when available, and streams response text when the configured provider supports OpenAI-compatible streaming. The Explain action uses that same selected text/code/document preview boundary to send a deterministic explanation prompt. It does not yet run a model-directed tool loop.
 
 ## Agent Modes
 

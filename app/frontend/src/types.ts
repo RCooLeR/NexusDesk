@@ -39,11 +39,17 @@ export type FilePreview = {
     fileType: string;
     content: string;
     text: string;
+    pages?: TextPage[];
     encoding?: string;
     table?: TablePreview;
     truncated: boolean;
     message: string;
     size: number;
+};
+
+export type TextPage = {
+    page: number;
+    text: string;
 };
 
 export type FileWriteRequest = {
@@ -104,6 +110,26 @@ export type DatasetProfile = {
     profiles: ColumnProfile[];
     updatedAt: string;
     message: string;
+};
+
+export type DatasetQueryResult = {
+    relPath: string;
+    query: string;
+    columns: string[];
+    rows: string[][];
+    totalRows: number;
+    matchedRows: number;
+    message: string;
+};
+
+export type WorkspaceSearchResult = {
+    relPath: string;
+    name: string;
+    kind: string;
+    fileType: string;
+    matchType: string;
+    line: number;
+    snippet: string;
 };
 
 export type RecentWorkspace = {

@@ -35,9 +35,11 @@ This tracker reflects the repository as it exists today and keeps planned work s
 - [x] Scanner skips noisy folders, symlinks, oversized listings, and paths deeper than 10 levels.
 - [x] Workspace file preview is implemented in `app/internal/workspace/preview.go`.
 - [x] File previews are rooted, traversal-checked, symlink-aware, size-limited, and UTF-8/text-only.
+- [x] Workspace search exists at `app/internal/workspace/search.go`.
 - [x] Common workspace images render as bounded inline previews.
 - [x] Workspace PDFs render as bounded inline previews.
-- [x] Workspace PDFs expose simple embedded text extraction when available.
+- [x] Workspace PDFs expose simple page-level embedded text extraction when available.
+- [x] DOCX files expose basic body text extraction when available.
 - [x] UTF-8 BOM and UTF-16 text previews are decoded.
 - [x] BOM-less UTF-16 and Windows-1251 Cyrillic text previews are decoded.
 - [x] Source preview headers show file type, decoded encoding, size, and truncation status when available.
@@ -45,6 +47,7 @@ This tracker reflects the repository as it exists today and keeps planned work s
 - [x] CSV previews show bounded column profiles with inferred type, missing count, distinct count, and numeric ranges.
 - [x] CSV profile stats read a larger bounded file sample than the visible text preview.
 - [x] Dataset profiles persist CSV profiles and XLSX sheet metadata under `.nexusdesk/datasets/`.
+- [x] CSV datasets can be queried with bounded row search and `column=value` filters.
 - [x] Lightweight syntax highlighting exists at `app/frontend/src/features/shell/HighlightedCode.tsx`.
 - [x] Frontend smoke script exists at `app/frontend/scripts/smoke.mjs`.
 - [x] Desktop workspace picker is bound through `SelectWorkspace`.
@@ -56,6 +59,7 @@ This tracker reflects the repository as it exists today and keeps planned work s
 - [x] Workspace navigator renders indexed nodes as an expandable tree.
 - [x] Workspace navigator uses filesystem tree ordering instead of depth-grouped ordering.
 - [x] Workspace navigator supports 10-level default filesystem scans.
+- [x] Workspace navigator includes search results and expand/collapse controls.
 - [x] Workspace navigator width can be resized with a drag handle.
 - [x] Workspace navigator keeps fallback and file-tree rows aligned inside the resizable sidebar.
 - [x] App shell stays fixed to the window while long navigator, preview, chat, settings, and timeline content scroll inside their panels.
@@ -87,11 +91,13 @@ This tracker reflects the repository as it exists today and keeps planned work s
 - [x] Selected PDFs with extracted text can be attached as chat context without sending PDF data URLs.
 - [x] Selected CSV previews send a structured column profile and bounded sample as chat context.
 - [x] Multiple selected source previews can be pinned into a bounded chat context pack.
+- [x] Context packs show individual pinned files and can remove one file at a time.
 - [x] Workspace chat history is persisted through `app/internal/storage/chat_history.go`.
 - [x] Report button creates timestamped Markdown artifacts under `.nexusdesk/artifacts/`.
 - [x] Markdown report artifacts are created without overwriting existing files.
 - [x] Text file edits use a preview/apply flow with a diff before workspace writes.
 - [x] Workbench artifact browser lists generated Markdown artifacts.
+- [x] Tool timeline records real workspace, preview, search, profile, write, report, and chat actions.
 - [x] Artifact rows can select the generated report preview when visible in the workspace tree.
 - [x] Helper services placeholder exists at `services/docker-compose.yml`.
 - [x] Repository ignore rules exist in `.gitignore`.
@@ -125,6 +131,8 @@ This tracker reflects the repository as it exists today and keeps planned work s
 - [x] Add first bounded CSV column profiles.
 - [x] Expand CSV profiling beyond the visible preview window with a larger capped sample.
 - [x] Persist first CSV/XLSX dataset profiles in the workspace.
+- [x] Add first bounded CSV query flow.
+- [x] Add workspace path/content search.
 - [x] Send structured CSV summaries as selected chat context.
 - [x] Persist recent workspaces locally.
 - [x] Add refresh behavior for the currently opened workspace.
@@ -139,6 +147,7 @@ This tracker reflects the repository as it exists today and keeps planned work s
 - [x] Persist chat history per workspace.
 - [x] Add streaming chat responses.
 - [x] Add first pinned multi-file context pack for chat.
+- [x] Add individual context pack file removal.
 - [x] Wire topbar Preview and Explain actions to real workspace/chat behavior.
 - [x] Mask API keys before they leave the backend settings store.
 - [x] Migrate API keys into OS credential storage before production release.

@@ -1,25 +1,34 @@
 import {brandAssets, workspaceIconByName} from '../../brand/assets';
 import {Button, IconButton} from '../../components/ui';
-import type {FileNode, RecentWorkspace, WorkspaceItem, WorkspaceSnapshot} from '../../types';
+import type {FileNode, RecentWorkspace, WorkspaceItem, WorkspaceSearchResult, WorkspaceSnapshot} from '../../types';
 
 type WorkspaceNavigatorProps = {
     activeFile: string;
     buildStage: string;
     expandedDirectories: Set<string>;
+    isSearchingWorkspace: boolean;
     isManagingRecent: boolean;
     isOpeningWorkspace: boolean;
     isRefreshingWorkspace: boolean;
     onClearRecentWorkspaces: () => void;
+    onClearWorkspaceSearch: () => void;
+    onCollapseAllDirectories: () => void;
+    onExpandAllDirectories: () => void;
     onOpenWorkspace: () => void;
     onRefreshWorkspace: () => void;
     onRemoveRecentWorkspace: (workspace: RecentWorkspace) => void;
     onReopenWorkspace: (workspace: RecentWorkspace) => void;
+    onSearchWorkspace: () => void;
     onSelectFallbackItem: (name: string) => void;
+    onSelectSearchResult: (result: WorkspaceSearchResult) => void;
     onSelectWorkspaceNode: (node: FileNode) => void;
+    onWorkspaceSearchQueryChange: (value: string) => void;
     recentWorkspaces: RecentWorkspace[];
     workspace: WorkspaceSnapshot | null;
     workspaceItems: WorkspaceItem[];
     workspaceNodes: FileNode[];
+    workspaceSearchQuery: string;
+    workspaceSearchResults: WorkspaceSearchResult[];
     workspaceStatus: string;
 };
 
@@ -36,20 +45,29 @@ export function WorkspaceNavigator({
     activeFile,
     buildStage,
     expandedDirectories,
+    isSearchingWorkspace,
     isManagingRecent,
     isOpeningWorkspace,
     isRefreshingWorkspace,
     onClearRecentWorkspaces,
+    onClearWorkspaceSearch,
+    onCollapseAllDirectories,
+    onExpandAllDirectories,
     onOpenWorkspace,
     onRefreshWorkspace,
     onRemoveRecentWorkspace,
     onReopenWorkspace,
+    onSearchWorkspace,
     onSelectFallbackItem,
+    onSelectSearchResult,
     onSelectWorkspaceNode,
+    onWorkspaceSearchQueryChange,
     recentWorkspaces,
     workspace,
     workspaceItems,
     workspaceNodes,
+    workspaceSearchQuery,
+    workspaceSearchResults,
     workspaceStatus,
 }: WorkspaceNavigatorProps) {
     return (
@@ -114,8 +132,43 @@ export function WorkspaceNavigator({
                     <>
                         <div className="workspace-summary">
                             <strong>{workspace.name}</strong>
-                            <small>{workspace.truncated ? 'Showing first indexed items' : workspaceStatus}</small>
+                            <small>{workspace.truncated ? `${workspace.nodes.length} indexed items; scan capped for responsiveness.` : workspaceStatus}</small>
                         </div>
+                        <div className="tree-tools">
+                            <div className="workspace-search">
+                                <input
+                                    aria-label="Search workspace"
+                                    onChange={(event) => onWorkspaceSearchQueryChange(event.target.value)}
+                                    onKeyDown={(event) => {
+                                        if (event.key === 'Enter') {
+                                            onSearchWorkspace();
+                                        }
+                                    }}
+                                    placeholder="Search files..."
+                                    value={workspaceSearchQuery}
+                                />
+                                <Button disabled={isSearchingWorkspace || workspaceSearchQuery.trim() === ''} onClick={onSearchWorkspace} variant="subtle">
+                                    {isSearchingWorkspace ? 'Searching...' : 'Search'}
+                                </Button>
+                            </div>
+                            <div className="tree-tool-row">
+                                <Button onClick={onExpandAllDirectories} variant="subtle">Expand all</Button>
+                                <Button onClick={onCollapseAllDirectories} variant="subtle">Collapse all</Button>
+                                {workspaceSearchResults.length > 0 && <Button onClick={onClearWorkspaceSearch} variant="subtle">Clear results</Button>}
+                            </div>
+                        </div>
+                        {workspaceSearchResults.length > 0 && (
+                            <div className="search-results">
+                                <div className="section-label">{workspaceSearchResults.length} matches</div>
+                                {workspaceSearchResults.map((result, index) => (
+                                    <button className="search-result" key={`${result.relPath}-${result.matchType}-${index}`} onClick={() => onSelectSearchResult(result)}>
+                                        <strong>{result.relPath}</strong>
+                                        <small>{result.matchType}{result.line > 0 ? `, line ${result.line}` : ''}</small>
+                                        <span>{result.snippet}</span>
+                                    </button>
+                                ))}
+                            </div>
+                        )}
                         {workspaceNodes.map((node) => (
                             <button
                                 key={node.relPath}

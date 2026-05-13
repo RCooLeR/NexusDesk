@@ -11,6 +11,8 @@ const checks = [
             'AskLLMStreamContextPack',
             'PreviewFileWrite',
             'ProfileDataset',
+            'QueryDataset',
+            'SearchWorkspace',
             'contextPackPaths',
             'listenForChatStream',
         ],
@@ -21,11 +23,15 @@ const checks = [
     },
     {
         file: 'src/features/shell/WorkbenchPanel.tsx',
-        terms: ['onPinContext', 'onApplyFileWrite', 'onProfileDataset', 'file-write-editor'],
+        terms: ['onPinContext', 'onApplyFileWrite', 'onProfileDataset', 'DatasetQueryPanel', 'file-write-editor'],
+    },
+    {
+        file: 'src/features/shell/WorkspaceNavigator.tsx',
+        terms: ['workspace-search', 'search-results', 'Expand all', 'Collapse all'],
     },
     {
         file: 'src/features/shell/AgentChatCard.tsx',
-        terms: ['context-pack-list', 'Clear pack'],
+        terms: ['context-pack-list', 'onRemoveContextPath', 'Clear pack'],
     },
     {
         file: 'src/App.css',

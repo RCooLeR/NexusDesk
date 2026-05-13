@@ -58,13 +58,14 @@ The current app implements the first safe workspace slice:
 - The scanner skips noisy folders, symlinks, listings deeper than 10 levels, and oversized result sets.
 - The scanner returns nodes in filesystem tree order so descendants stay grouped under their parent directories.
 - The frontend renders indexed nodes as an expandable tree and preserves expanded directories across refreshes.
+- `SearchWorkspace` searches safe workspace paths and previewable text content within the same ignore/depth limits.
 - `app/internal/workspace/preview.go` reads selected files only through a rooted relative path.
 - File previews reject traversal, symlinks, binary or unsupported text encoding content, and oversized previews.
 - Chat context uses the same rooted preview boundary and sends only selected text content or a bounded pack of pinned previews.
 - Workspace open/recent/refresh flows are bound through Wails methods on `app/app.go`.
 - Recent workspaces are stored in local JSON config through `app/internal/storage/recent_workspaces.go`.
 
-The app does not yet build persistent chunks, embeddings, dataset profiles, or a file watcher. Those remain future indexing work.
+The app does not yet build persistent chunks, embeddings, or a file watcher. Those remain future indexing work.
 
 ## File Classification
 
@@ -156,7 +157,9 @@ Current implementation:
 - parses CSV files into bounded table previews with lightweight column profiles from a larger capped CSV sample
 - persists first dataset profiles for CSV files and XLSX workbook sheet metadata under `.nexusdesk/datasets/`
 - renders common image files as capped inline data URLs
-- renders PDF files as capped inline data URLs and extracts simple embedded text when available
+- renders PDF files as capped inline data URLs and extracts simple embedded text by page when available
+- extracts basic DOCX body text from `word/document.xml`
+- searches workspace path names and previewable text/PDF/DOCX content
 - sends selected chat context with a smaller 16 KB cap
 - sends selected CSV chat context as a structured column profile plus bounded row sample
 - builds bounded multi-file context packs from pinned text, CSV, and extracted-PDF previews
@@ -182,8 +185,8 @@ For Markdown:
 For PDFs:
 
 - render in UI with a PDF viewer
-- extract text per page when possible
-- store page numbers
+- extract simple embedded text per page when possible
+- store page numbers for extracted text
 - support OCR or vision fallback for scanned PDFs later
 - avoid pretending a scanned document has text if extraction fails
 
@@ -208,6 +211,7 @@ For Excel and CSV:
 - render a bounded CSV table preview
 - infer column types, missing values, distinct counts, and numeric ranges from a larger capped CSV sample
 - persist CSV profiles and XLSX sheet metadata in the workspace
+- query CSV rows with a bounded search or `column=value` filter
 - expand profiling beyond the current capped sample with richer dataset profiles
 - optionally load tables into DuckDB
 - never send whole large workbooks directly to the LLM

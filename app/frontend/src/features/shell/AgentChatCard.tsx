@@ -10,6 +10,7 @@ type AgentChatCardProps = {
     onChatPromptChange: (value: string) => void;
     onClearChatHistory: () => void;
     onClearContextPack: () => void;
+    onRemoveContextPath: (relPath: string) => void;
     onSendPrompt: () => void;
 };
 
@@ -22,6 +23,7 @@ export function AgentChatCard({
     onChatPromptChange,
     onClearChatHistory,
     onClearContextPack,
+    onRemoveContextPath,
     onSendPrompt,
 }: AgentChatCardProps) {
     return (
@@ -49,9 +51,18 @@ export function AgentChatCard({
             )}
             {contextPackPaths.length > 0 && (
                 <div className="context-pack-list">
-                    <strong>{contextPackPaths.length} pinned</strong>
-                    <span>{contextPackPaths.join(', ')}</span>
-                    <Button onClick={onClearContextPack} variant="subtle">Clear pack</Button>
+                    <div className="context-pack-heading">
+                        <strong>{contextPackPaths.length} pinned</strong>
+                        <Button onClick={onClearContextPack} variant="subtle">Clear pack</Button>
+                    </div>
+                    <div className="context-pack-items">
+                        {contextPackPaths.map((relPath) => (
+                            <button key={relPath} onClick={() => onRemoveContextPath(relPath)} title={`Remove ${relPath}`}>
+                                <span>{relPath}</span>
+                                <strong>x</strong>
+                            </button>
+                        ))}
+                    </div>
                 </div>
             )}
             <div className="prompt-box">
