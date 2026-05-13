@@ -70,7 +70,7 @@
 .navigator {
     padding: 20px 16px;
     display: grid;
-    grid-template-rows: auto minmax(0, 1fr);
+    grid-template-rows: auto auto minmax(0, 1fr);
     overflow: hidden;
 }
 
@@ -280,6 +280,7 @@ button:disabled {
     align-content: start;
     gap: 6px;
     min-height: 0;
+    min-width: 0;
     overflow: auto;
     padding-right: 2px;
 }
@@ -386,9 +387,10 @@ button:disabled {
     background: transparent;
     border-radius: 8px;
     display: grid;
-    grid-template-columns: 18px 30px 1fr;
+    grid-template-columns: 18px 30px minmax(0, 1fr);
     gap: 8px;
     align-items: center;
+    min-width: 0;
     padding: 9px;
     text-align: left;
     cursor: pointer;
@@ -407,9 +409,14 @@ button:disabled {
 .tree-item strong,
 .tree-item small {
     display: block;
+    max-width: 100%;
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
+}
+
+.tree-item > span:last-child {
+    min-width: 0;
 }
 
 .tree-disclosure {
@@ -1037,6 +1044,7 @@ button:disabled {
 
     .navigator {
         padding: 14px;
+        grid-template-rows: auto auto minmax(0, 1fr);
     }
 
     .navigator-resizer {

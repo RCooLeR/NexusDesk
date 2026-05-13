@@ -148,6 +148,7 @@ export function WorkspaceNavigator({
                                 className={activeFile.startsWith(item.name) ? 'tree-item selected' : 'tree-item'}
                                 onClick={() => onSelectFallbackItem(item.name)}
                             >
+                                <span className="tree-disclosure" />
                                 <span className={`file-glyph ${item.kind}`}>
                                     <img src={workspaceIconByName[item.name] ?? brandAssets.icons.documents} alt="" />
                                 </span>

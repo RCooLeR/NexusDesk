@@ -52,6 +52,7 @@ This tracker reflects the repository as it exists today and keeps planned work s
 - [x] Workspace navigator renders indexed nodes as an expandable tree.
 - [x] Workspace navigator uses filesystem tree ordering instead of depth-grouped ordering.
 - [x] Workspace navigator width can be resized with a drag handle.
+- [x] Workspace navigator keeps fallback and file-tree rows aligned inside the resizable sidebar.
 - [x] App shell stays fixed to the window while long navigator, preview, chat, settings, and timeline content scroll inside their panels.
 - [x] Expanded workspace directories are reconciled and preserved across refreshes.
 - [x] Backend remembers the selected workspace root for the session.
