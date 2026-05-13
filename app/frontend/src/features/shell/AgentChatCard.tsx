@@ -30,9 +30,9 @@ export function AgentChatCard({
                     </div>
                 ) : (
                     chatMessages.slice(-4).map((message, index) => (
-                        <div className={message.role === 'user' ? 'user-message' : 'assistant-message'} key={`${message.role}-${index}-${message.content}`}>
+                        <div className={message.role === 'user' ? 'user-message' : 'assistant-message'} key={`${message.role}-${message.createdAt}-${index}`}>
                             <strong>{message.role === 'user' ? 'You' : 'NexusDesk'}</strong>
-                            <p>{message.content}</p>
+                            <p>{message.content || 'Receiving response...'}</p>
                             {message.contextRelPath && <small>{message.contextRelPath}</small>}
                         </div>
                     ))

@@ -83,13 +83,14 @@ Current implementation:
 - OS credential storage is still planned before production release.
 - `app/internal/llm/probe.go` tests OpenAI-compatible `/models` endpoints.
 - The probe returns model count, a small model sample, capability hints, and configured-model warnings.
-- `app/internal/llm/chat.go` sends non-streaming OpenAI-compatible `/chat/completions` requests.
-- `AskLLM` in `app/app.go` resolves saved settings and attaches selected workspace text context server-side.
+- `app/internal/llm/chat.go` sends OpenAI-compatible `/chat/completions` requests, including streaming responses through server-sent `data:` chunks.
+- `AskLLM` and `AskLLMStream` in `app/app.go` resolve saved settings and attach selected workspace text context server-side.
+- `AskLLMStream` emits `nexusdesk:chat-stream` Wails events so the frontend can render partial assistant responses before final history persistence completes.
 - `app/internal/storage/chat_history.go` persists bounded chat history per workspace in local JSON config.
 
 Capability hints are currently inferred from model IDs. They are useful for readiness signals, but they are not a substitute for provider-native capability metadata.
 
-The current chat implementation requires an explicit configured model. It includes at most a bounded selected text preview as context and does not yet stream responses, call tools, or build multi-file context packs.
+The current chat implementation requires an explicit configured model. It includes at most a bounded selected text preview as context and streams response text when the configured provider supports OpenAI-compatible streaming. It does not yet call tools or build multi-file context packs.
 
 ## Agent Modes
 

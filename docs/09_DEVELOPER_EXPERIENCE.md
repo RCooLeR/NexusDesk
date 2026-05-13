@@ -25,6 +25,10 @@ The current app uses small JSON files in the user's config directory while SQLit
 
 These stores live behind `app/internal/storage/` so the later SQLite migration can keep the same app-level boundaries.
 
+## Chat Streaming
+
+`AskLLMStream` emits `nexusdesk:chat-stream` Wails events while `app/internal/llm/chat.go` reads OpenAI-compatible server-sent response chunks. The frontend listens in `NexusDeskShell.tsx`, updates the in-flight assistant message per `delta`, then replaces it with the final persisted response or refreshed workspace chat history when the request completes.
+
 ## Frontend Structure
 
 The shell is now mostly orchestration. Feature panels own stable presentation, while `NexusDeskShell.tsx` keeps workspace, preview, provider, and chat state wiring close to the Wails bindings:

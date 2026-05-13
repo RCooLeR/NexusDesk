@@ -74,6 +74,16 @@ export type LLMChatResult = {
     contextRelPath: string;
 };
 
+export type ChatStreamEvent = {
+    requestId: string;
+    type: 'delta' | 'done' | 'error';
+    delta: string;
+    message: string;
+    model: string;
+    endpoint: string;
+    contextRelPath: string;
+};
+
 export type ChatMessage = {
     role: string;
     content: string;

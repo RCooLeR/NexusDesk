@@ -6,6 +6,10 @@ export function AskLLM(arg1, arg2) {
   return window['go']['main']['App']['AskLLM'](arg1, arg2);
 }
 
+export function AskLLMStream(arg1, arg2, arg3) {
+  return window['go']['main']['App']['AskLLMStream'](arg1, arg2, arg3);
+}
+
 export function ClearChatHistory() {
   return window['go']['main']['App']['ClearChatHistory']();
 }

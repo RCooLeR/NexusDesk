@@ -7,6 +7,8 @@ import {workspace} from '../models';
 
 export function AskLLM(arg1:string,arg2:string):Promise<llm.ChatResult>;
 
+export function AskLLMStream(arg1:string,arg2:string,arg3:string):Promise<llm.ChatResult>;
+
 export function ClearChatHistory():Promise<Array<storage.ChatMessage>>;
 
 export function ClearRecentWorkspaces():Promise<Array<storage.RecentWorkspace>>;

@@ -44,7 +44,18 @@ type WorkspaceOpenResult struct {
 	Snapshot workspace.WorkspaceSnapshot `json:"snapshot"`
 }
 
+type ChatStreamEvent struct {
+	RequestID      string `json:"requestId"`
+	Type           string `json:"type"`
+	Delta          string `json:"delta"`
+	Message        string `json:"message"`
+	Model          string `json:"model"`
+	Endpoint       string `json:"endpoint"`
+	ContextRelPath string `json:"contextRelPath"`
+}
+
 const chatContextMaxBytes = 16 * 1024
+const chatStreamEventName = "nexusdesk:chat-stream"
 
 type App struct {
 	ctx           context.Context
@@ -205,14 +216,70 @@ func (a *App) ClearChatHistory() ([]storage.ChatMessage, error) {
 }
 
 func (a *App) AskLLM(prompt string, relPath string) (llm.ChatResult, error) {
-	settings, err := a.llmStore.Get()
+	chatRequest, settings, err := a.prepareChat(prompt, relPath)
 	if err != nil {
 		return llm.ChatResult{}, err
 	}
 
-	resolvedSettings, err := a.llmStore.ResolveForUse(settings)
+	result, err := a.llmClient.Chat(context.Background(), settings, chatRequest)
 	if err != nil {
 		return llm.ChatResult{}, err
+	}
+
+	if err := a.persistChatPair(prompt, chatRequest, result); err != nil {
+		return llm.ChatResult{}, err
+	}
+
+	return result, nil
+}
+
+func (a *App) AskLLMStream(prompt string, relPath string, requestID string) (llm.ChatResult, error) {
+	chatRequest, settings, err := a.prepareChat(prompt, relPath)
+	if err != nil {
+		a.emitChatStreamEvent(ChatStreamEvent{RequestID: requestID, Type: "error", Message: err.Error()})
+		return llm.ChatResult{}, err
+	}
+
+	result, err := a.llmClient.ChatStream(context.Background(), settings, chatRequest, func(delta string) error {
+		a.emitChatStreamEvent(ChatStreamEvent{
+			RequestID:      requestID,
+			Type:           "delta",
+			Delta:          delta,
+			ContextRelPath: chatRequest.ContextRelPath,
+		})
+		return nil
+	})
+	if err != nil {
+		a.emitChatStreamEvent(ChatStreamEvent{RequestID: requestID, Type: "error", Message: err.Error()})
+		return llm.ChatResult{}, err
+	}
+
+	if err := a.persistChatPair(prompt, chatRequest, result); err != nil {
+		a.emitChatStreamEvent(ChatStreamEvent{RequestID: requestID, Type: "error", Message: err.Error()})
+		return llm.ChatResult{}, err
+	}
+
+	a.emitChatStreamEvent(ChatStreamEvent{
+		RequestID:      requestID,
+		Type:           "done",
+		Message:        result.Message,
+		Model:          result.Model,
+		Endpoint:       result.Endpoint,
+		ContextRelPath: result.ContextRelPath,
+	})
+
+	return result, nil
+}
+
+func (a *App) prepareChat(prompt string, relPath string) (llm.ChatRequest, storage.LLMSettings, error) {
+	settings, err := a.llmStore.Get()
+	if err != nil {
+		return llm.ChatRequest{}, storage.LLMSettings{}, err
+	}
+
+	resolvedSettings, err := a.llmStore.ResolveForUse(settings)
+	if err != nil {
+		return llm.ChatRequest{}, storage.LLMSettings{}, err
 	}
 
 	chatRequest := llm.ChatRequest{
@@ -222,20 +289,19 @@ func (a *App) AskLLM(prompt string, relPath string) (llm.ChatResult, error) {
 	if relPath != "" {
 		contextPreview, err := a.previewChatContext(relPath)
 		if err != nil {
-			return llm.ChatResult{}, err
+			return llm.ChatRequest{}, storage.LLMSettings{}, err
 		}
 		chatRequest.ContextRelPath = contextPreview.RelPath
 		chatRequest.ContextContent = contextPreview.Content
 	}
 
-	result, err := a.llmClient.Chat(context.Background(), resolvedSettings, chatRequest)
-	if err != nil {
-		return llm.ChatResult{}, err
-	}
+	return chatRequest, resolvedSettings, nil
+}
 
+func (a *App) persistChatPair(prompt string, chatRequest llm.ChatRequest, result llm.ChatResult) error {
 	root := a.getWorkspaceRoot()
 	if root != "" {
-		_, err = a.chatStore.AppendPair(root, storage.ChatMessage{
+		_, err := a.chatStore.AppendPair(root, storage.ChatMessage{
 			Role:           "user",
 			Content:        prompt,
 			ContextRelPath: chatRequest.ContextRelPath,
@@ -245,11 +311,18 @@ func (a *App) AskLLM(prompt string, relPath string) (llm.ChatResult, error) {
 			ContextRelPath: result.ContextRelPath,
 		})
 		if err != nil {
-			return llm.ChatResult{}, err
+			return err
 		}
 	}
 
-	return result, nil
+	return nil
+}
+
+func (a *App) emitChatStreamEvent(event ChatStreamEvent) {
+	if a.ctx == nil {
+		return
+	}
+	runtime.EventsEmit(a.ctx, chatStreamEventName, event)
 }
 
 func (a *App) previewChatContext(relPath string) (workspace.FilePreview, error) {

@@ -1,6 +1,7 @@
 package llm
 
 import (
+	"bufio"
 	"bytes"
 	"context"
 	"encoding/json"
@@ -28,6 +29,14 @@ type ChatResult struct {
 }
 
 func (c *Client) Chat(ctx context.Context, settings storage.LLMSettings, chatRequest ChatRequest) (ChatResult, error) {
+	return c.chat(ctx, settings, chatRequest, false, nil)
+}
+
+func (c *Client) ChatStream(ctx context.Context, settings storage.LLMSettings, chatRequest ChatRequest, onDelta func(string) error) (ChatResult, error) {
+	return c.chat(ctx, settings, chatRequest, true, onDelta)
+}
+
+func (c *Client) chat(ctx context.Context, settings storage.LLMSettings, chatRequest ChatRequest, stream bool, onDelta func(string) error) (ChatResult, error) {
 	if c.httpClient == nil {
 		c.httpClient = &http.Client{Timeout: probeTimeout}
 	}
@@ -59,6 +68,7 @@ func (c *Client) Chat(ctx context.Context, settings storage.LLMSettings, chatReq
 			{Role: "user", Content: buildUserPrompt(prompt, chatRequest)},
 		},
 		Temperature: 0.2,
+		Stream:      stream,
 	})
 	if err != nil {
 		return ChatResult{}, err
@@ -85,6 +95,20 @@ func (c *Client) Chat(ctx context.Context, settings storage.LLMSettings, chatReq
 		return ChatResult{}, fmt.Errorf("provider returned HTTP %d", response.StatusCode)
 	}
 
+	if stream {
+		message, err := readChatCompletionStream(response, onDelta)
+		if err != nil {
+			return ChatResult{}, err
+		}
+
+		return ChatResult{
+			Message:        message,
+			Model:          settings.Model,
+			Endpoint:       endpoint,
+			ContextRelPath: strings.TrimSpace(chatRequest.ContextRelPath),
+		}, nil
+	}
+
 	var payload chatCompletionResponse
 	if err := json.NewDecoder(response.Body).Decode(&payload); err != nil {
 		return ChatResult{}, err
@@ -100,6 +124,54 @@ func (c *Client) Chat(ctx context.Context, settings storage.LLMSettings, chatReq
 		Endpoint:       endpoint,
 		ContextRelPath: strings.TrimSpace(chatRequest.ContextRelPath),
 	}, nil
+}
+
+func readChatCompletionStream(response *http.Response, onDelta func(string) error) (string, error) {
+	scanner := bufio.NewScanner(response.Body)
+	scanner.Buffer(make([]byte, 0, 64*1024), 1024*1024)
+
+	var message strings.Builder
+	for scanner.Scan() {
+		line := strings.TrimSpace(scanner.Text())
+		if line == "" || !strings.HasPrefix(line, "data:") {
+			continue
+		}
+
+		data := strings.TrimSpace(strings.TrimPrefix(line, "data:"))
+		if data == "[DONE]" {
+			break
+		}
+
+		var payload chatCompletionStreamResponse
+		if err := json.Unmarshal([]byte(data), &payload); err != nil {
+			return "", err
+		}
+		if len(payload.Choices) == 0 {
+			continue
+		}
+
+		delta := payload.Choices[0].Delta.Content
+		if delta == "" {
+			continue
+		}
+
+		message.WriteString(delta)
+		if onDelta != nil {
+			if err := onDelta(delta); err != nil {
+				return "", err
+			}
+		}
+	}
+	if err := scanner.Err(); err != nil {
+		return "", err
+	}
+
+	result := strings.TrimSpace(message.String())
+	if result == "" {
+		return "", errors.New("provider returned an empty chat response")
+	}
+
+	return result, nil
 }
 
 func chatCompletionsEndpoint(baseURL string) (string, error) {
@@ -138,6 +210,7 @@ type chatCompletionRequest struct {
 	Model       string        `json:"model"`
 	Messages    []chatMessage `json:"messages"`
 	Temperature float64       `json:"temperature"`
+	Stream      bool          `json:"stream,omitempty"`
 }
 
 type chatMessage struct {
@@ -151,4 +224,12 @@ type chatCompletionResponse struct {
 
 type chatChoice struct {
 	Message chatMessage `json:"message"`
+}
+
+type chatCompletionStreamResponse struct {
+	Choices []chatStreamChoice `json:"choices"`
+}
+
+type chatStreamChoice struct {
+	Delta chatMessage `json:"delta"`
 }

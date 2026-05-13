@@ -58,7 +58,9 @@ This tracker reflects the repository as it exists today and keeps planned work s
 - [x] LLM probe infers model-list, chat, embedding, vision, and reranking capability hints from provider model IDs.
 - [x] LLM probe warns when the configured model is not returned by the provider.
 - [x] Non-streaming OpenAI-compatible chat is implemented in `app/internal/llm/chat.go`.
+- [x] Streaming OpenAI-compatible chat is implemented in `app/internal/llm/chat.go`.
 - [x] Agent panel can send prompts through `AskLLM`.
+- [x] Agent panel streams partial assistant responses through `nexusdesk:chat-stream` Wails events.
 - [x] Selected workspace text previews can be attached as bounded chat context.
 - [x] Workspace chat history is persisted through `app/internal/storage/chat_history.go`.
 - [x] Helper services placeholder exists at `services/docker-compose.yml`.
@@ -96,7 +98,7 @@ This tracker reflects the repository as it exists today and keeps planned work s
 - [x] Add LLM capability detection beyond model listing.
 - [x] Add first non-streaming chat call with selected text context.
 - [x] Persist chat history per workspace.
-- [ ] Add streaming chat responses.
+- [x] Add streaming chat responses.
 - [x] Mask API keys before they leave the backend settings store.
 - [ ] Migrate API keys into OS credential storage before production release.
 - [x] Split brand-aware shell sections into smaller rail, navigator, workbench pane, agent panel, and timeline components when they need behavior.

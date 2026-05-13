@@ -70,3 +70,41 @@ func TestChatRequiresConfiguredModel(t *testing.T) {
 		t.Fatal("expected missing model error")
 	}
 }
+
+func TestChatStreamReadsDeltas(t *testing.T) {
+	server := httptest.NewServer(http.HandlerFunc(func(response http.ResponseWriter, request *http.Request) {
+		var body chatCompletionRequest
+		if err := json.NewDecoder(request.Body).Decode(&body); err != nil {
+			t.Fatalf("Decode failed: %v", err)
+		}
+		if !body.Stream {
+			t.Fatal("expected streaming request")
+		}
+
+		response.Header().Set("Content-Type", "text/event-stream")
+		_, _ = response.Write([]byte("data: {\"choices\":[{\"delta\":{\"content\":\"Hello\"}}]}\n\n"))
+		_, _ = response.Write([]byte("data: {\"choices\":[{\"delta\":{\"content\":\" world\"}}]}\n\n"))
+		_, _ = response.Write([]byte("data: [DONE]\n\n"))
+	}))
+	defer server.Close()
+
+	var deltas []string
+	client := NewClient()
+	result, err := client.ChatStream(context.Background(), storage.LLMSettings{
+		BaseURL: server.URL + "/v1",
+		Model:   "test-model",
+	}, ChatRequest{Prompt: "Say hello"}, func(delta string) error {
+		deltas = append(deltas, delta)
+		return nil
+	})
+	if err != nil {
+		t.Fatalf("ChatStream returned error: %v", err)
+	}
+
+	if result.Message != "Hello world" {
+		t.Fatalf("unexpected streamed response: %s", result.Message)
+	}
+	if len(deltas) != 2 || deltas[0] != "Hello" || deltas[1] != " world" {
+		t.Fatalf("unexpected deltas: %#v", deltas)
+	}
+}

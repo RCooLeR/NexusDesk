@@ -1,6 +1,7 @@
 import {useEffect, useMemo, useState} from 'react';
 import {
     AskLLM,
+    AskLLMStream,
     ClearRecentWorkspaces,
     ClearChatHistory,
     GetChatHistory,
@@ -13,7 +14,9 @@ import {
     SelectWorkspace,
     TestLLMConnection,
 } from '../../../wailsjs/go/main/App';
+import {EventsOn} from '../../../wailsjs/runtime/runtime';
 import type {
+    ChatStreamEvent,
     ChatMessage,
     FileNode,
     FilePreview,
@@ -39,6 +42,8 @@ type NexusDeskShellProps = {
     onRecentWorkspacesChange: (workspaces: RecentWorkspace[]) => void;
     onLLMSettingsChange: (settings: LLMSettings) => void;
 };
+
+const chatStreamEventName = 'nexusdesk:chat-stream';
 
 export function NexusDeskShell({
     state,
@@ -455,46 +460,95 @@ export function NexusDeskShell({
         }
 
         const contextRelPath = filePreview?.content ? filePreview.relPath : '';
+        const requestId = createRequestId();
+        const userMessage: ChatMessage = {content: prompt, contextRelPath, createdAt: new Date().toISOString(), role: 'user'};
+        const assistantMessage: ChatMessage = {content: '', contextRelPath, createdAt: new Date().toISOString(), role: 'assistant'};
+
         setIsSendingPrompt(true);
-        setChatStatus(contextRelPath ? `Sending with ${contextRelPath} as context...` : 'Sending without selected file context...');
-        setChatMessages((current) => [...current, {content: prompt, contextRelPath, createdAt: new Date().toISOString(), role: 'user'}]);
+        setChatStatus(contextRelPath ? `Streaming with ${contextRelPath} as context...` : 'Streaming without selected file context...');
+        setChatMessages((current) => [...current, userMessage, assistantMessage]);
         setChatPrompt('');
 
+        const unsubscribe = listenForChatStream(requestId, assistantMessage.createdAt, contextRelPath);
         try {
-            const result: LLMChatResult = await AskLLM(prompt, contextRelPath);
+            const result: LLMChatResult = unsubscribe
+                ? await AskLLMStream(prompt, contextRelPath, requestId)
+                : await AskLLM(prompt, contextRelPath);
             if (workspace) {
                 await refreshChatHistory();
             } else {
-                setChatMessages((current) => [
-                    ...current,
-                    {
-                        content: result.message,
-                        contextRelPath: result.contextRelPath,
-                        createdAt: new Date().toISOString(),
-                        role: 'assistant',
-                    },
-                ]);
+                replaceChatMessage(assistantMessage.createdAt, result.message, result.contextRelPath);
             }
             setChatStatus(result.contextRelPath ? `Answered with ${result.contextRelPath}.` : `Answered by ${result.model}.`);
         } catch (error) {
             const message = error instanceof Error ? error.message : '';
             if (message.includes('undefined') || message.includes('window')) {
+                replaceChatMessage(assistantMessage.createdAt, 'Chat is available in the desktop runtime.', '');
                 setChatStatus('Chat is available in the desktop runtime.');
                 return;
             }
-            setChatMessages((current) => [
-                ...current,
-                {
-                    content: message || 'The provider did not return a usable chat response.',
-                    contextRelPath: '',
-                    createdAt: new Date().toISOString(),
-                    role: 'assistant',
-                },
-            ]);
+            replaceChatMessage(assistantMessage.createdAt, message || 'The provider did not return a usable chat response.', '');
             setChatStatus(message || 'Chat request failed.');
         } finally {
+            unsubscribe?.();
             setIsSendingPrompt(false);
         }
+    }
+
+    function listenForChatStream(requestId: string, assistantCreatedAt: string, fallbackContextRelPath: string) {
+        if (!isWailsRuntimeAvailable()) {
+            return null;
+        }
+
+        try {
+            return EventsOn(chatStreamEventName, (event: ChatStreamEvent) => {
+                if (event.requestId !== requestId) {
+                    return;
+                }
+
+                if (event.type === 'delta') {
+                    appendChatDelta(assistantCreatedAt, event.delta, event.contextRelPath || fallbackContextRelPath);
+                }
+                if (event.type === 'done') {
+                    replaceChatMessage(assistantCreatedAt, event.message, event.contextRelPath || fallbackContextRelPath);
+                }
+                if (event.type === 'error') {
+                    replaceChatMessage(assistantCreatedAt, event.message || 'Streaming response failed.', '');
+                }
+            });
+        } catch {
+            return null;
+        }
+    }
+
+    function appendChatDelta(createdAt: string, delta: string, contextRelPath: string) {
+        if (!delta) {
+            return;
+        }
+
+        setChatMessages((current) => current.map((message) => {
+            if (message.createdAt !== createdAt) {
+                return message;
+            }
+            return {
+                ...message,
+                content: `${message.content}${delta}`,
+                contextRelPath,
+            };
+        }));
+    }
+
+    function replaceChatMessage(createdAt: string, content: string, contextRelPath: string) {
+        setChatMessages((current) => current.map((message) => {
+            if (message.createdAt !== createdAt) {
+                return message;
+            }
+            return {
+                ...message,
+                content,
+                contextRelPath,
+            };
+        }));
     }
 
     return (
@@ -552,4 +606,15 @@ export function NexusDeskShell({
             />
         </div>
     );
+}
+
+function createRequestId() {
+    if (typeof crypto !== 'undefined' && 'randomUUID' in crypto) {
+        return crypto.randomUUID();
+    }
+    return `${Date.now()}-${Math.random().toString(16).slice(2)}`;
+}
+
+function isWailsRuntimeAvailable() {
+    return typeof window !== 'undefined' && 'runtime' in window;
 }
