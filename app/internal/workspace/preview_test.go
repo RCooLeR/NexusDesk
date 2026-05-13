@@ -59,6 +59,46 @@ func TestPreviewRejectsBinaryContent(t *testing.T) {
 	}
 }
 
+func TestPreviewReturnsImageDataURL(t *testing.T) {
+	root := t.TempDir()
+	path := filepath.Join(root, "logo.png")
+	if err := os.WriteFile(path, []byte{0x89, 0x50, 0x4e, 0x47}, 0o644); err != nil {
+		t.Fatalf("WriteFile failed: %v", err)
+	}
+
+	preview, err := Preview(root, "logo.png", PreviewOptions{})
+	if err != nil {
+		t.Fatalf("Preview returned error: %v", err)
+	}
+
+	if preview.Kind != "image" || preview.FileType != "image" {
+		t.Fatalf("expected image preview, got kind=%s type=%s", preview.Kind, preview.FileType)
+	}
+	if !strings.HasPrefix(preview.Content, "data:image/png;base64,") {
+		t.Fatalf("expected PNG data URL, got %q", preview.Content)
+	}
+}
+
+func TestPreviewRejectsOversizedImage(t *testing.T) {
+	root := t.TempDir()
+	path := filepath.Join(root, "large.png")
+	if err := os.WriteFile(path, []byte{0x89, 0x50, 0x4e, 0x47}, 0o644); err != nil {
+		t.Fatalf("WriteFile failed: %v", err)
+	}
+
+	preview, err := Preview(root, "large.png", PreviewOptions{MaxBytes: 2})
+	if err != nil {
+		t.Fatalf("Preview returned error: %v", err)
+	}
+
+	if preview.Kind != "unsupported" {
+		t.Fatalf("expected oversized image to be unsupported, got %s", preview.Kind)
+	}
+	if preview.Content != "" {
+		t.Fatalf("expected oversized image content to be empty, got %q", preview.Content)
+	}
+}
+
 func TestPreviewTruncatesLargeText(t *testing.T) {
 	root := t.TempDir()
 	writeFile(t, root, "large.txt", strings.Repeat("a", 20))

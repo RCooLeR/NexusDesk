@@ -35,8 +35,8 @@ Deliverables:
 - file tree with ignore rules: implemented
 - expandable tree state across refreshes: implemented
 - safe text/code file viewer: implemented
+- image preview: implemented
 - Monaco editor integration
-- image preview
 - basic PDF preview
 - LLM settings screen: implemented
 - LLM connection test for OpenAI-compatible `/models`: implemented
@@ -57,11 +57,12 @@ Current status:
 - The desktop shell builds on Windows through Wails.
 - The workspace browser can open, refresh, preview, and remember local folders.
 - Text preview stays inside the approved workspace root and refuses binary/unsafe paths.
+- Common image previews render inline as capped data URLs from inside the approved workspace root.
 - Recent workspaces and LLM settings persist locally.
 - API keys are masked before leaving backend settings storage, but OS credential storage is still pending.
 - Streaming chat works with the configured model and optional selected file context.
 - Persistent chat history works through local JSON config.
-- Multi-file context packaging, Monaco, image/PDF previews, and SQLite persistence are still planned.
+- Multi-file context packaging, Monaco, PDF previews, and SQLite persistence are still planned.
 
 ## Phase 2: Files, Documents, And Artifacts
 

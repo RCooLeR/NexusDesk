@@ -1,7 +1,9 @@
 package workspace
 
 import (
+	"encoding/base64"
 	"errors"
+	"fmt"
 	"io"
 	"io/fs"
 	"os"
@@ -11,6 +13,7 @@ import (
 )
 
 const defaultPreviewMaxBytes = 64 * 1024
+const defaultImagePreviewMaxBytes = 2 * 1024 * 1024
 
 type PreviewOptions struct {
 	MaxBytes int
@@ -82,6 +85,23 @@ func Preview(root string, relPath string, options PreviewOptions) (FilePreview, 
 		return preview, nil
 	}
 
+	if preview.FileType == "image" {
+		content, err := readImagePreviewContent(absTarget, info.Size(), imagePreviewLimit(options.MaxBytes))
+		if err != nil {
+			return FilePreview{}, err
+		}
+		if content == "" {
+			preview.Kind = "unsupported"
+			preview.Message = "Image is too large to preview inline."
+			return preview, nil
+		}
+
+		preview.Kind = "image"
+		preview.Content = content
+		preview.Message = "Image preview rendered from the approved workspace root."
+		return preview, nil
+	}
+
 	content, truncated, err := readPreviewContent(absTarget, previewLimit(options.MaxBytes))
 	if err != nil {
 		return FilePreview{}, err
@@ -146,6 +166,13 @@ func previewLimit(maxBytes int) int {
 	return maxBytes
 }
 
+func imagePreviewLimit(maxBytes int) int {
+	if maxBytes <= 0 {
+		return defaultImagePreviewMaxBytes
+	}
+	return maxBytes
+}
+
 func readPreviewContent(path string, maxBytes int) ([]byte, bool, error) {
 	file, err := os.Open(path)
 	if err != nil {
@@ -163,6 +190,46 @@ func readPreviewContent(path string, maxBytes int) ([]byte, bool, error) {
 	}
 
 	return content[:maxBytes], true, nil
+}
+
+func readImagePreviewContent(path string, size int64, maxBytes int) (string, error) {
+	if size > int64(maxBytes) {
+		return "", nil
+	}
+
+	content, err := os.ReadFile(path)
+	if err != nil {
+		return "", err
+	}
+	if len(content) > maxBytes {
+		return "", nil
+	}
+
+	mimeType, ok := imageMimeType(path)
+	if !ok {
+		return "", nil
+	}
+
+	return fmt.Sprintf("data:%s;base64,%s", mimeType, base64.StdEncoding.EncodeToString(content)), nil
+}
+
+func imageMimeType(path string) (string, bool) {
+	switch strings.ToLower(filepath.Ext(path)) {
+	case ".png":
+		return "image/png", true
+	case ".jpg", ".jpeg":
+		return "image/jpeg", true
+	case ".gif":
+		return "image/gif", true
+	case ".webp":
+		return "image/webp", true
+	case ".svg":
+		return "image/svg+xml", true
+	case ".ico":
+		return "image/x-icon", true
+	default:
+		return "", false
+	}
 }
 
 func isLikelyBinary(content []byte) bool {

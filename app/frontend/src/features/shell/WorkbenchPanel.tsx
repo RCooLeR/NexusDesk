@@ -47,6 +47,13 @@ export function WorkbenchPanel({
                                     iconSrc={brandAssets.icons.documents}
                                     title="Loading preview"
                                 />
+                            ) : filePreview?.kind === 'image' && filePreview.content ? (
+                                <>
+                                    {filePreview.message && <InlineAlert>{filePreview.message}</InlineAlert>}
+                                    <div className="image-preview">
+                                        <img src={filePreview.content} alt={filePreview.name} />
+                                    </div>
+                                </>
                             ) : filePreview?.content ? (
                                 <>
                                     {filePreview.message && <InlineAlert>{filePreview.message}</InlineAlert>}

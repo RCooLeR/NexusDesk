@@ -150,9 +150,11 @@ For text and code files:
 Current implementation:
 
 - previews UTF-8 text/code within a 64 KB default cap
+- renders common image files as capped inline data URLs
 - sends selected chat context with a smaller 16 KB cap
 - trims partial UTF-8 characters at truncation boundaries
 - shows unsupported state for binary or non-UTF-8 files
+- excludes image previews from text chat context
 - does not yet persist line-aware chunks or citations
 
 ### Markdown
