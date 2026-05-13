@@ -9,8 +9,8 @@ import (
 )
 
 const (
-	defaultMaxDepth   = 4
-	defaultMaxEntries = 400
+	defaultMaxDepth   = 10
+	defaultMaxEntries = 800
 )
 
 type ScanOptions struct {

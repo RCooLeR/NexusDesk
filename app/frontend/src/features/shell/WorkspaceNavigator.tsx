@@ -121,7 +121,7 @@ export function WorkspaceNavigator({
                                 key={node.relPath}
                                 className={activeFile === node.relPath ? 'tree-item selected' : 'tree-item'}
                                 onClick={() => onSelectWorkspaceNode(node)}
-                                style={{paddingLeft: `${8 + Math.min(node.depth, 4) * 10}px`}}
+                                style={{paddingLeft: `${8 + Math.min(node.depth, 10) * 8}px`}}
                             >
                                 <span className="tree-disclosure">
                                     {node.kind === 'directory' ? (expandedDirectories.has(node.relPath) ? '-' : '+') : ''}

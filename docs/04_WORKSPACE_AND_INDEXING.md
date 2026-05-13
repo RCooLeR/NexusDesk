@@ -55,7 +55,7 @@ flowchart TD
 The current app implements the first safe workspace slice:
 
 - `app/internal/workspace/scanner.go` scans an approved workspace root.
-- The scanner skips noisy folders, symlinks, deep listings, and oversized result sets.
+- The scanner skips noisy folders, symlinks, listings deeper than 10 levels, and oversized result sets.
 - The scanner returns nodes in filesystem tree order so descendants stay grouped under their parent directories.
 - The frontend renders indexed nodes as an expandable tree and preserves expanded directories across refreshes.
 - `app/internal/workspace/preview.go` reads selected files only through a rooted relative path.
@@ -150,6 +150,7 @@ For text and code files:
 
 Current implementation:
 
+- scans workspace trees up to 10 levels deep with an 800-node default cap
 - previews UTF-8 text/code within a 64 KB default cap
 - decodes UTF-8 with BOM, UTF-16 LE/BE with or without BOM, and Windows-1251 Cyrillic text previews
 - parses CSV files into bounded table previews with lightweight column profiles from a larger capped CSV sample

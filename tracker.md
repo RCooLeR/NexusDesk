@@ -32,7 +32,7 @@ This tracker reflects the repository as it exists today and keeps planned work s
 - [x] Agent panel is split into `app/frontend/src/features/shell/AgentPanel.tsx`.
 - [x] Workspace scanner package exists at `app/internal/workspace/`.
 - [x] Artifact writer package exists at `app/internal/artifact/`.
-- [x] Scanner skips noisy folders, symlinks, and oversized/deep listings.
+- [x] Scanner skips noisy folders, symlinks, oversized listings, and paths deeper than 10 levels.
 - [x] Workspace file preview is implemented in `app/internal/workspace/preview.go`.
 - [x] File previews are rooted, traversal-checked, symlink-aware, size-limited, and UTF-8/text-only.
 - [x] Common workspace images render as bounded inline previews.
@@ -55,6 +55,7 @@ This tracker reflects the repository as it exists today and keeps planned work s
 - [x] Preview button reloads the selected workspace preview from disk.
 - [x] Workspace navigator renders indexed nodes as an expandable tree.
 - [x] Workspace navigator uses filesystem tree ordering instead of depth-grouped ordering.
+- [x] Workspace navigator supports 10-level default filesystem scans.
 - [x] Workspace navigator width can be resized with a drag handle.
 - [x] Workspace navigator keeps fallback and file-tree rows aligned inside the resizable sidebar.
 - [x] App shell stays fixed to the window while long navigator, preview, chat, settings, and timeline content scroll inside their panels.

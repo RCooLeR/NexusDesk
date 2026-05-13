@@ -35,6 +35,7 @@ Deliverables:
 - controlled Markdown artifact writer: implemented
 - workspace open/recent workspaces: implemented
 - file tree with ignore rules: implemented
+- file tree scans up to 10 workspace levels by default: implemented
 - expandable tree state across refreshes: implemented
 - fixed-height desktop shell with panel-level scrolling: implemented
 - safe text/code file viewer: implemented
@@ -73,7 +74,7 @@ Exit criteria:
 Current status:
 
 - The desktop shell builds on Windows through Wails.
-- The workspace browser can open, refresh, preview, and remember local folders.
+- The workspace browser can open, refresh, preview, and remember local folders, scanning up to 10 levels deep by default.
 - The window shell stays fixed-height; long file trees, previews, chat, settings, and timelines scroll inside their own panels.
 - Text preview stays inside the approved workspace root and refuses binary/unsafe paths.
 - Text preview decodes common UTF-8, UTF-16, and Windows-1251 Cyrillic files.

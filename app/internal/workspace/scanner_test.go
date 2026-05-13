@@ -95,6 +95,19 @@ func TestScanHonorsDepthAndEntryLimit(t *testing.T) {
 	}
 }
 
+func TestScanDefaultDepthIncludesDeepWorkspaceFiles(t *testing.T) {
+	root := t.TempDir()
+
+	writeFile(t, root, "one/two/three/four/five/six/seven/eight/nine/ten.txt", "deep")
+
+	snapshot, err := Scan(root, ScanOptions{})
+	if err != nil {
+		t.Fatalf("Scan returned error: %v", err)
+	}
+
+	assertContains(t, snapshot.Nodes, "one/two/three/four/five/six/seven/eight/nine/ten.txt", "document")
+}
+
 func writeFile(t *testing.T, root string, relPath string, content string) {
 	t.Helper()
 
