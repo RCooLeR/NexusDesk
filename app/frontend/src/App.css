@@ -150,6 +150,27 @@ button:disabled {
     opacity: 0.72;
 }
 
+.ui-button {
+    font: inherit;
+}
+
+.ui-icon-button {
+    padding: 0;
+}
+
+.status-badge {
+    display: inline-flex;
+    border-radius: 999px;
+    padding: 3px 8px;
+    font-size: 12px;
+    font-weight: 700;
+}
+
+.status-badge-warning {
+    color: var(--nd-warning-text);
+    background: var(--nd-warning-bg);
+}
+
 .primary-action,
 .topbar-actions button,
 .prompt-box button {
@@ -473,15 +494,8 @@ button:disabled {
     line-height: 1.45;
 }
 
-.capability-card span {
-    display: inline-flex;
+.capability-card .status-badge {
     margin-top: 10px;
-    color: var(--nd-warning-text);
-    background: var(--nd-warning-bg);
-    border-radius: 999px;
-    padding: 3px 8px;
-    font-size: 12px;
-    font-weight: 700;
 }
 
 .agent-panel {

@@ -12,6 +12,7 @@ import {
     TestLLMConnection,
 } from '../../../wailsjs/go/main/App';
 import {brandAssets, capabilityIconByTitle, railItems, workspaceIconByName} from '../../brand/assets';
+import {Button, IconButton, StatusBadge} from '../../components/ui';
 import type {
     FileNode,
     FilePreview,
@@ -456,18 +457,17 @@ export function NexusDeskShell({
                 </header>
 
                 <div className="action-row">
-                    <button className="primary-action" onClick={openWorkspace} disabled={isOpeningWorkspace}>
+                    <Button className="primary-action" onClick={openWorkspace} disabled={isOpeningWorkspace} variant="primary">
                         {isOpeningWorkspace ? 'Opening...' : 'Open Folder'}
-                    </button>
-                    <button
+                    </Button>
+                    <IconButton
                         className="icon-action"
-                        title="Refresh workspace"
-                        aria-label="Refresh workspace"
+                        label="Refresh workspace"
                         onClick={refreshWorkspace}
                         disabled={isRefreshingWorkspace}
                     >
                         R
-                    </button>
+                    </IconButton>
                 </div>
 
                 <div className="tree-list">
@@ -475,7 +475,7 @@ export function NexusDeskShell({
                         <div className="recent-list">
                             <div className="recent-list-header">
                                 <div className="section-label">Recent</div>
-                                <button onClick={clearRecentWorkspaces} disabled={isManagingRecent}>Clear</button>
+                                <Button onClick={clearRecentWorkspaces} disabled={isManagingRecent} variant="subtle">Clear</Button>
                             </div>
                             {recentWorkspaces.slice(0, 4).map((recentWorkspace) => (
                                 <div className="recent-row" key={recentWorkspace.path}>
@@ -487,13 +487,14 @@ export function NexusDeskShell({
                                         <strong>{recentWorkspace.name}</strong>
                                         <small>{recentWorkspace.path}</small>
                                     </button>
-                                    <button
+                                    <Button
                                         className="recent-remove"
                                         onClick={() => void removeRecentWorkspace(recentWorkspace)}
                                         disabled={isManagingRecent}
+                                        variant="subtle"
                                     >
                                         Remove
-                                    </button>
+                                    </Button>
                                 </div>
                             ))}
                         </div>
@@ -558,9 +559,9 @@ export function NexusDeskShell({
                         <h2>{activeFile}</h2>
                     </div>
                     <div className="topbar-actions">
-                        <button>Preview</button>
-                        <button>Explain</button>
-                        <button>Report</button>
+                        <Button>Preview</Button>
+                        <Button>Explain</Button>
+                        <Button>Report</Button>
                     </div>
                 </header>
 
@@ -607,7 +608,7 @@ export function NexusDeskShell({
                                     <img src={capabilityIconByTitle[capability.title] ?? brandAssets.icons.ai} alt="" />
                                     <strong>{capability.title}</strong>
                                     <p>{capability.description}</p>
-                                    <span>{capability.status}</span>
+                                    <StatusBadge tone="warning">{capability.status}</StatusBadge>
                                 </div>
                             ))}
                         </div>
@@ -630,7 +631,7 @@ export function NexusDeskShell({
                     </div>
                     <div className="prompt-box">
                         <span>Ask about the workspace...</span>
-                        <button title="Send prompt">Send</button>
+                        <Button title="Send prompt" variant="primary">Send</Button>
                     </div>
                 </div>
 
@@ -664,12 +665,12 @@ export function NexusDeskShell({
                         <div className="settings-actions">
                             <small>{settingsStatus}</small>
                             <div className="settings-button-row">
-                                <button onClick={testLLMConnection} disabled={isTestingConnection}>
+                                <Button onClick={testLLMConnection} disabled={isTestingConnection}>
                                     {isTestingConnection ? 'Testing...' : 'Test'}
-                                </button>
-                                <button onClick={saveLLMSettings} disabled={isSavingSettings}>
+                                </Button>
+                                <Button onClick={saveLLMSettings} disabled={isSavingSettings} variant="primary">
                                     {isSavingSettings ? 'Saving...' : 'Save'}
-                                </button>
+                                </Button>
                             </div>
                         </div>
                         {probeResult && (
