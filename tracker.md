@@ -61,7 +61,7 @@ This tracker reflects the repository as it exists today and keeps planned work s
 - [x] Keep app runtime brand assets under `app/frontend/src/assets/brand/`.
 - [x] Keep source brand package under `docs/brand/` as the design source of truth.
 - [x] Keep brand asset imports centralized in `app/frontend/src/brand/assets.ts`.
-- [ ] Replace generated template font with a local Inter asset or approved system font strategy.
+- [x] Replace generated template font with an Inter-first system font strategy.
 - [ ] Add branded empty, loading, approval, and error states.
 - [ ] Add visual regression screenshots once the first interactive flows exist.
 - [ ] Confirm final app icon pipeline for Windows/macOS/Linux packaging.
