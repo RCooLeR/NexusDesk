@@ -32,6 +32,7 @@ The shell is being split only as behavior stabilizes:
 - `app/frontend/src/components/ui.tsx` contains reusable UI atoms such as buttons, cards, status badges, and branded state panels.
 - `app/frontend/src/features/shell/NexusDeskShell.tsx` owns the composed desktop workbench state.
 - `app/frontend/src/features/shell/AgentChatCard.tsx` owns the chat card presentation and delegates provider calls/history actions back to the shell.
+- `app/frontend/src/features/shell/LLMSettingsCard.tsx` owns the provider settings form and delegates persistence/probe actions back to the shell.
 
 ## Goals
 

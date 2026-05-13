@@ -586,12 +586,6 @@ button:disabled {
     padding: 0 8px;
 }
 
-.settings-card {
-    background: var(--nd-panel);
-    border: 1px solid var(--nd-border);
-    border-radius: var(--nd-radius-sm);
-}
-
 .settings-form {
     display: grid;
     gap: 10px;

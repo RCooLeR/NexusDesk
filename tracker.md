@@ -24,6 +24,7 @@ This tracker reflects the repository as it exists today and keeps planned work s
 - [x] Reusable branded empty, loading, and inline alert states live in `app/frontend/src/components/ui.tsx`.
 - [x] Shell layout is split into `app/frontend/src/features/shell/NexusDeskShell.tsx`.
 - [x] Agent chat card is split into `app/frontend/src/features/shell/AgentChatCard.tsx`.
+- [x] LLM settings card is split into `app/frontend/src/features/shell/LLMSettingsCard.tsx`.
 - [x] Workspace scanner package exists at `app/internal/workspace/`.
 - [x] Scanner skips noisy folders, symlinks, and oversized/deep listings.
 - [x] Workspace file preview is implemented in `app/internal/workspace/preview.go`.

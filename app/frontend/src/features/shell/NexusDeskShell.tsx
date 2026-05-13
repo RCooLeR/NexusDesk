@@ -1,5 +1,4 @@
 import {useEffect, useMemo, useState} from 'react';
-import type {ChangeEvent} from 'react';
 import {
     AskLLM,
     ClearRecentWorkspaces,
@@ -29,6 +28,7 @@ import type {
     WorkspaceSnapshot,
 } from '../../types';
 import {AgentChatCard} from './AgentChatCard';
+import {LLMSettingsCard} from './LLMSettingsCard';
 
 type NexusDeskShellProps = {
     state: StartupState;
@@ -401,13 +401,11 @@ export function NexusDeskShell({
         }
     }
 
-    function updateSettingsDraft(field: keyof LLMSettings) {
-        return (event: ChangeEvent<HTMLInputElement>) => {
-            setSettingsDraft((current) => ({
-                ...current,
-                [field]: event.target.value,
-            }));
-        };
+    function updateSettingsDraft(field: keyof LLMSettings, value: string) {
+        setSettingsDraft((current) => ({
+            ...current,
+            [field]: value,
+        }));
     }
 
     async function saveLLMSettings() {
@@ -724,63 +722,16 @@ export function NexusDeskShell({
                     onSendPrompt={() => void sendPrompt()}
                 />
 
-                <section className="settings-card">
-                    <div className="pane-title">
-                        <span>LLM Provider</span>
-                        <small>Local config</small>
-                    </div>
-                    <div className="settings-form">
-                        <label>
-                            <span>Provider</span>
-                            <input value={settingsDraft.providerName} onChange={updateSettingsDraft('providerName')} />
-                        </label>
-                        <label>
-                            <span>Base URL</span>
-                            <input value={settingsDraft.baseUrl} onChange={updateSettingsDraft('baseUrl')} />
-                        </label>
-                        <label>
-                            <span>Model</span>
-                            <input value={settingsDraft.model} onChange={updateSettingsDraft('model')} placeholder="Optional" />
-                        </label>
-                        <label>
-                            <span>API Key</span>
-                            <input
-                                value={settingsDraft.apiKey}
-                                onChange={updateSettingsDraft('apiKey')}
-                                placeholder="Optional"
-                                type="password"
-                            />
-                        </label>
-                        <div className="settings-actions">
-                            <small>{settingsStatus}</small>
-                            <div className="settings-button-row">
-                                <Button onClick={testLLMConnection} disabled={isTestingConnection}>
-                                    {isTestingConnection ? 'Testing...' : 'Test'}
-                                </Button>
-                                <Button onClick={saveLLMSettings} disabled={isSavingSettings} variant="primary">
-                                    {isSavingSettings ? 'Saving...' : 'Save'}
-                                </Button>
-                            </div>
-                        </div>
-                        {probeResult && (
-                            <div className={probeResult.ok ? 'probe-result ok' : 'probe-result failed'}>
-                                <strong>{probeResult.ok ? 'Connection ready' : 'Connection issue'}</strong>
-                                <span>{probeResult.endpoint}</span>
-                                {probeResult.capabilities.length > 0 && (
-                                    <div className="probe-capabilities">
-                                        {probeResult.capabilities.map((capability) => (
-                                            <small key={capability}>{capability}</small>
-                                        ))}
-                                    </div>
-                                )}
-                                {probeResult.modelSample.length > 0 && <small>{probeResult.modelSample.join(', ')}</small>}
-                                {probeResult.warnings.map((warning) => (
-                                    <small className="probe-warning" key={warning}>{warning}</small>
-                                ))}
-                            </div>
-                        )}
-                    </div>
-                </section>
+                <LLMSettingsCard
+                    isSavingSettings={isSavingSettings}
+                    isTestingConnection={isTestingConnection}
+                    onSaveSettings={() => void saveLLMSettings()}
+                    onSettingsDraftChange={updateSettingsDraft}
+                    onTestConnection={() => void testLLMConnection()}
+                    probeResult={probeResult}
+                    settingsDraft={settingsDraft}
+                    settingsStatus={settingsStatus}
+                />
 
                 <section className="timeline">
                     <div className="pane-title">
