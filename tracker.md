@@ -26,6 +26,7 @@ This tracker reflects the repository as it exists today and keeps planned work s
 - [x] Agent chat card is split into `app/frontend/src/features/shell/AgentChatCard.tsx`.
 - [x] LLM settings card is split into `app/frontend/src/features/shell/LLMSettingsCard.tsx`.
 - [x] Tool timeline is split into `app/frontend/src/features/shell/ToolTimeline.tsx`.
+- [x] Workspace navigator is split into `app/frontend/src/features/shell/WorkspaceNavigator.tsx`.
 - [x] Workspace scanner package exists at `app/internal/workspace/`.
 - [x] Scanner skips noisy folders, symlinks, and oversized/deep listings.
 - [x] Workspace file preview is implemented in `app/internal/workspace/preview.go`.

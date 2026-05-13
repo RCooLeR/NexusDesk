@@ -13,8 +13,8 @@ import {
     SelectWorkspace,
     TestLLMConnection,
 } from '../../../wailsjs/go/main/App';
-import {brandAssets, capabilityIconByTitle, railItems, workspaceIconByName} from '../../brand/assets';
-import {Button, EmptyState, IconButton, InlineAlert, LoadingState, StatusBadge} from '../../components/ui';
+import {brandAssets, capabilityIconByTitle, railItems} from '../../brand/assets';
+import {Button, EmptyState, InlineAlert, LoadingState, StatusBadge} from '../../components/ui';
 import type {
     ChatMessage,
     FileNode,
@@ -30,6 +30,7 @@ import type {
 import {AgentChatCard} from './AgentChatCard';
 import {LLMSettingsCard} from './LLMSettingsCard';
 import {ToolTimeline} from './ToolTimeline';
+import {WorkspaceNavigator} from './WorkspaceNavigator';
 
 type NexusDeskShellProps = {
     state: StartupState;
@@ -39,15 +40,6 @@ type NexusDeskShellProps = {
     onWorkspaceChange: (workspace: WorkspaceSnapshot) => void;
     onRecentWorkspacesChange: (workspaces: RecentWorkspace[]) => void;
     onLLMSettingsChange: (settings: LLMSettings) => void;
-};
-
-const fileIconByType: Record<string, string> = {
-    code: brandAssets.icons.code,
-    data: brandAssets.icons.data,
-    document: brandAssets.icons.documents,
-    image: brandAssets.icons.documents,
-    folder: brandAssets.icons.documents,
-    file: brandAssets.icons.documents,
 };
 
 export function NexusDeskShell({
@@ -525,114 +517,26 @@ export function NexusDeskShell({
                 ))}
             </aside>
 
-            <section className="navigator">
-                <header className="navigator-header">
-                    <div className="product-lockup" aria-label="NexusDesk">
-                        <img src={brandAssets.symbolDark} alt="" />
-                        <div>
-                            <h1><span>Nexus</span><strong>Desk</strong></h1>
-                            <small>AI Workbench for Code, Data &amp; Ops</small>
-                        </div>
-                    </div>
-                    <p className="eyebrow">Workspace</p>
-                    <span>{state.buildStage}</span>
-                </header>
-
-                <div className="action-row">
-                    <Button className="primary-action" onClick={openWorkspace} disabled={isOpeningWorkspace} variant="primary">
-                        {isOpeningWorkspace ? 'Opening...' : 'Open Folder'}
-                    </Button>
-                    <IconButton
-                        className="icon-action"
-                        label="Refresh workspace"
-                        onClick={refreshWorkspace}
-                        disabled={isRefreshingWorkspace}
-                    >
-                        R
-                    </IconButton>
-                </div>
-
-                <div className="tree-list">
-                    {!workspace && recentWorkspaces.length > 0 && (
-                        <div className="recent-list">
-                            <div className="recent-list-header">
-                                <div className="section-label">Recent</div>
-                                <Button onClick={clearRecentWorkspaces} disabled={isManagingRecent} variant="subtle">Clear</Button>
-                            </div>
-                            {recentWorkspaces.slice(0, 4).map((recentWorkspace) => (
-                                <div className="recent-row" key={recentWorkspace.path}>
-                                    <button
-                                        className="recent-item"
-                                        onClick={() => reopenWorkspace(recentWorkspace)}
-                                        disabled={isOpeningWorkspace}
-                                    >
-                                        <strong>{recentWorkspace.name}</strong>
-                                        <small>{recentWorkspace.path}</small>
-                                    </button>
-                                    <Button
-                                        className="recent-remove"
-                                        onClick={() => void removeRecentWorkspace(recentWorkspace)}
-                                        disabled={isManagingRecent}
-                                        variant="subtle"
-                                    >
-                                        Remove
-                                    </Button>
-                                </div>
-                            ))}
-                        </div>
-                    )}
-
-                    {workspace ? (
-                        <>
-                            <div className="workspace-summary">
-                                <strong>{workspace.name}</strong>
-                                <small>{workspace.truncated ? 'Showing first indexed items' : workspaceStatus}</small>
-                            </div>
-                            {workspaceNodes.map((node) => (
-                                <button
-                                    key={node.relPath}
-                                    className={activeFile === node.relPath ? 'tree-item selected' : 'tree-item'}
-                                    onClick={() => void selectWorkspaceNode(node)}
-                                    style={{paddingLeft: `${8 + Math.min(node.depth, 4) * 10}px`}}
-                                >
-                                    <span className="tree-disclosure">
-                                        {node.kind === 'directory' ? (expandedDirectories.has(node.relPath) ? '-' : '+') : ''}
-                                    </span>
-                                    <span className={`file-glyph ${node.kind}`}>
-                                        <img src={fileIconByType[node.fileType] ?? brandAssets.icons.documents} alt="" />
-                                    </span>
-                                    <span>
-                                        <strong>{node.name}</strong>
-                                        <small>{node.meta}</small>
-                                    </span>
-                                </button>
-                            ))}
-                        </>
-                    ) : (
-                        <>
-                            <div className="workspace-summary">
-                                <strong>Scaffold preview</strong>
-                                <small>{workspaceStatus}</small>
-                            </div>
-                            {state.workspaceItems.map((item) => (
-                                <button
-                                    key={item.name}
-                                    className={activeFile.startsWith(item.name) ? 'tree-item selected' : 'tree-item'}
-                                    onClick={() => selectFallbackItem(item.name)}
-                                >
-                                    <span className={`file-glyph ${item.kind}`}>
-                                        <img src={workspaceIconByName[item.name] ?? brandAssets.icons.documents} alt="" />
-                                    </span>
-                                    <span>
-                                        <strong>{item.name}</strong>
-                                        <small>{item.meta}</small>
-                                    </span>
-                                </button>
-                            ))}
-                        </>
-                    )}
-                </div>
-            </section>
+            <WorkspaceNavigator
+                activeFile={activeFile}
+                buildStage={state.buildStage}
+                expandedDirectories={expandedDirectories}
+                isManagingRecent={isManagingRecent}
+                isOpeningWorkspace={isOpeningWorkspace}
+                isRefreshingWorkspace={isRefreshingWorkspace}
+                onClearRecentWorkspaces={() => void clearRecentWorkspaces()}
+                onOpenWorkspace={() => void openWorkspace()}
+                onRefreshWorkspace={() => void refreshWorkspace()}
+                onRemoveRecentWorkspace={(recentWorkspace) => void removeRecentWorkspace(recentWorkspace)}
+                onReopenWorkspace={(recentWorkspace) => void reopenWorkspace(recentWorkspace)}
+                onSelectFallbackItem={selectFallbackItem}
+                onSelectWorkspaceNode={(node) => void selectWorkspaceNode(node)}
+                recentWorkspaces={recentWorkspaces}
+                workspace={workspace}
+                workspaceItems={state.workspaceItems}
+                workspaceNodes={workspaceNodes}
+                workspaceStatus={workspaceStatus}
+            />
 
             <main className="workbench">
                 <header className="topbar">
