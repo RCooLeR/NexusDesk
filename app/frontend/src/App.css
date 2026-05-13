@@ -130,14 +130,6 @@
     line-height: 1.2;
 }
 
-.navigator-header span,
-.agent-panel header span,
-.pane-title small,
-.tree-item small {
-    color: var(--nd-muted-text);
-    font-size: 12px;
-}
-
 .eyebrow {
     margin: 0;
     color: var(--nd-electric-blue);
