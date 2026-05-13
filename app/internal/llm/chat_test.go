@@ -6,6 +6,7 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"testing"
+	"time"
 
 	"NexusDesk/internal/storage"
 )
@@ -68,6 +69,20 @@ func TestChatRequiresConfiguredModel(t *testing.T) {
 	}, ChatRequest{Prompt: "Hello"})
 	if err == nil {
 		t.Fatal("expected missing model error")
+	}
+}
+
+func TestChatUsesLongerTimeoutThanProbe(t *testing.T) {
+	client := NewClient()
+	chatClient := client.chatHTTPClient()
+	if chatClient.Timeout != chatTimeout {
+		t.Fatalf("expected chat timeout, got %s", chatClient.Timeout)
+	}
+	if client.httpClient.Timeout != probeTimeout {
+		t.Fatalf("expected probe client timeout to stay unchanged, got %s", client.httpClient.Timeout)
+	}
+	if chatTimeout < time.Minute {
+		t.Fatalf("chat timeout is too short: %s", chatTimeout)
 	}
 }
 

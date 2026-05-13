@@ -11,9 +11,12 @@ import (
 	"net/url"
 	"path"
 	"strings"
+	"time"
 
 	"NexusDesk/internal/storage"
 )
+
+const chatTimeout = 5 * time.Minute
 
 type ChatRequest struct {
 	Prompt         string `json:"prompt"`
@@ -37,10 +40,6 @@ func (c *Client) ChatStream(ctx context.Context, settings storage.LLMSettings, c
 }
 
 func (c *Client) chat(ctx context.Context, settings storage.LLMSettings, chatRequest ChatRequest, stream bool, onDelta func(string) error) (ChatResult, error) {
-	if c.httpClient == nil {
-		c.httpClient = &http.Client{Timeout: probeTimeout}
-	}
-
 	settings = storage.LLMSettings{
 		ProviderName: strings.TrimSpace(settings.ProviderName),
 		BaseURL:      strings.TrimSpace(settings.BaseURL),
@@ -85,7 +84,7 @@ func (c *Client) chat(ctx context.Context, settings storage.LLMSettings, chatReq
 		request.Header.Set("Authorization", "Bearer "+settings.APIKey)
 	}
 
-	response, err := c.httpClient.Do(request)
+	response, err := c.chatHTTPClient().Do(request)
 	if err != nil {
 		return ChatResult{}, err
 	}
@@ -124,6 +123,18 @@ func (c *Client) chat(ctx context.Context, settings storage.LLMSettings, chatReq
 		Endpoint:       endpoint,
 		ContextRelPath: strings.TrimSpace(chatRequest.ContextRelPath),
 	}, nil
+}
+
+func (c *Client) chatHTTPClient() *http.Client {
+	if c.httpClient == nil {
+		return &http.Client{Timeout: chatTimeout}
+	}
+	if c.httpClient.Timeout > 0 && c.httpClient.Timeout < chatTimeout {
+		chatClient := *c.httpClient
+		chatClient.Timeout = chatTimeout
+		return &chatClient
+	}
+	return c.httpClient
 }
 
 func readChatCompletionStream(response *http.Response, onDelta func(string) error) (string, error) {
