@@ -27,7 +27,7 @@ These stores live behind `app/internal/storage/` so the later SQLite migration c
 
 ## Frontend Structure
 
-The shell is being split only as behavior stabilizes:
+The shell is now mostly orchestration. Feature panels own stable presentation, while `NexusDeskShell.tsx` keeps workspace, preview, provider, and chat state wiring close to the Wails bindings:
 
 - `app/frontend/src/components/ui.tsx` contains reusable UI atoms such as buttons, cards, status badges, and branded state panels.
 - `app/frontend/src/features/shell/NexusDeskShell.tsx` owns the composed desktop workbench state.
