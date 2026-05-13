@@ -4,4 +4,6 @@ import {main} from '../models';
 
 export function GetStartupState():Promise<main.StartupState>;
 
+export function RefreshWorkspace():Promise<main.WorkspaceOpenResult>;
+
 export function SelectWorkspace():Promise<main.WorkspaceOpenResult>;

@@ -1,5 +1,5 @@
 import {useMemo, useState} from 'react';
-import {SelectWorkspace} from '../../../wailsjs/go/main/App';
+import {RefreshWorkspace, SelectWorkspace} from '../../../wailsjs/go/main/App';
 import {brandAssets, capabilityIconByTitle, railItems, workspaceIconByName} from '../../brand/assets';
 import type {FileNode, StartupState, WorkspaceSnapshot} from '../../types';
 
@@ -22,6 +22,7 @@ export function NexusDeskShell({state, workspace, onWorkspaceChange}: NexusDeskS
     const [activeFile, setActiveFile] = useState('docs/08_DELIVERY_PLAN.md');
     const [workspaceStatus, setWorkspaceStatus] = useState('No workspace opened yet.');
     const [isOpeningWorkspace, setIsOpeningWorkspace] = useState(false);
+    const [isRefreshingWorkspace, setIsRefreshingWorkspace] = useState(false);
 
     const selectedMeta = useMemo(() => {
         if (workspace) {
@@ -67,6 +68,39 @@ export function NexusDeskShell({state, workspace, onWorkspaceChange}: NexusDeskS
         }
     }
 
+    async function refreshWorkspace() {
+        if (!workspace) {
+            setWorkspaceStatus('Open a workspace before refreshing.');
+            return;
+        }
+
+        setIsRefreshingWorkspace(true);
+        setWorkspaceStatus(`Refreshing ${workspace.name}...`);
+
+        try {
+            const result = await RefreshWorkspace();
+            if (!result.selected) {
+                setWorkspaceStatus('Open a workspace before refreshing.');
+                return;
+            }
+
+            onWorkspaceChange(result.snapshot);
+            if (!result.snapshot.nodes.some((node) => node.relPath === activeFile)) {
+                setActiveFile(result.snapshot.nodes[0]?.relPath ?? result.snapshot.name);
+            }
+            setWorkspaceStatus(`${result.snapshot.nodes.length} items refreshed from ${result.snapshot.name}.`);
+        } catch (error) {
+            const message = error instanceof Error ? error.message : '';
+            if (message.includes('undefined') || message.includes('window')) {
+                setWorkspaceStatus('Workspace refresh is available in the desktop runtime.');
+                return;
+            }
+            setWorkspaceStatus(message || 'Workspace refresh failed.');
+        } finally {
+            setIsRefreshingWorkspace(false);
+        }
+    }
+
     return (
         <div className="app-shell">
             <aside className="workspace-rail">
@@ -102,7 +136,15 @@ export function NexusDeskShell({state, workspace, onWorkspaceChange}: NexusDeskS
                     <button className="primary-action" onClick={openWorkspace} disabled={isOpeningWorkspace}>
                         {isOpeningWorkspace ? 'Opening...' : 'Open Folder'}
                     </button>
-                    <button className="icon-action" title="Refresh workspace">R</button>
+                    <button
+                        className="icon-action"
+                        title="Refresh workspace"
+                        aria-label="Refresh workspace"
+                        onClick={refreshWorkspace}
+                        disabled={isRefreshingWorkspace}
+                    >
+                        R
+                    </button>
                 </div>
 
                 <div className="tree-list">

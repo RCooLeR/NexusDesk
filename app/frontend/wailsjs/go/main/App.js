@@ -6,6 +6,10 @@ export function GetStartupState() {
   return window['go']['main']['App']['GetStartupState']();
 }
 
+export function RefreshWorkspace() {
+  return window['go']['main']['App']['RefreshWorkspace']();
+}
+
 export function SelectWorkspace() {
   return window['go']['main']['App']['SelectWorkspace']();
 }

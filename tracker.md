@@ -22,6 +22,8 @@ This tracker reflects the repository as it exists today and keeps planned work s
 - [x] Scanner skips noisy folders, symlinks, and oversized/deep listings.
 - [x] Desktop workspace picker is bound through `SelectWorkspace`.
 - [x] Frontend switches from scaffold preview to indexed workspace nodes after folder selection.
+- [x] Backend remembers the selected workspace root for the session.
+- [x] Refresh action rescans the active workspace through `RefreshWorkspace`.
 - [x] Helper services placeholder exists at `services/docker-compose.yml`.
 - [x] Repository ignore rules exist in `.gitignore`.
 - [x] Current and target directory structures are documented separately.
@@ -45,7 +47,8 @@ This tracker reflects the repository as it exists today and keeps planned work s
 - [x] Add a safe workspace folder picker.
 - [x] Build a real file tree from approved workspace roots.
 - [ ] Persist recent workspaces locally.
-- [ ] Add refresh behavior for the currently opened workspace.
+- [x] Add refresh behavior for the currently opened workspace.
+- [ ] Preserve selected file and expanded tree state across refreshes.
 - [ ] Add local settings storage for LLM provider configuration.
 - [ ] Split brand-aware shell sections into smaller rail, navigator, workbench pane, agent panel, and timeline components when they need behavior.
 - [ ] Add first reusable button, icon button, card, and status badge components.

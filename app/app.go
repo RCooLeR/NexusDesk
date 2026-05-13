@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"errors"
+	"sync"
 
 	"NexusDesk/internal/workspace"
 	"github.com/wailsapp/wails/v2/pkg/runtime"
@@ -41,7 +42,9 @@ type WorkspaceOpenResult struct {
 }
 
 type App struct {
-	ctx context.Context
+	ctx           context.Context
+	workspaceMu   sync.RWMutex
+	workspaceRoot string
 }
 
 func NewApp() *App {
@@ -108,8 +111,39 @@ func (a *App) SelectWorkspace() (WorkspaceOpenResult, error) {
 		return WorkspaceOpenResult{}, err
 	}
 
+	a.setWorkspaceRoot(snapshot.Root)
+
 	return WorkspaceOpenResult{
 		Selected: true,
 		Snapshot: snapshot,
 	}, nil
+}
+
+func (a *App) RefreshWorkspace() (WorkspaceOpenResult, error) {
+	root := a.getWorkspaceRoot()
+	if root == "" {
+		return WorkspaceOpenResult{Selected: false}, nil
+	}
+
+	snapshot, err := workspace.Scan(root, workspace.ScanOptions{})
+	if err != nil {
+		return WorkspaceOpenResult{}, err
+	}
+
+	return WorkspaceOpenResult{
+		Selected: true,
+		Snapshot: snapshot,
+	}, nil
+}
+
+func (a *App) setWorkspaceRoot(root string) {
+	a.workspaceMu.Lock()
+	defer a.workspaceMu.Unlock()
+	a.workspaceRoot = root
+}
+
+func (a *App) getWorkspaceRoot() string {
+	a.workspaceMu.RLock()
+	defer a.workspaceMu.RUnlock()
+	return a.workspaceRoot
 }
