@@ -1,6 +1,6 @@
 import {brandAssets, capabilityIconByTitle} from '../../brand/assets';
 import {Button, EmptyState, InlineAlert, LoadingState, StatusBadge} from '../../components/ui';
-import type {Capability, FilePreview, WorkspaceArtifact, WorkspaceSnapshot} from '../../types';
+import type {Capability, FilePreview, TablePreview, WorkspaceArtifact, WorkspaceSnapshot} from '../../types';
 import {HighlightedCode} from './HighlightedCode';
 
 type WorkbenchPanelProps = {
@@ -84,6 +84,11 @@ export function WorkbenchPanel({
                                         <iframe src={filePreview.content} title={filePreview.name} />
                                     </div>
                                 </>
+                            ) : filePreview?.table ? (
+                                <>
+                                    {filePreview.message && <InlineAlert>{filePreview.message}</InlineAlert>}
+                                    <CsvTablePreview table={filePreview.table} />
+                                </>
                             ) : filePreview?.content ? (
                                 <>
                                     {filePreview.message && <InlineAlert>{filePreview.message}</InlineAlert>}
@@ -148,5 +153,30 @@ export function WorkbenchPanel({
                 </article>
             </section>
         </main>
+    );
+}
+
+function CsvTablePreview({table}: {table: TablePreview}) {
+    return (
+        <div className="csv-preview" aria-label="CSV table preview">
+            <table>
+                <thead>
+                    <tr>
+                        {table.columns.map((column, index) => (
+                            <th key={`${column}-${index}`}>{column || `Column ${index + 1}`}</th>
+                        ))}
+                    </tr>
+                </thead>
+                <tbody>
+                    {table.rows.map((row, rowIndex) => (
+                        <tr key={rowIndex}>
+                            {table.columns.map((_, columnIndex) => (
+                                <td key={columnIndex}>{row[columnIndex] ?? ''}</td>
+                            ))}
+                        </tr>
+                    ))}
+                </tbody>
+            </table>
+        </div>
     );
 }

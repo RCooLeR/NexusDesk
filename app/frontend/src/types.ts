@@ -39,9 +39,17 @@ export type FilePreview = {
     fileType: string;
     content: string;
     encoding?: string;
+    table?: TablePreview;
     truncated: boolean;
     message: string;
     size: number;
+};
+
+export type TablePreview = {
+    columns: string[];
+    rows: string[][];
+    totalRows: number;
+    truncated: boolean;
 };
 
 export type MarkdownReport = {

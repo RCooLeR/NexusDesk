@@ -152,11 +152,12 @@ Current implementation:
 
 - previews UTF-8 text/code within a 64 KB default cap
 - decodes UTF-8 with BOM, UTF-16 LE/BE with or without BOM, and Windows-1251 Cyrillic text previews
+- parses CSV files into bounded table previews
 - renders common image files as capped inline data URLs
 - renders PDF files as capped inline data URLs
 - sends selected chat context with a smaller 16 KB cap
 - trims partial UTF-8 characters at truncation boundaries
-- shows unsupported state for binary or non-UTF-8 files
+- shows unsupported state for binary or unsupported text-encoding files
 - excludes image and PDF previews from text chat context
 - creates Markdown report artifacts under `.nexusdesk/artifacts/` from selected previews
 - lists generated Markdown artifacts from `.nexusdesk/artifacts/`
@@ -200,6 +201,7 @@ For Excel and CSV:
 - detect headers
 - count rows and columns
 - sample rows
+- render a bounded CSV table preview before richer profiling exists
 - infer column types
 - profile missing values and numeric ranges
 - optionally load tables into DuckDB

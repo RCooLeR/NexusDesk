@@ -37,6 +37,7 @@ Deliverables:
 - expandable tree state across refreshes: implemented
 - fixed-height desktop shell with panel-level scrolling: implemented
 - safe text/code file viewer: implemented
+- bounded CSV table preview: implemented
 - image preview: implemented
 - basic PDF preview: implemented
 - lightweight syntax highlighting: implemented
@@ -67,6 +68,7 @@ Current status:
 - The window shell stays fixed-height; long file trees, previews, chat, settings, and timelines scroll inside their own panels.
 - Text preview stays inside the approved workspace root and refuses binary/unsafe paths.
 - Text preview decodes common UTF-8, UTF-16, and Windows-1251 Cyrillic files.
+- CSV files render as bounded table previews while retaining raw text for selected chat context.
 - Common image previews render inline as capped data URLs from inside the approved workspace root.
 - PDF previews render inline as capped data URLs from inside the approved workspace root.
 - Recent workspaces and LLM settings persist locally.
@@ -111,6 +113,7 @@ Deliverables:
 
 - Excel workbook inspector
 - CSV loader
+- CSV table preview: implemented
 - dataset profiles
 - DuckDB local analytics
 - query dataset tool

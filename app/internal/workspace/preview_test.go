@@ -199,6 +199,57 @@ func TestPreviewDecodesWindows1251Text(t *testing.T) {
 	}
 }
 
+func TestPreviewParsesCSVTable(t *testing.T) {
+	root := t.TempDir()
+	writeFile(t, root, "data/report.csv", "name,value\nalpha,10\nbeta,20\n")
+
+	preview, err := Preview(root, "data/report.csv", PreviewOptions{})
+	if err != nil {
+		t.Fatalf("Preview returned error: %v", err)
+	}
+
+	if preview.Table == nil {
+		t.Fatal("expected CSV table preview")
+	}
+	if preview.Table.TotalRows != 2 {
+		t.Fatalf("expected 2 data rows, got %d", preview.Table.TotalRows)
+	}
+	if got := strings.Join(preview.Table.Columns, ","); got != "name,value" {
+		t.Fatalf("unexpected columns: %s", got)
+	}
+	if preview.Table.Rows[1][0] != "beta" {
+		t.Fatalf("expected second row beta, got %q", preview.Table.Rows[1][0])
+	}
+	if preview.Content == "" {
+		t.Fatal("expected raw CSV content to remain available")
+	}
+}
+
+func TestPreviewTruncatesCSVTableRows(t *testing.T) {
+	root := t.TempDir()
+	var builder strings.Builder
+	builder.WriteString("name,value\n")
+	for index := 0; index < csvPreviewMaxRows+2; index++ {
+		builder.WriteString("row,1\n")
+	}
+	writeFile(t, root, "data/report.csv", builder.String())
+
+	preview, err := Preview(root, "data/report.csv", PreviewOptions{})
+	if err != nil {
+		t.Fatalf("Preview returned error: %v", err)
+	}
+
+	if preview.Table == nil {
+		t.Fatal("expected CSV table preview")
+	}
+	if len(preview.Table.Rows) != csvPreviewMaxRows {
+		t.Fatalf("expected %d rendered rows, got %d", csvPreviewMaxRows, len(preview.Table.Rows))
+	}
+	if !preview.Table.Truncated {
+		t.Fatal("expected CSV table preview truncation")
+	}
+}
+
 func TestPreviewReturnsPDFDataURL(t *testing.T) {
 	root := t.TempDir()
 	path := filepath.Join(root, "brief.pdf")

@@ -40,6 +40,7 @@ This tracker reflects the repository as it exists today and keeps planned work s
 - [x] UTF-8 BOM and UTF-16 text previews are decoded.
 - [x] BOM-less UTF-16 and Windows-1251 Cyrillic text previews are decoded.
 - [x] Source preview headers show file type, decoded encoding, size, and truncation status when available.
+- [x] CSV previews parse bounded rows/columns into a table while keeping raw text content available for chat context.
 - [x] Lightweight syntax highlighting exists at `app/frontend/src/features/shell/HighlightedCode.tsx`.
 - [x] Desktop workspace picker is bound through `SelectWorkspace`.
 - [x] Frontend switches from scaffold preview to indexed workspace nodes after folder selection.
@@ -107,6 +108,7 @@ This tracker reflects the repository as it exists today and keeps planned work s
 - [x] Add safe image preview for selected workspace files.
 - [x] Add basic PDF preview for selected workspace files.
 - [x] Add lightweight syntax highlighting for text/code previews.
+- [x] Add first bounded CSV table preview.
 - [x] Persist recent workspaces locally.
 - [x] Add refresh behavior for the currently opened workspace.
 - [x] Preserve selected file across refreshes.

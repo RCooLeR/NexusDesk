@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"encoding/base64"
 	"encoding/binary"
+	"encoding/csv"
 	"errors"
 	"fmt"
 	"io"
@@ -21,21 +22,31 @@ import (
 const defaultPreviewMaxBytes = 64 * 1024
 const defaultImagePreviewMaxBytes = 2 * 1024 * 1024
 const defaultDocumentPreviewMaxBytes = 8 * 1024 * 1024
+const csvPreviewMaxRows = 50
+const csvPreviewMaxColumns = 30
 
 type PreviewOptions struct {
 	MaxBytes int
 }
 
+type TablePreview struct {
+	Columns   []string   `json:"columns"`
+	Rows      [][]string `json:"rows"`
+	TotalRows int        `json:"totalRows"`
+	Truncated bool       `json:"truncated"`
+}
+
 type FilePreview struct {
-	RelPath   string `json:"relPath"`
-	Name      string `json:"name"`
-	Kind      string `json:"kind"`
-	FileType  string `json:"fileType"`
-	Content   string `json:"content"`
-	Encoding  string `json:"encoding"`
-	Truncated bool   `json:"truncated"`
-	Message   string `json:"message"`
-	Size      int64  `json:"size"`
+	RelPath   string        `json:"relPath"`
+	Name      string        `json:"name"`
+	Kind      string        `json:"kind"`
+	FileType  string        `json:"fileType"`
+	Content   string        `json:"content"`
+	Encoding  string        `json:"encoding"`
+	Table     *TablePreview `json:"table,omitempty"`
+	Truncated bool          `json:"truncated"`
+	Message   string        `json:"message"`
+	Size      int64         `json:"size"`
 }
 
 func Preview(root string, relPath string, options PreviewOptions) (FilePreview, error) {
@@ -149,13 +160,92 @@ func Preview(root string, relPath string, options PreviewOptions) (FilePreview, 
 	preview.Content = string(normalized)
 	preview.Encoding = encoding
 	preview.Truncated = truncated
-	if truncated {
+	if strings.EqualFold(filepath.Ext(info.Name()), ".csv") {
+		table, err := parseCSVPreview(preview.Content, csvPreviewMaxRows, csvPreviewMaxColumns)
+		if err == nil && len(table.Columns) > 0 {
+			preview.Table = &table
+			preview.Message = fmt.Sprintf("CSV table preview loaded with %d rows.", table.TotalRows)
+			if table.Truncated || truncated {
+				preview.Message = "CSV table preview truncated to keep the app responsive."
+			}
+		}
+	}
+	if truncated && preview.Table == nil {
 		preview.Message = "Preview truncated to keep the app responsive."
-	} else if encoding != "utf-8" {
+	} else if encoding != "utf-8" && preview.Message == "" {
 		preview.Message = fmt.Sprintf("Decoded as %s.", encoding)
 	}
 
 	return preview, nil
+}
+
+func parseCSVPreview(content string, maxRows int, maxColumns int) (TablePreview, error) {
+	reader := csv.NewReader(strings.NewReader(content))
+	reader.FieldsPerRecord = -1
+	records, err := reader.ReadAll()
+	if err != nil {
+		return TablePreview{}, err
+	}
+	if len(records) == 0 {
+		return TablePreview{}, nil
+	}
+
+	columns := trimRecordWidth(records[0], maxColumns)
+	rows := make([][]string, 0, minInt(len(records)-1, maxRows))
+	totalRows := 0
+	for _, record := range records[1:] {
+		totalRows++
+		if len(rows) >= maxRows {
+			continue
+		}
+		rows = append(rows, trimRecordWidth(record, maxColumns))
+	}
+
+	if len(columns) == 0 {
+		for index := range widestRecord(records, maxColumns) {
+			columns = append(columns, fmt.Sprintf("Column %d", index+1))
+		}
+	}
+
+	return TablePreview{
+		Columns:   columns,
+		Rows:      rows,
+		TotalRows: totalRows,
+		Truncated: totalRows > len(rows) || recordsWiderThan(records, maxColumns),
+	}, nil
+}
+
+func trimRecordWidth(record []string, maxColumns int) []string {
+	if len(record) <= maxColumns {
+		return record
+	}
+	return record[:maxColumns]
+}
+
+func widestRecord(records [][]string, maxColumns int) []string {
+	widest := []string{}
+	for _, record := range records {
+		if len(record) > len(widest) {
+			widest = record
+		}
+	}
+	return trimRecordWidth(widest, maxColumns)
+}
+
+func recordsWiderThan(records [][]string, maxColumns int) bool {
+	for _, record := range records {
+		if len(record) > maxColumns {
+			return true
+		}
+	}
+	return false
+}
+
+func minInt(left int, right int) int {
+	if left < right {
+		return left
+	}
+	return right
 }
 
 func cleanPreviewRelPath(relPath string) (string, error) {
