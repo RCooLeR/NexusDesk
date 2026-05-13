@@ -12,7 +12,7 @@ import {
     TestLLMConnection,
 } from '../../../wailsjs/go/main/App';
 import {brandAssets, capabilityIconByTitle, railItems, workspaceIconByName} from '../../brand/assets';
-import {Button, IconButton, StatusBadge} from '../../components/ui';
+import {Button, EmptyState, IconButton, InlineAlert, LoadingState, StatusBadge} from '../../components/ui';
 import type {
     FileNode,
     FilePreview,
@@ -574,16 +574,23 @@ export function NexusDeskShell({
                         {workspace ? (
                             <div className="file-preview" aria-label="Workspace file preview">
                                 {isLoadingPreview ? (
-                                    <div className="preview-empty">Loading preview...</div>
+                                    <LoadingState
+                                        detail="Reading the selected file inside the approved workspace root."
+                                        iconSrc={brandAssets.icons.documents}
+                                        title="Loading preview"
+                                    />
                                 ) : filePreview?.content ? (
                                     <>
-                                        {filePreview.message && <div className="preview-banner">{filePreview.message}</div>}
+                                        {filePreview.message && <InlineAlert>{filePreview.message}</InlineAlert>}
                                         <pre>{filePreview.content}</pre>
                                     </>
                                 ) : (
-                                    <div className="preview-empty">
-                                        {filePreview?.message ?? 'Select a file from the workspace tree to preview it here.'}
-                                    </div>
+                                    <EmptyState
+                                        detail={filePreview?.message ?? 'Select a file from the workspace tree to preview it here.'}
+                                        iconSrc={brandAssets.icons.documents}
+                                        title={filePreview?.kind === 'unsupported' ? 'Preview unavailable' : 'No file selected'}
+                                        tone={filePreview?.kind === 'unsupported' ? 'warning' : 'neutral'}
+                                    />
                                 )}
                             </div>
                         ) : (

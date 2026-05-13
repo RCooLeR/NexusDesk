@@ -27,16 +27,20 @@ Goal: create a usable local desktop app with project browsing and LLM chat.
 
 Deliverables:
 
-- Wails desktop app shell
-- frontend layout with project tree, editor area, and chat panel
-- local SQLite app database
-- workspace open/recent workspaces
-- file tree with ignore rules
-- text/code file viewer
+- Wails desktop app shell: implemented
+- frontend layout with project tree, editor area, and chat panel: implemented
+- local JSON app config for recent workspaces and LLM settings: implemented
+- local SQLite app database: planned
+- workspace open/recent workspaces: implemented
+- file tree with ignore rules: implemented
+- expandable tree state across refreshes: implemented
+- safe text/code file viewer: implemented
 - Monaco editor integration
 - image preview
 - basic PDF preview
-- LLM settings screen
+- LLM settings screen: implemented
+- LLM connection test for OpenAI-compatible `/models`: implemented
+- LLM capability hints from provider model IDs: implemented
 - chat with configured LLM URL
 - chat history per workspace
 - read selected file into chat context
@@ -47,6 +51,15 @@ Exit criteria:
 - selected files can be included in context
 - file access stays inside workspace root
 - app runs on at least one development platform
+
+Current status:
+
+- The desktop shell builds on Windows through Wails.
+- The workspace browser can open, refresh, preview, and remember local folders.
+- Text preview stays inside the approved workspace root and refuses binary/unsafe paths.
+- Recent workspaces and LLM settings persist locally.
+- API keys are masked before leaving backend settings storage, but OS credential storage is still pending.
+- Chat, context packaging, Monaco, image/PDF previews, and SQLite persistence are still planned.
 
 ## Phase 2: Files, Documents, And Artifacts
 

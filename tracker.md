@@ -20,6 +20,7 @@ This tracker reflects the repository as it exists today and keeps planned work s
 - [x] Runtime brand asset mapping lives in `app/frontend/src/brand/assets.ts`.
 - [x] Browser-safe fallback startup state lives in `app/frontend/src/data/startupState.ts`.
 - [x] First reusable button, icon button, and status badge components live in `app/frontend/src/components/ui.tsx`.
+- [x] Reusable branded empty, loading, and inline alert states live in `app/frontend/src/components/ui.tsx`.
 - [x] Shell layout is split into `app/frontend/src/features/shell/NexusDeskShell.tsx`.
 - [x] Workspace scanner package exists at `app/internal/workspace/`.
 - [x] Scanner skips noisy folders, symlinks, and oversized/deep listings.
@@ -62,7 +63,8 @@ This tracker reflects the repository as it exists today and keeps planned work s
 - [x] Keep source brand package under `docs/brand/` as the design source of truth.
 - [x] Keep brand asset imports centralized in `app/frontend/src/brand/assets.ts`.
 - [x] Replace generated template font with an Inter-first system font strategy.
-- [ ] Add branded empty, loading, approval, and error states.
+- [x] Add branded empty, loading, and inline alert states.
+- [ ] Add branded approval states when approval flows are implemented.
 - [ ] Add visual regression screenshots once the first interactive flows exist.
 - [ ] Confirm final app icon pipeline for Windows/macOS/Linux packaging.
 - [ ] Add macOS/Linux icon generation checks when packaging those targets.

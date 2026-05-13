@@ -1,5 +1,20 @@
 # Developer Experience
 
+## Current Verification Loop
+
+On the current Windows workstation, use this loop after backend, frontend, binding, or asset changes:
+
+```powershell
+$env:NODE_OPTIONS='--use-system-ca --dns-result-order=ipv4first'
+go test ./...
+npm.cmd run build
+wails build
+```
+
+Run Go commands from `app/`, frontend commands from `app/frontend/`, and Wails build commands from `app/`.
+
+When Wails regenerates frontend bindings, `app/frontend/wailsjs/go/models.ts` can pick up whitespace-only changes. Clean those before committing if `git diff --check` reports trailing whitespace.
+
 ## Goals
 
 NexusDesk should be easy to run, easy to test, easy to reason about, and hard to accidentally make unsafe.

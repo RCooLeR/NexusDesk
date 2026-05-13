@@ -50,6 +50,20 @@ flowchart TD
   Index --> Ready["Workspace ready for chat and search"]
 ```
 
+## Current Implementation Snapshot
+
+The current app implements the first safe workspace slice:
+
+- `app/internal/workspace/scanner.go` scans an approved workspace root.
+- The scanner skips noisy folders, symlinks, deep listings, and oversized result sets.
+- The frontend renders indexed nodes as an expandable tree and preserves expanded directories across refreshes.
+- `app/internal/workspace/preview.go` reads selected files only through a rooted relative path.
+- File previews reject traversal, symlinks, binary or non-UTF-8 content, and oversized previews.
+- Workspace open/recent/refresh flows are bound through Wails methods on `app/app.go`.
+- Recent workspaces are stored in local JSON config through `app/internal/storage/recent_workspaces.go`.
+
+The app does not yet build persistent chunks, embeddings, dataset profiles, or a file watcher. Those remain future indexing work.
+
 ## File Classification
 
 Every file should be assigned a type and preview mode.
@@ -131,6 +145,13 @@ For text and code files:
 - build chunks by logical boundaries
 - prefer heading, function, or block boundaries when possible
 - keep line ranges for citations and patch previews
+
+Current implementation:
+
+- previews UTF-8 text/code within a 64 KB default cap
+- trims partial UTF-8 characters at truncation boundaries
+- shows unsupported state for binary or non-UTF-8 files
+- does not yet persist line-aware chunks or citations
 
 ### Markdown
 

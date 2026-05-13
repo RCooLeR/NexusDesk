@@ -171,6 +171,62 @@ button:disabled {
     background: var(--nd-warning-bg);
 }
 
+.state-panel {
+    min-height: 220px;
+    display: grid;
+    justify-items: center;
+    align-content: center;
+    gap: 9px;
+    color: #475467;
+    padding: 24px;
+    text-align: center;
+}
+
+.state-panel img {
+    width: 30px;
+    height: 30px;
+}
+
+.state-panel strong {
+    color: #1f2937;
+    font-size: 15px;
+}
+
+.state-panel p {
+    max-width: 360px;
+    margin: 0;
+    font-size: 13px;
+    line-height: 1.45;
+}
+
+.state-panel-warning strong {
+    color: var(--nd-warning-text);
+}
+
+.state-panel-loading img {
+    opacity: 0.72;
+}
+
+.state-loader {
+    width: 92px;
+    height: 3px;
+    border-radius: 999px;
+    background: linear-gradient(90deg, var(--nd-electric-blue), var(--nd-sky-blue));
+}
+
+.inline-alert {
+    border-bottom: 1px solid var(--nd-border-soft);
+    background: #f8fafc;
+    color: #475467;
+    font-size: 12px;
+    padding: 9px 14px;
+}
+
+.inline-alert-warning {
+    background: #fff7ed;
+    color: #9a3412;
+}
+
 .primary-action,
 .topbar-actions button,
 .prompt-box button {
@@ -439,24 +495,6 @@ button:disabled {
     font: 13px/1.55 "Cascadia Code", "Consolas", monospace;
     white-space: pre-wrap;
     word-break: break-word;
-}
-
-.preview-banner {
-    border-bottom: 1px solid var(--nd-border-soft);
-    background: #f8fafc;
-    color: #475467;
-    font-size: 12px;
-    padding: 9px 14px;
-}
-
-.preview-empty {
-    min-height: 220px;
-    display: grid;
-    place-items: center;
-    color: var(--nd-muted-text);
-    font-size: 14px;
-    padding: 24px;
-    text-align: center;
 }
 
 .capability-list {

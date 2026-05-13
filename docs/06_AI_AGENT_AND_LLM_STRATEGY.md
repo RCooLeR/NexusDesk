@@ -75,6 +75,17 @@ Users should be able to configure:
 
 Capabilities should be explicit. The app should not assume every model supports tool calling, vision, embeddings, or image generation.
 
+Current implementation:
+
+- `app/internal/storage/llm_settings.go` stores provider name, base URL, model, and API key in local JSON config.
+- Saved API keys are redacted before settings are returned to the frontend.
+- When the frontend sends the redacted API key marker back, the backend resolves the stored secret only for save/test flows that need it.
+- OS credential storage is still planned before production release.
+- `app/internal/llm/probe.go` tests OpenAI-compatible `/models` endpoints.
+- The probe returns model count, a small model sample, capability hints, and configured-model warnings.
+
+Capability hints are currently inferred from model IDs. They are useful for readiness signals, but they are not a substitute for provider-native capability metadata.
+
 ## Agent Modes
 
 NexusDesk can expose several modes while using the same underlying agent loop.
