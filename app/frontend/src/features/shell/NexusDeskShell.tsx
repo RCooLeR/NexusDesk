@@ -6,10 +6,12 @@ import {
     RefreshWorkspace,
     SaveLLMSettings,
     SelectWorkspace,
+    TestLLMConnection,
 } from '../../../wailsjs/go/main/App';
 import {brandAssets, capabilityIconByTitle, railItems, workspaceIconByName} from '../../brand/assets';
 import type {
     FileNode,
+    LLMProbeResult,
     LLMSettings,
     RecentWorkspace,
     StartupState,
@@ -52,6 +54,8 @@ export function NexusDeskShell({
     const [settingsDraft, setSettingsDraft] = useState<LLMSettings>(llmSettings);
     const [settingsStatus, setSettingsStatus] = useState('LLM provider not connected yet.');
     const [isSavingSettings, setIsSavingSettings] = useState(false);
+    const [isTestingConnection, setIsTestingConnection] = useState(false);
+    const [probeResult, setProbeResult] = useState<LLMProbeResult | null>(null);
 
     useEffect(() => {
         setSettingsDraft(llmSettings);
@@ -185,6 +189,7 @@ export function NexusDeskShell({
             const saved = await SaveLLMSettings(settingsDraft);
             onLLMSettingsChange(saved);
             setSettingsDraft(saved);
+            setProbeResult(null);
             setSettingsStatus('LLM settings saved locally.');
         } catch (error) {
             const message = error instanceof Error ? error.message : '';
@@ -195,6 +200,32 @@ export function NexusDeskShell({
             setSettingsStatus(message || 'Could not save LLM settings.');
         } finally {
             setIsSavingSettings(false);
+        }
+    }
+
+    async function testLLMConnection() {
+        setIsTestingConnection(true);
+        setProbeResult(null);
+        setSettingsStatus('Testing LLM provider...');
+
+        try {
+            const result = await TestLLMConnection(settingsDraft);
+            setProbeResult(result);
+            if (result.ok) {
+                const suffix = result.modelCount > 0 ? ` ${result.modelCount} models found.` : '';
+                setSettingsStatus(`${result.message}${suffix}`);
+            } else {
+                setSettingsStatus(result.message || 'Provider did not accept the request.');
+            }
+        } catch (error) {
+            const message = error instanceof Error ? error.message : '';
+            if (message.includes('undefined') || message.includes('window')) {
+                setSettingsStatus('LLM connection test is available in the desktop runtime.');
+                return;
+            }
+            setSettingsStatus(message || 'LLM connection test failed.');
+        } finally {
+            setIsTestingConnection(false);
         }
     }
 
@@ -406,10 +437,22 @@ export function NexusDeskShell({
                         </label>
                         <div className="settings-actions">
                             <small>{settingsStatus}</small>
-                            <button onClick={saveLLMSettings} disabled={isSavingSettings}>
-                                {isSavingSettings ? 'Saving...' : 'Save'}
-                            </button>
+                            <div className="settings-button-row">
+                                <button onClick={testLLMConnection} disabled={isTestingConnection}>
+                                    {isTestingConnection ? 'Testing...' : 'Test'}
+                                </button>
+                                <button onClick={saveLLMSettings} disabled={isSavingSettings}>
+                                    {isSavingSettings ? 'Saving...' : 'Save'}
+                                </button>
+                            </div>
                         </div>
+                        {probeResult && (
+                            <div className={probeResult.ok ? 'probe-result ok' : 'probe-result failed'}>
+                                <strong>{probeResult.ok ? 'Connection ready' : 'Connection issue'}</strong>
+                                <span>{probeResult.endpoint}</span>
+                                {probeResult.modelSample.length > 0 && <small>{probeResult.modelSample.join(', ')}</small>}
+                            </div>
+                        )}
                     </div>
                 </section>
 

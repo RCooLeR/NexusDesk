@@ -6,6 +6,7 @@ import (
 	"os"
 	"sync"
 
+	"NexusDesk/internal/llm"
 	"NexusDesk/internal/storage"
 	"NexusDesk/internal/workspace"
 	"github.com/wailsapp/wails/v2/pkg/runtime"
@@ -45,6 +46,7 @@ type WorkspaceOpenResult struct {
 
 type App struct {
 	ctx           context.Context
+	llmClient     *llm.Client
 	llmStore      *storage.LLMSettingsStore
 	recentStore   *storage.RecentWorkspaceStore
 	workspaceMu   sync.RWMutex
@@ -53,6 +55,7 @@ type App struct {
 
 func NewApp() *App {
 	return &App{
+		llmClient:   llm.NewClient(),
 		llmStore:    storage.NewDefaultLLMSettingsStore(),
 		recentStore: storage.NewDefaultRecentWorkspaceStore(),
 	}
@@ -151,6 +154,10 @@ func (a *App) GetLLMSettings() (storage.LLMSettings, error) {
 
 func (a *App) SaveLLMSettings(settings storage.LLMSettings) (storage.LLMSettings, error) {
 	return a.llmStore.Save(settings)
+}
+
+func (a *App) TestLLMConnection(settings storage.LLMSettings) (llm.ProbeResult, error) {
+	return a.llmClient.Probe(context.Background(), settings)
 }
 
 func (a *App) openWorkspace(root string) (WorkspaceOpenResult, error) {

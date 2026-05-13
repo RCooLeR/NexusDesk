@@ -46,6 +46,14 @@ export type LLMSettings = {
     updatedAt: string;
 };
 
+export type LLMProbeResult = {
+    ok: boolean;
+    message: string;
+    endpoint: string;
+    modelCount: number;
+    modelSample: string[];
+};
+
 export type ToolEvent = {
     time: string;
     title: string;

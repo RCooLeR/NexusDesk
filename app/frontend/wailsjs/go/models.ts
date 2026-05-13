@@ -1,3 +1,28 @@
+export namespace llm {
+	
+	export class ProbeResult {
+	    ok: boolean;
+	    message: string;
+	    endpoint: string;
+	    modelCount: number;
+	    modelSample: string[];
+	
+	    static createFrom(source: any = {}) {
+	        return new ProbeResult(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.ok = source["ok"];
+	        this.message = source["message"];
+	        this.endpoint = source["endpoint"];
+	        this.modelCount = source["modelCount"];
+	        this.modelSample = source["modelSample"];
+	    }
+	}
+
+}
+
 export namespace main {
 	
 	export class Capability {

@@ -485,7 +485,12 @@ button:disabled {
     line-height: 1.35;
 }
 
-.settings-actions button {
+.settings-button-row {
+    display: flex;
+    gap: 8px;
+}
+
+.settings-button-row button {
     border: 1px solid var(--nd-charcoal);
     background: var(--nd-charcoal);
     color: var(--nd-pure-white);
@@ -493,6 +498,44 @@ button:disabled {
     cursor: pointer;
     min-height: 34px;
     padding: 0 12px;
+}
+
+.settings-button-row button:first-child {
+    border-color: #ccd5e1;
+    background: var(--nd-panel);
+    color: var(--nd-charcoal);
+}
+
+.probe-result {
+    border: 1px solid var(--nd-border-soft);
+    border-radius: var(--nd-radius-sm);
+    display: grid;
+    gap: 4px;
+    padding: 9px 10px;
+}
+
+.probe-result.ok {
+    background: #ecfdf5;
+    border-color: #a7f3d0;
+}
+
+.probe-result.failed {
+    background: #fff7ed;
+    border-color: #fed7aa;
+}
+
+.probe-result strong,
+.probe-result span,
+.probe-result small {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.probe-result span,
+.probe-result small {
+    color: #475467;
+    font-size: 12px;
 }
 
 .assistant-message {

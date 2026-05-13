@@ -29,3 +29,7 @@ export function SaveLLMSettings(arg1) {
 export function SelectWorkspace() {
   return window['go']['main']['App']['SelectWorkspace']();
 }
+
+export function TestLLMConnection(arg1) {
+  return window['go']['main']['App']['TestLLMConnection'](arg1);
+}
