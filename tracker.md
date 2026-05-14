@@ -91,6 +91,7 @@ This tracker reflects the repository as it exists today and keeps planned work s
 - [x] Agent chat uses a larger conversation layout with full visible history and a multiline composer.
 - [x] Agent chat renders Markdown-style headings, lists, code fences, inline code/bold, and tables.
 - [x] Explain button sends a grounded explanation prompt for selected text/code previews.
+- [x] Summarize button sends selected context through chat and saves a Markdown summary artifact.
 - [x] Agent panel streams partial assistant responses through `nexusdesk:chat-stream` Wails events.
 - [x] Selected workspace text previews can be attached as bounded chat context without sending image/PDF data URLs.
 - [x] Selected PDFs with extracted text can be attached as chat context without sending PDF data URLs.
@@ -166,6 +167,7 @@ This tracker reflects the repository as it exists today and keeps planned work s
 - [x] Add bounded directory/project context packs for chat.
 - [x] Add a backend-backed context pack preview in the chat panel.
 - [x] Wire topbar Preview and Explain actions to real workspace/chat behavior.
+- [x] Add first selected-context summarize-to-artifact flow.
 - [x] Mask API keys before they leave the backend settings store.
 - [x] Migrate API keys into OS credential storage before production release.
 - [x] Add first Markdown report artifact creation flow.

@@ -64,6 +64,24 @@ type NexusDeskShellProps = {
     onLLMSettingsChange: (settings: LLMSettings) => void;
 };
 
+type SendPromptOptions = {
+    clearComposer: boolean;
+    contextPaths?: string[];
+    saveArtifactSource?: string;
+    saveArtifactTitle?: string;
+};
+
+type AssistantArtifactWriteRequest = {
+    title: string;
+    content: string;
+    contextRelPath: string;
+    prompt: string;
+    model: string;
+    source: string;
+    sourcePaths: string[];
+    eventTitle: string;
+};
+
 const chatStreamEventName = 'nexusdesk:chat-stream';
 const navigatorMinWidth = 220;
 const navigatorMaxWidth = 460;
@@ -110,6 +128,7 @@ export function NexusDeskShell({
     const [isSendingPrompt, setIsSendingPrompt] = useState(false);
     const [isCreatingReport, setIsCreatingReport] = useState(false);
     const [isSavingChatArtifact, setIsSavingChatArtifact] = useState(false);
+    const [isSummarizingContext, setIsSummarizingContext] = useState(false);
     const [isProfilingDataset, setIsProfilingDataset] = useState(false);
     const [isEditingFile, setIsEditingFile] = useState(false);
     const [isPreviewingWrite, setIsPreviewingWrite] = useState(false);
@@ -790,7 +809,7 @@ export function NexusDeskShell({
     }
 
     async function sendPrompt() {
-        await sendPromptText(chatPrompt, true);
+        await sendPromptText(chatPrompt, {clearComposer: true});
     }
 
     async function explainSelectedContext() {
@@ -803,10 +822,36 @@ export function NexusDeskShell({
             `Explain ${filePreview?.relPath}.`,
             'Cover purpose, important structures, notable dependencies, risks, and practical next steps.',
         ].join(' ');
-        await sendPromptText(prompt, false);
+        await sendPromptText(prompt, {clearComposer: false});
     }
 
-    async function sendPromptText(rawPrompt: string, clearComposer: boolean) {
+    async function summarizeSelectedContext() {
+        const contextRelPath = selectedTextContextRelPath();
+        if (!contextRelPath) {
+            setChatStatus('Select a text, extracted document, or directory context before summarizing.');
+            return;
+        }
+
+        const prompt = [
+            `Summarize ${contextRelPath}.`,
+            'Return a concise Markdown summary with overview, key details, risks or gaps, and practical next actions.',
+            'Stay grounded in the provided context and call out missing context if the source is incomplete.',
+        ].join(' ');
+
+        setIsSummarizingContext(true);
+        try {
+            await sendPromptText(prompt, {
+                clearComposer: false,
+                contextPaths: [contextRelPath],
+                saveArtifactSource: 'NexusDesk summary',
+                saveArtifactTitle: `Summary - ${contextRelPath}`,
+            });
+        } finally {
+            setIsSummarizingContext(false);
+        }
+    }
+
+    async function sendPromptText(rawPrompt: string, options: SendPromptOptions) {
         const prompt = rawPrompt.trim();
         if (!prompt) {
             setChatStatus('Write a prompt before sending.');
@@ -814,9 +859,9 @@ export function NexusDeskShell({
         }
 
         const selectedContextRelPath = selectedTextContextRelPath();
-        const contextPaths = contextPackPaths.length > 0 ? contextPackPaths : selectedContextRelPath ? [selectedContextRelPath] : [];
+        const contextPaths = options.contextPaths ?? (contextPackPaths.length > 0 ? contextPackPaths : selectedContextRelPath ? [selectedContextRelPath] : []);
         const contextRelPath = contextPaths.length > 1 ? `pack: ${contextPaths.join(', ')}` : contextPaths[0] ?? '';
-        const sourcePaths = contextPackPreview && contextPackPaths.length > 0
+        const sourcePaths = contextPackPreview && contextPackPaths.length > 0 && !options.contextPaths
             ? contextPackPreview.files.map((file) => file.relPath)
             : sourcePathsFromContext(contextRelPath);
         const requestId = createRequestId();
@@ -826,7 +871,7 @@ export function NexusDeskShell({
         setIsSendingPrompt(true);
         setChatStatus(contextRelPath ? `Streaming with ${contextRelPath} as context...` : 'Streaming without selected file context...');
         setChatMessages((current) => [...current, userMessage, assistantMessage]);
-        if (clearComposer) {
+        if (options.clearComposer) {
             setChatPrompt('');
         }
 
@@ -844,7 +889,21 @@ export function NexusDeskShell({
             } else {
                 replaceChatMessage(assistantMessage.createdAt, result.message, result.contextRelPath, result.sourcePaths);
             }
-            setChatStatus(result.contextRelPath ? `Answered with ${result.contextRelPath}.` : `Answered by ${result.model}.`);
+            if (options.saveArtifactTitle && workspace) {
+                const report = await writeAssistantArtifact({
+                    content: result.message,
+                    contextRelPath: result.contextRelPath,
+                    eventTitle: 'Summary saved',
+                    model: result.model,
+                    prompt,
+                    source: options.saveArtifactSource ?? 'NexusDesk chat',
+                    sourcePaths: result.sourcePaths && result.sourcePaths.length > 0 ? result.sourcePaths : sourcePaths,
+                    title: options.saveArtifactTitle,
+                });
+                setChatStatus(`${report.name} saved as a Markdown summary.`);
+            } else {
+                setChatStatus(result.contextRelPath ? `Answered with ${result.contextRelPath}.` : `Answered by ${result.model}.`);
+            }
             pushToolEvent('Chat completed', result.contextRelPath || result.model);
         } catch (error) {
             const message = error instanceof Error ? error.message : '';
@@ -948,25 +1007,17 @@ export function NexusDeskShell({
         setChatStatus('Saving latest assistant answer as Markdown...');
 
         try {
-            const report: MarkdownReport = await CreateChatMarkdownArtifact({
+            const report = await writeAssistantArtifact({
                 title: latestAssistantArtifactTitle(chatMessages),
                 content: latest.content,
                 contextRelPath: latest.contextRelPath,
                 prompt: latestUserPromptForAssistant(chatMessages),
                 model: settingsDraft.model,
+                eventTitle: 'Answer saved',
                 source: 'NexusDesk chat',
                 sourcePaths: latest.sourcePaths && latest.sourcePaths.length > 0 ? latest.sourcePaths : sourcePathsFromContext(latest.contextRelPath),
             });
-            const result = await RefreshWorkspace();
-            if (result.selected) {
-                onWorkspaceChange(result.snapshot);
-                await refreshArtifacts();
-                setExpandedDirectories((current) => reconcileExpandedDirectories(current, result.snapshot, findWorkspaceNode(result.snapshot, report.relPath)));
-                await selectWorkspaceFile(result.snapshot, report.relPath);
-                setWorkspaceStatus(`${report.name} saved in .nexusdesk/artifacts.`);
-            }
             setChatStatus(`${report.name} saved as a Markdown artifact.`);
-            pushToolEvent('Answer saved', report.relPath);
         } catch (error) {
             const message = error instanceof Error ? error.message : '';
             if (message.includes('undefined') || message.includes('window')) {
@@ -977,6 +1028,28 @@ export function NexusDeskShell({
         } finally {
             setIsSavingChatArtifact(false);
         }
+    }
+
+    async function writeAssistantArtifact(request: AssistantArtifactWriteRequest) {
+        const report: MarkdownReport = await CreateChatMarkdownArtifact({
+            title: request.title,
+            content: request.content,
+            contextRelPath: request.contextRelPath,
+            prompt: request.prompt,
+            model: request.model,
+            source: request.source,
+            sourcePaths: request.sourcePaths,
+        });
+        const result = await RefreshWorkspace();
+        if (result.selected) {
+            onWorkspaceChange(result.snapshot);
+            await refreshArtifacts();
+            setExpandedDirectories((current) => reconcileExpandedDirectories(current, result.snapshot, findWorkspaceNode(result.snapshot, report.relPath)));
+            await selectWorkspaceFile(result.snapshot, report.relPath);
+            setWorkspaceStatus(`${report.name} saved in .nexusdesk/artifacts.`);
+        }
+        pushToolEvent(request.eventTitle, report.relPath);
+        return report;
     }
 
     async function profileSelectedDataset() {
@@ -1168,6 +1241,7 @@ export function NexusDeskShell({
                 isCreatingReport={isCreatingReport}
                 isProfilingDataset={isProfilingDataset}
                 isQueryingDataset={isQueryingDataset}
+                isSummarizingContext={isSummarizingContext}
                 isEditingFile={isEditingFile}
                 isApplyingWrite={isApplyingWrite}
                 isLoadingPreview={isLoadingPreview}
@@ -1179,6 +1253,7 @@ export function NexusDeskShell({
                 onDatasetQueryChange={setDatasetQuery}
                 onFileDraftChange={setFileDraft}
                 onExplainContext={() => void explainSelectedContext()}
+                onSummarizeContext={() => void summarizeSelectedContext()}
                 onPinContext={pinSelectedContext}
                 onPinProjectContext={pinProjectContext}
                 onPreviewFileWrite={() => void previewFileWrite()}

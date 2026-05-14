@@ -19,6 +19,7 @@ const checks = [
             'listenForChatStream',
             'CreateChatMarkdownArtifact',
             'PreviewChatContextPack',
+            'summarizeSelectedContext',
         ],
     },
     {
@@ -27,7 +28,7 @@ const checks = [
     },
     {
         file: 'src/features/shell/WorkbenchPanel.tsx',
-        terms: ['editor-tabs', 'markdownViewMode', 'markdown-view-toggle', 'markdown-document-preview', 'onSelectTab', 'onCloseTab', 'onPinProjectContext', 'DatasetQueryPanel', 'file-write-editor'],
+        terms: ['editor-tabs', 'markdownViewMode', 'markdown-view-toggle', 'markdown-document-preview', 'Summarize', 'onSummarizeContext', 'onSelectTab', 'onCloseTab', 'onPinProjectContext', 'DatasetQueryPanel', 'file-write-editor'],
     },
     {
         file: 'src/features/shell/WorkspaceNavigator.tsx',

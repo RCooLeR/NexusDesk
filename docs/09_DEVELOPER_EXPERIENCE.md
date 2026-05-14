@@ -73,7 +73,7 @@ For a healthy load, `/api/ps` should show nonzero `size_vram`, and the Ollama lo
 
 `app/internal/dataset/` owns the first persistent dataset profile pass. CSV files reuse the workspace preview profiles and XLSX files expose workbook sheet names, then profiles are stored under `.nexusdesk/datasets/profiles.json` inside the active workspace.
 
-The workbench topbar now has functional Preview, Explain, Edit, Report, and Profile actions. Preview reloads the selected workspace node from disk, Explain sends a predefined grounded prompt when text context is available, Edit uses the diff/apply write flow, Report creates a Markdown artifact, and Profile persists CSV/XLSX dataset metadata. The dataset panel can run a bounded CSV row query for the selected table.
+The workbench topbar now has functional Preview, Explain, Summarize, Edit, Report, and Profile actions. Preview reloads the selected workspace node from disk, Explain sends a predefined grounded prompt when text context is available, Summarize sends selected file/directory context through chat and saves the result as a Markdown artifact, Edit uses the diff/apply write flow, Report creates a Markdown artifact, and Profile persists CSV/XLSX dataset metadata. The dataset panel can run a bounded CSV row query for the selected table.
 
 ## Frontend Structure
 

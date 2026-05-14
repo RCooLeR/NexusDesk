@@ -21,12 +21,14 @@ type WorkbenchPanelProps = {
     isCreatingReport: boolean;
     isProfilingDataset: boolean;
     isQueryingDataset: boolean;
+    isSummarizingContext: boolean;
     isLoadingPreview: boolean;
     isPreviewingWrite: boolean;
     onApplyFileWrite: () => void;
     onCancelFileEdit: () => void;
     onExplainContext: () => void;
     onCreateReport: () => void;
+    onSummarizeContext: () => void;
     onFileDraftChange: (content: string) => void;
     onDatasetQueryChange: (content: string) => void;
     onPinContext: () => void;
@@ -61,12 +63,14 @@ export function WorkbenchPanel({
     isCreatingReport,
     isProfilingDataset,
     isQueryingDataset,
+    isSummarizingContext,
     isLoadingPreview,
     isPreviewingWrite,
     onApplyFileWrite,
     onCancelFileEdit,
     onExplainContext,
     onCreateReport,
+    onSummarizeContext,
     onFileDraftChange,
     onDatasetQueryChange,
     onPinContext,
@@ -109,6 +113,9 @@ export function WorkbenchPanel({
                     </Button>
                     <Button disabled={!canExplainContext || isSendingPrompt} onClick={onExplainContext}>
                         {isSendingPrompt ? 'Sending...' : 'Explain'}
+                    </Button>
+                    <Button disabled={!canExplainContext || isSendingPrompt || isSummarizingContext} onClick={onSummarizeContext}>
+                        {isSummarizingContext ? 'Summarizing...' : 'Summarize'}
                     </Button>
                     <Button disabled={!canExplainContext} onClick={onPinContext}>
                         Pin

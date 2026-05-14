@@ -67,6 +67,7 @@ Deliverables:
 - read extracted PDF text into chat context when available: implemented
 - reload selected preview from disk: implemented
 - explain selected text/code preview through chat: implemented
+- summarize selected context through chat and save a Markdown artifact: implemented
 - create Markdown report artifact from selected preview: implemented
 - save latest assistant answer as Markdown artifact: implemented
 - artifact browser for generated Markdown reports: implemented
@@ -101,6 +102,7 @@ Current status:
 - Selected directories and the workspace root can be expanded into bounded streaming context packs.
 - Pinned context packs show individual files and support removing one file at a time.
 - The Preview button reloads the selected file, and the Explain button sends a grounded prompt for selected text/code previews.
+- The Summarize button sends selected file, extracted document, or directory context through chat and saves the result as a Markdown artifact with provenance.
 - The workbench keeps recently opened previews in closeable editor tabs so several files can stay loaded while browsing.
 - Markdown editor tabs can switch between raw source and rendered preview.
 - The chat panel has an expanded conversation area, full visible history, context pack list, and multiline prompt composer.
@@ -123,7 +125,7 @@ Deliverables:
 
 - Markdown/text extraction
 - PDF text extraction where available
-- document summary tool
+- document summary tool: first selected-context summarize-to-artifact flow implemented
 - artifact manager: first Markdown artifact list implemented
 - artifact provenance sidecars: first implementation
 - create Markdown report tool: first controlled artifact flow implemented
