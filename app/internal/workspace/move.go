@@ -69,6 +69,9 @@ func resolveMoveTargets(root string, request FileMoveRequest) (string, string, s
 	if err != nil {
 		return "", "", "", "", nil, err
 	}
+	if strings.HasSuffix(strings.TrimSpace(request.TargetRelPath), "/") || strings.HasSuffix(strings.TrimSpace(request.TargetRelPath), "\\") {
+		return "", "", "", "", nil, errors.New("move target must include a file name")
+	}
 	cleanTarget, err := cleanPreviewRelPath(request.TargetRelPath)
 	if err != nil {
 		return "", "", "", "", nil, err

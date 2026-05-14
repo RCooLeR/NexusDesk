@@ -60,3 +60,12 @@ func TestPreviewFileMoveRejectsTraversal(t *testing.T) {
 		t.Fatal("expected traversal move to be rejected")
 	}
 }
+
+func TestPreviewFileMoveRejectsDirectoryLikeTarget(t *testing.T) {
+	root := t.TempDir()
+	writeFile(t, root, "docs/old.md", "# Old\n")
+
+	if _, err := PreviewFileMove(root, FileMoveRequest{SourceRelPath: "docs/old.md", TargetRelPath: "docs/new/"}); err == nil {
+		t.Fatal("expected directory-like target to be rejected")
+	}
+}
