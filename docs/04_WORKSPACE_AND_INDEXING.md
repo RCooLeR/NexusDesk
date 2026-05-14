@@ -68,7 +68,10 @@ The current app implements the first safe workspace slice:
 - Saved CSV row filters and read-only SQL snippets are stored per dataset under `.nexusdesk/datasets/queries.json` as separate query kinds.
 - Dataset summary artifacts use the bounded CSV preview/profile data to write deterministic Markdown with column profiles and suggested analysis questions.
 - Artifact metadata and chat history are included in the workspace search surface even before a full index database exists.
+- SQLite metadata search now adds chat, artifact, and tool-run history snippets once the workspace metadata store exists.
+- SQLite workspace files (`.sqlite`, `.sqlite3`, `.db`) are classified as database files and routed to the read-only connector surface rather than text preview.
 - `app/internal/workspace/freshness.go` captures file fingerprints so the shell can detect changed files, mark generated artifacts that cite changed sources as stale, and flag dataset-derived views/snippets/reports that should be refreshed.
+- Dataset dependency and SQL run records preserve which saved snippets, SQL reports, chart artifacts, query exports, summaries, and connector queries came from a dataset path.
 - Chat messages and context-pack previews surface stale-source warnings when their cited files change.
 - The workbench can rebuild a context preview from changed files and records that stale-context refresh in the local approval/metadata trail.
 - Data Studio clears visible query/chart/profile state for the active dataset when that dataset changes on disk.

@@ -25,7 +25,7 @@ The current app still uses small JSON files in the user's config directory as th
 - `llm-settings.json`
 - `chat-history.json`
 
-LLM API keys are not written into `llm-settings.json`. They are saved in a sidecar credential blob protected by the OS where available, while the JSON settings file keeps only a storage marker. `EnsureSQLiteMetadataStore` now initializes `.nexusdesk/metadata/nexusdesk.sqlite` with `modernc.org/sqlite`, applies the workspace/chat/approval/artifact/tool-run schema, and mirrors current JSON chat, approval, artifact, and tool-run records into SQLite. Once that store exists, chat history, approval log, artifact list, and tool-run list reads prefer SQLite mirror rows while JSON remains the compatibility write path. These stores live behind `app/internal/storage/`, `app/internal/approval/`, `app/internal/artifact/`, and `app/internal/agenttools/` so the next repository migration can replace writes without changing frontend contracts.
+LLM API keys are not written into `llm-settings.json`. They are saved in a sidecar credential blob protected by the OS where available, while the JSON settings file keeps only a storage marker. `EnsureSQLiteMetadataStore` now initializes `.nexusdesk/metadata/nexusdesk.sqlite` with `modernc.org/sqlite`, applies the workspace/chat/approval/artifact/tool-run plus dataset dependency/SQL run schema, and mirrors current JSON chat, approval, artifact, and tool-run records into SQLite. Once that store exists, fresh chat, approval, artifact, and tool-run rows are also appended directly to SQLite while JSON remains the compatibility fallback. Metadata search, dataset dependencies, and SQL run history live behind `app/internal/appmeta/` so the frontend can inspect history without reading workspace files directly.
 
 ## Chat Streaming
 
@@ -103,7 +103,7 @@ The shell is now mostly orchestration. Feature panels own stable presentation, w
 
 `app/frontend/scripts/smoke.mjs` checks that the built frontend and key shell source files still expose the main MVP functionality: Wails bindings, search, quick-open, command palette, Monaco preview/edit surfaces, find-in-file, context packs, file create/update/delete/move flows, dataset profiling/querying/saved queries/exporting/charting/summaries, read-only SQL, artifact actions/comparison, agent tool plan dry-run/execute controls, Compose parsing, approval log styling, resizable navigator styling, and the production `dist/index.html` entrypoint. Run it after `npm.cmd run build`.
 
-`app/frontend/scripts/visual-smoke.mjs` is now an enforced Playwright screenshot smoke with Wails-free mocks for workspace, dataset, metadata, chat, tool-run, and artifact flows. It captures desktop and mobile screenshots plus `visual-baselines/manifest.json` from the built `dist/index.html`, and fails if the production build or Playwright dependency is missing. On this workstation, install/run with `$env:NODE_OPTIONS='--use-system-ca'` because npm needs the system CA store.
+`app/frontend/scripts/visual-smoke.mjs` is now an enforced Playwright screenshot smoke with Wails-free mocks for workspace, dataset, metadata, chat, tool-run, artifact, lineage export, and metadata history flows. Shared mocks live in `app/frontend/scripts/visual-fixtures.mjs` so future Playwright scenarios can reuse the same workspace/data/metadata setup instead of copying a large inline fixture. It captures desktop and mobile screenshots plus `visual-baselines/manifest.json` from the built `dist/index.html`, and fails if the production build or Playwright dependency is missing. On this workstation, install/run with `$env:NODE_OPTIONS='--use-system-ca'` because npm needs the system CA store.
 
 ## Artifact Creation
 
@@ -115,11 +115,13 @@ The shell is now mostly orchestration. Feature panels own stable presentation, w
 
 `app/internal/agenttools/` owns tool descriptors and tool run records. Dry-runs and explicit executions persist under `.nexusdesk/tool-runs/log.json` with inputs, output summaries, risk, approval ID, duration, and errors. The agent panel can expand recent tool runs to inspect captured inputs, output/error text, approval reference, duration, and replay/diff affordances.
 
-`app/internal/appmeta/` owns the SQLite metadata schema, manifest, first real database initialization, metadata browser, and JSON-to-SQLite mirror under `.nexusdesk/metadata/`. It mirrors the current JSON-backed workspace, chat, approval, artifact, and tool-run domains and exposes typed read helpers used by the app once the metadata store exists. `InspectMetadataStore` returns table columns, row counts, sample rows, and dataset SQL view summaries for the workbench, where users can select tables, filter columns, and copy sample rows.
+`app/internal/appmeta/` owns the SQLite metadata schema, manifest, real database initialization, metadata browser, JSON-to-SQLite mirror, direct fresh-row writes, metadata search, dataset dependency records, and SQL run history under `.nexusdesk/metadata/`. `InspectMetadataStore` returns table columns, row counts, sample rows, and dataset SQL view summaries for the workbench, where users can select tables, filter columns, and copy sample rows.
 
 `app/internal/analytics/` owns the first read-only SQL-style CSV query surface. It accepts a constrained `SELECT` subset, blocks mutation keywords, and executes through bounded CSV query primitives by default. A real DuckDB `database/sql` execution path is implemented behind the `duckdb` build tag for CGO-enabled machines; the current Windows verification loop keeps CGO disabled and therefore uses the safe fallback path. SQL results can be exported as Markdown artifacts that include SQL text, engine, row counts, preview rows, and source dataset citations.
 
-`GetArtifactLineage` in `app/app.go` assembles lineage from artifact metadata, chat source paths, and persisted tool runs. It returns relationship counts for the workbench's selectable graph layout, so users can filter by node kind, select nodes, inspect nearby relationships, and jump back to visible source files.
+`app/internal/dbconnector/` owns the first workspace SQLite connector. It opens `.sqlite`, `.sqlite3`, and `.db` files inside the active workspace in read-only mode, accepts bounded `SELECT`/`WITH` queries, blocks mutation-oriented SQL, and returns capped rows to the Data Studio connector panel. Connector queries record SQL run and dependency metadata, but this first connector does not introduce credentials or external network access.
+
+`GetArtifactLineage` in `app/app.go` assembles lineage from artifact metadata, chat source paths, and persisted tool runs. It returns relationship counts for the workbench's selectable graph layout, so users can filter by node kind, select nodes, inspect nearby relationships, and jump back to visible source files. The app can also export that graph as a JSON artifact and import a JSON graph preview for debugging and future sync work.
 
 ## Completed Batch: Agent Execution And Analytics Foundations
 
@@ -163,17 +165,28 @@ The Agent Execution And Analytics Foundations batch turned the tool planning sur
 - SQL snippets are saved separately from lightweight row filters per dataset.
 - Playwright visual smoke uses Wails-free mocked workspace, dataset, metadata, chat, and artifact fixtures.
 
+## Completed Batch: Studio Depth And Connectors
+
+- Fresh chat, approval, artifact, and tool-run records now write directly into SQLite metadata when the store exists.
+- Metadata history search returns chat, artifact, and tool-run snippets backed by SQLite metadata queries.
+- Dataset lineage dependencies are recorded for saved SQL snippets, exported reports, chart artifacts, query exports, and summaries.
+- Saved SQL execution history records status, row counts, messages, and artifact links.
+- Data Studio has a first read-only SQLite workspace database connector surface.
+- Artifact lineage can be exported as JSON and imported for debugging/preview workflows.
+- Playwright visual smoke mocks moved into a reusable fixture helper.
+
 ## Prepared Next Batch
 
-The next implementation batch should move from mirrored reads toward deeper persistence and connector depth:
+The next implementation batch should turn the new history/connector records into richer studio workflows:
 
-- Move SQLite from mirrored read preference to true repository-backed writes for chats, approvals, artifacts, and tool runs.
-- Add searchable chat/artifact/tool-run history views backed by SQLite metadata queries.
-- Add dataset lineage dependencies for saved SQL snippets, exported reports, chart artifacts, and summaries with explicit refresh/rebuild actions.
-- Add saved SQL execution history with last-run status, row counts, and artifact links.
-- Add first database connector design surface for read-only SQLite files inside a workspace.
-- Add artifact graph export/import as JSON for debugging and future team sync.
-- Add reusable Playwright fixture helpers instead of inline visual-smoke mocks.
+- Add explicit refresh/rebuild buttons for dataset dependencies so saved SQL reports, charts, summaries, and exports can be regenerated from recorded inputs.
+- Add a richer metadata history tab with filters by kind, time, source path, and jump-to-chat/artifact/tool actions.
+- Expand the SQLite connector with schema browsing, table previews, saved connector queries, and clearer read-only status.
+- Add artifact lineage JSON import comparison in the UI, including validation errors and graph diff previews.
+- Promote dataset dependency and SQL run records into first-class UI navigation from Data Studio, Artifact Studio, and Metadata Browser.
+- Add connector approval policy docs/tests for read-only proofs, blocked SQL statements, result caps, and redacted errors.
+- Start a DuckDB multi-file workspace dataset surface for joins across CSV/XLSX-derived tables.
+- Split large shell orchestration state where connector/history flows start to crowd `NexusDeskShell.tsx`.
 
 ## File Writes
 

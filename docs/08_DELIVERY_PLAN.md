@@ -33,7 +33,7 @@ Deliverables:
 - visible studio surface vocabulary for code, data, documents, operations, and artifacts: first implementation
 - local JSON app config for recent workspaces and LLM settings: implemented
 - OS-protected API key credential storage: implemented
-- local SQLite app database: initialized through a real driver, repository migration planned
+- local SQLite app database: initialized through a real driver with direct fresh-row metadata writes and compatibility mirroring
 - controlled Markdown artifact writer: implemented
 - workspace open/recent workspaces: implemented
 - safe new text/code file draft creation through preview/apply: first implementation
@@ -141,7 +141,7 @@ Current status:
 - The chat panel has an expanded conversation area, full visible history, context pack list, and multiline prompt composer.
 - Chat responses render common Markdown structures, including tables and code blocks, instead of flattening formatted model output into one paragraph.
 - Persistent chat history works through local JSON config.
-- richer document extraction/OCR and full SQLite repository migration are still planned.
+- richer document extraction/OCR and broader SQLite repository coverage are still planned.
 - Markdown report artifacts can be created under `.nexusdesk/artifacts/` without overwriting existing files.
 - Latest assistant answers can be saved as Markdown artifacts under `.nexusdesk/artifacts/` with their chat context recorded as metadata.
 - Markdown artifacts now write sidecar provenance metadata with source, prompt, model, source paths, and creation timestamp.
@@ -173,7 +173,7 @@ Current status:
 - Data Studio saves read-only SQL snippets separately from lightweight row filters.
 - Artifact lineage has a selectable graph layout with relationship counts and source navigation.
 - Playwright visual smoke now asserts navigator resizing, panel-level scrolling, tool-run details, metadata browser, lineage graph/filtering, SQL snippets, and freshness warnings using Wails-free mocks.
-- richer document extraction/OCR and full SQLite repository migration are still planned.
+- richer document extraction/OCR and broader SQLite repository coverage are still planned.
 
 ## Completed Batch: Studio Hardening And Inspectors
 
@@ -239,15 +239,26 @@ This batch made more of the studio inspectable and auditable without turning on 
 6. SQL snippets are saved per dataset separately from lightweight row filters.
 7. Playwright visual smoke now uses Wails-free mocked workspace, dataset, metadata, chat, and artifact fixtures.
 
-## Prepared Next Batch: Studio Depth And Connectors
+## Completed Batch: Studio Depth And Connectors
 
-1. Move SQLite from mirrored read preference to true repository-backed writes for chats, approvals, artifacts, and tool runs.
-2. Add searchable chat/artifact/tool-run history views backed by SQLite metadata queries.
-3. Add dataset lineage dependencies for saved SQL snippets, exported reports, chart artifacts, and summaries with explicit refresh/rebuild actions.
-4. Add saved SQL execution history with last-run status, row counts, and artifact links.
-5. Add first database connector design surface for read-only SQLite files inside a workspace.
-6. Add artifact graph export/import as JSON for debugging and future team sync.
-7. Add reusable Playwright fixture helpers instead of inline visual-smoke mocks.
+1. Fresh chat, approval, artifact, and tool-run records now write directly into SQLite metadata when the store exists.
+2. Metadata history search returns chat, artifact, and tool-run snippets backed by SQLite metadata queries.
+3. Dataset lineage dependencies are recorded for saved SQL snippets, exported reports, chart artifacts, query exports, and summaries.
+4. Saved SQL execution history records status, row counts, messages, and artifact links.
+5. Data Studio has a first read-only SQLite workspace database connector surface.
+6. Artifact lineage can be exported as JSON and imported for debugging/preview workflows.
+7. Playwright visual smoke mocks moved into a reusable fixture helper.
+
+## Prepared Next Batch: Studio Query And Connector Maturity
+
+1. Add explicit refresh/rebuild buttons for dataset dependencies so saved SQL reports, charts, summaries, and exports can be regenerated from recorded inputs.
+2. Add a richer metadata history tab with filters by kind, time, source path, and jump-to-chat/artifact/tool actions.
+3. Expand the SQLite connector with schema browsing, table previews, saved connector queries, and clearer read-only status.
+4. Add artifact lineage JSON import comparison in the UI, including validation errors and graph diff previews.
+5. Promote dataset dependency and SQL run records into first-class UI navigation from Data Studio, Artifact Studio, and Metadata Browser.
+6. Add connector approval policy docs/tests for read-only proofs, blocked SQL statements, result caps, and redacted errors.
+7. Start a DuckDB multi-file workspace dataset surface for joins across CSV/XLSX-derived tables.
+8. Split large shell orchestration state where connector/history flows start to crowd `NexusDeskShell.tsx`.
 
 ## Phase 2: Files, Documents, And Artifacts
 

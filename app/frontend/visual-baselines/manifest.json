@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-05-14T16:25:59.779Z",
+  "generatedAt": "2026-05-14T17:41:07.063Z",
   "source": "dist/index.html",
   "viewports": [
     "desktop",
@@ -9,10 +9,13 @@
     "navigator-resize",
     "panel-overflow",
     "tool-run-detail",
+    "lineage-export",
     "lineage-filter",
     "lineage-graph",
     "freshness-warning",
     "metadata-browser",
-    "sql-snippets"
+    "metadata-history",
+    "sql-snippets",
+    "dataset-lineage"
   ]
 }

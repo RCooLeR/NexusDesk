@@ -1,7 +1,7 @@
 import {useEffect, useRef, useState} from 'react';
 import {brandAssets, capabilityIconByTitle} from '../../brand/assets';
 import {Button, EmptyState, InlineAlert, LoadingState, StatusBadge} from '../../components/ui';
-import type {ApprovalRecord, ArtifactComparison, ArtifactLineage, ArtifactMetadata, Capability, ColumnProfile, DatasetChartResult, DatasetProfile, DatasetQueryResult, DatasetSQLQueryResult, FilePreview, FileWriteProposal, MetadataBrowser, SavedDatasetQuery, SQLiteMetadataStatus, TablePreview, WorkspaceArtifact, WorkspaceFreshnessStatus, WorkspaceSnapshot} from '../../types';
+import type {ApprovalRecord, ArtifactComparison, ArtifactLineage, ArtifactMetadata, Capability, ColumnProfile, DatasetChartResult, DatasetDependency, DatasetProfile, DatasetQueryResult, DatasetSQLQueryResult, FilePreview, FileWriteProposal, MetadataBrowser, MetadataSearchResult, SavedDatasetQuery, SQLRun, SQLiteMetadataStatus, SQLiteQueryResult, TablePreview, WorkspaceArtifact, WorkspaceFreshnessStatus, WorkspaceSnapshot} from '../../types';
 import {ApprovalLogPanel} from './ApprovalLogPanel';
 import {ArtifactMetadataPanel} from './ArtifactMetadataPanel';
 import {ChatMessageContent} from './ChatMessageContent';
@@ -19,6 +19,8 @@ type WorkbenchPanelProps = {
     approvalRecords: ApprovalRecord[];
     capabilities: Capability[];
     datasetProfiles: DatasetProfile[];
+    datasetDependencies: DatasetDependency[];
+    datasetSQLRuns: SQLRun[];
     datasetChartCategory: string;
     datasetChartPreview: DatasetChartResult | null;
     datasetChartType: string;
@@ -30,11 +32,15 @@ type WorkbenchPanelProps = {
     datasetSQLQueryLabel: string;
     datasetSQLQueryResult: DatasetSQLQueryResult | null;
     metadataBrowser: MetadataBrowser | null;
+    metadataSearchQuery: string;
+    metadataSearchResults: MetadataSearchResult[];
     savedDatasetQueries: SavedDatasetQuery[];
     savedDatasetSQLQueries: SavedDatasetQuery[];
     artifactComparison: ArtifactComparison | null;
     artifactLineage: ArtifactLineage | null;
     sqliteStatus: SQLiteMetadataStatus | null;
+    sqliteConnectorQuery: string;
+    sqliteConnectorResult: SQLiteQueryResult | null;
     workspaceFreshness: WorkspaceFreshnessStatus | null;
     dirtyTabPaths: string[];
     fileDraft: string;
@@ -58,6 +64,8 @@ type WorkbenchPanelProps = {
     isSavingDatasetSQLQuery: boolean;
     isRefreshingStaleContext: boolean;
     isPreparingMetadataStore: boolean;
+    isSearchingMetadata: boolean;
+    isQueryingSQLiteConnector: boolean;
     isCreatingDatasetSummary: boolean;
     isSummarizingContext: boolean;
     isLoadingPreview: boolean;
@@ -70,6 +78,7 @@ type WorkbenchPanelProps = {
     onFileDraftChange: (content: string) => void;
     onDatasetQueryChange: (content: string) => void;
     onDatasetSQLQueryChange: (content: string) => void;
+    onSQLiteConnectorQueryChange: (content: string) => void;
     onDatasetQueryLabelChange: (content: string) => void;
     onDatasetSQLQueryLabelChange: (content: string) => void;
     onSaveDatasetQuery: () => void;
@@ -97,7 +106,11 @@ type WorkbenchPanelProps = {
     onDeleteArtifact: () => void;
     onOpenArtifactSource: () => void;
     onInspectMetadata: () => void;
+    onMetadataSearchQueryChange: (content: string) => void;
+    onSearchMetadata: () => void;
+    onQuerySQLiteConnector: () => void;
     onRefreshLineage: () => void;
+    onExportLineage: () => void;
     onRefreshStaleContext: () => void;
     onOpenLineageSource: (relPath: string) => void;
     onSelectTab: (relPath: string) => void;
@@ -118,6 +131,8 @@ export function WorkbenchPanel({
     approvalRecords,
     capabilities,
     datasetProfiles,
+    datasetDependencies,
+    datasetSQLRuns,
     datasetChartCategory,
     datasetChartPreview,
     datasetChartType,
@@ -129,11 +144,15 @@ export function WorkbenchPanel({
     datasetSQLQueryLabel,
     datasetSQLQueryResult,
     metadataBrowser,
+    metadataSearchQuery,
+    metadataSearchResults,
     savedDatasetQueries,
     savedDatasetSQLQueries,
     artifactComparison,
     artifactLineage,
     sqliteStatus,
+    sqliteConnectorQuery,
+    sqliteConnectorResult,
     workspaceFreshness,
     dirtyTabPaths,
     fileDraft,
@@ -157,6 +176,8 @@ export function WorkbenchPanel({
     isSavingDatasetSQLQuery,
     isRefreshingStaleContext,
     isPreparingMetadataStore,
+    isSearchingMetadata,
+    isQueryingSQLiteConnector,
     isCreatingDatasetSummary,
     isSummarizingContext,
     isLoadingPreview,
@@ -169,6 +190,7 @@ export function WorkbenchPanel({
     onFileDraftChange,
     onDatasetQueryChange,
     onDatasetSQLQueryChange,
+    onSQLiteConnectorQueryChange,
     onDatasetQueryLabelChange,
     onDatasetSQLQueryLabelChange,
     onSaveDatasetQuery,
@@ -196,7 +218,11 @@ export function WorkbenchPanel({
     onDeleteArtifact,
     onOpenArtifactSource,
     onInspectMetadata,
+    onMetadataSearchQueryChange,
+    onSearchMetadata,
+    onQuerySQLiteConnector,
     onRefreshLineage,
+    onExportLineage,
     onRefreshStaleContext,
     onOpenLineageSource,
     onSelectTab,
@@ -479,6 +505,8 @@ export function WorkbenchPanel({
                                     sqlResult={datasetSQLQueryResult}
                                     savedQueries={savedDatasetQueries}
                                     savedSQLQueries={savedDatasetSQLQueries}
+                                    sqlRuns={datasetSQLRuns}
+                                    dependencies={datasetDependencies}
                                     table={filePreview?.table ?? null}
                                     isQueryingSQL={isQueryingDatasetSQL}
                                     isExportingSQL={isExportingDatasetSQL}
@@ -491,6 +519,15 @@ export function WorkbenchPanel({
                                 />
                             )}
                             <OperationsInspector preview={filePreview} workspace={workspace} />
+                            {filePreview?.fileType === 'database' && (
+                                <SQLiteConnectorPanel
+                                    isQuerying={isQueryingSQLiteConnector}
+                                    onChange={onSQLiteConnectorQueryChange}
+                                    onQuery={onQuerySQLiteConnector}
+                                    query={sqliteConnectorQuery}
+                                    result={sqliteConnectorResult}
+                                />
+                            )}
                             {artifactMetadata && (
                                 <ArtifactMetadataPanel
                                     isArchiving={isArchivingArtifact}
@@ -506,7 +543,16 @@ export function WorkbenchPanel({
                             )}
                             {artifactComparison && <ArtifactComparisonPanel comparison={artifactComparison} />}
                             {sqliteStatus && <MetadataStorePanel status={sqliteStatus} />}
-                            {metadataBrowser && <MetadataBrowserPanel browser={metadataBrowser} />}
+                            {metadataBrowser && (
+                                <MetadataBrowserPanel
+                                    browser={metadataBrowser}
+                                    isSearching={isSearchingMetadata}
+                                    onQueryChange={onMetadataSearchQueryChange}
+                                    onSearch={onSearchMetadata}
+                                    query={metadataSearchQuery}
+                                    results={metadataSearchResults}
+                                />
+                            )}
                             {workspaceFreshness && (
                                 <WorkspaceFreshnessPanel
                                     isRefreshing={isRefreshingStaleContext}
@@ -514,7 +560,7 @@ export function WorkbenchPanel({
                                     status={workspaceFreshness}
                                 />
                             )}
-                            <ArtifactLineagePanel lineage={artifactLineage} onOpenSource={onOpenLineageSource} onRefresh={onRefreshLineage} />
+                            <ArtifactLineagePanel lineage={artifactLineage} onExport={onExportLineage} onOpenSource={onOpenLineageSource} onRefresh={onRefreshLineage} />
                             <Button onClick={onInspectMetadata} variant="subtle">Inspect metadata</Button>
                             <ApprovalLogPanel records={approvalRecords} />
                             {artifacts.length === 0 ? (
@@ -737,10 +783,24 @@ function MetadataStorePanel({status}: {status: SQLiteMetadataStatus}) {
     );
 }
 
-function MetadataBrowserPanel({browser}: {browser: MetadataBrowser}) {
-    const [query, setQuery] = useState('');
+function MetadataBrowserPanel({
+    browser,
+    isSearching,
+    onQueryChange,
+    onSearch,
+    query,
+    results,
+}: {
+    browser: MetadataBrowser;
+    isSearching: boolean;
+    onQueryChange: (value: string) => void;
+    onSearch: () => void;
+    query: string;
+    results: MetadataSearchResult[];
+}) {
+    const [columnQuery, setColumnQuery] = useState('');
     const [selectedTable, setSelectedTable] = useState(browser.tables[0]?.name ?? '');
-    const normalizedQuery = query.trim().toLowerCase();
+    const normalizedQuery = columnQuery.trim().toLowerCase();
     const selected = browser.tables.find((table) => table.name === selectedTable) ?? browser.tables[0] ?? null;
     const visibleColumns = selected?.columns.filter((column) => {
         if (!normalizedQuery) {
@@ -765,9 +825,35 @@ function MetadataBrowserPanel({browser}: {browser: MetadataBrowser}) {
                         <option key={table.name} value={table.name}>{table.name} / {table.rowCount}</option>
                     ))}
                 </select>
-                <input aria-label="Column search" onChange={(event) => setQuery(event.target.value)} placeholder="Search columns" value={query} />
+                <input aria-label="Column search" onChange={(event) => setColumnQuery(event.target.value)} placeholder="Search columns" value={columnQuery} />
                 <Button disabled={!sampleText} onClick={() => void navigator.clipboard?.writeText(sampleText)} variant="subtle">Copy rows</Button>
             </div>
+            <div className="metadata-browser-controls">
+                <input
+                    aria-label="Metadata history search"
+                    onChange={(event) => onQueryChange(event.target.value)}
+                    onKeyDown={(event) => {
+                        if (event.key === 'Enter') {
+                            onSearch();
+                        }
+                    }}
+                    placeholder="Search chats, artifacts, tools"
+                    value={query}
+                />
+                <Button disabled={isSearching || !query.trim()} onClick={onSearch} variant="subtle">
+                    {isSearching ? 'Searching...' : 'Search history'}
+                </Button>
+            </div>
+            {results.length > 0 && (
+                <div className="metadata-history-results">
+                    {results.map((result) => (
+                        <p key={`${result.kind}-${result.id}`}>
+                            <strong>{result.kind}</strong> {result.title} <small>{result.target}</small>
+                            <span>{result.snippet}</span>
+                        </p>
+                    ))}
+                </div>
+            )}
             {selected && (
                 <>
                     <div className="metadata-column-grid">
@@ -793,6 +879,38 @@ function MetadataBrowserPanel({browser}: {browser: MetadataBrowser}) {
                         <p key={view.relPath}>{view.name}: {view.rows} rows, {view.columns.length} columns <small>{view.engine}</small></p>
                     ))}
                 </div>
+            )}
+        </div>
+    );
+}
+
+function SQLiteConnectorPanel({
+    isQuerying,
+    onChange,
+    onQuery,
+    query,
+    result,
+}: {
+    isQuerying: boolean;
+    onChange: (value: string) => void;
+    onQuery: () => void;
+    query: string;
+    result: SQLiteQueryResult | null;
+}) {
+    return (
+        <div className="metadata-store-panel sqlite-connector-panel">
+            <strong>SQLite Connector</strong>
+            <small>Read-only workspace database query surface.</small>
+            <textarea aria-label="Workspace SQLite query" onChange={(event) => onChange(event.target.value)} value={query} />
+            <Button disabled={isQuerying || !query.trim()} onClick={onQuery} variant="subtle">
+                {isQuerying ? 'Querying...' : 'Run read-only query'}
+            </Button>
+            {result && (
+                <SortableDataTable
+                    pageSize={8}
+                    table={{columns: result.columns, rows: result.rows, profiles: [], totalRows: result.totalRows, truncated: result.rows.length < result.totalRows}}
+                    title={result.engine}
+                />
             )}
         </div>
     );
@@ -834,10 +952,12 @@ function WorkspaceFreshnessPanel({
 
 function ArtifactLineagePanel({
     lineage,
+    onExport,
     onOpenSource,
     onRefresh,
 }: {
     lineage: ArtifactLineage | null;
+    onExport: () => void;
     onOpenSource: (relPath: string) => void;
     onRefresh: () => void;
 }) {
@@ -868,7 +988,10 @@ function ArtifactLineagePanel({
         <div className="metadata-store-panel">
             <div className="panel-toolbar">
                 <strong>Artifact Lineage</strong>
-                <Button onClick={onRefresh} variant="subtle">Refresh</Button>
+                <span>
+                    <Button onClick={onRefresh} variant="subtle">Refresh</Button>
+                    <Button disabled={!lineage} onClick={onExport} variant="subtle">Export JSON</Button>
+                </span>
             </div>
             <small>{lineage?.message ?? 'Build graph from chats, tools, source files, and artifacts.'}</small>
             {relationshipText && <small>{relationshipText}</small>}

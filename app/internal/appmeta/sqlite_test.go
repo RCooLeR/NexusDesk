@@ -95,4 +95,28 @@ func TestMirrorAndInspectSQLiteMetadata(t *testing.T) {
 	if err != nil || len(toolRuns) != 1 || toolRuns[0].ToolName != "dataset.query" {
 		t.Fatalf("ListToolRuns returned unexpected data: %+v, %v", toolRuns, err)
 	}
+	if err := AppendChats(root, []ChatMirror{{ID: "chat-direct", Role: "user", Content: "direct", CreatedAt: "2026-05-14T00:00:04Z"}}); err != nil {
+		t.Fatalf("AppendChats returned error: %v", err)
+	}
+	if err := AppendApproval(root, ApprovalMirror{ID: "approval-direct", Action: "context.refresh", Target: "README.md", Risk: "low", Decision: "applied", CreatedAt: "2026-05-14T00:00:05Z"}); err != nil {
+		t.Fatalf("AppendApproval returned error: %v", err)
+	}
+	if err := AppendSQLRun(root, SQLRun{ID: "sql-1", RelPath: "data.csv", SQL: "select * from dataset", Engine: "duckdb-compatible-csv", Rows: 1, Status: "completed", CreatedAt: "2026-05-14T00:00:06Z"}); err != nil {
+		t.Fatalf("AppendSQLRun returned error: %v", err)
+	}
+	if err := RecordDatasetDependency(root, DatasetDependency{ID: "dep-1", RelPath: "data.csv", Kind: "sql-snippet", Query: "select * from dataset", CreatedAt: "2026-05-14T00:00:07Z"}); err != nil {
+		t.Fatalf("RecordDatasetDependency returned error: %v", err)
+	}
+	results, err := Search(root, "direct", 10)
+	if err != nil || len(results) == 0 {
+		t.Fatalf("Search returned unexpected data: %+v, %v", results, err)
+	}
+	sqlRuns, err := ListSQLRuns(root, "data.csv")
+	if err != nil || len(sqlRuns) != 1 {
+		t.Fatalf("ListSQLRuns returned unexpected data: %+v, %v", sqlRuns, err)
+	}
+	deps, err := ListDatasetDependencies(root, "data.csv")
+	if err != nil || len(deps) != 1 {
+		t.Fatalf("ListDatasetDependencies returned unexpected data: %+v, %v", deps, err)
+	}
 }

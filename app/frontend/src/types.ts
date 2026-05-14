@@ -244,6 +244,48 @@ export type MetadataBrowser = {
     updatedAt: string;
 };
 
+export type MetadataSearchResult = {
+    id: string;
+    kind: string;
+    title: string;
+    target: string;
+    snippet: string;
+    createdAt: string;
+};
+
+export type DatasetDependency = {
+    id: string;
+    relPath: string;
+    kind: string;
+    target: string;
+    query: string;
+    artifact: string;
+    createdAt: string;
+    lastRefresh: string;
+};
+
+export type SQLRun = {
+    id: string;
+    relPath: string;
+    sql: string;
+    engine: string;
+    rows: number;
+    artifact: string;
+    status: string;
+    message: string;
+    createdAt: string;
+};
+
+export type SQLiteQueryResult = {
+    relPath: string;
+    sql: string;
+    engine: string;
+    columns: string[];
+    rows: string[][];
+    totalRows: number;
+    message: string;
+};
+
 export type ContextPreviewFile = {
     relPath: string;
     required: boolean;

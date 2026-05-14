@@ -90,6 +90,10 @@ export function ExecuteAgentTool(arg1) {
   return window['go']['main']['App']['ExecuteAgentTool'](arg1);
 }
 
+export function ExportArtifactLineageJSON() {
+  return window['go']['main']['App']['ExportArtifactLineageJSON']();
+}
+
 export function GetArtifactLineage() {
   return window['go']['main']['App']['GetArtifactLineage']();
 }
@@ -114,6 +118,10 @@ export function GetStartupState() {
   return window['go']['main']['App']['GetStartupState']();
 }
 
+export function ImportArtifactLineageJSON(arg1) {
+  return window['go']['main']['App']['ImportArtifactLineageJSON'](arg1);
+}
+
 export function InspectMetadataStore() {
   return window['go']['main']['App']['InspectMetadataStore']();
 }
@@ -134,6 +142,10 @@ export function ListArtifacts() {
   return window['go']['main']['App']['ListArtifacts']();
 }
 
+export function ListDatasetDependencies(arg1) {
+  return window['go']['main']['App']['ListDatasetDependencies'](arg1);
+}
+
 export function ListDatasetProfiles() {
   return window['go']['main']['App']['ListDatasetProfiles']();
 }
@@ -144,6 +156,10 @@ export function ListDatasetQueries(arg1) {
 
 export function ListDatasetSQLQueries(arg1) {
   return window['go']['main']['App']['ListDatasetSQLQueries'](arg1);
+}
+
+export function ListDatasetSQLRuns(arg1) {
+  return window['go']['main']['App']['ListDatasetSQLRuns'](arg1);
 }
 
 export function OpenWorkspace(arg1) {
@@ -186,6 +202,10 @@ export function QueryDatasetSQL(arg1) {
   return window['go']['main']['App']['QueryDatasetSQL'](arg1);
 }
 
+export function QueryWorkspaceSQLite(arg1) {
+  return window['go']['main']['App']['QueryWorkspaceSQLite'](arg1);
+}
+
 export function ReadWorkspaceFile(arg1) {
   return window['go']['main']['App']['ReadWorkspaceFile'](arg1);
 }
@@ -212,6 +232,10 @@ export function SaveDatasetSQLQuery(arg1, arg2, arg3) {
 
 export function SaveLLMSettings(arg1) {
   return window['go']['main']['App']['SaveLLMSettings'](arg1);
+}
+
+export function SearchMetadata(arg1) {
+  return window['go']['main']['App']['SearchMetadata'](arg1);
 }
 
 export function SearchWorkspace(arg1) {

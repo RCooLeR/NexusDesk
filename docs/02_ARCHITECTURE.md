@@ -19,10 +19,12 @@ The implemented desktop slice currently contains:
 - append-only workspace approval/action log for applied file and artifact operations
 - backend agent tool descriptor registry and first frontend tool-plan preview
 - persisted tool-run dry-runs/executions with approval references
-- SQLite metadata initialization and JSON-store mirroring through a real driver, with SQLite preferred for prepared chat/approval/artifact/tool-run reads and JSON stores retained as the compatibility write layer
+- SQLite metadata initialization, JSON-store migration compatibility, direct repository-backed writes for fresh chat/approval/artifact/tool-run rows, metadata history search, dataset dependency records, and SQL run history
 - DuckDB-capable read-only SQL surface over datasets, with CGO-tagged driver execution and bounded CSV fallback
+- first read-only SQLite workspace database connector for `.sqlite`, `.sqlite3`, and `.db` files
 - artifact comparison for generated output versions
 - selectable artifact lineage graph and workspace freshness snapshots for source-aware generated outputs
+- artifact lineage JSON export/import for debugging and future sync workflows
 - Metadata Browser for SQLite tables, filtered columns, copyable sample rows, and dataset SQL views
 - separate saved SQL snippets and lightweight row filters per dataset
 - SQL result Markdown artifacts with query, engine, row count, preview, and source citation metadata
@@ -66,8 +68,9 @@ flowchart LR
 
   Context --> Search["Path/Text Search"]
   Search --> JsonStores[("Local JSON Stores<br/>settings, compatibility writes, recent workspaces")]
-  Search --> AppDB[("SQLite Metadata DB<br/>schema initialized, mirrored, preferred reads")]
+  Search --> AppDB[("SQLite Metadata DB<br/>direct writes, search, lineage, SQL history")]
   Search --> AnalyticsDB[("DuckDB / CSV SQL<br/>datasets, query results")]
+  Search --> SQLiteFiles[("Workspace SQLite Files<br/>read-only connector")]
   Search --> FutureVectorStore["Optional local vectors"]
 
   Tools --> Registry["Tool Registry<br/>risk, surface, approval metadata"]

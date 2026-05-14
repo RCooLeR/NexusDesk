@@ -77,6 +77,16 @@ type ArtifactComparison struct {
 	Message      string   `json:"message"`
 }
 
+type JSONArtifactRequest struct {
+	Name           string   `json:"name"`
+	Content        string   `json:"content"`
+	Title          string   `json:"title"`
+	Source         string   `json:"source"`
+	SourcePaths    []string `json:"sourcePaths"`
+	ContextRelPath string   `json:"contextRelPath"`
+	Prompt         string   `json:"prompt"`
+}
+
 func CreateMarkdownReport(root string, source workspace.FilePreview, now time.Time) (MarkdownReport, error) {
 	if strings.TrimSpace(root) == "" {
 		return MarkdownReport{}, errors.New("open a workspace before creating reports")
@@ -463,6 +473,67 @@ func CreateDatasetSummaryMarkdown(root string, source workspace.FilePreview, now
 		Name:    name,
 		Path:    path,
 		Message: "Dataset summary artifact created inside the workspace.",
+		Size:    info.Size(),
+	}, nil
+}
+
+func CreateJSONArtifact(root string, request JSONArtifactRequest, now time.Time) (MarkdownReport, error) {
+	if strings.TrimSpace(root) == "" {
+		return MarkdownReport{}, errors.New("open a workspace before creating JSON artifacts")
+	}
+	if !json.Valid([]byte(request.Content)) {
+		return MarkdownReport{}, errors.New("JSON artifact content is invalid")
+	}
+	absRoot, err := filepath.Abs(root)
+	if err != nil {
+		return MarkdownReport{}, err
+	}
+	reportDir := filepath.Join(absRoot, filepath.FromSlash(artifactDirRelPath))
+	if err := os.MkdirAll(reportDir, 0o755); err != nil {
+		return MarkdownReport{}, err
+	}
+	name := jsonArtifactFileName(request, now)
+	path := filepath.Join(reportDir, name)
+	if err := ensureInsideRoot(absRoot, path); err != nil {
+		return MarkdownReport{}, err
+	}
+	file, err := os.OpenFile(path, os.O_WRONLY|os.O_CREATE|os.O_EXCL, 0o644)
+	if err != nil {
+		return MarkdownReport{}, err
+	}
+	defer file.Close()
+	if _, err := file.WriteString(request.Content); err != nil {
+		return MarkdownReport{}, err
+	}
+	if !strings.HasSuffix(request.Content, "\n") {
+		if _, err := file.WriteString("\n"); err != nil {
+			return MarkdownReport{}, err
+		}
+	}
+	if err := writeArtifactMetadata(absRoot, path, ArtifactMetadata{
+		Kind:           "json-artifact",
+		Title:          fallbackArtifactTitle(request.Title, "JSON Artifact"),
+		Source:         fallbackArtifactTitle(request.Source, "structured export"),
+		SourcePaths:    cleanMetadataPaths(request.SourcePaths),
+		ContextRelPath: request.ContextRelPath,
+		Prompt:         request.Prompt,
+		CreatedAt:      now.UTC().Format(time.RFC3339),
+	}); err != nil {
+		return MarkdownReport{}, err
+	}
+	info, err := file.Stat()
+	if err != nil {
+		return MarkdownReport{}, err
+	}
+	relPath, err := filepath.Rel(absRoot, path)
+	if err != nil {
+		return MarkdownReport{}, err
+	}
+	return MarkdownReport{
+		RelPath: filepath.ToSlash(relPath),
+		Name:    name,
+		Path:    path,
+		Message: "JSON artifact created inside the workspace.",
 		Size:    info.Size(),
 	}, nil
 }
@@ -860,6 +931,18 @@ func datasetSummaryFileName(source workspace.FilePreview, now time.Time) string 
 	return fmt.Sprintf("%s-%s.md", slug, now.UTC().Format("20060102-150405"))
 }
 
+func jsonArtifactFileName(request JSONArtifactRequest, now time.Time) string {
+	base := strings.TrimSuffix(filepath.Base(request.Name), filepath.Ext(request.Name))
+	if base == "" {
+		base = request.Title
+	}
+	slug := slugify(base)
+	if slug == "" {
+		slug = "structured-export"
+	}
+	return fmt.Sprintf("%s-%s.json", slug, now.UTC().Format("20060102-150405"))
+}
+
 func scanReportFileName(snapshot workspace.WorkspaceSnapshot, now time.Time) string {
 	slug := slugify(snapshot.Name + "-scan-report")
 	if slug == "" {
@@ -874,6 +957,14 @@ func generatedArtifactTitle(request MarkdownArtifactRequest) string {
 		base = "Assistant Response"
 	}
 	return base
+}
+
+func fallbackArtifactTitle(value string, fallback string) string {
+	value = strings.TrimSpace(value)
+	if value == "" {
+		return fallback
+	}
+	return value
 }
 
 func datasetChartTitle(chart workspace.DatasetChartResult) string {

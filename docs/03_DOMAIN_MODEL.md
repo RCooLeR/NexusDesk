@@ -2,7 +2,7 @@
 
 ## Current Implementation Note
 
-The current repository implements the early local-first subset of this model. Workspaces are represented by a selected root path and a scanned `WorkspaceSnapshot`; file nodes are returned by `app/internal/workspace/scanner.go`; previews, searches, context packs, dataset profiles, artifacts, LLM settings, recent workspaces, agent tool descriptors, freshness checks, lineage, and chat history are implemented with Go structs and local JSON/provenance files. SQLite schema initialization and mirroring now exist, and prepared read paths prefer SQLite rows after the metadata store exists; JSON remains the compatibility write store until repository writes migrate.
+The current repository implements the early local-first subset of this model. Workspaces are represented by a selected root path and a scanned `WorkspaceSnapshot`; file nodes are returned by `app/internal/workspace/scanner.go`; previews, searches, context packs, dataset profiles, artifacts, LLM settings, recent workspaces, agent tool descriptors, freshness checks, lineage, and chat history are implemented with Go structs and local JSON/provenance files. SQLite schema initialization, mirroring, direct fresh-row writes, metadata search, dataset dependency records, and SQL run history now exist; JSON remains the compatibility fallback while repository coverage expands.
 
 The richer IDs below describe the intended durable domain model. Do not treat every listed field as a created database column yet.
 
@@ -499,14 +499,27 @@ Model-directed autonomous tool loops are still planned; current execution is ini
 
 ### SQLite Metadata Store
 
-The SQLite metadata store is the prepared durable replacement for the current JSON stores.
+The SQLite metadata store is the durable app metadata path for current workspace history, while JSON remains the migration and compatibility fallback.
 
 Current implementation:
 
 - `app/internal/appmeta/` writes `.nexusdesk/metadata/schema.sql`, initializes `.nexusdesk/metadata/nexusdesk.sqlite` through `modernc.org/sqlite`, and writes a manifest with schema version/hash.
 - The schema mirrors workspaces, chats, approvals, artifacts, and tool runs from the current JSON/provenance stores.
-- Chat history, approval log, artifact list, and tool-run list reads prefer SQLite mirror rows once the store exists, while JSON stores remain active compatibility writers until repository migration lands.
+- Fresh chats, approvals, artifacts, and tool runs write directly to SQLite once the store exists, while JSON stores remain active compatibility writers/fallbacks.
 - `InspectMetadataStore` returns table columns, row counts, sample rows, and dataset SQL view summaries for the workbench; the UI can select tables, filter columns, and copy row samples.
+- Metadata search returns chat, artifact, and tool-run snippets for the workbench history surface.
+- Dataset dependency and SQL run tables record saved SQL snippets, SQL artifacts, chart artifacts, summaries, and connector queries.
+
+### Workspace SQLite Connector
+
+The first database connector is scoped to workspace-local SQLite files.
+
+Current implementation:
+
+- `.sqlite`, `.sqlite3`, and `.db` files are classified as database files in the workspace tree.
+- `app/internal/dbconnector/` opens those files read-only through `modernc.org/sqlite`.
+- Only bounded `SELECT`/`WITH` queries are accepted, mutation-oriented keywords are blocked, and result rows are capped before they reach the frontend.
+- Data Studio can use this for local inspection without introducing stored credentials or external database access.
 
 ### Read-only Dataset SQL
 
@@ -527,6 +540,7 @@ Current implementation:
 
 - `GetArtifactLineage` builds a compact graph from artifact sidecar metadata, chat source paths, and `.nexusdesk/tool-runs/log.json`.
 - The workbench shows a selectable lineage graph, relationship counts, source/chat/tool/artifact filtering, and visible source navigation.
+- Lineage can be exported as a JSON artifact and imported back as a preview for debugging, future sync, and graph comparison workflows.
 
 ### Workspace Freshness
 

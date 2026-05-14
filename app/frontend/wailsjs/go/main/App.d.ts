@@ -10,6 +10,7 @@ import {agenttools} from '../models';
 import {main} from '../models';
 import {approval} from '../models';
 import {dataset} from '../models';
+import {dbconnector} from '../models';
 
 export function ApplyFileDelete(arg1:string):Promise<workspace.FileDeleteProposal>;
 
@@ -55,6 +56,8 @@ export function EnsureSQLiteMetadataStore():Promise<appmeta.SQLiteStatus>;
 
 export function ExecuteAgentTool(arg1:agenttools.RunRequest):Promise<agenttools.RunRecord>;
 
+export function ExportArtifactLineageJSON():Promise<artifact.MarkdownReport>;
+
 export function GetArtifactLineage():Promise<main.ArtifactLineage>;
 
 export function GetArtifactMetadata(arg1:string):Promise<artifact.ArtifactMetadata>;
@@ -67,6 +70,8 @@ export function GetRecentWorkspaces():Promise<Array<storage.RecentWorkspace>>;
 
 export function GetStartupState():Promise<main.StartupState>;
 
+export function ImportArtifactLineageJSON(arg1:string):Promise<main.ArtifactLineageImport>;
+
 export function InspectMetadataStore():Promise<appmeta.MetadataBrowser>;
 
 export function ListAgentToolRuns():Promise<Array<agenttools.RunRecord>>;
@@ -77,11 +82,15 @@ export function ListApprovals():Promise<Array<approval.Record>>;
 
 export function ListArtifacts():Promise<Array<artifact.WorkspaceArtifact>>;
 
+export function ListDatasetDependencies(arg1:string):Promise<Array<appmeta.DatasetDependency>>;
+
 export function ListDatasetProfiles():Promise<Array<dataset.Profile>>;
 
 export function ListDatasetQueries(arg1:string):Promise<Array<dataset.SavedQuery>>;
 
 export function ListDatasetSQLQueries(arg1:string):Promise<Array<dataset.SavedQuery>>;
+
+export function ListDatasetSQLRuns(arg1:string):Promise<Array<appmeta.SQLRun>>;
 
 export function OpenWorkspace(arg1:string):Promise<main.WorkspaceOpenResult>;
 
@@ -103,6 +112,8 @@ export function QueryDataset(arg1:string,arg2:string):Promise<workspace.DatasetQ
 
 export function QueryDatasetSQL(arg1:analytics.SQLQueryRequest):Promise<analytics.SQLQueryResult>;
 
+export function QueryWorkspaceSQLite(arg1:dbconnector.SQLiteQueryRequest):Promise<dbconnector.SQLiteQueryResult>;
+
 export function ReadWorkspaceFile(arg1:string):Promise<workspace.FilePreview>;
 
 export function RefreshStaleContext(arg1:Array<string>):Promise<main.StaleContextRefresh>;
@@ -116,6 +127,8 @@ export function SaveDatasetQuery(arg1:string,arg2:string,arg3:string):Promise<da
 export function SaveDatasetSQLQuery(arg1:string,arg2:string,arg3:string):Promise<dataset.SavedQuery>;
 
 export function SaveLLMSettings(arg1:storage.LLMSettings):Promise<storage.LLMSettings>;
+
+export function SearchMetadata(arg1:string):Promise<Array<appmeta.MetadataSearchResult>>;
 
 export function SearchWorkspace(arg1:string):Promise<Array<workspace.SearchResult>>;
 

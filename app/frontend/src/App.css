@@ -1542,6 +1542,36 @@ button:disabled {
     overflow: auto;
 }
 
+.metadata-history-results,
+.dataset-lineage-history {
+    display: grid;
+    gap: 5px;
+}
+
+.metadata-history-results p,
+.dataset-lineage-history p {
+    border: 1px solid var(--nd-border-soft);
+    border-radius: var(--nd-radius-sm);
+    display: grid;
+    gap: 2px;
+    margin: 0;
+    min-width: 0;
+    padding: 6px;
+}
+
+.metadata-history-results span {
+    color: var(--nd-muted-text);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.sqlite-connector-panel textarea {
+    min-height: 96px;
+    resize: vertical;
+    width: 100%;
+}
+
 .metadata-browser-panel {
     min-height: 0;
 }
@@ -1590,6 +1620,11 @@ button:disabled {
     align-items: center;
     justify-content: space-between;
     gap: 8px;
+}
+
+.panel-toolbar span {
+    display: flex;
+    gap: 6px;
 }
 
 .lineage-list {

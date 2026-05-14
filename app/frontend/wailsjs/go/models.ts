@@ -134,6 +134,32 @@ export namespace analytics {
 
 export namespace appmeta {
 
+	export class DatasetDependency {
+	    id: string;
+	    relPath: string;
+	    kind: string;
+	    target: string;
+	    query: string;
+	    artifact: string;
+	    createdAt: string;
+	    lastRefresh: string;
+
+	    static createFrom(source: any = {}) {
+	        return new DatasetDependency(source);
+	    }
+
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.id = source["id"];
+	        this.relPath = source["relPath"];
+	        this.kind = source["kind"];
+	        this.target = source["target"];
+	        this.query = source["query"];
+	        this.artifact = source["artifact"];
+	        this.createdAt = source["createdAt"];
+	        this.lastRefresh = source["lastRefresh"];
+	    }
+	}
 	export class DatasetView {
 	    name: string;
 	    relPath: string;
@@ -245,7 +271,57 @@ export namespace appmeta {
 		}
 	}
 
+	export class MetadataSearchResult {
+	    id: string;
+	    kind: string;
+	    title: string;
+	    target: string;
+	    snippet: string;
+	    createdAt: string;
 
+	    static createFrom(source: any = {}) {
+	        return new MetadataSearchResult(source);
+	    }
+
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.id = source["id"];
+	        this.kind = source["kind"];
+	        this.title = source["title"];
+	        this.target = source["target"];
+	        this.snippet = source["snippet"];
+	        this.createdAt = source["createdAt"];
+	    }
+	}
+
+	export class SQLRun {
+	    id: string;
+	    relPath: string;
+	    sql: string;
+	    engine: string;
+	    rows: number;
+	    artifact: string;
+	    status: string;
+	    message: string;
+	    createdAt: string;
+
+	    static createFrom(source: any = {}) {
+	        return new SQLRun(source);
+	    }
+
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.id = source["id"];
+	        this.relPath = source["relPath"];
+	        this.sql = source["sql"];
+	        this.engine = source["engine"];
+	        this.rows = source["rows"];
+	        this.artifact = source["artifact"];
+	        this.status = source["status"];
+	        this.message = source["message"];
+	        this.createdAt = source["createdAt"];
+	    }
+	}
 	export class SQLiteStatus {
 	    path: string;
 	    schemaPath: string;
@@ -504,6 +580,49 @@ export namespace dataset {
 
 }
 
+export namespace dbconnector {
+
+	export class SQLiteQueryRequest {
+	    relPath: string;
+	    sql: string;
+
+	    static createFrom(source: any = {}) {
+	        return new SQLiteQueryRequest(source);
+	    }
+
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.relPath = source["relPath"];
+	        this.sql = source["sql"];
+	    }
+	}
+	export class SQLiteQueryResult {
+	    relPath: string;
+	    sql: string;
+	    engine: string;
+	    columns: string[];
+	    rows: string[][];
+	    totalRows: number;
+	    message: string;
+
+	    static createFrom(source: any = {}) {
+	        return new SQLiteQueryResult(source);
+	    }
+
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.relPath = source["relPath"];
+	        this.sql = source["sql"];
+	        this.engine = source["engine"];
+	        this.columns = source["columns"];
+	        this.rows = source["rows"];
+	        this.totalRows = source["totalRows"];
+	        this.message = source["message"];
+	    }
+	}
+
+}
+
 export namespace llm {
 
 	export class ChatResult {
@@ -687,6 +806,38 @@ export namespace main {
 	        this.nodes = this.convertValues(source["nodes"], LineageNode);
 	        this.edges = this.convertValues(source["edges"], LineageEdge);
 	        this.relationshipCounts = source["relationshipCounts"];
+	        this.message = source["message"];
+	    }
+
+		convertValues(a: any, classs: any, asMap: boolean = false): any {
+		    if (!a) {
+		        return a;
+		    }
+		    if (a.slice && a.map) {
+		        return (a as any[]).map(elem => this.convertValues(elem, classs));
+		    } else if ("object" === typeof a) {
+		        if (asMap) {
+		            for (const key of Object.keys(a)) {
+		                a[key] = new classs(a[key]);
+		            }
+		            return a;
+		        }
+		        return new classs(a);
+		    }
+		    return a;
+		}
+	}
+	export class ArtifactLineageImport {
+	    lineage: ArtifactLineage;
+	    message: string;
+
+	    static createFrom(source: any = {}) {
+	        return new ArtifactLineageImport(source);
+	    }
+
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.lineage = this.convertValues(source["lineage"], ArtifactLineage);
 	        this.message = source["message"];
 	    }
 

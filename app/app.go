@@ -19,6 +19,7 @@ import (
 	"NexusDesk/internal/approval"
 	"NexusDesk/internal/artifact"
 	"NexusDesk/internal/dataset"
+	"NexusDesk/internal/dbconnector"
 	"NexusDesk/internal/llm"
 	"NexusDesk/internal/storage"
 	"NexusDesk/internal/workspace"
@@ -94,6 +95,11 @@ type StaleContextRefresh struct {
 	StaleArtifacts []string                 `json:"staleArtifacts"`
 	StaleDatasets  []string                 `json:"staleDatasets"`
 	Message        string                   `json:"message"`
+}
+
+type ArtifactLineageImport struct {
+	Lineage ArtifactLineage `json:"lineage"`
+	Message string          `json:"message"`
 }
 
 const chatContextMaxBytes = 16 * 1024
@@ -343,6 +349,7 @@ func (a *App) CreateMarkdownReport(relPath string) (artifact.MarkdownReport, err
 	if err != nil {
 		return artifact.MarkdownReport{}, err
 	}
+	a.persistArtifactMetadata(root, report.RelPath)
 	a.recordApproval("artifact.report", report.RelPath, "low", report.Message)
 	return report, nil
 }
@@ -361,6 +368,7 @@ func (a *App) CreateScanReportArtifact() (artifact.MarkdownReport, error) {
 	if err != nil {
 		return artifact.MarkdownReport{}, err
 	}
+	a.persistArtifactMetadata(root, report.RelPath)
 	a.recordApproval("artifact.scan-report", report.RelPath, "low", report.Message)
 	return report, nil
 }
@@ -375,6 +383,7 @@ func (a *App) CreateChatMarkdownArtifact(request artifact.MarkdownArtifactReques
 	if err != nil {
 		return artifact.MarkdownReport{}, err
 	}
+	a.persistArtifactMetadata(root, report.RelPath)
 	a.recordApproval("artifact.markdown", report.RelPath, "low", report.Message)
 	return report, nil
 }
@@ -467,7 +476,14 @@ func (a *App) QueryDatasetSQL(request analytics.SQLQueryRequest) (analytics.SQLQ
 	if root == "" {
 		return analytics.SQLQueryResult{}, errors.New("open a workspace before querying datasets")
 	}
-	return analytics.QueryCSVSQL(root, request)
+	result, err := analytics.QueryCSVSQL(root, request)
+	if err != nil {
+		a.recordSQLRun(root, request.RelPath, request.SQL, "", 0, "", "failed", err.Error())
+		return analytics.SQLQueryResult{}, err
+	}
+	a.recordSQLRun(root, result.RelPath, result.SQL, result.Engine, len(result.Rows), "", "completed", result.Message)
+	a.recordDatasetDependency(root, result.RelPath, "sql-run", result.SQL, result.Engine, "")
+	return result, nil
 }
 
 func (a *App) ListAgentTools() []agenttools.Descriptor {
@@ -667,12 +683,64 @@ func (a *App) GetArtifactLineage() (ArtifactLineage, error) {
 	}, nil
 }
 
+func (a *App) ExportArtifactLineageJSON() (artifact.MarkdownReport, error) {
+	root := a.getWorkspaceRoot()
+	if root == "" {
+		return artifact.MarkdownReport{}, errors.New("open a workspace before exporting artifact lineage")
+	}
+	lineage, err := a.GetArtifactLineage()
+	if err != nil {
+		return artifact.MarkdownReport{}, err
+	}
+	payload, err := json.MarshalIndent(lineage, "", "  ")
+	if err != nil {
+		return artifact.MarkdownReport{}, err
+	}
+	report, err := artifact.CreateJSONArtifact(root, artifact.JSONArtifactRequest{
+		Name:        "artifact-lineage",
+		Title:       "Artifact Lineage Graph",
+		Content:     string(payload),
+		Source:      "artifact lineage",
+		SourcePaths: lineageSourcePaths(lineage),
+		Prompt:      "Export current NexusDesk artifact lineage graph.",
+	}, time.Now())
+	if err != nil {
+		return artifact.MarkdownReport{}, err
+	}
+	a.persistArtifactMetadata(root, report.RelPath)
+	a.recordApproval("artifact.lineage.export", report.RelPath, "low", report.Message)
+	return report, nil
+}
+
+func (a *App) ImportArtifactLineageJSON(relPath string) (ArtifactLineageImport, error) {
+	root := a.getWorkspaceRoot()
+	if root == "" {
+		return ArtifactLineageImport{}, errors.New("open a workspace before importing artifact lineage")
+	}
+	preview, err := workspace.Preview(root, relPath, workspace.PreviewOptions{MaxBytes: 512 * 1024})
+	if err != nil {
+		return ArtifactLineageImport{}, err
+	}
+	var lineage ArtifactLineage
+	if err := json.Unmarshal([]byte(preview.Content), &lineage); err != nil {
+		return ArtifactLineageImport{}, err
+	}
+	return ArtifactLineageImport{
+		Lineage: lineage,
+		Message: fmt.Sprintf("Imported %d lineage nodes and %d relationships from %s.", len(lineage.Nodes), len(lineage.Edges), preview.RelPath),
+	}, nil
+}
+
 func (a *App) SaveDatasetQuery(relPath string, query string, label string) (dataset.SavedQuery, error) {
 	root := a.getWorkspaceRoot()
 	if root == "" {
 		return dataset.SavedQuery{}, errors.New("open a workspace before saving dataset queries")
 	}
-	return dataset.SaveQuery(root, relPath, query, label)
+	saved, err := dataset.SaveQuery(root, relPath, query, label)
+	if err == nil {
+		a.recordDatasetDependency(root, saved.RelPath, "filter-snippet", saved.Query, saved.Label, "")
+	}
+	return saved, err
 }
 
 func (a *App) ListDatasetQueries(relPath string) ([]dataset.SavedQuery, error) {
@@ -688,7 +756,59 @@ func (a *App) SaveDatasetSQLQuery(relPath string, query string, label string) (d
 	if root == "" {
 		return dataset.SavedQuery{}, errors.New("open a workspace before saving SQL snippets")
 	}
-	return dataset.SaveQueryKind(root, relPath, query, label, "sql")
+	saved, err := dataset.SaveQueryKind(root, relPath, query, label, "sql")
+	if err == nil {
+		a.recordDatasetDependency(root, saved.RelPath, "sql-snippet", saved.Query, saved.Label, "")
+	}
+	return saved, err
+}
+
+func (a *App) ListDatasetDependencies(relPath string) ([]appmeta.DatasetDependency, error) {
+	root := a.getWorkspaceRoot()
+	if root == "" {
+		return []appmeta.DatasetDependency{}, nil
+	}
+	if !appmeta.Exists(root) {
+		return []appmeta.DatasetDependency{}, nil
+	}
+	return appmeta.ListDatasetDependencies(root, relPath)
+}
+
+func (a *App) ListDatasetSQLRuns(relPath string) ([]appmeta.SQLRun, error) {
+	root := a.getWorkspaceRoot()
+	if root == "" {
+		return []appmeta.SQLRun{}, nil
+	}
+	if !appmeta.Exists(root) {
+		return []appmeta.SQLRun{}, nil
+	}
+	return appmeta.ListSQLRuns(root, relPath)
+}
+
+func (a *App) SearchMetadata(query string) ([]appmeta.MetadataSearchResult, error) {
+	root := a.getWorkspaceRoot()
+	if root == "" {
+		return []appmeta.MetadataSearchResult{}, nil
+	}
+	if _, err := a.mirrorMetadataStore(root, true); err != nil {
+		return []appmeta.MetadataSearchResult{}, err
+	}
+	return appmeta.Search(root, query, 40)
+}
+
+func (a *App) QueryWorkspaceSQLite(request dbconnector.SQLiteQueryRequest) (dbconnector.SQLiteQueryResult, error) {
+	root := a.getWorkspaceRoot()
+	if root == "" {
+		return dbconnector.SQLiteQueryResult{}, errors.New("open a workspace before querying SQLite files")
+	}
+	result, err := dbconnector.QuerySQLite(root, request)
+	if err != nil {
+		a.recordSQLRun(root, request.RelPath, request.SQL, "sqlite-readonly", 0, "", "failed", err.Error())
+		return dbconnector.SQLiteQueryResult{}, err
+	}
+	a.recordSQLRun(root, result.RelPath, result.SQL, result.Engine, len(result.Rows), "", "completed", result.Message)
+	a.recordDatasetDependency(root, result.RelPath, "sqlite-query", result.SQL, result.Engine, "")
+	return result, nil
 }
 
 func (a *App) ListDatasetSQLQueries(relPath string) ([]dataset.SavedQuery, error) {
@@ -721,6 +841,8 @@ func (a *App) CreateDatasetChartArtifact(request workspace.DatasetChartRequest) 
 	if err != nil {
 		return artifact.MarkdownReport{}, err
 	}
+	a.persistArtifactMetadata(root, report.RelPath)
+	a.recordDatasetDependency(root, chart.RelPath, "chart", chart.CategoryColumn, chart.ValueColumn, report.RelPath)
 	a.recordApproval("artifact.chart", report.RelPath, "low", report.Message)
 	return report, nil
 }
@@ -739,6 +861,8 @@ func (a *App) CreateDatasetQueryArtifact(relPath string, query string) (artifact
 	if err != nil {
 		return artifact.MarkdownReport{}, err
 	}
+	a.persistArtifactMetadata(root, report.RelPath)
+	a.recordDatasetDependency(root, result.RelPath, "filter-export", result.Query, "", report.RelPath)
 	a.recordApproval("artifact.query", report.RelPath, "low", report.Message)
 	return report, nil
 }
@@ -750,12 +874,17 @@ func (a *App) CreateDatasetSQLArtifact(request analytics.SQLQueryRequest) (artif
 	}
 	result, err := analytics.QueryCSVSQL(root, request)
 	if err != nil {
+		a.recordSQLRun(root, request.RelPath, request.SQL, "", 0, "", "failed", err.Error())
 		return artifact.MarkdownReport{}, err
 	}
 	report, err := artifact.CreateDatasetSQLMarkdown(root, result, time.Now())
 	if err != nil {
+		a.recordSQLRun(root, result.RelPath, result.SQL, result.Engine, len(result.Rows), "", "failed", err.Error())
 		return artifact.MarkdownReport{}, err
 	}
+	a.persistArtifactMetadata(root, report.RelPath)
+	a.recordSQLRun(root, result.RelPath, result.SQL, result.Engine, len(result.Rows), report.RelPath, "completed", result.Message)
+	a.recordDatasetDependency(root, result.RelPath, "sql-report", result.SQL, result.Engine, report.RelPath)
 	a.recordApproval("artifact.dataset_sql.create", report.RelPath, "medium", fmt.Sprintf("Created SQL result artifact from %s using %s.", result.RelPath, result.Engine))
 	return report, nil
 }
@@ -774,6 +903,8 @@ func (a *App) CreateDatasetSummaryArtifact(relPath string) (artifact.MarkdownRep
 	if err != nil {
 		return artifact.MarkdownReport{}, err
 	}
+	a.persistArtifactMetadata(root, report.RelPath)
+	a.recordDatasetDependency(root, relPath, "summary", "dataset summary", "", report.RelPath)
 	a.recordApproval("artifact.dataset-summary", report.RelPath, "low", report.Message)
 	return report, nil
 }
@@ -846,7 +977,9 @@ func (a *App) ClearChatHistory() ([]storage.ChatMessage, error) {
 
 	items, err := a.chatStore.Clear(root)
 	if err == nil {
-		a.syncPreparedMetadataStore(root)
+		if appmeta.Exists(root) {
+			_ = appmeta.ClearChats(root)
+		}
 	}
 	return items, err
 }
@@ -1047,7 +1180,7 @@ func (a *App) prepareChat(prompt string, relPaths []string) (llm.ChatRequest, st
 func (a *App) persistChatPair(prompt string, chatRequest llm.ChatRequest, result llm.ChatResult) error {
 	root := a.getWorkspaceRoot()
 	if root != "" {
-		_, err := a.chatStore.AppendPair(root, storage.ChatMessage{
+		messages, err := a.chatStore.AppendPair(root, storage.ChatMessage{
 			Role:           "user",
 			Content:        prompt,
 			ContextRelPath: chatRequest.ContextRelPath,
@@ -1061,7 +1194,13 @@ func (a *App) persistChatPair(prompt string, chatRequest llm.ChatRequest, result
 		if err != nil {
 			return err
 		}
-		a.syncPreparedMetadataStore(root)
+		if appmeta.Exists(root) && len(messages) >= 2 {
+			last := messages[len(messages)-2:]
+			_ = appmeta.AppendChats(root, []appmeta.ChatMirror{
+				chatMirrorFromMessage(last[0], fmt.Sprintf("chat-%03d-%s", len(messages)-2, hashForID(last[0].Role+last[0].CreatedAt+last[0].Content))),
+				chatMirrorFromMessage(last[1], fmt.Sprintf("chat-%03d-%s", len(messages)-1, hashForID(last[1].Role+last[1].CreatedAt+last[1].Content))),
+			})
+		}
 	}
 
 	return nil
@@ -1355,8 +1494,23 @@ func (a *App) appendToolRun(root string, record agenttools.RunRecord) error {
 		return nil
 	}
 	_, err := agenttools.Append(root, record)
-	if err == nil {
-		a.syncPreparedMetadataStore(root)
+	if err == nil && appmeta.Exists(root) {
+		inputs, _ := json.Marshal(record.Inputs)
+		_ = appmeta.AppendToolRun(root, appmeta.ToolRunMirror{
+			ID:            record.ID,
+			ToolName:      record.ToolName,
+			Target:        record.Target,
+			Risk:          record.Risk,
+			Status:        record.Status,
+			Mode:          record.Mode,
+			ApprovalID:    record.ApprovalID,
+			Inputs:        inputs,
+			OutputSummary: record.OutputSummary,
+			Error:         record.Error,
+			StartedAt:     record.StartedAt,
+			CompletedAt:   record.CompletedAt,
+			DurationMs:    record.DurationMs,
+		})
 	}
 	return err
 }
@@ -1384,7 +1538,17 @@ func (a *App) recordApproval(action string, target string, risk string, message 
 	if len(items) == 0 {
 		return ""
 	}
-	a.syncPreparedMetadataStore(root)
+	if appmeta.Exists(root) {
+		_ = appmeta.AppendApproval(root, appmeta.ApprovalMirror{
+			ID:        items[0].ID,
+			Action:    items[0].Action,
+			Target:    items[0].Target,
+			Risk:      items[0].Risk,
+			Decision:  items[0].Decision,
+			Message:   items[0].Message,
+			CreatedAt: items[0].CreatedAt,
+		})
+	}
 	return items[0].ID
 }
 
@@ -1629,6 +1793,86 @@ func (a *App) listArtifactsFromMetadata(root string) ([]artifact.WorkspaceArtifa
 		})
 	}
 	return artifacts, nil
+}
+
+func (a *App) persistArtifactMetadata(root string, relPath string) {
+	if root == "" || relPath == "" || !appmeta.Exists(root) {
+		return
+	}
+	item, err := artifact.Metadata(root, relPath)
+	if err != nil {
+		return
+	}
+	payload, _ := json.Marshal(item)
+	_ = appmeta.UpsertArtifact(root, appmeta.ArtifactMirror{
+		ID:             "artifact-" + hashForID(relPath),
+		RelPath:        relPath,
+		Kind:           item.Kind,
+		Title:          item.Title,
+		Source:         item.Source,
+		ContextRelPath: item.ContextRelPath,
+		Metadata:       payload,
+		CreatedAt:      item.CreatedAt,
+	})
+}
+
+func (a *App) recordDatasetDependency(root string, relPath string, kind string, query string, target string, artifactRelPath string) {
+	if root == "" || relPath == "" || !appmeta.Exists(root) {
+		return
+	}
+	now := time.Now().UTC().Format(time.RFC3339)
+	_ = appmeta.RecordDatasetDependency(root, appmeta.DatasetDependency{
+		ID:          "dataset-dependency-" + hashForID(relPath+kind+query+target+artifactRelPath+now),
+		RelPath:     filepath.ToSlash(relPath),
+		Kind:        kind,
+		Target:      target,
+		Query:       query,
+		Artifact:    artifactRelPath,
+		CreatedAt:   now,
+		LastRefresh: now,
+	})
+}
+
+func (a *App) recordSQLRun(root string, relPath string, sqlText string, engine string, rows int, artifactRelPath string, status string, message string) {
+	if root == "" || relPath == "" || !appmeta.Exists(root) {
+		return
+	}
+	now := time.Now().UTC().Format(time.RFC3339)
+	_ = appmeta.AppendSQLRun(root, appmeta.SQLRun{
+		ID:        "sql-run-" + hashForID(relPath+sqlText+now),
+		RelPath:   filepath.ToSlash(relPath),
+		SQL:       sqlText,
+		Engine:    fallbackInput(engine, "unknown"),
+		Rows:      rows,
+		Artifact:  artifactRelPath,
+		Status:    status,
+		Message:   message,
+		CreatedAt: now,
+	})
+}
+
+func chatMirrorFromMessage(message storage.ChatMessage, id string) appmeta.ChatMirror {
+	return appmeta.ChatMirror{
+		ID:             id,
+		Role:           message.Role,
+		Content:        message.Content,
+		ContextRelPath: message.ContextRelPath,
+		SourcePaths:    message.SourcePaths,
+		CreatedAt:      message.CreatedAt,
+	}
+}
+
+func lineageSourcePaths(lineage ArtifactLineage) []string {
+	paths := []string{}
+	seen := map[string]bool{}
+	for _, node := range lineage.Nodes {
+		if node.RelPath == "" || seen[node.RelPath] {
+			continue
+		}
+		seen[node.RelPath] = true
+		paths = append(paths, node.RelPath)
+	}
+	return paths
 }
 
 func chatsFromMirror(items []appmeta.ChatMirror) []storage.ChatMessage {

@@ -87,6 +87,38 @@ type LineageStats struct {
 	RelationshipCount map[string]int `json:"relationshipCount"`
 }
 
+type MetadataSearchResult struct {
+	ID        string `json:"id"`
+	Kind      string `json:"kind"`
+	Title     string `json:"title"`
+	Target    string `json:"target"`
+	Snippet   string `json:"snippet"`
+	CreatedAt string `json:"createdAt"`
+}
+
+type DatasetDependency struct {
+	ID          string `json:"id"`
+	RelPath     string `json:"relPath"`
+	Kind        string `json:"kind"`
+	Target      string `json:"target"`
+	Query       string `json:"query"`
+	Artifact    string `json:"artifact"`
+	CreatedAt   string `json:"createdAt"`
+	LastRefresh string `json:"lastRefresh"`
+}
+
+type SQLRun struct {
+	ID        string `json:"id"`
+	RelPath   string `json:"relPath"`
+	SQL       string `json:"sql"`
+	Engine    string `json:"engine"`
+	Rows      int    `json:"rows"`
+	Artifact  string `json:"artifact"`
+	Status    string `json:"status"`
+	Message   string `json:"message"`
+	CreatedAt string `json:"createdAt"`
+}
+
 type MetadataColumn struct {
 	Name string `json:"name"`
 	Type string `json:"type"`
@@ -239,6 +271,269 @@ func Inspect(root string, datasetViews []DatasetView) (MetadataBrowser, error) {
 		Message:      "SQLite metadata tables and dataset SQL views are available for inspection.",
 		UpdatedAt:    time.Now().UTC().Format(time.RFC3339),
 	}, nil
+}
+
+func AppendChats(root string, chats []ChatMirror) error {
+	if len(chats) == 0 {
+		return nil
+	}
+	workspaceRoot, db, err := writableDB(root)
+	if err != nil {
+		return err
+	}
+	defer db.Close()
+	for index, item := range chats {
+		sourcePaths, _ := json.Marshal(item.SourcePaths)
+		if _, err := db.Exec(
+			`INSERT OR REPLACE INTO chats (id, workspace_root, role, content, context_rel_path, source_paths_json, created_at)
+			 VALUES (?, ?, ?, ?, ?, ?, ?)`,
+			fallbackID(item.ID, workspaceRoot, "chat", index, item.Role+item.CreatedAt+item.Content),
+			workspaceRoot,
+			item.Role,
+			item.Content,
+			item.ContextRelPath,
+			string(sourcePaths),
+			fallbackTime(item.CreatedAt),
+		); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+func ClearChats(root string) error {
+	workspaceRoot, db, err := writableDB(root)
+	if err != nil {
+		return err
+	}
+	defer db.Close()
+	_, err = db.Exec(`DELETE FROM chats WHERE workspace_root = ?`, workspaceRoot)
+	return err
+}
+
+func AppendApproval(root string, item ApprovalMirror) error {
+	workspaceRoot, db, err := writableDB(root)
+	if err != nil {
+		return err
+	}
+	defer db.Close()
+	_, err = db.Exec(
+		`INSERT OR REPLACE INTO approvals (id, workspace_root, action, target, risk, decision, message, created_at)
+		 VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+		fallbackID(item.ID, workspaceRoot, "approval", 0, item.Action+item.Target+item.CreatedAt),
+		workspaceRoot,
+		item.Action,
+		item.Target,
+		fallbackString(item.Risk, "medium"),
+		fallbackString(item.Decision, "applied"),
+		item.Message,
+		fallbackTime(item.CreatedAt),
+	)
+	return err
+}
+
+func UpsertArtifact(root string, item ArtifactMirror) error {
+	workspaceRoot, db, err := writableDB(root)
+	if err != nil {
+		return err
+	}
+	defer db.Close()
+	_, err = db.Exec(
+		`INSERT OR REPLACE INTO artifacts (id, workspace_root, rel_path, kind, title, source, context_rel_path, metadata_json, created_at)
+		 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+		fallbackID(item.ID, workspaceRoot, "artifact", 0, item.RelPath+item.CreatedAt),
+		workspaceRoot,
+		item.RelPath,
+		fallbackString(item.Kind, "artifact"),
+		item.Title,
+		item.Source,
+		item.ContextRelPath,
+		string(item.Metadata),
+		fallbackTime(item.CreatedAt),
+	)
+	return err
+}
+
+func AppendToolRun(root string, item ToolRunMirror) error {
+	workspaceRoot, db, err := writableDB(root)
+	if err != nil {
+		return err
+	}
+	defer db.Close()
+	_, err = db.Exec(
+		`INSERT OR REPLACE INTO tool_runs (id, workspace_root, tool_name, target, risk, status, mode, approval_id, inputs_json, output_summary, error, started_at, completed_at, duration_ms)
+		 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+		fallbackID(item.ID, workspaceRoot, "tool", 0, item.ToolName+item.Target+item.StartedAt),
+		workspaceRoot,
+		item.ToolName,
+		item.Target,
+		fallbackString(item.Risk, "low"),
+		fallbackString(item.Status, "completed"),
+		fallbackString(item.Mode, "dry-run"),
+		item.ApprovalID,
+		string(item.Inputs),
+		item.OutputSummary,
+		item.Error,
+		fallbackTime(item.StartedAt),
+		item.CompletedAt,
+		item.DurationMs,
+	)
+	return err
+}
+
+func RecordDatasetDependency(root string, item DatasetDependency) error {
+	workspaceRoot, db, err := writableDB(root)
+	if err != nil {
+		return err
+	}
+	defer db.Close()
+	createdAt := fallbackTime(item.CreatedAt)
+	_, err = db.Exec(
+		`INSERT OR REPLACE INTO dataset_dependencies (id, workspace_root, rel_path, kind, target, query, artifact, created_at, last_refresh)
+		 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+		fallbackID(item.ID, workspaceRoot, "dataset-dependency", 0, item.RelPath+item.Kind+item.Target+item.Query+item.Artifact),
+		workspaceRoot,
+		item.RelPath,
+		fallbackString(item.Kind, "query"),
+		item.Target,
+		item.Query,
+		item.Artifact,
+		createdAt,
+		fallbackString(item.LastRefresh, createdAt),
+	)
+	return err
+}
+
+func ListDatasetDependencies(root string, relPath string) ([]DatasetDependency, error) {
+	_, db, err := openExisting(root)
+	if err != nil {
+		return nil, err
+	}
+	defer db.Close()
+	workspaceRoot, err := filepath.Abs(root)
+	if err != nil {
+		return nil, err
+	}
+	rows, err := db.Query(`SELECT id, rel_path, kind, target, query, artifact, created_at, last_refresh
+		FROM dataset_dependencies WHERE workspace_root = ? AND (? = '' OR rel_path = ?) ORDER BY created_at DESC`, workspaceRoot, strings.TrimSpace(relPath), strings.TrimSpace(relPath))
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []DatasetDependency{}
+	for rows.Next() {
+		var item DatasetDependency
+		if err := rows.Scan(&item.ID, &item.RelPath, &item.Kind, &item.Target, &item.Query, &item.Artifact, &item.CreatedAt, &item.LastRefresh); err != nil {
+			return nil, err
+		}
+		items = append(items, item)
+	}
+	return items, rows.Err()
+}
+
+func AppendSQLRun(root string, item SQLRun) error {
+	workspaceRoot, db, err := writableDB(root)
+	if err != nil {
+		return err
+	}
+	defer db.Close()
+	_, err = db.Exec(
+		`INSERT OR REPLACE INTO sql_runs (id, workspace_root, rel_path, sql_text, engine, rows_returned, artifact, status, message, created_at)
+		 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+		fallbackID(item.ID, workspaceRoot, "sql-run", 0, item.RelPath+item.SQL+item.CreatedAt),
+		workspaceRoot,
+		item.RelPath,
+		item.SQL,
+		item.Engine,
+		item.Rows,
+		item.Artifact,
+		fallbackString(item.Status, "completed"),
+		item.Message,
+		fallbackTime(item.CreatedAt),
+	)
+	return err
+}
+
+func ListSQLRuns(root string, relPath string) ([]SQLRun, error) {
+	_, db, err := openExisting(root)
+	if err != nil {
+		return nil, err
+	}
+	defer db.Close()
+	workspaceRoot, err := filepath.Abs(root)
+	if err != nil {
+		return nil, err
+	}
+	rows, err := db.Query(`SELECT id, rel_path, sql_text, engine, rows_returned, artifact, status, message, created_at
+		FROM sql_runs WHERE workspace_root = ? AND (? = '' OR rel_path = ?) ORDER BY created_at DESC LIMIT 50`, workspaceRoot, strings.TrimSpace(relPath), strings.TrimSpace(relPath))
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []SQLRun{}
+	for rows.Next() {
+		var item SQLRun
+		if err := rows.Scan(&item.ID, &item.RelPath, &item.SQL, &item.Engine, &item.Rows, &item.Artifact, &item.Status, &item.Message, &item.CreatedAt); err != nil {
+			return nil, err
+		}
+		items = append(items, item)
+	}
+	return items, rows.Err()
+}
+
+func Search(root string, query string, limit int) ([]MetadataSearchResult, error) {
+	query = strings.TrimSpace(query)
+	if query == "" {
+		return []MetadataSearchResult{}, nil
+	}
+	if limit <= 0 || limit > 100 {
+		limit = 40
+	}
+	_, db, err := openExisting(root)
+	if err != nil {
+		return nil, err
+	}
+	defer db.Close()
+	workspaceRoot, err := filepath.Abs(root)
+	if err != nil {
+		return nil, err
+	}
+	like := "%" + strings.ToLower(query) + "%"
+	items := []MetadataSearchResult{}
+	appendRows := func(kind string, rows *sql.Rows, err error) error {
+		if err != nil {
+			return err
+		}
+		defer rows.Close()
+		for rows.Next() {
+			var item MetadataSearchResult
+			item.Kind = kind
+			if err := rows.Scan(&item.ID, &item.Title, &item.Target, &item.Snippet, &item.CreatedAt); err != nil {
+				return err
+			}
+			items = append(items, item)
+		}
+		return rows.Err()
+	}
+	rows, err := db.Query(`SELECT id, role, context_rel_path, substr(content, 1, 220), created_at
+		FROM chats WHERE workspace_root = ? AND lower(content || ' ' || context_rel_path || ' ' || source_paths_json) LIKE ? ORDER BY created_at DESC LIMIT ?`, workspaceRoot, like, limit)
+	if err := appendRows("chat", rows, err); err != nil {
+		return nil, err
+	}
+	rows, err = db.Query(`SELECT id, title, rel_path, substr(metadata_json, 1, 220), created_at
+		FROM artifacts WHERE workspace_root = ? AND lower(rel_path || ' ' || title || ' ' || source || ' ' || metadata_json) LIKE ? ORDER BY created_at DESC LIMIT ?`, workspaceRoot, like, limit)
+	if err := appendRows("artifact", rows, err); err != nil {
+		return nil, err
+	}
+	rows, err = db.Query(`SELECT id, tool_name, target, substr(output_summary || ' ' || error || ' ' || inputs_json, 1, 220), started_at
+		FROM tool_runs WHERE workspace_root = ? AND lower(tool_name || ' ' || target || ' ' || output_summary || ' ' || error || ' ' || inputs_json) LIKE ? ORDER BY started_at DESC LIMIT ?`, workspaceRoot, like, limit)
+	if err := appendRows("tool", rows, err); err != nil {
+		return nil, err
+	}
+	if len(items) > limit {
+		items = items[:limit]
+	}
+	return items, nil
 }
 
 func ListChats(root string) ([]ChatMirror, error) {
@@ -411,6 +706,22 @@ func openExisting(root string) (SQLiteStatus, *sql.DB, error) {
 		SchemaHash:    hex.EncodeToString(hash[:]),
 		Tables:        tables,
 	}, db, nil
+}
+
+func writableDB(root string) (string, *sql.DB, error) {
+	status, err := Ensure(root)
+	if err != nil {
+		return "", nil, err
+	}
+	workspaceRoot, err := filepath.Abs(root)
+	if err != nil {
+		return "", nil, err
+	}
+	db, err := sql.Open("sqlite", status.Path)
+	if err != nil {
+		return "", nil, err
+	}
+	return workspaceRoot, db, nil
 }
 
 func hashID(value string) string {
@@ -651,6 +962,31 @@ CREATE TABLE IF NOT EXISTS tool_runs (
     started_at TEXT NOT NULL,
     completed_at TEXT,
     duration_ms INTEGER
+);
+
+CREATE TABLE IF NOT EXISTS dataset_dependencies (
+    id TEXT PRIMARY KEY,
+    workspace_root TEXT NOT NULL,
+    rel_path TEXT NOT NULL,
+    kind TEXT NOT NULL,
+    target TEXT,
+    query TEXT,
+    artifact TEXT,
+    created_at TEXT NOT NULL,
+    last_refresh TEXT
+);
+
+CREATE TABLE IF NOT EXISTS sql_runs (
+    id TEXT PRIMARY KEY,
+    workspace_root TEXT NOT NULL,
+    rel_path TEXT NOT NULL,
+    sql_text TEXT NOT NULL,
+    engine TEXT NOT NULL,
+    rows_returned INTEGER,
+    artifact TEXT,
+    status TEXT NOT NULL,
+    message TEXT,
+    created_at TEXT NOT NULL
 );
 `
 

@@ -169,6 +169,12 @@ This tracker reflects the repository as it exists today and keeps planned work s
 - [x] Data Studio stores SQL snippets per dataset separately from lightweight row filters.
 - [x] Playwright visual smoke asserts navigator resizing, panel-level scrolling, tool-run details, metadata browser, lineage filtering, and freshness warnings.
 - [x] Playwright visual smoke runs against Wails-free mocked workspace/data/metadata/chat/artifact fixtures.
+- [x] SQLite metadata now receives direct chat, approval, artifact, and tool-run writes once the workspace metadata store exists.
+- [x] Metadata history search can query chat, artifact, and tool-run rows through the SQLite-backed metadata surface.
+- [x] Dataset dependencies and SQL run history are recorded for saved SQL snippets, SQL reports, chart artifacts, query exports, and summaries.
+- [x] Read-only SQLite workspace database files are classified as database files and can be queried through a bounded connector surface.
+- [x] Artifact lineage can be exported as JSON and imported back for debugging/preview workflows.
+- [x] Playwright visual smoke mocks live in a reusable fixture helper shared by the visual smoke scenario.
 - [x] Tool timeline records real workspace, preview, search, profile, write, report, and chat actions.
 - [x] Artifact rows can select the generated report preview when visible in the workspace tree.
 - [x] Helper services placeholder exists at `services/docker-compose.yml`.
@@ -259,13 +265,24 @@ This tracker reflects the repository as it exists today and keeps planned work s
 
 ### Prepared Batch: Studio Depth And Connectors
 
-- [ ] Move SQLite from mirrored read preference to true repository-backed writes for chats, approvals, artifacts, and tool runs.
-- [ ] Add searchable chat/artifact/tool-run history views backed by SQLite metadata queries.
-- [ ] Add dataset lineage dependencies for saved SQL snippets, exported reports, chart artifacts, and summaries with explicit refresh/rebuild actions.
-- [ ] Add saved SQL execution history with last-run status, row counts, and artifact links.
-- [ ] Add first database connector design surface for read-only SQLite files inside a workspace.
-- [ ] Add artifact graph export/import as JSON for debugging and future team sync.
-- [ ] Add reusable Playwright fixture helpers instead of inline visual-smoke mocks.
+- [x] Move SQLite from mirrored read preference to direct repository-backed writes for chats, approvals, artifacts, and tool runs when the metadata store exists.
+- [x] Add searchable chat/artifact/tool-run history views backed by SQLite metadata queries.
+- [x] Add dataset lineage dependencies for saved SQL snippets, exported reports, chart artifacts, and summaries.
+- [x] Add saved SQL execution history with last-run status, row counts, and artifact links.
+- [x] Add first database connector design surface for read-only SQLite files inside a workspace.
+- [x] Add artifact graph export/import as JSON for debugging and future team sync.
+- [x] Add reusable Playwright fixture helpers instead of inline visual-smoke mocks.
+
+### Prepared Batch: Studio Query And Connector Maturity
+
+- [ ] Add explicit refresh/rebuild buttons for dataset dependencies so saved SQL reports, charts, summaries, and exports can be regenerated from their recorded inputs.
+- [ ] Add a richer metadata history tab with filters by kind, time, source path, and jump-to-chat/artifact/tool actions.
+- [ ] Expand the SQLite connector with schema browsing, table previews, saved connector queries, and clearer read-only status.
+- [ ] Add artifact lineage JSON import comparison in the UI, including validation errors and graph diff previews.
+- [ ] Promote dataset dependency and SQL run records into first-class UI navigation from Data Studio, Artifact Studio, and Metadata Browser.
+- [ ] Add connector approval policy docs/tests for read-only proofs, blocked SQL statements, result caps, and redacted errors.
+- [ ] Start a DuckDB multi-file workspace dataset surface for joins across CSV/XLSX-derived tables.
+- [ ] Split large shell orchestration state where connector/history flows start to crowd `NexusDeskShell.tsx`.
 
 - [x] Batch: align product docs around NexusDesk as an IDE/data/analytics studio.
 - [x] Batch: align architecture, domain, indexing, search, AI, operations, delivery, DX, brand, README, and tracker wording.
@@ -362,9 +379,11 @@ This tracker reflects the repository as it exists today and keeps planned work s
 
 `app/internal/agenttools/run.go` owns persisted tool run records. Dry-runs and explicit executions capture tool name, target, inputs, risk, approval ID, timing, output summary, and errors under `.nexusdesk/tool-runs/log.json`.
 
-`app/internal/appmeta/` owns the SQLite metadata schema, manifest, first real database initialization, and the mirror from JSON compatibility stores. `EnsureSQLiteMetadataStore` writes `.nexusdesk/metadata/schema.sql`, opens `.nexusdesk/metadata/nexusdesk.sqlite` through `modernc.org/sqlite`, applies the schema, records the active workspace row, and mirrors chats, approvals, artifacts, and tool runs. Once the store exists, the app prefers SQLite reads for chat history, approvals, artifacts, and tool runs while JSON stores remain the compatibility write path until repository writes migrate deliberately.
+`app/internal/appmeta/` owns the SQLite metadata schema, manifest, real database initialization, JSON compatibility mirroring, direct metadata writes, metadata search, dataset dependency records, and SQL run history. `EnsureSQLiteMetadataStore` writes `.nexusdesk/metadata/schema.sql`, opens `.nexusdesk/metadata/nexusdesk.sqlite` through `modernc.org/sqlite`, applies the schema, records the active workspace row, and mirrors existing compatibility records. Once the store exists, chats, approvals, artifacts, and tool runs write fresh rows directly into SQLite while JSON stores remain the compatibility fallback.
 
 `app/internal/analytics/` owns the first read-only SQL-style CSV query surface. It accepts a constrained `SELECT` subset, blocks mutation keywords, uses a real `database/sql` DuckDB execution path when built with the `duckdb` tag on a CGO-enabled workstation, and otherwise falls back to the bounded CSV query path. SQL result exports are written as Markdown artifacts with the SQL text, engine, row counts, preview rows, and source dataset citation.
+
+`app/internal/dbconnector/` owns the first workspace database connector. It opens workspace-local `.sqlite`, `.sqlite3`, and `.db` files in read-only mode, accepts bounded `SELECT`/`WITH` queries, blocks mutation-oriented SQL, and returns capped tabular rows for Data Studio inspection.
 
 `app/internal/workspace/freshness.go` owns the first workspace freshness snapshot. The frontend polls it to show changed-file indicators, mark generated artifacts that cite changed source paths as potentially stale, and flag dataset-derived views/snippets/reports that need refresh when source datasets change.
 

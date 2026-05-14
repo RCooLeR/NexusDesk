@@ -23,6 +23,7 @@ import {
     DeleteArtifact,
     EnsureSQLiteMetadataStore,
     ExecuteAgentTool,
+    ExportArtifactLineageJSON,
     GetArtifactMetadata,
     GetArtifactLineage,
     InspectMetadataStore,
@@ -35,6 +36,8 @@ import {
     ListDatasetProfiles,
     GetRecentWorkspaces,
     ListArtifacts,
+    ListDatasetDependencies,
+    ListDatasetSQLRuns,
     OpenWorkspace,
     PreviewFileDelete,
     PreviewFileMove,
@@ -45,6 +48,7 @@ import {
     ProfileDataset,
     QueryDataset,
     QueryDatasetSQL,
+    QueryWorkspaceSQLite,
     ReadWorkspaceFile,
     RemoveRecentWorkspace,
     RefreshWorkspace,
@@ -52,6 +56,7 @@ import {
     SaveLLMSettings,
     SaveDatasetQuery,
     SaveDatasetSQLQuery,
+    SearchMetadata,
     SearchWorkspace,
     SelectWorkspace,
     TestLLMConnection,
@@ -69,6 +74,7 @@ import type {
     ChatMessage,
     ContextPreview,
     DatasetChartResult,
+    DatasetDependency,
     DatasetProfile,
     DatasetQueryResult,
     DatasetSQLQueryResult,
@@ -80,8 +86,11 @@ import type {
     LLMSettings,
     MarkdownReport,
     MetadataBrowser,
+    MetadataSearchResult,
     RecentWorkspace,
     SavedDatasetQuery,
+    SQLRun,
+    SQLiteQueryResult,
     SQLiteMetadataStatus,
     StartupState,
     ToolEvent,
@@ -207,7 +216,15 @@ export function NexusDeskShell({
     const [artifactLineage, setArtifactLineage] = useState<ArtifactLineage | null>(null);
     const [sqliteStatus, setSQLiteStatus] = useState<SQLiteMetadataStatus | null>(null);
     const [metadataBrowser, setMetadataBrowser] = useState<MetadataBrowser | null>(null);
+    const [metadataSearchQuery, setMetadataSearchQuery] = useState('');
+    const [metadataSearchResults, setMetadataSearchResults] = useState<MetadataSearchResult[]>([]);
+    const [isSearchingMetadata, setIsSearchingMetadata] = useState(false);
     const [workspaceFreshness, setWorkspaceFreshness] = useState<WorkspaceFreshnessStatus | null>(null);
+    const [datasetDependencies, setDatasetDependencies] = useState<DatasetDependency[]>([]);
+    const [datasetSQLRuns, setDatasetSQLRuns] = useState<SQLRun[]>([]);
+    const [sqliteConnectorQuery, setSQLiteConnectorQuery] = useState('select name, type from sqlite_master where type in (\'table\', \'view\') order by name');
+    const [sqliteConnectorResult, setSQLiteConnectorResult] = useState<SQLiteQueryResult | null>(null);
+    const [isQueryingSQLiteConnector, setIsQueryingSQLiteConnector] = useState(false);
     const [isPreparingMetadataStore, setIsPreparingMetadataStore] = useState(false);
     const [editingFilePaths, setEditingFilePaths] = useState<string[]>([]);
     const [fileDrafts, setFileDrafts] = useState<Record<string, string>>({});
@@ -369,12 +386,19 @@ export function NexusDeskShell({
     useEffect(() => {
         setSavedDatasetQueries([]);
         setSavedDatasetSQLQueries([]);
+        setDatasetDependencies([]);
+        setDatasetSQLRuns([]);
         if (!filePreview?.table) {
             return;
         }
         void refreshSavedDatasetQueries(filePreview.relPath);
         void refreshSavedDatasetSQLQueries(filePreview.relPath);
+        void refreshDatasetLineage(filePreview.relPath);
     }, [filePreview?.relPath, filePreview?.table]);
+
+    useEffect(() => {
+        setSQLiteConnectorResult(null);
+    }, [filePreview?.relPath]);
 
     useEffect(() => {
         function handleGlobalKeyDown(event: KeyboardEvent) {
@@ -1551,6 +1575,19 @@ export function NexusDeskShell({
         }
     }
 
+    async function refreshDatasetLineage(relPath: string) {
+        try {
+            setDatasetDependencies(await ListDatasetDependencies(relPath));
+        } catch {
+            setDatasetDependencies([]);
+        }
+        try {
+            setDatasetSQLRuns(await ListDatasetSQLRuns(relPath));
+        } catch {
+            setDatasetSQLRuns([]);
+        }
+    }
+
     async function refreshAgentTools() {
         try {
             const tools = await ListAgentTools();
@@ -2437,6 +2474,28 @@ export function NexusDeskShell({
         }
     }
 
+    async function exportArtifactLineage() {
+        if (!workspace) {
+            setWorkspaceStatus('Open a workspace before exporting lineage.');
+            return;
+        }
+        try {
+            const report = await ExportArtifactLineageJSON();
+            const result = await RefreshWorkspace();
+            if (result.selected) {
+                onWorkspaceChange(result.snapshot);
+                await refreshArtifacts();
+                setExpandedDirectories((current) => reconcileExpandedDirectories(current, result.snapshot, findWorkspaceNode(result.snapshot, report.relPath)));
+                await selectWorkspaceFile(result.snapshot, report.relPath);
+            }
+            setWorkspaceStatus(report.message);
+            pushToolEvent('Lineage exported', report.relPath);
+        } catch (error) {
+            const message = error instanceof Error ? error.message : '';
+            setWorkspaceStatus(message || 'Could not export artifact lineage.');
+        }
+    }
+
     async function prepareSQLiteMetadataStore() {
         if (!workspace) {
             setWorkspaceStatus('Open a workspace before preparing metadata storage.');
@@ -2471,6 +2530,45 @@ export function NexusDeskShell({
         } catch (error) {
             const message = error instanceof Error ? error.message : '';
             setWorkspaceStatus(message || 'Could not inspect metadata store.');
+        }
+    }
+
+    async function searchMetadataHistory() {
+        if (!workspace || !metadataSearchQuery.trim()) {
+            setMetadataSearchResults([]);
+            return;
+        }
+        setIsSearchingMetadata(true);
+        try {
+            const results = await SearchMetadata(metadataSearchQuery);
+            setMetadataSearchResults(results);
+            setWorkspaceStatus(`${results.length} metadata history results.`);
+        } catch (error) {
+            const message = error instanceof Error ? error.message : '';
+            setWorkspaceStatus(message || 'Could not search metadata history.');
+            setMetadataSearchResults([]);
+        } finally {
+            setIsSearchingMetadata(false);
+        }
+    }
+
+    async function queryActiveSQLiteFile() {
+        if (!workspace || !filePreview || filePreview.fileType !== 'database') {
+            setWorkspaceStatus('Select a SQLite database file before querying it.');
+            return;
+        }
+        setIsQueryingSQLiteConnector(true);
+        try {
+            const result = await QueryWorkspaceSQLite({relPath: filePreview.relPath, sql: sqliteConnectorQuery});
+            setSQLiteConnectorResult(result);
+            setWorkspaceStatus(result.message);
+            pushToolEvent('SQLite queried', result.relPath);
+            await refreshDatasetLineage(filePreview.relPath);
+        } catch (error) {
+            const message = error instanceof Error ? error.message : '';
+            setWorkspaceStatus(message || 'Could not query SQLite database.');
+        } finally {
+            setIsQueryingSQLiteConnector(false);
         }
     }
 
@@ -2737,6 +2835,8 @@ export function NexusDeskShell({
                 approvalRecords={approvalRecords}
                 capabilities={state.capabilities}
                 datasetProfiles={datasetProfiles}
+                datasetDependencies={datasetDependencies}
+                datasetSQLRuns={datasetSQLRuns}
                 datasetQuery={datasetQuery}
                 datasetQueryLabel={datasetQueryLabel}
                 datasetQueryResult={datasetQueryResult}
@@ -2744,11 +2844,15 @@ export function NexusDeskShell({
                 datasetSQLQueryLabel={datasetSQLQueryLabel}
                 datasetSQLQueryResult={datasetSQLQueryResult}
                 metadataBrowser={metadataBrowser}
+                metadataSearchQuery={metadataSearchQuery}
+                metadataSearchResults={metadataSearchResults}
                 savedDatasetQueries={savedDatasetQueries}
                 savedDatasetSQLQueries={savedDatasetSQLQueries}
                 artifactComparison={artifactComparison}
                 artifactLineage={artifactLineage}
                 sqliteStatus={sqliteStatus}
+                sqliteConnectorQuery={sqliteConnectorQuery}
+                sqliteConnectorResult={sqliteConnectorResult}
                 workspaceFreshness={workspaceFreshness}
                 datasetChartPreview={datasetChartPreview}
                 datasetChartCategory={datasetChartCategory}
@@ -2769,6 +2873,8 @@ export function NexusDeskShell({
                 isSavingDatasetSQLQuery={isSavingDatasetSQLQuery}
                 isRefreshingStaleContext={isRefreshingStaleContext}
                 isPreparingMetadataStore={isPreparingMetadataStore}
+                isSearchingMetadata={isSearchingMetadata}
+                isQueryingSQLiteConnector={isQueryingSQLiteConnector}
                 isPreviewingDatasetChart={isPreviewingDatasetChart}
                 isCreatingDatasetChart={isCreatingDatasetChart}
                 isCreatingDatasetSummary={isCreatingDatasetSummary}
@@ -2786,6 +2892,7 @@ export function NexusDeskShell({
                 onCreateReport={() => void createMarkdownReport()}
                 onDatasetQueryChange={setDatasetQuery}
                 onDatasetSQLQueryChange={setDatasetSQLQuery}
+                onSQLiteConnectorQueryChange={setSQLiteConnectorQuery}
                 onDatasetQueryLabelChange={setDatasetQueryLabel}
                 onDatasetSQLQueryLabelChange={setDatasetSQLQueryLabel}
                 onSaveDatasetQuery={() => void saveCurrentDatasetQuery()}
@@ -2824,9 +2931,13 @@ export function NexusDeskShell({
                 onDeleteArtifact={() => void deleteActiveArtifact()}
                 onOpenArtifactSource={() => void openArtifactSource()}
                 onRefreshLineage={() => void loadArtifactLineage()}
+                onExportLineage={() => void exportArtifactLineage()}
                 onRefreshStaleContext={() => void refreshStaleContextFromWorkspace()}
                 onOpenLineageSource={(relPath) => void openLineageSource(relPath)}
                 onInspectMetadata={() => void inspectMetadataStore()}
+                onMetadataSearchQueryChange={setMetadataSearchQuery}
+                onSearchMetadata={() => void searchMetadataHistory()}
+                onQuerySQLiteConnector={() => void queryActiveSQLiteFile()}
                 onPrepareMetadataStore={() => void prepareSQLiteMetadataStore()}
                 onSelectTab={selectOpenTab}
                 onSelectArtifact={(artifact) => void selectArtifact(artifact)}

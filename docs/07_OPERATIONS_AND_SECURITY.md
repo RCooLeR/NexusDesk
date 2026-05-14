@@ -43,7 +43,7 @@ Runtime changes should be stored locally and optionally exportable as workspace 
 
 Studio surfaces can change which tools and panels are visible, but they must not change the underlying safety boundary. Code Studio, Data Studio, Analytics Studio, Document Studio, Operations Studio, and Artifact Studio all share the same workspace roots, path checks, approval rules, secret handling, and audit model.
 
-The current implementation has an append-only local approval/action log for applied file writes, deletes, moves, artifact creation, scan-report creation, artifact archive, artifact delete, and approved agent tool executions. It writes records under `.nexusdesk/approvals/log.json` and shows the latest entries in the workbench. Modal approval prompts now cover higher-risk file, artifact, and explicit agent tool actions; Docker, database, and autonomous model-directed agent tool execution remain planned.
+The current implementation has an append-only local approval/action log for applied file writes, deletes, moves, artifact creation, scan-report creation, artifact archive, artifact delete, and approved agent tool executions. It writes records under `.nexusdesk/approvals/log.json` and mirrors fresh records into SQLite metadata when the store exists. Modal approval prompts now cover higher-risk file, artifact, and explicit agent tool actions; mutating Docker/database actions and autonomous model-directed agent tool execution remain planned.
 
 ## Secrets
 
@@ -93,9 +93,9 @@ Current implementation:
 - scan-report artifacts are created from backend scan status and exclusive artifact writes
 - artifact archive/delete actions validate workspace-relative artifact paths and move/remove sibling metadata sidecars through backend methods
 - explicit agent tool dry-runs/executions persist auditable records under `.nexusdesk/tool-runs/log.json`
-- SQLite metadata preparation writes schema and manifest files under `.nexusdesk/metadata/`, opens `.nexusdesk/metadata/nexusdesk.sqlite` through `modernc.org/sqlite`, and applies the schema while JSON remains the compatibility write layer
-- SQLite metadata inspection mirrors JSON/provenance records into SQLite and exposes table columns, row counts, filterable columns, copyable sample rows, and dataset SQL view summaries
-- prepared metadata reads prefer SQLite rows for chat history, approvals, artifacts, and tool runs after the store exists
+- SQLite metadata preparation writes schema and manifest files under `.nexusdesk/metadata/`, opens `.nexusdesk/metadata/nexusdesk.sqlite` through `modernc.org/sqlite`, applies the schema, mirrors existing compatibility records, and accepts direct fresh writes for chats, approvals, artifacts, and tool runs
+- SQLite metadata inspection exposes table columns, row counts, filterable columns, copyable sample rows, dataset SQL view summaries, and searchable chat/artifact/tool-run history
+- dataset dependency and SQL run metadata records tie saved snippets, reports, charts, summaries, and connector queries back to source datasets
 - workspace freshness checks ignore internal metadata/tool-run paths, detect source file changes, mark generated artifacts with stale source provenance, flag stale dataset-derived views, and warn chat/context surfaces when cited files changed
 - frontend commands call Wails bindings rather than reading or mutating arbitrary paths directly
 
@@ -116,6 +116,8 @@ Rules:
 Data Studio and Analytics Studio should make read-only status visible near schema, query, chart, and report surfaces. Mutating SQL is a policy change, not a UI shortcut.
 
 The current read-only SQL surface accepts a constrained `SELECT` subset over CSV data, blocks mutation keywords, and reuses the bounded CSV query path by default. A real DuckDB `database/sql` execution path is implemented behind the `duckdb` build tag for CGO-enabled machines; the current Windows loop keeps CGO disabled unless a C compiler is installed.
+
+The first workspace database connector supports local `.sqlite`, `.sqlite3`, and `.db` files only. It opens files through `modernc.org/sqlite` in read-only mode, requires `SELECT`/`WITH`, blocks mutation-oriented SQL keywords, caps rows, and records query history/dependency metadata without storing connector credentials.
 
 SQL result exports are artifact writes, not database mutations. They include the SQL text, engine, row counts, preview rows, and source dataset citation in a Markdown artifact plus sidecar metadata.
 

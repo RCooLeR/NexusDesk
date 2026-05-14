@@ -248,6 +248,8 @@ func detectFileTypeName(name string, isDir bool) string {
 		return "code"
 	case ".csv", ".xlsx", ".xls", ".parquet":
 		return "data"
+	case ".sqlite", ".sqlite3", ".db":
+		return "database"
 	case ".pdf", ".doc", ".docx", ".txt", ".rtf":
 		return "document"
 	case ".png", ".jpg", ".jpeg", ".gif", ".webp", ".svg", ".ico":

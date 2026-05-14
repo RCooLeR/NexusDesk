@@ -1,6 +1,6 @@
 import {useEffect, useMemo, useState} from 'react';
 import {Button} from '../../components/ui';
-import type {ColumnProfile, DatasetChartResult, DatasetProfile, DatasetQueryResult, DatasetSQLQueryResult, SavedDatasetQuery, TablePreview} from '../../types';
+import type {ColumnProfile, DatasetChartResult, DatasetDependency, DatasetProfile, DatasetQueryResult, DatasetSQLQueryResult, SavedDatasetQuery, SQLRun, TablePreview} from '../../types';
 
 type DataStudioPanelProps = {
     activeDatasetProfile: DatasetProfile | null;
@@ -43,6 +43,8 @@ type DataStudioPanelProps = {
     sqlResult: DatasetSQLQueryResult | null;
     savedQueries: SavedDatasetQuery[];
     savedSQLQueries: SavedDatasetQuery[];
+    sqlRuns: SQLRun[];
+    dependencies: DatasetDependency[];
     table: TablePreview | null;
 };
 
@@ -87,6 +89,8 @@ export function DataStudioPanel({
     sqlResult,
     savedQueries,
     savedSQLQueries,
+    sqlRuns,
+    dependencies,
     table,
 }: DataStudioPanelProps) {
     return (
@@ -117,6 +121,8 @@ export function DataStudioPanel({
                 onSQLExport={onSQLExport}
                 onSQLSave={onSQLSave}
                 savedSQLQueries={savedSQLQueries}
+                sqlRuns={sqlRuns}
+                dependencies={dependencies}
                 sqlLabel={sqlLabel}
             />
             <DatasetChartPanel
@@ -167,6 +173,8 @@ function DatasetQueryPanel({
     onSQLSave,
     onSave,
     savedSQLQueries,
+    sqlRuns,
+    dependencies,
     sqlLabel,
 }: {
     columns: string[];
@@ -193,6 +201,8 @@ function DatasetQueryPanel({
     onSQLSave: () => void;
     onSave: () => void;
     savedSQLQueries: SavedDatasetQuery[];
+    sqlRuns: SQLRun[];
+    dependencies: DatasetDependency[];
     sqlLabel: string;
 }) {
     const [filterColumn, setFilterColumn] = useState(columns[0] ?? '');
@@ -336,6 +346,16 @@ function DatasetQueryPanel({
                             }}
                             title="SQL Result"
                         />
+                    </div>
+                )}
+                {(sqlRuns.length > 0 || dependencies.length > 0) && (
+                    <div className="dataset-lineage-history">
+                        {sqlRuns.slice(0, 3).map((run) => (
+                            <p key={run.id}><strong>{run.status}</strong> {run.engine} / {run.rows} rows <small>{run.artifact || run.message}</small></p>
+                        ))}
+                        {dependencies.slice(0, 4).map((item) => (
+                            <p key={item.id}><strong>{item.kind}</strong> {item.target || item.artifact || item.query}</p>
+                        ))}
                     </div>
                 )}
             </div>
