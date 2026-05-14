@@ -25,7 +25,7 @@ The current app still uses small JSON files in the user's config directory as th
 - `llm-settings.json`
 - `chat-history.json`
 
-LLM API keys are not written into `llm-settings.json`. They are saved in a sidecar credential blob protected by the OS where available, while the JSON settings file keeps only a storage marker. `EnsureSQLiteMetadataStore` now initializes `.nexusdesk/metadata/nexusdesk.sqlite` with `modernc.org/sqlite`, applies the workspace/chat/approval/artifact/tool-run schema, and mirrors current JSON chat, approval, artifact, and tool-run records into SQLite. These JSON stores live behind `app/internal/storage/` so the next repository migration can replace read paths without changing frontend contracts.
+LLM API keys are not written into `llm-settings.json`. They are saved in a sidecar credential blob protected by the OS where available, while the JSON settings file keeps only a storage marker. `EnsureSQLiteMetadataStore` now initializes `.nexusdesk/metadata/nexusdesk.sqlite` with `modernc.org/sqlite`, applies the workspace/chat/approval/artifact/tool-run schema, and mirrors current JSON chat, approval, artifact, and tool-run records into SQLite. Once that store exists, chat history, approval log, artifact list, and tool-run list reads prefer SQLite mirror rows while JSON remains the compatibility write path. These stores live behind `app/internal/storage/`, `app/internal/approval/`, `app/internal/artifact/`, and `app/internal/agenttools/` so the next repository migration can replace writes without changing frontend contracts.
 
 ## Chat Streaming
 
@@ -66,13 +66,13 @@ For a healthy load, `/api/ps` should show nonzero `size_vram`, and the Ollama lo
 
 `app/internal/workspace/search.go` owns the first workspace path/content search pass. It searches path names and previewable text content inside the same ignore and depth boundaries as scanning. `SearchWorkspace` now merges that result set with artifact metadata matches from `app/internal/artifact/` and persisted chat snippets from `app/internal/storage/chat_history.go`, so generated outputs and prior analysis are searchable from the same navigator surface. `app/internal/workspace/dataset_query.go` owns the first CSV query flow with bounded row results, text search, column filters, numeric comparisons, `contains`, `limit`, and simple `order by` clauses until a DuckDB SQL layer is added. Dataset query exports rerun that same bounded query before writing a CSV artifact, so exported rows match the backend safety boundary rather than trusting frontend table state.
 
-`app/internal/workspace/context.go` owns directory/project context expansion and context-pack previews. The UI can pin a selected directory or the workspace root, but the backend still decides which files are safe and useful enough to include. `app/internal/workspace/freshness.go` owns the first file-change snapshot; the shell polls it to mark changed tree rows and warn when generated artifacts cite changed source paths.
+`app/internal/workspace/context.go` owns directory/project context expansion and context-pack previews. The UI can pin a selected directory or the workspace root, but the backend still decides which files are safe and useful enough to include. `app/internal/workspace/freshness.go` owns the first file-change snapshot; the shell polls it to mark changed tree rows, warn when generated artifacts cite changed source paths, and flag dataset-derived views/snippets/reports when CSV/XLSX source files change. The workbench can refresh a stale context preview from changed files and records that action in the local approval/metadata trail.
 
 `app/frontend/src/features/shell/HighlightedCode.tsx` remains as the dependency-free fallback highlighter for non-Monaco preview paths. Text/code source previews and edit drafts now use the Monaco-backed components listed below.
 
 ## Dataset Profiles
 
-`app/internal/dataset/` owns the first persistent dataset profile pass and saved query history. CSV files reuse the workspace preview profiles and XLSX files expose workbook sheet names, then profiles are stored under `.nexusdesk/datasets/profiles.json` inside the active workspace. Saved CSV queries are stored under `.nexusdesk/datasets/queries.json` and capped per dataset. `app/internal/workspace/chart.go` owns the first CSV chart model: one category column, optional numeric value column, bar or line chart mode, bounded points, and no arbitrary SQL or model-rendered pixels.
+`app/internal/dataset/` owns the first persistent dataset profile pass and saved query history. CSV files reuse the workspace preview profiles and XLSX files expose workbook sheet names, then profiles are stored under `.nexusdesk/datasets/profiles.json` inside the active workspace. Saved lightweight row filters and read-only SQL snippets are stored separately under `.nexusdesk/datasets/queries.json` and capped per dataset. `app/internal/workspace/chart.go` owns the first CSV chart model: one category column, optional numeric value column, bar or line chart mode, bounded points, and no arbitrary SQL or model-rendered pixels.
 
 The workbench topbar now has functional Preview, Explain, Summarize, Edit, Report, and Profile actions. Preview reloads the selected workspace node from disk, Explain sends a predefined grounded prompt when text context is available, Summarize sends selected file/directory context through chat and saves the result as a Markdown artifact, Edit uses the diff/apply write flow, Report creates a Markdown artifact, and Profile persists CSV/XLSX dataset metadata. The dataset panel can run a bounded CSV row query for the selected table, save/reuse queries, export the bounded result as a CSV artifact, preview chart points, create deterministic SVG bar or line chart artifacts, and create deterministic Markdown dataset summaries. The topbar also shows the active studio surface so code, data, document, operations, artifact, and workspace contexts are explicit. Editor previews and drafts now use Monaco with language detection for common code, document, data, and operations files. Drafts show dirty state, persist per tab while navigating, clear stale diff previews after edits, support revert before apply, guard dirty tab close, and use Ctrl+S to preview/apply through the same write path. New files start as draft tabs from Ctrl+N or the command palette, then use the same preview/apply boundary to create the file. Editor keyboard shortcuts include Ctrl+F for in-file find, Ctrl+W for active-tab close, and Ctrl+Tab / Ctrl+Shift+Tab for tab cycling. Ctrl+Shift+P opens the command palette for common workspace, editor, context, data, artifact, and chat actions.
 
@@ -93,7 +93,7 @@ The shell is now mostly orchestration. Feature panels own stable presentation, w
 - `app/frontend/src/features/shell/LLMSettingsCard.tsx` owns the provider settings form and delegates persistence/probe actions back to the shell.
 - `app/frontend/src/features/shell/ToolTimeline.tsx` owns the visible tool event timeline presentation.
 - `app/frontend/src/features/shell/WorkspaceNavigator.tsx` owns the workspace lockup, search controls, recent workspace list, fallback scaffold list, and indexed workspace tree presentation, with aligned rows inside the resizable sidebar. `NexusDeskShell.tsx` owns the resizable navigator width state.
-- `app/frontend/src/features/shell/WorkbenchPanel.tsx` owns the active context topbar, active studio surface indicator, closeable editor tab strip, source preview/editor presentation, find-in-file, Markdown source/rendered switching, dataset query/chart/SQL panels, artifact metadata and comparison panels, SQLite metadata status, first approval log, fallback workflow preview, and capability cards.
+- `app/frontend/src/features/shell/WorkbenchPanel.tsx` owns the active context topbar, active studio surface indicator, closeable editor tab strip, source preview/editor presentation, find-in-file, Markdown source/rendered switching, dataset query/chart/SQL panels, artifact metadata and comparison panels, SQLite metadata status/browser, selectable artifact lineage graph, stale-context refresh control, first approval log, fallback workflow preview, and capability cards.
 - `app/frontend/src/features/shell/WorkspaceRail.tsx` owns the compact branded rail and mode icons.
 - `app/frontend/src/features/shell/AgentPanel.tsx` composes the grounded assistant header, chat card, provider settings, and tool timeline.
 
@@ -103,7 +103,7 @@ The shell is now mostly orchestration. Feature panels own stable presentation, w
 
 `app/frontend/scripts/smoke.mjs` checks that the built frontend and key shell source files still expose the main MVP functionality: Wails bindings, search, quick-open, command palette, Monaco preview/edit surfaces, find-in-file, context packs, file create/update/delete/move flows, dataset profiling/querying/saved queries/exporting/charting/summaries, read-only SQL, artifact actions/comparison, agent tool plan dry-run/execute controls, Compose parsing, approval log styling, resizable navigator styling, and the production `dist/index.html` entrypoint. Run it after `npm.cmd run build`.
 
-`app/frontend/scripts/visual-smoke.mjs` is now an enforced Playwright screenshot smoke. It captures desktop and mobile screenshots plus `visual-baselines/manifest.json` from the built `dist/index.html`, and fails if the production build or Playwright dependency is missing. On this workstation, install/run with `$env:NODE_OPTIONS='--use-system-ca'` because npm needs the system CA store.
+`app/frontend/scripts/visual-smoke.mjs` is now an enforced Playwright screenshot smoke with Wails-free mocks for workspace, dataset, metadata, chat, tool-run, and artifact flows. It captures desktop and mobile screenshots plus `visual-baselines/manifest.json` from the built `dist/index.html`, and fails if the production build or Playwright dependency is missing. On this workstation, install/run with `$env:NODE_OPTIONS='--use-system-ca'` because npm needs the system CA store.
 
 ## Artifact Creation
 
@@ -115,11 +115,11 @@ The shell is now mostly orchestration. Feature panels own stable presentation, w
 
 `app/internal/agenttools/` owns tool descriptors and tool run records. Dry-runs and explicit executions persist under `.nexusdesk/tool-runs/log.json` with inputs, output summaries, risk, approval ID, duration, and errors. The agent panel can expand recent tool runs to inspect captured inputs, output/error text, approval reference, duration, and replay/diff affordances.
 
-`app/internal/appmeta/` owns the SQLite metadata schema, manifest, first real database initialization, metadata browser, and JSON-to-SQLite mirror under `.nexusdesk/metadata/`. It mirrors the current JSON-backed workspace, chat, approval, artifact, and tool-run domains so repository migration can replace JSON stores deliberately. `InspectMetadataStore` returns table columns, row counts, sample rows, and dataset SQL view summaries for the workbench.
+`app/internal/appmeta/` owns the SQLite metadata schema, manifest, first real database initialization, metadata browser, and JSON-to-SQLite mirror under `.nexusdesk/metadata/`. It mirrors the current JSON-backed workspace, chat, approval, artifact, and tool-run domains and exposes typed read helpers used by the app once the metadata store exists. `InspectMetadataStore` returns table columns, row counts, sample rows, and dataset SQL view summaries for the workbench, where users can select tables, filter columns, and copy sample rows.
 
 `app/internal/analytics/` owns the first read-only SQL-style CSV query surface. It accepts a constrained `SELECT` subset, blocks mutation keywords, and executes through bounded CSV query primitives by default. A real DuckDB `database/sql` execution path is implemented behind the `duckdb` build tag for CGO-enabled machines; the current Windows verification loop keeps CGO disabled and therefore uses the safe fallback path. SQL results can be exported as Markdown artifacts that include SQL text, engine, row counts, preview rows, and source dataset citations.
 
-`GetArtifactLineage` in `app/app.go` assembles a first lineage graph from artifact metadata, chat source paths, and persisted tool runs. `WorkbenchPanel.tsx` shows a compact lineage inspector and keeps richer graph filtering in the next batch.
+`GetArtifactLineage` in `app/app.go` assembles lineage from artifact metadata, chat source paths, and persisted tool runs. It returns relationship counts for the workbench's selectable graph layout, so users can filter by node kind, select nodes, inspect nearby relationships, and jump back to visible source files.
 
 ## Completed Batch: Agent Execution And Analytics Foundations
 
@@ -153,17 +153,27 @@ The Agent Execution And Analytics Foundations batch turned the tool planning sur
 - SQL result artifacts save SQL text, engine, row counts, preview rows, and source dataset citations.
 - Playwright visual smoke asserts navigator resizing, tool-run details, metadata browser, lineage filtering, panel scrolling, and freshness warnings.
 
+## Completed Batch: Studio Scale And Reliability
+
+- SQLite mirror rows now serve prepared reads for chat history, approvals, artifacts, and tool runs after the metadata store exists.
+- Metadata Browser supports table selection, column filtering, and copyable row samples.
+- Artifact lineage has a selectable graph layout with relationship counts and source navigation.
+- Stale-context refresh rebuilds a context preview from changed files and records the refresh action.
+- Dataset freshness now flags dataset-derived views/snippets/reports when source data files change.
+- SQL snippets are saved separately from lightweight row filters per dataset.
+- Playwright visual smoke uses Wails-free mocked workspace, dataset, metadata, chat, and artifact fixtures.
+
 ## Prepared Next Batch
 
-The next implementation batch should improve scale and reliability:
+The next implementation batch should move from mirrored reads toward deeper persistence and connector depth:
 
-- Promote SQLite mirror writes into repository-backed primary reads for chat history, approvals, artifacts, and tool runs.
-- Add a persistent metadata/schema tab with table search, column filtering, and copyable row samples.
-- Add a real graph layout for artifact lineage with node selection, relationship counts, and open-source navigation.
-- Add stale-context refresh controls that can re-run context packs and update affected chat/artifact records.
-- Add dataset dependency invalidation for saved queries, SQL reports, chart artifacts, and summaries.
-- Add SQL history and saved SQL snippets per dataset, separate from lightweight row filters.
-- Add CI-friendly Playwright fixtures that cover mocked workspace, dataset, metadata, chat, and artifact flows without requiring Wails.
+- Move SQLite from mirrored read preference to true repository-backed writes for chats, approvals, artifacts, and tool runs.
+- Add searchable chat/artifact/tool-run history views backed by SQLite metadata queries.
+- Add dataset lineage dependencies for saved SQL snippets, exported reports, chart artifacts, and summaries with explicit refresh/rebuild actions.
+- Add saved SQL execution history with last-run status, row counts, and artifact links.
+- Add first database connector design surface for read-only SQLite files inside a workspace.
+- Add artifact graph export/import as JSON for debugging and future team sync.
+- Add reusable Playwright fixture helpers instead of inline visual-smoke mocks.
 
 ## File Writes
 

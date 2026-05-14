@@ -16,8 +16,15 @@ func TestSaveAndListSavedQueries(t *testing.T) {
 	if err != nil {
 		t.Fatalf("SaveQuery returned error: %v", err)
 	}
-	if saved.Label != "Search leads" || saved.Query != "channel=search" {
+	if saved.Label != "Search leads" || saved.Query != "channel=search" || saved.Kind != "filter" {
 		t.Fatalf("unexpected saved query: %#v", saved)
+	}
+	sql, err := SaveQueryKind(root, "leads.csv", "select * from dataset", "All rows", "sql")
+	if err != nil {
+		t.Fatalf("SaveQueryKind returned error: %v", err)
+	}
+	if sql.Kind != "sql" {
+		t.Fatalf("expected SQL query kind: %#v", sql)
 	}
 
 	queries, err := ListSavedQueries(root, "leads.csv")
@@ -26,6 +33,13 @@ func TestSaveAndListSavedQueries(t *testing.T) {
 	}
 	if len(queries) != 1 || queries[0].Query != "channel=search" {
 		t.Fatalf("unexpected saved queries: %#v", queries)
+	}
+	sqlQueries, err := ListSavedQueriesKind(root, "leads.csv", "sql")
+	if err != nil {
+		t.Fatalf("ListSavedQueriesKind returned error: %v", err)
+	}
+	if len(sqlQueries) != 1 || sqlQueries[0].Query != "select * from dataset" {
+		t.Fatalf("unexpected saved SQL queries: %#v", sqlQueries)
 	}
 }
 

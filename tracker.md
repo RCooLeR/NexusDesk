@@ -156,12 +156,19 @@ This tracker reflects the repository as it exists today and keeps planned work s
 - [x] Workspace freshness polling detects changed files and marks potentially stale generated artifacts.
 - [x] Playwright is installed as a frontend dev dependency and visual smoke now fails instead of skipping when build output or Playwright is missing.
 - [x] SQLite metadata can mirror current JSON chat, approval, artifact, and tool-run records into the active database.
+- [x] Chat history, approval log, artifact list, and tool-run list prefer SQLite mirror reads after the metadata store exists, with JSON stores retained as compatibility writers.
 - [x] Metadata Browser inspects SQLite table columns, row counts, sample rows, and dataset SQL views.
+- [x] Metadata Browser has table selection, column filtering, and copyable row samples.
 - [x] Artifact lineage filtering can focus relationships by source, chat, tool, or artifact kind.
+- [x] Artifact lineage now has a compact graph layout with selectable nodes, relationship counts, and source navigation.
 - [x] Chat messages and context-pack previews warn when cited source files have changed.
+- [x] Stale-context refresh can rebuild a context preview for changed files and records the refresh in approvals/metadata.
 - [x] Data Studio invalidates visible query/chart/profile state when the selected dataset changes on disk.
+- [x] Workspace freshness reports stale dataset-derived views alongside stale artifacts.
 - [x] Read-only SQL results can be exported as Markdown artifacts with SQL text, engine, row counts, and dataset citations.
+- [x] Data Studio stores SQL snippets per dataset separately from lightweight row filters.
 - [x] Playwright visual smoke asserts navigator resizing, panel-level scrolling, tool-run details, metadata browser, lineage filtering, and freshness warnings.
+- [x] Playwright visual smoke runs against Wails-free mocked workspace/data/metadata/chat/artifact fixtures.
 - [x] Tool timeline records real workspace, preview, search, profile, write, report, and chat actions.
 - [x] Artifact rows can select the generated report preview when visible in the workspace tree.
 - [x] Helper services placeholder exists at `services/docker-compose.yml`.
@@ -242,13 +249,23 @@ This tracker reflects the repository as it exists today and keeps planned work s
 
 ### Prepared Batch: Studio Scale And Reliability
 
-- [ ] Promote SQLite mirror writes into repository-backed primary reads for chat history, approvals, artifacts, and tool runs.
-- [ ] Add a persistent metadata/schema tab with table search, column filtering, and copyable row samples.
-- [ ] Add a real graph layout for artifact lineage with node selection, relationship counts, and open-source navigation.
-- [ ] Add stale-context refresh controls that can re-run context packs and update affected chat/artifact records.
-- [ ] Add dataset dependency invalidation for saved queries, SQL reports, chart artifacts, and summaries.
-- [ ] Add SQL history and saved SQL snippets per dataset, separate from lightweight row filters.
-- [ ] Add CI-friendly Playwright fixtures that cover mocked workspace, dataset, metadata, chat, and artifact flows without requiring Wails.
+- [x] Promote SQLite mirror writes into repository-backed primary reads for chat history, approvals, artifacts, and tool runs.
+- [x] Add a persistent metadata/schema tab with table search, column filtering, and copyable row samples.
+- [x] Add a real graph layout for artifact lineage with node selection, relationship counts, and open-source navigation.
+- [x] Add stale-context refresh controls that can re-run context packs and update affected chat/artifact records.
+- [x] Add dataset dependency invalidation for saved queries, SQL reports, chart artifacts, and summaries.
+- [x] Add SQL history and saved SQL snippets per dataset, separate from lightweight row filters.
+- [x] Add CI-friendly Playwright fixtures that cover mocked workspace, dataset, metadata, chat, and artifact flows without requiring Wails.
+
+### Prepared Batch: Studio Depth And Connectors
+
+- [ ] Move SQLite from mirrored read preference to true repository-backed writes for chats, approvals, artifacts, and tool runs.
+- [ ] Add searchable chat/artifact/tool-run history views backed by SQLite metadata queries.
+- [ ] Add dataset lineage dependencies for saved SQL snippets, exported reports, chart artifacts, and summaries with explicit refresh/rebuild actions.
+- [ ] Add saved SQL execution history with last-run status, row counts, and artifact links.
+- [ ] Add first database connector design surface for read-only SQLite files inside a workspace.
+- [ ] Add artifact graph export/import as JSON for debugging and future team sync.
+- [ ] Add reusable Playwright fixture helpers instead of inline visual-smoke mocks.
 
 - [x] Batch: align product docs around NexusDesk as an IDE/data/analytics studio.
 - [x] Batch: align architecture, domain, indexing, search, AI, operations, delivery, DX, brand, README, and tracker wording.
@@ -345,15 +362,15 @@ This tracker reflects the repository as it exists today and keeps planned work s
 
 `app/internal/agenttools/run.go` owns persisted tool run records. Dry-runs and explicit executions capture tool name, target, inputs, risk, approval ID, timing, output summary, and errors under `.nexusdesk/tool-runs/log.json`.
 
-`app/internal/appmeta/` owns the SQLite metadata schema, manifest, first real database initialization, and the mirror from JSON compatibility stores. `EnsureSQLiteMetadataStore` writes `.nexusdesk/metadata/schema.sql`, opens `.nexusdesk/metadata/nexusdesk.sqlite` through `modernc.org/sqlite`, applies the schema, records the active workspace row, and mirrors chats, approvals, artifacts, and tool runs. JSON stores remain active for compatibility until repositories are migrated deliberately.
+`app/internal/appmeta/` owns the SQLite metadata schema, manifest, first real database initialization, and the mirror from JSON compatibility stores. `EnsureSQLiteMetadataStore` writes `.nexusdesk/metadata/schema.sql`, opens `.nexusdesk/metadata/nexusdesk.sqlite` through `modernc.org/sqlite`, applies the schema, records the active workspace row, and mirrors chats, approvals, artifacts, and tool runs. Once the store exists, the app prefers SQLite reads for chat history, approvals, artifacts, and tool runs while JSON stores remain the compatibility write path until repository writes migrate deliberately.
 
 `app/internal/analytics/` owns the first read-only SQL-style CSV query surface. It accepts a constrained `SELECT` subset, blocks mutation keywords, uses a real `database/sql` DuckDB execution path when built with the `duckdb` tag on a CGO-enabled workstation, and otherwise falls back to the bounded CSV query path. SQL result exports are written as Markdown artifacts with the SQL text, engine, row counts, preview rows, and source dataset citation.
 
-`app/internal/workspace/freshness.go` owns the first workspace freshness snapshot. The frontend polls it to show changed-file indicators and mark generated artifacts that cite changed source paths as potentially stale.
+`app/internal/workspace/freshness.go` owns the first workspace freshness snapshot. The frontend polls it to show changed-file indicators, mark generated artifacts that cite changed source paths as potentially stale, and flag dataset-derived views/snippets/reports that need refresh when source datasets change.
 
 `app/internal/approval/` owns the first append-only approval/action log for applied file and artifact operations. Records are persisted under `.nexusdesk/approvals/log.json` inside the active workspace and surfaced in the workbench while modal approval policy remains a later hardening step.
 
-`app/internal/dataset/query_history.go` owns saved Data Studio queries per dataset. It stores bounded recent queries under `.nexusdesk/datasets/queries.json` and reuses the same rooted dataset path validation as profiling.
+`app/internal/dataset/query_history.go` owns saved Data Studio queries per dataset. It stores bounded recent row filters and separate read-only SQL snippets under `.nexusdesk/datasets/queries.json`, reusing the same rooted dataset path validation as profiling.
 
 `app/internal/storage/` owns local app persistence. Recent workspaces and non-secret LLM settings currently use small JSON files in the user's config directory; LLM API keys are kept in a sidecar credential blob protected by the OS where available.
 

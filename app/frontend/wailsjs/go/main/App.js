@@ -142,6 +142,10 @@ export function ListDatasetQueries(arg1) {
   return window['go']['main']['App']['ListDatasetQueries'](arg1);
 }
 
+export function ListDatasetSQLQueries(arg1) {
+  return window['go']['main']['App']['ListDatasetSQLQueries'](arg1);
+}
+
 export function OpenWorkspace(arg1) {
   return window['go']['main']['App']['OpenWorkspace'](arg1);
 }
@@ -186,6 +190,10 @@ export function ReadWorkspaceFile(arg1) {
   return window['go']['main']['App']['ReadWorkspaceFile'](arg1);
 }
 
+export function RefreshStaleContext(arg1) {
+  return window['go']['main']['App']['RefreshStaleContext'](arg1);
+}
+
 export function RefreshWorkspace() {
   return window['go']['main']['App']['RefreshWorkspace']();
 }
@@ -196,6 +204,10 @@ export function RemoveRecentWorkspace(arg1) {
 
 export function SaveDatasetQuery(arg1, arg2, arg3) {
   return window['go']['main']['App']['SaveDatasetQuery'](arg1, arg2, arg3);
+}
+
+export function SaveDatasetSQLQuery(arg1, arg2, arg3) {
+  return window['go']['main']['App']['SaveDatasetSQLQuery'](arg1, arg2, arg3);
 }
 
 export function SaveLLMSettings(arg1) {

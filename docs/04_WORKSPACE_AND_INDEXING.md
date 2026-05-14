@@ -65,11 +65,12 @@ The current app implements the first safe workspace slice:
 - File deletes go through `app/internal/workspace/delete.go` and reject traversal, metadata paths, directories, and symlinks before frontend confirmation.
 - File rename/move goes through `app/internal/workspace/move.go` and rejects traversal, metadata paths, directories, symlinks, same-path moves, and overwrites.
 - CSV query export reruns the bounded query through `app/internal/workspace/dataset_query.go` and writes a CSV artifact through the artifact manager.
-- Saved CSV queries are stored per dataset under `.nexusdesk/datasets/queries.json`.
+- Saved CSV row filters and read-only SQL snippets are stored per dataset under `.nexusdesk/datasets/queries.json` as separate query kinds.
 - Dataset summary artifacts use the bounded CSV preview/profile data to write deterministic Markdown with column profiles and suggested analysis questions.
 - Artifact metadata and chat history are included in the workspace search surface even before a full index database exists.
-- `app/internal/workspace/freshness.go` captures file fingerprints so the shell can detect changed files and mark generated artifacts that cite changed sources as stale.
+- `app/internal/workspace/freshness.go` captures file fingerprints so the shell can detect changed files, mark generated artifacts that cite changed sources as stale, and flag dataset-derived views/snippets/reports that should be refreshed.
 - Chat messages and context-pack previews surface stale-source warnings when their cited files change.
+- The workbench can rebuild a context preview from changed files and records that stale-context refresh in the local approval/metadata trail.
 - Data Studio clears visible query/chart/profile state for the active dataset when that dataset changes on disk.
 - CSV chart generation goes through `app/internal/workspace/chart.go` and returns bounded category counts or numeric sums.
 - Chat context uses the same rooted preview boundary and sends only selected text content or a bounded pack of pinned previews.
@@ -334,6 +335,7 @@ Current behavior:
 - flags generated artifacts whose provenance references changed source files
 - warns chat messages and context-pack previews that cited files changed
 - invalidates active dataset query, SQL, chart, and profile state for changed selected datasets
+- reports dataset-derived refresh needs for changed CSV/XLSX files
 
 ## Index Run Reporting
 

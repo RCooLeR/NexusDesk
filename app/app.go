@@ -82,9 +82,18 @@ type LineageEdge struct {
 }
 
 type ArtifactLineage struct {
-	Nodes   []LineageNode `json:"nodes"`
-	Edges   []LineageEdge `json:"edges"`
-	Message string        `json:"message"`
+	Nodes              []LineageNode  `json:"nodes"`
+	Edges              []LineageEdge  `json:"edges"`
+	RelationshipCounts map[string]int `json:"relationshipCounts"`
+	Message            string         `json:"message"`
+}
+
+type StaleContextRefresh struct {
+	Preview        workspace.ContextPreview `json:"preview"`
+	AffectedChats  int                      `json:"affectedChats"`
+	StaleArtifacts []string                 `json:"staleArtifacts"`
+	StaleDatasets  []string                 `json:"staleDatasets"`
+	Message        string                   `json:"message"`
 }
 
 const chatContextMaxBytes = 16 * 1024
@@ -371,7 +380,18 @@ func (a *App) CreateChatMarkdownArtifact(request artifact.MarkdownArtifactReques
 }
 
 func (a *App) ListArtifacts() ([]artifact.WorkspaceArtifact, error) {
-	return artifact.List(a.getWorkspaceRoot())
+	root := a.getWorkspaceRoot()
+	if root == "" {
+		return []artifact.WorkspaceArtifact{}, nil
+	}
+	if appmeta.Exists(root) {
+		if _, err := a.mirrorMetadataStore(root, false); err == nil {
+			if items, readErr := a.listArtifactsFromMetadata(root); readErr == nil {
+				return items, nil
+			}
+		}
+	}
+	return artifact.List(root)
 }
 
 func (a *App) GetArtifactMetadata(relPath string) (artifact.ArtifactMetadata, error) {
@@ -479,7 +499,18 @@ func (a *App) ExecuteAgentTool(request agenttools.RunRequest) (agenttools.RunRec
 }
 
 func (a *App) ListAgentToolRuns() ([]agenttools.RunRecord, error) {
-	return agenttools.List(a.getWorkspaceRoot())
+	root := a.getWorkspaceRoot()
+	if root == "" {
+		return []agenttools.RunRecord{}, nil
+	}
+	if appmeta.Exists(root) {
+		if _, err := a.mirrorMetadataStore(root, false); err == nil {
+			if items, readErr := appmeta.ListToolRuns(root); readErr == nil {
+				return toolRunsFromMirror(items), nil
+			}
+		}
+	}
+	return agenttools.List(root)
 }
 
 func (a *App) CheckWorkspaceFreshness() (workspace.FreshnessStatus, error) {
@@ -501,6 +532,7 @@ func (a *App) CheckWorkspaceFreshness() (workspace.FreshnessStatus, error) {
 
 	changes := workspace.CompareFingerprints(previous, current)
 	staleArtifacts := a.staleArtifactsForChanges(root, changes)
+	staleDatasets := staleDatasetsForChanges(changes)
 	message := "Workspace files are current."
 	if len(changes) > 0 {
 		message = fmt.Sprintf("%d workspace file changes detected.", len(changes))
@@ -508,9 +540,13 @@ func (a *App) CheckWorkspaceFreshness() (workspace.FreshnessStatus, error) {
 	if len(staleArtifacts) > 0 {
 		message = fmt.Sprintf("%s %d artifacts may be stale.", message, len(staleArtifacts))
 	}
+	if len(staleDatasets) > 0 {
+		message = fmt.Sprintf("%s %d dataset-derived views need refresh.", message, len(staleDatasets))
+	}
 	return workspace.FreshnessStatus{
 		Changed:        changes,
 		StaleArtifacts: staleArtifacts,
+		StaleDatasets:  staleDatasets,
 		Message:        message,
 	}, nil
 }
@@ -546,6 +582,7 @@ func (a *App) GetArtifactLineage() (ArtifactLineage, error) {
 	}
 	nodes := map[string]LineageNode{}
 	edges := []LineageEdge{}
+	relationshipCounts := map[string]int{}
 	addNode := func(node LineageNode) {
 		if node.ID == "" {
 			return
@@ -559,6 +596,7 @@ func (a *App) GetArtifactLineage() (ArtifactLineage, error) {
 			return
 		}
 		edges = append(edges, LineageEdge{From: from, To: to, Label: label})
+		relationshipCounts[label]++
 	}
 
 	items, err := artifact.List(root)
@@ -603,7 +641,7 @@ func (a *App) GetArtifactLineage() (ArtifactLineage, error) {
 		}
 	}
 
-	chats, _ := a.chatStore.List(root)
+	chats, _ := a.GetChatHistory()
 	for index, message := range chats {
 		if message.Role != "assistant" || len(message.SourcePaths) == 0 {
 			continue
@@ -622,9 +660,10 @@ func (a *App) GetArtifactLineage() (ArtifactLineage, error) {
 		nodeList = append(nodeList, node)
 	}
 	return ArtifactLineage{
-		Nodes:   nodeList,
-		Edges:   edges,
-		Message: fmt.Sprintf("%d lineage nodes and %d relationships.", len(nodeList), len(edges)),
+		Nodes:              nodeList,
+		Edges:              edges,
+		RelationshipCounts: relationshipCounts,
+		Message:            fmt.Sprintf("%d lineage nodes and %d relationships.", len(nodeList), len(edges)),
 	}, nil
 }
 
@@ -642,6 +681,22 @@ func (a *App) ListDatasetQueries(relPath string) ([]dataset.SavedQuery, error) {
 		return []dataset.SavedQuery{}, nil
 	}
 	return dataset.ListSavedQueries(root, relPath)
+}
+
+func (a *App) SaveDatasetSQLQuery(relPath string, query string, label string) (dataset.SavedQuery, error) {
+	root := a.getWorkspaceRoot()
+	if root == "" {
+		return dataset.SavedQuery{}, errors.New("open a workspace before saving SQL snippets")
+	}
+	return dataset.SaveQueryKind(root, relPath, query, label, "sql")
+}
+
+func (a *App) ListDatasetSQLQueries(relPath string) ([]dataset.SavedQuery, error) {
+	root := a.getWorkspaceRoot()
+	if root == "" {
+		return []dataset.SavedQuery{}, nil
+	}
+	return dataset.ListSavedQueriesKind(root, relPath, "sql")
 }
 
 func (a *App) PreviewDatasetChart(request workspace.DatasetChartRequest) (workspace.DatasetChartResult, error) {
@@ -724,7 +779,18 @@ func (a *App) CreateDatasetSummaryArtifact(relPath string) (artifact.MarkdownRep
 }
 
 func (a *App) ListApprovals() ([]approval.Record, error) {
-	return approval.List(a.getWorkspaceRoot())
+	root := a.getWorkspaceRoot()
+	if root == "" {
+		return []approval.Record{}, nil
+	}
+	if appmeta.Exists(root) {
+		if _, err := a.mirrorMetadataStore(root, false); err == nil {
+			if items, readErr := appmeta.ListApprovals(root); readErr == nil {
+				return approvalsFromMirror(items), nil
+			}
+		}
+	}
+	return approval.List(root)
 }
 
 func (a *App) GetRecentWorkspaces() ([]storage.RecentWorkspace, error) {
@@ -761,6 +827,13 @@ func (a *App) GetChatHistory() ([]storage.ChatMessage, error) {
 	if root == "" {
 		return []storage.ChatMessage{}, nil
 	}
+	if appmeta.Exists(root) {
+		if _, err := a.mirrorMetadataStore(root, false); err == nil {
+			if items, readErr := appmeta.ListChats(root); readErr == nil {
+				return chatsFromMirror(items), nil
+			}
+		}
+	}
 
 	return a.chatStore.List(root)
 }
@@ -771,7 +844,11 @@ func (a *App) ClearChatHistory() ([]storage.ChatMessage, error) {
 		return []storage.ChatMessage{}, nil
 	}
 
-	return a.chatStore.Clear(root)
+	items, err := a.chatStore.Clear(root)
+	if err == nil {
+		a.syncPreparedMetadataStore(root)
+	}
+	return items, err
 }
 
 func (a *App) AskLLM(prompt string, relPath string) (llm.ChatResult, error) {
@@ -890,6 +967,44 @@ func (a *App) PreviewChatContextPack(relPaths []string) (workspace.ContextPrevie
 	}
 
 	return workspace.PreviewContextFiles(root, relPaths, workspace.ContextCollectOptions{MaxFiles: chatContextPackMaxFiles})
+}
+
+func (a *App) RefreshStaleContext(relPaths []string) (StaleContextRefresh, error) {
+	root := a.getWorkspaceRoot()
+	if root == "" {
+		return StaleContextRefresh{}, errors.New("open a workspace before refreshing stale context")
+	}
+	paths := cleanContextPaths(relPaths)
+	if len(paths) == 0 {
+		return StaleContextRefresh{}, errors.New("choose changed files before refreshing stale context")
+	}
+	preview, err := workspace.PreviewContextFiles(root, paths, workspace.ContextCollectOptions{MaxFiles: chatContextPackMaxFiles})
+	if err != nil {
+		return StaleContextRefresh{}, err
+	}
+	chats, _ := a.GetChatHistory()
+	affectedChats := 0
+	for _, message := range chats {
+		for _, sourcePath := range message.SourcePaths {
+			if containsPath(paths, sourcePath) {
+				affectedChats++
+				break
+			}
+		}
+	}
+	changes := make([]workspace.FileChange, 0, len(paths))
+	for _, relPath := range paths {
+		changes = append(changes, workspace.FileChange{RelPath: relPath, Kind: "refreshed", Message: relPath + " context was refreshed."})
+	}
+	result := StaleContextRefresh{
+		Preview:        preview,
+		AffectedChats:  affectedChats,
+		StaleArtifacts: a.staleArtifactsForChanges(root, changes),
+		StaleDatasets:  staleDatasetsForChanges(changes),
+		Message:        fmt.Sprintf("Refreshed context preview for %d changed roots.", len(paths)),
+	}
+	a.recordApproval("context.refresh", strings.Join(paths, ", "), "low", result.Message)
+	return result, nil
 }
 
 func (a *App) prepareChat(prompt string, relPaths []string) (llm.ChatRequest, storage.LLMSettings, error) {
@@ -1353,6 +1468,34 @@ func (a *App) staleArtifactsForChanges(root string, changes []workspace.FileChan
 	return stale
 }
 
+func staleDatasetsForChanges(changes []workspace.FileChange) []string {
+	stale := []string{}
+	seen := map[string]bool{}
+	for _, change := range changes {
+		relPath := filepath.ToSlash(change.RelPath)
+		ext := strings.ToLower(filepath.Ext(relPath))
+		if ext != ".csv" && ext != ".tsv" && ext != ".xlsx" && ext != ".xls" {
+			continue
+		}
+		if seen[relPath] {
+			continue
+		}
+		seen[relPath] = true
+		stale = append(stale, relPath)
+	}
+	return stale
+}
+
+func containsPath(paths []string, relPath string) bool {
+	relPath = filepath.ToSlash(strings.TrimSpace(relPath))
+	for _, path := range paths {
+		if filepath.ToSlash(strings.TrimSpace(path)) == relPath {
+			return true
+		}
+	}
+	return false
+}
+
 func (a *App) syncPreparedMetadataStore(root string) {
 	if root == "" || !appmeta.Exists(root) {
 		return
@@ -1449,6 +1592,118 @@ func (a *App) metadataMirrorData(root string) (appmeta.MirrorData, error) {
 		})
 	}
 	return data, nil
+}
+
+func (a *App) listArtifactsFromMetadata(root string) ([]artifact.WorkspaceArtifact, error) {
+	items, err := appmeta.ListArtifacts(root)
+	if err != nil {
+		return nil, err
+	}
+	absRoot, err := filepath.Abs(root)
+	if err != nil {
+		return nil, err
+	}
+	artifacts := make([]artifact.WorkspaceArtifact, 0, len(items))
+	for _, item := range items {
+		path := filepath.Join(absRoot, filepath.FromSlash(item.RelPath))
+		info, statErr := os.Stat(path)
+		if statErr != nil {
+			continue
+		}
+		var metadata artifact.ArtifactMetadata
+		_ = json.Unmarshal(item.Metadata, &metadata)
+		source := metadata.Source
+		if source == "" {
+			source = item.Source
+		}
+		artifacts = append(artifacts, artifact.WorkspaceArtifact{
+			RelPath:    item.RelPath,
+			Name:       filepath.Base(item.RelPath),
+			Path:       path,
+			Kind:       item.Kind,
+			Size:       info.Size(),
+			ModifiedAt: info.ModTime().UTC().Format(time.RFC3339),
+			Source:     source,
+			Summary:    artifactSummaryFromMetadata(metadata),
+			Model:      metadata.Model,
+		})
+	}
+	return artifacts, nil
+}
+
+func chatsFromMirror(items []appmeta.ChatMirror) []storage.ChatMessage {
+	messages := make([]storage.ChatMessage, 0, len(items))
+	for _, item := range items {
+		messages = append(messages, storage.ChatMessage{
+			Role:           item.Role,
+			Content:        item.Content,
+			ContextRelPath: item.ContextRelPath,
+			SourcePaths:    item.SourcePaths,
+			CreatedAt:      item.CreatedAt,
+		})
+	}
+	return messages
+}
+
+func approvalsFromMirror(items []appmeta.ApprovalMirror) []approval.Record {
+	records := make([]approval.Record, 0, len(items))
+	for _, item := range items {
+		records = append(records, approval.Record{
+			ID:        item.ID,
+			Action:    item.Action,
+			Target:    item.Target,
+			Risk:      item.Risk,
+			Decision:  item.Decision,
+			Message:   item.Message,
+			CreatedAt: item.CreatedAt,
+		})
+	}
+	return records
+}
+
+func toolRunsFromMirror(items []appmeta.ToolRunMirror) []agenttools.RunRecord {
+	records := make([]agenttools.RunRecord, 0, len(items))
+	for _, item := range items {
+		inputs := map[string]string{}
+		_ = json.Unmarshal(item.Inputs, &inputs)
+		title := item.ToolName
+		requiresApproval := false
+		if descriptor, ok := agenttools.Find(item.ToolName); ok {
+			title = descriptor.Title
+			requiresApproval = descriptor.RequiresApproval
+		}
+		records = append(records, agenttools.RunRecord{
+			ID:               item.ID,
+			ToolName:         item.ToolName,
+			Title:            title,
+			Target:           item.Target,
+			Risk:             item.Risk,
+			RequiresApproval: requiresApproval,
+			Status:           item.Status,
+			Mode:             item.Mode,
+			Inputs:           inputs,
+			OutputSummary:    item.OutputSummary,
+			Error:            item.Error,
+			ApprovalID:       item.ApprovalID,
+			StartedAt:        item.StartedAt,
+			CompletedAt:      item.CompletedAt,
+			DurationMs:       item.DurationMs,
+		})
+	}
+	return records
+}
+
+func artifactSummaryFromMetadata(metadata artifact.ArtifactMetadata) string {
+	if metadata.Title != "" {
+		return metadata.Title
+	}
+	if len(metadata.SourcePaths) == 1 {
+		return metadata.SourcePaths[0]
+	}
+	if len(metadata.SourcePaths) > 1 {
+		return fmt.Sprintf("%d source paths", len(metadata.SourcePaths))
+	}
+	return metadata.Source
 }
 
 func (a *App) datasetViews(root string) []appmeta.DatasetView {

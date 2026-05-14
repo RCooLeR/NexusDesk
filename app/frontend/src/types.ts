@@ -191,6 +191,7 @@ export type WorkspaceFileChange = {
 export type WorkspaceFreshnessStatus = {
     changed: WorkspaceFileChange[];
     staleArtifacts: string[];
+    staleDatasets: string[];
     message: string;
 };
 
@@ -210,6 +211,7 @@ export type LineageEdge = {
 export type ArtifactLineage = {
     nodes: LineageNode[];
     edges: LineageEdge[];
+    relationshipCounts: Record<string, number>;
     message: string;
 };
 
@@ -297,6 +299,7 @@ export type SavedDatasetQuery = {
     relPath: string;
     query: string;
     label: string;
+    kind: string;
     updatedAt: string;
 };
 

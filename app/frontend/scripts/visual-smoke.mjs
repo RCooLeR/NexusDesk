@@ -90,14 +90,17 @@ await page.addInitScript(() => {
                 ListApprovals: async () => [],
                 ListDatasetProfiles: async () => [{relPath: 'data/campaigns.csv', name: 'campaigns.csv', kind: 'csv', rows: 2, columns: 3, sheets: [], profiles: table.profiles, updatedAt: '2026-05-14T00:00:00Z', message: 'Profile ready'}],
                 ListDatasetQueries: async () => [],
+                ListDatasetSQLQueries: async () => [{relPath: 'data/campaigns.csv', query: 'select * from dataset', label: 'All campaigns', kind: 'sql', updatedAt: '2026-05-14T00:00:00Z'}],
                 ListAgentToolRuns: async () => [{id: 'smoke-tool', toolName: 'dataset.query', title: 'Query Dataset', target: 'data/campaigns.csv', risk: 'low', requiresApproval: false, status: 'dry-run', mode: 'dry-run', inputs: {query: 'spend > 10'}, outputSummary: 'Ready to query dataset.', error: '', approvalId: 'approval-smoke', startedAt: '2026-05-14T00:00:00Z', completedAt: '2026-05-14T00:00:01Z', durationMs: 1000}],
                 ListAgentTools: async () => [],
                 ReadWorkspaceFile: async () => ({relPath: 'data/campaigns.csv', name: 'campaigns.csv', kind: 'file', fileType: 'data', content: 'channel,spend,conversions\nSearch,120,8\nEmail,40,6\n', text: 'channel,spend,conversions\nSearch,120,8\nEmail,40,6\n', encoding: 'utf-8', table, truncated: false, message: 'CSV preview ready', size: 64}),
-                CheckWorkspaceFreshness: async () => ({changed: [{relPath: 'data/campaigns.csv', kind: 'modified', message: 'data/campaigns.csv changed on disk.'}], staleArtifacts: ['.nexusdesk/artifacts/smoke.md'], message: '1 workspace file changes detected. 1 artifacts may be stale.'}),
-                GetArtifactLineage: async () => ({message: '4 lineage nodes and 3 relationships.', nodes: [{id: 'source:data/campaigns.csv', kind: 'source', label: 'campaigns.csv', relPath: 'data/campaigns.csv'}, {id: 'chat:assistant:0', kind: 'chat', label: 'Assistant answer', relPath: 'data/campaigns.csv'}, {id: 'tool:smoke-tool', kind: 'tool', label: 'Query Dataset', relPath: 'data/campaigns.csv'}, {id: 'artifact:.nexusdesk/artifacts/smoke.md', kind: 'artifact', label: 'smoke.md', relPath: '.nexusdesk/artifacts/smoke.md'}], edges: [{from: 'source:data/campaigns.csv', to: 'chat:assistant:0', label: 'cited'}, {from: 'source:data/campaigns.csv', to: 'tool:smoke-tool', label: 'dry-run'}, {from: 'chat:assistant:0', to: 'artifact:.nexusdesk/artifacts/smoke.md', label: 'generated'}]}),
+                CheckWorkspaceFreshness: async () => ({changed: [{relPath: 'data/campaigns.csv', kind: 'modified', message: 'data/campaigns.csv changed on disk.'}], staleArtifacts: ['.nexusdesk/artifacts/smoke.md'], staleDatasets: ['data/campaigns.csv'], message: '1 workspace file changes detected. 1 artifacts may be stale. 1 dataset-derived views need refresh.'}),
+                RefreshStaleContext: async () => ({preview: {roots: ['data/campaigns.csv'], files: [{relPath: 'data/campaigns.csv', required: true}], fileCount: 1, truncated: false, message: 'Context refreshed'}, affectedChats: 1, staleArtifacts: ['.nexusdesk/artifacts/smoke.md'], staleDatasets: ['data/campaigns.csv'], message: 'Refreshed context preview for 1 changed roots.'}),
+                GetArtifactLineage: async () => ({message: '4 lineage nodes and 3 relationships.', relationshipCounts: {cited: 1, 'dry-run': 1, generated: 1}, nodes: [{id: 'source:data/campaigns.csv', kind: 'source', label: 'campaigns.csv', relPath: 'data/campaigns.csv'}, {id: 'chat:assistant:0', kind: 'chat', label: 'Assistant answer', relPath: 'data/campaigns.csv'}, {id: 'tool:smoke-tool', kind: 'tool', label: 'Query Dataset', relPath: 'data/campaigns.csv'}, {id: 'artifact:.nexusdesk/artifacts/smoke.md', kind: 'artifact', label: 'smoke.md', relPath: '.nexusdesk/artifacts/smoke.md'}], edges: [{from: 'source:data/campaigns.csv', to: 'chat:assistant:0', label: 'cited'}, {from: 'source:data/campaigns.csv', to: 'tool:smoke-tool', label: 'dry-run'}, {from: 'chat:assistant:0', to: 'artifact:.nexusdesk/artifacts/smoke.md', label: 'generated'}]}),
                 InspectMetadataStore: async () => metadataBrowser,
                 EnsureSQLiteMetadataStore: async () => ({path: metadataBrowser.path, schemaPath: 'schema.sql', schemaVersion: 1, schemaHash: 'smoke', tables: metadataBrowser.tables.map((table) => table.name), message: 'SQLite metadata store mirrored from current JSON compatibility stores.', updatedAt: metadataBrowser.updatedAt}),
                 QueryDatasetSQL: async () => ({relPath: 'data/campaigns.csv', sql: 'select * from dataset', engine: 'duckdb-compatible-csv', columns: table.columns, rows: table.rows, totalRows: 2, matchedRows: 2, message: 'SQL smoke ready'}),
+                SaveDatasetSQLQuery: async () => ({relPath: 'data/campaigns.csv', query: 'select * from dataset', label: 'All campaigns', kind: 'sql', updatedAt: '2026-05-14T00:00:00Z'}),
             },
         },
     };
@@ -106,8 +109,9 @@ await page.goto(server.url);
 await page.getByText('Open Folder').click();
 await page.locator('.metadata-store-panel').filter({hasText: 'Artifact Lineage'}).getByText('Refresh').click();
 await page.getByText('Inspect metadata').click();
-await page.getByText('Query Dataset', {exact: true}).click();
-await page.getByText('Replay dry run').waitFor({state: 'visible'});
+await page.locator('.tool-run-row summary').first().click();
+await page.locator('.tool-run-detail').first().scrollIntoViewIfNeeded();
+await page.locator('.tool-run-detail').getByText('Replay dry run').waitFor({state: 'visible'});
 await page.getByLabel('Lineage filter').getByText('source').click();
 const beforeResize = await page.locator('.navigator').boundingBox();
 const resizer = await page.locator('.navigator-resizer').boundingBox();
@@ -126,7 +130,7 @@ const hasBodyScroll = await page.evaluate(() => document.scrollingElement ? docu
 if (hasBodyScroll) {
     throw new Error('NexusDesk visual smoke failed: whole window became scrollable.');
 }
-for (const text of ['Metadata Browser', 'Workspace Watcher', 'Artifact Lineage', 'Replay dry run', 'Context changed since this answer was created.']) {
+for (const text of ['Metadata Browser', 'Workspace Watcher', 'Artifact Lineage', 'Replay dry run', 'Context changed since this answer was created.', 'All campaigns']) {
     if (!(await page.getByText(text).first().isVisible())) {
         throw new Error(`NexusDesk visual smoke failed: missing ${text}.`);
     }
@@ -143,7 +147,7 @@ writeFileSync(path.join(baselineDir, 'manifest.json'), `${JSON.stringify({
     generatedAt: new Date().toISOString(),
     source: 'dist/index.html',
     viewports: ['desktop', 'mobile'],
-    assertions: ['navigator-resize', 'panel-overflow', 'tool-run-detail', 'lineage-filter', 'freshness-warning', 'metadata-browser'],
+    assertions: ['navigator-resize', 'panel-overflow', 'tool-run-detail', 'lineage-filter', 'lineage-graph', 'freshness-warning', 'metadata-browser', 'sql-snippets'],
 }, null, 2)}\n`);
 
 console.log('NexusDesk visual smoke captured desktop/mobile screenshots and baseline metadata.');

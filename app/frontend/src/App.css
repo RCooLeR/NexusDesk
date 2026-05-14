@@ -1535,20 +1535,49 @@ button:disabled {
     margin: 0;
 }
 
-.metadata-browser-panel details {
-    border-top: 1px solid var(--nd-border-soft);
-    padding-top: 6px;
-}
-
-.metadata-browser-panel summary {
-    cursor: pointer;
-    font-size: 12px;
-    font-weight: 700;
-}
-
 .metadata-sample {
     display: grid;
     gap: 3px;
+    max-height: 120px;
+    overflow: auto;
+}
+
+.metadata-browser-panel {
+    min-height: 0;
+}
+
+.metadata-browser-controls,
+.metadata-column-grid {
+    display: grid;
+    gap: 6px;
+}
+
+.metadata-browser-controls {
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) auto;
+}
+
+.metadata-browser-controls input,
+.metadata-browser-controls select {
+    min-width: 0;
+}
+
+.metadata-column-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.metadata-column-grid span {
+    border: 1px solid var(--nd-border-soft);
+    border-radius: var(--nd-radius-sm);
+    display: grid;
+    gap: 2px;
+    min-width: 0;
+    padding: 6px;
+}
+
+.metadata-column-grid strong {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
 }
 
 .metadata-dataset-views {
@@ -1566,6 +1595,75 @@ button:disabled {
 .lineage-list {
     display: grid;
     gap: 4px;
+}
+
+.lineage-graph-layout {
+    display: grid;
+    gap: 8px;
+}
+
+.lineage-node-cloud {
+    display: grid;
+    gap: 6px;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.lineage-node {
+    align-items: start;
+    background: #ffffff;
+    border: 1px solid var(--nd-border-soft);
+    border-radius: var(--nd-radius-sm);
+    color: var(--nd-text);
+    cursor: pointer;
+    display: grid;
+    gap: 2px;
+    min-height: 58px;
+    min-width: 0;
+    padding: 7px;
+    text-align: left;
+}
+
+.lineage-node.selected {
+    border-color: var(--nd-sky-blue);
+    box-shadow: 0 0 0 2px rgba(67, 151, 216, 0.14);
+}
+
+.lineage-node span {
+    color: var(--nd-muted-text);
+    font-size: 10px;
+    font-weight: 800;
+    text-transform: uppercase;
+}
+
+.lineage-node strong {
+    font-size: 11px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.lineage-node.source {
+    border-left: 3px solid #4397d8;
+}
+
+.lineage-node.chat {
+    border-left: 3px solid #8964e8;
+}
+
+.lineage-node.tool {
+    border-left: 3px solid #de8f38;
+}
+
+.lineage-node.artifact {
+    border-left: 3px solid #41a77b;
+}
+
+.lineage-detail {
+    border: 1px solid var(--nd-border-soft);
+    border-radius: var(--nd-radius-sm);
+    display: grid;
+    gap: 4px;
+    padding: 8px;
 }
 
 .lineage-filter-row {

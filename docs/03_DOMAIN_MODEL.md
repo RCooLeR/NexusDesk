@@ -2,7 +2,7 @@
 
 ## Current Implementation Note
 
-The current repository implements the early local-first subset of this model. Workspaces are represented by a selected root path and a scanned `WorkspaceSnapshot`; file nodes are returned by `app/internal/workspace/scanner.go`; previews, searches, context packs, dataset profiles, artifacts, LLM settings, recent workspaces, agent tool descriptors, freshness checks, lineage, and chat history are implemented with Go structs and local JSON/provenance files. SQLite schema initialization and mirroring now exist, but JSON remains the active compatibility store until repositories migrate.
+The current repository implements the early local-first subset of this model. Workspaces are represented by a selected root path and a scanned `WorkspaceSnapshot`; file nodes are returned by `app/internal/workspace/scanner.go`; previews, searches, context packs, dataset profiles, artifacts, LLM settings, recent workspaces, agent tool descriptors, freshness checks, lineage, and chat history are implemented with Go structs and local JSON/provenance files. SQLite schema initialization and mirroring now exist, and prepared read paths prefer SQLite rows after the metadata store exists; JSON remains the compatibility write store until repository writes migrate.
 
 The richer IDs below describe the intended durable domain model. Do not treat every listed field as a created database column yet.
 
@@ -504,8 +504,9 @@ The SQLite metadata store is the prepared durable replacement for the current JS
 Current implementation:
 
 - `app/internal/appmeta/` writes `.nexusdesk/metadata/schema.sql`, initializes `.nexusdesk/metadata/nexusdesk.sqlite` through `modernc.org/sqlite`, and writes a manifest with schema version/hash.
-- The schema mirrors workspaces, chats, approvals, artifacts, and tool runs from the current JSON/provenance stores, while JSON stores remain active until repository migration lands.
-- `InspectMetadataStore` returns table columns, row counts, sample rows, and dataset SQL view summaries for the workbench.
+- The schema mirrors workspaces, chats, approvals, artifacts, and tool runs from the current JSON/provenance stores.
+- Chat history, approval log, artifact list, and tool-run list reads prefer SQLite mirror rows once the store exists, while JSON stores remain active compatibility writers until repository migration lands.
+- `InspectMetadataStore` returns table columns, row counts, sample rows, and dataset SQL view summaries for the workbench; the UI can select tables, filter columns, and copy row samples.
 
 ### Read-only Dataset SQL
 
@@ -516,6 +517,7 @@ Current implementation:
 - `app/internal/analytics/` accepts a constrained `SELECT` subset, blocks mutation keywords, and executes through bounded CSV query primitives by default.
 - A real DuckDB `database/sql` execution path registers the selected dataset as a `dataset` view when built with the `duckdb` tag on a CGO-enabled workstation.
 - SQL result exports create Markdown artifacts with SQL text, engine, row counts, preview rows, and source dataset citations.
+- SQL snippets are saved per dataset separately from lightweight row filters.
 
 ### Artifact Lineage
 
@@ -524,7 +526,7 @@ Artifact lineage links generated outputs back to chats, tool runs, and source fi
 Current implementation:
 
 - `GetArtifactLineage` builds a compact graph from artifact sidecar metadata, chat source paths, and `.nexusdesk/tool-runs/log.json`.
-- The workbench shows the first lineage relationships and can filter by source, chat, tool, or artifact kind. A graph layout remains the next UI step.
+- The workbench shows a selectable lineage graph, relationship counts, source/chat/tool/artifact filtering, and visible source navigation.
 
 ### Workspace Freshness
 
@@ -535,7 +537,7 @@ Current implementation:
 - `app/internal/workspace/freshness.go` snapshots file size and modification time by workspace-relative path.
 - `CheckWorkspaceFreshness` compares snapshots, ignores internal metadata/tool-run paths, and marks generated artifacts stale when their provenance references changed source paths.
 - Chat messages and context-pack previews warn when cited paths have changed.
-- Data Studio clears visible query/chart/profile state when the selected dataset changes on disk.
+- Data Studio clears visible query/chart/profile state when the selected dataset changes on disk, and freshness reports dataset-derived views/snippets/reports that should be refreshed.
 
 ### Artifact Comparison
 
@@ -552,7 +554,8 @@ A saved dataset query is a reusable Data Studio query tied to one workspace-rela
 Current implementation:
 
 - `app/internal/dataset/query_history.go` stores recent saved queries in `.nexusdesk/datasets/queries.json`.
-- Saved queries include label, query text, dataset path, and update time.
+- Saved queries include label, query text, dataset path, query kind, and update time.
+- Lightweight row filters and read-only SQL snippets are stored as separate query kinds.
 - The store reuses rooted dataset path validation and caps saved queries per dataset.
 
 ### Dataset Summary

@@ -289,8 +289,8 @@ Current implementation:
 - first CSV chart artifacts are deterministic UI-triggered tools today, not model-directed chart rendering
 - artifact archive/delete and scan-report creation are deterministic UI-triggered tools today, not model-directed artifact mutations
 - tool run records capture inputs, output summary, risk, approval ID, duration, and errors for later agent-loop replay/audit
-- artifact lineage can link source files, assistant answers, persisted tool runs, and generated artifacts for a first audit graph
-- lineage can be filtered in the workbench by source, chat, tool, or artifact kind
+- artifact lineage can link source files, assistant answers, persisted tool runs, and generated artifacts for an audit graph
+- lineage can be filtered in the workbench by source, chat, tool, or artifact kind, with selectable nodes, relationship counts, and source navigation
 
 ## Prompt Contracts
 

@@ -16,10 +16,15 @@ type SavedQuery struct {
 	RelPath   string `json:"relPath"`
 	Query     string `json:"query"`
 	Label     string `json:"label"`
+	Kind      string `json:"kind"`
 	UpdatedAt string `json:"updatedAt"`
 }
 
 func SaveQuery(root string, relPath string, query string, label string) (SavedQuery, error) {
+	return SaveQueryKind(root, relPath, query, label, "filter")
+}
+
+func SaveQueryKind(root string, relPath string, query string, label string, kind string) (SavedQuery, error) {
 	absRoot, _, cleanRel, err := resolveDatasetPath(root, relPath)
 	if err != nil {
 		return SavedQuery{}, err
@@ -36,6 +41,7 @@ func SaveQuery(root string, relPath string, query string, label string) (SavedQu
 	if label == "" {
 		label = "First rows"
 	}
+	kind = cleanQueryKind(kind)
 
 	items, err := readSavedQueries(absRoot)
 	if err != nil {
@@ -46,9 +52,10 @@ func SaveQuery(root string, relPath string, query string, label string) (SavedQu
 		RelPath:   filepath.ToSlash(cleanRel),
 		Query:     query,
 		Label:     label,
+		Kind:      kind,
 		UpdatedAt: time.Now().UTC().Format(time.RFC3339),
 	}
-	key := savedQueryKey(saved.RelPath, saved.Query)
+	key := savedQueryKey(saved.RelPath, saved.Query, saved.Kind)
 	items[key] = saved
 	items = trimSavedQueries(items, saved.RelPath)
 
@@ -60,6 +67,10 @@ func SaveQuery(root string, relPath string, query string, label string) (SavedQu
 }
 
 func ListSavedQueries(root string, relPath string) ([]SavedQuery, error) {
+	return ListSavedQueriesKind(root, relPath, "filter")
+}
+
+func ListSavedQueriesKind(root string, relPath string, kind string) ([]SavedQuery, error) {
 	absRoot, _, cleanRel, err := resolveDatasetPath(root, relPath)
 	if err != nil {
 		return nil, err
@@ -70,9 +81,10 @@ func ListSavedQueries(root string, relPath string) ([]SavedQuery, error) {
 	}
 
 	cleanRelPath := filepath.ToSlash(cleanRel)
+	kind = cleanQueryKind(kind)
 	queries := []SavedQuery{}
 	for _, item := range items {
-		if item.RelPath == cleanRelPath {
+		if item.RelPath == cleanRelPath && cleanQueryKind(item.Kind) == kind {
 			queries = append(queries, item)
 		}
 	}
@@ -124,11 +136,19 @@ func trimSavedQueries(items map[string]SavedQuery, relPath string) map[string]Sa
 		if index < maxSavedQueriesPerDataset {
 			continue
 		}
-		delete(items, savedQueryKey(query.RelPath, query.Query))
+		delete(items, savedQueryKey(query.RelPath, query.Query, query.Kind))
 	}
 	return items
 }
 
-func savedQueryKey(relPath string, query string) string {
-	return strings.ToLower(relPath) + "\x00" + strings.ToLower(strings.TrimSpace(query))
+func savedQueryKey(relPath string, query string, kind string) string {
+	return cleanQueryKind(kind) + "\x00" + strings.ToLower(relPath) + "\x00" + strings.ToLower(strings.TrimSpace(query))
+}
+
+func cleanQueryKind(kind string) string {
+	kind = strings.ToLower(strings.TrimSpace(kind))
+	if kind == "sql" {
+		return "sql"
+	}
+	return "filter"
 }

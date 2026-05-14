@@ -22,6 +22,7 @@ type FileChange struct {
 type FreshnessStatus struct {
 	Changed        []FileChange `json:"changed"`
 	StaleArtifacts []string     `json:"staleArtifacts"`
+	StaleDatasets  []string     `json:"staleDatasets"`
 	Message        string       `json:"message"`
 }
 

@@ -31,6 +31,7 @@ import {
     ListAgentToolRuns,
     ListApprovals,
     ListDatasetQueries,
+    ListDatasetSQLQueries,
     ListDatasetProfiles,
     GetRecentWorkspaces,
     ListArtifacts,
@@ -47,8 +48,10 @@ import {
     ReadWorkspaceFile,
     RemoveRecentWorkspace,
     RefreshWorkspace,
+    RefreshStaleContext,
     SaveLLMSettings,
     SaveDatasetQuery,
+    SaveDatasetSQLQuery,
     SearchWorkspace,
     SelectWorkspace,
     TestLLMConnection,
@@ -164,13 +167,17 @@ export function NexusDeskShell({
     const [datasetQuery, setDatasetQuery] = useState('');
     const [datasetSQLQuery, setDatasetSQLQuery] = useState('');
     const [datasetQueryLabel, setDatasetQueryLabel] = useState('');
+    const [datasetSQLQueryLabel, setDatasetSQLQueryLabel] = useState('');
     const [datasetQueryResult, setDatasetQueryResult] = useState<DatasetQueryResult | null>(null);
     const [datasetSQLQueryResult, setDatasetSQLQueryResult] = useState<DatasetSQLQueryResult | null>(null);
     const [savedDatasetQueries, setSavedDatasetQueries] = useState<SavedDatasetQuery[]>([]);
+    const [savedDatasetSQLQueries, setSavedDatasetSQLQueries] = useState<SavedDatasetQuery[]>([]);
     const [isQueryingDataset, setIsQueryingDataset] = useState(false);
     const [isQueryingDatasetSQL, setIsQueryingDatasetSQL] = useState(false);
     const [isExportingDatasetSQL, setIsExportingDatasetSQL] = useState(false);
     const [isSavingDatasetQuery, setIsSavingDatasetQuery] = useState(false);
+    const [isSavingDatasetSQLQuery, setIsSavingDatasetSQLQuery] = useState(false);
+    const [isRefreshingStaleContext, setIsRefreshingStaleContext] = useState(false);
     const [datasetChartType, setDatasetChartType] = useState('bar');
     const [datasetChartCategory, setDatasetChartCategory] = useState('');
     const [datasetChartValue, setDatasetChartValue] = useState('');
@@ -361,10 +368,12 @@ export function NexusDeskShell({
 
     useEffect(() => {
         setSavedDatasetQueries([]);
+        setSavedDatasetSQLQueries([]);
         if (!filePreview?.table) {
             return;
         }
         void refreshSavedDatasetQueries(filePreview.relPath);
+        void refreshSavedDatasetSQLQueries(filePreview.relPath);
     }, [filePreview?.relPath, filePreview?.table]);
 
     useEffect(() => {
@@ -1534,6 +1543,14 @@ export function NexusDeskShell({
         }
     }
 
+    async function refreshSavedDatasetSQLQueries(relPath: string) {
+        try {
+            setSavedDatasetSQLQueries(await ListDatasetSQLQueries(relPath));
+        } catch {
+            setSavedDatasetSQLQueries([]);
+        }
+    }
+
     async function refreshAgentTools() {
         try {
             const tools = await ListAgentTools();
@@ -2060,6 +2077,49 @@ export function NexusDeskShell({
         }
     }
 
+    async function saveCurrentDatasetSQLQuery() {
+        if (!workspace || !filePreview?.table || !datasetSQLQuery.trim()) {
+            setWorkspaceStatus('Select a dataset and enter SQL before saving a snippet.');
+            return;
+        }
+
+        setIsSavingDatasetSQLQuery(true);
+        try {
+            const saved = await SaveDatasetSQLQuery(filePreview.relPath, datasetSQLQuery, datasetSQLQueryLabel);
+            setDatasetSQLQueryLabel('');
+            await refreshSavedDatasetSQLQueries(filePreview.relPath);
+            setWorkspaceStatus(`Saved SQL snippet "${saved.label}".`);
+            pushToolEvent('SQL snippet saved', `${saved.relPath}: ${saved.label}`);
+        } catch (error) {
+            const message = error instanceof Error ? error.message : '';
+            setWorkspaceStatus(message || 'Could not save SQL snippet.');
+        } finally {
+            setIsSavingDatasetSQLQuery(false);
+        }
+    }
+
+    async function refreshStaleContextFromWorkspace() {
+        if (!workspaceFreshness || workspaceFreshness.changed.length === 0) {
+            setWorkspaceStatus('No changed workspace files need context refresh.');
+            return;
+        }
+        const changedPaths = workspaceFreshness.changed.map((change) => change.relPath);
+        setIsRefreshingStaleContext(true);
+        try {
+            const refresh = await RefreshStaleContext(changedPaths);
+            setContextPackPaths(changedPaths);
+            setContextPackPreview(refresh.preview);
+            setWorkspaceStatus(`${refresh.message} ${refresh.affectedChats} chat messages reference changed files.`);
+            await refreshApprovals();
+            await inspectMetadataStore();
+        } catch (error) {
+            const message = error instanceof Error ? error.message : '';
+            setWorkspaceStatus(message || 'Could not refresh stale context.');
+        } finally {
+            setIsRefreshingStaleContext(false);
+        }
+    }
+
     async function previewDatasetChart() {
         if (!workspace || !filePreview?.table) {
             setWorkspaceStatus('Open a workspace and select a CSV dataset before previewing a chart.');
@@ -2228,6 +2288,20 @@ export function NexusDeskShell({
         await selectWorkspaceFile(workspace, source);
         setWorkspaceStatus(`Opened source context ${source}.`);
         pushToolEvent('Artifact source opened', source);
+    }
+
+    async function openLineageSource(relPath: string) {
+        if (!workspace || !relPath) {
+            return;
+        }
+        const node = findWorkspaceNode(workspace, relPath);
+        if (!node) {
+            setWorkspaceStatus(`${relPath} is not visible in the current workspace tree.`);
+            return;
+        }
+        await selectWorkspaceFile(workspace, relPath);
+        setWorkspaceStatus(`Opened lineage source ${relPath}.`);
+        pushToolEvent('Lineage source opened', relPath);
     }
 
     async function archiveActiveArtifact() {
@@ -2667,9 +2741,11 @@ export function NexusDeskShell({
                 datasetQueryLabel={datasetQueryLabel}
                 datasetQueryResult={datasetQueryResult}
                 datasetSQLQuery={datasetSQLQuery}
+                datasetSQLQueryLabel={datasetSQLQueryLabel}
                 datasetSQLQueryResult={datasetSQLQueryResult}
                 metadataBrowser={metadataBrowser}
                 savedDatasetQueries={savedDatasetQueries}
+                savedDatasetSQLQueries={savedDatasetSQLQueries}
                 artifactComparison={artifactComparison}
                 artifactLineage={artifactLineage}
                 sqliteStatus={sqliteStatus}
@@ -2690,6 +2766,8 @@ export function NexusDeskShell({
                 isQueryingDatasetSQL={isQueryingDatasetSQL}
                 isExportingDatasetSQL={isExportingDatasetSQL}
                 isSavingDatasetQuery={isSavingDatasetQuery}
+                isSavingDatasetSQLQuery={isSavingDatasetSQLQuery}
+                isRefreshingStaleContext={isRefreshingStaleContext}
                 isPreparingMetadataStore={isPreparingMetadataStore}
                 isPreviewingDatasetChart={isPreviewingDatasetChart}
                 isCreatingDatasetChart={isCreatingDatasetChart}
@@ -2709,7 +2787,9 @@ export function NexusDeskShell({
                 onDatasetQueryChange={setDatasetQuery}
                 onDatasetSQLQueryChange={setDatasetSQLQuery}
                 onDatasetQueryLabelChange={setDatasetQueryLabel}
+                onDatasetSQLQueryLabelChange={setDatasetSQLQueryLabel}
                 onSaveDatasetQuery={() => void saveCurrentDatasetQuery()}
+                onSaveDatasetSQLQuery={() => void saveCurrentDatasetSQLQuery()}
                 onDatasetChartCategoryChange={(value) => {
                     setDatasetChartCategory(value);
                     setDatasetChartPreview(null);
@@ -2744,6 +2824,8 @@ export function NexusDeskShell({
                 onDeleteArtifact={() => void deleteActiveArtifact()}
                 onOpenArtifactSource={() => void openArtifactSource()}
                 onRefreshLineage={() => void loadArtifactLineage()}
+                onRefreshStaleContext={() => void refreshStaleContextFromWorkspace()}
+                onOpenLineageSource={(relPath) => void openLineageSource(relPath)}
                 onInspectMetadata={() => void inspectMetadataStore()}
                 onPrepareMetadataStore={() => void prepareSQLiteMetadataStore()}
                 onSelectTab={selectOpenTab}

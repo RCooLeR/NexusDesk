@@ -81,6 +81,8 @@ export function ListDatasetProfiles():Promise<Array<dataset.Profile>>;
 
 export function ListDatasetQueries(arg1:string):Promise<Array<dataset.SavedQuery>>;
 
+export function ListDatasetSQLQueries(arg1:string):Promise<Array<dataset.SavedQuery>>;
+
 export function OpenWorkspace(arg1:string):Promise<main.WorkspaceOpenResult>;
 
 export function PreviewAgentTool(arg1:agenttools.RunRequest):Promise<agenttools.RunRecord>;
@@ -103,11 +105,15 @@ export function QueryDatasetSQL(arg1:analytics.SQLQueryRequest):Promise<analytic
 
 export function ReadWorkspaceFile(arg1:string):Promise<workspace.FilePreview>;
 
+export function RefreshStaleContext(arg1:Array<string>):Promise<main.StaleContextRefresh>;
+
 export function RefreshWorkspace():Promise<main.WorkspaceOpenResult>;
 
 export function RemoveRecentWorkspace(arg1:string):Promise<Array<storage.RecentWorkspace>>;
 
 export function SaveDatasetQuery(arg1:string,arg2:string,arg3:string):Promise<dataset.SavedQuery>;
+
+export function SaveDatasetSQLQuery(arg1:string,arg2:string,arg3:string):Promise<dataset.SavedQuery>;
 
 export function SaveLLMSettings(arg1:storage.LLMSettings):Promise<storage.LLMSettings>;
 

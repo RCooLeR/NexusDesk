@@ -93,9 +93,10 @@ Current implementation:
 - scan-report artifacts are created from backend scan status and exclusive artifact writes
 - artifact archive/delete actions validate workspace-relative artifact paths and move/remove sibling metadata sidecars through backend methods
 - explicit agent tool dry-runs/executions persist auditable records under `.nexusdesk/tool-runs/log.json`
-- SQLite metadata preparation writes schema and manifest files under `.nexusdesk/metadata/`, opens `.nexusdesk/metadata/nexusdesk.sqlite` through `modernc.org/sqlite`, and applies the schema without migrating active JSON stores yet
-- SQLite metadata inspection mirrors JSON/provenance records into SQLite and exposes table columns, row counts, sample rows, and dataset SQL view summaries
-- workspace freshness checks ignore internal metadata/tool-run paths, detect source file changes, mark generated artifacts with stale source provenance, and warn chat/context surfaces when cited files changed
+- SQLite metadata preparation writes schema and manifest files under `.nexusdesk/metadata/`, opens `.nexusdesk/metadata/nexusdesk.sqlite` through `modernc.org/sqlite`, and applies the schema while JSON remains the compatibility write layer
+- SQLite metadata inspection mirrors JSON/provenance records into SQLite and exposes table columns, row counts, filterable columns, copyable sample rows, and dataset SQL view summaries
+- prepared metadata reads prefer SQLite rows for chat history, approvals, artifacts, and tool runs after the store exists
+- workspace freshness checks ignore internal metadata/tool-run paths, detect source file changes, mark generated artifacts with stale source provenance, flag stale dataset-derived views, and warn chat/context surfaces when cited files changed
 - frontend commands call Wails bindings rather than reading or mutating arbitrary paths directly
 
 ## Database Security

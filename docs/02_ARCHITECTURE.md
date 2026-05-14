@@ -19,11 +19,12 @@ The implemented desktop slice currently contains:
 - append-only workspace approval/action log for applied file and artifact operations
 - backend agent tool descriptor registry and first frontend tool-plan preview
 - persisted tool-run dry-runs/executions with approval references
-- SQLite metadata initialization and JSON-store mirroring through a real driver, with JSON stores retained as the compatibility layer
+- SQLite metadata initialization and JSON-store mirroring through a real driver, with SQLite preferred for prepared chat/approval/artifact/tool-run reads and JSON stores retained as the compatibility write layer
 - DuckDB-capable read-only SQL surface over datasets, with CGO-tagged driver execution and bounded CSV fallback
 - artifact comparison for generated output versions
-- artifact lineage and workspace freshness snapshots for source-aware generated outputs
-- Metadata Browser for SQLite tables, sample rows, and dataset SQL views
+- selectable artifact lineage graph and workspace freshness snapshots for source-aware generated outputs
+- Metadata Browser for SQLite tables, filtered columns, copyable sample rows, and dataset SQL views
+- separate saved SQL snippets and lightweight row filters per dataset
 - SQL result Markdown artifacts with query, engine, row count, preview, and source citation metadata
 - read-only Compose parsing for Operations Studio
 - configurable LLM gateway
@@ -64,8 +65,8 @@ flowchart LR
   Agent --> LLM["LLM Gateway"]
 
   Context --> Search["Path/Text Search"]
-  Search --> JsonStores[("Local JSON Stores<br/>settings, chats, recent workspaces")]
-  Search --> AppDB[("SQLite Metadata DB<br/>schema initialized and mirrored, repos migrating")]
+  Search --> JsonStores[("Local JSON Stores<br/>settings, compatibility writes, recent workspaces")]
+  Search --> AppDB[("SQLite Metadata DB<br/>schema initialized, mirrored, preferred reads")]
   Search --> AnalyticsDB[("DuckDB / CSV SQL<br/>datasets, query results")]
   Search --> FutureVectorStore["Optional local vectors"]
 
@@ -262,7 +263,7 @@ Responsibilities:
 - create report files
 - export bounded CSV query results as CSV artifacts
 - render first deterministic SVG chart artifacts from CSV aggregations
-- link artifacts to chats, tool runs, source files, and generated outputs through filterable lineage
+- link artifacts to chats, tool runs, source files, and generated outputs through filterable/selectable lineage
 - prevent silent overwrites
 
 Planned responsibilities:

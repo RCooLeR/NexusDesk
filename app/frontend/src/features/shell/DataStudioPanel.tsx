@@ -16,6 +16,7 @@ type DataStudioPanelProps = {
     isQuerying: boolean;
     isQueryingSQL: boolean;
     isExportingSQL: boolean;
+    isSavingSQL: boolean;
     isSavingQuery: boolean;
     onChartCategoryChange: (value: string) => void;
     onChartTypeChange: (value: string) => void;
@@ -27,8 +28,10 @@ type DataStudioPanelProps = {
     onQuery: () => void;
     onQueryChange: (value: string) => void;
     onSQLChange: (value: string) => void;
+    onSQLLabelChange: (value: string) => void;
     onSQLQuery: () => void;
     onSQLExport: () => void;
+    onSQLSave: () => void;
     onQueryLabelChange: (value: string) => void;
     onSaveQuery: () => void;
     profiles: ColumnProfile[];
@@ -36,8 +39,10 @@ type DataStudioPanelProps = {
     queryLabel: string;
     queryResult: DatasetQueryResult | null;
     sqlQuery: string;
+    sqlLabel: string;
     sqlResult: DatasetSQLQueryResult | null;
     savedQueries: SavedDatasetQuery[];
+    savedSQLQueries: SavedDatasetQuery[];
     table: TablePreview | null;
 };
 
@@ -55,6 +60,7 @@ export function DataStudioPanel({
     isQuerying,
     isQueryingSQL,
     isExportingSQL,
+    isSavingSQL,
     isSavingQuery,
     onChartCategoryChange,
     onChartTypeChange,
@@ -66,8 +72,10 @@ export function DataStudioPanel({
     onQuery,
     onQueryChange,
     onSQLChange,
+    onSQLLabelChange,
     onSQLQuery,
     onSQLExport,
+    onSQLSave,
     onQueryLabelChange,
     onSaveQuery,
     profiles,
@@ -75,8 +83,10 @@ export function DataStudioPanel({
     queryLabel,
     queryResult,
     sqlQuery,
+    sqlLabel,
     sqlResult,
     savedQueries,
+    savedSQLQueries,
     table,
 }: DataStudioPanelProps) {
     return (
@@ -100,9 +110,14 @@ export function DataStudioPanel({
                 isQuerying={isQuerying}
                 isQueryingSQL={isQueryingSQL}
                 isExportingSQL={isExportingSQL}
+                isSavingSQL={isSavingSQL}
                 onSQLChange={onSQLChange}
+                onSQLLabelChange={onSQLLabelChange}
                 onSQLQuery={onSQLQuery}
                 onSQLExport={onSQLExport}
+                onSQLSave={onSQLSave}
+                savedSQLQueries={savedSQLQueries}
+                sqlLabel={sqlLabel}
             />
             <DatasetChartPanel
                 categoryColumn={chartCategory}
@@ -140,14 +155,19 @@ function DatasetQueryPanel({
     isQuerying,
     isQueryingSQL,
     isExportingSQL,
+    isSavingSQL,
     onChange,
     onExport,
     onLabelChange,
     onQuery,
     onSQLChange,
+    onSQLLabelChange,
     onSQLQuery,
     onSQLExport,
+    onSQLSave,
     onSave,
+    savedSQLQueries,
+    sqlLabel,
 }: {
     columns: string[];
     isExporting: boolean;
@@ -161,14 +181,19 @@ function DatasetQueryPanel({
     isQuerying: boolean;
     isQueryingSQL: boolean;
     isExportingSQL: boolean;
+    isSavingSQL: boolean;
     onChange: (value: string) => void;
     onExport: () => void;
     onLabelChange: (value: string) => void;
     onQuery: () => void;
     onSQLChange: (value: string) => void;
+    onSQLLabelChange: (value: string) => void;
     onSQLQuery: () => void;
     onSQLExport: () => void;
+    onSQLSave: () => void;
     onSave: () => void;
+    savedSQLQueries: SavedDatasetQuery[];
+    sqlLabel: string;
 }) {
     const [filterColumn, setFilterColumn] = useState(columns[0] ?? '');
     const [filterValue, setFilterValue] = useState('');
@@ -263,18 +288,40 @@ function DatasetQueryPanel({
             )}
             <div className="dataset-sql-panel">
                 <strong>Read-only SQL</strong>
+                {savedSQLQueries.length > 0 && (
+                    <div className="saved-query-list" aria-label="Saved SQL snippets">
+                        {savedSQLQueries.map((saved) => (
+                            <button key={`${saved.relPath}-${saved.query}`} onClick={() => onSQLChange(saved.query)} title={saved.query}>
+                                {saved.label}
+                            </button>
+                        ))}
+                    </div>
+                )}
                 <textarea
                     aria-label="DuckDB-compatible SQL query"
                     onChange={(event) => onSQLChange(event.target.value)}
                     placeholder="select * from dataset where spend > 10 order by spend desc limit 20"
                     value={sqlQuery}
                 />
-                <Button disabled={isQueryingSQL} onClick={onSQLQuery} variant="subtle">
-                    {isQueryingSQL ? 'Running...' : 'Run SQL'}
-                </Button>
-                <Button disabled={isExportingSQL || !sqlQuery.trim()} onClick={onSQLExport} variant="subtle">
-                    {isExportingSQL ? 'Exporting...' : 'Export SQL'}
-                </Button>
+                <div className="query-save-row">
+                    <input
+                        aria-label="Saved SQL label"
+                        onChange={(event) => onSQLLabelChange(event.target.value)}
+                        placeholder="SQL label"
+                        value={sqlLabel}
+                    />
+                    <Button disabled={isSavingSQL || !sqlQuery.trim()} onClick={onSQLSave} variant="subtle">
+                        {isSavingSQL ? 'Saving...' : 'Save SQL'}
+                    </Button>
+                </div>
+                <div className="dataset-query-row">
+                    <Button disabled={isQueryingSQL} onClick={onSQLQuery} variant="subtle">
+                        {isQueryingSQL ? 'Running...' : 'Run SQL'}
+                    </Button>
+                    <Button disabled={isExportingSQL || !sqlQuery.trim()} onClick={onSQLExport} variant="subtle">
+                        {isExportingSQL ? 'Exporting...' : 'Export SQL'}
+                    </Button>
+                </div>
                 {sqlResult && (
                     <div className="dataset-query-result">
                         <small>{sqlResult.message}</small>

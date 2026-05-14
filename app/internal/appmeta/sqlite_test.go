@@ -79,4 +79,20 @@ func TestMirrorAndInspectSQLiteMetadata(t *testing.T) {
 			t.Fatalf("expected mirrored chat row, got %#v", table)
 		}
 	}
+	chats, err := ListChats(root)
+	if err != nil || len(chats) != 1 || chats[0].SourcePaths[0] != "README.md" {
+		t.Fatalf("ListChats returned unexpected data: %+v, %v", chats, err)
+	}
+	approvals, err := ListApprovals(root)
+	if err != nil || len(approvals) != 1 || approvals[0].Action != "artifact.create" {
+		t.Fatalf("ListApprovals returned unexpected data: %+v, %v", approvals, err)
+	}
+	artifacts, err := ListArtifacts(root)
+	if err != nil || len(artifacts) != 1 || artifacts[0].RelPath != ".nexusdesk/artifacts/report.md" {
+		t.Fatalf("ListArtifacts returned unexpected data: %+v, %v", artifacts, err)
+	}
+	toolRuns, err := ListToolRuns(root)
+	if err != nil || len(toolRuns) != 1 || toolRuns[0].ToolName != "dataset.query" {
+		t.Fatalf("ListToolRuns returned unexpected data: %+v, %v", toolRuns, err)
+	}
 }

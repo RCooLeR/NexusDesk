@@ -81,6 +81,12 @@ type MirrorData struct {
 	ToolRuns  []ToolRunMirror  `json:"toolRuns"`
 }
 
+type LineageStats struct {
+	NodeCount         int            `json:"nodeCount"`
+	EdgeCount         int            `json:"edgeCount"`
+	RelationshipCount map[string]int `json:"relationshipCount"`
+}
+
 type MetadataColumn struct {
 	Name string `json:"name"`
 	Type string `json:"type"`
@@ -235,6 +241,135 @@ func Inspect(root string, datasetViews []DatasetView) (MetadataBrowser, error) {
 	}, nil
 }
 
+func ListChats(root string) ([]ChatMirror, error) {
+	status, db, err := openExisting(root)
+	if err != nil {
+		return nil, err
+	}
+	defer db.Close()
+	workspaceRoot, err := filepath.Abs(root)
+	if err != nil {
+		return nil, err
+	}
+	rows, err := db.Query(`SELECT id, role, content, context_rel_path, source_paths_json, created_at
+		FROM chats WHERE workspace_root = ? ORDER BY created_at ASC, id ASC`, workspaceRoot)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	_ = status
+	items := []ChatMirror{}
+	for rows.Next() {
+		var item ChatMirror
+		var sourcePaths string
+		if err := rows.Scan(&item.ID, &item.Role, &item.Content, &item.ContextRelPath, &sourcePaths, &item.CreatedAt); err != nil {
+			return nil, err
+		}
+		_ = json.Unmarshal([]byte(sourcePaths), &item.SourcePaths)
+		items = append(items, item)
+	}
+	return items, rows.Err()
+}
+
+func ListApprovals(root string) ([]ApprovalMirror, error) {
+	_, db, err := openExisting(root)
+	if err != nil {
+		return nil, err
+	}
+	defer db.Close()
+	workspaceRoot, err := filepath.Abs(root)
+	if err != nil {
+		return nil, err
+	}
+	rows, err := db.Query(`SELECT id, action, target, risk, decision, message, created_at
+		FROM approvals WHERE workspace_root = ? ORDER BY created_at DESC, id DESC`, workspaceRoot)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []ApprovalMirror{}
+	for rows.Next() {
+		var item ApprovalMirror
+		if err := rows.Scan(&item.ID, &item.Action, &item.Target, &item.Risk, &item.Decision, &item.Message, &item.CreatedAt); err != nil {
+			return nil, err
+		}
+		items = append(items, item)
+	}
+	return items, rows.Err()
+}
+
+func ListArtifacts(root string) ([]ArtifactMirror, error) {
+	_, db, err := openExisting(root)
+	if err != nil {
+		return nil, err
+	}
+	defer db.Close()
+	workspaceRoot, err := filepath.Abs(root)
+	if err != nil {
+		return nil, err
+	}
+	rows, err := db.Query(`SELECT id, rel_path, kind, title, source, context_rel_path, metadata_json, created_at
+		FROM artifacts WHERE workspace_root = ? ORDER BY created_at DESC, rel_path ASC`, workspaceRoot)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []ArtifactMirror{}
+	for rows.Next() {
+		var item ArtifactMirror
+		var metadata string
+		if err := rows.Scan(&item.ID, &item.RelPath, &item.Kind, &item.Title, &item.Source, &item.ContextRelPath, &metadata, &item.CreatedAt); err != nil {
+			return nil, err
+		}
+		item.Metadata = json.RawMessage(metadata)
+		items = append(items, item)
+	}
+	return items, rows.Err()
+}
+
+func ListToolRuns(root string) ([]ToolRunMirror, error) {
+	_, db, err := openExisting(root)
+	if err != nil {
+		return nil, err
+	}
+	defer db.Close()
+	workspaceRoot, err := filepath.Abs(root)
+	if err != nil {
+		return nil, err
+	}
+	rows, err := db.Query(`SELECT id, tool_name, target, risk, status, mode, approval_id, inputs_json, output_summary, error, started_at, completed_at, duration_ms
+		FROM tool_runs WHERE workspace_root = ? ORDER BY started_at DESC, id DESC`, workspaceRoot)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []ToolRunMirror{}
+	for rows.Next() {
+		var item ToolRunMirror
+		var inputs string
+		if err := rows.Scan(
+			&item.ID,
+			&item.ToolName,
+			&item.Target,
+			&item.Risk,
+			&item.Status,
+			&item.Mode,
+			&item.ApprovalID,
+			&inputs,
+			&item.OutputSummary,
+			&item.Error,
+			&item.StartedAt,
+			&item.CompletedAt,
+			&item.DurationMs,
+		); err != nil {
+			return nil, err
+		}
+		item.Inputs = json.RawMessage(inputs)
+		items = append(items, item)
+	}
+	return items, rows.Err()
+}
+
 func listTables(db *sql.DB) ([]string, error) {
 	rows, err := db.Query(`SELECT name FROM sqlite_master WHERE type = 'table' AND name NOT LIKE 'sqlite_%' ORDER BY name`)
 	if err != nil {
@@ -251,6 +386,31 @@ func listTables(db *sql.DB) ([]string, error) {
 		tables = append(tables, table)
 	}
 	return tables, rows.Err()
+}
+
+func openExisting(root string) (SQLiteStatus, *sql.DB, error) {
+	absRoot, err := filepath.Abs(root)
+	if err != nil {
+		return SQLiteStatus{}, nil, err
+	}
+	dbPath := filepath.Join(absRoot, filepath.FromSlash(metadataDirRelPath), "nexusdesk.sqlite")
+	db, err := sql.Open("sqlite", dbPath)
+	if err != nil {
+		return SQLiteStatus{}, nil, err
+	}
+	tables, err := listTables(db)
+	if err != nil {
+		db.Close()
+		return SQLiteStatus{}, nil, err
+	}
+	hash := sha256.Sum256([]byte(schemaSQL))
+	return SQLiteStatus{
+		Path:          dbPath,
+		SchemaPath:    filepath.Join(absRoot, filepath.FromSlash(metadataDirRelPath), schemaFileName),
+		SchemaVersion: 1,
+		SchemaHash:    hex.EncodeToString(hash[:]),
+		Tables:        tables,
+	}, db, nil
 }
 
 func hashID(value string) string {
