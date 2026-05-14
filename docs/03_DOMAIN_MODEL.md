@@ -403,7 +403,7 @@ Examples:
 - Markdown report
 - PDF report
 - PNG chart
-- SVG chart
+- SVG chart, first deterministic CSV bar chart implemented
 - SQL file
 - generated source file
 - Dockerfile
@@ -455,6 +455,17 @@ Current implementation:
 - creates and updates require a diff preview before apply
 - deletes and moves require backend validation and frontend confirmation
 
+### Dataset Chart
+
+A dataset chart is a deterministic visualization artifact produced from a bounded dataset analysis.
+
+Current implementation:
+
+- `app/internal/workspace/chart.go` builds a first CSV bar chart model from one category column.
+- The chart can count rows per category or sum a selected numeric column per category.
+- The result is capped to the top categories before rendering.
+- `app/internal/artifact/markdown_report.go` writes the chart as an SVG artifact under `.nexusdesk/artifacts/` with provenance metadata.
+
 ## Relationship Overview
 
 ```mermaid
@@ -473,6 +484,7 @@ erDiagram
   SEGMENT ||--o{ CHUNK : splits_into
 
   DATASET ||--o{ DATA_PROFILE : describes
+  DATASET ||--o{ ARTIFACT : charts_to
 
   CONNECTOR ||--o| DATABASE_CONNECTION : may_be
   CONNECTOR ||--o| DOCKER_ENVIRONMENT : may_be

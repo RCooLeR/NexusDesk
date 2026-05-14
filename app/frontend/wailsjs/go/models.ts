@@ -523,6 +523,24 @@ export namespace workspace {
 		}
 	}
 
+	export class DatasetChartRequest {
+	    relPath: string;
+	    chartType: string;
+	    categoryColumn: string;
+	    valueColumn: string;
+
+	    static createFrom(source: any = {}) {
+	        return new DatasetChartRequest(source);
+	    }
+
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.relPath = source["relPath"];
+	        this.chartType = source["chartType"];
+	        this.categoryColumn = source["categoryColumn"];
+	        this.valueColumn = source["valueColumn"];
+	    }
+	}
 	export class DatasetQueryResult {
 	    relPath: string;
 	    query: string;

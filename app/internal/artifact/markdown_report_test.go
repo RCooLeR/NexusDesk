@@ -195,6 +195,53 @@ func TestCreateGeneratedMarkdownTruncatesLargeResponse(t *testing.T) {
 	}
 }
 
+func TestCreateDatasetChartSVGWritesArtifact(t *testing.T) {
+	root := t.TempDir()
+	now := time.Date(2026, 5, 13, 12, 30, 0, 0, time.UTC)
+
+	report, err := CreateDatasetChartSVG(root, workspace.DatasetChartResult{
+		RelPath:        "data/leads.csv",
+		ChartType:      "bar",
+		CategoryColumn: "channel",
+		ValueColumn:    "revenue",
+		Mode:           "sum",
+		TotalRows:      3,
+		UsedRows:       3,
+		Message:        "Charted top 2 revenue totals by channel from data/leads.csv.",
+		Points: []workspace.DatasetChartPoint{
+			{Label: "search", Value: 16, Count: 2},
+			{Label: "social", Value: 4, Count: 1},
+		},
+	}, now)
+	if err != nil {
+		t.Fatalf("CreateDatasetChartSVG returned error: %v", err)
+	}
+
+	if report.RelPath != ".nexusdesk/artifacts/revenue-by-channel-20260513-123000.svg" {
+		t.Fatalf("unexpected chart rel path: %s", report.RelPath)
+	}
+
+	content, err := os.ReadFile(filepath.Join(root, filepath.FromSlash(report.RelPath)))
+	if err != nil {
+		t.Fatalf("ReadFile failed: %v", err)
+	}
+	text := string(content)
+	if !strings.Contains(text, "<svg") || !strings.Contains(text, "Revenue by channel") && !strings.Contains(text, "revenue by channel") {
+		t.Fatalf("expected SVG chart content, got %q", text)
+	}
+	if !strings.Contains(text, "search") || !strings.Contains(text, "16") {
+		t.Fatalf("expected chart point content, got %q", text)
+	}
+
+	metadata := readTestMetadata(t, root, report.RelPath)
+	if metadata.Kind != "chart-svg" {
+		t.Fatalf("unexpected metadata kind: %s", metadata.Kind)
+	}
+	if len(metadata.SourcePaths) != 1 || metadata.SourcePaths[0] != "data/leads.csv" {
+		t.Fatalf("unexpected metadata source paths: %#v", metadata.SourcePaths)
+	}
+}
+
 func TestListReturnsMarkdownArtifactsNewestFirst(t *testing.T) {
 	root := t.TempDir()
 	firstTime := time.Date(2026, 5, 13, 12, 30, 0, 0, time.UTC)
@@ -237,6 +284,35 @@ func TestListReturnsMarkdownArtifactsNewestFirst(t *testing.T) {
 	}
 	if artifacts[0].Source != "selected preview" {
 		t.Fatalf("expected artifact source from metadata, got %q", artifacts[0].Source)
+	}
+}
+
+func TestListReturnsSVGChartArtifacts(t *testing.T) {
+	root := t.TempDir()
+	now := time.Date(2026, 5, 13, 12, 30, 0, 0, time.UTC)
+
+	chart, err := CreateDatasetChartSVG(root, workspace.DatasetChartResult{
+		RelPath:        "data/leads.csv",
+		CategoryColumn: "channel",
+		Points:         []workspace.DatasetChartPoint{{Label: "search", Value: 2, Count: 2}},
+		Message:        "Charted top 1 categories from data/leads.csv.",
+	}, now)
+	if err != nil {
+		t.Fatalf("CreateDatasetChartSVG returned error: %v", err)
+	}
+
+	artifacts, err := List(root)
+	if err != nil {
+		t.Fatalf("List returned error: %v", err)
+	}
+	if len(artifacts) != 1 {
+		t.Fatalf("expected 1 chart artifact, got %d", len(artifacts))
+	}
+	if artifacts[0].RelPath != chart.RelPath {
+		t.Fatalf("unexpected chart artifact rel path: %s", artifacts[0].RelPath)
+	}
+	if artifacts[0].Kind != "chart-svg" {
+		t.Fatalf("unexpected chart artifact kind: %s", artifacts[0].Kind)
 	}
 }
 

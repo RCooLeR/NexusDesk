@@ -301,6 +301,19 @@ func (a *App) QueryDataset(relPath string, query string) (workspace.DatasetQuery
 	return workspace.QueryCSV(root, relPath, query)
 }
 
+func (a *App) CreateDatasetChartArtifact(request workspace.DatasetChartRequest) (artifact.MarkdownReport, error) {
+	root := a.getWorkspaceRoot()
+	if root == "" {
+		return artifact.MarkdownReport{}, errors.New("open a workspace before creating dataset charts")
+	}
+
+	chart, err := workspace.BuildCSVChart(root, request)
+	if err != nil {
+		return artifact.MarkdownReport{}, err
+	}
+	return artifact.CreateDatasetChartSVG(root, chart, time.Now())
+}
+
 func (a *App) GetRecentWorkspaces() ([]storage.RecentWorkspace, error) {
 	return a.recentStore.List()
 }

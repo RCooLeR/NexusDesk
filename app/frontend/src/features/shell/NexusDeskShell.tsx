@@ -11,6 +11,7 @@ import {
     ClearRecentWorkspaces,
     ClearChatHistory,
     CreateChatMarkdownArtifact,
+    CreateDatasetChartArtifact,
     CreateMarkdownReport,
     GetChatHistory,
     ListDatasetProfiles,
@@ -128,6 +129,10 @@ export function NexusDeskShell({
     const [datasetQuery, setDatasetQuery] = useState('');
     const [datasetQueryResult, setDatasetQueryResult] = useState<DatasetQueryResult | null>(null);
     const [isQueryingDataset, setIsQueryingDataset] = useState(false);
+    const [datasetChartType, setDatasetChartType] = useState('bar');
+    const [datasetChartCategory, setDatasetChartCategory] = useState('');
+    const [datasetChartValue, setDatasetChartValue] = useState('');
+    const [isCreatingDatasetChart, setIsCreatingDatasetChart] = useState(false);
     const [workspaceSearchQuery, setWorkspaceSearchQuery] = useState('');
     const [workspaceSearchResults, setWorkspaceSearchResults] = useState<WorkspaceSearchResult[]>([]);
     const [isSearchingWorkspace, setIsSearchingWorkspace] = useState(false);
@@ -190,6 +195,23 @@ export function NexusDeskShell({
             cancelled = true;
         };
     }, [contextPackPaths, workspace]);
+
+    useEffect(() => {
+        const columns = currentDatasetColumns(filePreview, activeDatasetProfile);
+        if (columns.length === 0) {
+            setDatasetChartCategory('');
+            setDatasetChartValue('');
+            return;
+        }
+
+        setDatasetChartCategory((current) => columns.includes(current) ? current : columns[0]);
+        setDatasetChartValue((current) => {
+            if (current === '' || columns.includes(current)) {
+                return current;
+            }
+            return '';
+        });
+    }, [activeDatasetProfile, filePreview]);
 
     useEffect(() => {
         function handleGlobalKeyDown(event: KeyboardEvent) {
@@ -313,6 +335,7 @@ export function NexusDeskShell({
         const canMoveSelectedFile = Boolean(workspace && filePreview?.kind === 'file' && !isEditingFile);
         const canUseSelectedContext = Boolean(selectedContextRelPath) && !isSendingPrompt;
         const canUseSelectedDataset = Boolean(workspace && filePreview?.fileType === 'data');
+        const canChartSelectedDataset = Boolean(workspace && filePreview?.table && datasetChartCategory);
 
         return [
             {
@@ -518,6 +541,14 @@ export function NexusDeskShell({
                 id: 'data.query',
                 run: () => void querySelectedDataset(),
                 title: 'Query Current Dataset',
+            },
+            {
+                detail: canChartSelectedDataset ? `Create a ${datasetChartType} chart from ${activeFile}.` : 'Select a CSV dataset and chart category first.',
+                disabled: !canChartSelectedDataset || isCreatingDatasetChart,
+                group: 'Data Studio',
+                id: 'data.create-chart',
+                run: () => void createDatasetChart(),
+                title: 'Create Dataset Chart',
             },
             {
                 detail: chatMessages.length > 0 ? 'Clear persisted chat messages for the active workspace.' : 'No chat messages are loaded.',
@@ -1680,6 +1711,48 @@ export function NexusDeskShell({
         }
     }
 
+    async function createDatasetChart() {
+        if (!workspace || !filePreview?.table) {
+            setWorkspaceStatus('Open a workspace and select a CSV dataset before creating a chart.');
+            return;
+        }
+        if (!datasetChartCategory) {
+            setWorkspaceStatus('Choose a category column before creating a chart.');
+            return;
+        }
+
+        setIsCreatingDatasetChart(true);
+        setWorkspaceStatus(`Creating chart from ${filePreview.relPath}...`);
+        try {
+            const report: MarkdownReport = await CreateDatasetChartArtifact({
+                relPath: filePreview.relPath,
+                chartType: datasetChartType,
+                categoryColumn: datasetChartCategory,
+                valueColumn: datasetChartValue,
+            });
+            const result = await RefreshWorkspace();
+            if (result.selected) {
+                onWorkspaceChange(result.snapshot);
+                await refreshArtifacts();
+                setExpandedDirectories((current) => reconcileExpandedDirectories(current, result.snapshot, findWorkspaceNode(result.snapshot, report.relPath)));
+                await selectWorkspaceFile(result.snapshot, report.relPath);
+                setWorkspaceStatus(`${report.name} created in .nexusdesk/artifacts.`);
+                pushToolEvent('Chart created', report.relPath);
+            } else {
+                setWorkspaceStatus(report.message);
+            }
+        } catch (error) {
+            const message = error instanceof Error ? error.message : '';
+            if (message.includes('undefined') || message.includes('window')) {
+                setWorkspaceStatus('Chart creation is available in the desktop runtime.');
+                return;
+            }
+            setWorkspaceStatus(message || 'Could not create dataset chart.');
+        } finally {
+            setIsCreatingDatasetChart(false);
+        }
+    }
+
     async function selectArtifact(artifact: WorkspaceArtifact) {
         if (!workspace) {
             setWorkspaceStatus('Open a workspace before selecting artifacts.');
@@ -1840,6 +1913,9 @@ export function NexusDeskShell({
                 datasetProfiles={datasetProfiles}
                 datasetQuery={datasetQuery}
                 datasetQueryResult={datasetQueryResult}
+                datasetChartCategory={datasetChartCategory}
+                datasetChartType={datasetChartType}
+                datasetChartValue={datasetChartValue}
                 activeDatasetProfile={activeDatasetProfile}
                 fileDraft={fileDraft}
                 filePreview={filePreview}
@@ -1849,6 +1925,7 @@ export function NexusDeskShell({
                 isMovingFile={isMovingFile}
                 isProfilingDataset={isProfilingDataset}
                 isQueryingDataset={isQueryingDataset}
+                isCreatingDatasetChart={isCreatingDatasetChart}
                 isSummarizingContext={isSummarizingContext}
                 isEditingFile={isEditingFile}
                 isApplyingWrite={isApplyingWrite}
@@ -1859,6 +1936,9 @@ export function NexusDeskShell({
                 onCancelFileEdit={clearFileWriteDraft}
                 onCreateReport={() => void createMarkdownReport()}
                 onDatasetQueryChange={setDatasetQuery}
+                onDatasetChartCategoryChange={setDatasetChartCategory}
+                onDatasetChartTypeChange={setDatasetChartType}
+                onDatasetChartValueChange={setDatasetChartValue}
                 onDeleteFile={() => void deleteActiveFile()}
                 onMoveFile={() => void moveActiveFile()}
                 onFileDraftChange={updateFileDraft}
@@ -1869,6 +1949,7 @@ export function NexusDeskShell({
                 onPreviewFileWrite={() => void previewFileWrite()}
                 onProfileDataset={() => void profileSelectedDataset()}
                 onQueryDataset={() => void querySelectedDataset()}
+                onCreateDatasetChart={() => void createDatasetChart()}
                 onCloseTab={closeOpenTab}
                 onSelectTab={selectOpenTab}
                 onSelectArtifact={(artifact) => void selectArtifact(artifact)}
@@ -1921,6 +2002,16 @@ function dirtyDraftPaths(fileDrafts: Record<string, string>, openTabs: FilePrevi
             return Boolean(tab && draft !== tab.content);
         })
         .map(([relPath]) => relPath);
+}
+
+function currentDatasetColumns(preview: FilePreview | null, profile: DatasetProfile | null) {
+    if (preview?.table?.columns.length) {
+        return preview.table.columns;
+    }
+    if (profile?.profiles.length) {
+        return profile.profiles.map((column) => column.name);
+    }
+    return [];
 }
 
 function omitKey<T>(record: Record<string, T>, key: string) {

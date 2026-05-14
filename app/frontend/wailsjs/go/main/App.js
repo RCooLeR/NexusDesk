@@ -42,6 +42,10 @@ export function CreateChatMarkdownArtifact(arg1) {
   return window['go']['main']['App']['CreateChatMarkdownArtifact'](arg1);
 }
 
+export function CreateDatasetChartArtifact(arg1) {
+  return window['go']['main']['App']['CreateDatasetChartArtifact'](arg1);
+}
+
 export function CreateMarkdownReport(arg1) {
   return window['go']['main']['App']['CreateMarkdownReport'](arg1);
 }

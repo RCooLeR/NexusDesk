@@ -4,10 +4,13 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"html"
+	"math"
 	"os"
 	"path/filepath"
 	"regexp"
 	"sort"
+	"strconv"
 	"strings"
 	"time"
 	"unicode/utf8"
@@ -189,6 +192,73 @@ func CreateGeneratedMarkdown(root string, request MarkdownArtifactRequest, now t
 	}, nil
 }
 
+func CreateDatasetChartSVG(root string, chart workspace.DatasetChartResult, now time.Time) (MarkdownReport, error) {
+	if strings.TrimSpace(root) == "" {
+		return MarkdownReport{}, errors.New("open a workspace before creating chart artifacts")
+	}
+	if strings.TrimSpace(chart.RelPath) == "" || len(chart.Points) == 0 {
+		return MarkdownReport{}, errors.New("chart artifact needs dataset points")
+	}
+
+	absRoot, err := filepath.Abs(root)
+	if err != nil {
+		return MarkdownReport{}, err
+	}
+
+	artifactDir := filepath.Join(absRoot, filepath.FromSlash(artifactDirRelPath))
+	if err := os.MkdirAll(artifactDir, 0o755); err != nil {
+		return MarkdownReport{}, err
+	}
+
+	name := datasetChartFileName(chart, now)
+	path := filepath.Join(artifactDir, name)
+	if err := ensureInsideRoot(absRoot, path); err != nil {
+		return MarkdownReport{}, err
+	}
+
+	content := buildDatasetChartSVG(chart, now)
+	file, err := os.OpenFile(path, os.O_WRONLY|os.O_CREATE|os.O_EXCL, 0o644)
+	if err != nil {
+		return MarkdownReport{}, err
+	}
+	defer file.Close()
+
+	if _, err := file.WriteString(content); err != nil {
+		return MarkdownReport{}, err
+	}
+
+	title := datasetChartTitle(chart)
+	if err := writeArtifactMetadata(absRoot, path, ArtifactMetadata{
+		Kind:           "chart-svg",
+		Title:          title,
+		Source:         "dataset chart",
+		SourcePaths:    cleanMetadataPaths([]string{chart.RelPath}),
+		ContextRelPath: chart.RelPath,
+		Prompt:         datasetChartPrompt(chart),
+		CreatedAt:      now.UTC().Format(time.RFC3339),
+	}); err != nil {
+		return MarkdownReport{}, err
+	}
+
+	info, err := file.Stat()
+	if err != nil {
+		return MarkdownReport{}, err
+	}
+
+	relPath, err := filepath.Rel(absRoot, path)
+	if err != nil {
+		return MarkdownReport{}, err
+	}
+
+	return MarkdownReport{
+		RelPath: filepath.ToSlash(relPath),
+		Name:    name,
+		Path:    path,
+		Message: "SVG chart artifact created inside the workspace.",
+		Size:    info.Size(),
+	}, nil
+}
+
 func List(root string) ([]WorkspaceArtifact, error) {
 	if strings.TrimSpace(root) == "" {
 		return []WorkspaceArtifact{}, nil
@@ -213,7 +283,8 @@ func List(root string) ([]WorkspaceArtifact, error) {
 		if entry.IsDir() {
 			continue
 		}
-		if strings.ToLower(filepath.Ext(entry.Name())) != ".md" {
+		extension := strings.ToLower(filepath.Ext(entry.Name()))
+		if extension != ".md" && extension != ".svg" {
 			continue
 		}
 
@@ -279,12 +350,39 @@ func generatedArtifactFileName(request MarkdownArtifactRequest, now time.Time) s
 	return fmt.Sprintf("%s-%s.md", slug, now.UTC().Format("20060102-150405"))
 }
 
+func datasetChartFileName(chart workspace.DatasetChartResult, now time.Time) string {
+	slug := slugify(datasetChartTitle(chart))
+	if slug == "" {
+		slug = "dataset-chart"
+	}
+	return fmt.Sprintf("%s-%s.svg", slug, now.UTC().Format("20060102-150405"))
+}
+
 func generatedArtifactTitle(request MarkdownArtifactRequest) string {
 	base := strings.TrimSpace(request.Title)
 	if base == "" {
 		base = "Assistant Response"
 	}
 	return base
+}
+
+func datasetChartTitle(chart workspace.DatasetChartResult) string {
+	metric := "Rows"
+	if chart.ValueColumn != "" {
+		metric = chart.ValueColumn
+	}
+	category := strings.TrimSpace(chart.CategoryColumn)
+	if category == "" {
+		category = "Category"
+	}
+	return fmt.Sprintf("%s by %s", metric, category)
+}
+
+func datasetChartPrompt(chart workspace.DatasetChartResult) string {
+	if chart.ValueColumn == "" {
+		return fmt.Sprintf("Chart row count by %s from %s", chart.CategoryColumn, chart.RelPath)
+	}
+	return fmt.Sprintf("Chart sum of %s by %s from %s", chart.ValueColumn, chart.CategoryColumn, chart.RelPath)
 }
 
 func buildMarkdownReport(source workspace.FilePreview, now time.Time) string {
@@ -351,6 +449,59 @@ func buildMarkdownReport(source workspace.FilePreview, now time.Time) string {
 	return builder.String()
 }
 
+func buildDatasetChartSVG(chart workspace.DatasetChartResult, now time.Time) string {
+	const width = 960.0
+	const rowHeight = 42.0
+	const top = 116.0
+	const left = 220.0
+	const right = 52.0
+	const barHeight = 20.0
+
+	height := top + float64(len(chart.Points))*rowHeight + 70
+	maxValue := 0.0
+	for _, point := range chart.Points {
+		if point.Value > maxValue {
+			maxValue = point.Value
+		}
+	}
+	if maxValue <= 0 {
+		maxValue = 1
+	}
+
+	title := datasetChartTitle(chart)
+	subtitle := chart.Message
+	barMaxWidth := width - left - right
+
+	var builder strings.Builder
+	builder.WriteString(`<?xml version="1.0" encoding="UTF-8"?>` + "\n")
+	builder.WriteString(fmt.Sprintf(`<svg xmlns="http://www.w3.org/2000/svg" width="%.0f" height="%.0f" viewBox="0 0 %.0f %.0f" role="img" aria-labelledby="title desc">`+"\n", width, height, width, height))
+	builder.WriteString("<title>")
+	builder.WriteString(html.EscapeString(title))
+	builder.WriteString("</title>\n<desc>")
+	builder.WriteString(html.EscapeString(subtitle))
+	builder.WriteString("</desc>\n")
+	builder.WriteString(`<rect width="100%" height="100%" fill="#f7f5f0"/>` + "\n")
+	builder.WriteString(`<text x="40" y="48" fill="#1f2933" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="28" font-weight="700">`)
+	builder.WriteString(html.EscapeString(title))
+	builder.WriteString("</text>\n")
+	builder.WriteString(`<text x="40" y="78" fill="#65717f" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="14">`)
+	builder.WriteString(html.EscapeString(subtitle))
+	builder.WriteString("</text>\n")
+	builder.WriteString(`<line x1="40" y1="96" x2="920" y2="96" stroke="#d8d4ca" stroke-width="1"/>` + "\n")
+
+	for index, point := range chart.Points {
+		y := top + float64(index)*rowHeight
+		barWidth := math.Max(2, (point.Value/maxValue)*barMaxWidth)
+		builder.WriteString(fmt.Sprintf(`<text x="40" y="%.1f" fill="#30363d" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="14">%s</text>`+"\n", y+15, html.EscapeString(truncateChartLabel(point.Label))))
+		builder.WriteString(fmt.Sprintf(`<rect x="%.1f" y="%.1f" width="%.1f" height="%.1f" rx="4" fill="#2f7d7e"/>`+"\n", left, y, barWidth, barHeight))
+		builder.WriteString(fmt.Sprintf(`<text x="%.1f" y="%.1f" fill="#1f2933" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="13">%s</text>`+"\n", left+barWidth+10, y+15, html.EscapeString(formatChartValue(point.Value))))
+	}
+
+	builder.WriteString(fmt.Sprintf(`<text x="40" y="%.1f" fill="#65717f" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="12">Generated %s from %s. Rows used: %d of %d.</text>`+"\n", height-28, html.EscapeString(now.UTC().Format(time.RFC3339)), html.EscapeString(chart.RelPath), chart.UsedRows, chart.TotalRows))
+	builder.WriteString("</svg>\n")
+	return builder.String()
+}
+
 func buildGeneratedMarkdown(request MarkdownArtifactRequest, now time.Time) string {
 	var builder strings.Builder
 
@@ -389,6 +540,23 @@ func buildGeneratedMarkdown(request MarkdownArtifactRequest, now time.Time) stri
 	}
 
 	return builder.String()
+}
+
+func truncateChartLabel(label string) string {
+	label = strings.TrimSpace(label)
+	if label == "" {
+		return "(blank)"
+	}
+	const maxRunes = 24
+	runes := []rune(label)
+	if len(runes) <= maxRunes {
+		return label
+	}
+	return string(runes[:maxRunes-1]) + "..."
+}
+
+func formatChartValue(value float64) string {
+	return strconv.FormatFloat(value, 'f', -1, 64)
 }
 
 func writeArtifactMetadata(root string, artifactPath string, metadata ArtifactMetadata) error {

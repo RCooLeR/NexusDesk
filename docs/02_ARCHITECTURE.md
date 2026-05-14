@@ -14,7 +14,8 @@ The implemented desktop slice currently contains:
 - OS-protected sidecar credential storage where available
 - safe workspace scanner, previewer, search, context-pack builder, and file operation boundaries
 - CSV/XLSX dataset profiling and bounded CSV row queries
-- Markdown artifact writer with provenance sidecars
+- Markdown/SVG artifact writer with provenance sidecars
+- first CSV chart artifact flow for category counts or numeric sums
 - configurable LLM gateway
 - OpenAI-compatible chat and streaming
 
@@ -102,7 +103,8 @@ Responsibilities:
 - chat UI
 - tool call timeline
 - approval dialogs, planned
-- charts and dashboards, planned
+- first CSV chart artifacts
+- richer charts and dashboards, planned
 - settings screens
 - artifact browser
 
@@ -242,12 +244,13 @@ Responsibilities:
 - write generated files
 - track artifact metadata
 - create report files
+- render first deterministic SVG chart artifacts from CSV aggregations
 - link artifacts to chats and tool runs
 - prevent silent overwrites
 
 Planned responsibilities:
 
-- render or export charts
+- richer chart rendering, export options, and dashboards
 
 Artifacts are the bridge between chat and real work.
 

@@ -1293,6 +1293,40 @@ button:disabled {
     font-size: 12px;
 }
 
+.dataset-chart-panel {
+    border: 1px solid var(--nd-border-soft);
+    border-radius: var(--nd-radius-sm);
+    background: #fffdf8;
+    display: grid;
+    gap: 8px;
+    padding: 10px;
+}
+
+.dataset-chart-panel > strong {
+    font-size: 12px;
+}
+
+.dataset-chart-grid {
+    display: grid;
+    gap: 8px;
+}
+
+.dataset-chart-grid label {
+    display: grid;
+    gap: 4px;
+}
+
+.dataset-chart-grid span {
+    color: var(--nd-muted-text);
+    font-size: 11px;
+    font-weight: 700;
+    text-transform: uppercase;
+}
+
+.dataset-chart-grid select {
+    width: 100%;
+}
+
 .dataset-query-row {
     display: grid;
     grid-template-columns: minmax(0, 1fr) auto;

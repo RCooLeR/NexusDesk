@@ -16,6 +16,7 @@ const checks = [
             'ApplyFileMove',
             'ProfileDataset',
             'QueryDataset',
+            'CreateDatasetChartArtifact',
             'SearchWorkspace',
             'QuickOpenPalette',
             'CommandPalette',
@@ -44,6 +45,7 @@ const checks = [
             'CreateChatMarkdownArtifact',
             'PreviewChatContextPack',
             'summarizeSelectedContext',
+            'createDatasetChart',
         ],
     },
     {
@@ -52,7 +54,7 @@ const checks = [
     },
     {
         file: 'src/features/shell/WorkbenchPanel.tsx',
-        terms: ['editor-tabs', 'markdownViewMode', 'markdown-view-toggle', 'markdown-document-preview', 'studio-mode-strip', 'resolveStudioMode', 'Data Studio', 'Summarize', 'onSummarizeContext', 'onSelectTab', 'onCloseTab', 'onDeleteFile', 'onMoveFile', 'onPinProjectContext', 'DatasetQueryPanel', 'file-write-editor', 'MonacoFileEditor', 'MonacoCodePreview', 'editor-find', 'findInputRef', 'dirty-indicator', 'dirtyTabPaths', 'countFindMatches'],
+        terms: ['editor-tabs', 'markdownViewMode', 'markdown-view-toggle', 'markdown-document-preview', 'studio-mode-strip', 'resolveStudioMode', 'Data Studio', 'Summarize', 'onSummarizeContext', 'onSelectTab', 'onCloseTab', 'onDeleteFile', 'onMoveFile', 'onPinProjectContext', 'DatasetQueryPanel', 'DatasetChartPanel', 'file-write-editor', 'MonacoFileEditor', 'MonacoCodePreview', 'editor-find', 'findInputRef', 'dirty-indicator', 'dirtyTabPaths', 'countFindMatches'],
     },
     {
         file: 'src/features/shell/MonacoFileEditor.tsx',
@@ -110,6 +112,7 @@ const checks = [
             '.monaco-code-preview',
             '.monaco-find-highlight',
             '.dataset-profile-summary',
+            '.dataset-chart-panel',
             '.studio-mode-strip',
             '.quick-open',
             '.quick-open-result',
@@ -123,7 +126,7 @@ const checks = [
     },
     {
         file: 'wailsjs/go/main/App.d.ts',
-        terms: ['AskLLMContextPack', 'PreviewFileWrite', 'ApplyFileDelete', 'ApplyFileMove', 'ProfileDataset', 'CreateChatMarkdownArtifact', 'PreviewChatContextPack'],
+        terms: ['AskLLMContextPack', 'PreviewFileWrite', 'ApplyFileDelete', 'ApplyFileMove', 'ProfileDataset', 'CreateDatasetChartArtifact', 'CreateChatMarkdownArtifact', 'PreviewChatContextPack'],
     },
     {
         file: 'dist/index.html',

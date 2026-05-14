@@ -1,7 +1,7 @@
 import {useEffect, useRef, useState} from 'react';
 import {brandAssets, capabilityIconByTitle} from '../../brand/assets';
 import {Button, EmptyState, InlineAlert, LoadingState, StatusBadge} from '../../components/ui';
-import type {Capability, DatasetProfile, DatasetQueryResult, FilePreview, FileWriteProposal, TablePreview, WorkspaceArtifact, WorkspaceSnapshot} from '../../types';
+import type {Capability, ColumnProfile, DatasetProfile, DatasetQueryResult, FilePreview, FileWriteProposal, TablePreview, WorkspaceArtifact, WorkspaceSnapshot} from '../../types';
 import {ChatMessageContent} from './ChatMessageContent';
 import {HighlightedCode} from './HighlightedCode';
 import {MonacoCodePreview} from './MonacoCodePreview';
@@ -13,6 +13,9 @@ type WorkbenchPanelProps = {
     artifacts: WorkspaceArtifact[];
     capabilities: Capability[];
     datasetProfiles: DatasetProfile[];
+    datasetChartCategory: string;
+    datasetChartType: string;
+    datasetChartValue: string;
     datasetQuery: string;
     datasetQueryResult: DatasetQueryResult | null;
     dirtyTabPaths: string[];
@@ -22,6 +25,7 @@ type WorkbenchPanelProps = {
     isEditingFile: boolean;
     isSendingPrompt: boolean;
     isCreatingReport: boolean;
+    isCreatingDatasetChart: boolean;
     isDeletingFile: boolean;
     isMovingFile: boolean;
     isProfilingDataset: boolean;
@@ -36,6 +40,9 @@ type WorkbenchPanelProps = {
     onSummarizeContext: () => void;
     onFileDraftChange: (content: string) => void;
     onDatasetQueryChange: (content: string) => void;
+    onDatasetChartCategoryChange: (content: string) => void;
+    onDatasetChartTypeChange: (content: string) => void;
+    onDatasetChartValueChange: (content: string) => void;
     onDeleteFile: () => void;
     onMoveFile: () => void;
     onPinContext: () => void;
@@ -43,6 +50,7 @@ type WorkbenchPanelProps = {
     onPreviewFileWrite: () => void;
     onProfileDataset: () => void;
     onQueryDataset: () => void;
+    onCreateDatasetChart: () => void;
     onCloseTab: (relPath: string) => void;
     onSelectTab: (relPath: string) => void;
     onSelectArtifact: (artifact: WorkspaceArtifact) => void;
@@ -60,6 +68,9 @@ export function WorkbenchPanel({
     artifacts,
     capabilities,
     datasetProfiles,
+    datasetChartCategory,
+    datasetChartType,
+    datasetChartValue,
     datasetQuery,
     datasetQueryResult,
     dirtyTabPaths,
@@ -69,6 +80,7 @@ export function WorkbenchPanel({
     isEditingFile,
     isSendingPrompt,
     isCreatingReport,
+    isCreatingDatasetChart,
     isDeletingFile,
     isMovingFile,
     isProfilingDataset,
@@ -83,6 +95,9 @@ export function WorkbenchPanel({
     onSummarizeContext,
     onFileDraftChange,
     onDatasetQueryChange,
+    onDatasetChartCategoryChange,
+    onDatasetChartTypeChange,
+    onDatasetChartValueChange,
     onDeleteFile,
     onMoveFile,
     onPinContext,
@@ -90,6 +105,7 @@ export function WorkbenchPanel({
     onPreviewFileWrite,
     onProfileDataset,
     onQueryDataset,
+    onCreateDatasetChart,
     onCloseTab,
     onSelectTab,
     onSelectArtifact,
@@ -336,13 +352,27 @@ export function WorkbenchPanel({
                         <div className="artifact-list">
                             {activeDatasetProfile && <DatasetProfileSummary profile={activeDatasetProfile} />}
                             {(activeDatasetProfile || filePreview?.table) && (
-                                <DatasetQueryPanel
-                                    query={datasetQuery}
-                                    result={datasetQueryResult}
-                                    isQuerying={isQueryingDataset}
-                                    onChange={onDatasetQueryChange}
-                                    onQuery={onQueryDataset}
-                                />
+                                <>
+                                    <DatasetQueryPanel
+                                        query={datasetQuery}
+                                        result={datasetQueryResult}
+                                        isQuerying={isQueryingDataset}
+                                        onChange={onDatasetQueryChange}
+                                        onQuery={onQueryDataset}
+                                    />
+                                    <DatasetChartPanel
+                                        categoryColumn={datasetChartCategory}
+                                        chartType={datasetChartType}
+                                        columns={filePreview?.table?.columns ?? activeDatasetProfile?.profiles.map((profile) => profile.name) ?? []}
+                                        isCreating={isCreatingDatasetChart}
+                                        onCategoryChange={onDatasetChartCategoryChange}
+                                        onChartTypeChange={onDatasetChartTypeChange}
+                                        onCreate={onCreateDatasetChart}
+                                        onValueChange={onDatasetChartValueChange}
+                                        profiles={filePreview?.table?.profiles ?? activeDatasetProfile?.profiles ?? []}
+                                        valueColumn={datasetChartValue}
+                                    />
+                                </>
                             )}
                             {artifacts.length === 0 ? (
                                 <EmptyState
@@ -352,7 +382,7 @@ export function WorkbenchPanel({
                                 />
                             ) : artifacts.map((artifact) => (
                                 <button className="artifact-item" key={artifact.relPath} onClick={() => onSelectArtifact(artifact)}>
-                                    <img src={brandAssets.icons.documents} alt="" />
+                                    <img src={artifact.kind === 'chart-svg' ? brandAssets.icons.data : brandAssets.icons.documents} alt="" />
                                     <span>
                                         <strong>{artifact.name}</strong>
                                         <small>{artifact.summary || artifact.source || artifact.relPath}</small>
@@ -500,6 +530,69 @@ function DatasetQueryPanel({
                     }} />
                 </div>
             )}
+        </div>
+    );
+}
+
+function DatasetChartPanel({
+    categoryColumn,
+    chartType,
+    columns,
+    isCreating,
+    onCategoryChange,
+    onChartTypeChange,
+    onCreate,
+    onValueChange,
+    profiles,
+    valueColumn,
+}: {
+    categoryColumn: string;
+    chartType: string;
+    columns: string[];
+    isCreating: boolean;
+    onCategoryChange: (value: string) => void;
+    onChartTypeChange: (value: string) => void;
+    onCreate: () => void;
+    onValueChange: (value: string) => void;
+    profiles: ColumnProfile[];
+    valueColumn: string;
+}) {
+    const numericColumns = profiles
+        .filter((profile) => profile.type === 'integer' || profile.type === 'number')
+        .map((profile) => profile.name)
+        .filter((name) => columns.includes(name));
+
+    return (
+        <div className="dataset-chart-panel">
+            <strong>Dataset Chart</strong>
+            <div className="dataset-chart-grid">
+                <label>
+                    <span>Type</span>
+                    <select aria-label="Chart type" onChange={(event) => onChartTypeChange(event.target.value)} value={chartType}>
+                        <option value="bar">Bar</option>
+                    </select>
+                </label>
+                <label>
+                    <span>Category</span>
+                    <select aria-label="Chart category column" onChange={(event) => onCategoryChange(event.target.value)} value={categoryColumn}>
+                        {columns.map((column) => (
+                            <option key={column} value={column}>{column}</option>
+                        ))}
+                    </select>
+                </label>
+                <label>
+                    <span>Value</span>
+                    <select aria-label="Chart value column" onChange={(event) => onValueChange(event.target.value)} value={valueColumn}>
+                        <option value="">Count rows</option>
+                        {numericColumns.map((column) => (
+                            <option key={column} value={column}>Sum {column}</option>
+                        ))}
+                    </select>
+                </label>
+                <Button disabled={isCreating || columns.length === 0 || !categoryColumn} onClick={onCreate} variant="subtle">
+                    {isCreating ? 'Creating...' : 'Create chart'}
+                </Button>
+            </div>
         </div>
     );
 }
