@@ -22,6 +22,7 @@ type WorkbenchPanelProps = {
     isEditingFile: boolean;
     isSendingPrompt: boolean;
     isCreatingReport: boolean;
+    isDeletingFile: boolean;
     isProfilingDataset: boolean;
     isQueryingDataset: boolean;
     isSummarizingContext: boolean;
@@ -34,6 +35,7 @@ type WorkbenchPanelProps = {
     onSummarizeContext: () => void;
     onFileDraftChange: (content: string) => void;
     onDatasetQueryChange: (content: string) => void;
+    onDeleteFile: () => void;
     onPinContext: () => void;
     onPinProjectContext: () => void;
     onPreviewFileWrite: () => void;
@@ -65,6 +67,7 @@ export function WorkbenchPanel({
     isEditingFile,
     isSendingPrompt,
     isCreatingReport,
+    isDeletingFile,
     isProfilingDataset,
     isQueryingDataset,
     isSummarizingContext,
@@ -77,6 +80,7 @@ export function WorkbenchPanel({
     onSummarizeContext,
     onFileDraftChange,
     onDatasetQueryChange,
+    onDeleteFile,
     onPinContext,
     onPinProjectContext,
     onPreviewFileWrite,
@@ -103,6 +107,7 @@ export function WorkbenchPanel({
         )
     );
     const canEditContext = Boolean(workspace && filePreview?.kind === 'file' && !filePreview.table);
+    const canDeleteContext = Boolean(workspace && filePreview?.kind === 'file' && !isEditingFile);
     const canProfileDataset = Boolean(workspace && filePreview?.fileType === 'data');
     const canRenderMarkdown = Boolean(filePreview?.kind === 'file' && filePreview.content && isMarkdownFile(filePreview.name));
     const studioMode = resolveStudioMode(filePreview, activeDatasetProfile, activeFile);
@@ -154,6 +159,9 @@ export function WorkbenchPanel({
                     </Button>
                     <Button disabled={!canEditContext || isLoadingPreview} onClick={onStartFileEdit}>
                         Edit
+                    </Button>
+                    <Button disabled={!canDeleteContext || isDeletingFile} onClick={onDeleteFile} variant="subtle">
+                        {isDeletingFile ? 'Deleting...' : 'Delete'}
                     </Button>
                     <Button disabled={!workspace || isCreatingReport} onClick={onCreateReport}>
                         {isCreatingReport ? 'Creating...' : 'Report'}

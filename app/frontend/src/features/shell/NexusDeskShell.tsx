@@ -2,6 +2,7 @@ import {useEffect, useMemo, useState} from 'react';
 import type {CSSProperties, MouseEvent as ReactMouseEvent} from 'react';
 import {
     ApplyFileWrite,
+    ApplyFileDelete,
     AskLLM,
     AskLLMContextPack,
     AskLLMStream,
@@ -15,6 +16,7 @@ import {
     GetRecentWorkspaces,
     ListArtifacts,
     OpenWorkspace,
+    PreviewFileDelete,
     PreviewChatContextPack,
     PreviewFileWrite,
     ProfileDataset,
@@ -134,6 +136,7 @@ export function NexusDeskShell({
     const [isProfilingDataset, setIsProfilingDataset] = useState(false);
     const [isPreviewingWrite, setIsPreviewingWrite] = useState(false);
     const [isApplyingWrite, setIsApplyingWrite] = useState(false);
+    const [isDeletingFile, setIsDeletingFile] = useState(false);
     const [editingFilePaths, setEditingFilePaths] = useState<string[]>([]);
     const [fileDrafts, setFileDrafts] = useState<Record<string, string>>({});
     const [writeProposals, setWriteProposals] = useState<Record<string, FileWriteProposal>>({});
@@ -303,6 +306,7 @@ export function NexusDeskShell({
         const hasActivePreview = Boolean(workspace && filePreview);
         const hasDirtyActiveDraft = Boolean(isEditingFile && filePreview && dirtyTabPaths.includes(filePreview.relPath));
         const canEditSelectedFile = Boolean(workspace && filePreview?.kind === 'file' && !filePreview.table);
+        const canDeleteSelectedFile = Boolean(workspace && filePreview?.kind === 'file' && !isEditingFile);
         const canUseSelectedContext = Boolean(selectedContextRelPath) && !isSendingPrompt;
         const canUseSelectedDataset = Boolean(workspace && filePreview?.fileType === 'data');
 
@@ -409,6 +413,14 @@ export function NexusDeskShell({
                 id: 'editor.start-edit',
                 run: startFileEdit,
                 title: 'Edit Current File',
+            },
+            {
+                detail: canDeleteSelectedFile ? `Delete ${activeFile} after backend preview and confirmation.` : 'Select a saved file and close any active draft before deleting.',
+                disabled: !canDeleteSelectedFile || isDeletingFile,
+                group: 'Editor',
+                id: 'editor.delete-file',
+                run: () => void deleteActiveFile(),
+                title: 'Delete Active File',
             },
             {
                 detail: hasDirtyActiveDraft ? 'Preview or apply the active file draft through the write safety flow.' : 'Change the active edit draft before saving.',
@@ -761,6 +773,55 @@ export function NexusDeskShell({
         }
     }
 
+    async function deleteActiveFile() {
+        if (!workspace || !filePreview || filePreview.kind !== 'file') {
+            setWorkspaceStatus('Select a workspace file before deleting.');
+            return;
+        }
+        if (isEditingFile) {
+            setWorkspaceStatus('Close or cancel the active edit draft before deleting this file.');
+            return;
+        }
+
+        const relPath = filePreview.relPath;
+        setIsDeletingFile(true);
+        setWorkspaceStatus(`Preparing delete preview for ${relPath}...`);
+        try {
+            const proposal = await PreviewFileDelete(relPath);
+            const sizeLabel = proposal.size > 0 ? ` (${formatBytes(Number(proposal.size))})` : '';
+            if (!window.confirm(`Delete ${proposal.relPath}${sizeLabel}?\n\nThis removes the file from the workspace.`)) {
+                setWorkspaceStatus(`Delete cancelled for ${proposal.relPath}.`);
+                return;
+            }
+
+            const deleted = await ApplyFileDelete(relPath);
+            const result = await RefreshWorkspace();
+            if (result.selected) {
+                const selectedNode = selectNodeAfterWorkspaceUpdate(result.snapshot);
+                onWorkspaceChange(result.snapshot);
+                removeOpenTabState(deleted.relPath);
+                await refreshArtifacts();
+                await refreshDatasetProfiles();
+                setExpandedDirectories((current) => reconcileExpandedDirectories(current, result.snapshot, selectedNode));
+                if (selectedNode) {
+                    setActiveFile(selectedNode.relPath);
+                    await previewWorkspaceNode(selectedNode, false);
+                } else {
+                    setActiveFile(result.snapshot.name);
+                    setFilePreview(null);
+                    setActiveDatasetProfile(null);
+                }
+            }
+            setWorkspaceStatus(deleted.message);
+            pushToolEvent('File deleted', deleted.relPath);
+        } catch (error) {
+            const message = error instanceof Error ? error.message : '';
+            setWorkspaceStatus(message || 'Could not delete this file.');
+        } finally {
+            setIsDeletingFile(false);
+        }
+    }
+
     async function openWorkspace() {
         setIsOpeningWorkspace(true);
         setWorkspaceStatus('Waiting for folder selection...');
@@ -921,6 +982,13 @@ export function NexusDeskShell({
         selectOpenTab(openTabs[nextIndex].relPath);
     }
 
+    function removeOpenTabState(relPath: string) {
+        setOpenTabs((current) => current.filter((tab) => tab.relPath !== relPath));
+        setEditingFilePaths((current) => current.filter((path) => path !== relPath));
+        setFileDrafts((current) => omitKey(current, relPath));
+        setWriteProposals((current) => omitKey(current, relPath));
+    }
+
     function closeOpenTab(relPath: string) {
         const tabIndex = openTabs.findIndex((tab) => tab.relPath === relPath);
         if (tabIndex === -1) {
@@ -932,10 +1000,7 @@ export function NexusDeskShell({
         }
 
         const nextTabs = openTabs.filter((tab) => tab.relPath !== relPath);
-        setOpenTabs(nextTabs);
-        setEditingFilePaths((current) => current.filter((path) => path !== relPath));
-        setFileDrafts((current) => omitKey(current, relPath));
-        setWriteProposals((current) => omitKey(current, relPath));
+        removeOpenTabState(relPath);
         if (activeFile !== relPath) {
             return;
         }
@@ -1695,6 +1760,7 @@ export function NexusDeskShell({
                 filePreview={filePreview}
                 dirtyTabPaths={dirtyTabPaths}
                 isCreatingReport={isCreatingReport}
+                isDeletingFile={isDeletingFile}
                 isProfilingDataset={isProfilingDataset}
                 isQueryingDataset={isQueryingDataset}
                 isSummarizingContext={isSummarizingContext}
@@ -1707,6 +1773,7 @@ export function NexusDeskShell({
                 onCancelFileEdit={clearFileWriteDraft}
                 onCreateReport={() => void createMarkdownReport()}
                 onDatasetQueryChange={setDatasetQuery}
+                onDeleteFile={() => void deleteActiveFile()}
                 onFileDraftChange={updateFileDraft}
                 onExplainContext={() => void explainSelectedContext()}
                 onSummarizeContext={() => void summarizeSelectedContext()}

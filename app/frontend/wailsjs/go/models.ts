@@ -547,6 +547,28 @@ export namespace workspace {
 	        this.message = source["message"];
 	    }
 	}
+	export class FileDeleteProposal {
+	    relPath: string;
+	    name: string;
+	    action: string;
+	    diff: string;
+	    size: number;
+	    message: string;
+
+	    static createFrom(source: any = {}) {
+	        return new FileDeleteProposal(source);
+	    }
+
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.relPath = source["relPath"];
+	        this.name = source["name"];
+	        this.action = source["action"];
+	        this.diff = source["diff"];
+	        this.size = source["size"];
+	        this.message = source["message"];
+	    }
+	}
 	export class FileNode {
 	    name: string;
 	    path: string;

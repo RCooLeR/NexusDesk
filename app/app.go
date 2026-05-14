@@ -207,6 +207,24 @@ func (a *App) ApplyFileWrite(request workspace.FileWriteRequest) (workspace.File
 	return workspace.ApplyFileWrite(root, request)
 }
 
+func (a *App) PreviewFileDelete(relPath string) (workspace.FileDeleteProposal, error) {
+	root := a.getWorkspaceRoot()
+	if root == "" {
+		return workspace.FileDeleteProposal{}, errors.New("open a workspace before previewing file deletes")
+	}
+
+	return workspace.PreviewFileDelete(root, relPath)
+}
+
+func (a *App) ApplyFileDelete(relPath string) (workspace.FileDeleteProposal, error) {
+	root := a.getWorkspaceRoot()
+	if root == "" {
+		return workspace.FileDeleteProposal{}, errors.New("open a workspace before deleting files")
+	}
+
+	return workspace.ApplyFileDelete(root, relPath)
+}
+
 func (a *App) CreateMarkdownReport(relPath string) (artifact.MarkdownReport, error) {
 	root := a.getWorkspaceRoot()
 	if root == "" {

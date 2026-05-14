@@ -123,6 +123,7 @@ This tracker reflects the repository as it exists today and keeps planned work s
 - [x] Markdown artifacts write provenance sidecars with source, prompt, model, and context metadata.
 - [x] Markdown report artifacts are created without overwriting existing files.
 - [x] Text file edits use a preview/apply flow with a diff before workspace writes.
+- [x] Text/code file deletes use a backend safety boundary with confirmation before workspace removal.
 - [x] Workbench artifact browser lists generated Markdown artifacts.
 - [x] Tool timeline records real workspace, preview, search, profile, write, report, and chat actions.
 - [x] Artifact rows can select the generated report preview when visible in the workspace tree.
@@ -167,6 +168,7 @@ This tracker reflects the repository as it exists today and keeps planned work s
 - [x] Add Monaco-backed read-only previews for text/code files.
 - [x] Add editor tab and find keyboard shortcuts.
 - [x] Add safe new file draft creation through the existing write approval boundary.
+- [x] Add safe active file delete flow with workspace refresh.
 - [x] Add a safe workspace folder picker.
 - [x] Build a real file tree from approved workspace roots.
 - [x] Add safe text file preview for selected workspace files.

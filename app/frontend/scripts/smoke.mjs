@@ -10,6 +10,8 @@ const checks = [
         terms: [
             'AskLLMStreamContextPack',
             'PreviewFileWrite',
+            'PreviewFileDelete',
+            'ApplyFileDelete',
             'ProfileDataset',
             'QueryDataset',
             'SearchWorkspace',
@@ -25,6 +27,8 @@ const checks = [
             'Next Editor Tab',
             'startNewFileDraft',
             'New File',
+            'Delete Active File',
+            'deleteActiveFile',
             'defaultNewFileContent',
             'dirtyDraftPaths',
             'editingFilePaths',
@@ -44,7 +48,7 @@ const checks = [
     },
     {
         file: 'src/features/shell/WorkbenchPanel.tsx',
-        terms: ['editor-tabs', 'markdownViewMode', 'markdown-view-toggle', 'markdown-document-preview', 'studio-mode-strip', 'resolveStudioMode', 'Data Studio', 'Summarize', 'onSummarizeContext', 'onSelectTab', 'onCloseTab', 'onPinProjectContext', 'DatasetQueryPanel', 'file-write-editor', 'MonacoFileEditor', 'MonacoCodePreview', 'editor-find', 'findInputRef', 'dirty-indicator', 'dirtyTabPaths', 'countFindMatches'],
+        terms: ['editor-tabs', 'markdownViewMode', 'markdown-view-toggle', 'markdown-document-preview', 'studio-mode-strip', 'resolveStudioMode', 'Data Studio', 'Summarize', 'onSummarizeContext', 'onSelectTab', 'onCloseTab', 'onDeleteFile', 'onPinProjectContext', 'DatasetQueryPanel', 'file-write-editor', 'MonacoFileEditor', 'MonacoCodePreview', 'editor-find', 'findInputRef', 'dirty-indicator', 'dirtyTabPaths', 'countFindMatches'],
     },
     {
         file: 'src/features/shell/MonacoFileEditor.tsx',
@@ -115,7 +119,7 @@ const checks = [
     },
     {
         file: 'wailsjs/go/main/App.d.ts',
-        terms: ['AskLLMContextPack', 'PreviewFileWrite', 'ProfileDataset', 'CreateChatMarkdownArtifact', 'PreviewChatContextPack'],
+        terms: ['AskLLMContextPack', 'PreviewFileWrite', 'ApplyFileDelete', 'ProfileDataset', 'CreateChatMarkdownArtifact', 'PreviewChatContextPack'],
     },
     {
         file: 'dist/index.html',
