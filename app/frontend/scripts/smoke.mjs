@@ -38,11 +38,19 @@ const checks = [
     },
     {
         file: 'src/features/shell/WorkbenchPanel.tsx',
-        terms: ['editor-tabs', 'markdownViewMode', 'markdown-view-toggle', 'markdown-document-preview', 'studio-mode-strip', 'resolveStudioMode', 'Data Studio', 'Summarize', 'onSummarizeContext', 'onSelectTab', 'onCloseTab', 'onPinProjectContext', 'DatasetQueryPanel', 'file-write-editor', 'MonacoFileEditor', 'editor-find', 'dirty-indicator', 'dirtyTabPaths', 'countFindMatches'],
+        terms: ['editor-tabs', 'markdownViewMode', 'markdown-view-toggle', 'markdown-document-preview', 'studio-mode-strip', 'resolveStudioMode', 'Data Studio', 'Summarize', 'onSummarizeContext', 'onSelectTab', 'onCloseTab', 'onPinProjectContext', 'DatasetQueryPanel', 'file-write-editor', 'MonacoFileEditor', 'MonacoCodePreview', 'editor-find', 'dirty-indicator', 'dirtyTabPaths', 'countFindMatches'],
     },
     {
         file: 'src/features/shell/MonacoFileEditor.tsx',
-        terms: ['monaco-editor', 'MonacoEnvironment', 'loadMonaco', 'languageForFile', 'nexusdesk-light', 'KeyCode.KeyS'],
+        terms: ['MonacoFileEditor', 'loadMonaco', 'languageForFile', 'nexusdesk-light', 'KeyCode.KeyS'],
+    },
+    {
+        file: 'src/features/shell/MonacoCodePreview.tsx',
+        terms: ['MonacoCodePreview', 'readOnly', 'updateSearchDecorations', 'monaco-find-highlight'],
+    },
+    {
+        file: 'src/features/shell/monacoRuntime.ts',
+        terms: ['monaco-editor', 'MonacoEnvironment', 'loadMonaco', 'languageForFile', 'nexusdesk-light'],
     },
     {
         file: 'src/features/shell/HighlightedCode.tsx',
@@ -85,6 +93,8 @@ const checks = [
             '.chat-table',
             '.file-write-editor',
             '.monaco-file-editor',
+            '.monaco-code-preview',
+            '.monaco-find-highlight',
             '.dataset-profile-summary',
             '.studio-mode-strip',
             '.quick-open',

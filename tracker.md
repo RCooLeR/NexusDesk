@@ -59,6 +59,7 @@ This tracker reflects the repository as it exists today and keeps planned work s
 - [x] Center workbench pane keeps recently opened previews in closeable editor tabs.
 - [x] Markdown files in the editor can switch between source and rendered preview.
 - [x] Text/code previews include find-in-file with match counts and highlighted matches.
+- [x] Text/code previews use a read-only Monaco viewer while retaining find match decorations.
 - [x] Text edit drafts show dirty state and can revert to the loaded content.
 - [x] Text edit draft changes clear stale diff proposals before apply.
 - [x] Text edit drafts persist per open editor tab while navigating.
@@ -161,6 +162,7 @@ This tracker reflects the repository as it exists today and keeps planned work s
 - [x] Preserve edit drafts per tab and guard dirty tab close.
 - [x] Add Ctrl+S edit preview/apply shortcut.
 - [x] Add Monaco-backed editing for text/code drafts.
+- [x] Add Monaco-backed read-only previews for text/code files.
 - [x] Add a safe workspace folder picker.
 - [x] Build a real file tree from approved workspace roots.
 - [x] Add safe text file preview for selected workspace files.

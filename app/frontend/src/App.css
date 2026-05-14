@@ -967,6 +967,32 @@ button:disabled {
     word-break: break-word;
 }
 
+.source-editor-preview {
+    grid-row: 1 / -1;
+    min-height: 0;
+    display: grid;
+    grid-template-rows: auto minmax(0, 1fr);
+    overflow: hidden;
+}
+
+.source-editor-preview.no-message {
+    grid-template-rows: minmax(0, 1fr);
+}
+
+.monaco-code-preview {
+    min-height: 0;
+    overflow: hidden;
+}
+
+.monaco-code-preview .monaco-editor {
+    outline: none;
+}
+
+.monaco-find-highlight {
+    border-radius: 3px;
+    background: #fde68a;
+}
+
 .file-write-editor {
     min-height: 0;
     display: grid;

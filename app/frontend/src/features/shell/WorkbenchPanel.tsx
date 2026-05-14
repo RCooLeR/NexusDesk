@@ -4,6 +4,7 @@ import {Button, EmptyState, InlineAlert, LoadingState, StatusBadge} from '../../
 import type {Capability, DatasetProfile, DatasetQueryResult, FilePreview, FileWriteProposal, TablePreview, WorkspaceArtifact, WorkspaceSnapshot} from '../../types';
 import {ChatMessageContent} from './ChatMessageContent';
 import {HighlightedCode} from './HighlightedCode';
+import {MonacoCodePreview} from './MonacoCodePreview';
 import {MonacoFileEditor} from './MonacoFileEditor';
 
 type WorkbenchPanelProps = {
@@ -269,10 +270,10 @@ export function WorkbenchPanel({
                                     </div>
                                 </>
                             ) : filePreview?.content ? (
-                                <>
+                                <div className={filePreview.message ? 'source-editor-preview' : 'source-editor-preview no-message'}>
                                     {filePreview.message && <InlineAlert>{filePreview.message}</InlineAlert>}
-                                    <HighlightedCode content={filePreview.content} fileName={filePreview.name} searchQuery={findQuery} />
-                                </>
+                                    <MonacoCodePreview content={filePreview.content} fileName={filePreview.name} searchQuery={findQuery} />
+                                </div>
                             ) : (
                                 <EmptyState
                                     detail={filePreview?.message ?? 'Select a file from the workspace tree to preview it here.'}
