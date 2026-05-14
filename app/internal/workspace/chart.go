@@ -66,6 +66,7 @@ func BuildCSVChart(root string, request DatasetChartRequest) (DatasetChartResult
 	}
 
 	buckets := map[string]*DatasetChartPoint{}
+	labels := []string{}
 	totalRows := 0
 	usedRows := 0
 	for _, record := range records[1:] {
@@ -95,6 +96,7 @@ func BuildCSVChart(root string, request DatasetChartRequest) (DatasetChartResult
 		if point == nil {
 			point = &DatasetChartPoint{Label: label}
 			buckets[label] = point
+			labels = append(labels, label)
 		}
 		point.Value += value
 		point.Count++
@@ -105,34 +107,37 @@ func BuildCSVChart(root string, request DatasetChartRequest) (DatasetChartResult
 		return DatasetChartResult{}, errors.New("no chartable rows found for the selected columns")
 	}
 
-	points := make([]DatasetChartPoint, 0, len(buckets))
-	for _, point := range buckets {
+	points := make([]DatasetChartPoint, 0, len(labels))
+	for _, label := range labels {
+		point := buckets[label]
 		if math.IsNaN(point.Value) || math.IsInf(point.Value, 0) {
 			continue
 		}
 		points = append(points, *point)
-	}
-	sort.SliceStable(points, func(i, j int) bool {
-		if points[i].Value == points[j].Value {
-			return strings.ToLower(points[i].Label) < strings.ToLower(points[j].Label)
-		}
-		return points[i].Value > points[j].Value
-	})
-	if len(points) > datasetChartMaxPoints {
-		points = points[:datasetChartMaxPoints]
 	}
 
 	chartType := strings.ToLower(strings.TrimSpace(request.ChartType))
 	if chartType == "" {
 		chartType = "bar"
 	}
-	if chartType != "bar" {
-		return DatasetChartResult{}, errors.New("only bar charts are available in the first chart pass")
+	if chartType != "bar" && chartType != "line" {
+		return DatasetChartResult{}, errors.New("chart type must be bar or line")
+	}
+	if chartType == "bar" {
+		sort.SliceStable(points, func(i, j int) bool {
+			if points[i].Value == points[j].Value {
+				return strings.ToLower(points[i].Label) < strings.ToLower(points[j].Label)
+			}
+			return points[i].Value > points[j].Value
+		})
+	}
+	if len(points) > datasetChartMaxPoints {
+		points = points[:datasetChartMaxPoints]
 	}
 
-	message := fmt.Sprintf("Charted top %d categories from %s.", len(points), preview.RelPath)
+	message := fmt.Sprintf("Charted %d categories from %s.", len(points), preview.RelPath)
 	if mode == "sum" {
-		message = fmt.Sprintf("Charted top %d %s totals by %s from %s.", len(points), columns[valueIndex], columns[categoryIndex], preview.RelPath)
+		message = fmt.Sprintf("Charted %d %s totals by %s from %s.", len(points), columns[valueIndex], columns[categoryIndex], preview.RelPath)
 	}
 
 	return DatasetChartResult{

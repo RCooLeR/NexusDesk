@@ -54,6 +54,30 @@ func TestBuildCSVChartSumsNumericValues(t *testing.T) {
 	}
 }
 
+func TestBuildCSVChartSupportsLineType(t *testing.T) {
+	root := t.TempDir()
+	if err := os.WriteFile(filepath.Join(root, "daily.csv"), []byte("day,revenue\nMon,10\nTue,4\nWed,6\n"), 0o644); err != nil {
+		t.Fatalf("WriteFile failed: %v", err)
+	}
+
+	chart, err := BuildCSVChart(root, DatasetChartRequest{
+		RelPath:        "daily.csv",
+		ChartType:      "line",
+		CategoryColumn: "day",
+		ValueColumn:    "revenue",
+	})
+	if err != nil {
+		t.Fatalf("BuildCSVChart returned error: %v", err)
+	}
+
+	if chart.ChartType != "line" {
+		t.Fatalf("expected line chart, got %s", chart.ChartType)
+	}
+	if chart.Points[0].Label != "Mon" || chart.Points[1].Label != "Tue" {
+		t.Fatalf("expected line chart to preserve input order, got %#v", chart.Points)
+	}
+}
+
 func TestBuildCSVChartRejectsMissingCategory(t *testing.T) {
 	root := t.TempDir()
 	if err := os.WriteFile(filepath.Join(root, "leads.csv"), []byte("channel,revenue\nsearch,10\n"), 0o644); err != nil {

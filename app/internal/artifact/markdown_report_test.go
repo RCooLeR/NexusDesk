@@ -281,6 +281,43 @@ func TestCreateDatasetQueryCSVWritesArtifact(t *testing.T) {
 	}
 }
 
+func TestCreateDatasetSummaryMarkdownWritesArtifact(t *testing.T) {
+	root := t.TempDir()
+	now := time.Date(2026, 5, 13, 12, 30, 0, 0, time.UTC)
+
+	report, err := CreateDatasetSummaryMarkdown(root, workspace.FilePreview{
+		RelPath: "data/leads.csv",
+		Name:    "leads.csv",
+		Table: &workspace.TablePreview{
+			Columns:   []string{"channel", "revenue"},
+			Rows:      [][]string{{"search", "10"}},
+			TotalRows: 1,
+			Profiles: []workspace.ColumnProfile{
+				{Name: "channel", Type: "text", Distinct: 1},
+				{Name: "revenue", Type: "integer", Distinct: 1, Min: "10", Max: "10"},
+			},
+		},
+	}, now)
+	if err != nil {
+		t.Fatalf("CreateDatasetSummaryMarkdown returned error: %v", err)
+	}
+	if report.RelPath != ".nexusdesk/artifacts/leads-summary-20260513-123000.md" {
+		t.Fatalf("unexpected summary rel path: %s", report.RelPath)
+	}
+	content, err := os.ReadFile(filepath.Join(root, filepath.FromSlash(report.RelPath)))
+	if err != nil {
+		t.Fatalf("ReadFile failed: %v", err)
+	}
+	text := string(content)
+	if !strings.Contains(text, "# Dataset Summary: leads.csv") || !strings.Contains(text, "revenue") {
+		t.Fatalf("expected dataset summary content, got %q", text)
+	}
+	metadata := readTestMetadata(t, root, report.RelPath)
+	if metadata.Kind != "dataset-summary" {
+		t.Fatalf("unexpected metadata kind: %s", metadata.Kind)
+	}
+}
+
 func TestListReturnsMarkdownArtifactsNewestFirst(t *testing.T) {
 	root := t.TempDir()
 	firstTime := time.Date(2026, 5, 13, 12, 30, 0, 0, time.UTC)
@@ -323,6 +360,46 @@ func TestListReturnsMarkdownArtifactsNewestFirst(t *testing.T) {
 	}
 	if artifacts[0].Source != "selected preview" {
 		t.Fatalf("expected artifact source from metadata, got %q", artifacts[0].Source)
+	}
+}
+
+func TestMetadataReturnsArtifactMetadata(t *testing.T) {
+	root := t.TempDir()
+	report, err := CreateDatasetQueryCSV(root, workspace.DatasetQueryResult{
+		RelPath: "data/leads.csv",
+		Columns: []string{"channel"},
+		Rows:    [][]string{{"search"}},
+	}, time.Date(2026, 5, 13, 12, 30, 0, 0, time.UTC))
+	if err != nil {
+		t.Fatalf("CreateDatasetQueryCSV returned error: %v", err)
+	}
+
+	metadata, err := Metadata(root, report.RelPath)
+	if err != nil {
+		t.Fatalf("Metadata returned error: %v", err)
+	}
+	if metadata.Kind != "dataset-query-csv" {
+		t.Fatalf("unexpected metadata: %#v", metadata)
+	}
+}
+
+func TestSearchFindsArtifactMetadata(t *testing.T) {
+	root := t.TempDir()
+	if _, err := CreateDatasetQueryCSV(root, workspace.DatasetQueryResult{
+		RelPath: "data/leads.csv",
+		Query:   "channel=search",
+		Columns: []string{"channel"},
+		Rows:    [][]string{{"search"}},
+	}, time.Date(2026, 5, 13, 12, 30, 0, 0, time.UTC)); err != nil {
+		t.Fatalf("CreateDatasetQueryCSV returned error: %v", err)
+	}
+
+	results, err := Search(root, "channel=search")
+	if err != nil {
+		t.Fatalf("Search returned error: %v", err)
+	}
+	if len(results) != 1 || results[0].MatchType != "artifact" {
+		t.Fatalf("unexpected search results: %#v", results)
 	}
 }
 

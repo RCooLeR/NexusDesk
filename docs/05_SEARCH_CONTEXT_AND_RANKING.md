@@ -28,7 +28,8 @@ The current app implements deterministic path/text search and explicit context p
 - Chat context is explicit: the user pins selected files, directories, or the workspace root, and the backend expands that selection through `app/internal/workspace/context.go`.
 - Context packs are capped by file count and bytes, skip ignored folders, binaries, symlinks, images, raw PDF data URLs, and oversized content, and preview the actual file list before send.
 - CSV context uses a structured column profile plus bounded row sample rather than sending whole datasets.
-- Persistent chunk indexes, semantic search, artifact search ranking, and conversation search are still planned.
+- Workspace search now also merges artifact metadata matches from `.nexusdesk/artifacts/` and persisted workspace chat history matches, so generated outputs and prior analysis are discoverable from the same navigator search box.
+- Persistent chunk indexes, semantic search, richer artifact ranking, and full conversation faceting are still planned.
 
 ## Query Pipeline
 

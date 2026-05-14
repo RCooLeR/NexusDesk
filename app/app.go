@@ -12,6 +12,7 @@ import (
 	"time"
 	"unicode/utf8"
 
+	"NexusDesk/internal/approval"
 	"NexusDesk/internal/artifact"
 	"NexusDesk/internal/dataset"
 	"NexusDesk/internal/llm"
@@ -177,7 +178,35 @@ func (a *App) SearchWorkspace(query string) ([]workspace.SearchResult, error) {
 		return []workspace.SearchResult{}, errors.New("open a workspace before searching")
 	}
 
-	return workspace.Search(root, query, workspace.SearchOptions{})
+	results, err := workspace.Search(root, query, workspace.SearchOptions{MaxResults: 70})
+	if err != nil {
+		return nil, err
+	}
+
+	artifactResults, err := artifact.Search(root, query)
+	if err != nil {
+		return nil, err
+	}
+	results = append(results, artifactResults...)
+
+	chatMessages, err := a.chatStore.Search(root, query)
+	if err != nil {
+		return nil, err
+	}
+	for _, message := range chatMessages {
+		results = append(results, workspace.SearchResult{
+			RelPath:   "Chat history",
+			Name:      "Chat history",
+			Kind:      "chat",
+			FileType:  "chat",
+			MatchType: message.Role,
+			Snippet:   trimAppSnippet(message.Content),
+		})
+	}
+	if len(results) > 100 {
+		results = results[:100]
+	}
+	return results, nil
 }
 
 func (a *App) ReadWorkspaceFile(relPath string) (workspace.FilePreview, error) {
@@ -204,7 +233,12 @@ func (a *App) ApplyFileWrite(request workspace.FileWriteRequest) (workspace.File
 		return workspace.FileWriteProposal{}, errors.New("open a workspace before applying file writes")
 	}
 
-	return workspace.ApplyFileWrite(root, request)
+	proposal, err := workspace.ApplyFileWrite(root, request)
+	if err != nil {
+		return workspace.FileWriteProposal{}, err
+	}
+	a.recordApproval("file.write", proposal.RelPath, "medium", proposal.Message)
+	return proposal, nil
 }
 
 func (a *App) PreviewFileDelete(relPath string) (workspace.FileDeleteProposal, error) {
@@ -222,7 +256,12 @@ func (a *App) ApplyFileDelete(relPath string) (workspace.FileDeleteProposal, err
 		return workspace.FileDeleteProposal{}, errors.New("open a workspace before deleting files")
 	}
 
-	return workspace.ApplyFileDelete(root, relPath)
+	proposal, err := workspace.ApplyFileDelete(root, relPath)
+	if err != nil {
+		return workspace.FileDeleteProposal{}, err
+	}
+	a.recordApproval("file.delete", proposal.RelPath, "high", proposal.Message)
+	return proposal, nil
 }
 
 func (a *App) PreviewFileMove(request workspace.FileMoveRequest) (workspace.FileMoveProposal, error) {
@@ -240,7 +279,12 @@ func (a *App) ApplyFileMove(request workspace.FileMoveRequest) (workspace.FileMo
 		return workspace.FileMoveProposal{}, errors.New("open a workspace before moving files")
 	}
 
-	return workspace.ApplyFileMove(root, request)
+	proposal, err := workspace.ApplyFileMove(root, request)
+	if err != nil {
+		return workspace.FileMoveProposal{}, err
+	}
+	a.recordApproval("file.move", proposal.TargetRelPath, "high", proposal.Message)
+	return proposal, nil
 }
 
 func (a *App) CreateMarkdownReport(relPath string) (artifact.MarkdownReport, error) {
@@ -261,7 +305,12 @@ func (a *App) CreateMarkdownReport(relPath string) (artifact.MarkdownReport, err
 		source = preview
 	}
 
-	return artifact.CreateMarkdownReport(root, source, time.Now())
+	report, err := artifact.CreateMarkdownReport(root, source, time.Now())
+	if err != nil {
+		return artifact.MarkdownReport{}, err
+	}
+	a.recordApproval("artifact.report", report.RelPath, "low", report.Message)
+	return report, nil
 }
 
 func (a *App) CreateChatMarkdownArtifact(request artifact.MarkdownArtifactRequest) (artifact.MarkdownReport, error) {
@@ -270,11 +319,24 @@ func (a *App) CreateChatMarkdownArtifact(request artifact.MarkdownArtifactReques
 		return artifact.MarkdownReport{}, errors.New("open a workspace before creating artifacts")
 	}
 
-	return artifact.CreateGeneratedMarkdown(root, request, time.Now())
+	report, err := artifact.CreateGeneratedMarkdown(root, request, time.Now())
+	if err != nil {
+		return artifact.MarkdownReport{}, err
+	}
+	a.recordApproval("artifact.markdown", report.RelPath, "low", report.Message)
+	return report, nil
 }
 
 func (a *App) ListArtifacts() ([]artifact.WorkspaceArtifact, error) {
 	return artifact.List(a.getWorkspaceRoot())
+}
+
+func (a *App) GetArtifactMetadata(relPath string) (artifact.ArtifactMetadata, error) {
+	root := a.getWorkspaceRoot()
+	if root == "" {
+		return artifact.ArtifactMetadata{}, errors.New("open a workspace before reading artifact metadata")
+	}
+	return artifact.Metadata(root, relPath)
 }
 
 func (a *App) ProfileDataset(relPath string) (dataset.Profile, error) {
@@ -301,6 +363,30 @@ func (a *App) QueryDataset(relPath string, query string) (workspace.DatasetQuery
 	return workspace.QueryCSV(root, relPath, query)
 }
 
+func (a *App) SaveDatasetQuery(relPath string, query string, label string) (dataset.SavedQuery, error) {
+	root := a.getWorkspaceRoot()
+	if root == "" {
+		return dataset.SavedQuery{}, errors.New("open a workspace before saving dataset queries")
+	}
+	return dataset.SaveQuery(root, relPath, query, label)
+}
+
+func (a *App) ListDatasetQueries(relPath string) ([]dataset.SavedQuery, error) {
+	root := a.getWorkspaceRoot()
+	if root == "" {
+		return []dataset.SavedQuery{}, nil
+	}
+	return dataset.ListSavedQueries(root, relPath)
+}
+
+func (a *App) PreviewDatasetChart(request workspace.DatasetChartRequest) (workspace.DatasetChartResult, error) {
+	root := a.getWorkspaceRoot()
+	if root == "" {
+		return workspace.DatasetChartResult{}, errors.New("open a workspace before previewing dataset charts")
+	}
+	return workspace.BuildCSVChart(root, request)
+}
+
 func (a *App) CreateDatasetChartArtifact(request workspace.DatasetChartRequest) (artifact.MarkdownReport, error) {
 	root := a.getWorkspaceRoot()
 	if root == "" {
@@ -311,7 +397,12 @@ func (a *App) CreateDatasetChartArtifact(request workspace.DatasetChartRequest) 
 	if err != nil {
 		return artifact.MarkdownReport{}, err
 	}
-	return artifact.CreateDatasetChartSVG(root, chart, time.Now())
+	report, err := artifact.CreateDatasetChartSVG(root, chart, time.Now())
+	if err != nil {
+		return artifact.MarkdownReport{}, err
+	}
+	a.recordApproval("artifact.chart", report.RelPath, "low", report.Message)
+	return report, nil
 }
 
 func (a *App) CreateDatasetQueryArtifact(relPath string, query string) (artifact.MarkdownReport, error) {
@@ -324,7 +415,34 @@ func (a *App) CreateDatasetQueryArtifact(relPath string, query string) (artifact
 	if err != nil {
 		return artifact.MarkdownReport{}, err
 	}
-	return artifact.CreateDatasetQueryCSV(root, result, time.Now())
+	report, err := artifact.CreateDatasetQueryCSV(root, result, time.Now())
+	if err != nil {
+		return artifact.MarkdownReport{}, err
+	}
+	a.recordApproval("artifact.query", report.RelPath, "low", report.Message)
+	return report, nil
+}
+
+func (a *App) CreateDatasetSummaryArtifact(relPath string) (artifact.MarkdownReport, error) {
+	root := a.getWorkspaceRoot()
+	if root == "" {
+		return artifact.MarkdownReport{}, errors.New("open a workspace before creating dataset summaries")
+	}
+
+	preview, err := workspace.Preview(root, relPath, workspace.PreviewOptions{MaxBytes: 1024 * 1024})
+	if err != nil {
+		return artifact.MarkdownReport{}, err
+	}
+	report, err := artifact.CreateDatasetSummaryMarkdown(root, preview, time.Now())
+	if err != nil {
+		return artifact.MarkdownReport{}, err
+	}
+	a.recordApproval("artifact.dataset-summary", report.RelPath, "low", report.Message)
+	return report, nil
+}
+
+func (a *App) ListApprovals() ([]approval.Record, error) {
+	return approval.List(a.getWorkspaceRoot())
 }
 
 func (a *App) GetRecentWorkspaces() ([]storage.RecentWorkspace, error) {
@@ -741,6 +859,28 @@ func cleanContextPaths(relPaths []string) []string {
 		cleaned = append(cleaned, relPath)
 	}
 	return cleaned
+}
+
+func trimAppSnippet(value string) string {
+	value = strings.TrimSpace(strings.ReplaceAll(value, "\r\n", "\n"))
+	if len(value) <= 180 {
+		return value
+	}
+	return value[:177] + "..."
+}
+
+func (a *App) recordApproval(action string, target string, risk string, message string) {
+	root := a.getWorkspaceRoot()
+	if root == "" {
+		return
+	}
+	_, _ = approval.Append(root, approval.Record{
+		Action:   action,
+		Target:   target,
+		Risk:     risk,
+		Decision: "applied",
+		Message:  message,
+	})
 }
 
 func (a *App) openWorkspace(root string) (WorkspaceOpenResult, error) {

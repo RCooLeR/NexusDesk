@@ -126,6 +126,13 @@ This tracker reflects the repository as it exists today and keeps planned work s
 - [x] Markdown report artifacts are created without overwriting existing files.
 - [x] CSV query export artifacts write provenance sidecars and are listed in the artifact browser.
 - [x] SVG chart artifacts write provenance sidecars and are listed in the artifact browser.
+- [x] Dataset summary artifacts write deterministic Markdown with column profiles and suggested questions.
+- [x] Artifact metadata can be read back through `GetArtifactMetadata` and shown in the workbench.
+- [x] Workspace search now includes artifact metadata and workspace chat history matches.
+- [x] Dataset queries can be saved per CSV dataset under `.nexusdesk/datasets/queries.json`.
+- [x] Dataset charts support bar and line modes with a deterministic backend preview before artifact creation.
+- [x] Applied file and artifact actions are appended to `.nexusdesk/approvals/log.json`.
+- [x] Workbench status pane shows a first approval log for applied write/artifact actions.
 - [x] Text file edits use a preview/apply flow with a diff before workspace writes.
 - [x] Text/code file deletes use a backend safety boundary with confirmation before workspace removal.
 - [x] Text/code files can be renamed or moved inside the workspace with no-overwrite backend validation.
@@ -148,7 +155,8 @@ This tracker reflects the repository as it exists today and keeps planned work s
 - [x] Keep brand asset imports centralized in `app/frontend/src/brand/assets.ts`.
 - [x] Replace generated template font with an Inter-first system font strategy.
 - [x] Add branded empty, loading, and inline alert states.
-- [ ] Add branded approval states when approval flows are implemented.
+- [x] Add first branded approval log state for applied workspace and artifact actions.
+- [ ] Add modal approval dialogs for higher-risk tool execution.
 - [ ] Add visual regression screenshots once the first interactive flows exist.
 - [ ] Confirm final app icon pipeline for Windows/macOS/Linux packaging.
 - [ ] Add macOS/Linux icon generation checks when packaging those targets.
@@ -188,6 +196,12 @@ This tracker reflects the repository as it exists today and keeps planned work s
 - [x] Add first bounded CSV query flow.
 - [x] Add first CSV query result export artifact flow.
 - [x] Add first CSV-to-SVG chart artifact flow.
+- [x] Add first artifact preview polish with metadata cards.
+- [x] Add first saved/recent query controls for Data Studio.
+- [x] Add line chart mode and chart preview before SVG artifact creation.
+- [x] Add first append-only approval log foundation.
+- [x] Add workspace search matches for artifacts and chat history.
+- [x] Add deterministic dataset summary Markdown artifacts.
 - [x] Add workspace path/content search.
 - [x] Send structured CSV summaries as selected chat context.
 - [x] Persist recent workspaces locally.
@@ -238,7 +252,11 @@ This tracker reflects the repository as it exists today and keeps planned work s
 
 `app/internal/workspace/context.go` owns directory and project context expansion for chat. It accepts selected files, selected directories, and `.` for the workspace root, then expands them into a capped list of previewable text/document/data files while preserving scanner ignore rules and symlink/path traversal protections.
 
-`app/internal/artifact/` owns deterministic Markdown, CSV, and SVG artifact writes, sidecar provenance metadata, and listing. Source reports, saved assistant answers, first CSV query exports, and first CSV chart artifacts are written under `.nexusdesk/artifacts/` with timestamped names and exclusive creation, so generated outputs stay separate from source files.
+`app/internal/artifact/` owns deterministic Markdown, CSV, and SVG artifact writes, sidecar provenance metadata, listing, artifact metadata lookup, and artifact search. Source reports, saved assistant answers, first CSV query exports, first CSV chart artifacts, and first dataset summary artifacts are written under `.nexusdesk/artifacts/` with timestamped names and exclusive creation, so generated outputs stay separate from source files.
+
+`app/internal/approval/` owns the first append-only approval/action log for applied file and artifact operations. Records are persisted under `.nexusdesk/approvals/log.json` inside the active workspace and surfaced in the workbench while modal approval policy remains a later hardening step.
+
+`app/internal/dataset/query_history.go` owns saved Data Studio queries per dataset. It stores bounded recent queries under `.nexusdesk/datasets/queries.json` and reuses the same rooted dataset path validation as profiling.
 
 `app/internal/storage/` owns local app persistence. Recent workspaces and non-secret LLM settings currently use small JSON files in the user's config directory; LLM API keys are kept in a sidecar credential blob protected by the OS where available.
 
@@ -252,7 +270,7 @@ The current workstation LLM runner is the sibling Compose stack at `../Llm/`, no
 
 `app/frontend/src/features/shell/QuickOpenPalette.tsx` owns client-side quick-open over the already indexed workspace snapshot and open editor tabs. It does not read files directly; selection still flows through the shell's workspace preview path.
 
-`app/frontend/src/features/shell/WorkbenchPanel.tsx` owns local find-in-file, visible dirty markers, and revert controls. `app/frontend/src/features/shell/NexusDeskShell.tsx` owns per-tab edit drafts, stale-proposal clearing, Ctrl+S routing, and dirty-close guards. File writes still route through `app/internal/workspace/write.go` for diff preview and rooted apply.
+`app/frontend/src/features/shell/WorkbenchPanel.tsx` owns local find-in-file, visible dirty markers, revert controls, dataset query/chart controls, artifact metadata display, and the first approval log. `app/frontend/src/features/shell/NexusDeskShell.tsx` owns per-tab edit drafts, stale-proposal clearing, Ctrl+S routing, dirty-close guards, saved query refresh, chart preview, and summary artifact orchestration. File writes still route through `app/internal/workspace/write.go` for diff preview and rooted apply.
 
 ## Verified Commands
 

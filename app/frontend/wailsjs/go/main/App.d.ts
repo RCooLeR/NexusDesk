@@ -5,6 +5,7 @@ import {llm} from '../models';
 import {storage} from '../models';
 import {artifact} from '../models';
 import {main} from '../models';
+import {approval} from '../models';
 import {dataset} from '../models';
 
 export function ApplyFileDelete(arg1:string):Promise<workspace.FileDeleteProposal>;
@@ -31,7 +32,11 @@ export function CreateDatasetChartArtifact(arg1:workspace.DatasetChartRequest):P
 
 export function CreateDatasetQueryArtifact(arg1:string,arg2:string):Promise<artifact.MarkdownReport>;
 
+export function CreateDatasetSummaryArtifact(arg1:string):Promise<artifact.MarkdownReport>;
+
 export function CreateMarkdownReport(arg1:string):Promise<artifact.MarkdownReport>;
+
+export function GetArtifactMetadata(arg1:string):Promise<artifact.ArtifactMetadata>;
 
 export function GetChatHistory():Promise<Array<storage.ChatMessage>>;
 
@@ -41,13 +46,19 @@ export function GetRecentWorkspaces():Promise<Array<storage.RecentWorkspace>>;
 
 export function GetStartupState():Promise<main.StartupState>;
 
+export function ListApprovals():Promise<Array<approval.Record>>;
+
 export function ListArtifacts():Promise<Array<artifact.WorkspaceArtifact>>;
 
 export function ListDatasetProfiles():Promise<Array<dataset.Profile>>;
 
+export function ListDatasetQueries(arg1:string):Promise<Array<dataset.SavedQuery>>;
+
 export function OpenWorkspace(arg1:string):Promise<main.WorkspaceOpenResult>;
 
 export function PreviewChatContextPack(arg1:Array<string>):Promise<workspace.ContextPreview>;
+
+export function PreviewDatasetChart(arg1:workspace.DatasetChartRequest):Promise<workspace.DatasetChartResult>;
 
 export function PreviewFileDelete(arg1:string):Promise<workspace.FileDeleteProposal>;
 
@@ -64,6 +75,8 @@ export function ReadWorkspaceFile(arg1:string):Promise<workspace.FilePreview>;
 export function RefreshWorkspace():Promise<main.WorkspaceOpenResult>;
 
 export function RemoveRecentWorkspace(arg1:string):Promise<Array<storage.RecentWorkspace>>;
+
+export function SaveDatasetQuery(arg1:string,arg2:string,arg3:string):Promise<dataset.SavedQuery>;
 
 export function SaveLLMSettings(arg1:storage.LLMSettings):Promise<storage.LLMSettings>;
 

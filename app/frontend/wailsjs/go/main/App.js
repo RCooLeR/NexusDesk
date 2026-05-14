@@ -50,8 +50,16 @@ export function CreateDatasetQueryArtifact(arg1, arg2) {
   return window['go']['main']['App']['CreateDatasetQueryArtifact'](arg1, arg2);
 }
 
+export function CreateDatasetSummaryArtifact(arg1) {
+  return window['go']['main']['App']['CreateDatasetSummaryArtifact'](arg1);
+}
+
 export function CreateMarkdownReport(arg1) {
   return window['go']['main']['App']['CreateMarkdownReport'](arg1);
+}
+
+export function GetArtifactMetadata(arg1) {
+  return window['go']['main']['App']['GetArtifactMetadata'](arg1);
 }
 
 export function GetChatHistory() {
@@ -70,6 +78,10 @@ export function GetStartupState() {
   return window['go']['main']['App']['GetStartupState']();
 }
 
+export function ListApprovals() {
+  return window['go']['main']['App']['ListApprovals']();
+}
+
 export function ListArtifacts() {
   return window['go']['main']['App']['ListArtifacts']();
 }
@@ -78,12 +90,20 @@ export function ListDatasetProfiles() {
   return window['go']['main']['App']['ListDatasetProfiles']();
 }
 
+export function ListDatasetQueries(arg1) {
+  return window['go']['main']['App']['ListDatasetQueries'](arg1);
+}
+
 export function OpenWorkspace(arg1) {
   return window['go']['main']['App']['OpenWorkspace'](arg1);
 }
 
 export function PreviewChatContextPack(arg1) {
   return window['go']['main']['App']['PreviewChatContextPack'](arg1);
+}
+
+export function PreviewDatasetChart(arg1) {
+  return window['go']['main']['App']['PreviewDatasetChart'](arg1);
 }
 
 export function PreviewFileDelete(arg1) {
@@ -116,6 +136,10 @@ export function RefreshWorkspace() {
 
 export function RemoveRecentWorkspace(arg1) {
   return window['go']['main']['App']['RemoveRecentWorkspace'](arg1);
+}
+
+export function SaveDatasetQuery(arg1, arg2, arg3) {
+  return window['go']['main']['App']['SaveDatasetQuery'](arg1, arg2, arg3);
 }
 
 export function SaveLLMSettings(arg1) {

@@ -118,7 +118,9 @@ Current status:
 - CSV context is sent as a structured profile plus bounded row sample instead of only raw preview text.
 - CSV datasets can be queried with bounded text search or `column=value` filters.
 - CSV query results can be exported as timestamped CSV artifacts.
-- CSV datasets can generate first SVG bar chart artifacts from category counts or numeric sums.
+- CSV queries can be saved per dataset and reused from the Data Studio panel.
+- CSV datasets can preview bar or line chart points before generating deterministic SVG chart artifacts from category counts or numeric sums.
+- CSV datasets can generate deterministic Markdown summary artifacts with column profiles and suggested analysis questions.
 - Multiple text, CSV, and extracted-PDF previews can be pinned into a bounded context pack for chat.
 - Selected directories and the workspace root can be expanded into bounded streaming context packs.
 - Pinned context packs show individual files and support removing one file at a time.
@@ -144,9 +146,11 @@ Current status:
 - Markdown artifacts now write sidecar provenance metadata with source, prompt, model, source paths, and creation timestamp.
 - CSV query export artifacts now write sidecar provenance metadata with dataset source paths and query string.
 - SVG chart artifacts now write sidecar provenance metadata with dataset source paths and chart configuration.
-- The workbench lists generated Markdown, CSV, and SVG artifacts and can reselect visible artifact files from that list.
+- The workbench lists generated Markdown, CSV, and SVG artifacts, can reselect visible artifact files from that list, and shows artifact metadata when a generated artifact is active.
+- Workspace search includes path/content matches, artifact metadata, and chat history snippets.
+- Applied write/delete/move and artifact creation actions are recorded in `.nexusdesk/approvals/log.json` and shown in a first workbench approval log.
 - The frontend has a smoke check for the built entrypoint, generated Wails bindings, and core shell functionality markers.
-- richer document extraction/OCR, richer approval dialogs, DuckDB SQL, and SQLite persistence are still planned.
+- richer document extraction/OCR, modal approval dialogs, DuckDB SQL, and SQLite persistence are still planned.
 
 ## Phase 2: Files, Documents, And Artifacts
 

@@ -92,6 +92,27 @@ func (s *ChatHistoryStore) Clear(workspaceRoot string) ([]ChatMessage, error) {
 	return []ChatMessage{}, nil
 }
 
+func (s *ChatHistoryStore) Search(workspaceRoot string, query string) ([]ChatMessage, error) {
+	query = strings.ToLower(strings.TrimSpace(query))
+	if query == "" {
+		return []ChatMessage{}, nil
+	}
+
+	messages, err := s.List(workspaceRoot)
+	if err != nil {
+		return nil, err
+	}
+
+	results := []ChatMessage{}
+	for _, message := range messages {
+		haystack := strings.ToLower(message.Content + "\n" + message.ContextRelPath + "\n" + strings.Join(message.SourcePaths, "\n"))
+		if strings.Contains(haystack, query) {
+			results = append(results, message)
+		}
+	}
+	return results, nil
+}
+
 func (s *ChatHistoryStore) read() (map[string][]ChatMessage, error) {
 	data, err := os.ReadFile(s.path)
 	if os.IsNotExist(err) {

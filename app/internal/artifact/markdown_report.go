@@ -330,6 +330,69 @@ func CreateDatasetQueryCSV(root string, result workspace.DatasetQueryResult, now
 	}, nil
 }
 
+func CreateDatasetSummaryMarkdown(root string, source workspace.FilePreview, now time.Time) (MarkdownReport, error) {
+	if strings.TrimSpace(root) == "" {
+		return MarkdownReport{}, errors.New("open a workspace before creating dataset summaries")
+	}
+	if source.Table == nil {
+		return MarkdownReport{}, errors.New("dataset summary requires a CSV table preview")
+	}
+
+	absRoot, err := filepath.Abs(root)
+	if err != nil {
+		return MarkdownReport{}, err
+	}
+
+	artifactDir := filepath.Join(absRoot, filepath.FromSlash(artifactDirRelPath))
+	if err := os.MkdirAll(artifactDir, 0o755); err != nil {
+		return MarkdownReport{}, err
+	}
+
+	name := datasetSummaryFileName(source, now)
+	path := filepath.Join(artifactDir, name)
+	if err := ensureInsideRoot(absRoot, path); err != nil {
+		return MarkdownReport{}, err
+	}
+
+	content := buildDatasetSummaryMarkdown(source, now)
+	file, err := os.OpenFile(path, os.O_WRONLY|os.O_CREATE|os.O_EXCL, 0o644)
+	if err != nil {
+		return MarkdownReport{}, err
+	}
+	defer file.Close()
+
+	if _, err := file.WriteString(content); err != nil {
+		return MarkdownReport{}, err
+	}
+
+	if err := writeArtifactMetadata(absRoot, path, ArtifactMetadata{
+		Kind:           "dataset-summary",
+		Title:          "Dataset summary: " + source.Name,
+		Source:         "dataset summary",
+		SourcePaths:    cleanMetadataPaths([]string{source.RelPath}),
+		ContextRelPath: source.RelPath,
+		CreatedAt:      now.UTC().Format(time.RFC3339),
+	}); err != nil {
+		return MarkdownReport{}, err
+	}
+
+	info, err := file.Stat()
+	if err != nil {
+		return MarkdownReport{}, err
+	}
+	relPath, err := filepath.Rel(absRoot, path)
+	if err != nil {
+		return MarkdownReport{}, err
+	}
+	return MarkdownReport{
+		RelPath: filepath.ToSlash(relPath),
+		Name:    name,
+		Path:    path,
+		Message: "Dataset summary artifact created inside the workspace.",
+		Size:    info.Size(),
+	}, nil
+}
+
 func List(root string) ([]WorkspaceArtifact, error) {
 	if strings.TrimSpace(root) == "" {
 		return []WorkspaceArtifact{}, nil
@@ -396,6 +459,67 @@ func List(root string) ([]WorkspaceArtifact, error) {
 	return artifacts, nil
 }
 
+func Metadata(root string, relPath string) (ArtifactMetadata, error) {
+	absRoot, err := filepath.Abs(root)
+	if err != nil {
+		return ArtifactMetadata{}, err
+	}
+	cleanRel := filepath.Clean(filepath.FromSlash(relPath))
+	if cleanRel == "." || filepath.IsAbs(cleanRel) {
+		return ArtifactMetadata{}, errors.New("artifact path must be relative")
+	}
+	path := filepath.Join(absRoot, cleanRel)
+	absPath, err := filepath.Abs(path)
+	if err != nil {
+		return ArtifactMetadata{}, err
+	}
+	if err := ensureInsideRoot(absRoot, absPath); err != nil {
+		return ArtifactMetadata{}, err
+	}
+	metadata := readArtifactMetadata(absPath)
+	if metadata.Kind == "" {
+		return ArtifactMetadata{}, errors.New("artifact metadata is unavailable")
+	}
+	return metadata, nil
+}
+
+func Search(root string, query string) ([]workspace.SearchResult, error) {
+	query = strings.ToLower(strings.TrimSpace(query))
+	if query == "" {
+		return nil, nil
+	}
+	artifacts, err := List(root)
+	if err != nil {
+		return nil, err
+	}
+	results := []workspace.SearchResult{}
+	for _, item := range artifacts {
+		metadata, _ := Metadata(root, item.RelPath)
+		haystack := strings.ToLower(strings.Join([]string{
+			item.RelPath,
+			item.Name,
+			item.Kind,
+			item.Source,
+			item.Summary,
+			metadata.Title,
+			metadata.Prompt,
+			strings.Join(metadata.SourcePaths, " "),
+		}, "\n"))
+		if !strings.Contains(haystack, query) {
+			continue
+		}
+		results = append(results, workspace.SearchResult{
+			RelPath:   item.RelPath,
+			Name:      item.Name,
+			Kind:      "file",
+			FileType:  artifactFileType(item),
+			MatchType: "artifact",
+			Snippet:   artifactSearchSnippet(item, metadata),
+		})
+	}
+	return results, nil
+}
+
 func reportFileName(source workspace.FilePreview, now time.Time) string {
 	base := strings.TrimSuffix(source.Name, filepath.Ext(source.Name))
 	if base == "" {
@@ -443,6 +567,18 @@ func datasetQueryFileName(result workspace.DatasetQueryResult, now time.Time) st
 		slug = "dataset-query"
 	}
 	return fmt.Sprintf("%s-%s.csv", slug, now.UTC().Format("20060102-150405"))
+}
+
+func datasetSummaryFileName(source workspace.FilePreview, now time.Time) string {
+	base := strings.TrimSuffix(source.Name, filepath.Ext(source.Name))
+	if base == "" {
+		base = "dataset"
+	}
+	slug := slugify(base + "-summary")
+	if slug == "" {
+		slug = "dataset-summary"
+	}
+	return fmt.Sprintf("%s-%s.md", slug, now.UTC().Format("20060102-150405"))
 }
 
 func generatedArtifactTitle(request MarkdownArtifactRequest) string {
@@ -568,6 +704,59 @@ func buildDatasetQueryCSV(result workspace.DatasetQueryResult) (string, error) {
 	return builder.String(), nil
 }
 
+func buildDatasetSummaryMarkdown(source workspace.FilePreview, now time.Time) string {
+	var builder strings.Builder
+	builder.WriteString("# Dataset Summary: ")
+	builder.WriteString(escapeMarkdownLine(source.Name))
+	builder.WriteString("\n\n")
+	builder.WriteString("- Generated: ")
+	builder.WriteString(now.UTC().Format(time.RFC3339))
+	builder.WriteString("\n")
+	builder.WriteString("- Source: `")
+	builder.WriteString(strings.ReplaceAll(source.RelPath, "`", "'"))
+	builder.WriteString("`\n")
+	builder.WriteString(fmt.Sprintf("- Rows: %d\n", source.Table.TotalRows))
+	builder.WriteString(fmt.Sprintf("- Columns: %d\n", len(source.Table.Columns)))
+	if source.Table.Truncated || source.Truncated {
+		builder.WriteString("- Note: Source preview/profile was bounded for responsiveness.\n")
+	}
+
+	builder.WriteString("\n## Columns\n\n")
+	builder.WriteString("| Column | Type | Missing | Distinct | Range |\n")
+	builder.WriteString("|---|---:|---:|---:|---|\n")
+	for _, profile := range source.Table.Profiles {
+		valueRange := ""
+		if profile.Min != "" || profile.Max != "" {
+			valueRange = profile.Min + "..." + profile.Max
+		}
+		builder.WriteString("| ")
+		builder.WriteString(escapeMarkdownCell(profile.Name))
+		builder.WriteString(" | ")
+		builder.WriteString(profile.Type)
+		builder.WriteString(fmt.Sprintf(" | %d | %d | ", profile.Missing, profile.Distinct))
+		builder.WriteString(escapeMarkdownCell(valueRange))
+		builder.WriteString(" |\n")
+	}
+
+	builder.WriteString("\n## Suggested Questions\n\n")
+	for _, profile := range source.Table.Profiles {
+		if profile.Type == "number" || profile.Type == "integer" {
+			builder.WriteString("- Which segments explain the largest values in `")
+			builder.WriteString(strings.ReplaceAll(profile.Name, "`", "'"))
+			builder.WriteString("`?\n")
+			continue
+		}
+		if profile.Distinct > 1 && profile.Distinct <= 30 {
+			builder.WriteString("- How do rows break down by `")
+			builder.WriteString(strings.ReplaceAll(profile.Name, "`", "'"))
+			builder.WriteString("`?\n")
+		}
+	}
+	builder.WriteString("- Which rows are missing important values?\n")
+	builder.WriteString("- What chart best communicates the top categories or trends?\n")
+	return builder.String()
+}
+
 func buildDatasetChartSVG(chart workspace.DatasetChartResult, now time.Time) string {
 	const width = 960.0
 	const rowHeight = 42.0
@@ -608,17 +797,43 @@ func buildDatasetChartSVG(chart workspace.DatasetChartResult, now time.Time) str
 	builder.WriteString("</text>\n")
 	builder.WriteString(`<line x1="40" y1="96" x2="920" y2="96" stroke="#d8d4ca" stroke-width="1"/>` + "\n")
 
-	for index, point := range chart.Points {
-		y := top + float64(index)*rowHeight
-		barWidth := math.Max(2, (point.Value/maxValue)*barMaxWidth)
-		builder.WriteString(fmt.Sprintf(`<text x="40" y="%.1f" fill="#30363d" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="14">%s</text>`+"\n", y+15, html.EscapeString(truncateChartLabel(point.Label))))
-		builder.WriteString(fmt.Sprintf(`<rect x="%.1f" y="%.1f" width="%.1f" height="%.1f" rx="4" fill="#2f7d7e"/>`+"\n", left, y, barWidth, barHeight))
-		builder.WriteString(fmt.Sprintf(`<text x="%.1f" y="%.1f" fill="#1f2933" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="13">%s</text>`+"\n", left+barWidth+10, y+15, html.EscapeString(formatChartValue(point.Value))))
+	if chart.ChartType == "line" {
+		writeLineChartSVG(&builder, chart, left, top, barMaxWidth, float64(len(chart.Points))*rowHeight, maxValue)
+	} else {
+		for index, point := range chart.Points {
+			y := top + float64(index)*rowHeight
+			barWidth := math.Max(2, (point.Value/maxValue)*barMaxWidth)
+			builder.WriteString(fmt.Sprintf(`<text x="40" y="%.1f" fill="#30363d" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="14">%s</text>`+"\n", y+15, html.EscapeString(truncateChartLabel(point.Label))))
+			builder.WriteString(fmt.Sprintf(`<rect x="%.1f" y="%.1f" width="%.1f" height="%.1f" rx="4" fill="#2f7d7e"/>`+"\n", left, y, barWidth, barHeight))
+			builder.WriteString(fmt.Sprintf(`<text x="%.1f" y="%.1f" fill="#1f2933" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="13">%s</text>`+"\n", left+barWidth+10, y+15, html.EscapeString(formatChartValue(point.Value))))
+		}
 	}
 
 	builder.WriteString(fmt.Sprintf(`<text x="40" y="%.1f" fill="#65717f" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="12">Generated %s from %s. Rows used: %d of %d.</text>`+"\n", height-28, html.EscapeString(now.UTC().Format(time.RFC3339)), html.EscapeString(chart.RelPath), chart.UsedRows, chart.TotalRows))
 	builder.WriteString("</svg>\n")
 	return builder.String()
+}
+
+func writeLineChartSVG(builder *strings.Builder, chart workspace.DatasetChartResult, left float64, top float64, width float64, height float64, maxValue float64) {
+	if len(chart.Points) == 0 {
+		return
+	}
+	bottom := top + math.Max(80, height-20)
+	step := width
+	if len(chart.Points) > 1 {
+		step = width / float64(len(chart.Points)-1)
+	}
+
+	points := []string{}
+	for index, point := range chart.Points {
+		x := left + float64(index)*step
+		y := bottom - (point.Value/maxValue)*math.Max(40, height-50)
+		points = append(points, fmt.Sprintf("%.1f,%.1f", x, y))
+		builder.WriteString(fmt.Sprintf(`<circle cx="%.1f" cy="%.1f" r="4" fill="#2f7d7e"/>`+"\n", x, y))
+		builder.WriteString(fmt.Sprintf(`<text x="%.1f" y="%.1f" fill="#30363d" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="11" text-anchor="middle">%s</text>`+"\n", x, bottom+20, html.EscapeString(truncateChartLabel(point.Label))))
+		builder.WriteString(fmt.Sprintf(`<text x="%.1f" y="%.1f" fill="#1f2933" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="12" text-anchor="middle">%s</text>`+"\n", x, y-10, html.EscapeString(formatChartValue(point.Value))))
+	}
+	builder.WriteString(fmt.Sprintf(`<polyline points="%s" fill="none" stroke="#2f7d7e" stroke-width="3"/>`+"\n", strings.Join(points, " ")))
 }
 
 func buildGeneratedMarkdown(request MarkdownArtifactRequest, now time.Time) string {
@@ -676,6 +891,34 @@ func truncateChartLabel(label string) string {
 
 func formatChartValue(value float64) string {
 	return strconv.FormatFloat(value, 'f', -1, 64)
+}
+
+func artifactFileType(item WorkspaceArtifact) string {
+	switch strings.ToLower(filepath.Ext(item.Name)) {
+	case ".csv":
+		return "data"
+	case ".svg":
+		return "image"
+	default:
+		return "document"
+	}
+}
+
+func artifactSearchSnippet(item WorkspaceArtifact, metadata ArtifactMetadata) string {
+	if metadata.Title != "" {
+		return metadata.Title
+	}
+	if metadata.Prompt != "" {
+		return metadata.Prompt
+	}
+	if item.Summary != "" {
+		return item.Summary
+	}
+	return item.Source
+}
+
+func escapeMarkdownCell(value string) string {
+	return strings.ReplaceAll(escapeMarkdownLine(value), "|", "\\|")
 }
 
 func writeArtifactMetadata(root string, artifactPath string, metadata ArtifactMetadata) error {

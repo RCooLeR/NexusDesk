@@ -89,3 +89,19 @@ func TestChatHistoryStoreClearsWorkspace(t *testing.T) {
 		t.Fatalf("expected cleared messages, got %d", len(messages))
 	}
 }
+
+func TestChatHistoryStoreSearchFindsMessages(t *testing.T) {
+	store := NewChatHistoryStore(filepath.Join(t.TempDir(), "chat.json"))
+	workspace := filepath.Join(t.TempDir(), "workspace")
+	if _, err := store.AppendPair(workspace, ChatMessage{Content: "How is revenue?"}, ChatMessage{Content: "Revenue is up", SourcePaths: []string{"data/leads.csv"}}); err != nil {
+		t.Fatalf("AppendPair returned error: %v", err)
+	}
+
+	results, err := store.Search(workspace, "revenue")
+	if err != nil {
+		t.Fatalf("Search returned error: %v", err)
+	}
+	if len(results) != 2 {
+		t.Fatalf("expected 2 matching messages, got %d", len(results))
+	}
+}

@@ -43,6 +43,8 @@ Runtime changes should be stored locally and optionally exportable as workspace 
 
 Studio surfaces can change which tools and panels are visible, but they must not change the underlying safety boundary. Code Studio, Data Studio, Analytics Studio, Document Studio, Operations Studio, and Artifact Studio all share the same workspace roots, path checks, approval rules, secret handling, and audit model.
 
+The current implementation has an append-only local approval/action log for applied file writes, deletes, moves, and artifact creation. It writes records under `.nexusdesk/approvals/log.json` and shows the latest entries in the workbench. This is a foundation for auditability; higher-risk modal approval policy is still planned for shell, Docker, database, and agent tool execution.
+
 ## Secrets
 
 NexusDesk may store:

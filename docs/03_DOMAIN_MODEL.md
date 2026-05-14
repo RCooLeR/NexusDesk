@@ -462,9 +462,9 @@ A dataset chart is a deterministic visualization artifact produced from a bounde
 
 Current implementation:
 
-- `app/internal/workspace/chart.go` builds a first CSV bar chart model from one category column.
+- `app/internal/workspace/chart.go` builds a first CSV bar or line chart model from one category column.
 - The chart can count rows per category or sum a selected numeric column per category.
-- The result is capped to the top categories before rendering.
+- The result is capped to bounded chart points before rendering.
 - `app/internal/artifact/markdown_report.go` writes the chart as an SVG artifact under `.nexusdesk/artifacts/` with provenance metadata.
 
 ### Dataset Query Export
@@ -476,6 +476,25 @@ Current implementation:
 - `app/internal/workspace/dataset_query.go` returns bounded CSV rows for text search or `column=value` filters.
 - `app/internal/artifact/markdown_report.go` writes those bounded rows as a CSV artifact under `.nexusdesk/artifacts/`.
 - The export writes a provenance sidecar with source path and query string.
+
+### Saved Dataset Query
+
+A saved dataset query is a reusable Data Studio query tied to one workspace-relative dataset path.
+
+Current implementation:
+
+- `app/internal/dataset/query_history.go` stores recent saved queries in `.nexusdesk/datasets/queries.json`.
+- Saved queries include label, query text, dataset path, and update time.
+- The store reuses rooted dataset path validation and caps saved queries per dataset.
+
+### Dataset Summary
+
+A dataset summary is a deterministic Markdown artifact generated from the bounded CSV table preview/profile.
+
+Current implementation:
+
+- `app/internal/artifact/markdown_report.go` writes source path, row/column counts, column profile table, and suggested questions.
+- The summary is written under `.nexusdesk/artifacts/` with sidecar metadata like reports, charts, and query exports.
 
 ## Relationship Overview
 

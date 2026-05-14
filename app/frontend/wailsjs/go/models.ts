@@ -1,5 +1,60 @@
+export namespace approval {
+
+	export class Record {
+	    id: string;
+	    action: string;
+	    target: string;
+	    risk: string;
+	    decision: string;
+	    message: string;
+	    createdAt: string;
+
+	    static createFrom(source: any = {}) {
+	        return new Record(source);
+	    }
+
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.id = source["id"];
+	        this.action = source["action"];
+	        this.target = source["target"];
+	        this.risk = source["risk"];
+	        this.decision = source["decision"];
+	        this.message = source["message"];
+	        this.createdAt = source["createdAt"];
+	    }
+	}
+
+}
+
 export namespace artifact {
 
+	export class ArtifactMetadata {
+	    kind: string;
+	    title: string;
+	    source: string;
+	    sourcePaths: string[];
+	    contextRelPath: string;
+	    prompt: string;
+	    model: string;
+	    createdAt: string;
+
+	    static createFrom(source: any = {}) {
+	        return new ArtifactMetadata(source);
+	    }
+
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.kind = source["kind"];
+	        this.title = source["title"];
+	        this.source = source["source"];
+	        this.sourcePaths = source["sourcePaths"];
+	        this.contextRelPath = source["contextRelPath"];
+	        this.prompt = source["prompt"];
+	        this.model = source["model"];
+	        this.createdAt = source["createdAt"];
+	    }
+	}
 	export class MarkdownArtifactRequest {
 	    title: string;
 	    content: string;
@@ -122,6 +177,24 @@ export namespace dataset {
 		    }
 		    return a;
 		}
+	}
+	export class SavedQuery {
+	    relPath: string;
+	    query: string;
+	    label: string;
+	    updatedAt: string;
+
+	    static createFrom(source: any = {}) {
+	        return new SavedQuery(source);
+	    }
+
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.relPath = source["relPath"];
+	        this.query = source["query"];
+	        this.label = source["label"];
+	        this.updatedAt = source["updatedAt"];
+	    }
 	}
 
 }
@@ -523,6 +596,22 @@ export namespace workspace {
 		}
 	}
 
+	export class DatasetChartPoint {
+	    label: string;
+	    value: number;
+	    count: number;
+
+	    static createFrom(source: any = {}) {
+	        return new DatasetChartPoint(source);
+	    }
+
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.label = source["label"];
+	        this.value = source["value"];
+	        this.count = source["count"];
+	    }
+	}
 	export class DatasetChartRequest {
 	    relPath: string;
 	    chartType: string;
@@ -540,6 +629,52 @@ export namespace workspace {
 	        this.categoryColumn = source["categoryColumn"];
 	        this.valueColumn = source["valueColumn"];
 	    }
+	}
+	export class DatasetChartResult {
+	    relPath: string;
+	    chartType: string;
+	    categoryColumn: string;
+	    valueColumn: string;
+	    mode: string;
+	    points: DatasetChartPoint[];
+	    totalRows: number;
+	    usedRows: number;
+	    message: string;
+
+	    static createFrom(source: any = {}) {
+	        return new DatasetChartResult(source);
+	    }
+
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.relPath = source["relPath"];
+	        this.chartType = source["chartType"];
+	        this.categoryColumn = source["categoryColumn"];
+	        this.valueColumn = source["valueColumn"];
+	        this.mode = source["mode"];
+	        this.points = this.convertValues(source["points"], DatasetChartPoint);
+	        this.totalRows = source["totalRows"];
+	        this.usedRows = source["usedRows"];
+	        this.message = source["message"];
+	    }
+
+		convertValues(a: any, classs: any, asMap: boolean = false): any {
+		    if (!a) {
+		        return a;
+		    }
+		    if (a.slice && a.map) {
+		        return (a as any[]).map(elem => this.convertValues(elem, classs));
+		    } else if ("object" === typeof a) {
+		        if (asMap) {
+		            for (const key of Object.keys(a)) {
+		                a[key] = new classs(a[key]);
+		            }
+		            return a;
+		        }
+		        return new classs(a);
+		    }
+		    return a;
+		}
 	}
 	export class DatasetQueryResult {
 	    relPath: string;

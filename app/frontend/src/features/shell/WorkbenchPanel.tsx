@@ -1,7 +1,7 @@
 import {useEffect, useRef, useState} from 'react';
 import {brandAssets, capabilityIconByTitle} from '../../brand/assets';
 import {Button, EmptyState, InlineAlert, LoadingState, StatusBadge} from '../../components/ui';
-import type {Capability, ColumnProfile, DatasetProfile, DatasetQueryResult, FilePreview, FileWriteProposal, TablePreview, WorkspaceArtifact, WorkspaceSnapshot} from '../../types';
+import type {ApprovalRecord, ArtifactMetadata, Capability, ColumnProfile, DatasetChartResult, DatasetProfile, DatasetQueryResult, FilePreview, FileWriteProposal, SavedDatasetQuery, TablePreview, WorkspaceArtifact, WorkspaceSnapshot} from '../../types';
 import {ChatMessageContent} from './ChatMessageContent';
 import {HighlightedCode} from './HighlightedCode';
 import {MonacoCodePreview} from './MonacoCodePreview';
@@ -11,13 +11,18 @@ type WorkbenchPanelProps = {
     activeFile: string;
     activeDatasetProfile: DatasetProfile | null;
     artifacts: WorkspaceArtifact[];
+    artifactMetadata: ArtifactMetadata | null;
+    approvalRecords: ApprovalRecord[];
     capabilities: Capability[];
     datasetProfiles: DatasetProfile[];
     datasetChartCategory: string;
+    datasetChartPreview: DatasetChartResult | null;
     datasetChartType: string;
     datasetChartValue: string;
     datasetQuery: string;
+    datasetQueryLabel: string;
     datasetQueryResult: DatasetQueryResult | null;
+    savedDatasetQueries: SavedDatasetQuery[];
     dirtyTabPaths: string[];
     fileDraft: string;
     filePreview: FilePreview | null;
@@ -30,7 +35,10 @@ type WorkbenchPanelProps = {
     isDeletingFile: boolean;
     isMovingFile: boolean;
     isProfilingDataset: boolean;
+    isPreviewingDatasetChart: boolean;
     isQueryingDataset: boolean;
+    isSavingDatasetQuery: boolean;
+    isCreatingDatasetSummary: boolean;
     isSummarizingContext: boolean;
     isLoadingPreview: boolean;
     isPreviewingWrite: boolean;
@@ -41,6 +49,8 @@ type WorkbenchPanelProps = {
     onSummarizeContext: () => void;
     onFileDraftChange: (content: string) => void;
     onDatasetQueryChange: (content: string) => void;
+    onDatasetQueryLabelChange: (content: string) => void;
+    onSaveDatasetQuery: () => void;
     onDatasetChartCategoryChange: (content: string) => void;
     onDatasetChartTypeChange: (content: string) => void;
     onDatasetChartValueChange: (content: string) => void;
@@ -50,8 +60,10 @@ type WorkbenchPanelProps = {
     onPinProjectContext: () => void;
     onPreviewFileWrite: () => void;
     onProfileDataset: () => void;
+    onPreviewDatasetChart: () => void;
     onQueryDataset: () => void;
     onCreateDatasetChart: () => void;
+    onCreateDatasetSummary: () => void;
     onExportDatasetQuery: () => void;
     onCloseTab: (relPath: string) => void;
     onSelectTab: (relPath: string) => void;
@@ -68,13 +80,18 @@ export function WorkbenchPanel({
     activeFile,
     activeDatasetProfile,
     artifacts,
+    artifactMetadata,
+    approvalRecords,
     capabilities,
     datasetProfiles,
     datasetChartCategory,
+    datasetChartPreview,
     datasetChartType,
     datasetChartValue,
     datasetQuery,
+    datasetQueryLabel,
     datasetQueryResult,
+    savedDatasetQueries,
     dirtyTabPaths,
     fileDraft,
     filePreview,
@@ -87,7 +104,10 @@ export function WorkbenchPanel({
     isDeletingFile,
     isMovingFile,
     isProfilingDataset,
+    isPreviewingDatasetChart,
     isQueryingDataset,
+    isSavingDatasetQuery,
+    isCreatingDatasetSummary,
     isSummarizingContext,
     isLoadingPreview,
     isPreviewingWrite,
@@ -98,6 +118,8 @@ export function WorkbenchPanel({
     onSummarizeContext,
     onFileDraftChange,
     onDatasetQueryChange,
+    onDatasetQueryLabelChange,
+    onSaveDatasetQuery,
     onDatasetChartCategoryChange,
     onDatasetChartTypeChange,
     onDatasetChartValueChange,
@@ -107,8 +129,10 @@ export function WorkbenchPanel({
     onPinProjectContext,
     onPreviewFileWrite,
     onProfileDataset,
+    onPreviewDatasetChart,
     onQueryDataset,
     onCreateDatasetChart,
+    onCreateDatasetSummary,
     onExportDatasetQuery,
     onCloseTab,
     onSelectTab,
@@ -358,28 +382,42 @@ export function WorkbenchPanel({
                             {(activeDatasetProfile || filePreview?.table) && (
                                 <>
                                     <DatasetQueryPanel
+                                        columns={filePreview?.table?.columns ?? activeDatasetProfile?.profiles.map((profile) => profile.name) ?? []}
                                         isExporting={isExportingDatasetQuery}
+                                        isSaving={isSavingDatasetQuery}
+                                        label={datasetQueryLabel}
+                                        savedQueries={savedDatasetQueries}
                                         query={datasetQuery}
                                         result={datasetQueryResult}
                                         isQuerying={isQueryingDataset}
                                         onChange={onDatasetQueryChange}
                                         onExport={onExportDatasetQuery}
+                                        onLabelChange={onDatasetQueryLabelChange}
                                         onQuery={onQueryDataset}
+                                        onSave={onSaveDatasetQuery}
                                     />
                                     <DatasetChartPanel
                                         categoryColumn={datasetChartCategory}
                                         chartType={datasetChartType}
                                         columns={filePreview?.table?.columns ?? activeDatasetProfile?.profiles.map((profile) => profile.name) ?? []}
                                         isCreating={isCreatingDatasetChart}
+                                        isPreviewing={isPreviewingDatasetChart}
                                         onCategoryChange={onDatasetChartCategoryChange}
                                         onChartTypeChange={onDatasetChartTypeChange}
                                         onCreate={onCreateDatasetChart}
+                                        onPreview={onPreviewDatasetChart}
                                         onValueChange={onDatasetChartValueChange}
+                                        preview={datasetChartPreview}
                                         profiles={filePreview?.table?.profiles ?? activeDatasetProfile?.profiles ?? []}
                                         valueColumn={datasetChartValue}
                                     />
+                                    <Button disabled={!filePreview?.table || isCreatingDatasetSummary} onClick={onCreateDatasetSummary} variant="subtle">
+                                        {isCreatingDatasetSummary ? 'Summarizing...' : 'Create dataset summary'}
+                                    </Button>
                                 </>
                             )}
+                            {artifactMetadata && <ArtifactMetadataPanel metadata={artifactMetadata} />}
+                            <ApprovalLogPanel records={approvalRecords} />
                             {artifacts.length === 0 ? (
                                 <EmptyState
                                     detail="Create a report to add the first workspace artifact."
@@ -493,25 +531,70 @@ function isOperationsFile(relPath: string, fileName: string) {
 }
 
 function DatasetQueryPanel({
+    columns,
     isExporting,
+    isSaving,
+    label,
     query,
     result,
+    savedQueries,
     isQuerying,
     onChange,
     onExport,
+    onLabelChange,
     onQuery,
+    onSave,
 }: {
+    columns: string[];
     isExporting: boolean;
+    isSaving: boolean;
+    label: string;
     query: string;
     result: DatasetQueryResult | null;
+    savedQueries: SavedDatasetQuery[];
     isQuerying: boolean;
     onChange: (value: string) => void;
     onExport: () => void;
+    onLabelChange: (value: string) => void;
     onQuery: () => void;
+    onSave: () => void;
 }) {
+    const [filterColumn, setFilterColumn] = useState(columns[0] ?? '');
+    const [filterValue, setFilterValue] = useState('');
+
+    useEffect(() => {
+        setFilterColumn((current) => columns.includes(current) ? current : columns[0] ?? '');
+    }, [columns]);
+
+    function applyFilter() {
+        if (!filterColumn) {
+            return;
+        }
+        onChange(filterValue.trim() ? `${filterColumn}=${filterValue.trim()}` : filterColumn);
+    }
+
     return (
         <div className="dataset-query-panel">
             <strong>Dataset Query</strong>
+            <div className="dataset-filter-row">
+                <select aria-label="Filter column" onChange={(event) => setFilterColumn(event.target.value)} value={filterColumn}>
+                    {columns.map((column) => (
+                        <option key={column} value={column}>{column}</option>
+                    ))}
+                </select>
+                <input
+                    aria-label="Filter value"
+                    onChange={(event) => setFilterValue(event.target.value)}
+                    onKeyDown={(event) => {
+                        if (event.key === 'Enter') {
+                            applyFilter();
+                        }
+                    }}
+                    placeholder="Filter value"
+                    value={filterValue}
+                />
+                <Button disabled={!filterColumn} onClick={applyFilter} variant="subtle">Apply</Button>
+            </div>
             <div className="dataset-query-row">
                 <input
                     aria-label="Dataset query"
@@ -529,6 +612,26 @@ function DatasetQueryPanel({
                 </Button>
                 <Button disabled={!result || isExporting} onClick={onExport} variant="subtle">
                     {isExporting ? 'Exporting...' : 'Export'}
+                </Button>
+            </div>
+            {savedQueries.length > 0 && (
+                <div className="saved-query-list" aria-label="Saved dataset queries">
+                    {savedQueries.map((saved) => (
+                        <button key={`${saved.relPath}-${saved.query}`} onClick={() => onChange(saved.query)} title={saved.query || 'First rows'}>
+                            {saved.label}
+                        </button>
+                    ))}
+                </div>
+            )}
+            <div className="query-save-row">
+                <input
+                    aria-label="Saved query label"
+                    onChange={(event) => onLabelChange(event.target.value)}
+                    placeholder="Label"
+                    value={label}
+                />
+                <Button disabled={isSaving} onClick={onSave} variant="subtle">
+                    {isSaving ? 'Saving...' : 'Save query'}
                 </Button>
             </div>
             {result && (
@@ -552,10 +655,13 @@ function DatasetChartPanel({
     chartType,
     columns,
     isCreating,
+    isPreviewing,
     onCategoryChange,
     onChartTypeChange,
     onCreate,
+    onPreview,
     onValueChange,
+    preview,
     profiles,
     valueColumn,
 }: {
@@ -563,10 +669,13 @@ function DatasetChartPanel({
     chartType: string;
     columns: string[];
     isCreating: boolean;
+    isPreviewing: boolean;
     onCategoryChange: (value: string) => void;
     onChartTypeChange: (value: string) => void;
     onCreate: () => void;
+    onPreview: () => void;
     onValueChange: (value: string) => void;
+    preview: DatasetChartResult | null;
     profiles: ColumnProfile[];
     valueColumn: string;
 }) {
@@ -583,6 +692,7 @@ function DatasetChartPanel({
                     <span>Type</span>
                     <select aria-label="Chart type" onChange={(event) => onChartTypeChange(event.target.value)} value={chartType}>
                         <option value="bar">Bar</option>
+                        <option value="line">Line</option>
                     </select>
                 </label>
                 <label>
@@ -605,9 +715,86 @@ function DatasetChartPanel({
                 <Button disabled={isCreating || columns.length === 0 || !categoryColumn} onClick={onCreate} variant="subtle">
                     {isCreating ? 'Creating...' : 'Create chart'}
                 </Button>
+                <Button disabled={isPreviewing || columns.length === 0 || !categoryColumn} onClick={onPreview} variant="subtle">
+                    {isPreviewing ? 'Previewing...' : 'Preview'}
+                </Button>
             </div>
+            {preview && <DatasetChartPreview preview={preview} />}
         </div>
     );
+}
+
+function DatasetChartPreview({preview}: {preview: DatasetChartResult}) {
+    const maxValue = Math.max(...preview.points.map((point) => point.value), 1);
+
+    return (
+        <div className="dataset-chart-preview" aria-label="Dataset chart preview">
+            <small>{preview.message}</small>
+            {preview.points.map((point) => (
+                <div className="chart-preview-row" key={point.label}>
+                    <span>{point.label}</span>
+                    <i style={{width: `${Math.max(4, (point.value / maxValue) * 100)}%`}} />
+                    <strong>{formatChartPoint(point.value)}</strong>
+                </div>
+            ))}
+        </div>
+    );
+}
+
+function ArtifactMetadataPanel({metadata}: {metadata: ArtifactMetadata}) {
+    return (
+        <div className="artifact-metadata-panel">
+            <strong>{metadata.title || 'Artifact metadata'}</strong>
+            <p>{metadata.source || metadata.kind}</p>
+            <dl>
+                {metadata.contextRelPath && (
+                    <>
+                        <dt>Context</dt>
+                        <dd>{metadata.contextRelPath}</dd>
+                    </>
+                )}
+                {metadata.model && (
+                    <>
+                        <dt>Model</dt>
+                        <dd>{metadata.model}</dd>
+                    </>
+                )}
+                {metadata.createdAt && (
+                    <>
+                        <dt>Created</dt>
+                        <dd>{metadata.createdAt}</dd>
+                    </>
+                )}
+            </dl>
+            {metadata.prompt && <small>{metadata.prompt}</small>}
+        </div>
+    );
+}
+
+function ApprovalLogPanel({records}: {records: ApprovalRecord[]}) {
+    return (
+        <div className="approval-log-panel">
+            <strong>Approval Log</strong>
+            {records.length === 0 ? (
+                <small>No applied actions recorded yet.</small>
+            ) : records.slice(0, 5).map((record) => (
+                <div className="approval-log-row" key={record.id}>
+                    <span>
+                        <strong>{record.action}</strong>
+                        <small>{record.target}</small>
+                    </span>
+                    <StatusBadge tone={record.risk === 'high' ? 'warning' : 'success'}>{record.decision}</StatusBadge>
+                </div>
+            ))}
+        </div>
+    );
+}
+
+function formatChartPoint(value: number) {
+    if (!Number.isFinite(value)) {
+        return '0';
+    }
+    return Number.isInteger(value) ? value.toString() : value.toFixed(2);
 }
 
 function DatasetProfileSummary({profile}: {profile: DatasetProfile}) {

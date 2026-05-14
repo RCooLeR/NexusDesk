@@ -65,6 +65,9 @@ The current app implements the first safe workspace slice:
 - File deletes go through `app/internal/workspace/delete.go` and reject traversal, metadata paths, directories, and symlinks before frontend confirmation.
 - File rename/move goes through `app/internal/workspace/move.go` and rejects traversal, metadata paths, directories, symlinks, same-path moves, and overwrites.
 - CSV query export reruns the bounded query through `app/internal/workspace/dataset_query.go` and writes a CSV artifact through the artifact manager.
+- Saved CSV queries are stored per dataset under `.nexusdesk/datasets/queries.json`.
+- Dataset summary artifacts use the bounded CSV preview/profile data to write deterministic Markdown with column profiles and suggested analysis questions.
+- Artifact metadata and chat history are included in the workspace search surface even before a full index database exists.
 - CSV chart generation goes through `app/internal/workspace/chart.go` and returns bounded category counts or numeric sums.
 - Chat context uses the same rooted preview boundary and sends only selected text content or a bounded pack of pinned previews.
 - Workspace open/recent/refresh flows are bound through Wails methods on `app/app.go`.

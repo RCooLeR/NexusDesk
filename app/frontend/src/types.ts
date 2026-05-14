@@ -103,6 +103,17 @@ export type WorkspaceArtifact = {
     model: string;
 };
 
+export type ArtifactMetadata = {
+    kind: string;
+    title: string;
+    source: string;
+    sourcePaths: string[];
+    contextRelPath: string;
+    prompt: string;
+    model: string;
+    createdAt: string;
+};
+
 export type ContextPreviewFile = {
     relPath: string;
     required: boolean;
@@ -135,6 +146,38 @@ export type DatasetQueryResult = {
     rows: string[][];
     totalRows: number;
     matchedRows: number;
+    message: string;
+};
+
+export type SavedDatasetQuery = {
+    relPath: string;
+    query: string;
+    label: string;
+    updatedAt: string;
+};
+
+export type DatasetChartRequest = {
+    relPath: string;
+    chartType: string;
+    categoryColumn: string;
+    valueColumn: string;
+};
+
+export type DatasetChartPoint = {
+    label: string;
+    value: number;
+    count: number;
+};
+
+export type DatasetChartResult = {
+    relPath: string;
+    chartType: string;
+    categoryColumn: string;
+    valueColumn: string;
+    mode: string;
+    points: DatasetChartPoint[];
+    totalRows: number;
+    usedRows: number;
     message: string;
 };
 
@@ -222,6 +265,16 @@ export type ToolEvent = {
     time: string;
     title: string;
     detail: string;
+};
+
+export type ApprovalRecord = {
+    id: string;
+    action: string;
+    target: string;
+    risk: string;
+    decision: string;
+    message: string;
+    createdAt: string;
 };
 
 export type StartupState = {

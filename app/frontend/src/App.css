@@ -386,7 +386,10 @@ button:disabled {
 }
 
 .workspace-search input,
-.dataset-query-row input {
+.dataset-query-row input,
+.dataset-filter-row input,
+.dataset-filter-row select,
+.query-save-row input {
     min-width: 0;
     border: 1px solid #cbd5e1;
     border-radius: var(--nd-radius-sm);
@@ -406,7 +409,9 @@ button:disabled {
 
 .tree-tool-row button,
 .workspace-search button,
-.dataset-query-row button {
+.dataset-query-row button,
+.dataset-filter-row button,
+.query-save-row button {
     border: 1px solid #ccd5e1;
     border-radius: var(--nd-radius-sm);
     background: var(--nd-panel);
@@ -1327,9 +1332,38 @@ button:disabled {
     width: 100%;
 }
 
+.dataset-filter-row,
+.query-save-row {
+    display: grid;
+    grid-template-columns: minmax(92px, 0.75fr) minmax(0, 1fr) auto;
+    gap: 6px;
+}
+
 .dataset-query-row {
     display: grid;
     grid-template-columns: minmax(0, 1fr) auto auto;
+}
+
+.saved-query-list {
+    display: flex;
+    gap: 6px;
+    overflow-x: auto;
+    padding-bottom: 2px;
+}
+
+.saved-query-list button {
+    border: 1px solid var(--nd-border-soft);
+    border-radius: var(--nd-radius-sm);
+    background: #ffffff;
+    color: #344054;
+    cursor: pointer;
+    flex: 0 0 auto;
+    font-size: 12px;
+    max-width: 160px;
+    overflow: hidden;
+    padding: 5px 8px;
+    text-overflow: ellipsis;
+    white-space: nowrap;
 }
 
 .dataset-query-result {
@@ -1346,6 +1380,98 @@ button:disabled {
 .dataset-query-result small {
     color: var(--nd-muted-text);
     font-size: 12px;
+}
+
+.dataset-chart-preview {
+    display: grid;
+    gap: 6px;
+}
+
+.chart-preview-row {
+    display: grid;
+    grid-template-columns: minmax(72px, 0.85fr) minmax(48px, 1fr) auto;
+    gap: 8px;
+    align-items: center;
+    min-width: 0;
+}
+
+.chart-preview-row span {
+    color: #344054;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.chart-preview-row i {
+    background: #2f7d7e;
+    border-radius: var(--nd-radius-sm);
+    display: block;
+    height: 8px;
+}
+
+.chart-preview-row strong {
+    color: #1f2933;
+    font-size: 11px;
+}
+
+.artifact-metadata-panel,
+.approval-log-panel {
+    border: 1px solid var(--nd-border-soft);
+    border-radius: var(--nd-radius-sm);
+    background: #ffffff;
+    display: grid;
+    gap: 8px;
+    padding: 10px;
+}
+
+.artifact-metadata-panel > strong,
+.approval-log-panel > strong {
+    font-size: 12px;
+}
+
+.artifact-metadata-panel p,
+.artifact-metadata-panel small,
+.approval-log-panel small {
+    color: var(--nd-muted-text);
+    font-size: 12px;
+    margin: 0;
+}
+
+.artifact-metadata-panel dl {
+    display: grid;
+    gap: 4px;
+    margin: 0;
+}
+
+.artifact-metadata-panel dt {
+    color: var(--nd-muted-text);
+    font-size: 10px;
+    font-weight: 800;
+    text-transform: uppercase;
+}
+
+.artifact-metadata-panel dd {
+    margin: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.approval-log-row {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    gap: 8px;
+    align-items: center;
+}
+
+.approval-log-row span,
+.approval-log-row strong,
+.approval-log-row small {
+    display: block;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
 }
 
 .artifact-item {
