@@ -33,6 +33,19 @@ type WorkspaceSnapshot struct {
 	Name      string     `json:"name"`
 	Nodes     []FileNode `json:"nodes"`
 	Truncated bool       `json:"truncated"`
+	Scan      ScanStatus `json:"scan"`
+}
+
+type ScanStatus struct {
+	Included       int      `json:"included"`
+	Ignored        int      `json:"ignored"`
+	DepthSkipped   int      `json:"depthSkipped"`
+	EntrySkipped   int      `json:"entrySkipped"`
+	Unreadable     int      `json:"unreadable"`
+	MaxDepth       int      `json:"maxDepth"`
+	MaxEntries     int      `json:"maxEntries"`
+	IgnoredSamples []string `json:"ignoredSamples"`
+	SkippedSamples []string `json:"skippedSamples"`
 }
 
 func Scan(root string, options ScanOptions) (WorkspaceSnapshot, error) {
@@ -54,10 +67,16 @@ func Scan(root string, options ScanOptions) (WorkspaceSnapshot, error) {
 	snapshot := WorkspaceSnapshot{
 		Root: absRoot,
 		Name: filepath.Base(absRoot),
+		Scan: ScanStatus{
+			MaxDepth:   maxDepth,
+			MaxEntries: maxEntries,
+		},
 	}
 
 	err = filepath.WalkDir(absRoot, func(path string, entry fs.DirEntry, walkErr error) error {
 		if walkErr != nil {
+			snapshot.Scan.Unreadable++
+			appendScanSample(&snapshot.Scan.SkippedSamples, filepath.ToSlash(path), "unreadable")
 			return nil
 		}
 
@@ -77,6 +96,8 @@ func Scan(root string, options ScanOptions) (WorkspaceSnapshot, error) {
 		depth := strings.Count(relPath, "/") + 1
 
 		if shouldIgnore(relPath, entry) {
+			snapshot.Scan.Ignored++
+			appendScanSample(&snapshot.Scan.IgnoredSamples, relPath, "ignored")
 			if entry.IsDir() {
 				return filepath.SkipDir
 			}
@@ -84,6 +105,8 @@ func Scan(root string, options ScanOptions) (WorkspaceSnapshot, error) {
 		}
 
 		if depth > maxDepth {
+			snapshot.Scan.DepthSkipped++
+			appendScanSample(&snapshot.Scan.SkippedSamples, relPath, "depth")
 			if entry.IsDir() {
 				return filepath.SkipDir
 			}
@@ -92,6 +115,8 @@ func Scan(root string, options ScanOptions) (WorkspaceSnapshot, error) {
 
 		if len(snapshot.Nodes) >= maxEntries {
 			snapshot.Truncated = true
+			snapshot.Scan.EntrySkipped++
+			appendScanSample(&snapshot.Scan.SkippedSamples, relPath, "entry-cap")
 			if entry.IsDir() {
 				return filepath.SkipDir
 			}
@@ -100,6 +125,8 @@ func Scan(root string, options ScanOptions) (WorkspaceSnapshot, error) {
 
 		info, err := entry.Info()
 		if err != nil {
+			snapshot.Scan.Unreadable++
+			appendScanSample(&snapshot.Scan.SkippedSamples, relPath, "unreadable")
 			return nil
 		}
 
@@ -117,6 +144,7 @@ func Scan(root string, options ScanOptions) (WorkspaceSnapshot, error) {
 			Depth:    depth,
 			Meta:     describeEntry(entry, info.Size()),
 		})
+		snapshot.Scan.Included++
 
 		return nil
 	})
@@ -129,6 +157,13 @@ func Scan(root string, options ScanOptions) (WorkspaceSnapshot, error) {
 	})
 
 	return snapshot, nil
+}
+
+func appendScanSample(samples *[]string, relPath string, reason string) {
+	if len(*samples) >= 8 {
+		return
+	}
+	*samples = append(*samples, reason+": "+relPath)
 }
 
 func compareFileNodes(left FileNode, right FileNode) int {

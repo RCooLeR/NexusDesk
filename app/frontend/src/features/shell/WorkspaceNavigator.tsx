@@ -132,7 +132,8 @@ export function WorkspaceNavigator({
                     <>
                         <div className="workspace-summary">
                             <strong>{workspace.name}</strong>
-                            <small>{workspace.truncated ? `${workspace.nodes.length} indexed items; scan capped for responsiveness.` : workspaceStatus}</small>
+                            <small>{scanStatusSummary(workspace, workspaceStatus)}</small>
+                            <ScanStatusDetails workspace={workspace} />
                         </div>
                         <div className="tree-tools">
                             <div className="workspace-search">
@@ -160,12 +161,17 @@ export function WorkspaceNavigator({
                         {workspaceSearchResults.length > 0 && (
                             <div className="search-results">
                                 <div className="section-label">{workspaceSearchResults.length} matches</div>
-                                {workspaceSearchResults.map((result, index) => (
-                                    <button className="search-result" key={`${result.relPath}-${result.matchType}-${index}`} onClick={() => onSelectSearchResult(result)}>
-                                        <strong>{result.relPath}</strong>
-                                        <small>{result.matchType}{result.line > 0 ? `, line ${result.line}` : ''}</small>
-                                        <span>{result.snippet}</span>
-                                    </button>
+                                {groupSearchResults(workspaceSearchResults).map((group) => (
+                                    <div className="search-result-group" key={group.key}>
+                                        <small>{group.label}</small>
+                                        {group.results.map((result, index) => (
+                                            <button className="search-result" key={`${group.key}-${result.relPath}-${result.matchType}-${index}`} onClick={() => onSelectSearchResult(result)}>
+                                                <strong>{result.relPath}</strong>
+                                                <small>{result.matchType}{result.line > 0 ? `, line ${result.line}` : ''}</small>
+                                                <span>{result.snippet}</span>
+                                            </button>
+                                        ))}
+                                    </div>
                                 ))}
                             </div>
                         )}
@@ -216,4 +222,57 @@ export function WorkspaceNavigator({
             </div>
         </section>
     );
+}
+
+function scanStatusSummary(workspace: WorkspaceSnapshot, fallback: string) {
+    if (!workspace.scan) {
+        return workspace.truncated ? `${workspace.nodes.length} indexed items; scan capped for responsiveness.` : fallback;
+    }
+    const skipped = workspace.scan.ignored + workspace.scan.depthSkipped + workspace.scan.entrySkipped + workspace.scan.unreadable;
+    return `${workspace.scan.included} indexed, ${skipped} skipped. Depth ${workspace.scan.maxDepth}, cap ${workspace.scan.maxEntries}.`;
+}
+
+function ScanStatusDetails({workspace}: {workspace: WorkspaceSnapshot}) {
+    const scan = workspace.scan;
+    if (!scan) {
+        return null;
+    }
+
+    return (
+        <details className="scan-status-details">
+            <summary>Scan status</summary>
+            <dl>
+                <div><dt>Included</dt><dd>{scan.included}</dd></div>
+                <div><dt>Ignored</dt><dd>{scan.ignored}</dd></div>
+                <div><dt>Depth skipped</dt><dd>{scan.depthSkipped}</dd></div>
+                <div><dt>Entry cap</dt><dd>{scan.entrySkipped}</dd></div>
+                <div><dt>Unreadable</dt><dd>{scan.unreadable}</dd></div>
+            </dl>
+            {[...scan.ignoredSamples, ...scan.skippedSamples].length > 0 && (
+                <ul>
+                    {[...scan.ignoredSamples, ...scan.skippedSamples].slice(0, 6).map((sample) => (
+                        <li key={sample}>{sample}</li>
+                    ))}
+                </ul>
+            )}
+        </details>
+    );
+}
+
+function groupSearchResults(results: WorkspaceSearchResult[]) {
+    const groups = [
+        {key: 'files', label: 'Files', results: [] as WorkspaceSearchResult[]},
+        {key: 'artifacts', label: 'Artifacts', results: [] as WorkspaceSearchResult[]},
+        {key: 'chat', label: 'Chat History', results: [] as WorkspaceSearchResult[]},
+    ];
+    for (const result of results) {
+        if (result.kind === 'chat') {
+            groups[2].results.push(result);
+        } else if (result.matchType === 'artifact' || result.relPath.toLowerCase().startsWith('.nexusdesk/artifacts/')) {
+            groups[1].results.push(result);
+        } else {
+            groups[0].results.push(result);
+        }
+    }
+    return groups.filter((group) => group.results.length > 0);
 }

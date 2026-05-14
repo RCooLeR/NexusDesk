@@ -28,6 +28,12 @@ func TestScanReturnsSafeWorkspaceSnapshot(t *testing.T) {
 	if snapshot.Truncated {
 		t.Fatal("did not expect truncated result")
 	}
+	if snapshot.Scan.Included != len(snapshot.Nodes) {
+		t.Fatalf("expected scan included to match node count, got %d and %d", snapshot.Scan.Included, len(snapshot.Nodes))
+	}
+	if snapshot.Scan.Ignored == 0 || len(snapshot.Scan.IgnoredSamples) == 0 {
+		t.Fatal("expected ignored scan status samples")
+	}
 
 	assertContains(t, snapshot.Nodes, "README.md", "code")
 	assertContains(t, snapshot.Nodes, "src/main.go", "code")
@@ -86,6 +92,12 @@ func TestScanHonorsDepthAndEntryLimit(t *testing.T) {
 
 	if !snapshot.Truncated {
 		t.Fatal("expected truncated result")
+	}
+	if snapshot.Scan.DepthSkipped == 0 {
+		t.Fatal("expected depth skipped count")
+	}
+	if snapshot.Scan.EntrySkipped == 0 {
+		t.Fatal("expected entry skipped count")
 	}
 
 	assertNotContains(t, snapshot.Nodes, "a/b/c/d/e.txt")

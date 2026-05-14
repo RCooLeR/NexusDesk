@@ -25,6 +25,19 @@ export type WorkspaceSnapshot = {
     name: string;
     nodes: FileNode[];
     truncated: boolean;
+    scan: ScanStatus;
+};
+
+export type ScanStatus = {
+    included: number;
+    ignored: number;
+    depthSkipped: number;
+    entrySkipped: number;
+    unreadable: number;
+    maxDepth: number;
+    maxEntries: number;
+    ignoredSamples: string[];
+    skippedSamples: string[];
 };
 
 export type WorkspaceOpenResult = {

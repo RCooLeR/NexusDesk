@@ -165,13 +165,23 @@ This tracker reflects the repository as it exists today and keeps planned work s
 
 ### Prepared Batch: Studio Hardening And Inspectors
 
-- [ ] Add modal approval requests for higher-risk actions with risk, target, message, and explicit approve/cancel handling before apply.
-- [ ] Group workspace search results by files, artifacts, and chat history, with clearer snippets and active-result selection behavior.
-- [ ] Split Data Studio, Artifact metadata, and Approval Log panels out of `WorkbenchPanel.tsx` into focused feature components.
-- [ ] Add scan/index status reporting that explains included, skipped, truncated, and ignored workspace paths.
-- [ ] Add richer Data Studio table operations: sortable columns, bounded pagination, and clearer CSV query result navigation.
-- [ ] Add chart artifact preview polish: inline SVG preview for generated charts plus clearer chart config metadata.
-- [ ] Add first read-only Operations Studio inspector for Docker/Compose files and local service status, without mutating Docker state.
+- [x] Add modal approval requests for higher-risk actions with risk, target, message, and explicit approve/cancel handling before apply.
+- [x] Group workspace search results by files, artifacts, and chat history, with clearer snippets and active-result selection behavior.
+- [x] Split Data Studio, Artifact metadata, and Approval Log panels out of `WorkbenchPanel.tsx` into focused feature components.
+- [x] Add scan/index status reporting that explains included, skipped, truncated, and ignored workspace paths.
+- [x] Add richer Data Studio table operations: sortable columns, bounded pagination, and clearer CSV query result navigation.
+- [x] Add chart artifact preview polish: inline SVG preview for generated charts plus clearer chart config metadata.
+- [x] Add first read-only Operations Studio inspector for Docker/Compose files and local service status, without mutating Docker state.
+
+### Prepared Batch: Agent Tools And Workspace Intelligence
+
+- [ ] Add a backend tool registry for safe agent actions with names, descriptions, risk levels, and approval requirements.
+- [ ] Add first agent tool call planning UI that shows proposed file/data/artifact actions before execution.
+- [ ] Add persistent workspace scan report artifacts or metadata snapshots for later audit and comparison.
+- [ ] Add richer CSV query language support for numeric comparisons, contains, and simple limit/order clauses.
+- [ ] Add artifact actions for delete/archive and open-source-context navigation.
+- [ ] Add Operations Studio read-only Docker Compose parsing for service names, ports, images, volumes, and dependencies.
+- [ ] Add frontend component tests or Playwright smoke screenshots for modal approvals, grouped search, and Data Studio tables.
 
 - [x] Batch: align product docs around NexusDesk as an IDE/data/analytics studio.
 - [x] Batch: align architecture, domain, indexing, search, AI, operations, delivery, DX, brand, README, and tracker wording.

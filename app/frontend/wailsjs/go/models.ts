@@ -922,6 +922,34 @@ export namespace workspace {
 	        this.content = source["content"];
 	    }
 	}
+	export class ScanStatus {
+	    included: number;
+	    ignored: number;
+	    depthSkipped: number;
+	    entrySkipped: number;
+	    unreadable: number;
+	    maxDepth: number;
+	    maxEntries: number;
+	    ignoredSamples: string[];
+	    skippedSamples: string[];
+
+	    static createFrom(source: any = {}) {
+	        return new ScanStatus(source);
+	    }
+
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.included = source["included"];
+	        this.ignored = source["ignored"];
+	        this.depthSkipped = source["depthSkipped"];
+	        this.entrySkipped = source["entrySkipped"];
+	        this.unreadable = source["unreadable"];
+	        this.maxDepth = source["maxDepth"];
+	        this.maxEntries = source["maxEntries"];
+	        this.ignoredSamples = source["ignoredSamples"];
+	        this.skippedSamples = source["skippedSamples"];
+	    }
+	}
 	export class SearchResult {
 	    relPath: string;
 	    name: string;
@@ -953,6 +981,7 @@ export namespace workspace {
 	    name: string;
 	    nodes: FileNode[];
 	    truncated: boolean;
+	    scan: ScanStatus;
 
 	    static createFrom(source: any = {}) {
 	        return new WorkspaceSnapshot(source);
@@ -964,6 +993,7 @@ export namespace workspace {
 	        this.name = source["name"];
 	        this.nodes = this.convertValues(source["nodes"], FileNode);
 	        this.truncated = source["truncated"];
+	        this.scan = this.convertValues(source["scan"], ScanStatus);
 	    }
 
 		convertValues(a: any, classs: any, asMap: boolean = false): any {

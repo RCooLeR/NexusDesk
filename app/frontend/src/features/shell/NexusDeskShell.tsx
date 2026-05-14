@@ -1,4 +1,4 @@
-import {useEffect, useMemo, useState} from 'react';
+import {useEffect, useMemo, useRef, useState} from 'react';
 import type {CSSProperties, MouseEvent as ReactMouseEvent} from 'react';
 import {
     ApplyFileWrite,
@@ -66,6 +66,7 @@ import type {
     WorkspaceSnapshot,
 } from '../../types';
 import {AgentPanel} from './AgentPanel';
+import {ApprovalRequestModal, type ApprovalPrompt} from './ApprovalRequestModal';
 import {CommandPalette, type CommandAction} from './CommandPalette';
 import {QuickOpenPalette} from './QuickOpenPalette';
 import {WorkbenchPanel} from './WorkbenchPanel';
@@ -173,6 +174,8 @@ export function NexusDeskShell({
     const [quickOpenQuery, setQuickOpenQuery] = useState('');
     const [isCommandPaletteOpen, setIsCommandPaletteOpen] = useState(false);
     const [commandPaletteQuery, setCommandPaletteQuery] = useState('');
+    const [approvalPrompt, setApprovalPrompt] = useState<ApprovalPrompt | null>(null);
+    const approvalResolverRef = useRef<((approved: boolean) => void) | null>(null);
     const fileDraft = activeFile ? fileDrafts[activeFile] ?? '' : '';
     const writeProposal = activeFile ? writeProposals[activeFile] ?? null : null;
     const isEditingFile = Boolean(activeFile && editingFilePaths.includes(activeFile));
@@ -821,6 +824,19 @@ export function NexusDeskShell({
         setIsApplyingWrite(false);
     }
 
+    function requestApproval(prompt: ApprovalPrompt) {
+        setApprovalPrompt(prompt);
+        return new Promise<boolean>((resolve) => {
+            approvalResolverRef.current = resolve;
+        });
+    }
+
+    function resolveApproval(approved: boolean) {
+        approvalResolverRef.current?.(approved);
+        approvalResolverRef.current = null;
+        setApprovalPrompt(null);
+    }
+
     function updateFileDraft(content: string) {
         if (!activeFile) {
             return;
@@ -858,6 +874,18 @@ export function NexusDeskShell({
     async function applyFileWrite() {
         if (!workspace || !filePreview || !writeProposal) {
             setWorkspaceStatus('Preview the file write before applying it.');
+            return;
+        }
+
+        const approved = await requestApproval({
+            action: 'Apply file write',
+            confirmLabel: 'Apply write',
+            message: writeProposal.message,
+            risk: writeProposal.action === 'create' ? 'medium' : 'high',
+            target: writeProposal.relPath,
+        });
+        if (!approved) {
+            setWorkspaceStatus(`Write cancelled for ${writeProposal.relPath}.`);
             return;
         }
 
@@ -899,7 +927,14 @@ export function NexusDeskShell({
         try {
             const proposal = await PreviewFileDelete(relPath);
             const sizeLabel = proposal.size > 0 ? ` (${formatBytes(Number(proposal.size))})` : '';
-            if (!window.confirm(`Delete ${proposal.relPath}${sizeLabel}?\n\nThis removes the file from the workspace.`)) {
+            const approved = await requestApproval({
+                action: 'Delete file',
+                confirmLabel: 'Delete',
+                message: `Delete ${proposal.relPath}${sizeLabel}. This removes the file from the workspace.`,
+                risk: 'high',
+                target: proposal.relPath,
+            });
+            if (!approved) {
                 setWorkspaceStatus(`Delete cancelled for ${proposal.relPath}.`);
                 return;
             }
@@ -973,7 +1008,14 @@ export function NexusDeskShell({
         try {
             const proposal = await PreviewFileMove({sourceRelPath, targetRelPath});
             const sizeLabel = proposal.size > 0 ? ` (${formatBytes(Number(proposal.size))})` : '';
-            if (!window.confirm(`Move ${proposal.sourceRelPath} to ${proposal.targetRelPath}${sizeLabel}?`)) {
+            const approved = await requestApproval({
+                action: 'Rename or move file',
+                confirmLabel: 'Move file',
+                message: `Move ${proposal.sourceRelPath} to ${proposal.targetRelPath}${sizeLabel}.`,
+                risk: 'high',
+                target: proposal.targetRelPath,
+            });
+            if (!approved) {
                 setWorkspaceStatus(`Rename cancelled for ${proposal.sourceRelPath}.`);
                 return;
             }
@@ -2076,6 +2118,11 @@ export function NexusDeskShell({
                 onClose={() => setIsCommandPaletteOpen(false)}
                 onQueryChange={setCommandPaletteQuery}
                 query={commandPaletteQuery}
+            />
+            <ApprovalRequestModal
+                onApprove={() => resolveApproval(true)}
+                onCancel={() => resolveApproval(false)}
+                prompt={approvalPrompt}
             />
 
             <WorkspaceNavigator

@@ -109,17 +109,29 @@ The shell is now mostly orchestration. Feature panels own stable presentation, w
 
 `app/internal/approval/` owns the first append-only action log. Applied text writes, deletes, moves, reports, saved chat artifacts, chart artifacts, query exports, and dataset summaries append records under `.nexusdesk/approvals/log.json`. This is not the final modal policy engine yet, but it gives the studio an auditable local trail while higher-risk approval dialogs are designed.
 
+## Completed Batch: Studio Hardening And Inspectors
+
+The latest implementation batch hardened the studio around the surfaces that are already real:
+
+- Approval: `ApprovalRequestModal.tsx` adds an explicit approve/cancel decision before high-risk file write, delete, and move applies.
+- Search: `WorkspaceNavigator.tsx` groups file, artifact, and chat matches, and scan status is visible in the workspace summary.
+- Component structure: Data Studio, artifact metadata, approval log, operations inspector, and approval modal UI now live in focused shell components.
+- Index visibility: `WorkspaceSnapshot.scan` reports included, ignored, depth-skipped, entry-capped, unreadable, and sample skipped paths.
+- Data Studio: `SortableDataTable` adds sortable columns and bounded paging for CSV previews and query results.
+- Artifacts: generated chart SVGs can render inline in the metadata panel, with chart configuration shown separately.
+- Operations Studio: `OperationsInspector.tsx` starts read-only inspection for Docker/Compose/local service files without Docker mutations.
+
 ## Prepared Next Batch
 
-The next implementation batch should harden the studio around the surfaces that are already real:
+The next implementation batch should move toward controlled agent tools and richer workspace intelligence:
 
-- Approval: add a modal request/decision flow over the existing approval records so high-risk actions have explicit user consent before backend apply.
-- Search: group file, artifact, and chat matches in the navigator and improve snippets so mixed search results are understandable.
-- Component structure: split Data Studio, artifact metadata, and approval log UI out of `WorkbenchPanel.tsx` before the shell gets harder to reason about.
-- Index visibility: expose scan/index status, skipped paths, truncation, and ignored directories so the user knows what context exists.
-- Data Studio: add sortable and paged table/query results while keeping backend query limits intact.
-- Artifacts: show generated chart SVGs and chart configuration metadata more clearly.
-- Operations Studio: start with read-only Docker/Compose and local service inspection; no Docker mutations until modal approvals are in place.
+- Tool registry: add backend descriptors for safe file, data, artifact, and operations actions with risk and approval requirements.
+- Tool planning UI: show proposed agent tool calls before execution, using the modal approval foundation for risky applies.
+- Scan snapshots: persist or artifact workspace scan reports so indexing decisions are auditable over time.
+- Data queries: extend the bounded CSV query syntax with numeric comparisons, contains, limit, and simple order clauses.
+- Artifact actions: add delete/archive and source-context navigation for generated artifacts.
+- Operations parsing: parse Docker Compose files into service names, images, ports, volumes, and dependency summaries.
+- Verification: add component tests or Playwright screenshots for approvals, grouped search, and Data Studio table behavior.
 
 ## File Writes
 

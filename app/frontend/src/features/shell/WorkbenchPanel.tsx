@@ -2,10 +2,14 @@ import {useEffect, useRef, useState} from 'react';
 import {brandAssets, capabilityIconByTitle} from '../../brand/assets';
 import {Button, EmptyState, InlineAlert, LoadingState, StatusBadge} from '../../components/ui';
 import type {ApprovalRecord, ArtifactMetadata, Capability, ColumnProfile, DatasetChartResult, DatasetProfile, DatasetQueryResult, FilePreview, FileWriteProposal, SavedDatasetQuery, TablePreview, WorkspaceArtifact, WorkspaceSnapshot} from '../../types';
+import {ApprovalLogPanel} from './ApprovalLogPanel';
+import {ArtifactMetadataPanel} from './ArtifactMetadataPanel';
 import {ChatMessageContent} from './ChatMessageContent';
+import {DataStudioPanel, SortableDataTable} from './DataStudioPanel';
 import {HighlightedCode} from './HighlightedCode';
 import {MonacoCodePreview} from './MonacoCodePreview';
 import {MonacoFileEditor} from './MonacoFileEditor';
+import {OperationsInspector} from './OperationsInspector';
 
 type WorkbenchPanelProps = {
     activeFile: string;
@@ -378,45 +382,41 @@ export function WorkbenchPanel({
                     </div>
                     {workspace ? (
                         <div className="artifact-list">
-                            {activeDatasetProfile && <DatasetProfileSummary profile={activeDatasetProfile} />}
                             {(activeDatasetProfile || filePreview?.table) && (
-                                <>
-                                    <DatasetQueryPanel
-                                        columns={filePreview?.table?.columns ?? activeDatasetProfile?.profiles.map((profile) => profile.name) ?? []}
-                                        isExporting={isExportingDatasetQuery}
-                                        isSaving={isSavingDatasetQuery}
-                                        label={datasetQueryLabel}
-                                        savedQueries={savedDatasetQueries}
-                                        query={datasetQuery}
-                                        result={datasetQueryResult}
-                                        isQuerying={isQueryingDataset}
-                                        onChange={onDatasetQueryChange}
-                                        onExport={onExportDatasetQuery}
-                                        onLabelChange={onDatasetQueryLabelChange}
-                                        onQuery={onQueryDataset}
-                                        onSave={onSaveDatasetQuery}
-                                    />
-                                    <DatasetChartPanel
-                                        categoryColumn={datasetChartCategory}
-                                        chartType={datasetChartType}
-                                        columns={filePreview?.table?.columns ?? activeDatasetProfile?.profiles.map((profile) => profile.name) ?? []}
-                                        isCreating={isCreatingDatasetChart}
-                                        isPreviewing={isPreviewingDatasetChart}
-                                        onCategoryChange={onDatasetChartCategoryChange}
-                                        onChartTypeChange={onDatasetChartTypeChange}
-                                        onCreate={onCreateDatasetChart}
-                                        onPreview={onPreviewDatasetChart}
-                                        onValueChange={onDatasetChartValueChange}
-                                        preview={datasetChartPreview}
-                                        profiles={filePreview?.table?.profiles ?? activeDatasetProfile?.profiles ?? []}
-                                        valueColumn={datasetChartValue}
-                                    />
-                                    <Button disabled={!filePreview?.table || isCreatingDatasetSummary} onClick={onCreateDatasetSummary} variant="subtle">
-                                        {isCreatingDatasetSummary ? 'Summarizing...' : 'Create dataset summary'}
-                                    </Button>
-                                </>
+                                <DataStudioPanel
+                                    activeDatasetProfile={activeDatasetProfile}
+                                    chartCategory={datasetChartCategory}
+                                    chartPreview={datasetChartPreview}
+                                    chartType={datasetChartType}
+                                    chartValue={datasetChartValue}
+                                    columns={filePreview?.table?.columns ?? activeDatasetProfile?.profiles.map((profile) => profile.name) ?? []}
+                                    isCreatingChart={isCreatingDatasetChart}
+                                    isCreatingSummary={isCreatingDatasetSummary}
+                                    isExporting={isExportingDatasetQuery}
+                                    isPreviewingChart={isPreviewingDatasetChart}
+                                    isQuerying={isQueryingDataset}
+                                    isSavingQuery={isSavingDatasetQuery}
+                                    onChartCategoryChange={onDatasetChartCategoryChange}
+                                    onChartTypeChange={onDatasetChartTypeChange}
+                                    onChartValueChange={onDatasetChartValueChange}
+                                    onCreateChart={onCreateDatasetChart}
+                                    onCreateSummary={onCreateDatasetSummary}
+                                    onExportQuery={onExportDatasetQuery}
+                                    onPreviewChart={onPreviewDatasetChart}
+                                    onQuery={onQueryDataset}
+                                    onQueryChange={onDatasetQueryChange}
+                                    onQueryLabelChange={onDatasetQueryLabelChange}
+                                    onSaveQuery={onSaveDatasetQuery}
+                                    profiles={filePreview?.table?.profiles ?? activeDatasetProfile?.profiles ?? []}
+                                    query={datasetQuery}
+                                    queryLabel={datasetQueryLabel}
+                                    queryResult={datasetQueryResult}
+                                    savedQueries={savedDatasetQueries}
+                                    table={filePreview?.table ?? null}
+                                />
                             )}
-                            {artifactMetadata && <ArtifactMetadataPanel metadata={artifactMetadata} />}
+                            <OperationsInspector preview={filePreview} workspace={workspace} />
+                            {artifactMetadata && <ArtifactMetadataPanel metadata={artifactMetadata} preview={filePreview} />}
                             <ApprovalLogPanel records={approvalRecords} />
                             {artifacts.length === 0 ? (
                                 <EmptyState
@@ -530,287 +530,6 @@ function isOperationsFile(relPath: string, fileName: string) {
     return /\.(env|ps1|sh|bat|cmd|toml|ya?ml)$/i.test(fileName);
 }
 
-function DatasetQueryPanel({
-    columns,
-    isExporting,
-    isSaving,
-    label,
-    query,
-    result,
-    savedQueries,
-    isQuerying,
-    onChange,
-    onExport,
-    onLabelChange,
-    onQuery,
-    onSave,
-}: {
-    columns: string[];
-    isExporting: boolean;
-    isSaving: boolean;
-    label: string;
-    query: string;
-    result: DatasetQueryResult | null;
-    savedQueries: SavedDatasetQuery[];
-    isQuerying: boolean;
-    onChange: (value: string) => void;
-    onExport: () => void;
-    onLabelChange: (value: string) => void;
-    onQuery: () => void;
-    onSave: () => void;
-}) {
-    const [filterColumn, setFilterColumn] = useState(columns[0] ?? '');
-    const [filterValue, setFilterValue] = useState('');
-
-    useEffect(() => {
-        setFilterColumn((current) => columns.includes(current) ? current : columns[0] ?? '');
-    }, [columns]);
-
-    function applyFilter() {
-        if (!filterColumn) {
-            return;
-        }
-        onChange(filterValue.trim() ? `${filterColumn}=${filterValue.trim()}` : filterColumn);
-    }
-
-    return (
-        <div className="dataset-query-panel">
-            <strong>Dataset Query</strong>
-            <div className="dataset-filter-row">
-                <select aria-label="Filter column" onChange={(event) => setFilterColumn(event.target.value)} value={filterColumn}>
-                    {columns.map((column) => (
-                        <option key={column} value={column}>{column}</option>
-                    ))}
-                </select>
-                <input
-                    aria-label="Filter value"
-                    onChange={(event) => setFilterValue(event.target.value)}
-                    onKeyDown={(event) => {
-                        if (event.key === 'Enter') {
-                            applyFilter();
-                        }
-                    }}
-                    placeholder="Filter value"
-                    value={filterValue}
-                />
-                <Button disabled={!filterColumn} onClick={applyFilter} variant="subtle">Apply</Button>
-            </div>
-            <div className="dataset-query-row">
-                <input
-                    aria-label="Dataset query"
-                    onChange={(event) => onChange(event.target.value)}
-                    onKeyDown={(event) => {
-                        if (event.key === 'Enter') {
-                            onQuery();
-                        }
-                    }}
-                    placeholder="Search rows or use column=value"
-                    value={query}
-                />
-                <Button disabled={isQuerying} onClick={onQuery} variant="subtle">
-                    {isQuerying ? 'Querying...' : 'Run'}
-                </Button>
-                <Button disabled={!result || isExporting} onClick={onExport} variant="subtle">
-                    {isExporting ? 'Exporting...' : 'Export'}
-                </Button>
-            </div>
-            {savedQueries.length > 0 && (
-                <div className="saved-query-list" aria-label="Saved dataset queries">
-                    {savedQueries.map((saved) => (
-                        <button key={`${saved.relPath}-${saved.query}`} onClick={() => onChange(saved.query)} title={saved.query || 'First rows'}>
-                            {saved.label}
-                        </button>
-                    ))}
-                </div>
-            )}
-            <div className="query-save-row">
-                <input
-                    aria-label="Saved query label"
-                    onChange={(event) => onLabelChange(event.target.value)}
-                    placeholder="Label"
-                    value={label}
-                />
-                <Button disabled={isSaving} onClick={onSave} variant="subtle">
-                    {isSaving ? 'Saving...' : 'Save query'}
-                </Button>
-            </div>
-            {result && (
-                <div className="dataset-query-result">
-                    <small>{result.message}</small>
-                    <CsvTablePreview table={{
-                        columns: result.columns,
-                        rows: result.rows,
-                        profiles: [],
-                        totalRows: result.matchedRows,
-                        truncated: result.rows.length < result.matchedRows,
-                    }} />
-                </div>
-            )}
-        </div>
-    );
-}
-
-function DatasetChartPanel({
-    categoryColumn,
-    chartType,
-    columns,
-    isCreating,
-    isPreviewing,
-    onCategoryChange,
-    onChartTypeChange,
-    onCreate,
-    onPreview,
-    onValueChange,
-    preview,
-    profiles,
-    valueColumn,
-}: {
-    categoryColumn: string;
-    chartType: string;
-    columns: string[];
-    isCreating: boolean;
-    isPreviewing: boolean;
-    onCategoryChange: (value: string) => void;
-    onChartTypeChange: (value: string) => void;
-    onCreate: () => void;
-    onPreview: () => void;
-    onValueChange: (value: string) => void;
-    preview: DatasetChartResult | null;
-    profiles: ColumnProfile[];
-    valueColumn: string;
-}) {
-    const numericColumns = profiles
-        .filter((profile) => profile.type === 'integer' || profile.type === 'number')
-        .map((profile) => profile.name)
-        .filter((name) => columns.includes(name));
-
-    return (
-        <div className="dataset-chart-panel">
-            <strong>Dataset Chart</strong>
-            <div className="dataset-chart-grid">
-                <label>
-                    <span>Type</span>
-                    <select aria-label="Chart type" onChange={(event) => onChartTypeChange(event.target.value)} value={chartType}>
-                        <option value="bar">Bar</option>
-                        <option value="line">Line</option>
-                    </select>
-                </label>
-                <label>
-                    <span>Category</span>
-                    <select aria-label="Chart category column" onChange={(event) => onCategoryChange(event.target.value)} value={categoryColumn}>
-                        {columns.map((column) => (
-                            <option key={column} value={column}>{column}</option>
-                        ))}
-                    </select>
-                </label>
-                <label>
-                    <span>Value</span>
-                    <select aria-label="Chart value column" onChange={(event) => onValueChange(event.target.value)} value={valueColumn}>
-                        <option value="">Count rows</option>
-                        {numericColumns.map((column) => (
-                            <option key={column} value={column}>Sum {column}</option>
-                        ))}
-                    </select>
-                </label>
-                <Button disabled={isCreating || columns.length === 0 || !categoryColumn} onClick={onCreate} variant="subtle">
-                    {isCreating ? 'Creating...' : 'Create chart'}
-                </Button>
-                <Button disabled={isPreviewing || columns.length === 0 || !categoryColumn} onClick={onPreview} variant="subtle">
-                    {isPreviewing ? 'Previewing...' : 'Preview'}
-                </Button>
-            </div>
-            {preview && <DatasetChartPreview preview={preview} />}
-        </div>
-    );
-}
-
-function DatasetChartPreview({preview}: {preview: DatasetChartResult}) {
-    const maxValue = Math.max(...preview.points.map((point) => point.value), 1);
-
-    return (
-        <div className="dataset-chart-preview" aria-label="Dataset chart preview">
-            <small>{preview.message}</small>
-            {preview.points.map((point) => (
-                <div className="chart-preview-row" key={point.label}>
-                    <span>{point.label}</span>
-                    <i style={{width: `${Math.max(4, (point.value / maxValue) * 100)}%`}} />
-                    <strong>{formatChartPoint(point.value)}</strong>
-                </div>
-            ))}
-        </div>
-    );
-}
-
-function ArtifactMetadataPanel({metadata}: {metadata: ArtifactMetadata}) {
-    return (
-        <div className="artifact-metadata-panel">
-            <strong>{metadata.title || 'Artifact metadata'}</strong>
-            <p>{metadata.source || metadata.kind}</p>
-            <dl>
-                {metadata.contextRelPath && (
-                    <>
-                        <dt>Context</dt>
-                        <dd>{metadata.contextRelPath}</dd>
-                    </>
-                )}
-                {metadata.model && (
-                    <>
-                        <dt>Model</dt>
-                        <dd>{metadata.model}</dd>
-                    </>
-                )}
-                {metadata.createdAt && (
-                    <>
-                        <dt>Created</dt>
-                        <dd>{metadata.createdAt}</dd>
-                    </>
-                )}
-            </dl>
-            {metadata.prompt && <small>{metadata.prompt}</small>}
-        </div>
-    );
-}
-
-function ApprovalLogPanel({records}: {records: ApprovalRecord[]}) {
-    return (
-        <div className="approval-log-panel">
-            <strong>Approval Log</strong>
-            {records.length === 0 ? (
-                <small>No applied actions recorded yet.</small>
-            ) : records.slice(0, 5).map((record) => (
-                <div className="approval-log-row" key={record.id}>
-                    <span>
-                        <strong>{record.action}</strong>
-                        <small>{record.target}</small>
-                    </span>
-                    <StatusBadge tone={record.risk === 'high' ? 'warning' : 'success'}>{record.decision}</StatusBadge>
-                </div>
-            ))}
-        </div>
-    );
-}
-
-function formatChartPoint(value: number) {
-    if (!Number.isFinite(value)) {
-        return '0';
-    }
-    return Number.isInteger(value) ? value.toString() : value.toFixed(2);
-}
-
-function DatasetProfileSummary({profile}: {profile: DatasetProfile}) {
-    return (
-        <div className="dataset-profile-summary">
-            <strong>{profile.name}</strong>
-            <small>{profile.kind}</small>
-            {profile.kind === 'csv' ? (
-                <p>{profile.rows} rows, {profile.columns} columns</p>
-            ) : (
-                <p>{profile.sheets.length} sheets: {profile.sheets.join(', ')}</p>
-            )}
-        </div>
-    );
-}
-
 function FileWriteEditor({
     draft,
     isApplying,
@@ -882,41 +601,5 @@ function FileWriteEditor({
 }
 
 function CsvTablePreview({table}: {table: TablePreview}) {
-    return (
-        <div className="csv-preview" aria-label="CSV table preview">
-            {table.profiles.length > 0 && (
-                <div className="csv-profile-strip" aria-label="CSV column profile">
-                    {table.profiles.map((profile, index) => (
-                        <div className="csv-profile" key={`${profile.name}-${index}`}>
-                            <strong>{profile.name || `Column ${index + 1}`}</strong>
-                            <span>{profile.type}</span>
-                            <small>
-                                {profile.distinct} distinct
-                                {profile.missing > 0 ? `, ${profile.missing} missing` : ''}
-                                {profile.min && profile.max ? `, ${profile.min}-${profile.max}` : ''}
-                            </small>
-                        </div>
-                    ))}
-                </div>
-            )}
-            <table>
-                <thead>
-                    <tr>
-                        {table.columns.map((column, index) => (
-                            <th key={`${column}-${index}`}>{column || `Column ${index + 1}`}</th>
-                        ))}
-                    </tr>
-                </thead>
-                <tbody>
-                    {table.rows.map((row, rowIndex) => (
-                        <tr key={rowIndex}>
-                            {table.columns.map((_, columnIndex) => (
-                                <td key={columnIndex}>{row[columnIndex] ?? ''}</td>
-                            ))}
-                        </tr>
-                    ))}
-                </tbody>
-            </table>
-        </div>
-    );
+    return <SortableDataTable table={table} title="CSV Preview" />;
 }

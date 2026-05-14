@@ -152,17 +152,27 @@ Current status:
 - The frontend has a smoke check for the built entrypoint, generated Wails bindings, and core shell functionality markers.
 - richer document extraction/OCR, modal approval dialogs, DuckDB SQL, and SQLite persistence are still planned.
 
-## Prepared Next Batch: Studio Hardening And Inspectors
+## Completed Batch: Studio Hardening And Inspectors
 
-This batch should keep momentum on real functionality while cleaning up the growing shell surface:
+This batch kept momentum on real functionality while cleaning up the growing shell surface:
 
-1. Add modal approval requests for higher-risk actions.
-2. Group workspace search results into file, artifact, and chat sections with clearer snippets.
-3. Extract Data Studio, Artifact metadata, and Approval Log UI from the main workbench component.
-4. Add scan/index status reporting for included, skipped, truncated, and ignored paths.
-5. Add sortable/paged CSV result navigation for Data Studio.
-6. Improve chart artifact previews and chart metadata visibility.
-7. Add a first read-only Operations Studio inspector for Docker/Compose files and local service status.
+1. Modal approval requests now cover higher-risk file write/delete/move applies.
+2. Workspace search results are grouped into file, artifact, and chat sections.
+3. Data Studio, Artifact metadata, Approval Log, Operations inspector, and approval modal UI are split into focused components.
+4. Scan status now reports included, ignored, depth-skipped, entry-capped, and unreadable paths.
+5. CSV preview/query tables support sortable columns and bounded pagination.
+6. Chart artifact metadata now has clearer configuration and inline SVG preview.
+7. Operations Studio has a first read-only inspector for Docker/Compose and local service files.
+
+## Prepared Next Batch: Agent Tools And Workspace Intelligence
+
+1. Add a backend tool registry for safe agent actions with names, descriptions, risk levels, and approval requirements.
+2. Add first agent tool call planning UI that shows proposed file/data/artifact actions before execution.
+3. Add persistent workspace scan report artifacts or metadata snapshots for later audit and comparison.
+4. Add richer CSV query language support for numeric comparisons, contains, and simple limit/order clauses.
+5. Add artifact actions for delete/archive and open-source-context navigation.
+6. Add Operations Studio read-only Docker Compose parsing for service names, ports, images, volumes, and dependencies.
+7. Add frontend component tests or Playwright smoke screenshots for modal approvals, grouped search, and Data Studio tables.
 
 ## Phase 2: Files, Documents, And Artifacts
 

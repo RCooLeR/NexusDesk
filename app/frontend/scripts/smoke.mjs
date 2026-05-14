@@ -25,6 +25,8 @@ const checks = [
             'GetArtifactMetadata',
             'ListApprovals',
             'SearchWorkspace',
+            'ApprovalRequestModal',
+            'requestApproval',
             'QuickOpenPalette',
             'CommandPalette',
             'commandActions',
@@ -65,7 +67,27 @@ const checks = [
     },
     {
         file: 'src/features/shell/WorkbenchPanel.tsx',
-        terms: ['editor-tabs', 'markdownViewMode', 'markdown-view-toggle', 'markdown-document-preview', 'studio-mode-strip', 'resolveStudioMode', 'Data Studio', 'Summarize', 'onSummarizeContext', 'onSelectTab', 'onCloseTab', 'onDeleteFile', 'onMoveFile', 'onPinProjectContext', 'DatasetQueryPanel', 'DatasetChartPanel', 'DatasetChartPreview', 'ArtifactMetadataPanel', 'ApprovalLogPanel', 'onExportDatasetQuery', 'dataset-query-csv', 'file-write-editor', 'MonacoFileEditor', 'MonacoCodePreview', 'editor-find', 'findInputRef', 'dirty-indicator', 'dirtyTabPaths', 'countFindMatches'],
+        terms: ['editor-tabs', 'markdownViewMode', 'markdown-view-toggle', 'markdown-document-preview', 'studio-mode-strip', 'resolveStudioMode', 'Data Studio', 'Summarize', 'onSummarizeContext', 'onSelectTab', 'onCloseTab', 'onDeleteFile', 'onMoveFile', 'onPinProjectContext', 'DataStudioPanel', 'OperationsInspector', 'onExportDatasetQuery', 'dataset-query-csv', 'file-write-editor', 'MonacoFileEditor', 'MonacoCodePreview', 'editor-find', 'findInputRef', 'dirty-indicator', 'dirtyTabPaths', 'countFindMatches'],
+    },
+    {
+        file: 'src/features/shell/DataStudioPanel.tsx',
+        terms: ['DatasetQueryPanel', 'DatasetChartPanel', 'DatasetChartPreview', 'SortableDataTable', 'table-pager', 'chart-config-list'],
+    },
+    {
+        file: 'src/features/shell/ArtifactMetadataPanel.tsx',
+        terms: ['ArtifactMetadataPanel', 'artifact-chart-preview', 'Configuration'],
+    },
+    {
+        file: 'src/features/shell/ApprovalLogPanel.tsx',
+        terms: ['ApprovalLogPanel', 'approval-log-row'],
+    },
+    {
+        file: 'src/features/shell/ApprovalRequestModal.tsx',
+        terms: ['ApprovalRequestModal', 'Approval Required', 'risk-dot'],
+    },
+    {
+        file: 'src/features/shell/OperationsInspector.tsx',
+        terms: ['OperationsInspector', 'Read-only inspector', 'docker-compose'],
     },
     {
         file: 'src/features/shell/MonacoFileEditor.tsx',
@@ -97,7 +119,7 @@ const checks = [
     },
     {
         file: 'src/features/shell/WorkspaceNavigator.tsx',
-        terms: ['workspace-search', 'search-results', 'Expand all', 'Collapse all'],
+        terms: ['workspace-search', 'search-results', 'search-result-group', 'ScanStatusDetails', 'scanStatusSummary', 'Expand all', 'Collapse all'],
     },
     {
         file: 'src/features/shell/AgentChatCard.tsx',
@@ -128,6 +150,11 @@ const checks = [
             '.dataset-chart-preview',
             '.artifact-metadata-panel',
             '.approval-log-panel',
+            '.approval-modal',
+            '.operations-inspector-panel',
+            '.sortable-data-table',
+            '.scan-status-details',
+            '.search-result-group',
             '.studio-mode-strip',
             '.quick-open',
             '.quick-open-result',
