@@ -146,6 +146,42 @@ export type AgentToolPlanItem = {
     status: string;
 };
 
+export type AgentToolRunRequest = {
+    toolName: string;
+    target: string;
+    inputs: Record<string, string>;
+    approved: boolean;
+    approvalId: string;
+};
+
+export type AgentToolRunRecord = {
+    id: string;
+    toolName: string;
+    title: string;
+    target: string;
+    risk: string;
+    requiresApproval: boolean;
+    status: string;
+    mode: string;
+    inputs: Record<string, string>;
+    outputSummary: string;
+    error: string;
+    approvalId: string;
+    startedAt: string;
+    completedAt: string;
+    durationMs: number;
+};
+
+export type SQLiteMetadataStatus = {
+    path: string;
+    schemaPath: string;
+    schemaVersion: number;
+    schemaHash: string;
+    tables: string[];
+    message: string;
+    updatedAt: string;
+};
+
 export type ContextPreviewFile = {
     relPath: string;
     required: boolean;
@@ -179,6 +215,22 @@ export type DatasetQueryResult = {
     totalRows: number;
     matchedRows: number;
     message: string;
+};
+
+export type DatasetSQLQueryResult = {
+    relPath: string;
+    sql: string;
+    engine: string;
+    columns: string[];
+    rows: string[][];
+    totalRows: number;
+    matchedRows: number;
+    message: string;
+};
+
+export type DatasetSQLQueryRequest = {
+    relPath: string;
+    sql: string;
 };
 
 export type SavedDatasetQuery = {
@@ -307,6 +359,18 @@ export type ApprovalRecord = {
     decision: string;
     message: string;
     createdAt: string;
+};
+
+export type ArtifactComparison = {
+    leftRelPath: string;
+    rightRelPath: string;
+    leftTitle: string;
+    rightTitle: string;
+    sameKind: boolean;
+    sizeDelta: number;
+    addedLines: string[];
+    removedLines: string[];
+    message: string;
 };
 
 export type StartupState = {

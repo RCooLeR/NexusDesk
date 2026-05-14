@@ -1,5 +1,5 @@
 import {brandAssets} from '../../brand/assets';
-import type {AgentToolDescriptor, AgentToolPlanItem, ChatMessage, ContextPreview, LLMProbeResult, LLMSettings, ToolEvent} from '../../types';
+import type {AgentToolDescriptor, AgentToolPlanItem, AgentToolRunRecord, ChatMessage, ContextPreview, LLMProbeResult, LLMSettings, ToolEvent} from '../../types';
 import {AgentChatCard} from './AgentChatCard';
 import {AgentToolPlanCard} from './AgentToolPlanCard';
 import {LLMSettingsCard} from './LLMSettingsCard';
@@ -13,14 +13,18 @@ type AgentPanelProps = {
     contextPackPaths: string[];
     agentTools: AgentToolDescriptor[];
     agentToolPlan: AgentToolPlanItem[];
+    agentToolRuns: AgentToolRunRecord[];
     canSaveLatestAssistantArtifact: boolean;
     isSavingSettings: boolean;
     isSavingChatArtifact: boolean;
     isSendingPrompt: boolean;
     isTestingConnection: boolean;
+    isRunningAgentTool: boolean;
     onChatPromptChange: (value: string) => void;
     onClearChatHistory: () => void;
     onClearContextPack: () => void;
+    onDryRunAgentTool: (item: AgentToolPlanItem) => void;
+    onExecuteAgentTool: (item: AgentToolPlanItem) => void;
     onRefreshAgentPlan: () => void;
     onRemoveContextPath: (relPath: string) => void;
     onSaveLatestAssistantArtifact: () => void;
@@ -43,14 +47,18 @@ export function AgentPanel({
     contextPackPaths,
     agentTools,
     agentToolPlan,
+    agentToolRuns,
     canSaveLatestAssistantArtifact,
     isSavingSettings,
     isSavingChatArtifact,
     isSendingPrompt,
     isTestingConnection,
+    isRunningAgentTool,
     onChatPromptChange,
     onClearChatHistory,
     onClearContextPack,
+    onDryRunAgentTool,
+    onExecuteAgentTool,
     onRefreshAgentPlan,
     onRemoveContextPath,
     onSaveLatestAssistantArtifact,
@@ -93,6 +101,10 @@ export function AgentPanel({
             <AgentToolPlanCard
                 tools={agentTools}
                 planItems={agentToolPlan}
+                runs={agentToolRuns}
+                isRunning={isRunningAgentTool}
+                onDryRun={onDryRunAgentTool}
+                onExecute={onExecuteAgentTool}
                 onRefreshPlan={onRefreshAgentPlan}
             />
 

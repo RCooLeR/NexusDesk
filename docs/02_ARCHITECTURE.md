@@ -18,6 +18,10 @@ The implemented desktop slice currently contains:
 - CSV chart preview/artifact flow for bar and line charts from category counts or numeric sums
 - append-only workspace approval/action log for applied file and artifact operations
 - backend agent tool descriptor registry and first frontend tool-plan preview
+- persisted tool-run dry-runs/executions with approval references
+- SQLite metadata schema preparation for future driver-backed repositories
+- DuckDB-compatible read-only SQL surface over bounded CSV query primitives
+- artifact comparison for generated output versions
 - read-only Compose parsing for Operations Studio
 - configurable LLM gateway
 - OpenAI-compatible chat and streaming
@@ -58,11 +62,12 @@ flowchart LR
 
   Context --> Search["Path/Text Search"]
   Search --> JsonStores[("Local JSON Stores<br/>settings, chats, recent workspaces")]
-  Search --> FutureAppDB[("Planned SQLite<br/>metadata, chats, tool logs")]
-  Search --> FutureAnalyticsDB[("Planned DuckDB<br/>datasets, query results")]
+  Search --> FutureAppDB[("Prepared SQLite Schema<br/>metadata, chats, tool logs")]
+  Search --> FutureAnalyticsDB[("DuckDB-Compatible SQL<br/>datasets, query results")]
   Search --> FutureVectorStore["Optional local vectors"]
 
   Tools --> Registry["Tool Registry<br/>risk, surface, approval metadata"]
+  Tools --> ToolRuns["Tool Run Log<br/>dry-run, execute, approval refs"]
   Tools --> FileTools["File Tools<br/>create, edit, delete, move"]
   Tools --> DataTools["Data Tools<br/>profile, query CSV"]
   Tools --> FutureWebTools["Planned HTTP/Search Tools"]

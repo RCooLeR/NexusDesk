@@ -1,13 +1,17 @@
 import {Button, StatusBadge} from '../../components/ui';
-import type {AgentToolDescriptor, AgentToolPlanItem} from '../../types';
+import type {AgentToolDescriptor, AgentToolPlanItem, AgentToolRunRecord} from '../../types';
 
 type AgentToolPlanCardProps = {
     tools: AgentToolDescriptor[];
     planItems: AgentToolPlanItem[];
+    runs: AgentToolRunRecord[];
+    isRunning: boolean;
+    onDryRun: (item: AgentToolPlanItem) => void;
+    onExecute: (item: AgentToolPlanItem) => void;
     onRefreshPlan: () => void;
 };
 
-export function AgentToolPlanCard({tools, planItems, onRefreshPlan}: AgentToolPlanCardProps) {
+export function AgentToolPlanCard({tools, planItems, runs, isRunning, onDryRun, onExecute, onRefreshPlan}: AgentToolPlanCardProps) {
     return (
         <section className="agent-tool-plan-card">
             <div className="agent-card-header">
@@ -35,6 +39,24 @@ export function AgentToolPlanCard({tools, planItems, onRefreshPlan}: AgentToolPl
                                 {item.requiresApproval && <StatusBadge tone="warning">approval</StatusBadge>}
                             </div>
                             <small>{item.status}</small>
+                            <div className="tool-plan-actions">
+                                <Button disabled={isRunning} onClick={() => onDryRun(item)} variant="subtle">Dry run</Button>
+                                <Button disabled={isRunning || item.toolName === 'workspace.write'} onClick={() => onExecute(item)} variant="subtle">Execute</Button>
+                            </div>
+                        </div>
+                    ))}
+                </div>
+            )}
+            {runs.length > 0 && (
+                <div className="tool-run-list">
+                    <small>Recent tool runs</small>
+                    {runs.slice(0, 4).map((run) => (
+                        <div className="tool-run-row" key={run.id}>
+                            <span>
+                                <strong>{run.title || run.toolName}</strong>
+                                <small>{run.outputSummary || run.error || run.target}</small>
+                            </span>
+                            <StatusBadge tone={run.status === 'failed' ? 'warning' : 'neutral'}>{run.mode}</StatusBadge>
                         </div>
                     ))}
                 </div>

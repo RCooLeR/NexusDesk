@@ -404,6 +404,35 @@ func TestDeleteRemovesArtifactAndMetadata(t *testing.T) {
 	}
 }
 
+func TestCompareArtifactsReportsAddedAndRemovedLines(t *testing.T) {
+	root := t.TempDir()
+	first, err := CreateGeneratedMarkdown(root, MarkdownArtifactRequest{
+		Title:   "First",
+		Content: "Shared\nOld line\n",
+	}, time.Date(2026, 5, 13, 12, 30, 0, 0, time.UTC))
+	if err != nil {
+		t.Fatalf("CreateGeneratedMarkdown first returned error: %v", err)
+	}
+	second, err := CreateGeneratedMarkdown(root, MarkdownArtifactRequest{
+		Title:   "Second",
+		Content: "Shared\nNew line\n",
+	}, time.Date(2026, 5, 13, 12, 31, 0, 0, time.UTC))
+	if err != nil {
+		t.Fatalf("CreateGeneratedMarkdown second returned error: %v", err)
+	}
+
+	comparison, err := Compare(root, first.RelPath, second.RelPath)
+	if err != nil {
+		t.Fatalf("Compare returned error: %v", err)
+	}
+	if len(comparison.AddedLines) == 0 || len(comparison.RemovedLines) == 0 {
+		t.Fatalf("expected added and removed lines, got %#v", comparison)
+	}
+	if comparison.LeftTitle != "First" || comparison.RightTitle != "Second" {
+		t.Fatalf("unexpected comparison titles: %#v", comparison)
+	}
+}
+
 func TestListReturnsMarkdownArtifactsNewestFirst(t *testing.T) {
 	root := t.TempDir()
 	firstTime := time.Date(2026, 5, 13, 12, 30, 0, 0, time.UTC)

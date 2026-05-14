@@ -494,7 +494,34 @@ Current implementation:
 
 - `app/internal/agenttools/registry.go` exposes tool names, titles, descriptions, studio surfaces, risk levels, approval requirements, and input names.
 - The frontend uses these descriptors to show a proposed tool plan for the active workspace, dataset, artifact, or operations context.
-Execution is still handled by explicit UI flows until tool-run persistence and agent execution are added.
+- Dry-runs and explicit executions are persisted under `.nexusdesk/tool-runs/log.json` with inputs, output summary, risk, approval ID, timing, and errors.
+Model-directed autonomous tool loops are still planned; current execution is initiated by the user from the tool plan surface.
+
+### SQLite Metadata Store
+
+The SQLite metadata store is the prepared durable replacement for the current JSON stores.
+
+Current implementation:
+
+- `app/internal/appmeta/` writes `.nexusdesk/metadata/schema.sql` and a manifest with schema version/hash.
+- The schema mirrors workspaces, chats, approvals, artifacts, and tool runs, while JSON stores remain active until driver-backed repositories land.
+
+### Read-only Dataset SQL
+
+Read-only dataset SQL is the first SQL-like analytics surface for CSV data.
+
+Current implementation:
+
+- `app/internal/analytics/` accepts a constrained `SELECT` subset, blocks mutation keywords, and executes through bounded CSV query primitives.
+- Results are labeled DuckDB-compatible until real DuckDB table registration is added.
+
+### Artifact Comparison
+
+Artifact comparison summarizes differences between generated outputs.
+
+Current implementation:
+
+- `app/internal/artifact.Compare` validates both artifact paths, reads sidecar metadata, reports title/kind/size delta, and returns bounded added/removed line summaries.
 
 ### Saved Dataset Query
 

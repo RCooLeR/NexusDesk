@@ -11,6 +11,7 @@ import {
     ClearRecentWorkspaces,
     ClearChatHistory,
     ArchiveArtifact,
+    CompareArtifacts,
     CreateChatMarkdownArtifact,
     CreateDatasetChartArtifact,
     CreateDatasetQueryArtifact,
@@ -18,9 +19,12 @@ import {
     CreateMarkdownReport,
     CreateScanReportArtifact,
     DeleteArtifact,
+    EnsureSQLiteMetadataStore,
+    ExecuteAgentTool,
     GetArtifactMetadata,
     GetChatHistory,
     ListAgentTools,
+    ListAgentToolRuns,
     ListApprovals,
     ListDatasetQueries,
     ListDatasetProfiles,
@@ -29,11 +33,13 @@ import {
     OpenWorkspace,
     PreviewFileDelete,
     PreviewFileMove,
+    PreviewAgentTool,
     PreviewDatasetChart,
     PreviewChatContextPack,
     PreviewFileWrite,
     ProfileDataset,
     QueryDataset,
+    QueryDatasetSQL,
     ReadWorkspaceFile,
     RemoveRecentWorkspace,
     RefreshWorkspace,
@@ -48,6 +54,8 @@ import type {
     ApprovalRecord,
     AgentToolDescriptor,
     AgentToolPlanItem,
+    AgentToolRunRecord,
+    ArtifactComparison,
     ArtifactMetadata,
     ChatStreamEvent,
     ChatMessage,
@@ -55,6 +63,7 @@ import type {
     DatasetChartResult,
     DatasetProfile,
     DatasetQueryResult,
+    DatasetSQLQueryResult,
     FileNode,
     FilePreview,
     FileWriteProposal,
@@ -64,6 +73,7 @@ import type {
     MarkdownReport,
     RecentWorkspace,
     SavedDatasetQuery,
+    SQLiteMetadataStatus,
     StartupState,
     ToolEvent,
     WorkspaceArtifact,
@@ -145,10 +155,13 @@ export function NexusDeskShell({
     const [datasetProfiles, setDatasetProfiles] = useState<DatasetProfile[]>([]);
     const [activeDatasetProfile, setActiveDatasetProfile] = useState<DatasetProfile | null>(null);
     const [datasetQuery, setDatasetQuery] = useState('');
+    const [datasetSQLQuery, setDatasetSQLQuery] = useState('');
     const [datasetQueryLabel, setDatasetQueryLabel] = useState('');
     const [datasetQueryResult, setDatasetQueryResult] = useState<DatasetQueryResult | null>(null);
+    const [datasetSQLQueryResult, setDatasetSQLQueryResult] = useState<DatasetSQLQueryResult | null>(null);
     const [savedDatasetQueries, setSavedDatasetQueries] = useState<SavedDatasetQuery[]>([]);
     const [isQueryingDataset, setIsQueryingDataset] = useState(false);
+    const [isQueryingDatasetSQL, setIsQueryingDatasetSQL] = useState(false);
     const [isSavingDatasetQuery, setIsSavingDatasetQuery] = useState(false);
     const [datasetChartType, setDatasetChartType] = useState('bar');
     const [datasetChartCategory, setDatasetChartCategory] = useState('');
@@ -175,6 +188,9 @@ export function NexusDeskShell({
     const [isMovingFile, setIsMovingFile] = useState(false);
     const [isArchivingArtifact, setIsArchivingArtifact] = useState(false);
     const [isDeletingArtifact, setIsDeletingArtifact] = useState(false);
+    const [artifactComparison, setArtifactComparison] = useState<ArtifactComparison | null>(null);
+    const [sqliteStatus, setSQLiteStatus] = useState<SQLiteMetadataStatus | null>(null);
+    const [isPreparingMetadataStore, setIsPreparingMetadataStore] = useState(false);
     const [editingFilePaths, setEditingFilePaths] = useState<string[]>([]);
     const [fileDrafts, setFileDrafts] = useState<Record<string, string>>({});
     const [writeProposals, setWriteProposals] = useState<Record<string, FileWriteProposal>>({});
@@ -186,6 +202,8 @@ export function NexusDeskShell({
     const [approvalPrompt, setApprovalPrompt] = useState<ApprovalPrompt | null>(null);
     const [agentTools, setAgentTools] = useState<AgentToolDescriptor[]>([]);
     const [agentToolPlan, setAgentToolPlan] = useState<AgentToolPlanItem[]>([]);
+    const [agentToolRuns, setAgentToolRuns] = useState<AgentToolRunRecord[]>([]);
+    const [isRunningAgentTool, setIsRunningAgentTool] = useState(false);
     const approvalResolverRef = useRef<((approved: boolean) => void) | null>(null);
     const fileDraft = activeFile ? fileDrafts[activeFile] ?? '' : '';
     const writeProposal = activeFile ? writeProposals[activeFile] ?? null : null;
@@ -1162,6 +1180,7 @@ export function NexusDeskShell({
         await refreshArtifacts();
         await refreshApprovals();
         await refreshDatasetProfiles();
+        await refreshAgentToolRuns();
         setExpandedDirectories((current) => reconcileExpandedDirectories(current, result.snapshot, selectedNode));
         if (selectedNode) {
             setActiveFile(selectedNode.relPath);
@@ -1463,9 +1482,18 @@ export function NexusDeskShell({
             const tools = await ListAgentTools();
             setAgentTools(tools);
             setAgentToolPlan(buildAgentToolPlan(tools, filePreview, artifactMetadata, activeFile));
+            await refreshAgentToolRuns();
         } catch {
             setAgentTools([]);
             setAgentToolPlan([]);
+        }
+    }
+
+    async function refreshAgentToolRuns() {
+        try {
+            setAgentToolRuns(await ListAgentToolRuns());
+        } catch {
+            setAgentToolRuns([]);
         }
     }
 
@@ -1907,6 +1935,26 @@ export function NexusDeskShell({
         }
     }
 
+    async function querySelectedDatasetSQL() {
+        if (!workspace || !filePreview?.table) {
+            setWorkspaceStatus('Open a workspace and select a CSV dataset before running SQL.');
+            return;
+        }
+
+        setIsQueryingDatasetSQL(true);
+        try {
+            const result = await QueryDatasetSQL({relPath: filePreview.relPath, sql: datasetSQLQuery});
+            setDatasetSQLQueryResult(result);
+            setWorkspaceStatus(result.message);
+            pushToolEvent('Dataset SQL queried', `${result.engine}: ${result.relPath}`);
+        } catch (error) {
+            const message = error instanceof Error ? error.message : '';
+            setWorkspaceStatus(message || 'Could not run read-only SQL query.');
+        } finally {
+            setIsQueryingDatasetSQL(false);
+        }
+    }
+
     async function saveCurrentDatasetQuery() {
         if (!workspace || !filePreview?.table) {
             setWorkspaceStatus('Select a CSV dataset before saving a query.');
@@ -2189,6 +2237,110 @@ export function NexusDeskShell({
         }
     }
 
+    async function compareActiveArtifactWithPrevious() {
+        if (!workspace || !filePreview || !isArtifactPath(filePreview.relPath)) {
+            setWorkspaceStatus('Select an artifact before comparing versions.');
+            return;
+        }
+
+        const currentIndex = artifacts.findIndex((item) => item.relPath === filePreview.relPath);
+        const previous = artifacts
+            .slice(currentIndex + 1)
+            .find((item) => item.kind === (artifactMetadata?.kind || item.kind));
+        if (!previous) {
+            setWorkspaceStatus('No earlier artifact of the same kind is available for comparison.');
+            return;
+        }
+
+        try {
+            const comparison = await CompareArtifacts(previous.relPath, filePreview.relPath);
+            setArtifactComparison(comparison);
+            setWorkspaceStatus(comparison.message);
+            pushToolEvent('Artifacts compared', `${previous.name} -> ${filePreview.name}`);
+        } catch (error) {
+            const message = error instanceof Error ? error.message : '';
+            setWorkspaceStatus(message || 'Could not compare artifacts.');
+        }
+    }
+
+    async function prepareSQLiteMetadataStore() {
+        if (!workspace) {
+            setWorkspaceStatus('Open a workspace before preparing metadata storage.');
+            return;
+        }
+
+        setIsPreparingMetadataStore(true);
+        try {
+            const status = await EnsureSQLiteMetadataStore();
+            setSQLiteStatus(status);
+            await refreshApprovals();
+            setWorkspaceStatus(status.message);
+            pushToolEvent('SQLite schema prepared', `${status.tables.length} metadata tables`);
+        } catch (error) {
+            const message = error instanceof Error ? error.message : '';
+            setWorkspaceStatus(message || 'Could not prepare SQLite metadata schema.');
+        } finally {
+            setIsPreparingMetadataStore(false);
+        }
+    }
+
+    async function dryRunAgentTool(item: AgentToolPlanItem) {
+        await runAgentTool(item, false);
+    }
+
+    async function executeAgentTool(item: AgentToolPlanItem) {
+        await runAgentTool(item, true);
+    }
+
+    async function runAgentTool(item: AgentToolPlanItem, execute: boolean) {
+        if (!workspace) {
+            setChatStatus('Open a workspace before running tools.');
+            return;
+        }
+        if (execute && item.requiresApproval) {
+            const approved = await requestApproval({
+                action: `Execute ${item.title}`,
+                confirmLabel: 'Execute',
+                message: `Run ${item.toolName} for ${item.target}.`,
+                risk: approvalRisk(item.risk),
+                target: item.target,
+            });
+            if (!approved) {
+                setChatStatus(`Tool execution cancelled for ${item.toolName}.`);
+                return;
+            }
+        }
+
+        setIsRunningAgentTool(true);
+        try {
+            const request = {
+                toolName: item.toolName,
+                target: item.target,
+                inputs: agentToolInputs(item, datasetQuery),
+                approved: execute,
+                approvalId: '',
+            };
+            const record = execute ? await ExecuteAgentTool(request) : await PreviewAgentTool(request);
+            await refreshAgentToolRuns();
+            await refreshApprovals();
+            if (execute && (item.toolName.startsWith('artifact.') || item.toolName === 'metadata.sqlite.prepare')) {
+                const result = await RefreshWorkspace();
+                if (result.selected) {
+                    onWorkspaceChange(result.snapshot);
+                    await refreshArtifacts();
+                }
+            }
+            const summary = record.outputSummary || record.error || `${record.title} ${record.status}`;
+            setChatStatus(summary);
+            pushToolEvent(execute ? 'Tool executed' : 'Tool dry run', summary);
+        } catch (error) {
+            const message = error instanceof Error ? error.message : '';
+            setChatStatus(message || 'Agent tool run failed.');
+        } finally {
+            setIsRunningAgentTool(false);
+        }
+    }
+
     function listenForChatStream(requestId: string, assistantCreatedAt: string, fallbackContextRelPath: string) {
         if (!isWailsRuntimeAvailable()) {
             return null;
@@ -2343,7 +2495,11 @@ export function NexusDeskShell({
                 datasetQuery={datasetQuery}
                 datasetQueryLabel={datasetQueryLabel}
                 datasetQueryResult={datasetQueryResult}
+                datasetSQLQuery={datasetSQLQuery}
+                datasetSQLQueryResult={datasetSQLQueryResult}
                 savedDatasetQueries={savedDatasetQueries}
+                artifactComparison={artifactComparison}
+                sqliteStatus={sqliteStatus}
                 datasetChartPreview={datasetChartPreview}
                 datasetChartCategory={datasetChartCategory}
                 datasetChartType={datasetChartType}
@@ -2357,7 +2513,9 @@ export function NexusDeskShell({
                 isMovingFile={isMovingFile}
                 isProfilingDataset={isProfilingDataset}
                 isQueryingDataset={isQueryingDataset}
+                isQueryingDatasetSQL={isQueryingDatasetSQL}
                 isSavingDatasetQuery={isSavingDatasetQuery}
+                isPreparingMetadataStore={isPreparingMetadataStore}
                 isPreviewingDatasetChart={isPreviewingDatasetChart}
                 isCreatingDatasetChart={isCreatingDatasetChart}
                 isCreatingDatasetSummary={isCreatingDatasetSummary}
@@ -2374,6 +2532,7 @@ export function NexusDeskShell({
                 onCancelFileEdit={clearFileWriteDraft}
                 onCreateReport={() => void createMarkdownReport()}
                 onDatasetQueryChange={setDatasetQuery}
+                onDatasetSQLQueryChange={setDatasetSQLQuery}
                 onDatasetQueryLabelChange={setDatasetQueryLabel}
                 onSaveDatasetQuery={() => void saveCurrentDatasetQuery()}
                 onDatasetChartCategoryChange={(value) => {
@@ -2398,14 +2557,17 @@ export function NexusDeskShell({
                 onPreviewFileWrite={() => void previewFileWrite()}
                 onProfileDataset={() => void profileSelectedDataset()}
                 onQueryDataset={() => void querySelectedDataset()}
+                onQueryDatasetSQL={() => void querySelectedDatasetSQL()}
                 onPreviewDatasetChart={() => void previewDatasetChart()}
                 onCreateDatasetChart={() => void createDatasetChart()}
                 onCreateDatasetSummary={() => void createDatasetSummary()}
                 onExportDatasetQuery={() => void exportDatasetQuery()}
                 onArchiveArtifact={() => void archiveActiveArtifact()}
+                onCompareArtifact={() => void compareActiveArtifactWithPrevious()}
                 onCloseTab={closeOpenTab}
                 onDeleteArtifact={() => void deleteActiveArtifact()}
                 onOpenArtifactSource={() => void openArtifactSource()}
+                onPrepareMetadataStore={() => void prepareSQLiteMetadataStore()}
                 onSelectTab={selectOpenTab}
                 onSelectArtifact={(artifact) => void selectArtifact(artifact)}
                 onStartFileEdit={startFileEdit}
@@ -2424,14 +2586,18 @@ export function NexusDeskShell({
                 contextPackPaths={contextPackPaths}
                 agentTools={agentTools}
                 agentToolPlan={agentToolPlan}
+                agentToolRuns={agentToolRuns}
                 canSaveLatestAssistantArtifact={canSaveLatestAssistantArtifact}
                 isSavingSettings={isSavingSettings}
                 isSavingChatArtifact={isSavingChatArtifact}
                 isSendingPrompt={isSendingPrompt}
                 isTestingConnection={isTestingConnection}
+                isRunningAgentTool={isRunningAgentTool}
                 onChatPromptChange={setChatPrompt}
                 onClearChatHistory={() => void clearChatHistory()}
                 onClearContextPack={() => setContextPackPaths([])}
+                onDryRunAgentTool={(item) => void dryRunAgentTool(item)}
+                onExecuteAgentTool={(item) => void executeAgentTool(item)}
                 onRefreshAgentPlan={() => void refreshAgentTools()}
                 onRemoveContextPath={removeContextPath}
                 onSaveLatestAssistantArtifact={() => void saveLatestAssistantArtifact()}
@@ -2631,7 +2797,7 @@ function buildAgentToolPlan(
     }
     if (preview?.table) {
         add('dataset.query', preview.relPath, 'ready for filter, order, and export');
-        add('artifact.create', `${preview.relPath} summary or query result`, 'ready');
+        add('artifact.create', preview.relPath, 'ready to create report artifact');
     }
     if (metadata) {
         add('artifact.archive', preview?.relPath ?? target, 'requires confirmation');
@@ -2654,6 +2820,25 @@ function isOperationsContextPath(relPath: string, name: string) {
         /^compose\.ya?ml$/i.test(normalizedName) ||
         normalizedRelPath.startsWith('services/') ||
         /\.(env|ps1|sh|bat|cmd|toml|ya?ml)$/i.test(normalizedName);
+}
+
+function agentToolInputs(item: AgentToolPlanItem, datasetQuery: string) {
+    const inputs: Record<string, string> = {};
+    if (item.toolName === 'dataset.query') {
+        inputs.query = datasetQuery;
+    }
+    if (item.toolName === 'artifact.create') {
+        inputs.kind = 'markdown-report';
+        inputs.sourcePath = item.target;
+    }
+    return inputs;
+}
+
+function approvalRisk(risk: string): 'low' | 'medium' | 'high' {
+    if (risk === 'low' || risk === 'medium' || risk === 'high') {
+        return risk;
+    }
+    return 'medium';
 }
 
 function createRequestId() {

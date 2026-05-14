@@ -88,12 +88,12 @@ The shell is now mostly orchestration. Feature panels own stable presentation, w
 - `app/frontend/src/features/shell/MonacoCodePreview.tsx` owns read-only Monaco previews and search decorations for source files.
 - `app/frontend/src/features/shell/monacoRuntime.ts` owns shared Monaco lazy-loading, worker setup, theme definition, and file language detection.
 - `app/frontend/src/features/shell/AgentChatCard.tsx` owns the expanded chat presentation, full conversation scroll area, multiline prompt composer, context pack list, save-answer action surface, and delegates provider calls/history/artifact actions back to the shell.
-- `app/frontend/src/features/shell/AgentToolPlanCard.tsx` owns the first visible agent tool plan preview using backend tool descriptors and active context.
+- `app/frontend/src/features/shell/AgentToolPlanCard.tsx` owns the first visible agent tool plan preview, dry-run/execute controls, and recent tool-run summaries using backend tool descriptors and active context.
 - `app/frontend/src/features/shell/ChatMessageContent.tsx` renders safe dependency-free Markdown-style chat content, including headings, lists, tables, code fences, inline code, and bold text.
 - `app/frontend/src/features/shell/LLMSettingsCard.tsx` owns the provider settings form and delegates persistence/probe actions back to the shell.
 - `app/frontend/src/features/shell/ToolTimeline.tsx` owns the visible tool event timeline presentation.
 - `app/frontend/src/features/shell/WorkspaceNavigator.tsx` owns the workspace lockup, search controls, recent workspace list, fallback scaffold list, and indexed workspace tree presentation, with aligned rows inside the resizable sidebar. `NexusDeskShell.tsx` owns the resizable navigator width state.
-- `app/frontend/src/features/shell/WorkbenchPanel.tsx` owns the active context topbar, active studio surface indicator, closeable editor tab strip, source preview/editor presentation, find-in-file, Markdown source/rendered switching, dataset query/chart panels, artifact metadata panel, first approval log, fallback workflow preview, and capability cards.
+- `app/frontend/src/features/shell/WorkbenchPanel.tsx` owns the active context topbar, active studio surface indicator, closeable editor tab strip, source preview/editor presentation, find-in-file, Markdown source/rendered switching, dataset query/chart/SQL panels, artifact metadata and comparison panels, SQLite metadata status, first approval log, fallback workflow preview, and capability cards.
 - `app/frontend/src/features/shell/WorkspaceRail.tsx` owns the compact branded rail and mode icons.
 - `app/frontend/src/features/shell/AgentPanel.tsx` composes the grounded assistant header, chat card, provider settings, and tool timeline.
 
@@ -101,41 +101,47 @@ The shell is now mostly orchestration. Feature panels own stable presentation, w
 
 ## Frontend Smoke Checks
 
-`app/frontend/scripts/smoke.mjs` checks that the built frontend and key shell source files still expose the main MVP functionality: Wails bindings, search, quick-open, command palette, Monaco preview/edit surfaces, find-in-file, context packs, file create/update/delete/move flows, dataset profiling/querying/saved queries/exporting/charting/summaries, artifact actions, agent tool plan preview, Compose parsing, approval log styling, resizable navigator styling, and the production `dist/index.html` entrypoint. Run it after `npm.cmd run build`.
+`app/frontend/scripts/smoke.mjs` checks that the built frontend and key shell source files still expose the main MVP functionality: Wails bindings, search, quick-open, command palette, Monaco preview/edit surfaces, find-in-file, context packs, file create/update/delete/move flows, dataset profiling/querying/saved queries/exporting/charting/summaries, read-only SQL, artifact actions/comparison, agent tool plan dry-run/execute controls, Compose parsing, approval log styling, resizable navigator styling, and the production `dist/index.html` entrypoint. Run it after `npm.cmd run build`.
 
-`app/frontend/scripts/visual-smoke.mjs` is an optional Playwright screenshot smoke. It captures desktop and mobile screenshots from the built `dist/index.html` when Playwright is installed; otherwise it exits successfully with a skip message so the default local loop remains lightweight.
+`app/frontend/scripts/visual-smoke.mjs` is an optional Playwright screenshot smoke. It captures desktop and mobile screenshots plus `visual-baselines/manifest.json` from the built `dist/index.html` when Playwright is installed; otherwise it exits successfully with a skip message so the default local loop remains lightweight.
 
 ## Artifact Creation
 
-`app/internal/artifact/` owns deterministic artifact writes, provenance sidecars, metadata lookup, artifact search, listing, archive/delete, and scan-report creation. The first flows create timestamped Markdown reports from selected previews, timestamped Markdown artifacts from assistant answers, timestamped CSV exports from dataset queries, timestamped SVG chart artifacts from CSV chart models, timestamped Markdown dataset summaries, and timestamped workspace scan reports under `.nexusdesk/artifacts/`, use exclusive file creation to avoid overwrites, and return the new workspace-relative path so the UI can refresh and select it. Each artifact also gets a sibling `.meta.json` file with kind, source, source paths, prompt/configuration, model when relevant, context path, and creation timestamp when available. Saved assistant answers preserve the model's Markdown and include source/context metadata before the generated body. The workbench lists Markdown, CSV, and SVG artifacts from that folder so generated outputs remain visible after creation, shows metadata for the active generated artifact, and can open the artifact source context, archive the artifact, or delete it through approval prompts.
+`app/internal/artifact/` owns deterministic artifact writes, provenance sidecars, metadata lookup, artifact search, listing, archive/delete, comparison, and scan-report creation. The first flows create timestamped Markdown reports from selected previews, timestamped Markdown artifacts from assistant answers, timestamped CSV exports from dataset queries, timestamped SVG chart artifacts from CSV chart models, timestamped Markdown dataset summaries, and timestamped workspace scan reports under `.nexusdesk/artifacts/`, use exclusive file creation to avoid overwrites, and return the new workspace-relative path so the UI can refresh and select it. Each artifact also gets a sibling `.meta.json` file with kind, source, source paths, prompt/configuration, model when relevant, context path, and creation timestamp when available. Saved assistant answers preserve the model's Markdown and include source/context metadata before the generated body. The workbench lists Markdown, CSV, and SVG artifacts from that folder so generated outputs remain visible after creation, shows metadata for the active generated artifact, and can open the artifact source context, archive the artifact, delete it through approval prompts, or compare it with a prior artifact of the same kind.
 
 ## Approval Log
 
 `app/internal/approval/` owns the first append-only action log. Applied text writes, deletes, moves, reports, saved chat artifacts, chart artifacts, query exports, dataset summaries, scan reports, artifact archives, and artifact deletes append records under `.nexusdesk/approvals/log.json`. This is not the final agent policy engine yet, but it gives the studio an auditable local trail while higher-risk agent, Docker, and database approvals are designed.
 
-## Completed Batch: Agent Tools And Workspace Intelligence
+`app/internal/agenttools/` owns tool descriptors and tool run records. Dry-runs and explicit executions persist under `.nexusdesk/tool-runs/log.json` with inputs, output summaries, risk, approval ID, duration, and errors.
 
-The latest implementation batch added the first bridge between visible studio context and deterministic agent-capable tools:
+`app/internal/appmeta/` owns the prepared SQLite metadata schema and manifest under `.nexusdesk/metadata/`. It mirrors the current JSON-backed workspace, chat, approval, artifact, and tool-run domains so a driver-backed migration can replace JSON stores deliberately.
 
-- Tool registry: `app/internal/agenttools/registry.go` describes deterministic workspace, dataset, artifact, and operations actions with risk/approval metadata.
-- Tool planning UI: `AgentToolPlanCard.tsx` shows proposed actions for the active context before any execution path exists.
-- Index audit: scan reports can be saved as Markdown artifacts with scan counters and skipped/ignored samples.
-- Data Studio: CSV query syntax supports comparisons, `contains`, `limit`, and `order by`.
-- Artifacts: active generated artifacts can open source context, archive, or delete through backend methods and approval prompts.
-- Operations Studio: selected Compose files are parsed into service, image, port, volume, and dependency summaries.
-- Verification: frontend smoke checks cover the new surfaces, and optional visual smoke captures screenshots when Playwright is installed.
+`app/internal/analytics/` owns the first read-only SQL-style CSV query surface. It accepts a constrained `SELECT` subset, blocks mutation keywords, and executes through bounded CSV query primitives while the real DuckDB driver-backed registration remains a prepared next step.
+
+## Completed Batch: Agent Execution And Analytics Foundations
+
+The latest implementation batch turned the tool planning surface into auditable controlled actions and added the first metadata/analytics foundations:
+
+- Tool execution planner: proposed plan rows now map to backend dry-run and execute requests.
+- Approval integration: medium/high-risk executions require the modal approval prompt.
+- Tool run persistence: records include inputs, output summary, risk, approval ID, duration, and errors.
+- SQLite metadata: `.nexusdesk/metadata/schema.sql` and a manifest prepare the migration-compatible schema.
+- DuckDB-compatible analytics: Data Studio can run constrained read-only SQL over CSV previews.
+- Artifact versions: generated artifacts can be compared for size delta and added/removed line summaries.
+- Visual baselines: Playwright smoke writes desktop/mobile baselines and a manifest when installed.
 
 ## Prepared Next Batch
 
-The next implementation batch should move from planned tool surfaces toward controlled execution and analytics foundations:
+The next implementation batch should deepen persistence, citations, lineage, and freshness:
 
-- Tool execution planner: turn proposed tool plan rows into backend dry-run requests.
-- Approval integration: execute medium/high-risk agent tools only after modal approval.
-- Tool run persistence: store input, output summary, risk, approval ID, duration, and errors.
-- SQLite metadata: migrate workspaces, chats, approvals, artifacts, and tool runs from JSON-compatible stores.
-- DuckDB analytics: add read-only SQL-style CSV queries beyond the current lightweight filter syntax.
-- Artifact versions: compare generated reports, summaries, and exports.
-- Visual baselines: make Playwright screenshot capture mandatory once the dependency is installed.
+- SQLite driver-backed repositories behind the prepared schema.
+- DuckDB driver-backed CSV/table registration behind the SQL-compatible query surface.
+- Tool-run detail drawer with full inputs, outputs, approval references, and replay/diff affordances.
+- Context-pack source citations in assistant answers and saved artifacts.
+- Artifact lineage graph linking chats, tool runs, source files, and generated outputs.
+- Workspace file watcher with changed-file indicators and stale dataset/artifact warnings.
+- Installable Playwright dependency and enforced visual baselines in smoke/CI.
 
 ## File Writes
 

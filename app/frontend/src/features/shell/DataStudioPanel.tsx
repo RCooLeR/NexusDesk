@@ -1,6 +1,6 @@
 import {useEffect, useMemo, useState} from 'react';
 import {Button} from '../../components/ui';
-import type {ColumnProfile, DatasetChartResult, DatasetProfile, DatasetQueryResult, SavedDatasetQuery, TablePreview} from '../../types';
+import type {ColumnProfile, DatasetChartResult, DatasetProfile, DatasetQueryResult, DatasetSQLQueryResult, SavedDatasetQuery, TablePreview} from '../../types';
 
 type DataStudioPanelProps = {
     activeDatasetProfile: DatasetProfile | null;
@@ -14,6 +14,7 @@ type DataStudioPanelProps = {
     isExporting: boolean;
     isPreviewingChart: boolean;
     isQuerying: boolean;
+    isQueryingSQL: boolean;
     isSavingQuery: boolean;
     onChartCategoryChange: (value: string) => void;
     onChartTypeChange: (value: string) => void;
@@ -24,12 +25,16 @@ type DataStudioPanelProps = {
     onPreviewChart: () => void;
     onQuery: () => void;
     onQueryChange: (value: string) => void;
+    onSQLChange: (value: string) => void;
+    onSQLQuery: () => void;
     onQueryLabelChange: (value: string) => void;
     onSaveQuery: () => void;
     profiles: ColumnProfile[];
     query: string;
     queryLabel: string;
     queryResult: DatasetQueryResult | null;
+    sqlQuery: string;
+    sqlResult: DatasetSQLQueryResult | null;
     savedQueries: SavedDatasetQuery[];
     table: TablePreview | null;
 };
@@ -46,6 +51,7 @@ export function DataStudioPanel({
     isExporting,
     isPreviewingChart,
     isQuerying,
+    isQueryingSQL,
     isSavingQuery,
     onChartCategoryChange,
     onChartTypeChange,
@@ -56,12 +62,16 @@ export function DataStudioPanel({
     onPreviewChart,
     onQuery,
     onQueryChange,
+    onSQLChange,
+    onSQLQuery,
     onQueryLabelChange,
     onSaveQuery,
     profiles,
     query,
     queryLabel,
     queryResult,
+    sqlQuery,
+    sqlResult,
     savedQueries,
     table,
 }: DataStudioPanelProps) {
@@ -80,8 +90,13 @@ export function DataStudioPanel({
                 onSave={onSaveQuery}
                 query={query}
                 result={queryResult}
+                sqlQuery={sqlQuery}
+                sqlResult={sqlResult}
                 savedQueries={savedQueries}
                 isQuerying={isQuerying}
+                isQueryingSQL={isQueryingSQL}
+                onSQLChange={onSQLChange}
+                onSQLQuery={onSQLQuery}
             />
             <DatasetChartPanel
                 categoryColumn={chartCategory}
@@ -113,12 +128,17 @@ function DatasetQueryPanel({
     label,
     query,
     result,
+    sqlQuery,
+    sqlResult,
     savedQueries,
     isQuerying,
+    isQueryingSQL,
     onChange,
     onExport,
     onLabelChange,
     onQuery,
+    onSQLChange,
+    onSQLQuery,
     onSave,
 }: {
     columns: string[];
@@ -127,12 +147,17 @@ function DatasetQueryPanel({
     label: string;
     query: string;
     result: DatasetQueryResult | null;
+    sqlQuery: string;
+    sqlResult: DatasetSQLQueryResult | null;
     savedQueries: SavedDatasetQuery[];
     isQuerying: boolean;
+    isQueryingSQL: boolean;
     onChange: (value: string) => void;
     onExport: () => void;
     onLabelChange: (value: string) => void;
     onQuery: () => void;
+    onSQLChange: (value: string) => void;
+    onSQLQuery: () => void;
     onSave: () => void;
 }) {
     const [filterColumn, setFilterColumn] = useState(columns[0] ?? '');
@@ -226,6 +251,34 @@ function DatasetQueryPanel({
                     />
                 </div>
             )}
+            <div className="dataset-sql-panel">
+                <strong>Read-only SQL</strong>
+                <textarea
+                    aria-label="DuckDB-compatible SQL query"
+                    onChange={(event) => onSQLChange(event.target.value)}
+                    placeholder="select * from dataset where spend > 10 order by spend desc limit 20"
+                    value={sqlQuery}
+                />
+                <Button disabled={isQueryingSQL} onClick={onSQLQuery} variant="subtle">
+                    {isQueryingSQL ? 'Running...' : 'Run SQL'}
+                </Button>
+                {sqlResult && (
+                    <div className="dataset-query-result">
+                        <small>{sqlResult.message}</small>
+                        <SortableDataTable
+                            pageSize={12}
+                            table={{
+                                columns: sqlResult.columns,
+                                rows: sqlResult.rows,
+                                profiles: [],
+                                totalRows: sqlResult.matchedRows,
+                                truncated: sqlResult.rows.length < sqlResult.matchedRows,
+                            }}
+                            title="SQL Result"
+                        />
+                    </div>
+                )}
+            </div>
         </div>
     );
 }

@@ -24,6 +24,140 @@ export namespace agenttools {
 	        this.inputs = source["inputs"];
 	    }
 	}
+	export class RunRecord {
+	    id: string;
+	    toolName: string;
+	    title: string;
+	    target: string;
+	    risk: string;
+	    requiresApproval: boolean;
+	    status: string;
+	    mode: string;
+	    inputs: Record<string, string>;
+	    outputSummary: string;
+	    error: string;
+	    approvalId: string;
+	    startedAt: string;
+	    completedAt: string;
+	    durationMs: number;
+
+	    static createFrom(source: any = {}) {
+	        return new RunRecord(source);
+	    }
+
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.id = source["id"];
+	        this.toolName = source["toolName"];
+	        this.title = source["title"];
+	        this.target = source["target"];
+	        this.risk = source["risk"];
+	        this.requiresApproval = source["requiresApproval"];
+	        this.status = source["status"];
+	        this.mode = source["mode"];
+	        this.inputs = source["inputs"];
+	        this.outputSummary = source["outputSummary"];
+	        this.error = source["error"];
+	        this.approvalId = source["approvalId"];
+	        this.startedAt = source["startedAt"];
+	        this.completedAt = source["completedAt"];
+	        this.durationMs = source["durationMs"];
+	    }
+	}
+	export class RunRequest {
+	    toolName: string;
+	    target: string;
+	    inputs: Record<string, string>;
+	    approved: boolean;
+	    approvalId: string;
+
+	    static createFrom(source: any = {}) {
+	        return new RunRequest(source);
+	    }
+
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.toolName = source["toolName"];
+	        this.target = source["target"];
+	        this.inputs = source["inputs"];
+	        this.approved = source["approved"];
+	        this.approvalId = source["approvalId"];
+	    }
+	}
+
+}
+
+export namespace analytics {
+
+	export class SQLQueryRequest {
+	    relPath: string;
+	    sql: string;
+
+	    static createFrom(source: any = {}) {
+	        return new SQLQueryRequest(source);
+	    }
+
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.relPath = source["relPath"];
+	        this.sql = source["sql"];
+	    }
+	}
+	export class SQLQueryResult {
+	    relPath: string;
+	    sql: string;
+	    engine: string;
+	    columns: string[];
+	    rows: string[][];
+	    totalRows: number;
+	    matchedRows: number;
+	    message: string;
+
+	    static createFrom(source: any = {}) {
+	        return new SQLQueryResult(source);
+	    }
+
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.relPath = source["relPath"];
+	        this.sql = source["sql"];
+	        this.engine = source["engine"];
+	        this.columns = source["columns"];
+	        this.rows = source["rows"];
+	        this.totalRows = source["totalRows"];
+	        this.matchedRows = source["matchedRows"];
+	        this.message = source["message"];
+	    }
+	}
+
+}
+
+export namespace appmeta {
+
+	export class SQLiteStatus {
+	    path: string;
+	    schemaPath: string;
+	    schemaVersion: number;
+	    schemaHash: string;
+	    tables: string[];
+	    message: string;
+	    updatedAt: string;
+
+	    static createFrom(source: any = {}) {
+	        return new SQLiteStatus(source);
+	    }
+
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.path = source["path"];
+	        this.schemaPath = source["schemaPath"];
+	        this.schemaVersion = source["schemaVersion"];
+	        this.schemaHash = source["schemaHash"];
+	        this.tables = source["tables"];
+	        this.message = source["message"];
+	        this.updatedAt = source["updatedAt"];
+	    }
+	}
 
 }
 
@@ -58,6 +192,34 @@ export namespace approval {
 
 export namespace artifact {
 
+	export class ArtifactComparison {
+	    leftRelPath: string;
+	    rightRelPath: string;
+	    leftTitle: string;
+	    rightTitle: string;
+	    sameKind: boolean;
+	    sizeDelta: number;
+	    addedLines: string[];
+	    removedLines: string[];
+	    message: string;
+
+	    static createFrom(source: any = {}) {
+	        return new ArtifactComparison(source);
+	    }
+
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.leftRelPath = source["leftRelPath"];
+	        this.rightRelPath = source["rightRelPath"];
+	        this.leftTitle = source["leftTitle"];
+	        this.rightTitle = source["rightTitle"];
+	        this.sameKind = source["sameKind"];
+	        this.sizeDelta = source["sizeDelta"];
+	        this.addedLines = source["addedLines"];
+	        this.removedLines = source["removedLines"];
+	        this.message = source["message"];
+	    }
+	}
 	export class ArtifactMetadata {
 	    kind: string;
 	    title: string;

@@ -64,6 +64,18 @@ type WorkspaceArtifact struct {
 	Model      string `json:"model"`
 }
 
+type ArtifactComparison struct {
+	LeftRelPath  string   `json:"leftRelPath"`
+	RightRelPath string   `json:"rightRelPath"`
+	LeftTitle    string   `json:"leftTitle"`
+	RightTitle   string   `json:"rightTitle"`
+	SameKind     bool     `json:"sameKind"`
+	SizeDelta    int64    `json:"sizeDelta"`
+	AddedLines   []string `json:"addedLines"`
+	RemovedLines []string `json:"removedLines"`
+	Message      string   `json:"message"`
+}
+
 func CreateMarkdownReport(root string, source workspace.FilePreview, now time.Time) (MarkdownReport, error) {
 	if strings.TrimSpace(root) == "" {
 		return MarkdownReport{}, errors.New("open a workspace before creating reports")
@@ -534,6 +546,55 @@ func Delete(root string, relPath string) (MarkdownReport, error) {
 		Path:    artifactPath,
 		Message: "Artifact deleted from the workspace.",
 		Size:    info.Size(),
+	}, nil
+}
+
+func Compare(root string, leftRelPath string, rightRelPath string) (ArtifactComparison, error) {
+	absRoot, leftPath, err := resolveArtifactPath(root, leftRelPath)
+	if err != nil {
+		return ArtifactComparison{}, err
+	}
+	_, rightPath, err := resolveArtifactPath(root, rightRelPath)
+	if err != nil {
+		return ArtifactComparison{}, err
+	}
+	leftInfo, err := os.Stat(leftPath)
+	if err != nil {
+		return ArtifactComparison{}, err
+	}
+	rightInfo, err := os.Stat(rightPath)
+	if err != nil {
+		return ArtifactComparison{}, err
+	}
+	leftContent, err := os.ReadFile(leftPath)
+	if err != nil {
+		return ArtifactComparison{}, err
+	}
+	rightContent, err := os.ReadFile(rightPath)
+	if err != nil {
+		return ArtifactComparison{}, err
+	}
+	leftMetadata := readArtifactMetadata(leftPath)
+	rightMetadata := readArtifactMetadata(rightPath)
+	leftRel, err := filepath.Rel(absRoot, leftPath)
+	if err != nil {
+		return ArtifactComparison{}, err
+	}
+	rightRel, err := filepath.Rel(absRoot, rightPath)
+	if err != nil {
+		return ArtifactComparison{}, err
+	}
+	removed, added := compareLineSets(string(leftContent), string(rightContent), 12)
+	return ArtifactComparison{
+		LeftRelPath:  filepath.ToSlash(leftRel),
+		RightRelPath: filepath.ToSlash(rightRel),
+		LeftTitle:    fallbackString(leftMetadata.Title, filepath.Base(leftPath)),
+		RightTitle:   fallbackString(rightMetadata.Title, filepath.Base(rightPath)),
+		SameKind:     fallbackString(leftMetadata.Kind, filepath.Ext(leftPath)) == fallbackString(rightMetadata.Kind, filepath.Ext(rightPath)),
+		SizeDelta:    rightInfo.Size() - leftInfo.Size(),
+		AddedLines:   added,
+		RemovedLines: removed,
+		Message:      fmt.Sprintf("Compared %s to %s.", filepath.Base(leftPath), filepath.Base(rightPath)),
 	}, nil
 }
 
@@ -1209,6 +1270,42 @@ func uniqueArtifactPath(path string) string {
 		}
 	}
 	return fmt.Sprintf("%s-%d%s", base, time.Now().UTC().UnixNano(), extension)
+}
+
+func compareLineSets(left string, right string, limit int) ([]string, []string) {
+	leftCounts := lineCounts(left)
+	rightCounts := lineCounts(right)
+	removed := []string{}
+	added := []string{}
+	for line, count := range leftCounts {
+		if diff := count - rightCounts[line]; diff > 0 {
+			for index := 0; index < diff && len(removed) < limit; index++ {
+				removed = append(removed, line)
+			}
+		}
+	}
+	for line, count := range rightCounts {
+		if diff := count - leftCounts[line]; diff > 0 {
+			for index := 0; index < diff && len(added) < limit; index++ {
+				added = append(added, line)
+			}
+		}
+	}
+	sort.Strings(removed)
+	sort.Strings(added)
+	return removed, added
+}
+
+func lineCounts(content string) map[string]int {
+	counts := map[string]int{}
+	for _, line := range strings.Split(strings.ReplaceAll(content, "\r\n", "\n"), "\n") {
+		line = strings.TrimSpace(line)
+		if line == "" {
+			continue
+		}
+		counts[line]++
+	}
+	return counts
 }
 
 func artifactSummary(metadata ArtifactMetadata) string {

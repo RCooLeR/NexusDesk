@@ -8,6 +8,7 @@ type ArtifactMetadataPanelProps = {
     isArchiving: boolean;
     isDeleting: boolean;
     onArchive: () => void;
+    onCompare: () => void;
     onDelete: () => void;
     onOpenSource: () => void;
 };
@@ -19,6 +20,7 @@ export function ArtifactMetadataPanel({
     isArchiving,
     isDeleting,
     onArchive,
+    onCompare,
     onDelete,
     onOpenSource,
 }: ArtifactMetadataPanelProps) {
@@ -33,6 +35,7 @@ export function ArtifactMetadataPanel({
                 <Button disabled={!relPath || isArchiving} onClick={onArchive} variant="subtle">
                     {isArchiving ? 'Archiving...' : 'Archive'}
                 </Button>
+                <Button disabled={!relPath} onClick={onCompare} variant="subtle">Compare</Button>
                 <Button disabled={!relPath || isDeleting} onClick={onDelete} variant="subtle">
                     {isDeleting ? 'Deleting...' : 'Delete'}
                 </Button>

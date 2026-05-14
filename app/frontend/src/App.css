@@ -428,7 +428,8 @@ button:disabled {
 .dataset-query-row input,
 .dataset-filter-row input,
 .dataset-filter-row select,
-.query-save-row input {
+.query-save-row input,
+.dataset-sql-panel textarea {
     min-width: 0;
     border: 1px solid #cbd5e1;
     border-radius: var(--nd-radius-sm);
@@ -438,6 +439,12 @@ button:disabled {
     min-height: 32px;
     outline: none;
     padding: 0 9px;
+}
+
+.dataset-sql-panel textarea {
+    min-height: 72px;
+    padding: 8px 9px;
+    resize: vertical;
 }
 
 .tree-tool-row,
@@ -1337,7 +1344,8 @@ button:disabled {
     font-size: 12px;
 }
 
-.dataset-query-panel {
+.dataset-query-panel,
+.dataset-sql-panel {
     border: 1px solid var(--nd-border-soft);
     border-radius: var(--nd-radius-sm);
     background: #fbfdff;
@@ -1346,7 +1354,8 @@ button:disabled {
     padding: 10px;
 }
 
-.dataset-query-panel > strong {
+.dataset-query-panel > strong,
+.dataset-sql-panel > strong {
     font-size: 12px;
 }
 
@@ -1492,6 +1501,8 @@ button:disabled {
 }
 
 .artifact-metadata-panel,
+.artifact-comparison-panel,
+.metadata-store-panel,
 .approval-log-panel {
     border: 1px solid var(--nd-border-soft);
     border-radius: var(--nd-radius-sm);
@@ -1502,12 +1513,17 @@ button:disabled {
 }
 
 .artifact-metadata-panel > strong,
+.artifact-comparison-panel > strong,
+.metadata-store-panel > strong,
 .approval-log-panel > strong {
     font-size: 12px;
 }
 
 .artifact-metadata-panel p,
 .artifact-metadata-panel small,
+.artifact-comparison-panel small,
+.metadata-store-panel small,
+.metadata-store-panel p,
 .approval-log-panel small {
     color: var(--nd-muted-text);
     font-size: 12px;
@@ -1532,6 +1548,28 @@ button:disabled {
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
+}
+
+.artifact-comparison-panel dl {
+    display: grid;
+    gap: 4px;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    margin: 0;
+}
+
+.artifact-diff-grid {
+    display: grid;
+    gap: 8px;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.artifact-diff-grid span {
+    border: 1px solid var(--nd-border-soft);
+    border-radius: var(--nd-radius-sm);
+    display: grid;
+    gap: 3px;
+    min-width: 0;
+    padding: 6px;
 }
 
 .artifact-action-row {
@@ -1963,6 +2001,35 @@ button:disabled {
 .tool-plan-item > div {
     display: flex;
     gap: 5px;
+}
+
+.tool-plan-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 5px;
+}
+
+.tool-run-list {
+    border-top: 1px solid var(--nd-border-soft);
+    display: grid;
+    gap: 6px;
+    padding-top: 8px;
+}
+
+.tool-run-row {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    align-items: center;
+    gap: 6px;
+}
+
+.tool-run-row span,
+.tool-run-row strong,
+.tool-run-row small {
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
 }
 
 .chat-thread {

@@ -142,6 +142,12 @@ This tracker reflects the repository as it exists today and keeps planned work s
 - [x] Workbench artifact browser lists generated Markdown, CSV, and SVG artifacts.
 - [x] Backend agent tool registry exists at `app/internal/agenttools/`.
 - [x] Agent panel shows a first risk-aware tool plan for active workspace, dataset, artifact, and operations context.
+- [x] Agent tool plan rows can be dry-run or executed through backend tool-run records.
+- [x] Medium/high-risk agent tool execution uses the modal approval foundation before backend execution.
+- [x] Agent tool runs persist under `.nexusdesk/tool-runs/log.json`.
+- [x] SQLite metadata schema preparation lives in `app/internal/appmeta/` and writes `.nexusdesk/metadata/schema.sql`.
+- [x] Read-only SQL-style CSV analytics live in `app/internal/analytics/` with a DuckDB-compatible surface.
+- [x] Generated artifacts can be compared for added/removed line summaries.
 - [x] Tool timeline records real workspace, preview, search, profile, write, report, and chat actions.
 - [x] Artifact rows can select the generated report preview when visible in the workspace tree.
 - [x] Helper services placeholder exists at `services/docker-compose.yml`.
@@ -192,13 +198,23 @@ This tracker reflects the repository as it exists today and keeps planned work s
 
 ### Prepared Batch: Agent Execution And Analytics Foundations
 
-- [ ] Add a backend agent execution planner that turns proposed tool plan rows into dry-run tool requests.
-- [ ] Add modal approval integration for executing medium/high-risk agent tools from the plan surface.
-- [ ] Persist tool run records with input, output summary, risk, approval ID, duration, and errors.
-- [ ] Add SQLite-backed app metadata storage for workspaces, chats, approvals, artifacts, and tool runs while keeping JSON migration compatibility.
-- [ ] Add DuckDB-backed CSV query execution for SQL-style read-only analytics beyond the current lightweight filter syntax.
-- [ ] Add artifact version comparison for generated reports, summaries, and dataset exports.
-- [ ] Add mandatory Playwright visual baseline capture once Playwright is installed in the frontend dev environment.
+- [x] Add a backend agent execution planner that turns proposed tool plan rows into dry-run tool requests.
+- [x] Add modal approval integration for executing medium/high-risk agent tools from the plan surface.
+- [x] Persist tool run records with input, output summary, risk, approval ID, duration, and errors.
+- [x] Add SQLite-backed app metadata storage for workspaces, chats, approvals, artifacts, and tool runs while keeping JSON migration compatibility.
+- [x] Add DuckDB-backed CSV query execution for SQL-style read-only analytics beyond the current lightweight filter syntax.
+- [x] Add artifact version comparison for generated reports, summaries, and dataset exports.
+- [x] Add mandatory Playwright visual baseline capture once Playwright is installed in the frontend dev environment.
+
+### Prepared Batch: Context, Persistence, And Analytics Depth
+
+- [ ] Add real SQLite driver-backed migration and repository implementations behind the prepared schema.
+- [ ] Add real DuckDB driver-backed CSV/table registration behind the SQL-compatible query surface.
+- [ ] Add tool-run detail drawer with full inputs, outputs, approval references, and replay/diff affordances.
+- [ ] Add context-pack source citations in assistant answers and saved artifacts.
+- [ ] Add artifact lineage graph linking chats, tool runs, source files, and generated outputs.
+- [ ] Add workspace file watcher with changed-file indicators and stale dataset/artifact warnings.
+- [ ] Add installable Playwright dependency and enforce visual baselines in CI/local smoke.
 
 - [x] Batch: align product docs around NexusDesk as an IDE/data/analytics studio.
 - [x] Batch: align architecture, domain, indexing, search, AI, operations, delivery, DX, brand, README, and tracker wording.
@@ -292,6 +308,12 @@ This tracker reflects the repository as it exists today and keeps planned work s
 `app/internal/artifact/` owns deterministic Markdown, CSV, and SVG artifact writes, sidecar provenance metadata, listing, artifact metadata lookup, and artifact search. Source reports, saved assistant answers, first CSV query exports, first CSV chart artifacts, and first dataset summary artifacts are written under `.nexusdesk/artifacts/` with timestamped names and exclusive creation, so generated outputs stay separate from source files.
 
 `app/internal/agenttools/` owns the first backend registry for deterministic agent-capable tools. It describes workspace, dataset, artifact, and operations actions with risk and approval metadata; execution remains explicit UI/backend flows until the agent planner is added.
+
+`app/internal/agenttools/run.go` owns persisted tool run records. Dry-runs and explicit executions capture tool name, target, inputs, risk, approval ID, timing, output summary, and errors under `.nexusdesk/tool-runs/log.json`.
+
+`app/internal/appmeta/` owns the prepared SQLite metadata schema and manifest. JSON stores remain active for compatibility, while `.nexusdesk/metadata/schema.sql` mirrors the intended workspace, chat, approval, artifact, and tool-run tables for the driver-backed migration.
+
+`app/internal/analytics/` owns the first read-only SQL-style CSV query surface. It accepts a constrained `SELECT` subset, blocks mutation keywords, executes through the bounded CSV query path, and labels results as DuckDB-compatible until a real DuckDB driver is installed.
 
 `app/internal/approval/` owns the first append-only approval/action log for applied file and artifact operations. Records are persisted under `.nexusdesk/approvals/log.json` inside the active workspace and surfaced in the workbench while modal approval policy remains a later hardening step.
 

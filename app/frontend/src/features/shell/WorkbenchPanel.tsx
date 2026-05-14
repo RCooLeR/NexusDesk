@@ -1,7 +1,7 @@
 import {useEffect, useRef, useState} from 'react';
 import {brandAssets, capabilityIconByTitle} from '../../brand/assets';
 import {Button, EmptyState, InlineAlert, LoadingState, StatusBadge} from '../../components/ui';
-import type {ApprovalRecord, ArtifactMetadata, Capability, ColumnProfile, DatasetChartResult, DatasetProfile, DatasetQueryResult, FilePreview, FileWriteProposal, SavedDatasetQuery, TablePreview, WorkspaceArtifact, WorkspaceSnapshot} from '../../types';
+import type {ApprovalRecord, ArtifactComparison, ArtifactMetadata, Capability, ColumnProfile, DatasetChartResult, DatasetProfile, DatasetQueryResult, DatasetSQLQueryResult, FilePreview, FileWriteProposal, SavedDatasetQuery, SQLiteMetadataStatus, TablePreview, WorkspaceArtifact, WorkspaceSnapshot} from '../../types';
 import {ApprovalLogPanel} from './ApprovalLogPanel';
 import {ArtifactMetadataPanel} from './ArtifactMetadataPanel';
 import {ChatMessageContent} from './ChatMessageContent';
@@ -26,7 +26,11 @@ type WorkbenchPanelProps = {
     datasetQuery: string;
     datasetQueryLabel: string;
     datasetQueryResult: DatasetQueryResult | null;
+    datasetSQLQuery: string;
+    datasetSQLQueryResult: DatasetSQLQueryResult | null;
     savedDatasetQueries: SavedDatasetQuery[];
+    artifactComparison: ArtifactComparison | null;
+    sqliteStatus: SQLiteMetadataStatus | null;
     dirtyTabPaths: string[];
     fileDraft: string;
     filePreview: FilePreview | null;
@@ -43,7 +47,9 @@ type WorkbenchPanelProps = {
     isProfilingDataset: boolean;
     isPreviewingDatasetChart: boolean;
     isQueryingDataset: boolean;
+    isQueryingDatasetSQL: boolean;
     isSavingDatasetQuery: boolean;
+    isPreparingMetadataStore: boolean;
     isCreatingDatasetSummary: boolean;
     isSummarizingContext: boolean;
     isLoadingPreview: boolean;
@@ -55,6 +61,7 @@ type WorkbenchPanelProps = {
     onSummarizeContext: () => void;
     onFileDraftChange: (content: string) => void;
     onDatasetQueryChange: (content: string) => void;
+    onDatasetSQLQueryChange: (content: string) => void;
     onDatasetQueryLabelChange: (content: string) => void;
     onSaveDatasetQuery: () => void;
     onDatasetChartCategoryChange: (content: string) => void;
@@ -68,10 +75,13 @@ type WorkbenchPanelProps = {
     onProfileDataset: () => void;
     onPreviewDatasetChart: () => void;
     onQueryDataset: () => void;
+    onQueryDatasetSQL: () => void;
     onCreateDatasetChart: () => void;
     onCreateDatasetSummary: () => void;
     onExportDatasetQuery: () => void;
     onArchiveArtifact: () => void;
+    onCompareArtifact: () => void;
+    onPrepareMetadataStore: () => void;
     onCloseTab: (relPath: string) => void;
     onDeleteArtifact: () => void;
     onOpenArtifactSource: () => void;
@@ -100,7 +110,11 @@ export function WorkbenchPanel({
     datasetQuery,
     datasetQueryLabel,
     datasetQueryResult,
+    datasetSQLQuery,
+    datasetSQLQueryResult,
     savedDatasetQueries,
+    artifactComparison,
+    sqliteStatus,
     dirtyTabPaths,
     fileDraft,
     filePreview,
@@ -117,7 +131,9 @@ export function WorkbenchPanel({
     isProfilingDataset,
     isPreviewingDatasetChart,
     isQueryingDataset,
+    isQueryingDatasetSQL,
     isSavingDatasetQuery,
+    isPreparingMetadataStore,
     isCreatingDatasetSummary,
     isSummarizingContext,
     isLoadingPreview,
@@ -129,6 +145,7 @@ export function WorkbenchPanel({
     onSummarizeContext,
     onFileDraftChange,
     onDatasetQueryChange,
+    onDatasetSQLQueryChange,
     onDatasetQueryLabelChange,
     onSaveDatasetQuery,
     onDatasetChartCategoryChange,
@@ -142,10 +159,13 @@ export function WorkbenchPanel({
     onProfileDataset,
     onPreviewDatasetChart,
     onQueryDataset,
+    onQueryDatasetSQL,
     onCreateDatasetChart,
     onCreateDatasetSummary,
     onExportDatasetQuery,
     onArchiveArtifact,
+    onCompareArtifact,
+    onPrepareMetadataStore,
     onCloseTab,
     onDeleteArtifact,
     onOpenArtifactSource,
@@ -234,6 +254,9 @@ export function WorkbenchPanel({
                     </Button>
                     <Button disabled={!canProfileDataset || isProfilingDataset} onClick={onProfileDataset}>
                         {isProfilingDataset ? 'Profiling...' : 'Profile'}
+                    </Button>
+                    <Button disabled={!workspace || isPreparingMetadataStore} onClick={onPrepareMetadataStore} variant="subtle">
+                        {isPreparingMetadataStore ? 'Preparing...' : 'Metadata'}
                     </Button>
                 </div>
             </header>
@@ -421,8 +444,13 @@ export function WorkbenchPanel({
                                     query={datasetQuery}
                                     queryLabel={datasetQueryLabel}
                                     queryResult={datasetQueryResult}
+                                    sqlQuery={datasetSQLQuery}
+                                    sqlResult={datasetSQLQueryResult}
                                     savedQueries={savedDatasetQueries}
                                     table={filePreview?.table ?? null}
+                                    isQueryingSQL={isQueryingDatasetSQL}
+                                    onSQLChange={onDatasetSQLQueryChange}
+                                    onSQLQuery={onQueryDatasetSQL}
                                 />
                             )}
                             <OperationsInspector preview={filePreview} workspace={workspace} />
@@ -432,12 +460,15 @@ export function WorkbenchPanel({
                                     isDeleting={isDeletingArtifact}
                                     metadata={artifactMetadata}
                                     onArchive={onArchiveArtifact}
+                                    onCompare={onCompareArtifact}
                                     onDelete={onDeleteArtifact}
                                     onOpenSource={onOpenArtifactSource}
                                     preview={filePreview}
                                     relPath={filePreview?.relPath ?? ''}
                                 />
                             )}
+                            {artifactComparison && <ArtifactComparisonPanel comparison={artifactComparison} />}
+                            {sqliteStatus && <MetadataStorePanel status={sqliteStatus} />}
                             <ApprovalLogPanel records={approvalRecords} />
                             {artifacts.length === 0 ? (
                                 <EmptyState
@@ -623,4 +654,38 @@ function FileWriteEditor({
 
 function CsvTablePreview({table}: {table: TablePreview}) {
     return <SortableDataTable table={table} title="CSV Preview" />;
+}
+
+function ArtifactComparisonPanel({comparison}: {comparison: ArtifactComparison}) {
+    return (
+        <div className="artifact-comparison-panel">
+            <strong>Artifact Comparison</strong>
+            <small>{comparison.leftTitle} {'->'} {comparison.rightTitle}</small>
+            <dl>
+                <div><dt>Kind</dt><dd>{comparison.sameKind ? 'same' : 'different'}</dd></div>
+                <div><dt>Size delta</dt><dd>{comparison.sizeDelta} bytes</dd></div>
+            </dl>
+            <div className="artifact-diff-grid">
+                <span>
+                    <strong>Removed</strong>
+                    {comparison.removedLines.length === 0 ? <small>No removed lines</small> : comparison.removedLines.map((line) => <small key={line}>- {line}</small>)}
+                </span>
+                <span>
+                    <strong>Added</strong>
+                    {comparison.addedLines.length === 0 ? <small>No added lines</small> : comparison.addedLines.map((line) => <small key={line}>+ {line}</small>)}
+                </span>
+            </div>
+        </div>
+    );
+}
+
+function MetadataStorePanel({status}: {status: SQLiteMetadataStatus}) {
+    return (
+        <div className="metadata-store-panel">
+            <strong>SQLite Metadata</strong>
+            <small>{status.message}</small>
+            <p>{status.tables.join(', ')}</p>
+            <small>Schema v{status.schemaVersion}: {status.schemaHash.slice(0, 12)}</small>
+        </div>
+    );
 }

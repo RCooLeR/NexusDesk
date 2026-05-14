@@ -182,15 +182,25 @@ This batch made more of the studio inspectable and auditable without turning on 
 6. Operations Studio parses selected Compose YAML into services, images, ports, volumes, and dependencies.
 7. Frontend smoke coverage now checks the new tool-planning, artifact-action, scan-report, Compose parsing, and optional visual smoke surfaces.
 
-## Prepared Next Batch: Agent Execution And Analytics Foundations
+## Completed Batch: Agent Execution And Analytics Foundations
 
-1. Add a backend agent execution planner that turns proposed tool plan rows into dry-run tool requests.
-2. Add modal approval integration for executing medium/high-risk agent tools from the plan surface.
-3. Persist tool run records with input, output summary, risk, approval ID, duration, and errors.
-4. Add SQLite-backed app metadata storage for workspaces, chats, approvals, artifacts, and tool runs while keeping JSON migration compatibility.
-5. Add DuckDB-backed CSV query execution for SQL-style read-only analytics beyond the current lightweight filter syntax.
-6. Add artifact version comparison for generated reports, summaries, and dataset exports.
-7. Add mandatory Playwright visual baseline capture once Playwright is installed in the frontend dev environment.
+1. Backend agent tool plan rows can now be dry-run or executed through persisted tool-run records.
+2. Medium/high-risk plan executions use modal approval before backend execution.
+3. Tool run records persist input, output summary, risk, approval ID, duration, and errors under `.nexusdesk/tool-runs/`.
+4. SQLite metadata schema preparation now writes a migration-compatible schema and manifest under `.nexusdesk/metadata/`.
+5. Data Studio has a read-only DuckDB-compatible SQL surface over CSV datasets, using the bounded CSV query path until the real driver lands.
+6. Artifact comparison shows added/removed line summaries and size delta between generated outputs.
+7. Visual smoke now writes baseline screenshots and a manifest whenever Playwright is installed.
+
+## Prepared Next Batch: Context, Persistence, And Analytics Depth
+
+1. Add real SQLite driver-backed migration and repository implementations behind the prepared schema.
+2. Add real DuckDB driver-backed CSV/table registration behind the SQL-compatible query surface.
+3. Add a tool-run detail drawer with full inputs, outputs, approval references, and replay/diff affordances.
+4. Add context-pack source citations in assistant answers and saved artifacts.
+5. Add artifact lineage graph linking chats, tool runs, source files, and generated outputs.
+6. Add workspace file watcher with changed-file indicators and stale dataset/artifact warnings.
+7. Install Playwright as a dev dependency and enforce visual baselines in smoke/CI.
 
 ## Phase 2: Files, Documents, And Artifacts
 

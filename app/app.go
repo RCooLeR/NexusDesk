@@ -13,6 +13,8 @@ import (
 	"unicode/utf8"
 
 	"NexusDesk/internal/agenttools"
+	"NexusDesk/internal/analytics"
+	"NexusDesk/internal/appmeta"
 	"NexusDesk/internal/approval"
 	"NexusDesk/internal/artifact"
 	"NexusDesk/internal/dataset"
@@ -386,6 +388,14 @@ func (a *App) DeleteArtifact(relPath string) (artifact.MarkdownReport, error) {
 	return report, nil
 }
 
+func (a *App) CompareArtifacts(leftRelPath string, rightRelPath string) (artifact.ArtifactComparison, error) {
+	root := a.getWorkspaceRoot()
+	if root == "" {
+		return artifact.ArtifactComparison{}, errors.New("open a workspace before comparing artifacts")
+	}
+	return artifact.Compare(root, leftRelPath, rightRelPath)
+}
+
 func (a *App) ProfileDataset(relPath string) (dataset.Profile, error) {
 	root := a.getWorkspaceRoot()
 	if root == "" {
@@ -410,8 +420,57 @@ func (a *App) QueryDataset(relPath string, query string) (workspace.DatasetQuery
 	return workspace.QueryCSV(root, relPath, query)
 }
 
+func (a *App) QueryDatasetSQL(request analytics.SQLQueryRequest) (analytics.SQLQueryResult, error) {
+	root := a.getWorkspaceRoot()
+	if root == "" {
+		return analytics.SQLQueryResult{}, errors.New("open a workspace before querying datasets")
+	}
+	return analytics.QueryCSVSQL(root, request)
+}
+
 func (a *App) ListAgentTools() []agenttools.Descriptor {
 	return agenttools.Registry()
+}
+
+func (a *App) PreviewAgentTool(request agenttools.RunRequest) (agenttools.RunRecord, error) {
+	root := a.getWorkspaceRoot()
+	if root == "" {
+		return agenttools.RunRecord{}, errors.New("open a workspace before planning tools")
+	}
+	record, err := a.runAgentTool(root, request, "dry-run")
+	if appendErr := a.appendToolRun(root, record); appendErr != nil && err == nil {
+		err = appendErr
+	}
+	return record, err
+}
+
+func (a *App) ExecuteAgentTool(request agenttools.RunRequest) (agenttools.RunRecord, error) {
+	root := a.getWorkspaceRoot()
+	if root == "" {
+		return agenttools.RunRecord{}, errors.New("open a workspace before executing tools")
+	}
+	record, err := a.runAgentTool(root, request, "execute")
+	if appendErr := a.appendToolRun(root, record); appendErr != nil && err == nil {
+		err = appendErr
+	}
+	return record, err
+}
+
+func (a *App) ListAgentToolRuns() ([]agenttools.RunRecord, error) {
+	return agenttools.List(a.getWorkspaceRoot())
+}
+
+func (a *App) EnsureSQLiteMetadataStore() (appmeta.SQLiteStatus, error) {
+	root := a.getWorkspaceRoot()
+	if root == "" {
+		return appmeta.SQLiteStatus{}, errors.New("open a workspace before preparing metadata storage")
+	}
+	status, err := appmeta.Ensure(root)
+	if err != nil {
+		return appmeta.SQLiteStatus{}, err
+	}
+	a.recordApproval("metadata.sqlite.prepare", ".nexusdesk/metadata", "low", status.Message)
+	return status, nil
 }
 
 func (a *App) SaveDatasetQuery(relPath string, query string, label string) (dataset.SavedQuery, error) {
@@ -920,18 +979,121 @@ func trimAppSnippet(value string) string {
 	return value[:177] + "..."
 }
 
-func (a *App) recordApproval(action string, target string, risk string, message string) {
+func (a *App) runAgentTool(root string, request agenttools.RunRequest, mode string) (agenttools.RunRecord, error) {
+	descriptor, err := agenttools.RequireDescriptor(request.ToolName)
+	startedAt := time.Now()
+	if err != nil {
+		return agenttools.RunRecord{}, err
+	}
+	record := agenttools.NewRecord(request, descriptor, mode, "planned", startedAt)
+	if mode == "execute" && descriptor.RequiresApproval && !request.Approved {
+		err := errors.New("tool execution requires approval")
+		return agenttools.FinishRecord(record, "blocked", "", err, time.Now()), err
+	}
+
+	summary, runErr := a.agentToolSummary(root, request, descriptor, mode)
+	if mode == "execute" && runErr == nil && descriptor.RequiresApproval {
+		record.ApprovalID = a.recordApproval("agenttool."+descriptor.Name, record.Target, descriptor.Risk, summary)
+	}
+	status := "dry-run"
+	if mode == "execute" {
+		status = "executed"
+	}
+	finished := agenttools.FinishRecord(record, status, summary, runErr, time.Now())
+	return finished, runErr
+}
+
+func (a *App) agentToolSummary(root string, request agenttools.RunRequest, descriptor agenttools.Descriptor, mode string) (string, error) {
+	target := strings.TrimSpace(request.Target)
+	switch descriptor.Name {
+	case "workspace.preview":
+		if mode == "dry-run" {
+			return "Ready to preview " + target + " inside the active workspace.", nil
+		}
+		preview, err := workspace.Preview(root, target, workspace.PreviewOptions{MaxBytes: chatContextMaxBytes})
+		if err != nil {
+			return "", err
+		}
+		return fmt.Sprintf("Previewed %s as %s (%d bytes).", preview.RelPath, preview.Kind, preview.Size), nil
+	case "workspace.write":
+		if mode == "dry-run" {
+			return "Workspace writes must use the editor diff preview before apply.", nil
+		}
+		return "", errors.New("agent workspace.write execution is blocked until diff payload execution is implemented")
+	case "dataset.query":
+		query := request.Inputs["query"]
+		if mode == "dry-run" {
+			return fmt.Sprintf("Ready to query %s with %q.", target, fallbackInput(query, "first rows")), nil
+		}
+		result, err := workspace.QueryCSV(root, target, query)
+		if err != nil {
+			return "", err
+		}
+		return result.Message, nil
+	case "artifact.create":
+		if mode == "dry-run" {
+			return "Ready to create a Markdown report artifact from " + target + ".", nil
+		}
+		report, err := a.CreateMarkdownReport(target)
+		if err != nil {
+			return "", err
+		}
+		return report.Message + " " + report.RelPath, nil
+	case "artifact.archive":
+		if mode == "dry-run" {
+			return "Ready to archive " + target + " with metadata sidecar.", nil
+		}
+		report, err := artifact.Archive(root, target)
+		if err != nil {
+			return "", err
+		}
+		return report.Message + " " + report.RelPath, nil
+	case "operations.inspect":
+		if mode == "dry-run" {
+			return "Ready to inspect operations context " + target + " without mutating Docker state.", nil
+		}
+		preview, err := workspace.Preview(root, target, workspace.PreviewOptions{MaxBytes: chatContextMaxBytes})
+		if err != nil {
+			return "", err
+		}
+		return fmt.Sprintf("Inspected %s (%s, %d bytes) read-only.", preview.RelPath, preview.FileType, preview.Size), nil
+	default:
+		return "", errors.New("agent tool execution is not implemented for " + descriptor.Name)
+	}
+}
+
+func (a *App) appendToolRun(root string, record agenttools.RunRecord) error {
+	if record.ToolName == "" {
+		return nil
+	}
+	_, err := agenttools.Append(root, record)
+	return err
+}
+
+func fallbackInput(value string, fallback string) string {
+	value = strings.TrimSpace(value)
+	if value == "" {
+		return fallback
+	}
+	return value
+}
+
+func (a *App) recordApproval(action string, target string, risk string, message string) string {
 	root := a.getWorkspaceRoot()
 	if root == "" {
-		return
+		return ""
 	}
-	_, _ = approval.Append(root, approval.Record{
+	items, _ := approval.Append(root, approval.Record{
 		Action:   action,
 		Target:   target,
 		Risk:     risk,
 		Decision: "applied",
 		Message:  message,
 	})
+	if len(items) == 0 {
+		return ""
+	}
+	return items[0].ID
 }
 
 func (a *App) openWorkspace(root string) (WorkspaceOpenResult, error) {

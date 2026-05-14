@@ -4,10 +4,12 @@ import {workspace} from '../models';
 import {artifact} from '../models';
 import {llm} from '../models';
 import {storage} from '../models';
-import {main} from '../models';
+import {appmeta} from '../models';
 import {agenttools} from '../models';
+import {main} from '../models';
 import {approval} from '../models';
 import {dataset} from '../models';
+import {analytics} from '../models';
 
 export function ApplyFileDelete(arg1:string):Promise<workspace.FileDeleteProposal>;
 
@@ -29,6 +31,8 @@ export function ClearChatHistory():Promise<Array<storage.ChatMessage>>;
 
 export function ClearRecentWorkspaces():Promise<Array<storage.RecentWorkspace>>;
 
+export function CompareArtifacts(arg1:string,arg2:string):Promise<artifact.ArtifactComparison>;
+
 export function CreateChatMarkdownArtifact(arg1:artifact.MarkdownArtifactRequest):Promise<artifact.MarkdownReport>;
 
 export function CreateDatasetChartArtifact(arg1:workspace.DatasetChartRequest):Promise<artifact.MarkdownReport>;
@@ -43,6 +47,10 @@ export function CreateScanReportArtifact():Promise<artifact.MarkdownReport>;
 
 export function DeleteArtifact(arg1:string):Promise<artifact.MarkdownReport>;
 
+export function EnsureSQLiteMetadataStore():Promise<appmeta.SQLiteStatus>;
+
+export function ExecuteAgentTool(arg1:agenttools.RunRequest):Promise<agenttools.RunRecord>;
+
 export function GetArtifactMetadata(arg1:string):Promise<artifact.ArtifactMetadata>;
 
 export function GetChatHistory():Promise<Array<storage.ChatMessage>>;
@@ -52,6 +60,8 @@ export function GetLLMSettings():Promise<storage.LLMSettings>;
 export function GetRecentWorkspaces():Promise<Array<storage.RecentWorkspace>>;
 
 export function GetStartupState():Promise<main.StartupState>;
+
+export function ListAgentToolRuns():Promise<Array<agenttools.RunRecord>>;
 
 export function ListAgentTools():Promise<Array<agenttools.Descriptor>>;
 
@@ -64,6 +74,8 @@ export function ListDatasetProfiles():Promise<Array<dataset.Profile>>;
 export function ListDatasetQueries(arg1:string):Promise<Array<dataset.SavedQuery>>;
 
 export function OpenWorkspace(arg1:string):Promise<main.WorkspaceOpenResult>;
+
+export function PreviewAgentTool(arg1:agenttools.RunRequest):Promise<agenttools.RunRecord>;
 
 export function PreviewChatContextPack(arg1:Array<string>):Promise<workspace.ContextPreview>;
 
@@ -78,6 +90,8 @@ export function PreviewFileWrite(arg1:workspace.FileWriteRequest):Promise<worksp
 export function ProfileDataset(arg1:string):Promise<dataset.Profile>;
 
 export function QueryDataset(arg1:string,arg2:string):Promise<workspace.DatasetQueryResult>;
+
+export function QueryDatasetSQL(arg1:analytics.SQLQueryRequest):Promise<analytics.SQLQueryResult>;
 
 export function ReadWorkspaceFile(arg1:string):Promise<workspace.FilePreview>;
 

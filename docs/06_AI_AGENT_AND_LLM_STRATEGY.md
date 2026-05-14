@@ -102,7 +102,7 @@ Current implementation:
 - Directory and project context use `app/internal/workspace/context.go` to expand selected folders or `.` into a capped list of previewable files before the streaming chat request is sent.
 - Workspace search and CSV row queries are deterministic backend tools, not model-side file access.
 - `app/internal/agenttools/registry.go` now exposes a first deterministic tool registry for workspace preview, file write, dataset query, artifact create/archive, and operations inspect actions.
-- The agent sidebar renders a proposed tool plan for the active context with risk and approval labels, but it does not execute model-directed tools yet.
+- The agent sidebar renders a proposed tool plan for the active context with risk and approval labels, and user-triggered dry-run/execute actions now persist tool-run records.
 - `AskLLMStream` emits `nexusdesk:chat-stream` Wails events so the frontend can render partial assistant responses before final history persistence completes.
 - `app/internal/storage/chat_history.go` persists bounded chat history per workspace in local JSON config.
 - The local workstation endpoint is backed by the sibling `../Llm/` Compose stack. Its `rcooler-ollama` container must use `OLLAMA_LLM_LIBRARY=cuda_v12`; otherwise Ollama may select CUDA 13, fail GPU initialization, and fall back to CPU with zero VRAM offload.
@@ -278,13 +278,14 @@ Current implementation:
 
 - one user prompt maps to one non-streaming provider request
 - no tool loop is active yet
-- first tool descriptors and frontend plan preview are active, but execution remains explicit UI/backend commands
+- first tool descriptors, frontend plan preview, dry-runs, and explicit user-triggered executions are active, but autonomous model-directed loops remain planned
 - selected file context is read through the same rooted preview boundary as the source preview pane
 - chat history is persisted per workspace in local JSON config
 - file create/update/delete/rename/move actions are deterministic UI-triggered tools today, not model-directed tool calls
 - first CSV query exports are deterministic UI-triggered tools today, not model-directed file writes
 - first CSV chart artifacts are deterministic UI-triggered tools today, not model-directed chart rendering
 - artifact archive/delete and scan-report creation are deterministic UI-triggered tools today, not model-directed artifact mutations
+- tool run records capture inputs, output summary, risk, approval ID, duration, and errors for later agent-loop replay/audit
 
 ## Prompt Contracts
 

@@ -42,6 +42,10 @@ export function ClearRecentWorkspaces() {
   return window['go']['main']['App']['ClearRecentWorkspaces']();
 }
 
+export function CompareArtifacts(arg1, arg2) {
+  return window['go']['main']['App']['CompareArtifacts'](arg1, arg2);
+}
+
 export function CreateChatMarkdownArtifact(arg1) {
   return window['go']['main']['App']['CreateChatMarkdownArtifact'](arg1);
 }
@@ -70,6 +74,14 @@ export function DeleteArtifact(arg1) {
   return window['go']['main']['App']['DeleteArtifact'](arg1);
 }
 
+export function EnsureSQLiteMetadataStore() {
+  return window['go']['main']['App']['EnsureSQLiteMetadataStore']();
+}
+
+export function ExecuteAgentTool(arg1) {
+  return window['go']['main']['App']['ExecuteAgentTool'](arg1);
+}
+
 export function GetArtifactMetadata(arg1) {
   return window['go']['main']['App']['GetArtifactMetadata'](arg1);
 }
@@ -88,6 +100,10 @@ export function GetRecentWorkspaces() {
 
 export function GetStartupState() {
   return window['go']['main']['App']['GetStartupState']();
+}
+
+export function ListAgentToolRuns() {
+  return window['go']['main']['App']['ListAgentToolRuns']();
 }
 
 export function ListAgentTools() {
@@ -112,6 +128,10 @@ export function ListDatasetQueries(arg1) {
 
 export function OpenWorkspace(arg1) {
   return window['go']['main']['App']['OpenWorkspace'](arg1);
+}
+
+export function PreviewAgentTool(arg1) {
+  return window['go']['main']['App']['PreviewAgentTool'](arg1);
 }
 
 export function PreviewChatContextPack(arg1) {
@@ -140,6 +160,10 @@ export function ProfileDataset(arg1) {
 
 export function QueryDataset(arg1, arg2) {
   return window['go']['main']['App']['QueryDataset'](arg1, arg2);
+}
+
+export function QueryDatasetSQL(arg1) {
+  return window['go']['main']['App']['QueryDatasetSQL'](arg1);
 }
 
 export function ReadWorkspaceFile(arg1) {

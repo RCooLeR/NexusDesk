@@ -43,7 +43,7 @@ Runtime changes should be stored locally and optionally exportable as workspace 
 
 Studio surfaces can change which tools and panels are visible, but they must not change the underlying safety boundary. Code Studio, Data Studio, Analytics Studio, Document Studio, Operations Studio, and Artifact Studio all share the same workspace roots, path checks, approval rules, secret handling, and audit model.
 
-The current implementation has an append-only local approval/action log for applied file writes, deletes, moves, artifact creation, scan-report creation, artifact archive, and artifact delete. It writes records under `.nexusdesk/approvals/log.json` and shows the latest entries in the workbench. Modal approval prompts now cover higher-risk file and artifact actions; Docker, database, and model-directed agent tool execution remain planned.
+The current implementation has an append-only local approval/action log for applied file writes, deletes, moves, artifact creation, scan-report creation, artifact archive, artifact delete, and approved agent tool executions. It writes records under `.nexusdesk/approvals/log.json` and shows the latest entries in the workbench. Modal approval prompts now cover higher-risk file, artifact, and explicit agent tool actions; Docker, database, and autonomous model-directed agent tool execution remain planned.
 
 ## Secrets
 
@@ -92,6 +92,8 @@ Current implementation:
 - chart artifacts are created only through bounded CSV aggregation and exclusive artifact writes
 - scan-report artifacts are created from backend scan status and exclusive artifact writes
 - artifact archive/delete actions validate workspace-relative artifact paths and move/remove sibling metadata sidecars through backend methods
+- explicit agent tool dry-runs/executions persist auditable records under `.nexusdesk/tool-runs/log.json`
+- SQLite metadata preparation writes schema and manifest files under `.nexusdesk/metadata/` without migrating active JSON stores yet
 - frontend commands call Wails bindings rather than reading or mutating arbitrary paths directly
 
 ## Database Security
@@ -109,6 +111,8 @@ Rules:
 - redact credentials in error messages
 
 Data Studio and Analytics Studio should make read-only status visible near schema, query, chart, and report surfaces. Mutating SQL is a policy change, not a UI shortcut.
+
+The current read-only SQL surface accepts a constrained `SELECT` subset over CSV data, blocks mutation keywords, and reuses the bounded CSV query path. Real DuckDB execution remains behind the next driver-backed implementation step.
 
 ## Docker Security
 
