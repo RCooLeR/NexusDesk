@@ -36,6 +36,7 @@ Deliverables:
 - local SQLite app database: planned
 - controlled Markdown artifact writer: implemented
 - workspace open/recent workspaces: implemented
+- safe new text/code file draft creation through preview/apply: first implementation
 - file tree with ignore rules: implemented
 - file tree scans up to 10 workspace levels by default: implemented
 - workspace path/content search: implemented
@@ -123,6 +124,7 @@ Current status:
 - Text/code previews use a read-only Monaco viewer with find decorations.
 - Text edit drafts show dirty state, can be reverted to the loaded content, and clear stale diff previews when the draft changes.
 - Text edit drafts are retained per editor tab while navigating, dirty tabs are marked, closing a dirty tab asks for confirmation, and Ctrl+S previews or applies through the same safe write flow.
+- New text/code files can be drafted from the command palette or Ctrl+N, then created through the same diff/apply write flow.
 - Editor keyboard support includes Ctrl+F for the in-file finder, Ctrl+W for closing the active tab, and Ctrl+Tab / Ctrl+Shift+Tab for tab cycling.
 - Text/code edit drafts use a Monaco-backed editor surface with language detection while preserving the diff/apply boundary.
 - The chat panel has an expanded conversation area, full visible history, context pack list, and multiline prompt composer.
@@ -159,7 +161,7 @@ Deliverables:
 Exit criteria:
 
 - AI can create a report artifact from selected source files
-- user can approve or reject text file writes after reviewing a diff
+- user can approve or reject text file creates and updates after reviewing a diff
 - generated artifacts are linked to conversations and source context: first sidecar provenance flow implemented
 
 ## Phase 3: Excel, CSV, And Charts

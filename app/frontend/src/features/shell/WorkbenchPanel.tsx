@@ -102,7 +102,7 @@ export function WorkbenchPanel({
             filePreview?.kind === 'directory'
         )
     );
-    const canEditContext = Boolean(workspace && filePreview?.kind === 'file' && filePreview.content && !filePreview.table);
+    const canEditContext = Boolean(workspace && filePreview?.kind === 'file' && !filePreview.table);
     const canProfileDataset = Boolean(workspace && filePreview?.fileType === 'data');
     const canRenderMarkdown = Boolean(filePreview?.kind === 'file' && filePreview.content && isMarkdownFile(filePreview.name));
     const studioMode = resolveStudioMode(filePreview, activeDatasetProfile, activeFile);

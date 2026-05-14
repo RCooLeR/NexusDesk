@@ -226,6 +226,12 @@ export function NexusDeskShell({
                 return;
             }
 
+            if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === 'n') {
+                event.preventDefault();
+                startNewFileDraft();
+                return;
+            }
+
             if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === 'w') {
                 if (openTabs.some((tab) => tab.relPath === activeFile)) {
                     event.preventDefault();
@@ -296,7 +302,7 @@ export function NexusDeskShell({
         const hasWorkspace = Boolean(workspace);
         const hasActivePreview = Boolean(workspace && filePreview);
         const hasDirtyActiveDraft = Boolean(isEditingFile && filePreview && dirtyTabPaths.includes(filePreview.relPath));
-        const canEditSelectedFile = Boolean(workspace && filePreview?.kind === 'file' && filePreview.content && !filePreview.table);
+        const canEditSelectedFile = Boolean(workspace && filePreview?.kind === 'file' && !filePreview.table);
         const canUseSelectedContext = Boolean(selectedContextRelPath) && !isSendingPrompt;
         const canUseSelectedDataset = Boolean(workspace && filePreview?.fileType === 'data');
 
@@ -359,6 +365,15 @@ export function NexusDeskShell({
                 id: 'editor.reload-preview',
                 run: () => void refreshSelectedPreview(),
                 title: 'Reload Current Preview',
+            },
+            {
+                detail: hasWorkspace ? 'Create a workspace-relative text/code file through the draft and diff flow.' : 'Open a workspace before creating files.',
+                disabled: !hasWorkspace,
+                group: 'Editor',
+                id: 'editor.new-file',
+                run: startNewFileDraft,
+                shortcut: 'Ctrl+N',
+                title: 'New File',
             },
             {
                 detail: openTabs.some((tab) => tab.relPath === activeFile) ? `Close ${activeFile}.` : 'Open a file tab before closing the active tab.',
@@ -597,6 +612,21 @@ export function NexusDeskShell({
         };
     }
 
+    function createNewFilePreview(relPath: string): FilePreview {
+        return {
+            relPath,
+            name: fileNameFromRelPath(relPath),
+            kind: 'file',
+            fileType: fileTypeForRelPath(relPath),
+            content: '',
+            text: '',
+            encoding: 'utf-8',
+            truncated: false,
+            message: 'New file draft. Preview the diff, then apply to create it in the workspace.',
+            size: 0,
+        };
+    }
+
     function startFileEdit() {
         if (!filePreview || filePreview.kind !== 'file') {
             setWorkspaceStatus('Select a text file before editing.');
@@ -608,6 +638,56 @@ export function NexusDeskShell({
             [filePreview.relPath]: current[filePreview.relPath] ?? filePreview.content,
         }));
         setWriteProposals((current) => omitKey(current, filePreview.relPath));
+    }
+
+    function startNewFileDraft() {
+        if (!workspace) {
+            setWorkspaceStatus('Open a workspace before creating files.');
+            return;
+        }
+
+        const rawRelPath = window.prompt('New file path inside the workspace', suggestedNewFilePath(filePreview, activeFile));
+        if (rawRelPath === null) {
+            setWorkspaceStatus('New file creation cancelled.');
+            return;
+        }
+
+        const relPath = normalizeNewFileRelPath(rawRelPath);
+        if (!relPath) {
+            setWorkspaceStatus('Enter a workspace-relative file path.');
+            return;
+        }
+        if (relPath.includes('../') || relPath === '..' || relPath.startsWith('/')) {
+            setWorkspaceStatus('New file path must stay inside the workspace.');
+            return;
+        }
+        if (relPath.endsWith('/')) {
+            setWorkspaceStatus('New file path must include a file name.');
+            return;
+        }
+        if (relPath.toLowerCase().startsWith('.nexusdesk/')) {
+            setWorkspaceStatus('Direct writes to NexusDesk metadata are not allowed.');
+            return;
+        }
+
+        const existingNode = workspace.nodes.find((node) => node.relPath === relPath);
+        if (existingNode) {
+            void selectWorkspaceNode(existingNode);
+            setWorkspaceStatus(`${relPath} already exists. Opened existing file instead.`);
+            return;
+        }
+
+        const draft = defaultNewFileContent(relPath);
+        const preview = createNewFilePreview(relPath);
+        setActiveFile(relPath);
+        setFilePreview(preview);
+        upsertOpenTab(preview);
+        setEditingFilePaths((current) => current.includes(relPath) ? current : [...current, relPath]);
+        setFileDrafts((current) => ({...current, [relPath]: draft}));
+        setWriteProposals((current) => omitKey(current, relPath));
+        setActiveDatasetProfile(null);
+        setWorkspaceStatus(`${relPath} draft ready. Preview diff before applying the create.`);
+        pushToolEvent('New file draft', relPath);
     }
 
     function clearFileWriteDraft() {
@@ -1693,6 +1773,60 @@ function omitKey<T>(record: Record<string, T>, key: string) {
     const next = {...record};
     delete next[key];
     return next;
+}
+
+function normalizeNewFileRelPath(rawRelPath: string) {
+    return rawRelPath.trim().replaceAll('\\', '/').replace(/^\/+/, '').replace(/\/+/g, '/');
+}
+
+function suggestedNewFilePath(preview: FilePreview | null, activeFile: string) {
+    const currentPath = preview?.relPath || activeFile;
+    if (!currentPath || !currentPath.includes('/')) {
+        return 'notes/new-file.md';
+    }
+
+    const directory = currentPath.endsWith('/')
+        ? currentPath.replace(/\/+$/, '')
+        : currentPath.split('/').slice(0, -1).join('/');
+    return directory ? `${directory}/new-file.md` : 'new-file.md';
+}
+
+function defaultNewFileContent(relPath: string) {
+    const name = fileNameFromRelPath(relPath);
+    if (/\.mdx?$/i.test(relPath)) {
+        const title = name.replace(/\.[^.]+$/, '').replace(/[-_]+/g, ' ').trim() || 'New File';
+        return `# ${title}\n\n`;
+    }
+    if (/\.jsonc?$/i.test(relPath)) {
+        return "{}\n";
+    }
+    if (/\.ya?ml$/i.test(relPath)) {
+        return "---\n";
+    }
+    if (/\.html?$/i.test(relPath)) {
+        return "<!doctype html>\n";
+    }
+    if (/\.css$/i.test(relPath)) {
+        return ":root {\n}\n";
+    }
+    if (/\.gitignore$/i.test(relPath)) {
+        return "# Ignore local files\n";
+    }
+    return "\n";
+}
+
+function fileNameFromRelPath(relPath: string) {
+    return relPath.split('/').filter(Boolean).pop() ?? relPath;
+}
+
+function fileTypeForRelPath(relPath: string) {
+    if (/\.(csv|tsv|xlsx?|parquet|jsonl)$/i.test(relPath)) {
+        return 'data';
+    }
+    if (/\.(mdx?|txt|pdf|docx?|rtf)$/i.test(relPath)) {
+        return 'document';
+    }
+    return 'code';
 }
 
 function latestAssistantMessage(messages: ChatMessage[]) {
