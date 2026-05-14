@@ -67,7 +67,7 @@ For a healthy load, `/api/ps` should show nonzero `size_vram`, and the Ollama lo
 
 `app/internal/workspace/context.go` owns directory/project context expansion and context-pack previews. The UI can pin a selected directory or the workspace root, but the backend still decides which files are safe and useful enough to include.
 
-`app/frontend/src/features/shell/HighlightedCode.tsx` provides dependency-free lightweight highlighting for common code/data text previews until Monaco lands.
+`app/frontend/src/features/shell/HighlightedCode.tsx` remains as the dependency-free fallback highlighter for non-Monaco preview paths. Text/code source previews and edit drafts now use the Monaco-backed components listed below.
 
 ## Dataset Profiles
 
@@ -99,7 +99,7 @@ The shell is now mostly orchestration. Feature panels own stable presentation, w
 
 ## Frontend Smoke Checks
 
-`app/frontend/scripts/smoke.mjs` checks that the built frontend and key shell source files still expose the main MVP functionality: Wails bindings, search, quick-open, command palette, Monaco preview/edit surfaces, find-in-file, context packs, file write flow, dataset profiling/querying, resizable navigator styling, and the production `dist/index.html` entrypoint. Run it after `npm.cmd run build`.
+`app/frontend/scripts/smoke.mjs` checks that the built frontend and key shell source files still expose the main MVP functionality: Wails bindings, search, quick-open, command palette, Monaco preview/edit surfaces, find-in-file, context packs, file create/update/delete/move flows, dataset profiling/querying, resizable navigator styling, and the production `dist/index.html` entrypoint. Run it after `npm.cmd run build`.
 
 ## Artifact Creation
 
@@ -107,20 +107,23 @@ The shell is now mostly orchestration. Feature panels own stable presentation, w
 
 ## File Writes
 
-`app/internal/workspace/write.go` owns the first text write approval boundary. The frontend can draft edits for selected text files or create a new text/code file draft, preserve drafts per editor tab, request a diff preview, and only then apply the write through a rooted workspace method. Changing a draft clears the existing diff proposal, so an apply action always corresponds to the current draft. `app/internal/workspace/delete.go` owns the first file delete boundary: selected files are backend-validated, metadata paths/directories/symlinks are rejected, and the frontend requires confirmation before removal. `app/internal/workspace/move.go` owns rename/move validation and rejects traversal, metadata targets, directories, symlinks, and overwrites. Direct writes to `.nexusdesk/`, traversal paths, symlinks, directories, oversized previews, and binary existing files are rejected before apply.
+`app/internal/workspace/write.go` owns the first text write approval boundary. The frontend can draft edits for selected text files or create a new text/code file draft, preserve drafts per editor tab, request a diff preview, and only then apply the write through a rooted workspace method. Changing a draft clears the existing diff proposal, so an apply action always corresponds to the current draft. `app/internal/workspace/delete.go` owns the first file delete boundary: selected files are backend-validated, metadata paths/directories/symlinks are rejected, and the frontend requires confirmation before removal. `app/internal/workspace/move.go` owns rename/move validation and rejects traversal, metadata targets, directories, symlinks, same-path moves, directory-like targets, and overwrites. Direct writes to `.nexusdesk/`, traversal paths, symlinks, directories, oversized previews, and binary existing files are rejected before apply.
 
 ## Goals
 
 NexusDesk should be easy to run, easy to test, easy to reason about as an IDE/data/analytics studio, and hard to accidentally make unsafe.
 
-Developer setup should require:
+Current developer setup requires:
 
 - Go
 - Node.js or Bun for frontend development
 - Wails
+- optional Ollama or another LLM endpoint
+
+Planned data/connector work will add:
+
 - SQLite
 - DuckDB dependency
-- optional Ollama or another LLM endpoint
 - Docker only for connector testing or packaging experiments
 
 ## Repository Shape
@@ -131,6 +134,11 @@ Current structure:
 app/                           Wails desktop app
 app/app.go                     Go application state and frontend bindings
 app/main.go                    Wails entrypoint
+app/internal/artifact/         Markdown artifact creation, listing, provenance
+app/internal/dataset/          CSV/XLSX profile persistence
+app/internal/llm/              OpenAI-compatible probe, chat, streaming
+app/internal/storage/          JSON stores for recent workspaces, LLM settings, chat history
+app/internal/workspace/        Safe scanning, preview, search, context packs, file operations
 app/frontend/                  React + TypeScript frontend
 app/frontend/src/              Workbench UI source
 app/frontend/wailsjs/          Generated Wails bindings

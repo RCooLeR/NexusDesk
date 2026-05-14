@@ -19,6 +19,17 @@ Search is used by:
 
 The LLM should not receive the whole workspace. It should receive a compact context pack built from ranked, explainable sources.
 
+## Current Implementation Snapshot
+
+The current app implements deterministic path/text search and explicit context packing:
+
+- `app/internal/workspace/search.go` searches workspace-relative paths and previewable text/PDF/DOCX content inside scanner ignore and depth limits.
+- Quick-open searches the in-memory workspace tree and open editor tabs client-side for navigation speed.
+- Chat context is explicit: the user pins selected files, directories, or the workspace root, and the backend expands that selection through `app/internal/workspace/context.go`.
+- Context packs are capped by file count and bytes, skip ignored folders, binaries, symlinks, images, raw PDF data URLs, and oversized content, and preview the actual file list before send.
+- CSV context uses a structured column profile plus bounded row sample rather than sending whole datasets.
+- Persistent chunk indexes, semantic search, artifact search ranking, and conversation search are still planned.
+
 ## Query Pipeline
 
 ```mermaid

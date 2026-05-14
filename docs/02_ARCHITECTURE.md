@@ -4,20 +4,27 @@
 
 NexusDesk should be a modular local-first desktop studio application with a strong Go backend and a rich web-based frontend. The product shape is closer to an IDE/data studio than to a chatbot shell.
 
-The recommended first version:
+The implemented desktop slice currently contains:
 
 - Wails desktop shell
 - Go backend
-- React or Svelte frontend
-- Monaco editor for code/text
+- React frontend
+- Monaco-backed source preview and text/code draft editing
+- JSON-backed local stores for recent workspaces, LLM settings, and chat history
+- OS-protected sidecar credential storage where available
+- safe workspace scanner, previewer, search, context-pack builder, and file operation boundaries
+- CSV/XLSX dataset profiling and bounded CSV row queries
+- Markdown artifact writer with provenance sidecars
+- configurable LLM gateway
+- OpenAI-compatible chat and streaming
+
+The architecture keeps clean seams for later:
+
 - SQLite for app state
 - DuckDB for local analytics
-- local file/document parsing services
-- configurable LLM gateway
-- permissioned tool runner
-
-The architecture should keep clean seams for later:
-
+- richer document extraction and OCR
+- policy-backed approval dialogs
+- deterministic agent tool loop
 - MCP client support
 - external tool plugins
 - team/server mode
@@ -37,24 +44,25 @@ flowchart LR
   Bridge --> Artifacts["Artifact Manager"]
   Bridge --> Settings["Settings Manager"]
 
-  Workspace --> Indexer["Indexing Pipeline"]
-  Files --> Parsers["Document & Data Parsers"]
-  Parsers --> Indexer
+  Workspace --> Scanner["Safe Scanner"]
+  Files --> Previewer["Safe Preview / File Operations"]
+  Previewer --> Parsers["Document & Data Parsers"]
 
   Agent --> Context["Context Builder"]
-  Agent --> Tools["Tool Runner"]
+  Agent --> Tools["Deterministic Tools"]
   Agent --> LLM["LLM Gateway"]
 
-  Context --> Search["Search & Retrieval"]
-  Search --> AppDB[("SQLite<br/>metadata, chats, tool logs")]
-  Search --> AnalyticsDB[("DuckDB<br/>datasets, query results")]
-  Search --> VectorStore["Optional local vectors"]
+  Context --> Search["Path/Text Search"]
+  Search --> JsonStores[("Local JSON Stores<br/>settings, chats, recent workspaces")]
+  Search --> FutureAppDB[("Planned SQLite<br/>metadata, chats, tool logs")]
+  Search --> FutureAnalyticsDB[("Planned DuckDB<br/>datasets, query results")]
+  Search --> FutureVectorStore["Optional local vectors"]
 
-  Tools --> FileTools["File Tools"]
-  Tools --> DataTools["Data Tools"]
-  Tools --> WebTools["HTTP/Search Tools"]
-  Tools --> DBTools["Database Tools"]
-  Tools --> DockerTools["Docker Tools"]
+  Tools --> FileTools["File Tools<br/>create, edit, delete, move"]
+  Tools --> DataTools["Data Tools<br/>profile, query CSV"]
+  Tools --> FutureWebTools["Planned HTTP/Search Tools"]
+  Tools --> FutureDBTools["Planned Database Tools"]
+  Tools --> FutureDockerTools["Planned Docker Tools"]
   Tools --> ArtifactTools["Artifact Tools"]
 
   LLM --> Ollama["Ollama"]
@@ -88,13 +96,13 @@ Responsibilities:
 - file tree
 - tabs and editor state
 - studio mode surfaces for code, data, analytics, documents, operations, and artifacts
-- code highlighting
+- Monaco-backed code/text previews and draft editing
 - image and PDF preview
-- Excel/table preview
+- CSV table preview and XLSX sheet metadata display
 - chat UI
 - tool call timeline
-- approval dialogs
-- charts and dashboards
+- approval dialogs, planned
+- charts and dashboards, planned
 - settings screens
 - artifact browser
 
@@ -108,8 +116,8 @@ Responsibilities:
 - remember recent workspaces
 - enforce workspace root boundaries
 - track workspace configuration
-- track file scan status
-- coordinate file watchers
+- track file scan status, planned
+- coordinate file watchers, planned
 - map generated artifacts back to the workspace
 
 A workspace can be code-focused, data-focused, marketing-focused, operations-focused, or mixed. The UI should expose those as studio surfaces rather than hiding everything behind chat.
@@ -125,6 +133,7 @@ Responsibilities:
 - extract text from documents
 - inspect images
 - parse spreadsheets
+- create, update, delete, rename, and move files through rooted backend methods
 - limit file size and output size
 - maintain raw/source hashes
 
@@ -132,13 +141,16 @@ File services must never allow path traversal outside the approved workspace roo
 
 ### 5. Indexing Pipeline
 
-Responsibilities:
+Current responsibilities:
 
 - classify files
 - extract searchable text
-- create chunks
 - index filenames, paths, metadata, and content
 - profile datasets
+
+Planned responsibilities:
+
+- create chunks
 - track changed files
 - schedule document summaries when useful
 - store generated summaries separately from source content
@@ -147,28 +159,35 @@ Indexing should be incremental and explainable.
 
 ### 6. Search And Context Builder
 
-Responsibilities:
+Current responsibilities:
 
-- search files, chunks, datasets, schemas, conversations, artifacts, and tool results
-- rank candidates by relevance and recency
-- build compact context packs for LLM calls
+- search filenames, paths, and previewable text content
+- build bounded context packs from selected files, directories, or the workspace root
 - avoid overloading the model context window
+
+Planned responsibilities:
+
+- search chunks, schemas, conversations, artifacts, and tool results
+- rank candidates by relevance and recency
 - cite source identifiers in answers
 
 The agent should ask for more context through tools instead of receiving the whole workspace.
 
 ### 7. Agent Orchestrator
 
-Responsibilities:
+Current responsibilities:
 
 - manage conversation state
 - call the LLM gateway
+- feed tool results back to the model
+- create final answers and artifacts
+
+Planned responsibilities:
+
 - parse tool requests
 - apply tool policies
 - request user approvals when needed
-- feed tool results back to the model
 - stop loops safely
-- create final answers and artifacts
 
 The agent owns flow control. The LLM owns language generation and reasoning attempts, not permissions.
 
@@ -177,7 +196,7 @@ The agent owns flow control. The LLM owns language generation and reasoning atte
 Responsibilities:
 
 - support configurable base URLs
-- support multiple providers
+- support OpenAI-compatible providers
 - normalize request and response formats
 - support streaming where available
 - expose provider capabilities
@@ -185,24 +204,33 @@ Responsibilities:
 - log latency and errors
 - support model profiles
 
-Provider support should start with:
+Provider support starts with:
+
+- OpenAI-compatible
+- Ollama through its OpenAI-compatible endpoint
+- custom OpenAI-compatible base URLs
+
+Planned provider support:
 
 - Ollama native
-- OpenAI-compatible
 - Docker Model Runner compatible endpoints
-- custom HTTP profile
 
 ### 9. Tool Runner
 
-Responsibilities:
+Current responsibilities:
 
 - implement built-in tools
 - validate input
 - enforce permissions
-- rate-limit expensive calls
 - cap output size
 - record tool runs
 - return structured results
+
+Planned responsibilities:
+
+- rate-limit expensive calls
+- policy-backed approval decisions
+- model-directed tool orchestration
 
 Tools should be deterministic and testable.
 
@@ -213,10 +241,13 @@ Responsibilities:
 - create output directories
 - write generated files
 - track artifact metadata
-- render or export charts
 - create report files
 - link artifacts to chats and tool runs
 - prevent silent overwrites
+
+Planned responsibilities:
+
+- render or export charts
 
 Artifacts are the bridge between chat and real work.
 
@@ -237,8 +268,7 @@ Responsibilities:
 wails dev
 go backend
 frontend dev server
-sqlite
-duckdb
+JSON local stores
 ollama or custom LLM endpoint
 ```
 
@@ -248,7 +278,7 @@ ollama or custom LLM endpoint
 NexusDesk app
 embedded frontend assets
 Go backend in same process
-local app database
+local JSON config stores today; SQLite later
 user-selected model endpoint
 ```
 
@@ -282,15 +312,15 @@ The safe pattern is:
 
 ```text
 LLM requests action
-  ↓
+  ->
 Agent parses request
-  ↓
+  ->
 Policy engine evaluates risk
-  ↓
+  ->
 User approves if needed
-  ↓
+  ->
 Tool runner performs action
-  ↓
+  ->
 Tool result is logged and returned
 ```
 

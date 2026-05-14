@@ -278,6 +278,7 @@ Current implementation:
 - no tool loop is active yet
 - selected file context is read through the same rooted preview boundary as the source preview pane
 - chat history is persisted per workspace in local JSON config
+- file create/update/delete/rename/move actions are deterministic UI-triggered tools today, not model-directed tool calls
 
 ## Prompt Contracts
 

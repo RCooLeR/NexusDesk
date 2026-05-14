@@ -37,6 +37,8 @@ Deliverables:
 - controlled Markdown artifact writer: implemented
 - workspace open/recent workspaces: implemented
 - safe new text/code file draft creation through preview/apply: first implementation
+- safe text/code file deletion with backend validation and confirmation: first implementation
+- safe text/code rename/move with no-overwrite backend validation: first implementation
 - file tree with ignore rules: implemented
 - file tree scans up to 10 workspace levels by default: implemented
 - workspace path/content search: implemented
@@ -125,6 +127,8 @@ Current status:
 - Text edit drafts show dirty state, can be reverted to the loaded content, and clear stale diff previews when the draft changes.
 - Text edit drafts are retained per editor tab while navigating, dirty tabs are marked, closing a dirty tab asks for confirmation, and Ctrl+S previews or applies through the same safe write flow.
 - New text/code files can be drafted from the command palette or Ctrl+N, then created through the same diff/apply write flow.
+- Selected text/code files can be deleted only after backend validation and frontend confirmation.
+- Selected text/code files can be renamed or moved inside the workspace without overwriting existing files.
 - Editor keyboard support includes Ctrl+F for the in-file finder, Ctrl+W for closing the active tab, and Ctrl+Tab / Ctrl+Shift+Tab for tab cycling.
 - Text/code edit drafts use a Monaco-backed editor surface with language detection while preserving the diff/apply boundary.
 - The chat panel has an expanded conversation area, full visible history, context pack list, and multiline prompt composer.

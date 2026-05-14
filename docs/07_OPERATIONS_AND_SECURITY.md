@@ -79,6 +79,15 @@ Default rules:
 
 IDE-style convenience must remain scoped. Quick-open, editor tabs, project context packs, source previews, and artifact navigation should all resolve through the same rooted workspace APIs instead of reading arbitrary filesystem paths from the frontend.
 
+Current implementation:
+
+- workspace scans and previews are rooted in `app/internal/workspace/`
+- create/update writes require a backend diff preview before apply
+- deletes reject directories, symlinks, metadata paths, and traversal before frontend confirmation
+- rename/move rejects traversal, metadata paths, directories, symlinks, same-path moves, directory-like targets, and overwrites
+- direct `.nexusdesk/` metadata writes and deletes are blocked
+- frontend commands call Wails bindings rather than reading or mutating arbitrary paths directly
+
 ## Database Security
 
 Default database mode should be read-only.

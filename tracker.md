@@ -218,17 +218,17 @@ This tracker reflects the repository as it exists today and keeps planned work s
 - [x] Split brand-aware shell sections into smaller rail, navigator, workbench pane, agent panel, and timeline components when they need behavior.
 - [x] Add first reusable button, icon button, and status badge components.
 - [x] Add first reusable card component when panel extraction starts.
-- [ ] Add backend module layout only when implementation files are created.
-- [ ] Split the workbench UI into feature components once behavior lands.
+- [x] Add backend module layout only when implementation files are created.
+- [x] Split the workbench UI into feature components once behavior lands.
 - [ ] Replace the services placeholder with real development/test services when needed.
 - [x] Add an in-app Ollama runtime diagnostic that reports selected model, endpoint, and GPU/VRAM offload status.
 - [x] Add automated frontend tests after interactive behavior exists.
 
 ## Directory Notes
 
-`app/` contains the Wails desktop app. The current backend is intentionally small; create `internal/` packages incrementally as real workspace, settings, storage, indexing, and agent code lands.
+`app/` contains the Wails desktop app. The backend now has incremental `internal/` packages for workspace safety, storage, LLM access, dataset profiles, and artifact creation; keep adding modules only when real behavior lands.
 
-`app/internal/workspace/` owns safe workspace scanning. It should keep ignore rules, depth limits, entry limits, and path safety close to the backend instead of trusting frontend filtering.
+`app/internal/workspace/` owns safe workspace scanning, previews, search, context expansion, dataset queries, and file operations. It keeps ignore rules, depth limits, entry limits, and path safety close to the backend instead of trusting frontend filtering.
 
 `app/internal/workspace/context.go` owns directory and project context expansion for chat. It accepts selected files, selected directories, and `.` for the workspace root, then expands them into a capped list of previewable text/document/data files while preserving scanner ignore rules and symlink/path traversal protections.
 

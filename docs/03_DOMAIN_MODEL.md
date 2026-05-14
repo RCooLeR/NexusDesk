@@ -1,5 +1,11 @@
 # Domain Model
 
+## Current Implementation Note
+
+The current repository implements the early local-first subset of this model. Workspaces are represented by a selected root path and a scanned `WorkspaceSnapshot`; file nodes are returned by `app/internal/workspace/scanner.go`; previews, searches, context packs, dataset profiles, artifacts, LLM settings, recent workspaces, and chat history are implemented with Go structs and local JSON/provenance files rather than SQLite tables.
+
+The richer IDs below describe the intended durable domain model. Do not treat every listed field as a created database column yet.
+
 ## Main Concepts
 
 ### Workspace
@@ -67,6 +73,11 @@ Fields:
 - preview mode
 - index status
 - ignored flag
+
+Current implementation:
+
+- `workspace.FileNode` includes name, absolute path, workspace-relative path, kind, detected file type, depth, and display metadata.
+- The scanner skips ignored/noisy folders, symlinks, overly deep trees, and oversized listings before the frontend sees them.
 
 ### Document
 
@@ -413,6 +424,37 @@ Fields:
 - source references
 - content hash
 
+### File Operation
+
+A file operation is a deterministic backend action against a workspace-relative file path.
+
+Examples:
+
+- create file
+- update file
+- delete file
+- rename file
+- move file
+
+Fields:
+
+- operation type
+- source relative path
+- target relative path, when relevant
+- action preview or diff
+- size
+- status
+- message
+
+Current implementation:
+
+- create and update use `app/internal/workspace/write.go`
+- delete uses `app/internal/workspace/delete.go`
+- rename and move use `app/internal/workspace/move.go`
+- all three reject traversal, metadata paths, symlinks, directories, and unsafe targets before applying
+- creates and updates require a diff preview before apply
+- deletes and moves require backend validation and frontend confirmation
+
 ## Relationship Overview
 
 ```mermaid
@@ -426,6 +468,7 @@ erDiagram
   WORKSPACE ||--o{ STUDIO_SURFACE : presents
 
   FILE_NODE ||--o| DOCUMENT : extracts_to
+  FILE_NODE ||--o{ FILE_OPERATION : changes_through
   DOCUMENT ||--o{ SEGMENT : has
   SEGMENT ||--o{ CHUNK : splits_into
 
