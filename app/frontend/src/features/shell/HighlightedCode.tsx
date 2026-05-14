@@ -1,6 +1,9 @@
+import type {ReactNode} from 'react';
+
 type HighlightedCodeProps = {
     content: string;
     fileName: string;
+    searchQuery?: string;
 };
 
 type Token = {
@@ -16,7 +19,7 @@ const keywordByLanguage: Record<string, Set<string>> = {
     sql: new Set(['and', 'as', 'by', 'create', 'delete', 'from', 'group', 'insert', 'into', 'join', 'left', 'limit', 'not', 'null', 'on', 'or', 'order', 'right', 'select', 'table', 'update', 'values', 'where']),
 };
 
-export function HighlightedCode({content, fileName}: HighlightedCodeProps) {
+export function HighlightedCode({content, fileName, searchQuery = ''}: HighlightedCodeProps) {
     const language = detectLanguage(fileName);
     const tokens = tokenize(content, language);
 
@@ -24,11 +27,42 @@ export function HighlightedCode({content, fileName}: HighlightedCodeProps) {
         <pre className={`highlighted-code language-${language}`}>
             {tokens.map((token, index) => (
                 <span className={token.type === 'plain' ? undefined : `syntax-token syntax-${token.type}`} key={`${index}-${token.text}`}>
-                    {token.text}
+                    {renderTokenText(token.text, searchQuery)}
                 </span>
             ))}
         </pre>
     );
+}
+
+function renderTokenText(text: string, searchQuery: string) {
+    const query = searchQuery.trim();
+    if (!query) {
+        return text;
+    }
+
+    const queryIndex = text.toLowerCase().indexOf(query.toLowerCase());
+    if (queryIndex === -1) {
+        return text;
+    }
+
+    const parts: ReactNode[] = [];
+    let cursor = 0;
+    let matchIndex = queryIndex;
+    while (matchIndex !== -1) {
+        if (matchIndex > cursor) {
+            parts.push(text.slice(cursor, matchIndex));
+        }
+        const matched = text.slice(matchIndex, matchIndex + query.length);
+        parts.push(<mark className="find-highlight" key={`${matchIndex}-${matched}`}>{matched}</mark>);
+        cursor = matchIndex + query.length;
+        matchIndex = text.toLowerCase().indexOf(query.toLowerCase(), cursor);
+    }
+
+    if (cursor < text.length) {
+        parts.push(text.slice(cursor));
+    }
+
+    return parts;
 }
 
 function tokenize(content: string, language: string) {

@@ -73,7 +73,7 @@ For a healthy load, `/api/ps` should show nonzero `size_vram`, and the Ollama lo
 
 `app/internal/dataset/` owns the first persistent dataset profile pass. CSV files reuse the workspace preview profiles and XLSX files expose workbook sheet names, then profiles are stored under `.nexusdesk/datasets/profiles.json` inside the active workspace.
 
-The workbench topbar now has functional Preview, Explain, Summarize, Edit, Report, and Profile actions. Preview reloads the selected workspace node from disk, Explain sends a predefined grounded prompt when text context is available, Summarize sends selected file/directory context through chat and saves the result as a Markdown artifact, Edit uses the diff/apply write flow, Report creates a Markdown artifact, and Profile persists CSV/XLSX dataset metadata. The dataset panel can run a bounded CSV row query for the selected table. The topbar also shows the active studio surface so code, data, document, operations, artifact, and workspace contexts are explicit.
+The workbench topbar now has functional Preview, Explain, Summarize, Edit, Report, and Profile actions. Preview reloads the selected workspace node from disk, Explain sends a predefined grounded prompt when text context is available, Summarize sends selected file/directory context through chat and saves the result as a Markdown artifact, Edit uses the diff/apply write flow, Report creates a Markdown artifact, and Profile persists CSV/XLSX dataset metadata. The dataset panel can run a bounded CSV row query for the selected table. The topbar also shows the active studio surface so code, data, document, operations, artifact, and workspace contexts are explicit. Editor drafts now show dirty state, clear stale diff previews after edits, and support revert before apply.
 
 ## Frontend Structure
 
@@ -87,7 +87,7 @@ The shell is now mostly orchestration. Feature panels own stable presentation, w
 - `app/frontend/src/features/shell/LLMSettingsCard.tsx` owns the provider settings form and delegates persistence/probe actions back to the shell.
 - `app/frontend/src/features/shell/ToolTimeline.tsx` owns the visible tool event timeline presentation.
 - `app/frontend/src/features/shell/WorkspaceNavigator.tsx` owns the workspace lockup, search controls, recent workspace list, fallback scaffold list, and indexed workspace tree presentation, with aligned rows inside the resizable sidebar. `NexusDeskShell.tsx` owns the resizable navigator width state.
-- `app/frontend/src/features/shell/WorkbenchPanel.tsx` owns the active context topbar, active studio surface indicator, closeable editor tab strip, source preview/editor presentation, Markdown source/rendered switching, dataset query panel, fallback workflow preview, and capability cards.
+- `app/frontend/src/features/shell/WorkbenchPanel.tsx` owns the active context topbar, active studio surface indicator, closeable editor tab strip, source preview/editor presentation, find-in-file, Markdown source/rendered switching, dataset query panel, fallback workflow preview, and capability cards.
 - `app/frontend/src/features/shell/WorkspaceRail.tsx` owns the compact branded rail and mode icons.
 - `app/frontend/src/features/shell/AgentPanel.tsx` composes the grounded assistant header, chat card, provider settings, and tool timeline.
 
@@ -95,7 +95,7 @@ The shell is now mostly orchestration. Feature panels own stable presentation, w
 
 ## Frontend Smoke Checks
 
-`app/frontend/scripts/smoke.mjs` checks that the built frontend and key shell source files still expose the main MVP functionality: Wails bindings, search, quick-open, context packs, file write flow, dataset profiling/querying, resizable navigator styling, and the production `dist/index.html` entrypoint. Run it after `npm.cmd run build`.
+`app/frontend/scripts/smoke.mjs` checks that the built frontend and key shell source files still expose the main MVP functionality: Wails bindings, search, quick-open, find-in-file, context packs, file write flow, dataset profiling/querying, resizable navigator styling, and the production `dist/index.html` entrypoint. Run it after `npm.cmd run build`.
 
 ## Artifact Creation
 
@@ -103,7 +103,7 @@ The shell is now mostly orchestration. Feature panels own stable presentation, w
 
 ## File Writes
 
-`app/internal/workspace/write.go` owns the first text write approval boundary. The frontend can draft edits for the selected text file, request a diff preview, and only then apply the write through a rooted workspace method. Direct writes to `.nexusdesk/`, traversal paths, symlinks, directories, oversized previews, and binary existing files are rejected before apply.
+`app/internal/workspace/write.go` owns the first text write approval boundary. The frontend can draft edits for the selected text file, request a diff preview, and only then apply the write through a rooted workspace method. Changing a draft clears the existing diff proposal, so an apply action always corresponds to the current draft. Direct writes to `.nexusdesk/`, traversal paths, symlinks, directories, oversized previews, and binary existing files are rejected before apply.
 
 ## Goals
 

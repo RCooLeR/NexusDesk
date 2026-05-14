@@ -40,6 +40,7 @@ Deliverables:
 - file tree scans up to 10 workspace levels by default: implemented
 - workspace path/content search: implemented
 - keyboard quick-open palette for workspace files, folders, and open tabs: implemented
+- editor find-in-file with highlighted matches: first implementation
 - workspace tree expand/collapse controls: implemented
 - expandable tree state across refreshes: implemented
 - fixed-height desktop shell with panel-level scrolling: implemented
@@ -113,6 +114,8 @@ Current status:
 - The Summarize button sends selected file, extracted document, or directory context through chat and saves the result as a Markdown artifact with provenance.
 - The workbench keeps recently opened previews in closeable editor tabs so several files can stay loaded while browsing.
 - Markdown editor tabs can switch between raw source and rendered preview.
+- Text/code previews support a local find box with match counts and highlighted matches.
+- Text edit drafts show dirty state, can be reverted to the loaded content, and clear stale diff previews when the draft changes.
 - The chat panel has an expanded conversation area, full visible history, context pack list, and multiline prompt composer.
 - Chat responses render common Markdown structures, including tables and code blocks, instead of flattening formatted model output into one paragraph.
 - Persistent chat history works through local JSON config.
@@ -263,6 +266,7 @@ Protect the core:
 - inspect files
 - jump to files, folders, and tabs quickly
 - keep multiple files open in editor tabs
+- find text inside the active file
 - chat with configurable model
 - read selected context safely
 - analyze Excel/CSV

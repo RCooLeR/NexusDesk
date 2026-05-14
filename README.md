@@ -86,7 +86,7 @@ The first useful version should focus on:
 
 - opening local workspaces
 - configuring an LLM URL
-- file tree, quick-open, editor tabs, and studio modes
+- file tree, quick-open, editor tabs, find-in-file, and studio modes
 - chat per workspace
 - safe read-only tools
 - Excel/CSV analysis

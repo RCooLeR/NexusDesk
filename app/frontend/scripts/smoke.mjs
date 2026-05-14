@@ -30,7 +30,11 @@ const checks = [
     },
     {
         file: 'src/features/shell/WorkbenchPanel.tsx',
-        terms: ['editor-tabs', 'markdownViewMode', 'markdown-view-toggle', 'markdown-document-preview', 'studio-mode-strip', 'resolveStudioMode', 'Data Studio', 'Summarize', 'onSummarizeContext', 'onSelectTab', 'onCloseTab', 'onPinProjectContext', 'DatasetQueryPanel', 'file-write-editor'],
+        terms: ['editor-tabs', 'markdownViewMode', 'markdown-view-toggle', 'markdown-document-preview', 'studio-mode-strip', 'resolveStudioMode', 'Data Studio', 'Summarize', 'onSummarizeContext', 'onSelectTab', 'onCloseTab', 'onPinProjectContext', 'DatasetQueryPanel', 'file-write-editor', 'editor-find', 'dirty-indicator', 'countFindMatches'],
+    },
+    {
+        file: 'src/features/shell/HighlightedCode.tsx',
+        terms: ['searchQuery', 'find-highlight', 'renderTokenText'],
     },
     {
         file: 'src/features/shell/QuickOpenPalette.tsx',
@@ -68,6 +72,9 @@ const checks = [
             '.studio-mode-strip',
             '.quick-open',
             '.quick-open-result',
+            '.editor-find',
+            '.dirty-indicator',
+            '.find-highlight',
         ],
     },
     {

@@ -360,6 +360,11 @@ export function NexusDeskShell({
         setIsApplyingWrite(false);
     }
 
+    function updateFileDraft(content: string) {
+        setFileDraft(content);
+        setWriteProposal(null);
+    }
+
     async function previewFileWrite() {
         if (!workspace || !filePreview) {
             setWorkspaceStatus('Open a workspace and select a file before previewing writes.');
@@ -1310,7 +1315,7 @@ export function NexusDeskShell({
                 onCancelFileEdit={clearFileWriteDraft}
                 onCreateReport={() => void createMarkdownReport()}
                 onDatasetQueryChange={setDatasetQuery}
-                onFileDraftChange={setFileDraft}
+                onFileDraftChange={updateFileDraft}
                 onExplainContext={() => void explainSelectedContext()}
                 onSummarizeContext={() => void summarizeSelectedContext()}
                 onPinContext={pinSelectedContext}

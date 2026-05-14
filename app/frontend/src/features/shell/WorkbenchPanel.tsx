@@ -89,6 +89,7 @@ export function WorkbenchPanel({
     workspace,
 }: WorkbenchPanelProps) {
     const [markdownViewMode, setMarkdownViewMode] = useState<'source' | 'rendered'>('source');
+    const [findQuery, setFindQuery] = useState('');
     const canExplainContext = Boolean(
         workspace && (
             (filePreview?.kind === 'file' && filePreview.content) ||
@@ -100,6 +101,9 @@ export function WorkbenchPanel({
     const canProfileDataset = Boolean(workspace && filePreview?.fileType === 'data');
     const canRenderMarkdown = Boolean(filePreview?.kind === 'file' && filePreview.content && isMarkdownFile(filePreview.name));
     const studioMode = resolveStudioMode(filePreview, activeDatasetProfile, activeFile);
+    const findSource = isEditingFile ? fileDraft : filePreview?.content ?? filePreview?.text ?? '';
+    const findMatches = countFindMatches(findSource, findQuery);
+    const isDraftDirty = Boolean(isEditingFile && filePreview && fileDraft !== filePreview.content);
 
     return (
         <main className="workbench">
@@ -156,6 +160,7 @@ export function WorkbenchPanel({
                                     title={tab.relPath}
                                 >
                                     <span>{tab.name}</span>
+                                    {isEditingFile && activeFile === tab.relPath && isDraftDirty && <i aria-label="Unsaved changes" />}
                                     <small>{tab.kind === 'pdf' ? 'pdf' : tab.fileType}</small>
                                     <button
                                         aria-label={`Close ${tab.name}`}
@@ -170,6 +175,17 @@ export function WorkbenchPanel({
                             ))}
                         </div>
                         <div className="editor-tab-actions">
+                            {filePreview?.content && (
+                                <div className="editor-find" aria-label="Find in file">
+                                    <input
+                                        aria-label="Find in file"
+                                        onChange={(event) => setFindQuery(event.target.value)}
+                                        placeholder="Find"
+                                        value={findQuery}
+                                    />
+                                    <small>{findQuery.trim() ? `${findMatches} matches` : 'Find in file'}</small>
+                                </div>
+                            )}
                             {canRenderMarkdown && (
                                 <div className="markdown-view-toggle" aria-label="Markdown view mode">
                                     <button
@@ -238,6 +254,8 @@ export function WorkbenchPanel({
                                     onChange={onFileDraftChange}
                                     onPreview={onPreviewFileWrite}
                                     proposal={writeProposal}
+                                    originalContent={filePreview?.content ?? ''}
+                                    isDirty={isDraftDirty}
                                 />
                             ) : filePreview?.content && markdownViewMode === 'rendered' && isMarkdownFile(filePreview.name) ? (
                                 <>
@@ -249,7 +267,7 @@ export function WorkbenchPanel({
                             ) : filePreview?.content ? (
                                 <>
                                     {filePreview.message && <InlineAlert>{filePreview.message}</InlineAlert>}
-                                    <HighlightedCode content={filePreview.content} fileName={filePreview.name} />
+                                    <HighlightedCode content={filePreview.content} fileName={filePreview.name} searchQuery={findQuery} />
                                 </>
                             ) : (
                                 <EmptyState
@@ -326,6 +344,26 @@ export function WorkbenchPanel({
 
 function isMarkdownFile(fileName: string) {
     return /\.mdx?$/i.test(fileName);
+}
+
+function countFindMatches(content: string, query: string) {
+    const needle = query.trim().toLowerCase();
+    if (!needle || !content) {
+        return 0;
+    }
+
+    let count = 0;
+    let cursor = 0;
+    const haystack = content.toLowerCase();
+    while (cursor <= haystack.length) {
+        const index = haystack.indexOf(needle, cursor);
+        if (index === -1) {
+            break;
+        }
+        count += 1;
+        cursor = index + Math.max(needle.length, 1);
+    }
+    return count;
 }
 
 type StudioMode = {
@@ -451,6 +489,8 @@ function FileWriteEditor({
     onChange,
     onPreview,
     proposal,
+    originalContent,
+    isDirty,
 }: {
     draft: string;
     isApplying: boolean;
@@ -460,15 +500,23 @@ function FileWriteEditor({
     onChange: (content: string) => void;
     onPreview: () => void;
     proposal: FileWriteProposal | null;
+    originalContent: string;
+    isDirty: boolean;
 }) {
     return (
         <div className="file-write-editor">
             <div className="write-toolbar">
-                <Button disabled={isPreviewing || isApplying} onClick={onPreview}>
+                <span className={isDirty ? 'dirty-indicator dirty' : 'dirty-indicator'}>
+                    {isDirty ? 'Unsaved changes' : 'No changes'}
+                </span>
+                <Button disabled={!isDirty || isPreviewing || isApplying} onClick={onPreview}>
                     {isPreviewing ? 'Previewing...' : 'Preview diff'}
                 </Button>
                 <Button disabled={!proposal || isApplying} onClick={onApply}>
                     {isApplying ? 'Applying...' : 'Apply'}
+                </Button>
+                <Button disabled={!isDirty || isApplying} onClick={() => onChange(originalContent)} variant="subtle">
+                    Revert
                 </Button>
                 <Button disabled={isApplying} onClick={onCancel} variant="subtle">
                     Cancel

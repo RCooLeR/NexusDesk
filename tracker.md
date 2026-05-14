@@ -57,6 +57,9 @@ This tracker reflects the repository as it exists today and keeps planned work s
 - [x] Center workbench pane previews selected workspace text files.
 - [x] Center workbench pane keeps recently opened previews in closeable editor tabs.
 - [x] Markdown files in the editor can switch between source and rendered preview.
+- [x] Text/code previews include find-in-file with match counts and highlighted matches.
+- [x] Text edit drafts show dirty state and can revert to the loaded content.
+- [x] Text edit draft changes clear stale diff proposals before apply.
 - [x] Center workbench pane shows the active studio surface for code, data, document, operations, artifact, or workspace context.
 - [x] Workspace refresh preserves the selected file when it still exists.
 - [x] Workspace open/refresh auto-loads a preview for the selected or first file node.
@@ -148,6 +151,7 @@ This tracker reflects the repository as it exists today and keeps planned work s
 - [x] Batch: extend frontend smoke checks so the studio vocabulary and UI marker are guarded.
 - [x] Add keyboard quick-open for workspace nodes and editor tabs.
 - [x] Add quick-open smoke coverage and keep docs aligned.
+- [x] Add find-in-file and dirty/revert editor state.
 - [x] Add a safe workspace folder picker.
 - [x] Build a real file tree from approved workspace roots.
 - [x] Add safe text file preview for selected workspace files.
@@ -222,6 +226,8 @@ The current workstation LLM runner is the sibling Compose stack at `../Llm/`, no
 `app/frontend/src/assets/brand/` contains copied runtime assets from `docs/brand/`. Update the docs source first when changing brand assets, then refresh the app copies deliberately.
 
 `app/frontend/src/features/shell/QuickOpenPalette.tsx` owns client-side quick-open over the already indexed workspace snapshot and open editor tabs. It does not read files directly; selection still flows through the shell's workspace preview path.
+
+`app/frontend/src/features/shell/WorkbenchPanel.tsx` owns local find-in-file, active draft dirty state, and revert controls. File writes still route through `app/internal/workspace/write.go` for diff preview and rooted apply.
 
 ## Verified Commands
 
