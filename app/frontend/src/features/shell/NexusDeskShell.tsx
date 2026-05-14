@@ -50,6 +50,7 @@ import type {
     WorkspaceSnapshot,
 } from '../../types';
 import {AgentPanel} from './AgentPanel';
+import {QuickOpenPalette} from './QuickOpenPalette';
 import {WorkbenchPanel} from './WorkbenchPanel';
 import {WorkspaceNavigator} from './WorkspaceNavigator';
 import {WorkspaceRail} from './WorkspaceRail';
@@ -136,6 +137,8 @@ export function NexusDeskShell({
     const [fileDraft, setFileDraft] = useState('');
     const [writeProposal, setWriteProposal] = useState<FileWriteProposal | null>(null);
     const [navigatorWidth, setNavigatorWidth] = useState(280);
+    const [isQuickOpenOpen, setIsQuickOpenOpen] = useState(false);
+    const [quickOpenQuery, setQuickOpenQuery] = useState('');
 
     useEffect(() => {
         setSettingsDraft(llmSettings);
@@ -174,6 +177,40 @@ export function NexusDeskShell({
             cancelled = true;
         };
     }, [contextPackPaths, workspace]);
+
+    useEffect(() => {
+        function handleGlobalKeyDown(event: KeyboardEvent) {
+            const target = event.target as HTMLElement | null;
+            const isTyping = target?.tagName === 'INPUT' || target?.tagName === 'TEXTAREA' || target?.isContentEditable;
+            const isQuickOpenShortcut = (event.ctrlKey || event.metaKey) && event.key.toLowerCase() === 'p';
+
+            if (isQuickOpenShortcut) {
+                event.preventDefault();
+                setIsQuickOpenOpen(true);
+                setQuickOpenQuery('');
+                return;
+            }
+
+            if (event.key === 'Escape' && isQuickOpenOpen) {
+                event.preventDefault();
+                setIsQuickOpenOpen(false);
+                return;
+            }
+
+            if (isTyping) {
+                return;
+            }
+
+            if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === 'k') {
+                event.preventDefault();
+                setIsQuickOpenOpen(true);
+                setQuickOpenQuery('');
+            }
+        }
+
+        window.addEventListener('keydown', handleGlobalKeyDown);
+        return () => window.removeEventListener('keydown', handleGlobalKeyDown);
+    }, [isQuickOpenOpen]);
 
     const selectedMeta = useMemo(() => {
         if (workspace) {
@@ -599,6 +636,17 @@ export function NexusDeskShell({
             return next;
         });
         await selectWorkspaceNode(node);
+    }
+
+    async function selectQuickOpenNode(node: FileNode) {
+        setExpandedDirectories((current) => {
+            const next = new Set(current);
+            getAncestorDirectories(node).forEach((relPath) => next.add(relPath));
+            return next;
+        });
+        await selectWorkspaceNode(node);
+        setWorkspaceStatus(`${node.relPath} opened from quick open.`);
+        pushToolEvent('Quick open', node.relPath);
     }
 
     function expandAllDirectories() {
@@ -1190,6 +1238,17 @@ export function NexusDeskShell({
     return (
         <div className="app-shell" style={{'--navigator-width': `${navigatorWidth}px`} as CSSProperties}>
             <WorkspaceRail />
+            <QuickOpenPalette
+                activeFile={activeFile}
+                isOpen={isQuickOpenOpen}
+                onClose={() => setIsQuickOpenOpen(false)}
+                onQueryChange={setQuickOpenQuery}
+                onSelectNode={(node) => void selectQuickOpenNode(node)}
+                onSelectTab={selectOpenTab}
+                openTabs={openTabs}
+                query={quickOpenQuery}
+                workspace={workspace}
+            />
 
             <WorkspaceNavigator
                 activeFile={activeFile}

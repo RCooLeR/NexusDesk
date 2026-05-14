@@ -80,7 +80,8 @@ The workbench topbar now has functional Preview, Explain, Summarize, Edit, Repor
 The shell is now mostly orchestration. Feature panels own stable presentation, while `NexusDeskShell.tsx` keeps workspace, preview, provider, and chat state wiring close to the Wails bindings:
 
 - `app/frontend/src/components/ui.tsx` contains reusable UI atoms such as buttons, cards, status badges, and branded state panels.
-- `app/frontend/src/features/shell/NexusDeskShell.tsx` owns the composed desktop workbench state.
+- `app/frontend/src/features/shell/NexusDeskShell.tsx` owns the composed desktop workbench state, global quick-open shortcuts, and cross-panel navigation wiring.
+- `app/frontend/src/features/shell/QuickOpenPalette.tsx` owns the keyboard quick-open palette for workspace nodes and open editor tabs.
 - `app/frontend/src/features/shell/AgentChatCard.tsx` owns the expanded chat presentation, full conversation scroll area, multiline prompt composer, context pack list, save-answer action surface, and delegates provider calls/history/artifact actions back to the shell.
 - `app/frontend/src/features/shell/ChatMessageContent.tsx` renders safe dependency-free Markdown-style chat content, including headings, lists, tables, code fences, inline code, and bold text.
 - `app/frontend/src/features/shell/LLMSettingsCard.tsx` owns the provider settings form and delegates persistence/probe actions back to the shell.
@@ -90,11 +91,11 @@ The shell is now mostly orchestration. Feature panels own stable presentation, w
 - `app/frontend/src/features/shell/WorkspaceRail.tsx` owns the compact branded rail and mode icons.
 - `app/frontend/src/features/shell/AgentPanel.tsx` composes the grounded assistant header, chat card, provider settings, and tool timeline.
 
-`App.css` keeps the desktop shell fixed to the window and pushes overflow into the interactive surfaces that actually need it: workspace tree/search results, source preview, dataset query results, capability list, chat thread, provider settings, and tool timeline.
+`App.css` keeps the desktop shell fixed to the window and pushes overflow into the interactive surfaces that actually need it: workspace tree/search results, quick-open results, source preview, dataset query results, capability list, chat thread, provider settings, and tool timeline.
 
 ## Frontend Smoke Checks
 
-`app/frontend/scripts/smoke.mjs` checks that the built frontend and key shell source files still expose the main MVP functionality: Wails bindings, search, context packs, file write flow, dataset profiling/querying, resizable navigator styling, and the production `dist/index.html` entrypoint. Run it after `npm.cmd run build`.
+`app/frontend/scripts/smoke.mjs` checks that the built frontend and key shell source files still expose the main MVP functionality: Wails bindings, search, quick-open, context packs, file write flow, dataset profiling/querying, resizable navigator styling, and the production `dist/index.html` entrypoint. Run it after `npm.cmd run build`.
 
 ## Artifact Creation
 

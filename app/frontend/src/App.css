@@ -512,6 +512,115 @@ button:disabled {
     height: 19px;
 }
 
+.quick-open-backdrop {
+    position: fixed;
+    inset: 0;
+    z-index: 20;
+    display: grid;
+    align-items: start;
+    justify-items: center;
+    background: rgba(15, 23, 42, 0.22);
+    padding-top: 9vh;
+}
+
+.quick-open {
+    width: min(760px, calc(100vw - 32px));
+    max-height: min(680px, 82vh);
+    border: 1px solid rgba(148, 163, 184, 0.52);
+    border-radius: var(--nd-radius-sm);
+    background: #ffffff;
+    box-shadow: 0 24px 70px rgba(15, 23, 42, 0.24);
+    display: grid;
+    grid-template-rows: auto minmax(0, 1fr);
+    overflow: hidden;
+}
+
+.quick-open-input-row {
+    border-bottom: 1px solid var(--nd-border-soft);
+    display: grid;
+    grid-template-columns: 30px minmax(0, 1fr);
+    gap: 10px;
+    align-items: center;
+    padding: 12px 14px;
+}
+
+.quick-open-input-row img {
+    width: 22px;
+    height: 22px;
+}
+
+.quick-open-input-row input {
+    width: 100%;
+    border: 0;
+    color: #0f172a;
+    font: 17px/1.4 inherit;
+    outline: none;
+}
+
+.quick-open-results {
+    min-height: 0;
+    overflow: auto;
+    padding: 8px;
+}
+
+.quick-open-result {
+    width: 100%;
+    border: 1px solid transparent;
+    border-radius: var(--nd-radius-sm);
+    background: transparent;
+    cursor: pointer;
+    display: grid;
+    grid-template-columns: 30px minmax(0, 1fr) auto;
+    gap: 10px;
+    align-items: center;
+    min-height: 44px;
+    padding: 7px 9px;
+    text-align: left;
+}
+
+.quick-open-result:hover,
+.quick-open-result.selected {
+    border-color: #c7d7ee;
+    background: #eef6ff;
+}
+
+.quick-open-result.active {
+    box-shadow: inset 3px 0 0 var(--nd-sky-blue);
+}
+
+.quick-open-result strong,
+.quick-open-result small {
+    display: block;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.quick-open-result strong {
+    color: #0f172a;
+    font-size: 13px;
+}
+
+.quick-open-result small,
+.quick-open-result em {
+    color: var(--nd-muted-text);
+    font-size: 11px;
+    font-style: normal;
+}
+
+.quick-open-result em {
+    border: 1px solid #d8e1ef;
+    border-radius: 999px;
+    background: #fbfdff;
+    padding: 2px 7px;
+}
+
+.quick-open-empty {
+    color: var(--nd-muted-text);
+    font-size: 13px;
+    padding: 18px 12px;
+}
+
 .workbench {
     min-height: 0;
     min-width: 0;

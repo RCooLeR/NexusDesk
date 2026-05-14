@@ -75,7 +75,7 @@
       </g>
     </g>
 <text x="410" y="170" font-family="Inter, Arial, Helvetica, sans-serif" font-size="72" font-weight="760" letter-spacing="-4"><tspan fill="#FFFFFF">Nexus</tspan><tspan fill="url(#deskGrad)">Desk</tspan></text>
-<text x="416" y="224" font-family="Inter, Arial, Helvetica, sans-serif" font-size="28" fill="#CBD5E1">AI Workbench for Code, Data &amp; Ops</text>
+<text x="416" y="224" font-family="Inter, Arial, Helvetica, sans-serif" font-size="28" fill="#CBD5E1">AI IDE, Data &amp; Analytics Studio</text>
 <text x="418" y="279" font-family="Inter, Arial, Helvetica, sans-serif" font-size="21" fill="#94A3B8">Connected analysis for code, documents, traffic, databases, and Docker.</text>
 <rect x="0" y="384" width="528" height="12" fill="#7C3AED"/><rect x="528" y="384" width="528" height="12" fill="#2563EB"/><rect x="1056" y="384" width="528" height="12" fill="#38BDF8"/>
 </svg>

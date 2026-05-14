@@ -77,7 +77,7 @@ export function WorkspaceNavigator({
                     <img src={brandAssets.symbolDark} alt="" />
                     <div>
                         <h1><span>Nexus</span><strong>Desk</strong></h1>
-                        <small>AI Workbench for Code, Data &amp; Ops</small>
+                        <small>AI IDE, Data &amp; Analytics Studio</small>
                     </div>
                 </div>
                 <p className="eyebrow">Workspace</p>

@@ -67,6 +67,8 @@ This tracker reflects the repository as it exists today and keeps planned work s
 - [x] Workspace navigator includes search results and expand/collapse controls.
 - [x] Workspace navigator width can be resized with a drag handle.
 - [x] Workspace navigator keeps fallback and file-tree rows aligned inside the resizable sidebar.
+- [x] Keyboard quick-open palette exists for workspace files, folders, and open editor tabs.
+- [x] Quick-open selection expands parent folders before selecting a workspace node.
 - [x] App shell stays fixed to the window while long navigator, preview, chat, settings, and timeline content scroll inside their panels.
 - [x] Expanded workspace directories are reconciled and preserved across refreshes.
 - [x] Backend remembers the selected workspace root for the session.
@@ -144,6 +146,8 @@ This tracker reflects the repository as it exists today and keeps planned work s
 - [x] Batch: add a studio surface resolver for code, data, documents, operations, artifacts, and workspace context.
 - [x] Batch: show the active studio surface in the workbench topbar.
 - [x] Batch: extend frontend smoke checks so the studio vocabulary and UI marker are guarded.
+- [x] Add keyboard quick-open for workspace nodes and editor tabs.
+- [x] Add quick-open smoke coverage and keep docs aligned.
 - [x] Add a safe workspace folder picker.
 - [x] Build a real file tree from approved workspace roots.
 - [x] Add safe text file preview for selected workspace files.
@@ -216,6 +220,8 @@ The current workstation LLM runner is the sibling Compose stack at `../Llm/`, no
 `docs/` remains the source of truth for product direction, architecture, delivery phases, developer experience, studio surface vocabulary, and brand assets.
 
 `app/frontend/src/assets/brand/` contains copied runtime assets from `docs/brand/`. Update the docs source first when changing brand assets, then refresh the app copies deliberately.
+
+`app/frontend/src/features/shell/QuickOpenPalette.tsx` owns client-side quick-open over the already indexed workspace snapshot and open editor tabs. It does not read files directly; selection still flows through the shell's workspace preview path.
 
 ## Verified Commands
 

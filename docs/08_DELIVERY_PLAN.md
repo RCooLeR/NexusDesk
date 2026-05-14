@@ -39,6 +39,7 @@ Deliverables:
 - file tree with ignore rules: implemented
 - file tree scans up to 10 workspace levels by default: implemented
 - workspace path/content search: implemented
+- keyboard quick-open palette for workspace files, folders, and open tabs: implemented
 - workspace tree expand/collapse controls: implemented
 - expandable tree state across refreshes: implemented
 - fixed-height desktop shell with panel-level scrolling: implemented
@@ -89,6 +90,7 @@ Current status:
 - NexusDesk is now documented and presented as a local-first AI IDE, data studio, and analytics studio.
 - The active center pane exposes a first studio surface indicator for Code Studio, Data Studio, Document Studio, Operations Studio, Artifact Studio, or Workspace Studio.
 - The workspace browser can open, refresh, preview, remember, search, and expand/collapse local folders, scanning up to 10 levels deep by default.
+- The shell has a keyboard quick-open palette for workspace files, folders, and already-open tabs, with parent directories expanded on selection.
 - The window shell stays fixed-height; long file trees, previews, chat, settings, and timelines scroll inside their own panels.
 - Text preview stays inside the approved workspace root and refuses binary/unsafe paths.
 - Text preview decodes common UTF-8, UTF-16, and Windows-1251 Cyrillic files.
@@ -259,6 +261,7 @@ Protect the core:
 
 - open workspace
 - inspect files
+- jump to files, folders, and tabs quickly
 - keep multiple files open in editor tabs
 - chat with configurable model
 - read selected context safely

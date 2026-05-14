@@ -80,7 +80,7 @@
       <tspan fill="#FFFFFF">Nexus</tspan><tspan fill="url(#deskGrad)">Desk</tspan>
     </text>
     <text x="477" y="317" font-family="Inter, Arial, Helvetica, sans-serif" font-size="32" fill="#CBD5E1">
-      AI Workbench for Code, Data &amp; Ops
+      AI IDE, Data &amp; Analytics Studio
     </text>
     <text x="480" y="395" font-family="Inter, Arial, Helvetica, sans-serif" font-size="23" fill="#94A3B8">
       Analyze files, docs, traffic, databases, Docker, and code in one connected workspace.

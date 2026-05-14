@@ -3,7 +3,7 @@
 ## Identity
 
 **Name:** NexusDesk  
-**Tagline:** AI Workbench for Code, Data & Ops
+**Tagline:** AI IDE, Data & Analytics Studio
 
 NexusDesk is positioned as a connected AI workspace for development, analytics, documents, marketing traffic, databases, and Docker/Ops.
 

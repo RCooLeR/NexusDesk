@@ -13,6 +13,8 @@ const checks = [
             'ProfileDataset',
             'QueryDataset',
             'SearchWorkspace',
+            'QuickOpenPalette',
+            'selectQuickOpenNode',
             'contextPackPaths',
             'pinProjectContext',
             'openTabs',
@@ -29,6 +31,10 @@ const checks = [
     {
         file: 'src/features/shell/WorkbenchPanel.tsx',
         terms: ['editor-tabs', 'markdownViewMode', 'markdown-view-toggle', 'markdown-document-preview', 'studio-mode-strip', 'resolveStudioMode', 'Data Studio', 'Summarize', 'onSummarizeContext', 'onSelectTab', 'onCloseTab', 'onPinProjectContext', 'DatasetQueryPanel', 'file-write-editor'],
+    },
+    {
+        file: 'src/features/shell/QuickOpenPalette.tsx',
+        terms: ['QuickOpenPalette', 'quick-open-result', 'scoreQuickOpenEntry', 'maxQuickOpenResults', 'ArrowDown', 'ArrowUp'],
     },
     {
         file: 'src/brand/assets.ts',
@@ -60,6 +66,8 @@ const checks = [
             '.file-write-editor',
             '.dataset-profile-summary',
             '.studio-mode-strip',
+            '.quick-open',
+            '.quick-open-result',
         ],
     },
     {

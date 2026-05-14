@@ -80,7 +80,7 @@
       <tspan fill="#FFFFFF">Nexus</tspan><tspan fill="url(#deskGrad)">Desk</tspan>
     </text>
     <text x="960" y="735" text-anchor="middle" font-family="Inter, Arial, Helvetica, sans-serif" font-size="34" fill="#CBD5E1">
-      AI Workbench for Code, Data &amp; Ops
+      AI IDE, Data &amp; Analytics Studio
     </text>
     <rect x="0" y="1064" width="640" height="16" fill="#7C3AED"/>
     <rect x="640" y="1064" width="640" height="16" fill="#2563EB"/>
