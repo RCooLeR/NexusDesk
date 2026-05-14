@@ -68,12 +68,13 @@ The current app implements the first safe workspace slice:
 - Saved CSV queries are stored per dataset under `.nexusdesk/datasets/queries.json`.
 - Dataset summary artifacts use the bounded CSV preview/profile data to write deterministic Markdown with column profiles and suggested analysis questions.
 - Artifact metadata and chat history are included in the workspace search surface even before a full index database exists.
+- `app/internal/workspace/freshness.go` captures file fingerprints so the shell can detect changed files and mark generated artifacts that cite changed sources as stale.
 - CSV chart generation goes through `app/internal/workspace/chart.go` and returns bounded category counts or numeric sums.
 - Chat context uses the same rooted preview boundary and sends only selected text content or a bounded pack of pinned previews.
 - Workspace open/recent/refresh flows are bound through Wails methods on `app/app.go`.
 - Recent workspaces are stored in local JSON config through `app/internal/storage/recent_workspaces.go`.
 
-The app does not yet build persistent chunks, embeddings, or a file watcher. Those remain future indexing work.
+The app does not yet build persistent chunks, embeddings, or an event-driven filesystem watcher. Those remain future indexing work; the current freshness pass is a polling snapshot that keeps stale-source warnings visible without background indexing complexity.
 
 Studio implication: every indexed item should eventually be able to answer two questions: which surface should open it, and which actions make sense there.
 
@@ -182,7 +183,7 @@ Current implementation:
 - creates and lists first SVG chart artifacts under `.nexusdesk/artifacts/`
 - uses Monaco for read-only text/code previews and text/code edit drafts
 - supports safe new file drafts, text/code updates, deletes, and renames/moves through backend file-operation boundaries
-- does not yet persist line-aware chunks or citations
+- persists chat/artifact source path citations but does not yet persist line-aware chunks
 
 ### Markdown
 
@@ -313,7 +314,7 @@ When content changes:
 
 ## Workspace Watcher
 
-A file watcher can update the index when files change.
+The current app has a polling freshness check; a later event-driven file watcher can update the index when files change.
 
 Rules:
 
@@ -322,6 +323,13 @@ Rules:
 - pause indexing during large workspace operations
 - show indexing status in the UI
 - allow manual reindex
+
+Current behavior:
+
+- compares file size and modification time against the last workspace snapshot
+- ignores `.git/` and NexusDesk metadata/tool-run internals
+- marks changed rows in the navigator
+- flags generated artifacts whose provenance references changed source files
 
 ## Index Run Reporting
 

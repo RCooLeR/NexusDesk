@@ -19,13 +19,13 @@ When Wails regenerates frontend bindings, `app/frontend/wailsjs/go/models.ts` ca
 
 ## Current Local Persistence
 
-The current app uses small JSON files in the user's config directory while SQLite is still pending:
+The current app still uses small JSON files in the user's config directory as the compatibility layer:
 
 - `recent-workspaces.json`
 - `llm-settings.json`
 - `chat-history.json`
 
-LLM API keys are not written into `llm-settings.json`. They are saved in a sidecar credential blob protected by the OS where available, while the JSON settings file keeps only a storage marker. These stores live behind `app/internal/storage/` so the later SQLite migration can keep the same app-level boundaries.
+LLM API keys are not written into `llm-settings.json`. They are saved in a sidecar credential blob protected by the OS where available, while the JSON settings file keeps only a storage marker. `EnsureSQLiteMetadataStore` now initializes `.nexusdesk/metadata/nexusdesk.sqlite` with `modernc.org/sqlite` and applies the workspace/chat/approval/artifact/tool-run schema. These JSON stores live behind `app/internal/storage/` so the next repository migration can mirror and then replace them without changing frontend contracts.
 
 ## Chat Streaming
 
@@ -35,7 +35,7 @@ Selected directories and the workspace root also flow through the same streaming
 
 The chat panel previews pinned context packs by calling `PreviewChatContextPack`, which uses the same backend collector as the send path. That keeps the visible file list aligned with what the model will actually receive, including truncation warnings when caps are reached.
 
-Chat history stores the source paths attached to each user/assistant pair so saved answer artifacts can use the answer's original context instead of whatever happens to be pinned later.
+Chat history stores the source paths attached to each user/assistant pair so saved answer artifacts can use the answer's original context instead of whatever happens to be pinned later. Persisted assistant answers now append a compact source list when context paths exist, and saved Markdown answer artifacts include the same source citations in their header and footer.
 
 ## Local Models
 
@@ -66,7 +66,7 @@ For a healthy load, `/api/ps` should show nonzero `size_vram`, and the Ollama lo
 
 `app/internal/workspace/search.go` owns the first workspace path/content search pass. It searches path names and previewable text content inside the same ignore and depth boundaries as scanning. `SearchWorkspace` now merges that result set with artifact metadata matches from `app/internal/artifact/` and persisted chat snippets from `app/internal/storage/chat_history.go`, so generated outputs and prior analysis are searchable from the same navigator surface. `app/internal/workspace/dataset_query.go` owns the first CSV query flow with bounded row results, text search, column filters, numeric comparisons, `contains`, `limit`, and simple `order by` clauses until a DuckDB SQL layer is added. Dataset query exports rerun that same bounded query before writing a CSV artifact, so exported rows match the backend safety boundary rather than trusting frontend table state.
 
-`app/internal/workspace/context.go` owns directory/project context expansion and context-pack previews. The UI can pin a selected directory or the workspace root, but the backend still decides which files are safe and useful enough to include.
+`app/internal/workspace/context.go` owns directory/project context expansion and context-pack previews. The UI can pin a selected directory or the workspace root, but the backend still decides which files are safe and useful enough to include. `app/internal/workspace/freshness.go` owns the first file-change snapshot; the shell polls it to mark changed tree rows and warn when generated artifacts cite changed source paths.
 
 `app/frontend/src/features/shell/HighlightedCode.tsx` remains as the dependency-free fallback highlighter for non-Monaco preview paths. Text/code source previews and edit drafts now use the Monaco-backed components listed below.
 
@@ -103,7 +103,7 @@ The shell is now mostly orchestration. Feature panels own stable presentation, w
 
 `app/frontend/scripts/smoke.mjs` checks that the built frontend and key shell source files still expose the main MVP functionality: Wails bindings, search, quick-open, command palette, Monaco preview/edit surfaces, find-in-file, context packs, file create/update/delete/move flows, dataset profiling/querying/saved queries/exporting/charting/summaries, read-only SQL, artifact actions/comparison, agent tool plan dry-run/execute controls, Compose parsing, approval log styling, resizable navigator styling, and the production `dist/index.html` entrypoint. Run it after `npm.cmd run build`.
 
-`app/frontend/scripts/visual-smoke.mjs` is an optional Playwright screenshot smoke. It captures desktop and mobile screenshots plus `visual-baselines/manifest.json` from the built `dist/index.html` when Playwright is installed; otherwise it exits successfully with a skip message so the default local loop remains lightweight.
+`app/frontend/scripts/visual-smoke.mjs` is now an enforced Playwright screenshot smoke. It captures desktop and mobile screenshots plus `visual-baselines/manifest.json` from the built `dist/index.html`, and fails if the production build or Playwright dependency is missing. On this workstation, install/run with `$env:NODE_OPTIONS='--use-system-ca'` because npm needs the system CA store.
 
 ## Artifact Creation
 
@@ -113,15 +113,17 @@ The shell is now mostly orchestration. Feature panels own stable presentation, w
 
 `app/internal/approval/` owns the first append-only action log. Applied text writes, deletes, moves, reports, saved chat artifacts, chart artifacts, query exports, dataset summaries, scan reports, artifact archives, and artifact deletes append records under `.nexusdesk/approvals/log.json`. This is not the final agent policy engine yet, but it gives the studio an auditable local trail while higher-risk agent, Docker, and database approvals are designed.
 
-`app/internal/agenttools/` owns tool descriptors and tool run records. Dry-runs and explicit executions persist under `.nexusdesk/tool-runs/log.json` with inputs, output summaries, risk, approval ID, duration, and errors.
+`app/internal/agenttools/` owns tool descriptors and tool run records. Dry-runs and explicit executions persist under `.nexusdesk/tool-runs/log.json` with inputs, output summaries, risk, approval ID, duration, and errors. The agent panel can expand recent tool runs to inspect captured inputs, output/error text, approval reference, duration, and replay/diff affordances.
 
-`app/internal/appmeta/` owns the prepared SQLite metadata schema and manifest under `.nexusdesk/metadata/`. It mirrors the current JSON-backed workspace, chat, approval, artifact, and tool-run domains so a driver-backed migration can replace JSON stores deliberately.
+`app/internal/appmeta/` owns the SQLite metadata schema, manifest, and first real database initialization under `.nexusdesk/metadata/`. It mirrors the current JSON-backed workspace, chat, approval, artifact, and tool-run domains so repository migration can replace JSON stores deliberately.
 
-`app/internal/analytics/` owns the first read-only SQL-style CSV query surface. It accepts a constrained `SELECT` subset, blocks mutation keywords, and executes through bounded CSV query primitives while the real DuckDB driver-backed registration remains a prepared next step.
+`app/internal/analytics/` owns the first read-only SQL-style CSV query surface. It accepts a constrained `SELECT` subset, blocks mutation keywords, and executes through bounded CSV query primitives by default. A real DuckDB `database/sql` execution path is implemented behind the `duckdb` build tag for CGO-enabled machines; the current Windows verification loop keeps CGO disabled and therefore uses the safe fallback path.
+
+`GetArtifactLineage` in `app/app.go` assembles a first lineage graph from artifact metadata, chat source paths, and persisted tool runs. `WorkbenchPanel.tsx` shows a compact lineage inspector and keeps richer graph filtering in the next batch.
 
 ## Completed Batch: Agent Execution And Analytics Foundations
 
-The latest implementation batch turned the tool planning surface into auditable controlled actions and added the first metadata/analytics foundations:
+The Agent Execution And Analytics Foundations batch turned the tool planning surface into auditable controlled actions and added the first metadata/analytics foundations:
 
 - Tool execution planner: proposed plan rows now map to backend dry-run and execute requests.
 - Approval integration: medium/high-risk executions require the modal approval prompt.
@@ -131,17 +133,27 @@ The latest implementation batch turned the tool planning surface into auditable 
 - Artifact versions: generated artifacts can be compared for size delta and added/removed line summaries.
 - Visual baselines: Playwright smoke writes desktop/mobile baselines and a manifest when installed.
 
+## Completed Batch: Context, Persistence, And Analytics Depth
+
+- SQLite metadata initialization now creates a real `.nexusdesk/metadata/nexusdesk.sqlite` database and applies the schema through `modernc.org/sqlite`.
+- DuckDB query execution is available behind the `duckdb` build tag for CGO-enabled environments, with bounded CSV SQL fallback in the default loop.
+- Tool-run details expose inputs, outputs/errors, approvals, replay, and target diff affordances.
+- Assistant answers and saved Markdown answer artifacts include source citations.
+- Artifact lineage links chats, tool runs, source files, and generated artifacts.
+- Workspace freshness polling marks changed files and stale generated artifacts.
+- Playwright is installed as a dev dependency, visual smoke is enforced, and visual baselines are captured.
+
 ## Prepared Next Batch
 
-The next implementation batch should deepen persistence, citations, lineage, and freshness:
+The next implementation batch should turn these foundations into deeper studio workflows:
 
-- SQLite driver-backed repositories behind the prepared schema.
-- DuckDB driver-backed CSV/table registration behind the SQL-compatible query surface.
-- Tool-run detail drawer with full inputs, outputs, approval references, and replay/diff affordances.
-- Context-pack source citations in assistant answers and saved artifacts.
-- Artifact lineage graph linking chats, tool runs, source files, and generated outputs.
-- Workspace file watcher with changed-file indicators and stale dataset/artifact warnings.
-- Installable Playwright dependency and enforced visual baselines in smoke/CI.
+- SQLite repositories that mirror JSON chat, approvals, artifacts, and tool-run records into the active database.
+- A first schema browser for SQLite metadata tables and DuckDB dataset views.
+- A persistent artifact lineage view with filtering by source file, chat, tool run, and artifact kind.
+- Stale-context warnings in chat messages and context-pack previews when cited files change.
+- Dataset/profile refresh actions that react to watcher changes and invalidate stale chart/query artifacts.
+- Richer SQL result artifacts with SQL text, engine, row counts, and source dataset citations.
+- Playwright visual assertions for navigator resizing, tool-run details, and lineage/freshness panels.
 
 ## File Writes
 
@@ -160,8 +172,8 @@ Current developer setup requires:
 
 Planned data/connector work will add:
 
-- SQLite
-- DuckDB dependency
+- SQLite through `modernc.org/sqlite`
+- optional DuckDB dependency behind the `duckdb` build tag and CGO
 - Docker only for connector testing or packaging experiments
 
 ## Repository Shape

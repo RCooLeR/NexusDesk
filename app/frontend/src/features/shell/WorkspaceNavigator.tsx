@@ -32,6 +32,7 @@ type WorkspaceNavigatorProps = {
     workspaceSearchQuery: string;
     workspaceSearchResults: WorkspaceSearchResult[];
     workspaceStatus: string;
+    changedFilePaths: string[];
 };
 
 const fileIconByType: Record<string, string> = {
@@ -73,7 +74,9 @@ export function WorkspaceNavigator({
     workspaceSearchQuery,
     workspaceSearchResults,
     workspaceStatus,
+    changedFilePaths,
 }: WorkspaceNavigatorProps) {
+    const changedFiles = new Set(changedFilePaths);
     return (
         <section className="navigator">
             <header className="navigator-header">
@@ -185,7 +188,11 @@ export function WorkspaceNavigator({
                         {workspaceNodes.map((node) => (
                             <button
                                 key={node.relPath}
-                                className={activeFile === node.relPath ? 'tree-item selected' : 'tree-item'}
+                                className={[
+                                    'tree-item',
+                                    activeFile === node.relPath ? 'selected' : '',
+                                    changedFiles.has(node.relPath) ? 'changed' : '',
+                                ].filter(Boolean).join(' ')}
                                 onClick={() => onSelectWorkspaceNode(node)}
                                 style={{paddingLeft: `${8 + Math.min(node.depth, 10) * 8}px`}}
                             >
@@ -197,7 +204,7 @@ export function WorkspaceNavigator({
                                 </span>
                                 <span>
                                     <strong>{node.name}</strong>
-                                    <small>{node.meta}</small>
+                                    <small>{changedFiles.has(node.relPath) ? `${node.meta} / changed` : node.meta}</small>
                                 </span>
                             </button>
                         ))}

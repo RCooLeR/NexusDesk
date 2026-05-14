@@ -33,7 +33,7 @@ Deliverables:
 - visible studio surface vocabulary for code, data, documents, operations, and artifacts: first implementation
 - local JSON app config for recent workspaces and LLM settings: implemented
 - OS-protected API key credential storage: implemented
-- local SQLite app database: planned
+- local SQLite app database: initialized through a real driver, repository migration planned
 - controlled Markdown artifact writer: implemented
 - workspace open/recent workspaces: implemented
 - safe new text/code file draft creation through preview/apply: first implementation
@@ -141,7 +141,7 @@ Current status:
 - The chat panel has an expanded conversation area, full visible history, context pack list, and multiline prompt composer.
 - Chat responses render common Markdown structures, including tables and code blocks, instead of flattening formatted model output into one paragraph.
 - Persistent chat history works through local JSON config.
-- richer document extraction/OCR and SQLite persistence are still planned.
+- richer document extraction/OCR and full SQLite repository migration are still planned.
 - Markdown report artifacts can be created under `.nexusdesk/artifacts/` without overwriting existing files.
 - Latest assistant answers can be saved as Markdown artifacts under `.nexusdesk/artifacts/` with their chat context recorded as metadata.
 - Markdown artifacts now write sidecar provenance metadata with source, prompt, model, source paths, and creation timestamp.
@@ -155,8 +155,14 @@ Current status:
 - Applied write/delete/move and artifact creation actions are recorded in `.nexusdesk/approvals/log.json` and shown in a first workbench approval log.
 - Operations Studio parses selected Docker Compose files into service, image, port, volume, and dependency summaries without mutating Docker state.
 - The frontend has a smoke check for the built entrypoint, generated Wails bindings, and core shell functionality markers.
-- An optional Playwright visual smoke script can capture desktop/mobile screenshots when Playwright is installed.
-- richer document extraction/OCR, modal approval dialogs, DuckDB SQL, and SQLite persistence are still planned.
+- Playwright is installed as a frontend dev dependency and visual smoke captures desktop/mobile baselines from the production build.
+- SQLite metadata initialization now applies the schema to `.nexusdesk/metadata/nexusdesk.sqlite`, while JSON stores remain the compatibility layer until repositories migrate.
+- Read-only SQL uses the bounded CSV-compatible path by default and has a CGO-gated DuckDB driver path behind the `duckdb` build tag.
+- Tool-run rows expose detail drawers with captured inputs, outputs/errors, approval references, replay, and target diff affordances.
+- Assistant answers and saved answer artifacts include source citations from selected files and context packs.
+- Artifact lineage can be built across chats, tools, source files, and generated artifacts.
+- Workspace freshness polling marks changed files and generated artifacts that may be stale after source changes.
+- richer document extraction/OCR and full SQLite repository migration are still planned.
 
 ## Completed Batch: Studio Hardening And Inspectors
 
@@ -192,15 +198,25 @@ This batch made more of the studio inspectable and auditable without turning on 
 6. Artifact comparison shows added/removed line summaries and size delta between generated outputs.
 7. Visual smoke now writes baseline screenshots and a manifest whenever Playwright is installed.
 
-## Prepared Next Batch: Context, Persistence, And Analytics Depth
+## Completed Batch: Context, Persistence, And Analytics Depth
 
-1. Add real SQLite driver-backed migration and repository implementations behind the prepared schema.
-2. Add real DuckDB driver-backed CSV/table registration behind the SQL-compatible query surface.
-3. Add a tool-run detail drawer with full inputs, outputs, approval references, and replay/diff affordances.
-4. Add context-pack source citations in assistant answers and saved artifacts.
-5. Add artifact lineage graph linking chats, tool runs, source files, and generated outputs.
-6. Add workspace file watcher with changed-file indicators and stale dataset/artifact warnings.
-7. Install Playwright as a dev dependency and enforce visual baselines in smoke/CI.
+1. SQLite metadata preparation now uses `modernc.org/sqlite` to create and migrate `.nexusdesk/metadata/nexusdesk.sqlite`.
+2. DuckDB-backed SQL execution is implemented as a `database/sql` path behind the `duckdb` build tag for CGO-enabled systems, with bounded CSV SQL fallback in the default Windows loop.
+3. Tool-run rows now expand into detail drawers with inputs, outputs/errors, approval IDs, replay, and target diff affordances.
+4. Context-pack source citations now appear in persisted assistant answers and saved Markdown answer artifacts.
+5. Artifact lineage can be built across chats, tool runs, source files, and generated outputs.
+6. Workspace freshness polling detects changed files and flags generated artifacts that cite stale sources.
+7. Playwright is now a dev dependency, visual smoke is enforced, and desktop/mobile visual baselines are captured.
+
+## Prepared Next Batch: Real Studio Workflows
+
+1. Add SQLite repositories that mirror JSON chat, approvals, artifacts, and tool-run records into the active database.
+2. Add a first schema browser for SQLite metadata tables and DuckDB dataset views.
+3. Add a persistent artifact lineage view with filtering by source file, chat, tool run, and artifact kind.
+4. Add stale-context warnings directly in chat messages and context-pack previews when cited files change.
+5. Add dataset/profile refresh actions that react to watcher changes and invalidate stale chart/query artifacts.
+6. Add richer SQL result artifacts that save SQL text, engine, row counts, and source dataset citations.
+7. Add Playwright visual assertions for navigator resizing, tool-run details, and lineage/freshness panels.
 
 ## Phase 2: Files, Documents, And Artifacts
 

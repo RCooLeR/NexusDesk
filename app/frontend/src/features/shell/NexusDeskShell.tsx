@@ -11,6 +11,7 @@ import {
     ClearRecentWorkspaces,
     ClearChatHistory,
     ArchiveArtifact,
+    CheckWorkspaceFreshness,
     CompareArtifacts,
     CreateChatMarkdownArtifact,
     CreateDatasetChartArtifact,
@@ -22,6 +23,7 @@ import {
     EnsureSQLiteMetadataStore,
     ExecuteAgentTool,
     GetArtifactMetadata,
+    GetArtifactLineage,
     GetChatHistory,
     ListAgentTools,
     ListAgentToolRuns,
@@ -56,6 +58,7 @@ import type {
     AgentToolPlanItem,
     AgentToolRunRecord,
     ArtifactComparison,
+    ArtifactLineage,
     ArtifactMetadata,
     ChatStreamEvent,
     ChatMessage,
@@ -77,6 +80,7 @@ import type {
     StartupState,
     ToolEvent,
     WorkspaceArtifact,
+    WorkspaceFreshnessStatus,
     WorkspaceSearchResult,
     WorkspaceOpenResult,
     WorkspaceSnapshot,
@@ -189,7 +193,9 @@ export function NexusDeskShell({
     const [isArchivingArtifact, setIsArchivingArtifact] = useState(false);
     const [isDeletingArtifact, setIsDeletingArtifact] = useState(false);
     const [artifactComparison, setArtifactComparison] = useState<ArtifactComparison | null>(null);
+    const [artifactLineage, setArtifactLineage] = useState<ArtifactLineage | null>(null);
     const [sqliteStatus, setSQLiteStatus] = useState<SQLiteMetadataStatus | null>(null);
+    const [workspaceFreshness, setWorkspaceFreshness] = useState<WorkspaceFreshnessStatus | null>(null);
     const [isPreparingMetadataStore, setIsPreparingMetadataStore] = useState(false);
     const [editingFilePaths, setEditingFilePaths] = useState<string[]>([]);
     const [fileDrafts, setFileDrafts] = useState<Record<string, string>>({});
@@ -222,6 +228,38 @@ export function NexusDeskShell({
     useEffect(() => {
         setAgentToolPlan(buildAgentToolPlan(agentTools, filePreview, artifactMetadata, activeFile));
     }, [activeFile, agentTools, artifactMetadata, filePreview]);
+
+    useEffect(() => {
+        if (!workspace) {
+            setWorkspaceFreshness(null);
+            setArtifactLineage(null);
+            return;
+        }
+
+        let cancelled = false;
+        async function checkFreshness() {
+            try {
+                const status = await CheckWorkspaceFreshness();
+                if (!cancelled) {
+                    setWorkspaceFreshness(status);
+                    if (status.changed.length > 0) {
+                        setWorkspaceStatus(status.message);
+                    }
+                }
+            } catch {
+                if (!cancelled) {
+                    setWorkspaceFreshness(null);
+                }
+            }
+        }
+
+        void checkFreshness();
+        const timer = window.setInterval(() => void checkFreshness(), 10000);
+        return () => {
+            cancelled = true;
+            window.clearInterval(timer);
+        };
+    }, [workspace?.root]);
 
     useEffect(() => {
         if (!workspace || contextPackPaths.length === 0) {
@@ -2263,6 +2301,22 @@ export function NexusDeskShell({
         }
     }
 
+    async function loadArtifactLineage() {
+        if (!workspace) {
+            setWorkspaceStatus('Open a workspace before building lineage.');
+            return;
+        }
+        try {
+            const lineage = await GetArtifactLineage();
+            setArtifactLineage(lineage);
+            setWorkspaceStatus(lineage.message);
+            pushToolEvent('Lineage refreshed', lineage.message);
+        } catch (error) {
+            const message = error instanceof Error ? error.message : '';
+            setWorkspaceStatus(message || 'Could not build artifact lineage.');
+        }
+    }
+
     async function prepareSQLiteMetadataStore() {
         if (!workspace) {
             setWorkspaceStatus('Open a workspace before preparing metadata storage.');
@@ -2290,6 +2344,60 @@ export function NexusDeskShell({
 
     async function executeAgentTool(item: AgentToolPlanItem) {
         await runAgentTool(item, true);
+    }
+
+    async function replayAgentToolRun(run: AgentToolRunRecord) {
+        setIsRunningAgentTool(true);
+        try {
+            const record = await PreviewAgentTool({
+                toolName: run.toolName,
+                target: run.target,
+                inputs: run.inputs ?? {},
+                approved: false,
+                approvalId: '',
+            });
+            await refreshAgentToolRuns();
+            setChatStatus(record.outputSummary || record.error || `${record.title} replayed.`);
+            pushToolEvent('Tool replayed', record.outputSummary || record.toolName);
+        } catch (error) {
+            const message = error instanceof Error ? error.message : '';
+            setChatStatus(message || 'Could not replay tool run.');
+        } finally {
+            setIsRunningAgentTool(false);
+        }
+    }
+
+    async function compareAgentToolRunTarget(run: AgentToolRunRecord) {
+        if (!workspace || !run.target) {
+            setChatStatus('This tool run does not include a diffable target.');
+            return;
+        }
+        if (isArtifactPath(run.target)) {
+            const currentIndex = artifacts.findIndex((item) => item.relPath === run.target);
+            const current = artifacts[currentIndex];
+            const previous = artifacts.slice(currentIndex + 1).find((item) => !current || item.kind === current.kind);
+            if (!previous) {
+                setChatStatus('No earlier artifact is available for this tool target.');
+                return;
+            }
+            const comparison = await CompareArtifacts(previous.relPath, run.target);
+            setArtifactComparison(comparison);
+            setChatStatus(comparison.message);
+            return;
+        }
+        const nextContent = run.inputs?.content || run.inputs?.nextContent;
+        if (!nextContent) {
+            setChatStatus('This tool run target has no captured replacement content to diff.');
+            return;
+        }
+        try {
+            const proposal = await PreviewFileWrite({relPath: run.target, content: nextContent});
+            setWriteProposals((current) => ({...current, [run.target]: proposal}));
+            setChatStatus(proposal.message);
+        } catch (error) {
+            const message = error instanceof Error ? error.message : '';
+            setChatStatus(message || 'Could not diff tool run target.');
+        }
     }
 
     async function runAgentTool(item: AgentToolPlanItem, execute: boolean) {
@@ -2473,6 +2581,7 @@ export function NexusDeskShell({
                 workspace={workspace}
                 workspaceItems={state.workspaceItems}
                 workspaceNodes={workspaceNodes}
+                changedFilePaths={workspaceFreshness?.changed.map((change) => change.relPath) ?? []}
                 workspaceSearchQuery={workspaceSearchQuery}
                 workspaceSearchResults={workspaceSearchResults}
                 workspaceStatus={workspaceStatus}
@@ -2499,7 +2608,9 @@ export function NexusDeskShell({
                 datasetSQLQueryResult={datasetSQLQueryResult}
                 savedDatasetQueries={savedDatasetQueries}
                 artifactComparison={artifactComparison}
+                artifactLineage={artifactLineage}
                 sqliteStatus={sqliteStatus}
+                workspaceFreshness={workspaceFreshness}
                 datasetChartPreview={datasetChartPreview}
                 datasetChartCategory={datasetChartCategory}
                 datasetChartType={datasetChartType}
@@ -2567,6 +2678,7 @@ export function NexusDeskShell({
                 onCloseTab={closeOpenTab}
                 onDeleteArtifact={() => void deleteActiveArtifact()}
                 onOpenArtifactSource={() => void openArtifactSource()}
+                onRefreshLineage={() => void loadArtifactLineage()}
                 onPrepareMetadataStore={() => void prepareSQLiteMetadataStore()}
                 onSelectTab={selectOpenTab}
                 onSelectArtifact={(artifact) => void selectArtifact(artifact)}
@@ -2598,6 +2710,8 @@ export function NexusDeskShell({
                 onClearContextPack={() => setContextPackPaths([])}
                 onDryRunAgentTool={(item) => void dryRunAgentTool(item)}
                 onExecuteAgentTool={(item) => void executeAgentTool(item)}
+                onReplayAgentToolRun={(run) => void replayAgentToolRun(run)}
+                onCompareAgentToolRunTarget={(run) => void compareAgentToolRunTarget(run)}
                 onRefreshAgentPlan={() => void refreshAgentTools()}
                 onRemoveContextPath={removeContextPath}
                 onSaveLatestAssistantArtifact={() => void saveLatestAssistantArtifact()}

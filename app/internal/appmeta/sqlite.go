@@ -2,12 +2,15 @@ package appmeta
 
 import (
 	"crypto/sha256"
+	"database/sql"
 	"encoding/hex"
 	"encoding/json"
 	"os"
 	"path/filepath"
 	"strings"
 	"time"
+
+	_ "modernc.org/sqlite"
 )
 
 const metadataDirRelPath = ".nexusdesk/metadata"
@@ -38,15 +41,41 @@ func Ensure(root string) (SQLiteStatus, error) {
 	if err := os.WriteFile(schemaPath, []byte(schemaSQL), 0o644); err != nil {
 		return SQLiteStatus{}, err
 	}
+	dbPath := filepath.Join(dir, "nexusdesk.sqlite")
+	db, err := sql.Open("sqlite", dbPath)
+	if err != nil {
+		return SQLiteStatus{}, err
+	}
+	defer db.Close()
+	if _, err := db.Exec(schemaSQL); err != nil {
+		return SQLiteStatus{}, err
+	}
+	now := time.Now().UTC()
+	workspaceID := hashID(absRoot)
+	if _, err := db.Exec(
+		`INSERT INTO workspaces (id, root, name, opened_at)
+		 VALUES (?, ?, ?, ?)
+		 ON CONFLICT(root) DO UPDATE SET name = excluded.name, opened_at = excluded.opened_at`,
+		workspaceID,
+		absRoot,
+		filepath.Base(absRoot),
+		now.Format(time.RFC3339),
+	); err != nil {
+		return SQLiteStatus{}, err
+	}
+	tables, err := listTables(db)
+	if err != nil {
+		return SQLiteStatus{}, err
+	}
 	hash := sha256.Sum256([]byte(schemaSQL))
 	status := SQLiteStatus{
-		Path:          filepath.Join(dir, "nexusdesk.sqlite"),
+		Path:          dbPath,
 		SchemaPath:    schemaPath,
 		SchemaVersion: 1,
 		SchemaHash:    hex.EncodeToString(hash[:]),
-		Tables:        []string{"workspaces", "chats", "approvals", "artifacts", "tool_runs"},
-		Message:       "SQLite metadata schema prepared; JSON stores remain the active compatibility layer until the SQLite driver migration lands.",
-		UpdatedAt:     time.Now().UTC().Format(time.RFC3339),
+		Tables:        tables,
+		Message:       "SQLite metadata store is active; JSON stores remain the compatibility layer while repositories migrate incrementally.",
+		UpdatedAt:     now.Format(time.RFC3339),
 	}
 	payload, err := json.MarshalIndent(status, "", "  ")
 	if err != nil {
@@ -56,6 +85,29 @@ func Ensure(root string) (SQLiteStatus, error) {
 		return SQLiteStatus{}, err
 	}
 	return status, nil
+}
+
+func listTables(db *sql.DB) ([]string, error) {
+	rows, err := db.Query(`SELECT name FROM sqlite_master WHERE type = 'table' AND name NOT LIKE 'sqlite_%' ORDER BY name`)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	tables := []string{}
+	for rows.Next() {
+		var table string
+		if err := rows.Scan(&table); err != nil {
+			return nil, err
+		}
+		tables = append(tables, table)
+	}
+	return tables, rows.Err()
+}
+
+func hashID(value string) string {
+	hash := sha256.Sum256([]byte(value))
+	return hex.EncodeToString(hash[:16])
 }
 
 func SchemaSQL() string {

@@ -93,7 +93,8 @@ Current implementation:
 - scan-report artifacts are created from backend scan status and exclusive artifact writes
 - artifact archive/delete actions validate workspace-relative artifact paths and move/remove sibling metadata sidecars through backend methods
 - explicit agent tool dry-runs/executions persist auditable records under `.nexusdesk/tool-runs/log.json`
-- SQLite metadata preparation writes schema and manifest files under `.nexusdesk/metadata/` without migrating active JSON stores yet
+- SQLite metadata preparation writes schema and manifest files under `.nexusdesk/metadata/`, opens `.nexusdesk/metadata/nexusdesk.sqlite` through `modernc.org/sqlite`, and applies the schema without migrating active JSON stores yet
+- workspace freshness checks ignore internal metadata/tool-run paths, detect source file changes, and mark generated artifacts with stale source provenance
 - frontend commands call Wails bindings rather than reading or mutating arbitrary paths directly
 
 ## Database Security
@@ -112,7 +113,7 @@ Rules:
 
 Data Studio and Analytics Studio should make read-only status visible near schema, query, chart, and report surfaces. Mutating SQL is a policy change, not a UI shortcut.
 
-The current read-only SQL surface accepts a constrained `SELECT` subset over CSV data, blocks mutation keywords, and reuses the bounded CSV query path. Real DuckDB execution remains behind the next driver-backed implementation step.
+The current read-only SQL surface accepts a constrained `SELECT` subset over CSV data, blocks mutation keywords, and reuses the bounded CSV query path by default. A real DuckDB `database/sql` execution path is implemented behind the `duckdb` build tag for CGO-enabled machines; the current Windows loop keeps CGO disabled unless a C compiler is installed.
 
 ## Docker Security
 
@@ -170,6 +171,7 @@ Protect:
 - marketing data
 - chat history
 - tool outputs
+- source citations and lineage metadata
 
 Privacy controls:
 

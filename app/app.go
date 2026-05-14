@@ -67,6 +67,25 @@ type ChatStreamEvent struct {
 	SourcePaths    []string `json:"sourcePaths"`
 }
 
+type LineageNode struct {
+	ID      string `json:"id"`
+	Kind    string `json:"kind"`
+	Label   string `json:"label"`
+	RelPath string `json:"relPath"`
+}
+
+type LineageEdge struct {
+	From  string `json:"from"`
+	To    string `json:"to"`
+	Label string `json:"label"`
+}
+
+type ArtifactLineage struct {
+	Nodes   []LineageNode `json:"nodes"`
+	Edges   []LineageEdge `json:"edges"`
+	Message string        `json:"message"`
+}
+
 const chatContextMaxBytes = 16 * 1024
 const chatCSVContextMaxRows = 20
 const chatContextPackMaxFiles = 32
@@ -81,6 +100,8 @@ type App struct {
 	recentStore   *storage.RecentWorkspaceStore
 	workspaceMu   sync.RWMutex
 	workspaceRoot string
+	watchMu       sync.Mutex
+	fingerprints  map[string]workspace.FileFingerprint
 }
 
 func NewApp() *App {
@@ -460,6 +481,39 @@ func (a *App) ListAgentToolRuns() ([]agenttools.RunRecord, error) {
 	return agenttools.List(a.getWorkspaceRoot())
 }
 
+func (a *App) CheckWorkspaceFreshness() (workspace.FreshnessStatus, error) {
+	root := a.getWorkspaceRoot()
+	if root == "" {
+		return workspace.FreshnessStatus{}, errors.New("open a workspace before checking file changes")
+	}
+	current, err := workspace.SnapshotFingerprints(root)
+	if err != nil {
+		return workspace.FreshnessStatus{}, err
+	}
+	a.watchMu.Lock()
+	previous := a.fingerprints
+	a.fingerprints = current
+	a.watchMu.Unlock()
+	if previous == nil {
+		return workspace.FreshnessStatus{Message: "Workspace watcher baseline captured."}, nil
+	}
+
+	changes := workspace.CompareFingerprints(previous, current)
+	staleArtifacts := a.staleArtifactsForChanges(root, changes)
+	message := "Workspace files are current."
+	if len(changes) > 0 {
+		message = fmt.Sprintf("%d workspace file changes detected.", len(changes))
+	}
+	if len(staleArtifacts) > 0 {
+		message = fmt.Sprintf("%s %d artifacts may be stale.", message, len(staleArtifacts))
+	}
+	return workspace.FreshnessStatus{
+		Changed:        changes,
+		StaleArtifacts: staleArtifacts,
+		Message:        message,
+	}, nil
+}
+
 func (a *App) EnsureSQLiteMetadataStore() (appmeta.SQLiteStatus, error) {
 	root := a.getWorkspaceRoot()
 	if root == "" {
@@ -471,6 +525,95 @@ func (a *App) EnsureSQLiteMetadataStore() (appmeta.SQLiteStatus, error) {
 	}
 	a.recordApproval("metadata.sqlite.prepare", ".nexusdesk/metadata", "low", status.Message)
 	return status, nil
+}
+
+func (a *App) GetArtifactLineage() (ArtifactLineage, error) {
+	root := a.getWorkspaceRoot()
+	if root == "" {
+		return ArtifactLineage{}, errors.New("open a workspace before building artifact lineage")
+	}
+	nodes := map[string]LineageNode{}
+	edges := []LineageEdge{}
+	addNode := func(node LineageNode) {
+		if node.ID == "" {
+			return
+		}
+		if _, ok := nodes[node.ID]; !ok {
+			nodes[node.ID] = node
+		}
+	}
+	addEdge := func(from string, to string, label string) {
+		if from == "" || to == "" {
+			return
+		}
+		edges = append(edges, LineageEdge{From: from, To: to, Label: label})
+	}
+
+	items, err := artifact.List(root)
+	if err != nil {
+		return ArtifactLineage{}, err
+	}
+	for _, item := range items {
+		artifactID := "artifact:" + item.RelPath
+		addNode(LineageNode{ID: artifactID, Kind: "artifact", Label: item.Name, RelPath: item.RelPath})
+		metadata, err := artifact.Metadata(root, item.RelPath)
+		if err != nil {
+			continue
+		}
+		for _, sourcePath := range metadata.SourcePaths {
+			sourceID := "source:" + sourcePath
+			addNode(LineageNode{ID: sourceID, Kind: "source", Label: filepath.Base(sourcePath), RelPath: sourcePath})
+			addEdge(sourceID, artifactID, "source")
+		}
+		if metadata.ContextRelPath != "" {
+			contextID := "source:" + metadata.ContextRelPath
+			addNode(LineageNode{ID: contextID, Kind: "source", Label: filepath.Base(metadata.ContextRelPath), RelPath: metadata.ContextRelPath})
+			addEdge(contextID, artifactID, "context")
+		}
+		if metadata.Prompt != "" {
+			promptID := "chat:" + item.RelPath
+			addNode(LineageNode{ID: promptID, Kind: "chat", Label: "Prompt", RelPath: metadata.ContextRelPath})
+			addEdge(promptID, artifactID, "generated")
+		}
+	}
+
+	toolRuns, _ := agenttools.List(root)
+	for _, run := range toolRuns {
+		runID := "tool:" + run.ID
+		addNode(LineageNode{ID: runID, Kind: "tool", Label: run.Title, RelPath: run.Target})
+		if run.Target != "" {
+			targetID := "source:" + run.Target
+			if isArtifactRelPath(run.Target) {
+				targetID = "artifact:" + run.Target
+			}
+			addNode(LineageNode{ID: targetID, Kind: targetKind(run.Target), Label: filepath.Base(run.Target), RelPath: run.Target})
+			addEdge(targetID, runID, run.Mode)
+		}
+	}
+
+	chats, _ := a.chatStore.List(root)
+	for index, message := range chats {
+		if message.Role != "assistant" || len(message.SourcePaths) == 0 {
+			continue
+		}
+		chatID := fmt.Sprintf("chat:assistant:%d", index)
+		addNode(LineageNode{ID: chatID, Kind: "chat", Label: "Assistant answer", RelPath: message.ContextRelPath})
+		for _, sourcePath := range message.SourcePaths {
+			sourceID := "source:" + sourcePath
+			addNode(LineageNode{ID: sourceID, Kind: "source", Label: filepath.Base(sourcePath), RelPath: sourcePath})
+			addEdge(sourceID, chatID, "cited")
+		}
+	}
+
+	nodeList := make([]LineageNode, 0, len(nodes))
+	for _, node := range nodes {
+		nodeList = append(nodeList, node)
+	}
+	return ArtifactLineage{
+		Nodes:   nodeList,
+		Edges:   edges,
+		Message: fmt.Sprintf("%d lineage nodes and %d relationships.", len(nodeList), len(edges)),
+	}, nil
 }
 
 func (a *App) SaveDatasetQuery(relPath string, query string, label string) (dataset.SavedQuery, error) {
@@ -767,7 +910,7 @@ func (a *App) persistChatPair(prompt string, chatRequest llm.ChatRequest, result
 			SourcePaths:    chatRequest.SourcePaths,
 		}, storage.ChatMessage{
 			Role:           "assistant",
-			Content:        result.Message,
+			Content:        appendSourceCitations(result.Message, result.SourcePaths),
 			ContextRelPath: result.ContextRelPath,
 			SourcePaths:    result.SourcePaths,
 		})
@@ -1111,6 +1254,7 @@ func (a *App) openWorkspace(root string) (WorkspaceOpenResult, error) {
 	}
 
 	a.setWorkspaceRoot(snapshot.Root)
+	a.resetWorkspaceFreshness(snapshot.Root)
 	if _, err := a.recentStore.Add(snapshot.Root); err != nil {
 		return WorkspaceOpenResult{}, err
 	}
@@ -1131,4 +1275,88 @@ func (a *App) getWorkspaceRoot() string {
 	a.workspaceMu.RLock()
 	defer a.workspaceMu.RUnlock()
 	return a.workspaceRoot
+}
+
+func (a *App) resetWorkspaceFreshness(root string) {
+	fingerprints, err := workspace.SnapshotFingerprints(root)
+	if err != nil {
+		return
+	}
+	a.watchMu.Lock()
+	a.fingerprints = fingerprints
+	a.watchMu.Unlock()
+}
+
+func (a *App) staleArtifactsForChanges(root string, changes []workspace.FileChange) []string {
+	if len(changes) == 0 {
+		return nil
+	}
+	changed := map[string]bool{}
+	for _, change := range changes {
+		changed[filepath.ToSlash(change.RelPath)] = true
+	}
+	items, err := artifact.List(root)
+	if err != nil {
+		return nil
+	}
+	stale := []string{}
+	for _, item := range items {
+		metadata, err := artifact.Metadata(root, item.RelPath)
+		if err != nil {
+			continue
+		}
+		sourcePaths := append([]string{}, metadata.SourcePaths...)
+		if metadata.ContextRelPath != "" {
+			sourcePaths = append(sourcePaths, metadata.ContextRelPath)
+		}
+		for _, sourcePath := range sourcePaths {
+			if changed[filepath.ToSlash(sourcePath)] {
+				stale = append(stale, item.RelPath)
+				break
+			}
+		}
+	}
+	return stale
+}
+
+func appendSourceCitations(message string, sourcePaths []string) string {
+	sourcePaths = compactStrings(sourcePaths)
+	if strings.TrimSpace(message) == "" || len(sourcePaths) == 0 || strings.Contains(message, "\n\nSources:") {
+		return message
+	}
+	var builder strings.Builder
+	builder.WriteString(strings.TrimRight(message, "\n"))
+	builder.WriteString("\n\nSources:\n")
+	for _, sourcePath := range sourcePaths {
+		builder.WriteString("- ")
+		builder.WriteString(sourcePath)
+		builder.WriteString("\n")
+	}
+	return builder.String()
+}
+
+func compactStrings(values []string) []string {
+	seen := map[string]bool{}
+	result := []string{}
+	for _, value := range values {
+		value = strings.TrimSpace(value)
+		if value == "" || seen[value] {
+			continue
+		}
+		seen[value] = true
+		result = append(result, value)
+	}
+	return result
+}
+
+func isArtifactRelPath(relPath string) bool {
+	normalized := strings.ToLower(filepath.ToSlash(relPath))
+	return strings.HasPrefix(normalized, ".nexusdesk/artifacts/")
+}
+
+func targetKind(relPath string) string {
+	if isArtifactRelPath(relPath) {
+		return "artifact"
+	}
+	return "source"
 }

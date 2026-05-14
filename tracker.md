@@ -146,8 +146,15 @@ This tracker reflects the repository as it exists today and keeps planned work s
 - [x] Medium/high-risk agent tool execution uses the modal approval foundation before backend execution.
 - [x] Agent tool runs persist under `.nexusdesk/tool-runs/log.json`.
 - [x] SQLite metadata schema preparation lives in `app/internal/appmeta/` and writes `.nexusdesk/metadata/schema.sql`.
+- [x] SQLite metadata preparation now opens a real SQLite database at `.nexusdesk/metadata/nexusdesk.sqlite` and applies the schema through `modernc.org/sqlite`.
 - [x] Read-only SQL-style CSV analytics live in `app/internal/analytics/` with a DuckDB-compatible surface.
+- [x] DuckDB SQL execution is implemented through `database/sql` and can be enabled with the `duckdb` build tag when CGO and a C compiler are available; the default Windows loop falls back to the bounded CSV SQL surface.
 - [x] Generated artifacts can be compared for added/removed line summaries.
+- [x] Agent tool-run rows expand into detail drawers with inputs, output/error text, approval references, replay, and target diff affordances.
+- [x] Assistant answers and saved answer artifacts include source citations from selected files and context packs.
+- [x] Artifact lineage can be built from chats, tool runs, source files, and generated artifacts through `GetArtifactLineage`.
+- [x] Workspace freshness polling detects changed files and marks potentially stale generated artifacts.
+- [x] Playwright is installed as a frontend dev dependency and visual smoke now fails instead of skipping when build output or Playwright is missing.
 - [x] Tool timeline records real workspace, preview, search, profile, write, report, and chat actions.
 - [x] Artifact rows can select the generated report preview when visible in the workspace tree.
 - [x] Helper services placeholder exists at `services/docker-compose.yml`.
@@ -170,7 +177,7 @@ This tracker reflects the repository as it exists today and keeps planned work s
 - [x] Add branded empty, loading, and inline alert states.
 - [x] Add first branded approval log state for applied workspace and artifact actions.
 - [ ] Add modal approval dialogs for higher-risk tool execution.
-- [ ] Add visual regression screenshots once the first interactive flows exist.
+- [x] Add visual regression screenshots once the first interactive flows exist.
 - [ ] Confirm final app icon pipeline for Windows/macOS/Linux packaging.
 - [ ] Add macOS/Linux icon generation checks when packaging those targets.
 
@@ -208,13 +215,23 @@ This tracker reflects the repository as it exists today and keeps planned work s
 
 ### Prepared Batch: Context, Persistence, And Analytics Depth
 
-- [ ] Add real SQLite driver-backed migration and repository implementations behind the prepared schema.
-- [ ] Add real DuckDB driver-backed CSV/table registration behind the SQL-compatible query surface.
-- [ ] Add tool-run detail drawer with full inputs, outputs, approval references, and replay/diff affordances.
-- [ ] Add context-pack source citations in assistant answers and saved artifacts.
-- [ ] Add artifact lineage graph linking chats, tool runs, source files, and generated outputs.
-- [ ] Add workspace file watcher with changed-file indicators and stale dataset/artifact warnings.
-- [ ] Add installable Playwright dependency and enforce visual baselines in CI/local smoke.
+- [x] Add real SQLite driver-backed migration and repository implementations behind the prepared schema.
+- [x] Add DuckDB driver-backed CSV/table registration behind the SQL-compatible query surface, gated by the `duckdb` build tag for CGO-enabled workstations.
+- [x] Add tool-run detail drawer with full inputs, outputs, approval references, and replay/diff affordances.
+- [x] Add context-pack source citations in assistant answers and saved artifacts.
+- [x] Add artifact lineage graph linking chats, tool runs, source files, and generated outputs.
+- [x] Add workspace file watcher with changed-file indicators and stale dataset/artifact warnings.
+- [x] Add installable Playwright dependency and enforce visual baselines in CI/local smoke.
+
+### Prepared Batch: Real Studio Workflows
+
+- [ ] Add SQLite repositories that mirror JSON chat, approvals, artifacts, and tool-run records into the active database.
+- [ ] Add a first schema browser for SQLite metadata and DuckDB dataset views in Data Studio.
+- [ ] Add a persistent artifact lineage view with filtering by source file, chat, tool run, and artifact kind.
+- [ ] Add stale-context warnings directly in chat messages and context-pack previews when cited files change.
+- [ ] Add dataset/profile refresh actions that react to watcher changes and invalidate stale chart/query artifacts.
+- [ ] Add richer SQL result artifacts that save SQL text, engine, row counts, and source dataset citations.
+- [ ] Add Playwright visual assertions for navigator resizing, tool-run details, and lineage/freshness panels.
 
 - [x] Batch: align product docs around NexusDesk as an IDE/data/analytics studio.
 - [x] Batch: align architecture, domain, indexing, search, AI, operations, delivery, DX, brand, README, and tracker wording.
@@ -311,9 +328,11 @@ This tracker reflects the repository as it exists today and keeps planned work s
 
 `app/internal/agenttools/run.go` owns persisted tool run records. Dry-runs and explicit executions capture tool name, target, inputs, risk, approval ID, timing, output summary, and errors under `.nexusdesk/tool-runs/log.json`.
 
-`app/internal/appmeta/` owns the prepared SQLite metadata schema and manifest. JSON stores remain active for compatibility, while `.nexusdesk/metadata/schema.sql` mirrors the intended workspace, chat, approval, artifact, and tool-run tables for the driver-backed migration.
+`app/internal/appmeta/` owns the SQLite metadata schema, manifest, and first real database initialization. `EnsureSQLiteMetadataStore` writes `.nexusdesk/metadata/schema.sql`, opens `.nexusdesk/metadata/nexusdesk.sqlite` through `modernc.org/sqlite`, applies the schema, and records the active workspace row. JSON stores remain active for compatibility until repositories are migrated deliberately.
 
-`app/internal/analytics/` owns the first read-only SQL-style CSV query surface. It accepts a constrained `SELECT` subset, blocks mutation keywords, executes through the bounded CSV query path, and labels results as DuckDB-compatible until a real DuckDB driver is installed.
+`app/internal/analytics/` owns the first read-only SQL-style CSV query surface. It accepts a constrained `SELECT` subset, blocks mutation keywords, uses a real `database/sql` DuckDB execution path when built with the `duckdb` tag on a CGO-enabled workstation, and otherwise falls back to the bounded CSV query path.
+
+`app/internal/workspace/freshness.go` owns the first workspace freshness snapshot. The frontend polls it to show changed-file indicators and mark generated artifacts that cite changed source paths as potentially stale.
 
 `app/internal/approval/` owns the first append-only approval/action log for applied file and artifact operations. Records are persisted under `.nexusdesk/approvals/log.json` inside the active workspace and surfaced in the workbench while modal approval policy remains a later hardening step.
 

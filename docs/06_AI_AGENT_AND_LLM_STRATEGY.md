@@ -103,13 +103,15 @@ Current implementation:
 - Workspace search and CSV row queries are deterministic backend tools, not model-side file access.
 - `app/internal/agenttools/registry.go` now exposes a first deterministic tool registry for workspace preview, file write, dataset query, artifact create/archive, and operations inspect actions.
 - The agent sidebar renders a proposed tool plan for the active context with risk and approval labels, and user-triggered dry-run/execute actions now persist tool-run records.
+- Recent tool-run rows expand into detail drawers with captured inputs, output/error text, approval references, replay, and target diff affordances.
+- Persisted assistant answers and saved Markdown answer artifacts include the source paths used for selected-file or context-pack grounding.
 - `AskLLMStream` emits `nexusdesk:chat-stream` Wails events so the frontend can render partial assistant responses before final history persistence completes.
 - `app/internal/storage/chat_history.go` persists bounded chat history per workspace in local JSON config.
 - The local workstation endpoint is backed by the sibling `../Llm/` Compose stack. Its `rcooler-ollama` container must use `OLLAMA_LLM_LIBRARY=cuda_v12`; otherwise Ollama may select CUDA 13, fail GPU initialization, and fall back to CPU with zero VRAM offload.
 
 Capability hints are currently inferred from model IDs. They are useful for readiness signals, but they are not a substitute for provider-native capability metadata.
 
-The current chat implementation requires an explicit configured model. It includes either a bounded selected text preview or a bounded pinned context pack, sends selected CSV files as a structured column profile plus bounded row sample, sends DOCX text and extracted PDF text when available, and streams response text when the configured provider supports OpenAI-compatible streaming. Directory and project context are bounded expansions, not raw full-project dumps: ignored folders, symlinks, images, binaries, and oversized content are skipped, and the included files/bytes are capped. The Explain action uses the same selected text/code/document/directory boundary to send a deterministic explanation prompt. It does not yet run a model-directed tool loop.
+The current chat implementation requires an explicit configured model. It includes either a bounded selected text preview or a bounded pinned context pack, sends selected CSV files as a structured column profile plus bounded row sample, sends DOCX text and extracted PDF text when available, cites the source paths attached to persisted assistant answers, and streams response text when the configured provider supports OpenAI-compatible streaming. Directory and project context are bounded expansions, not raw full-project dumps: ignored folders, symlinks, images, binaries, and oversized content are skipped, and the included files/bytes are capped. The Explain action uses the same selected text/code/document/directory boundary to send a deterministic explanation prompt. It does not yet run a model-directed tool loop.
 
 ## Agent Modes
 
@@ -286,6 +288,7 @@ Current implementation:
 - first CSV chart artifacts are deterministic UI-triggered tools today, not model-directed chart rendering
 - artifact archive/delete and scan-report creation are deterministic UI-triggered tools today, not model-directed artifact mutations
 - tool run records capture inputs, output summary, risk, approval ID, duration, and errors for later agent-loop replay/audit
+- artifact lineage can link source files, assistant answers, persisted tool runs, and generated artifacts for a first audit graph
 
 ## Prompt Contracts
 
@@ -306,7 +309,7 @@ The prompt should tell the model:
 
 - do not claim access to files not provided or retrieved
 - request tools when more context is needed
-- cite files, sheets, rows, pages, or logs used
+- cite files, sheets, rows, pages, or logs used; current persisted answers include file-level source citations
 - create artifacts only through tools
 - do not ask for dangerous actions when safe alternatives exist
 

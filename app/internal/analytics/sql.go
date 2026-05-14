@@ -1,10 +1,13 @@
 package analytics
 
 import (
+	"database/sql"
 	"encoding/csv"
 	"errors"
 	"fmt"
+	"os"
 	"path/filepath"
+	"regexp"
 	"strconv"
 	"strings"
 
@@ -31,6 +34,7 @@ type SQLQueryResult struct {
 
 type parsedSelect struct {
 	columns   []string
+	source    string
 	where     string
 	orderBy   string
 	orderDesc bool
@@ -45,6 +49,11 @@ func QueryCSVSQL(root string, request SQLQueryRequest) (SQLQueryResult, error) {
 	parsed, err := parseSelectSQL(sql)
 	if err != nil {
 		return SQLQueryResult{}, err
+	}
+	if canUseDuckDBSource(parsed.source) {
+		if result, err := queryDuckDB(root, request, sql); err == nil {
+			return result, nil
+		}
 	}
 	filterQuery := parsed.where
 	if parsed.orderBy != "" {
@@ -75,6 +84,89 @@ func QueryCSVSQL(root string, request SQLQueryRequest) (SQLQueryResult, error) {
 		TotalRows:   result.TotalRows,
 		MatchedRows: result.MatchedRows,
 		Message:     fmt.Sprintf("DuckDB-compatible read-only query returned %d rows from %s.", len(rows), result.RelPath),
+	}, nil
+}
+
+func queryDuckDB(root string, request SQLQueryRequest, query string) (SQLQueryResult, error) {
+	absRoot, err := filepath.Abs(root)
+	if err != nil {
+		return SQLQueryResult{}, err
+	}
+	relPath := filepath.Clean(strings.TrimSpace(request.RelPath))
+	if filepath.IsAbs(relPath) || strings.HasPrefix(relPath, "..") {
+		return SQLQueryResult{}, errors.New("dataset path must stay inside the workspace")
+	}
+	absPath := filepath.Join(absRoot, relPath)
+	info, err := os.Stat(absPath)
+	if err != nil {
+		return SQLQueryResult{}, err
+	}
+	if info.IsDir() {
+		return SQLQueryResult{}, errors.New("dataset SQL target must be a file")
+	}
+
+	db, err := sql.Open("duckdb", "")
+	if err != nil {
+		return SQLQueryResult{}, err
+	}
+	defer db.Close()
+
+	sourceSQL := duckDBSourceSQL(absPath)
+	alias := datasetAlias(request.RelPath)
+	for _, statement := range []string{
+		"CREATE OR REPLACE TEMP VIEW dataset AS SELECT * FROM " + sourceSQL,
+		"CREATE OR REPLACE TEMP VIEW " + quoteIdentifier(alias) + " AS SELECT * FROM dataset",
+	} {
+		if _, err := db.Exec(statement); err != nil {
+			return SQLQueryResult{}, err
+		}
+	}
+
+	rows, err := db.Query(strings.TrimSuffix(query, ";"))
+	if err != nil {
+		return SQLQueryResult{}, err
+	}
+	defer rows.Close()
+	columns, err := rows.Columns()
+	if err != nil {
+		return SQLQueryResult{}, err
+	}
+	values := make([]sql.NullString, len(columns))
+	dest := make([]any, len(columns))
+	for index := range values {
+		dest[index] = &values[index]
+	}
+	resultRows := [][]string{}
+	totalRows := 0
+	for rows.Next() {
+		if err := rows.Scan(dest...); err != nil {
+			return SQLQueryResult{}, err
+		}
+		totalRows++
+		if len(resultRows) >= maxSQLRows {
+			continue
+		}
+		row := make([]string, len(columns))
+		for index, value := range values {
+			if value.Valid {
+				row[index] = value.String
+			}
+		}
+		resultRows = append(resultRows, row)
+	}
+	if err := rows.Err(); err != nil {
+		return SQLQueryResult{}, err
+	}
+
+	return SQLQueryResult{
+		RelPath:     request.RelPath,
+		SQL:         query,
+		Engine:      "duckdb",
+		Columns:     columns,
+		Rows:        resultRows,
+		TotalRows:   totalRows,
+		MatchedRows: totalRows,
+		Message:     fmt.Sprintf("DuckDB returned %d rows from %s using the dataset view.", len(resultRows), request.RelPath),
 	}, nil
 }
 
@@ -129,6 +221,7 @@ func parseSelectSQL(sql string) (parsedSelect, error) {
 
 	return parsedSelect{
 		columns:   columns,
+		source:    strings.Trim(source, "\"`"),
 		where:     sqlWhereToDatasetQuery(where),
 		orderBy:   orderColumn,
 		orderDesc: orderDesc,
@@ -243,3 +336,38 @@ func orderSuffix(desc bool) string {
 	}
 	return ""
 }
+
+func canUseDuckDBSource(source string) bool {
+	normalized := strings.Trim(strings.ToLower(source), "\"`")
+	return normalized == "dataset" || normalized == "csv" || safeIdentifier.MatchString(normalized)
+}
+
+func duckDBSourceSQL(absPath string) string {
+	extension := strings.ToLower(filepath.Ext(absPath))
+	path := "'" + strings.ReplaceAll(filepath.ToSlash(absPath), "'", "''") + "'"
+	switch extension {
+	case ".parquet":
+		return "read_parquet(" + path + ")"
+	case ".json", ".jsonl", ".ndjson":
+		return "read_json_auto(" + path + ")"
+	default:
+		return "read_csv_auto(" + path + ", union_by_name = true)"
+	}
+}
+
+func datasetAlias(relPath string) string {
+	name := strings.TrimSuffix(filepath.Base(filepath.ToSlash(relPath)), filepath.Ext(relPath))
+	name = strings.ToLower(name)
+	name = regexp.MustCompile(`[^a-z0-9_]+`).ReplaceAllString(name, "_")
+	name = strings.Trim(name, "_")
+	if name == "" {
+		return "dataset_file"
+	}
+	return name
+}
+
+func quoteIdentifier(value string) string {
+	return `"` + strings.ReplaceAll(value, `"`, `""`) + `"`
+}
+
+var safeIdentifier = regexp.MustCompile(`^[a-z_][a-z0-9_]*$`)

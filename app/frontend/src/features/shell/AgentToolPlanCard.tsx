@@ -8,10 +8,12 @@ type AgentToolPlanCardProps = {
     isRunning: boolean;
     onDryRun: (item: AgentToolPlanItem) => void;
     onExecute: (item: AgentToolPlanItem) => void;
+    onReplayRun: (run: AgentToolRunRecord) => void;
+    onCompareRunTarget: (run: AgentToolRunRecord) => void;
     onRefreshPlan: () => void;
 };
 
-export function AgentToolPlanCard({tools, planItems, runs, isRunning, onDryRun, onExecute, onRefreshPlan}: AgentToolPlanCardProps) {
+export function AgentToolPlanCard({tools, planItems, runs, isRunning, onDryRun, onExecute, onReplayRun, onCompareRunTarget, onRefreshPlan}: AgentToolPlanCardProps) {
     return (
         <section className="agent-tool-plan-card">
             <div className="agent-card-header">
@@ -51,13 +53,29 @@ export function AgentToolPlanCard({tools, planItems, runs, isRunning, onDryRun, 
                 <div className="tool-run-list">
                     <small>Recent tool runs</small>
                     {runs.slice(0, 4).map((run) => (
-                        <div className="tool-run-row" key={run.id}>
-                            <span>
-                                <strong>{run.title || run.toolName}</strong>
-                                <small>{run.outputSummary || run.error || run.target}</small>
-                            </span>
-                            <StatusBadge tone={run.status === 'failed' ? 'warning' : 'neutral'}>{run.mode}</StatusBadge>
-                        </div>
+                        <details className="tool-run-row" key={run.id}>
+                            <summary>
+                                <span>
+                                    <strong>{run.title || run.toolName}</strong>
+                                    <small>{run.outputSummary || run.error || run.target}</small>
+                                </span>
+                                <StatusBadge tone={run.status === 'failed' ? 'warning' : 'neutral'}>{run.mode}</StatusBadge>
+                            </summary>
+                            <div className="tool-run-detail">
+                                <dl>
+                                    <div><dt>Target</dt><dd>{run.target || 'workspace'}</dd></div>
+                                    <div><dt>Status</dt><dd>{run.status}</dd></div>
+                                    <div><dt>Approval</dt><dd>{run.approvalId || 'none'}</dd></div>
+                                    <div><dt>Duration</dt><dd>{run.durationMs} ms</dd></div>
+                                </dl>
+                                <pre>{JSON.stringify(run.inputs ?? {}, null, 2)}</pre>
+                                {run.error && <small>{run.error}</small>}
+                                <div className="tool-plan-actions">
+                                    <Button disabled={isRunning} onClick={() => onReplayRun(run)} variant="subtle">Replay dry run</Button>
+                                    <Button disabled={isRunning || !run.target} onClick={() => onCompareRunTarget(run)} variant="subtle">Diff target</Button>
+                                </div>
+                            </div>
+                        </details>
                     ))}
                 </div>
             )}

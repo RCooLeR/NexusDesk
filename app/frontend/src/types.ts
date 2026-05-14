@@ -182,6 +182,37 @@ export type SQLiteMetadataStatus = {
     updatedAt: string;
 };
 
+export type WorkspaceFileChange = {
+    relPath: string;
+    kind: string;
+    message: string;
+};
+
+export type WorkspaceFreshnessStatus = {
+    changed: WorkspaceFileChange[];
+    staleArtifacts: string[];
+    message: string;
+};
+
+export type LineageNode = {
+    id: string;
+    kind: string;
+    label: string;
+    relPath: string;
+};
+
+export type LineageEdge = {
+    from: string;
+    to: string;
+    label: string;
+};
+
+export type ArtifactLineage = {
+    nodes: LineageNode[];
+    edges: LineageEdge[];
+    message: string;
+};
+
 export type ContextPreviewFile = {
     relPath: string;
     required: boolean;

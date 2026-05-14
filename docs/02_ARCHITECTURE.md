@@ -19,9 +19,10 @@ The implemented desktop slice currently contains:
 - append-only workspace approval/action log for applied file and artifact operations
 - backend agent tool descriptor registry and first frontend tool-plan preview
 - persisted tool-run dry-runs/executions with approval references
-- SQLite metadata schema preparation for future driver-backed repositories
-- DuckDB-compatible read-only SQL surface over bounded CSV query primitives
+- SQLite metadata initialization through a real driver, with JSON stores retained as the compatibility layer
+- DuckDB-capable read-only SQL surface over datasets, with CGO-tagged driver execution and bounded CSV fallback
 - artifact comparison for generated output versions
+- artifact lineage and workspace freshness snapshots for source-aware generated outputs
 - read-only Compose parsing for Operations Studio
 - configurable LLM gateway
 - OpenAI-compatible chat and streaming
@@ -62,8 +63,8 @@ flowchart LR
 
   Context --> Search["Path/Text Search"]
   Search --> JsonStores[("Local JSON Stores<br/>settings, chats, recent workspaces")]
-  Search --> FutureAppDB[("Prepared SQLite Schema<br/>metadata, chats, tool logs")]
-  Search --> FutureAnalyticsDB[("DuckDB-Compatible SQL<br/>datasets, query results")]
+  Search --> AppDB[("SQLite Metadata DB<br/>schema initialized, repos migrating")]
+  Search --> AnalyticsDB[("DuckDB / CSV SQL<br/>datasets, query results")]
   Search --> FutureVectorStore["Optional local vectors"]
 
   Tools --> Registry["Tool Registry<br/>risk, surface, approval metadata"]
@@ -128,7 +129,7 @@ Responsibilities:
 - enforce workspace root boundaries
 - track workspace configuration
 - track file scan status and save scan-report artifacts
-- coordinate file watchers, planned
+- coordinate file freshness snapshots and later file watchers
 - map generated artifacts back to the workspace
 
 A workspace can be code-focused, data-focused, marketing-focused, operations-focused, or mixed. The UI should expose those as studio surfaces rather than hiding everything behind chat.
@@ -162,7 +163,7 @@ Current responsibilities:
 Planned responsibilities:
 
 - create chunks
-- track changed files
+- track changed files and mark generated artifacts stale
 - schedule document summaries when useful
 - store generated summaries separately from source content
 
@@ -181,6 +182,7 @@ Planned responsibilities:
 - search chunks, schemas, conversations, artifacts, and tool results
 - rank candidates by relevance and recency
 - cite source identifiers in answers
+- surface stale-context warnings when cited files change
 
 The agent should ask for more context through tools instead of receiving the whole workspace.
 
@@ -258,7 +260,7 @@ Responsibilities:
 - create report files
 - export bounded CSV query results as CSV artifacts
 - render first deterministic SVG chart artifacts from CSV aggregations
-- link artifacts to chats and tool runs
+- link artifacts to chats, tool runs, source files, and generated outputs through lineage
 - prevent silent overwrites
 
 Planned responsibilities:

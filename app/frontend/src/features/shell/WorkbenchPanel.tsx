@@ -1,7 +1,7 @@
 import {useEffect, useRef, useState} from 'react';
 import {brandAssets, capabilityIconByTitle} from '../../brand/assets';
 import {Button, EmptyState, InlineAlert, LoadingState, StatusBadge} from '../../components/ui';
-import type {ApprovalRecord, ArtifactComparison, ArtifactMetadata, Capability, ColumnProfile, DatasetChartResult, DatasetProfile, DatasetQueryResult, DatasetSQLQueryResult, FilePreview, FileWriteProposal, SavedDatasetQuery, SQLiteMetadataStatus, TablePreview, WorkspaceArtifact, WorkspaceSnapshot} from '../../types';
+import type {ApprovalRecord, ArtifactComparison, ArtifactLineage, ArtifactMetadata, Capability, ColumnProfile, DatasetChartResult, DatasetProfile, DatasetQueryResult, DatasetSQLQueryResult, FilePreview, FileWriteProposal, SavedDatasetQuery, SQLiteMetadataStatus, TablePreview, WorkspaceArtifact, WorkspaceFreshnessStatus, WorkspaceSnapshot} from '../../types';
 import {ApprovalLogPanel} from './ApprovalLogPanel';
 import {ArtifactMetadataPanel} from './ArtifactMetadataPanel';
 import {ChatMessageContent} from './ChatMessageContent';
@@ -30,7 +30,9 @@ type WorkbenchPanelProps = {
     datasetSQLQueryResult: DatasetSQLQueryResult | null;
     savedDatasetQueries: SavedDatasetQuery[];
     artifactComparison: ArtifactComparison | null;
+    artifactLineage: ArtifactLineage | null;
     sqliteStatus: SQLiteMetadataStatus | null;
+    workspaceFreshness: WorkspaceFreshnessStatus | null;
     dirtyTabPaths: string[];
     fileDraft: string;
     filePreview: FilePreview | null;
@@ -85,6 +87,7 @@ type WorkbenchPanelProps = {
     onCloseTab: (relPath: string) => void;
     onDeleteArtifact: () => void;
     onOpenArtifactSource: () => void;
+    onRefreshLineage: () => void;
     onSelectTab: (relPath: string) => void;
     onSelectArtifact: (artifact: WorkspaceArtifact) => void;
     onRefreshPreview: () => void;
@@ -114,7 +117,9 @@ export function WorkbenchPanel({
     datasetSQLQueryResult,
     savedDatasetQueries,
     artifactComparison,
+    artifactLineage,
     sqliteStatus,
+    workspaceFreshness,
     dirtyTabPaths,
     fileDraft,
     filePreview,
@@ -169,6 +174,7 @@ export function WorkbenchPanel({
     onCloseTab,
     onDeleteArtifact,
     onOpenArtifactSource,
+    onRefreshLineage,
     onSelectTab,
     onSelectArtifact,
     onRefreshPreview,
@@ -469,6 +475,8 @@ export function WorkbenchPanel({
                             )}
                             {artifactComparison && <ArtifactComparisonPanel comparison={artifactComparison} />}
                             {sqliteStatus && <MetadataStorePanel status={sqliteStatus} />}
+                            {workspaceFreshness && <WorkspaceFreshnessPanel status={workspaceFreshness} />}
+                            <ArtifactLineagePanel lineage={artifactLineage} onRefresh={onRefreshLineage} />
                             <ApprovalLogPanel records={approvalRecords} />
                             {artifacts.length === 0 ? (
                                 <EmptyState
@@ -686,6 +694,49 @@ function MetadataStorePanel({status}: {status: SQLiteMetadataStatus}) {
             <small>{status.message}</small>
             <p>{status.tables.join(', ')}</p>
             <small>Schema v{status.schemaVersion}: {status.schemaHash.slice(0, 12)}</small>
+        </div>
+    );
+}
+
+function WorkspaceFreshnessPanel({status}: {status: WorkspaceFreshnessStatus}) {
+    if (status.changed.length === 0 && status.staleArtifacts.length === 0) {
+        return null;
+    }
+    return (
+        <div className="metadata-store-panel">
+            <strong>Workspace Watcher</strong>
+            <small>{status.message}</small>
+            {status.changed.slice(0, 5).map((change) => (
+                <p key={`${change.kind}-${change.relPath}`}>{change.kind}: {change.relPath}</p>
+            ))}
+            {status.staleArtifacts.length > 0 && (
+                <small>Stale artifacts: {status.staleArtifacts.slice(0, 4).join(', ')}</small>
+            )}
+        </div>
+    );
+}
+
+function ArtifactLineagePanel({lineage, onRefresh}: {lineage: ArtifactLineage | null; onRefresh: () => void}) {
+    return (
+        <div className="metadata-store-panel">
+            <div className="panel-toolbar">
+                <strong>Artifact Lineage</strong>
+                <Button onClick={onRefresh} variant="subtle">Refresh</Button>
+            </div>
+            <small>{lineage?.message ?? 'Build graph from chats, tools, source files, and artifacts.'}</small>
+            {lineage && (
+                <div className="lineage-list">
+                    {lineage.edges.slice(0, 8).map((edge, index) => {
+                        const from = lineage.nodes.find((node) => node.id === edge.from);
+                        const to = lineage.nodes.find((node) => node.id === edge.to);
+                        return (
+                            <p key={`${edge.from}-${edge.to}-${index}`}>
+                                {from?.label ?? edge.from} {'->'} {to?.label ?? edge.to} <small>{edge.label}</small>
+                            </p>
+                        );
+                    })}
+                </div>
+            )}
         </div>
     );
 }

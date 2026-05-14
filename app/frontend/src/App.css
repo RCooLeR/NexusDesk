@@ -537,6 +537,11 @@ button:disabled {
     box-shadow: inset 3px 0 0 var(--nd-sky-blue);
 }
 
+.tree-item.changed {
+    border-color: #f0c66d;
+    background: #fff8e6;
+}
+
 .tree-item strong,
 .tree-item small {
     display: block;
@@ -1530,6 +1535,18 @@ button:disabled {
     margin: 0;
 }
 
+.panel-toolbar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+}
+
+.lineage-list {
+    display: grid;
+    gap: 4px;
+}
+
 .artifact-metadata-panel dl {
     display: grid;
     gap: 4px;
@@ -2018,9 +2035,51 @@ button:disabled {
 
 .tool-run-row {
     display: grid;
+    gap: 6px;
+}
+
+.tool-run-row summary {
+    cursor: pointer;
+    display: grid;
     grid-template-columns: minmax(0, 1fr) auto;
     align-items: center;
     gap: 6px;
+}
+
+.tool-run-detail {
+    border-top: 1px solid var(--nd-border-soft);
+    display: grid;
+    gap: 8px;
+    padding-top: 8px;
+}
+
+.tool-run-detail dl {
+    display: grid;
+    gap: 4px;
+    margin: 0;
+}
+
+.tool-run-detail div {
+    display: grid;
+    grid-template-columns: 80px minmax(0, 1fr);
+    gap: 8px;
+}
+
+.tool-run-detail dt,
+.tool-run-detail dd {
+    margin: 0;
+    min-width: 0;
+}
+
+.tool-run-detail pre {
+    background: #f7f9fc;
+    border: 1px solid var(--nd-border-soft);
+    border-radius: var(--nd-radius-sm);
+    margin: 0;
+    max-height: 160px;
+    overflow: auto;
+    padding: 8px;
+    white-space: pre-wrap;
 }
 
 .tool-run-row span,

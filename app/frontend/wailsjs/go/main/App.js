@@ -34,6 +34,10 @@ export function AskLLMStreamContextPack(arg1, arg2, arg3) {
   return window['go']['main']['App']['AskLLMStreamContextPack'](arg1, arg2, arg3);
 }
 
+export function CheckWorkspaceFreshness() {
+  return window['go']['main']['App']['CheckWorkspaceFreshness']();
+}
+
 export function ClearChatHistory() {
   return window['go']['main']['App']['ClearChatHistory']();
 }
@@ -80,6 +84,10 @@ export function EnsureSQLiteMetadataStore() {
 
 export function ExecuteAgentTool(arg1) {
   return window['go']['main']['App']['ExecuteAgentTool'](arg1);
+}
+
+export function GetArtifactLineage() {
+  return window['go']['main']['App']['GetArtifactLineage']();
 }
 
 export function GetArtifactMetadata(arg1) {

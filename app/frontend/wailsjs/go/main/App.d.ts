@@ -27,6 +27,8 @@ export function AskLLMStream(arg1:string,arg2:string,arg3:string):Promise<llm.Ch
 
 export function AskLLMStreamContextPack(arg1:string,arg2:Array<string>,arg3:string):Promise<llm.ChatResult>;
 
+export function CheckWorkspaceFreshness():Promise<workspace.FreshnessStatus>;
+
 export function ClearChatHistory():Promise<Array<storage.ChatMessage>>;
 
 export function ClearRecentWorkspaces():Promise<Array<storage.RecentWorkspace>>;
@@ -50,6 +52,8 @@ export function DeleteArtifact(arg1:string):Promise<artifact.MarkdownReport>;
 export function EnsureSQLiteMetadataStore():Promise<appmeta.SQLiteStatus>;
 
 export function ExecuteAgentTool(arg1:agenttools.RunRequest):Promise<agenttools.RunRecord>;
+
+export function GetArtifactLineage():Promise<main.ArtifactLineage>;
 
 export function GetArtifactMetadata(arg1:string):Promise<artifact.ArtifactMetadata>;
 

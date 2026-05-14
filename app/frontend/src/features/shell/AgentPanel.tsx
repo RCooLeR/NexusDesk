@@ -25,6 +25,8 @@ type AgentPanelProps = {
     onClearContextPack: () => void;
     onDryRunAgentTool: (item: AgentToolPlanItem) => void;
     onExecuteAgentTool: (item: AgentToolPlanItem) => void;
+    onReplayAgentToolRun: (run: AgentToolRunRecord) => void;
+    onCompareAgentToolRunTarget: (run: AgentToolRunRecord) => void;
     onRefreshAgentPlan: () => void;
     onRemoveContextPath: (relPath: string) => void;
     onSaveLatestAssistantArtifact: () => void;
@@ -59,6 +61,8 @@ export function AgentPanel({
     onClearContextPack,
     onDryRunAgentTool,
     onExecuteAgentTool,
+    onReplayAgentToolRun,
+    onCompareAgentToolRunTarget,
     onRefreshAgentPlan,
     onRemoveContextPath,
     onSaveLatestAssistantArtifact,
@@ -105,6 +109,8 @@ export function AgentPanel({
                 isRunning={isRunningAgentTool}
                 onDryRun={onDryRunAgentTool}
                 onExecute={onExecuteAgentTool}
+                onReplayRun={onReplayAgentToolRun}
+                onCompareRunTarget={onCompareAgentToolRunTarget}
                 onRefreshPlan={onRefreshAgentPlan}
             />
 

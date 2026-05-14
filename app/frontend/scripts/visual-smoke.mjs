@@ -8,16 +8,16 @@ const screenshotDir = path.join(root, 'dist', 'smoke');
 const baselineDir = path.join(root, 'visual-baselines');
 
 if (!existsSync(indexPath)) {
-    console.log('NexusDesk visual smoke skipped: run npm run build first.');
-    process.exit(0);
+    console.error('NexusDesk visual smoke failed: run npm run build first.');
+    process.exit(1);
 }
 
 let chromium;
 try {
     ({chromium} = await import('playwright'));
 } catch {
-    console.log('NexusDesk visual smoke skipped: Playwright is not installed.');
-    process.exit(0);
+    console.error('NexusDesk visual smoke failed: Playwright is not installed.');
+    process.exit(1);
 }
 
 mkdirSync(screenshotDir, {recursive: true});

@@ -1133,6 +1133,18 @@ func buildGeneratedMarkdown(request MarkdownArtifactRequest, now time.Time) stri
 		builder.WriteString(strings.ReplaceAll(request.ContextRelPath, "`", "'"))
 		builder.WriteString("`\n")
 	}
+	if len(request.SourcePaths) > 0 {
+		builder.WriteString("- Sources: ")
+		for index, sourcePath := range request.SourcePaths {
+			if index > 0 {
+				builder.WriteString(", ")
+			}
+			builder.WriteString("`")
+			builder.WriteString(strings.ReplaceAll(sourcePath, "`", "'"))
+			builder.WriteString("`")
+		}
+		builder.WriteString("\n")
+	}
 	builder.WriteString("\n")
 	builder.WriteString(content)
 	if !strings.HasSuffix(content, "\n") {
@@ -1140,6 +1152,14 @@ func buildGeneratedMarkdown(request MarkdownArtifactRequest, now time.Time) stri
 	}
 	if len(request.Content) > len(content) {
 		builder.WriteString("\n_Response content was truncated._\n")
+	}
+	if len(request.SourcePaths) > 0 && !strings.Contains(content, "\nSources:") {
+		builder.WriteString("\n## Sources\n\n")
+		for _, sourcePath := range request.SourcePaths {
+			builder.WriteString("- `")
+			builder.WriteString(strings.ReplaceAll(sourcePath, "`", "'"))
+			builder.WriteString("`\n")
+		}
 	}
 
 	return builder.String()
