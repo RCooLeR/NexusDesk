@@ -73,15 +73,16 @@ For a healthy load, `/api/ps` should show nonzero `size_vram`, and the Ollama lo
 
 `app/internal/dataset/` owns the first persistent dataset profile pass. CSV files reuse the workspace preview profiles and XLSX files expose workbook sheet names, then profiles are stored under `.nexusdesk/datasets/profiles.json` inside the active workspace.
 
-The workbench topbar now has functional Preview, Explain, Summarize, Edit, Report, and Profile actions. Preview reloads the selected workspace node from disk, Explain sends a predefined grounded prompt when text context is available, Summarize sends selected file/directory context through chat and saves the result as a Markdown artifact, Edit uses the diff/apply write flow, Report creates a Markdown artifact, and Profile persists CSV/XLSX dataset metadata. The dataset panel can run a bounded CSV row query for the selected table. The topbar also shows the active studio surface so code, data, document, operations, artifact, and workspace contexts are explicit. Editor drafts now show dirty state, persist per tab while navigating, clear stale diff previews after edits, support revert before apply, guard dirty tab close, and use Ctrl+S to preview/apply through the same write path.
+The workbench topbar now has functional Preview, Explain, Summarize, Edit, Report, and Profile actions. Preview reloads the selected workspace node from disk, Explain sends a predefined grounded prompt when text context is available, Summarize sends selected file/directory context through chat and saves the result as a Markdown artifact, Edit uses the diff/apply write flow, Report creates a Markdown artifact, and Profile persists CSV/XLSX dataset metadata. The dataset panel can run a bounded CSV row query for the selected table. The topbar also shows the active studio surface so code, data, document, operations, artifact, and workspace contexts are explicit. Editor drafts now show dirty state, persist per tab while navigating, clear stale diff previews after edits, support revert before apply, guard dirty tab close, and use Ctrl+S to preview/apply through the same write path. Ctrl+Shift+P opens the command palette for common workspace, editor, context, data, artifact, and chat actions.
 
 ## Frontend Structure
 
 The shell is now mostly orchestration. Feature panels own stable presentation, while `NexusDeskShell.tsx` keeps workspace, preview, provider, and chat state wiring close to the Wails bindings:
 
 - `app/frontend/src/components/ui.tsx` contains reusable UI atoms such as buttons, cards, status badges, and branded state panels.
-- `app/frontend/src/features/shell/NexusDeskShell.tsx` owns the composed desktop workbench state, global quick-open shortcuts, and cross-panel navigation wiring.
+- `app/frontend/src/features/shell/NexusDeskShell.tsx` owns the composed desktop workbench state, global quick-open/command-palette shortcuts, and cross-panel navigation wiring.
 - `app/frontend/src/features/shell/QuickOpenPalette.tsx` owns the keyboard quick-open palette for workspace nodes and open editor tabs.
+- `app/frontend/src/features/shell/CommandPalette.tsx` owns the keyboard command palette for workspace, editor, assistant, data, and artifact actions.
 - `app/frontend/src/features/shell/AgentChatCard.tsx` owns the expanded chat presentation, full conversation scroll area, multiline prompt composer, context pack list, save-answer action surface, and delegates provider calls/history/artifact actions back to the shell.
 - `app/frontend/src/features/shell/ChatMessageContent.tsx` renders safe dependency-free Markdown-style chat content, including headings, lists, tables, code fences, inline code, and bold text.
 - `app/frontend/src/features/shell/LLMSettingsCard.tsx` owns the provider settings form and delegates persistence/probe actions back to the shell.
@@ -91,11 +92,11 @@ The shell is now mostly orchestration. Feature panels own stable presentation, w
 - `app/frontend/src/features/shell/WorkspaceRail.tsx` owns the compact branded rail and mode icons.
 - `app/frontend/src/features/shell/AgentPanel.tsx` composes the grounded assistant header, chat card, provider settings, and tool timeline.
 
-`App.css` keeps the desktop shell fixed to the window and pushes overflow into the interactive surfaces that actually need it: workspace tree/search results, quick-open results, source preview, dataset query results, capability list, chat thread, provider settings, and tool timeline.
+`App.css` keeps the desktop shell fixed to the window and pushes overflow into the interactive surfaces that actually need it: workspace tree/search results, quick-open and command-palette results, source preview, dataset query results, capability list, chat thread, provider settings, and tool timeline.
 
 ## Frontend Smoke Checks
 
-`app/frontend/scripts/smoke.mjs` checks that the built frontend and key shell source files still expose the main MVP functionality: Wails bindings, search, quick-open, find-in-file, context packs, file write flow, dataset profiling/querying, resizable navigator styling, and the production `dist/index.html` entrypoint. Run it after `npm.cmd run build`.
+`app/frontend/scripts/smoke.mjs` checks that the built frontend and key shell source files still expose the main MVP functionality: Wails bindings, search, quick-open, command palette, find-in-file, context packs, file write flow, dataset profiling/querying, resizable navigator styling, and the production `dist/index.html` entrypoint. Run it after `npm.cmd run build`.
 
 ## Artifact Creation
 

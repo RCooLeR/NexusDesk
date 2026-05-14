@@ -40,6 +40,7 @@ Deliverables:
 - file tree scans up to 10 workspace levels by default: implemented
 - workspace path/content search: implemented
 - keyboard quick-open palette for workspace files, folders, and open tabs: implemented
+- keyboard command palette for workspace, editor, context, data, artifact, and chat actions: first implementation
 - editor find-in-file with highlighted matches: first implementation
 - per-tab text edit drafts with dirty tab markers and close guard: first implementation
 - Ctrl+S preview/apply shortcut for the current edit draft: first implementation
@@ -94,6 +95,7 @@ Current status:
 - The active center pane exposes a first studio surface indicator for Code Studio, Data Studio, Document Studio, Operations Studio, Artifact Studio, or Workspace Studio.
 - The workspace browser can open, refresh, preview, remember, search, and expand/collapse local folders, scanning up to 10 levels deep by default.
 - The shell has a keyboard quick-open palette for workspace files, folders, and already-open tabs, with parent directories expanded on selection.
+- The shell has a keyboard command palette for common workspace, editor, context, data, artifact, and chat actions.
 - The window shell stays fixed-height; long file trees, previews, chat, settings, and timelines scroll inside their own panels.
 - Text preview stays inside the approved workspace root and refuses binary/unsafe paths.
 - Text preview decodes common UTF-8, UTF-16, and Windows-1251 Cyrillic files.

@@ -50,6 +50,7 @@ import type {
     WorkspaceSnapshot,
 } from '../../types';
 import {AgentPanel} from './AgentPanel';
+import {CommandPalette, type CommandAction} from './CommandPalette';
 import {QuickOpenPalette} from './QuickOpenPalette';
 import {WorkbenchPanel} from './WorkbenchPanel';
 import {WorkspaceNavigator} from './WorkspaceNavigator';
@@ -139,6 +140,8 @@ export function NexusDeskShell({
     const [navigatorWidth, setNavigatorWidth] = useState(280);
     const [isQuickOpenOpen, setIsQuickOpenOpen] = useState(false);
     const [quickOpenQuery, setQuickOpenQuery] = useState('');
+    const [isCommandPaletteOpen, setIsCommandPaletteOpen] = useState(false);
+    const [commandPaletteQuery, setCommandPaletteQuery] = useState('');
     const fileDraft = activeFile ? fileDrafts[activeFile] ?? '' : '';
     const writeProposal = activeFile ? writeProposals[activeFile] ?? null : null;
     const isEditingFile = Boolean(activeFile && editingFilePaths.includes(activeFile));
@@ -186,12 +189,28 @@ export function NexusDeskShell({
         function handleGlobalKeyDown(event: KeyboardEvent) {
             const target = event.target as HTMLElement | null;
             const isTyping = target?.tagName === 'INPUT' || target?.tagName === 'TEXTAREA' || target?.isContentEditable;
-            const isQuickOpenShortcut = (event.ctrlKey || event.metaKey) && event.key.toLowerCase() === 'p';
+            const isCommandPaletteShortcut = (event.ctrlKey || event.metaKey) && event.shiftKey && event.key.toLowerCase() === 'p';
+            const isQuickOpenShortcut = (event.ctrlKey || event.metaKey) && !event.shiftKey && event.key.toLowerCase() === 'p';
+
+            if (isCommandPaletteShortcut) {
+                event.preventDefault();
+                setIsCommandPaletteOpen(true);
+                setIsQuickOpenOpen(false);
+                setCommandPaletteQuery('');
+                return;
+            }
 
             if (isQuickOpenShortcut) {
                 event.preventDefault();
+                setIsCommandPaletteOpen(false);
                 setIsQuickOpenOpen(true);
                 setQuickOpenQuery('');
+                return;
+            }
+
+            if (event.key === 'Escape' && isCommandPaletteOpen) {
+                event.preventDefault();
+                setIsCommandPaletteOpen(false);
                 return;
             }
 
@@ -213,6 +232,7 @@ export function NexusDeskShell({
 
             if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === 'k') {
                 event.preventDefault();
+                setIsCommandPaletteOpen(false);
                 setIsQuickOpenOpen(true);
                 setQuickOpenQuery('');
             }
@@ -220,7 +240,7 @@ export function NexusDeskShell({
 
         window.addEventListener('keydown', handleGlobalKeyDown);
         return () => window.removeEventListener('keydown', handleGlobalKeyDown);
-    }, [activeFile, fileDraft, isApplyingWrite, isEditingFile, isPreviewingWrite, isQuickOpenOpen, writeProposal]);
+    }, [activeFile, fileDraft, isApplyingWrite, isCommandPaletteOpen, isEditingFile, isPreviewingWrite, isQuickOpenOpen, writeProposal]);
 
     const selectedMeta = useMemo(() => {
         if (workspace) {
@@ -246,11 +266,194 @@ export function NexusDeskShell({
         return Boolean(latestAssistantMessage(chatMessages)) && !isSendingPrompt;
     }, [chatMessages, isSendingPrompt]);
 
+    const commandActions = buildCommandActions();
+
     function pushToolEvent(title: string, detail: string) {
         setLocalToolEvents((current) => [
             {time: new Date().toLocaleTimeString(), title, detail},
             ...current,
         ].slice(0, 12));
+    }
+
+    function buildCommandActions(): CommandAction[] {
+        const selectedContextRelPath = selectedTextContextRelPath();
+        const hasWorkspace = Boolean(workspace);
+        const hasActivePreview = Boolean(workspace && filePreview);
+        const hasDirtyActiveDraft = Boolean(isEditingFile && filePreview && dirtyTabPaths.includes(filePreview.relPath));
+        const canEditSelectedFile = Boolean(workspace && filePreview?.kind === 'file' && filePreview.content && !filePreview.table);
+        const canUseSelectedContext = Boolean(selectedContextRelPath) && !isSendingPrompt;
+        const canUseSelectedDataset = Boolean(workspace && filePreview?.fileType === 'data');
+
+        return [
+            {
+                detail: 'Choose a project folder and index its safe workspace tree.',
+                group: 'Workspace',
+                id: 'workspace.open',
+                run: () => void openWorkspace(),
+                title: 'Open Folder',
+            },
+            {
+                detail: hasWorkspace ? 'Rescan the current workspace and preserve the selected file when possible.' : 'Open a workspace before refreshing.',
+                disabled: !hasWorkspace || isRefreshingWorkspace,
+                group: 'Workspace',
+                id: 'workspace.refresh',
+                run: () => void refreshWorkspace(),
+                title: 'Refresh Workspace',
+            },
+            {
+                detail: 'Find and open workspace files, folders, datasets, artifacts, or loaded tabs.',
+                disabled: !hasWorkspace,
+                group: 'Workspace',
+                id: 'workspace.quick-open',
+                run: () => {
+                    setQuickOpenQuery('');
+                    setIsQuickOpenOpen(true);
+                },
+                shortcut: 'Ctrl+P',
+                title: 'Quick Open',
+            },
+            {
+                detail: workspaceSearchQuery.trim() ? `Search workspace paths and previewable text for "${workspaceSearchQuery.trim()}".` : 'Enter a query in the workspace search field first.',
+                disabled: !hasWorkspace || !workspaceSearchQuery.trim() || isSearchingWorkspace,
+                group: 'Workspace',
+                id: 'workspace.search',
+                run: () => void searchWorkspace(),
+                title: 'Search Workspace',
+            },
+            {
+                detail: hasWorkspace ? 'Expand every indexed directory in the project tree.' : 'Open a workspace before expanding folders.',
+                disabled: !hasWorkspace,
+                group: 'Workspace',
+                id: 'workspace.expand-all',
+                run: expandAllDirectories,
+                title: 'Expand All Folders',
+            },
+            {
+                detail: hasWorkspace ? 'Collapse the project tree back to the root view.' : 'Open a workspace before collapsing folders.',
+                disabled: !hasWorkspace,
+                group: 'Workspace',
+                id: 'workspace.collapse-all',
+                run: collapseAllDirectories,
+                title: 'Collapse All Folders',
+            },
+            {
+                detail: hasActivePreview ? `Reload ${activeFile} from disk.` : 'Select a workspace file before reloading its preview.',
+                disabled: !hasActivePreview || isLoadingPreview,
+                group: 'Editor',
+                id: 'editor.reload-preview',
+                run: () => void refreshSelectedPreview(),
+                title: 'Reload Current Preview',
+            },
+            {
+                detail: canEditSelectedFile ? `Start a safe edit draft for ${activeFile}.` : 'Select a text/code file before editing.',
+                disabled: !canEditSelectedFile,
+                group: 'Editor',
+                id: 'editor.start-edit',
+                run: startFileEdit,
+                title: 'Edit Current File',
+            },
+            {
+                detail: hasDirtyActiveDraft ? 'Preview or apply the active file draft through the write safety flow.' : 'Change the active edit draft before saving.',
+                disabled: !hasDirtyActiveDraft || isPreviewingWrite || isApplyingWrite,
+                group: 'Editor',
+                id: 'editor.save-draft',
+                run: () => void saveActiveDraftShortcut(),
+                shortcut: 'Ctrl+S',
+                title: 'Preview Or Apply Active Draft',
+            },
+            {
+                detail: selectedContextRelPath ? `Pin ${selectedContextRelPath} into the chat context pack.` : 'Select a file, extracted document, dataset, directory, or workspace context first.',
+                disabled: !selectedContextRelPath,
+                group: 'AI Assistant',
+                id: 'context.pin-selected',
+                run: pinSelectedContext,
+                title: 'Pin Current Context',
+            },
+            {
+                detail: hasWorkspace ? 'Pin the workspace root so chat can stream a bounded project context.' : 'Open a workspace before pinning project context.',
+                disabled: !hasWorkspace,
+                group: 'AI Assistant',
+                id: 'context.pin-project',
+                run: pinProjectContext,
+                title: 'Pin Project Context',
+            },
+            {
+                detail: contextPackPaths.length > 0 ? 'Remove every pinned context item from the chat pack.' : 'Pin context before clearing the pack.',
+                disabled: contextPackPaths.length === 0,
+                group: 'AI Assistant',
+                id: 'context.clear-pack',
+                run: () => {
+                    setContextPackPaths([]);
+                    setChatStatus('Context pack cleared.');
+                    pushToolEvent('Context pack cleared', 'Pinned chat context reset.');
+                },
+                title: 'Clear Context Pack',
+            },
+            {
+                detail: selectedContextRelPath ? `Ask the model to explain ${selectedContextRelPath}.` : 'Select explainable context first.',
+                disabled: !canUseSelectedContext,
+                group: 'AI Assistant',
+                id: 'chat.explain-context',
+                run: () => void explainSelectedContext(),
+                title: 'Explain Current Context',
+            },
+            {
+                detail: selectedContextRelPath ? `Summarize ${selectedContextRelPath} and save the result as Markdown.` : 'Select summarizable context first.',
+                disabled: !canUseSelectedContext || isSummarizingContext,
+                group: 'AI Assistant',
+                id: 'chat.summarize-context',
+                run: () => void summarizeSelectedContext(),
+                title: 'Summarize Current Context',
+            },
+            {
+                detail: canSaveLatestAssistantArtifact ? 'Save the latest assistant answer as a Markdown artifact.' : 'Generate an assistant answer before saving it.',
+                disabled: !hasWorkspace || !canSaveLatestAssistantArtifact || isSavingChatArtifact,
+                group: 'Artifacts',
+                id: 'artifacts.save-answer',
+                run: () => void saveLatestAssistantArtifact(),
+                title: 'Save Latest Assistant Answer',
+            },
+            {
+                detail: hasWorkspace ? 'Create a timestamped Markdown report from the selected preview or workspace.' : 'Open a workspace before creating reports.',
+                disabled: !hasWorkspace || isCreatingReport,
+                group: 'Artifacts',
+                id: 'artifacts.create-report',
+                run: () => void createMarkdownReport(),
+                title: 'Create Markdown Report',
+            },
+            {
+                detail: canUseSelectedDataset ? `Profile ${activeFile} and persist dataset metadata.` : 'Select a CSV or workbook dataset first.',
+                disabled: !canUseSelectedDataset || isProfilingDataset,
+                group: 'Data Studio',
+                id: 'data.profile',
+                run: () => void profileSelectedDataset(),
+                title: 'Profile Current Dataset',
+            },
+            {
+                detail: canUseSelectedDataset ? 'Run the bounded dataset query/filter currently in the data panel.' : 'Select a CSV dataset before querying.',
+                disabled: !canUseSelectedDataset || isQueryingDataset,
+                group: 'Data Studio',
+                id: 'data.query',
+                run: () => void querySelectedDataset(),
+                title: 'Query Current Dataset',
+            },
+            {
+                detail: chatMessages.length > 0 ? 'Clear persisted chat messages for the active workspace.' : 'No chat messages are loaded.',
+                disabled: chatMessages.length === 0,
+                group: 'AI Assistant',
+                id: 'chat.clear-history',
+                run: () => void clearChatHistory(),
+                title: 'Clear Chat History',
+            },
+            {
+                detail: recentWorkspaces.length > 0 ? 'Remove every recent workspace entry from local config.' : 'No recent workspace entries are stored.',
+                disabled: recentWorkspaces.length === 0 || isManagingRecent,
+                group: 'Workspace',
+                id: 'workspace.clear-recent',
+                run: () => void clearRecentWorkspaces(),
+                title: 'Clear Recent Workspaces',
+            },
+        ];
     }
 
     function selectFallbackItem(name: string) {
@@ -1301,6 +1504,13 @@ export function NexusDeskShell({
                 openTabs={openTabs}
                 query={quickOpenQuery}
                 workspace={workspace}
+            />
+            <CommandPalette
+                commands={commandActions}
+                isOpen={isCommandPaletteOpen}
+                onClose={() => setIsCommandPaletteOpen(false)}
+                onQueryChange={setCommandPaletteQuery}
+                query={commandPaletteQuery}
             />
 
             <WorkspaceNavigator

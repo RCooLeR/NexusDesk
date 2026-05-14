@@ -621,6 +621,50 @@ button:disabled {
     padding: 18px 12px;
 }
 
+.command-palette {
+    width: min(820px, calc(100vw - 32px));
+}
+
+.command-results {
+    max-height: min(560px, 68vh);
+}
+
+.command-result {
+    grid-template-columns: minmax(0, 1fr) auto;
+}
+
+.command-result:disabled {
+    cursor: not-allowed;
+    opacity: 0.52;
+}
+
+.command-result:disabled:hover {
+    border-color: transparent;
+    background: transparent;
+}
+
+.command-copy {
+    min-width: 0;
+}
+
+.command-title-row {
+    display: flex;
+    min-width: 0;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 12px;
+}
+
+.command-group {
+    color: var(--nd-muted-text);
+    font-size: 11px;
+    text-transform: uppercase;
+}
+
+.command-shortcut {
+    min-width: max-content;
+}
+
 .workbench {
     min-height: 0;
     min-width: 0;

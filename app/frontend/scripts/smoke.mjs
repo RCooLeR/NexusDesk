@@ -14,6 +14,10 @@ const checks = [
             'QueryDataset',
             'SearchWorkspace',
             'QuickOpenPalette',
+            'CommandPalette',
+            'commandActions',
+            'isCommandPaletteOpen',
+            'commandPaletteQuery',
             'selectQuickOpenNode',
             'saveActiveDraftShortcut',
             'dirtyDraftPaths',
@@ -43,6 +47,10 @@ const checks = [
     {
         file: 'src/features/shell/QuickOpenPalette.tsx',
         terms: ['QuickOpenPalette', 'quick-open-result', 'scoreQuickOpenEntry', 'maxQuickOpenResults', 'ArrowDown', 'ArrowUp'],
+    },
+    {
+        file: 'src/features/shell/CommandPalette.tsx',
+        terms: ['CommandPalette', 'command-result', 'scoreCommand', 'maxCommandResults', 'ArrowDown', 'ArrowUp'],
     },
     {
         file: 'src/brand/assets.ts',
@@ -76,6 +84,9 @@ const checks = [
             '.studio-mode-strip',
             '.quick-open',
             '.quick-open-result',
+            '.command-palette',
+            '.command-result',
+            '.command-shortcut',
             '.editor-find',
             '.dirty-indicator',
             '.find-highlight',

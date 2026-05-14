@@ -75,6 +75,7 @@ This tracker reflects the repository as it exists today and keeps planned work s
 - [x] Workspace navigator keeps fallback and file-tree rows aligned inside the resizable sidebar.
 - [x] Keyboard quick-open palette exists for workspace files, folders, and open editor tabs.
 - [x] Quick-open selection expands parent folders before selecting a workspace node.
+- [x] Keyboard command palette exists for workspace, editor, context, data, artifact, and chat actions.
 - [x] App shell stays fixed to the window while long navigator, preview, chat, settings, and timeline content scroll inside their panels.
 - [x] Expanded workspace directories are reconciled and preserved across refreshes.
 - [x] Backend remembers the selected workspace root for the session.
@@ -154,6 +155,7 @@ This tracker reflects the repository as it exists today and keeps planned work s
 - [x] Batch: extend frontend smoke checks so the studio vocabulary and UI marker are guarded.
 - [x] Add keyboard quick-open for workspace nodes and editor tabs.
 - [x] Add quick-open smoke coverage and keep docs aligned.
+- [x] Add keyboard command palette for core IDE/data/assistant actions.
 - [x] Add find-in-file and dirty/revert editor state.
 - [x] Preserve edit drafts per tab and guard dirty tab close.
 - [x] Add Ctrl+S edit preview/apply shortcut.
