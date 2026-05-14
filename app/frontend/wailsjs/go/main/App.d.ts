@@ -9,6 +9,8 @@ import {dataset} from '../models';
 
 export function ApplyFileDelete(arg1:string):Promise<workspace.FileDeleteProposal>;
 
+export function ApplyFileMove(arg1:workspace.FileMoveRequest):Promise<workspace.FileMoveProposal>;
+
 export function ApplyFileWrite(arg1:workspace.FileWriteRequest):Promise<workspace.FileWriteProposal>;
 
 export function AskLLM(arg1:string,arg2:string):Promise<llm.ChatResult>;
@@ -44,6 +46,8 @@ export function OpenWorkspace(arg1:string):Promise<main.WorkspaceOpenResult>;
 export function PreviewChatContextPack(arg1:Array<string>):Promise<workspace.ContextPreview>;
 
 export function PreviewFileDelete(arg1:string):Promise<workspace.FileDeleteProposal>;
+
+export function PreviewFileMove(arg1:workspace.FileMoveRequest):Promise<workspace.FileMoveProposal>;
 
 export function PreviewFileWrite(arg1:workspace.FileWriteRequest):Promise<workspace.FileWriteProposal>;
 

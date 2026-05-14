@@ -12,6 +12,8 @@ const checks = [
             'PreviewFileWrite',
             'PreviewFileDelete',
             'ApplyFileDelete',
+            'PreviewFileMove',
+            'ApplyFileMove',
             'ProfileDataset',
             'QueryDataset',
             'SearchWorkspace',
@@ -29,6 +31,8 @@ const checks = [
             'New File',
             'Delete Active File',
             'deleteActiveFile',
+            'Rename Or Move Active File',
+            'moveActiveFile',
             'defaultNewFileContent',
             'dirtyDraftPaths',
             'editingFilePaths',
@@ -48,7 +52,7 @@ const checks = [
     },
     {
         file: 'src/features/shell/WorkbenchPanel.tsx',
-        terms: ['editor-tabs', 'markdownViewMode', 'markdown-view-toggle', 'markdown-document-preview', 'studio-mode-strip', 'resolveStudioMode', 'Data Studio', 'Summarize', 'onSummarizeContext', 'onSelectTab', 'onCloseTab', 'onDeleteFile', 'onPinProjectContext', 'DatasetQueryPanel', 'file-write-editor', 'MonacoFileEditor', 'MonacoCodePreview', 'editor-find', 'findInputRef', 'dirty-indicator', 'dirtyTabPaths', 'countFindMatches'],
+        terms: ['editor-tabs', 'markdownViewMode', 'markdown-view-toggle', 'markdown-document-preview', 'studio-mode-strip', 'resolveStudioMode', 'Data Studio', 'Summarize', 'onSummarizeContext', 'onSelectTab', 'onCloseTab', 'onDeleteFile', 'onMoveFile', 'onPinProjectContext', 'DatasetQueryPanel', 'file-write-editor', 'MonacoFileEditor', 'MonacoCodePreview', 'editor-find', 'findInputRef', 'dirty-indicator', 'dirtyTabPaths', 'countFindMatches'],
     },
     {
         file: 'src/features/shell/MonacoFileEditor.tsx',
@@ -119,7 +123,7 @@ const checks = [
     },
     {
         file: 'wailsjs/go/main/App.d.ts',
-        terms: ['AskLLMContextPack', 'PreviewFileWrite', 'ApplyFileDelete', 'ProfileDataset', 'CreateChatMarkdownArtifact', 'PreviewChatContextPack'],
+        terms: ['AskLLMContextPack', 'PreviewFileWrite', 'ApplyFileDelete', 'ApplyFileMove', 'ProfileDataset', 'CreateChatMarkdownArtifact', 'PreviewChatContextPack'],
     },
     {
         file: 'dist/index.html',

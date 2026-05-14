@@ -153,6 +153,7 @@ Deliverables:
 - create chat answer artifact tool: first controlled artifact flow implemented
 - create text/code file tool with approval: first edit flow implemented
 - delete text/code file tool with confirmation: first implementation
+- rename/move text/code file tool with no-overwrite validation: first implementation
 - overwrite protection: first diff/apply flow implemented
 - tool call timeline in chat
 - approval dialog
@@ -164,6 +165,7 @@ Exit criteria:
 - AI can create a report artifact from selected source files
 - user can approve or reject text file creates and updates after reviewing a diff
 - user can delete a selected workspace file only after backend validation and confirmation
+- user can rename or move a selected workspace file without overwriting existing files
 - generated artifacts are linked to conversations and source context: first sidecar provenance flow implemented
 
 ## Phase 3: Excel, CSV, And Charts

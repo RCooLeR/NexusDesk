@@ -23,6 +23,7 @@ type WorkbenchPanelProps = {
     isSendingPrompt: boolean;
     isCreatingReport: boolean;
     isDeletingFile: boolean;
+    isMovingFile: boolean;
     isProfilingDataset: boolean;
     isQueryingDataset: boolean;
     isSummarizingContext: boolean;
@@ -36,6 +37,7 @@ type WorkbenchPanelProps = {
     onFileDraftChange: (content: string) => void;
     onDatasetQueryChange: (content: string) => void;
     onDeleteFile: () => void;
+    onMoveFile: () => void;
     onPinContext: () => void;
     onPinProjectContext: () => void;
     onPreviewFileWrite: () => void;
@@ -68,6 +70,7 @@ export function WorkbenchPanel({
     isSendingPrompt,
     isCreatingReport,
     isDeletingFile,
+    isMovingFile,
     isProfilingDataset,
     isQueryingDataset,
     isSummarizingContext,
@@ -81,6 +84,7 @@ export function WorkbenchPanel({
     onFileDraftChange,
     onDatasetQueryChange,
     onDeleteFile,
+    onMoveFile,
     onPinContext,
     onPinProjectContext,
     onPreviewFileWrite,
@@ -108,6 +112,7 @@ export function WorkbenchPanel({
     );
     const canEditContext = Boolean(workspace && filePreview?.kind === 'file' && !filePreview.table);
     const canDeleteContext = Boolean(workspace && filePreview?.kind === 'file' && !isEditingFile);
+    const canMoveContext = Boolean(workspace && filePreview?.kind === 'file' && !isEditingFile);
     const canProfileDataset = Boolean(workspace && filePreview?.fileType === 'data');
     const canRenderMarkdown = Boolean(filePreview?.kind === 'file' && filePreview.content && isMarkdownFile(filePreview.name));
     const studioMode = resolveStudioMode(filePreview, activeDatasetProfile, activeFile);
@@ -162,6 +167,9 @@ export function WorkbenchPanel({
                     </Button>
                     <Button disabled={!canDeleteContext || isDeletingFile} onClick={onDeleteFile} variant="subtle">
                         {isDeletingFile ? 'Deleting...' : 'Delete'}
+                    </Button>
+                    <Button disabled={!canMoveContext || isMovingFile} onClick={onMoveFile} variant="subtle">
+                        {isMovingFile ? 'Moving...' : 'Rename'}
                     </Button>
                     <Button disabled={!workspace || isCreatingReport} onClick={onCreateReport}>
                         {isCreatingReport ? 'Creating...' : 'Report'}

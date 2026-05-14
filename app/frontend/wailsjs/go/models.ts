@@ -569,6 +569,42 @@ export namespace workspace {
 	        this.message = source["message"];
 	    }
 	}
+	export class FileMoveProposal {
+	    sourceRelPath: string;
+	    targetRelPath: string;
+	    name: string;
+	    action: string;
+	    size: number;
+	    message: string;
+
+	    static createFrom(source: any = {}) {
+	        return new FileMoveProposal(source);
+	    }
+
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.sourceRelPath = source["sourceRelPath"];
+	        this.targetRelPath = source["targetRelPath"];
+	        this.name = source["name"];
+	        this.action = source["action"];
+	        this.size = source["size"];
+	        this.message = source["message"];
+	    }
+	}
+	export class FileMoveRequest {
+	    sourceRelPath: string;
+	    targetRelPath: string;
+
+	    static createFrom(source: any = {}) {
+	        return new FileMoveRequest(source);
+	    }
+
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.sourceRelPath = source["sourceRelPath"];
+	        this.targetRelPath = source["targetRelPath"];
+	    }
+	}
 	export class FileNode {
 	    name: string;
 	    path: string;

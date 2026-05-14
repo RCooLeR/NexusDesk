@@ -225,6 +225,24 @@ func (a *App) ApplyFileDelete(relPath string) (workspace.FileDeleteProposal, err
 	return workspace.ApplyFileDelete(root, relPath)
 }
 
+func (a *App) PreviewFileMove(request workspace.FileMoveRequest) (workspace.FileMoveProposal, error) {
+	root := a.getWorkspaceRoot()
+	if root == "" {
+		return workspace.FileMoveProposal{}, errors.New("open a workspace before previewing file moves")
+	}
+
+	return workspace.PreviewFileMove(root, request)
+}
+
+func (a *App) ApplyFileMove(request workspace.FileMoveRequest) (workspace.FileMoveProposal, error) {
+	root := a.getWorkspaceRoot()
+	if root == "" {
+		return workspace.FileMoveProposal{}, errors.New("open a workspace before moving files")
+	}
+
+	return workspace.ApplyFileMove(root, request)
+}
+
 func (a *App) CreateMarkdownReport(relPath string) (artifact.MarkdownReport, error) {
 	root := a.getWorkspaceRoot()
 	if root == "" {

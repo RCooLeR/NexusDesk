@@ -3,6 +3,7 @@ import type {CSSProperties, MouseEvent as ReactMouseEvent} from 'react';
 import {
     ApplyFileWrite,
     ApplyFileDelete,
+    ApplyFileMove,
     AskLLM,
     AskLLMContextPack,
     AskLLMStream,
@@ -17,6 +18,7 @@ import {
     ListArtifacts,
     OpenWorkspace,
     PreviewFileDelete,
+    PreviewFileMove,
     PreviewChatContextPack,
     PreviewFileWrite,
     ProfileDataset,
@@ -137,6 +139,7 @@ export function NexusDeskShell({
     const [isPreviewingWrite, setIsPreviewingWrite] = useState(false);
     const [isApplyingWrite, setIsApplyingWrite] = useState(false);
     const [isDeletingFile, setIsDeletingFile] = useState(false);
+    const [isMovingFile, setIsMovingFile] = useState(false);
     const [editingFilePaths, setEditingFilePaths] = useState<string[]>([]);
     const [fileDrafts, setFileDrafts] = useState<Record<string, string>>({});
     const [writeProposals, setWriteProposals] = useState<Record<string, FileWriteProposal>>({});
@@ -307,6 +310,7 @@ export function NexusDeskShell({
         const hasDirtyActiveDraft = Boolean(isEditingFile && filePreview && dirtyTabPaths.includes(filePreview.relPath));
         const canEditSelectedFile = Boolean(workspace && filePreview?.kind === 'file' && !filePreview.table);
         const canDeleteSelectedFile = Boolean(workspace && filePreview?.kind === 'file' && !isEditingFile);
+        const canMoveSelectedFile = Boolean(workspace && filePreview?.kind === 'file' && !isEditingFile);
         const canUseSelectedContext = Boolean(selectedContextRelPath) && !isSendingPrompt;
         const canUseSelectedDataset = Boolean(workspace && filePreview?.fileType === 'data');
 
@@ -421,6 +425,14 @@ export function NexusDeskShell({
                 id: 'editor.delete-file',
                 run: () => void deleteActiveFile(),
                 title: 'Delete Active File',
+            },
+            {
+                detail: canMoveSelectedFile ? `Rename or move ${activeFile} without overwriting an existing file.` : 'Select a saved file and close any active draft before renaming.',
+                disabled: !canMoveSelectedFile || isMovingFile,
+                group: 'Editor',
+                id: 'editor.move-file',
+                run: () => void moveActiveFile(),
+                title: 'Rename Or Move Active File',
             },
             {
                 detail: hasDirtyActiveDraft ? 'Preview or apply the active file draft through the write safety flow.' : 'Change the active edit draft before saving.',
@@ -819,6 +831,79 @@ export function NexusDeskShell({
             setWorkspaceStatus(message || 'Could not delete this file.');
         } finally {
             setIsDeletingFile(false);
+        }
+    }
+
+    async function moveActiveFile() {
+        if (!workspace || !filePreview || filePreview.kind !== 'file') {
+            setWorkspaceStatus('Select a workspace file before renaming or moving.');
+            return;
+        }
+        if (isEditingFile) {
+            setWorkspaceStatus('Close or cancel the active edit draft before renaming this file.');
+            return;
+        }
+
+        const sourceRelPath = filePreview.relPath;
+        const rawTarget = window.prompt('Rename or move to workspace-relative path', sourceRelPath);
+        if (rawTarget === null) {
+            setWorkspaceStatus(`Rename cancelled for ${sourceRelPath}.`);
+            return;
+        }
+
+        const targetRelPath = normalizeNewFileRelPath(rawTarget);
+        if (!targetRelPath) {
+            setWorkspaceStatus('Enter a workspace-relative target path.');
+            return;
+        }
+        if (targetRelPath === sourceRelPath) {
+            setWorkspaceStatus('Rename target is the same as the current file.');
+            return;
+        }
+        if (targetRelPath.includes('../') || targetRelPath === '..' || targetRelPath.startsWith('/')) {
+            setWorkspaceStatus('Rename target must stay inside the workspace.');
+            return;
+        }
+        if (targetRelPath.toLowerCase().startsWith('.nexusdesk/')) {
+            setWorkspaceStatus('Direct moves into NexusDesk metadata are not allowed.');
+            return;
+        }
+
+        setIsMovingFile(true);
+        setWorkspaceStatus(`Preparing move preview for ${sourceRelPath}...`);
+        try {
+            const proposal = await PreviewFileMove({sourceRelPath, targetRelPath});
+            const sizeLabel = proposal.size > 0 ? ` (${formatBytes(Number(proposal.size))})` : '';
+            if (!window.confirm(`Move ${proposal.sourceRelPath} to ${proposal.targetRelPath}${sizeLabel}?`)) {
+                setWorkspaceStatus(`Rename cancelled for ${proposal.sourceRelPath}.`);
+                return;
+            }
+
+            const moved = await ApplyFileMove({sourceRelPath, targetRelPath});
+            const result = await RefreshWorkspace();
+            if (result.selected) {
+                onWorkspaceChange(result.snapshot);
+                removeOpenTabState(moved.sourceRelPath);
+                await refreshArtifacts();
+                await refreshDatasetProfiles();
+                const selectedNode = findWorkspaceNode(result.snapshot, moved.targetRelPath) ?? selectNodeAfterWorkspaceUpdate(result.snapshot);
+                setExpandedDirectories((current) => reconcileExpandedDirectories(current, result.snapshot, selectedNode));
+                if (selectedNode) {
+                    setActiveFile(selectedNode.relPath);
+                    await previewWorkspaceNode(selectedNode, false);
+                } else {
+                    setActiveFile(result.snapshot.name);
+                    setFilePreview(null);
+                    setActiveDatasetProfile(null);
+                }
+            }
+            setWorkspaceStatus(moved.message);
+            pushToolEvent('File moved', `${moved.sourceRelPath} -> ${moved.targetRelPath}`);
+        } catch (error) {
+            const message = error instanceof Error ? error.message : '';
+            setWorkspaceStatus(message || 'Could not rename or move this file.');
+        } finally {
+            setIsMovingFile(false);
         }
     }
 
@@ -1761,6 +1846,7 @@ export function NexusDeskShell({
                 dirtyTabPaths={dirtyTabPaths}
                 isCreatingReport={isCreatingReport}
                 isDeletingFile={isDeletingFile}
+                isMovingFile={isMovingFile}
                 isProfilingDataset={isProfilingDataset}
                 isQueryingDataset={isQueryingDataset}
                 isSummarizingContext={isSummarizingContext}
@@ -1774,6 +1860,7 @@ export function NexusDeskShell({
                 onCreateReport={() => void createMarkdownReport()}
                 onDatasetQueryChange={setDatasetQuery}
                 onDeleteFile={() => void deleteActiveFile()}
+                onMoveFile={() => void moveActiveFile()}
                 onFileDraftChange={updateFileDraft}
                 onExplainContext={() => void explainSelectedContext()}
                 onSummarizeContext={() => void summarizeSelectedContext()}

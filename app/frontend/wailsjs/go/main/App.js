@@ -6,6 +6,10 @@ export function ApplyFileDelete(arg1) {
   return window['go']['main']['App']['ApplyFileDelete'](arg1);
 }
 
+export function ApplyFileMove(arg1) {
+  return window['go']['main']['App']['ApplyFileMove'](arg1);
+}
+
 export function ApplyFileWrite(arg1) {
   return window['go']['main']['App']['ApplyFileWrite'](arg1);
 }
@@ -76,6 +80,10 @@ export function PreviewChatContextPack(arg1) {
 
 export function PreviewFileDelete(arg1) {
   return window['go']['main']['App']['PreviewFileDelete'](arg1);
+}
+
+export function PreviewFileMove(arg1) {
+  return window['go']['main']['App']['PreviewFileMove'](arg1);
 }
 
 export function PreviewFileWrite(arg1) {
