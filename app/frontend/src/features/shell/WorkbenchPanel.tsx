@@ -26,6 +26,7 @@ type WorkbenchPanelProps = {
     isSendingPrompt: boolean;
     isCreatingReport: boolean;
     isCreatingDatasetChart: boolean;
+    isExportingDatasetQuery: boolean;
     isDeletingFile: boolean;
     isMovingFile: boolean;
     isProfilingDataset: boolean;
@@ -51,6 +52,7 @@ type WorkbenchPanelProps = {
     onProfileDataset: () => void;
     onQueryDataset: () => void;
     onCreateDatasetChart: () => void;
+    onExportDatasetQuery: () => void;
     onCloseTab: (relPath: string) => void;
     onSelectTab: (relPath: string) => void;
     onSelectArtifact: (artifact: WorkspaceArtifact) => void;
@@ -81,6 +83,7 @@ export function WorkbenchPanel({
     isSendingPrompt,
     isCreatingReport,
     isCreatingDatasetChart,
+    isExportingDatasetQuery,
     isDeletingFile,
     isMovingFile,
     isProfilingDataset,
@@ -106,6 +109,7 @@ export function WorkbenchPanel({
     onProfileDataset,
     onQueryDataset,
     onCreateDatasetChart,
+    onExportDatasetQuery,
     onCloseTab,
     onSelectTab,
     onSelectArtifact,
@@ -354,10 +358,12 @@ export function WorkbenchPanel({
                             {(activeDatasetProfile || filePreview?.table) && (
                                 <>
                                     <DatasetQueryPanel
+                                        isExporting={isExportingDatasetQuery}
                                         query={datasetQuery}
                                         result={datasetQueryResult}
                                         isQuerying={isQueryingDataset}
                                         onChange={onDatasetQueryChange}
+                                        onExport={onExportDatasetQuery}
                                         onQuery={onQueryDataset}
                                     />
                                     <DatasetChartPanel
@@ -382,7 +388,7 @@ export function WorkbenchPanel({
                                 />
                             ) : artifacts.map((artifact) => (
                                 <button className="artifact-item" key={artifact.relPath} onClick={() => onSelectArtifact(artifact)}>
-                                    <img src={artifact.kind === 'chart-svg' ? brandAssets.icons.data : brandAssets.icons.documents} alt="" />
+                                    <img src={artifact.kind === 'chart-svg' || artifact.kind === 'dataset-query-csv' ? brandAssets.icons.data : brandAssets.icons.documents} alt="" />
                                     <span>
                                         <strong>{artifact.name}</strong>
                                         <small>{artifact.summary || artifact.source || artifact.relPath}</small>
@@ -487,16 +493,20 @@ function isOperationsFile(relPath: string, fileName: string) {
 }
 
 function DatasetQueryPanel({
+    isExporting,
     query,
     result,
     isQuerying,
     onChange,
+    onExport,
     onQuery,
 }: {
+    isExporting: boolean;
     query: string;
     result: DatasetQueryResult | null;
     isQuerying: boolean;
     onChange: (value: string) => void;
+    onExport: () => void;
     onQuery: () => void;
 }) {
     return (
@@ -516,6 +526,9 @@ function DatasetQueryPanel({
                 />
                 <Button disabled={isQuerying} onClick={onQuery} variant="subtle">
                     {isQuerying ? 'Querying...' : 'Run'}
+                </Button>
+                <Button disabled={!result || isExporting} onClick={onExport} variant="subtle">
+                    {isExporting ? 'Exporting...' : 'Export'}
                 </Button>
             </div>
             {result && (

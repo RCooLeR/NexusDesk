@@ -17,6 +17,7 @@ const checks = [
             'ProfileDataset',
             'QueryDataset',
             'CreateDatasetChartArtifact',
+            'CreateDatasetQueryArtifact',
             'SearchWorkspace',
             'QuickOpenPalette',
             'CommandPalette',
@@ -46,6 +47,7 @@ const checks = [
             'PreviewChatContextPack',
             'summarizeSelectedContext',
             'createDatasetChart',
+            'exportDatasetQuery',
         ],
     },
     {
@@ -54,7 +56,7 @@ const checks = [
     },
     {
         file: 'src/features/shell/WorkbenchPanel.tsx',
-        terms: ['editor-tabs', 'markdownViewMode', 'markdown-view-toggle', 'markdown-document-preview', 'studio-mode-strip', 'resolveStudioMode', 'Data Studio', 'Summarize', 'onSummarizeContext', 'onSelectTab', 'onCloseTab', 'onDeleteFile', 'onMoveFile', 'onPinProjectContext', 'DatasetQueryPanel', 'DatasetChartPanel', 'file-write-editor', 'MonacoFileEditor', 'MonacoCodePreview', 'editor-find', 'findInputRef', 'dirty-indicator', 'dirtyTabPaths', 'countFindMatches'],
+        terms: ['editor-tabs', 'markdownViewMode', 'markdown-view-toggle', 'markdown-document-preview', 'studio-mode-strip', 'resolveStudioMode', 'Data Studio', 'Summarize', 'onSummarizeContext', 'onSelectTab', 'onCloseTab', 'onDeleteFile', 'onMoveFile', 'onPinProjectContext', 'DatasetQueryPanel', 'DatasetChartPanel', 'onExportDatasetQuery', 'dataset-query-csv', 'file-write-editor', 'MonacoFileEditor', 'MonacoCodePreview', 'editor-find', 'findInputRef', 'dirty-indicator', 'dirtyTabPaths', 'countFindMatches'],
     },
     {
         file: 'src/features/shell/MonacoFileEditor.tsx',
@@ -126,7 +128,7 @@ const checks = [
     },
     {
         file: 'wailsjs/go/main/App.d.ts',
-        terms: ['AskLLMContextPack', 'PreviewFileWrite', 'ApplyFileDelete', 'ApplyFileMove', 'ProfileDataset', 'CreateDatasetChartArtifact', 'CreateChatMarkdownArtifact', 'PreviewChatContextPack'],
+        terms: ['AskLLMContextPack', 'PreviewFileWrite', 'ApplyFileDelete', 'ApplyFileMove', 'ProfileDataset', 'CreateDatasetChartArtifact', 'CreateDatasetQueryArtifact', 'CreateChatMarkdownArtifact', 'PreviewChatContextPack'],
     },
     {
         file: 'dist/index.html',

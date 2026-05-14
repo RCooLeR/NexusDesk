@@ -242,6 +242,45 @@ func TestCreateDatasetChartSVGWritesArtifact(t *testing.T) {
 	}
 }
 
+func TestCreateDatasetQueryCSVWritesArtifact(t *testing.T) {
+	root := t.TempDir()
+	now := time.Date(2026, 5, 13, 12, 30, 0, 0, time.UTC)
+
+	report, err := CreateDatasetQueryCSV(root, workspace.DatasetQueryResult{
+		RelPath:     "data/leads.csv",
+		Query:       "channel=search",
+		Columns:     []string{"channel", "revenue"},
+		Rows:        [][]string{{"search", "10"}, {"search", "6"}},
+		TotalRows:   3,
+		MatchedRows: 2,
+		Message:     "2 matching rows from data/leads.csv.",
+	}, now)
+	if err != nil {
+		t.Fatalf("CreateDatasetQueryCSV returned error: %v", err)
+	}
+
+	if report.RelPath != ".nexusdesk/artifacts/leads-query-20260513-123000.csv" {
+		t.Fatalf("unexpected query rel path: %s", report.RelPath)
+	}
+
+	content, err := os.ReadFile(filepath.Join(root, filepath.FromSlash(report.RelPath)))
+	if err != nil {
+		t.Fatalf("ReadFile failed: %v", err)
+	}
+	text := string(content)
+	if !strings.Contains(text, "channel,revenue") || !strings.Contains(text, "search,10") {
+		t.Fatalf("expected CSV query content, got %q", text)
+	}
+
+	metadata := readTestMetadata(t, root, report.RelPath)
+	if metadata.Kind != "dataset-query-csv" {
+		t.Fatalf("unexpected metadata kind: %s", metadata.Kind)
+	}
+	if metadata.Prompt != "Export query \"channel=search\" from data/leads.csv" {
+		t.Fatalf("unexpected metadata prompt: %s", metadata.Prompt)
+	}
+}
+
 func TestListReturnsMarkdownArtifactsNewestFirst(t *testing.T) {
 	root := t.TempDir()
 	firstTime := time.Date(2026, 5, 13, 12, 30, 0, 0, time.UTC)
@@ -284,6 +323,35 @@ func TestListReturnsMarkdownArtifactsNewestFirst(t *testing.T) {
 	}
 	if artifacts[0].Source != "selected preview" {
 		t.Fatalf("expected artifact source from metadata, got %q", artifacts[0].Source)
+	}
+}
+
+func TestListReturnsDatasetQueryCSVArtifacts(t *testing.T) {
+	root := t.TempDir()
+	now := time.Date(2026, 5, 13, 12, 30, 0, 0, time.UTC)
+
+	queryExport, err := CreateDatasetQueryCSV(root, workspace.DatasetQueryResult{
+		RelPath: "data/leads.csv",
+		Columns: []string{"channel", "revenue"},
+		Rows:    [][]string{{"search", "10"}},
+		Message: "1 matching row from data/leads.csv.",
+	}, now)
+	if err != nil {
+		t.Fatalf("CreateDatasetQueryCSV returned error: %v", err)
+	}
+
+	artifacts, err := List(root)
+	if err != nil {
+		t.Fatalf("List returned error: %v", err)
+	}
+	if len(artifacts) != 1 {
+		t.Fatalf("expected 1 query artifact, got %d", len(artifacts))
+	}
+	if artifacts[0].RelPath != queryExport.RelPath {
+		t.Fatalf("unexpected query artifact rel path: %s", artifacts[0].RelPath)
+	}
+	if artifacts[0].Kind != "dataset-query-csv" {
+		t.Fatalf("unexpected query artifact kind: %s", artifacts[0].Kind)
 	}
 }
 

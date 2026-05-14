@@ -279,6 +279,7 @@ Current implementation:
 - selected file context is read through the same rooted preview boundary as the source preview pane
 - chat history is persisted per workspace in local JSON config
 - file create/update/delete/rename/move actions are deterministic UI-triggered tools today, not model-directed tool calls
+- first CSV query exports are deterministic UI-triggered tools today, not model-directed file writes
 - first CSV chart artifacts are deterministic UI-triggered tools today, not model-directed chart rendering
 
 ## Prompt Contracts

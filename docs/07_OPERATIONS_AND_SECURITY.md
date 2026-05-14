@@ -86,6 +86,7 @@ Current implementation:
 - deletes reject directories, symlinks, metadata paths, and traversal before frontend confirmation
 - rename/move rejects traversal, metadata paths, directories, symlinks, same-path moves, directory-like targets, and overwrites
 - direct `.nexusdesk/` metadata writes and deletes are blocked
+- CSV query exports are created only from bounded query results and exclusive artifact writes
 - chart artifacts are created only through bounded CSV aggregation and exclusive artifact writes
 - frontend commands call Wails bindings rather than reading or mutating arbitrary paths directly
 

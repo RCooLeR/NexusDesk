@@ -46,6 +46,10 @@ export function CreateDatasetChartArtifact(arg1) {
   return window['go']['main']['App']['CreateDatasetChartArtifact'](arg1);
 }
 
+export function CreateDatasetQueryArtifact(arg1, arg2) {
+  return window['go']['main']['App']['CreateDatasetQueryArtifact'](arg1, arg2);
+}
+
 export function CreateMarkdownReport(arg1) {
   return window['go']['main']['App']['CreateMarkdownReport'](arg1);
 }

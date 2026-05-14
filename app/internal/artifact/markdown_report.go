@@ -1,6 +1,7 @@
 package artifact
 
 import (
+	"encoding/csv"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -259,6 +260,76 @@ func CreateDatasetChartSVG(root string, chart workspace.DatasetChartResult, now 
 	}, nil
 }
 
+func CreateDatasetQueryCSV(root string, result workspace.DatasetQueryResult, now time.Time) (MarkdownReport, error) {
+	if strings.TrimSpace(root) == "" {
+		return MarkdownReport{}, errors.New("open a workspace before exporting dataset queries")
+	}
+	if strings.TrimSpace(result.RelPath) == "" || len(result.Columns) == 0 {
+		return MarkdownReport{}, errors.New("dataset query export needs columns")
+	}
+
+	absRoot, err := filepath.Abs(root)
+	if err != nil {
+		return MarkdownReport{}, err
+	}
+
+	artifactDir := filepath.Join(absRoot, filepath.FromSlash(artifactDirRelPath))
+	if err := os.MkdirAll(artifactDir, 0o755); err != nil {
+		return MarkdownReport{}, err
+	}
+
+	name := datasetQueryFileName(result, now)
+	path := filepath.Join(artifactDir, name)
+	if err := ensureInsideRoot(absRoot, path); err != nil {
+		return MarkdownReport{}, err
+	}
+
+	content, err := buildDatasetQueryCSV(result)
+	if err != nil {
+		return MarkdownReport{}, err
+	}
+
+	file, err := os.OpenFile(path, os.O_WRONLY|os.O_CREATE|os.O_EXCL, 0o644)
+	if err != nil {
+		return MarkdownReport{}, err
+	}
+	defer file.Close()
+
+	if _, err := file.WriteString(content); err != nil {
+		return MarkdownReport{}, err
+	}
+
+	if err := writeArtifactMetadata(absRoot, path, ArtifactMetadata{
+		Kind:           "dataset-query-csv",
+		Title:          datasetQueryTitle(result),
+		Source:         "dataset query",
+		SourcePaths:    cleanMetadataPaths([]string{result.RelPath}),
+		ContextRelPath: result.RelPath,
+		Prompt:         datasetQueryPrompt(result),
+		CreatedAt:      now.UTC().Format(time.RFC3339),
+	}); err != nil {
+		return MarkdownReport{}, err
+	}
+
+	info, err := file.Stat()
+	if err != nil {
+		return MarkdownReport{}, err
+	}
+
+	relPath, err := filepath.Rel(absRoot, path)
+	if err != nil {
+		return MarkdownReport{}, err
+	}
+
+	return MarkdownReport{
+		RelPath: filepath.ToSlash(relPath),
+		Name:    name,
+		Path:    path,
+		Message: "CSV dataset query artifact created inside the workspace.",
+		Size:    info.Size(),
+	}, nil
+}
+
 func List(root string) ([]WorkspaceArtifact, error) {
 	if strings.TrimSpace(root) == "" {
 		return []WorkspaceArtifact{}, nil
@@ -284,7 +355,7 @@ func List(root string) ([]WorkspaceArtifact, error) {
 			continue
 		}
 		extension := strings.ToLower(filepath.Ext(entry.Name()))
-		if extension != ".md" && extension != ".svg" {
+		if extension != ".md" && extension != ".svg" && extension != ".csv" {
 			continue
 		}
 
@@ -358,6 +429,22 @@ func datasetChartFileName(chart workspace.DatasetChartResult, now time.Time) str
 	return fmt.Sprintf("%s-%s.svg", slug, now.UTC().Format("20060102-150405"))
 }
 
+func datasetQueryFileName(result workspace.DatasetQueryResult, now time.Time) string {
+	base := strings.TrimSuffix(filepath.Base(result.RelPath), filepath.Ext(result.RelPath))
+	if base == "" {
+		base = "dataset"
+	}
+	suffix := "rows"
+	if strings.TrimSpace(result.Query) != "" {
+		suffix = "query"
+	}
+	slug := slugify(base + "-" + suffix)
+	if slug == "" {
+		slug = "dataset-query"
+	}
+	return fmt.Sprintf("%s-%s.csv", slug, now.UTC().Format("20060102-150405"))
+}
+
 func generatedArtifactTitle(request MarkdownArtifactRequest) string {
 	base := strings.TrimSpace(request.Title)
 	if base == "" {
@@ -383,6 +470,20 @@ func datasetChartPrompt(chart workspace.DatasetChartResult) string {
 		return fmt.Sprintf("Chart row count by %s from %s", chart.CategoryColumn, chart.RelPath)
 	}
 	return fmt.Sprintf("Chart sum of %s by %s from %s", chart.ValueColumn, chart.CategoryColumn, chart.RelPath)
+}
+
+func datasetQueryTitle(result workspace.DatasetQueryResult) string {
+	if strings.TrimSpace(result.Query) == "" {
+		return fmt.Sprintf("Rows from %s", result.RelPath)
+	}
+	return fmt.Sprintf("Query %q from %s", result.Query, result.RelPath)
+}
+
+func datasetQueryPrompt(result workspace.DatasetQueryResult) string {
+	if strings.TrimSpace(result.Query) == "" {
+		return fmt.Sprintf("Export first %d rows from %s", len(result.Rows), result.RelPath)
+	}
+	return fmt.Sprintf("Export query %q from %s", result.Query, result.RelPath)
 }
 
 func buildMarkdownReport(source workspace.FilePreview, now time.Time) string {
@@ -447,6 +548,24 @@ func buildMarkdownReport(source workspace.FilePreview, now time.Time) string {
 	builder.WriteString("- Attach supporting artifacts where needed.\n")
 
 	return builder.String()
+}
+
+func buildDatasetQueryCSV(result workspace.DatasetQueryResult) (string, error) {
+	var builder strings.Builder
+	writer := csv.NewWriter(&builder)
+	if err := writer.Write(result.Columns); err != nil {
+		return "", err
+	}
+	for _, row := range result.Rows {
+		if err := writer.Write(row); err != nil {
+			return "", err
+		}
+	}
+	writer.Flush()
+	if err := writer.Error(); err != nil {
+		return "", err
+	}
+	return builder.String(), nil
 }
 
 func buildDatasetChartSVG(chart workspace.DatasetChartResult, now time.Time) string {

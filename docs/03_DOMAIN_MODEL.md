@@ -402,6 +402,7 @@ Examples:
 
 - Markdown report
 - PDF report
+- CSV export, first bounded dataset query export implemented
 - PNG chart
 - SVG chart, first deterministic CSV bar chart implemented
 - SQL file
@@ -465,6 +466,16 @@ Current implementation:
 - The chart can count rows per category or sum a selected numeric column per category.
 - The result is capped to the top categories before rendering.
 - `app/internal/artifact/markdown_report.go` writes the chart as an SVG artifact under `.nexusdesk/artifacts/` with provenance metadata.
+
+### Dataset Query Export
+
+A dataset query export is a deterministic CSV artifact created from a bounded dataset query result.
+
+Current implementation:
+
+- `app/internal/workspace/dataset_query.go` returns bounded CSV rows for text search or `column=value` filters.
+- `app/internal/artifact/markdown_report.go` writes those bounded rows as a CSV artifact under `.nexusdesk/artifacts/`.
+- The export writes a provenance sidecar with source path and query string.
 
 ## Relationship Overview
 

@@ -50,6 +50,7 @@ This tracker reflects the repository as it exists today and keeps planned work s
 - [x] CSV profile stats read a larger bounded file sample than the visible text preview.
 - [x] Dataset profiles persist CSV profiles and XLSX sheet metadata under `.nexusdesk/datasets/`.
 - [x] CSV datasets can be queried with bounded row search and `column=value` filters.
+- [x] Bounded CSV query results can be exported as CSV artifacts.
 - [x] CSV datasets can generate a first SVG bar chart artifact from category counts or numeric sums.
 - [x] Lightweight syntax highlighting exists at `app/frontend/src/features/shell/HighlightedCode.tsx`.
 - [x] Monaco-backed edit surface exists at `app/frontend/src/features/shell/MonacoFileEditor.tsx`.
@@ -123,11 +124,12 @@ This tracker reflects the repository as it exists today and keeps planned work s
 - [x] Latest assistant chat answers can be saved as Markdown artifacts under `.nexusdesk/artifacts/`.
 - [x] Markdown artifacts write provenance sidecars with source, prompt, model, and context metadata.
 - [x] Markdown report artifacts are created without overwriting existing files.
+- [x] CSV query export artifacts write provenance sidecars and are listed in the artifact browser.
 - [x] SVG chart artifacts write provenance sidecars and are listed in the artifact browser.
 - [x] Text file edits use a preview/apply flow with a diff before workspace writes.
 - [x] Text/code file deletes use a backend safety boundary with confirmation before workspace removal.
 - [x] Text/code files can be renamed or moved inside the workspace with no-overwrite backend validation.
-- [x] Workbench artifact browser lists generated Markdown artifacts.
+- [x] Workbench artifact browser lists generated Markdown, CSV, and SVG artifacts.
 - [x] Tool timeline records real workspace, preview, search, profile, write, report, and chat actions.
 - [x] Artifact rows can select the generated report preview when visible in the workspace tree.
 - [x] Helper services placeholder exists at `services/docker-compose.yml`.
@@ -184,6 +186,7 @@ This tracker reflects the repository as it exists today and keeps planned work s
 - [x] Expand CSV profiling beyond the visible preview window with a larger capped sample.
 - [x] Persist first CSV/XLSX dataset profiles in the workspace.
 - [x] Add first bounded CSV query flow.
+- [x] Add first CSV query result export artifact flow.
 - [x] Add first CSV-to-SVG chart artifact flow.
 - [x] Add workspace path/content search.
 - [x] Send structured CSV summaries as selected chat context.
@@ -235,7 +238,7 @@ This tracker reflects the repository as it exists today and keeps planned work s
 
 `app/internal/workspace/context.go` owns directory and project context expansion for chat. It accepts selected files, selected directories, and `.` for the workspace root, then expands them into a capped list of previewable text/document/data files while preserving scanner ignore rules and symlink/path traversal protections.
 
-`app/internal/artifact/` owns deterministic Markdown and SVG artifact writes, sidecar provenance metadata, and listing. Source reports, saved assistant answers, and first CSV chart artifacts are written under `.nexusdesk/artifacts/` with timestamped names and exclusive creation, so generated outputs stay separate from source files.
+`app/internal/artifact/` owns deterministic Markdown, CSV, and SVG artifact writes, sidecar provenance metadata, and listing. Source reports, saved assistant answers, first CSV query exports, and first CSV chart artifacts are written under `.nexusdesk/artifacts/` with timestamped names and exclusive creation, so generated outputs stay separate from source files.
 
 `app/internal/storage/` owns local app persistence. Recent workspaces and non-secret LLM settings currently use small JSON files in the user's config directory; LLM API keys are kept in a sidecar credential blob protected by the OS where available.
 

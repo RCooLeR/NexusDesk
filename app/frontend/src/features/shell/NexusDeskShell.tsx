@@ -12,6 +12,7 @@ import {
     ClearChatHistory,
     CreateChatMarkdownArtifact,
     CreateDatasetChartArtifact,
+    CreateDatasetQueryArtifact,
     CreateMarkdownReport,
     GetChatHistory,
     ListDatasetProfiles,
@@ -133,6 +134,7 @@ export function NexusDeskShell({
     const [datasetChartCategory, setDatasetChartCategory] = useState('');
     const [datasetChartValue, setDatasetChartValue] = useState('');
     const [isCreatingDatasetChart, setIsCreatingDatasetChart] = useState(false);
+    const [isExportingDatasetQuery, setIsExportingDatasetQuery] = useState(false);
     const [workspaceSearchQuery, setWorkspaceSearchQuery] = useState('');
     const [workspaceSearchResults, setWorkspaceSearchResults] = useState<WorkspaceSearchResult[]>([]);
     const [isSearchingWorkspace, setIsSearchingWorkspace] = useState(false);
@@ -336,6 +338,7 @@ export function NexusDeskShell({
         const canUseSelectedContext = Boolean(selectedContextRelPath) && !isSendingPrompt;
         const canUseSelectedDataset = Boolean(workspace && filePreview?.fileType === 'data');
         const canChartSelectedDataset = Boolean(workspace && filePreview?.table && datasetChartCategory);
+        const canExportDatasetQuery = Boolean(workspace && filePreview?.table && datasetQueryResult);
 
         return [
             {
@@ -549,6 +552,14 @@ export function NexusDeskShell({
                 id: 'data.create-chart',
                 run: () => void createDatasetChart(),
                 title: 'Create Dataset Chart',
+            },
+            {
+                detail: canExportDatasetQuery ? `Export the current ${activeFile} query result as a CSV artifact.` : 'Run a CSV dataset query before exporting the result.',
+                disabled: !canExportDatasetQuery || isExportingDatasetQuery,
+                group: 'Data Studio',
+                id: 'data.export-query',
+                run: () => void exportDatasetQuery(),
+                title: 'Export Dataset Query',
             },
             {
                 detail: chatMessages.length > 0 ? 'Clear persisted chat messages for the active workspace.' : 'No chat messages are loaded.',
@@ -1753,6 +1764,39 @@ export function NexusDeskShell({
         }
     }
 
+    async function exportDatasetQuery() {
+        if (!workspace || !filePreview?.table) {
+            setWorkspaceStatus('Open a workspace and select a CSV dataset before exporting a query.');
+            return;
+        }
+
+        setIsExportingDatasetQuery(true);
+        setWorkspaceStatus(`Exporting query result from ${filePreview.relPath}...`);
+        try {
+            const report: MarkdownReport = await CreateDatasetQueryArtifact(filePreview.relPath, datasetQuery);
+            const result = await RefreshWorkspace();
+            if (result.selected) {
+                onWorkspaceChange(result.snapshot);
+                await refreshArtifacts();
+                setExpandedDirectories((current) => reconcileExpandedDirectories(current, result.snapshot, findWorkspaceNode(result.snapshot, report.relPath)));
+                await selectWorkspaceFile(result.snapshot, report.relPath);
+                setWorkspaceStatus(`${report.name} exported in .nexusdesk/artifacts.`);
+                pushToolEvent('Query exported', report.relPath);
+            } else {
+                setWorkspaceStatus(report.message);
+            }
+        } catch (error) {
+            const message = error instanceof Error ? error.message : '';
+            if (message.includes('undefined') || message.includes('window')) {
+                setWorkspaceStatus('Dataset query export is available in the desktop runtime.');
+                return;
+            }
+            setWorkspaceStatus(message || 'Could not export dataset query.');
+        } finally {
+            setIsExportingDatasetQuery(false);
+        }
+    }
+
     async function selectArtifact(artifact: WorkspaceArtifact) {
         if (!workspace) {
             setWorkspaceStatus('Open a workspace before selecting artifacts.');
@@ -1926,6 +1970,7 @@ export function NexusDeskShell({
                 isProfilingDataset={isProfilingDataset}
                 isQueryingDataset={isQueryingDataset}
                 isCreatingDatasetChart={isCreatingDatasetChart}
+                isExportingDatasetQuery={isExportingDatasetQuery}
                 isSummarizingContext={isSummarizingContext}
                 isEditingFile={isEditingFile}
                 isApplyingWrite={isApplyingWrite}
@@ -1950,6 +1995,7 @@ export function NexusDeskShell({
                 onProfileDataset={() => void profileSelectedDataset()}
                 onQueryDataset={() => void querySelectedDataset()}
                 onCreateDatasetChart={() => void createDatasetChart()}
+                onExportDatasetQuery={() => void exportDatasetQuery()}
                 onCloseTab={closeOpenTab}
                 onSelectTab={selectOpenTab}
                 onSelectArtifact={(artifact) => void selectArtifact(artifact)}

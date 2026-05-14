@@ -1329,7 +1329,7 @@ button:disabled {
 
 .dataset-query-row {
     display: grid;
-    grid-template-columns: minmax(0, 1fr) auto;
+    grid-template-columns: minmax(0, 1fr) auto auto;
 }
 
 .dataset-query-result {

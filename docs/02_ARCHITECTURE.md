@@ -13,8 +13,8 @@ The implemented desktop slice currently contains:
 - JSON-backed local stores for recent workspaces, LLM settings, and chat history
 - OS-protected sidecar credential storage where available
 - safe workspace scanner, previewer, search, context-pack builder, and file operation boundaries
-- CSV/XLSX dataset profiling and bounded CSV row queries
-- Markdown/SVG artifact writer with provenance sidecars
+- CSV/XLSX dataset profiling, bounded CSV row queries, and CSV query exports
+- Markdown/CSV/SVG artifact writer with provenance sidecars
 - first CSV chart artifact flow for category counts or numeric sums
 - configurable LLM gateway
 - OpenAI-compatible chat and streaming
@@ -244,6 +244,7 @@ Responsibilities:
 - write generated files
 - track artifact metadata
 - create report files
+- export bounded CSV query results as CSV artifacts
 - render first deterministic SVG chart artifacts from CSV aggregations
 - link artifacts to chats and tool runs
 - prevent silent overwrites

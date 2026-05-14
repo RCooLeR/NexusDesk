@@ -29,6 +29,8 @@ export function CreateChatMarkdownArtifact(arg1:artifact.MarkdownArtifactRequest
 
 export function CreateDatasetChartArtifact(arg1:workspace.DatasetChartRequest):Promise<artifact.MarkdownReport>;
 
+export function CreateDatasetQueryArtifact(arg1:string,arg2:string):Promise<artifact.MarkdownReport>;
+
 export function CreateMarkdownReport(arg1:string):Promise<artifact.MarkdownReport>;
 
 export function GetChatHistory():Promise<Array<storage.ChatMessage>>;

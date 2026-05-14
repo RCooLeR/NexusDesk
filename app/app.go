@@ -314,6 +314,19 @@ func (a *App) CreateDatasetChartArtifact(request workspace.DatasetChartRequest) 
 	return artifact.CreateDatasetChartSVG(root, chart, time.Now())
 }
 
+func (a *App) CreateDatasetQueryArtifact(relPath string, query string) (artifact.MarkdownReport, error) {
+	root := a.getWorkspaceRoot()
+	if root == "" {
+		return artifact.MarkdownReport{}, errors.New("open a workspace before exporting dataset queries")
+	}
+
+	result, err := workspace.QueryCSV(root, relPath, query)
+	if err != nil {
+		return artifact.MarkdownReport{}, err
+	}
+	return artifact.CreateDatasetQueryCSV(root, result, time.Now())
+}
+
 func (a *App) GetRecentWorkspaces() ([]storage.RecentWorkspace, error) {
 	return a.recentStore.List()
 }

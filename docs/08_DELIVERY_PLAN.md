@@ -57,6 +57,7 @@ Deliverables:
 - larger capped CSV profile sample: implemented
 - persistent CSV/XLSX dataset profiles: first implementation
 - bounded CSV query/filter flow: first implementation
+- CSV query result export artifact flow: first implementation
 - CSV-to-SVG bar chart artifact flow: first implementation
 - image preview: implemented
 - basic PDF preview: implemented
@@ -116,6 +117,7 @@ Current status:
 - Streaming chat works with the configured model and optional selected file context.
 - CSV context is sent as a structured profile plus bounded row sample instead of only raw preview text.
 - CSV datasets can be queried with bounded text search or `column=value` filters.
+- CSV query results can be exported as timestamped CSV artifacts.
 - CSV datasets can generate first SVG bar chart artifacts from category counts or numeric sums.
 - Multiple text, CSV, and extracted-PDF previews can be pinned into a bounded context pack for chat.
 - Selected directories and the workspace root can be expanded into bounded streaming context packs.
@@ -140,8 +142,9 @@ Current status:
 - Markdown report artifacts can be created under `.nexusdesk/artifacts/` without overwriting existing files.
 - Latest assistant answers can be saved as Markdown artifacts under `.nexusdesk/artifacts/` with their chat context recorded as metadata.
 - Markdown artifacts now write sidecar provenance metadata with source, prompt, model, source paths, and creation timestamp.
+- CSV query export artifacts now write sidecar provenance metadata with dataset source paths and query string.
 - SVG chart artifacts now write sidecar provenance metadata with dataset source paths and chart configuration.
-- The workbench lists generated Markdown artifacts and can reselect visible report files from that list.
+- The workbench lists generated Markdown, CSV, and SVG artifacts and can reselect visible artifact files from that list.
 - The frontend has a smoke check for the built entrypoint, generated Wails bindings, and core shell functionality markers.
 - richer document extraction/OCR, richer approval dialogs, DuckDB SQL, and SQLite persistence are still planned.
 
@@ -188,6 +191,7 @@ Deliverables:
 - larger capped CSV profile sample: implemented
 - dataset profiles beyond the preview window: first CSV/XLSX profile store implemented
 - structured CSV chat context: implemented
+- first CSV query result export artifacts: implemented
 - first CSV-to-SVG bar chart artifacts: implemented
 - DuckDB local analytics
 - query dataset tool

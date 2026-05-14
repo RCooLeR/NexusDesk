@@ -64,6 +64,7 @@ The current app implements the first safe workspace slice:
 - File creates/updates go through `app/internal/workspace/write.go` with rooted paths, size caps, diff previews, and apply-only-after-preview behavior.
 - File deletes go through `app/internal/workspace/delete.go` and reject traversal, metadata paths, directories, and symlinks before frontend confirmation.
 - File rename/move goes through `app/internal/workspace/move.go` and rejects traversal, metadata paths, directories, symlinks, same-path moves, and overwrites.
+- CSV query export reruns the bounded query through `app/internal/workspace/dataset_query.go` and writes a CSV artifact through the artifact manager.
 - CSV chart generation goes through `app/internal/workspace/chart.go` and returns bounded category counts or numeric sums.
 - Chat context uses the same rooted preview boundary and sends only selected text content or a bounded pack of pinned previews.
 - Workspace open/recent/refresh flows are bound through Wails methods on `app/app.go`.
@@ -173,7 +174,8 @@ Current implementation:
 - shows unsupported state for binary or unsupported text-encoding files
 - excludes image and PDF data URLs from text chat context, but allows extracted PDF text as context
 - creates Markdown report artifacts under `.nexusdesk/artifacts/` from selected previews
-- lists generated Markdown artifacts from `.nexusdesk/artifacts/`
+- lists generated Markdown, CSV, and SVG artifacts from `.nexusdesk/artifacts/`
+- creates and lists first CSV query export artifacts under `.nexusdesk/artifacts/`
 - creates and lists first SVG chart artifacts under `.nexusdesk/artifacts/`
 - uses Monaco for read-only text/code previews and text/code edit drafts
 - supports safe new file drafts, text/code updates, deletes, and renames/moves through backend file-operation boundaries
