@@ -1,5 +1,5 @@
 import {useEffect, useRef} from 'react';
-import * as monaco from 'monaco-editor/esm/vs/editor/editor.api';
+import type * as Monaco from 'monaco-editor/esm/vs/editor/editor.api';
 import editorWorker from 'monaco-editor/esm/vs/editor/editor.worker?worker';
 import cssWorker from 'monaco-editor/esm/vs/language/css/css.worker?worker';
 import htmlWorker from 'monaco-editor/esm/vs/language/html/html.worker?worker';
@@ -21,6 +21,7 @@ type MonacoWorkerHost = typeof self & {
 };
 
 let themeDefined = false;
+let monacoLoadPromise: Promise<typeof Monaco> | null = null;
 
 (self as MonacoWorkerHost).MonacoEnvironment = {
     getWorker: (_moduleId: string, label: string) => {
@@ -42,7 +43,7 @@ let themeDefined = false;
 
 export function MonacoFileEditor({fileName, onChange, onSave, value}: MonacoFileEditorProps) {
     const containerRef = useRef<HTMLDivElement>(null);
-    const editorRef = useRef<monaco.editor.IStandaloneCodeEditor | null>(null);
+    const editorRef = useRef<Monaco.editor.IStandaloneCodeEditor | null>(null);
     const changeHandlerRef = useRef(onChange);
     const saveHandlerRef = useRef(onSave);
 
@@ -55,41 +56,48 @@ export function MonacoFileEditor({fileName, onChange, onSave, value}: MonacoFile
     }, [onSave]);
 
     useEffect(() => {
-        if (!containerRef.current) {
-            return;
-        }
+        let disposed = false;
+        let changeSubscription: Monaco.IDisposable | null = null;
 
-        defineNexusDeskTheme();
-        const editor = monaco.editor.create(containerRef.current, {
-            automaticLayout: true,
-            contextmenu: true,
-            fontFamily: '"Cascadia Code", Consolas, monospace',
-            fontLigatures: false,
-            fontSize: 13,
-            language: languageForFile(fileName),
-            lineHeight: 21,
-            minimap: {enabled: false},
-            padding: {bottom: 16, top: 12},
-            renderLineHighlight: 'line',
-            scrollBeyondLastLine: false,
-            tabSize: 4,
-            theme: 'nexusdesk-light',
-            value,
-            wordWrap: 'on',
+        void loadMonaco().then((monaco) => {
+            if (disposed || !containerRef.current) {
+                return;
+            }
+
+            defineNexusDeskTheme(monaco);
+            const editor = monaco.editor.create(containerRef.current, {
+                automaticLayout: true,
+                contextmenu: true,
+                fontFamily: '"Cascadia Code", Consolas, monospace',
+                fontLigatures: false,
+                fontSize: 13,
+                language: languageForFile(fileName),
+                lineHeight: 21,
+                minimap: {enabled: false},
+                padding: {bottom: 16, top: 12},
+                renderLineHighlight: 'line',
+                scrollBeyondLastLine: false,
+                tabSize: 4,
+                theme: 'nexusdesk-light',
+                value,
+                wordWrap: 'on',
+            });
+
+            editor.addCommand(monaco.KeyMod.CtrlCmd | monaco.KeyCode.KeyS, () => {
+                saveHandlerRef.current();
+            });
+
+            changeSubscription = editor.onDidChangeModelContent(() => {
+                changeHandlerRef.current(editor.getValue());
+            });
+
+            editorRef.current = editor;
         });
 
-        editor.addCommand(monaco.KeyMod.CtrlCmd | monaco.KeyCode.KeyS, () => {
-            saveHandlerRef.current();
-        });
-
-        const changeSubscription = editor.onDidChangeModelContent(() => {
-            changeHandlerRef.current(editor.getValue());
-        });
-
-        editorRef.current = editor;
         return () => {
-            changeSubscription.dispose();
-            editor.dispose();
+            disposed = true;
+            changeSubscription?.dispose();
+            editorRef.current?.dispose();
             editorRef.current = null;
         };
     }, []);
@@ -100,15 +108,17 @@ export function MonacoFileEditor({fileName, onChange, onSave, value}: MonacoFile
             return;
         }
 
-        const model = editor.getModel();
-        if (!model) {
-            return;
-        }
+        void loadMonaco().then((monaco) => {
+            const model = editor.getModel();
+            if (!model) {
+                return;
+            }
 
-        const language = languageForFile(fileName);
-        if (model.getLanguageId() !== language) {
-            monaco.editor.setModelLanguage(model, language);
-        }
+            const language = languageForFile(fileName);
+            if (model.getLanguageId() !== language) {
+                monaco.editor.setModelLanguage(model, language);
+            }
+        });
     }, [fileName]);
 
     useEffect(() => {
@@ -128,7 +138,14 @@ export function MonacoFileEditor({fileName, onChange, onSave, value}: MonacoFile
     return <div className="monaco-file-editor" ref={containerRef} />;
 }
 
-function defineNexusDeskTheme() {
+function loadMonaco() {
+    if (!monacoLoadPromise) {
+        monacoLoadPromise = import('monaco-editor/esm/vs/editor/editor.api');
+    }
+    return monacoLoadPromise;
+}
+
+function defineNexusDeskTheme(monaco: typeof Monaco) {
     if (themeDefined) {
         return;
     }

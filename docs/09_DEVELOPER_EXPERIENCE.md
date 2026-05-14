@@ -83,7 +83,7 @@ The shell is now mostly orchestration. Feature panels own stable presentation, w
 - `app/frontend/src/features/shell/NexusDeskShell.tsx` owns the composed desktop workbench state, global quick-open/command-palette shortcuts, and cross-panel navigation wiring.
 - `app/frontend/src/features/shell/QuickOpenPalette.tsx` owns the keyboard quick-open palette for workspace nodes and open editor tabs.
 - `app/frontend/src/features/shell/CommandPalette.tsx` owns the keyboard command palette for workspace, editor, assistant, data, and artifact actions.
-- `app/frontend/src/features/shell/MonacoFileEditor.tsx` owns the Monaco edit surface, worker wiring, language detection, and editor-local Ctrl+S forwarding for draft writes.
+- `app/frontend/src/features/shell/MonacoFileEditor.tsx` owns the lazy-loaded Monaco edit surface, worker wiring, language detection, and editor-local Ctrl+S forwarding for draft writes.
 - `app/frontend/src/features/shell/AgentChatCard.tsx` owns the expanded chat presentation, full conversation scroll area, multiline prompt composer, context pack list, save-answer action surface, and delegates provider calls/history/artifact actions back to the shell.
 - `app/frontend/src/features/shell/ChatMessageContent.tsx` renders safe dependency-free Markdown-style chat content, including headings, lists, tables, code fences, inline code, and bold text.
 - `app/frontend/src/features/shell/LLMSettingsCard.tsx` owns the provider settings form and delegates persistence/probe actions back to the shell.

@@ -42,7 +42,7 @@ const checks = [
     },
     {
         file: 'src/features/shell/MonacoFileEditor.tsx',
-        terms: ['monaco-editor', 'MonacoEnvironment', 'languageForFile', 'nexusdesk-light', 'KeyCode.KeyS'],
+        terms: ['monaco-editor', 'MonacoEnvironment', 'loadMonaco', 'languageForFile', 'nexusdesk-light', 'KeyCode.KeyS'],
     },
     {
         file: 'src/features/shell/HighlightedCode.tsx',
