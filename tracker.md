@@ -163,6 +163,16 @@ This tracker reflects the repository as it exists today and keeps planned work s
 
 ## Next Work
 
+### Prepared Batch: Studio Hardening And Inspectors
+
+- [ ] Add modal approval requests for higher-risk actions with risk, target, message, and explicit approve/cancel handling before apply.
+- [ ] Group workspace search results by files, artifacts, and chat history, with clearer snippets and active-result selection behavior.
+- [ ] Split Data Studio, Artifact metadata, and Approval Log panels out of `WorkbenchPanel.tsx` into focused feature components.
+- [ ] Add scan/index status reporting that explains included, skipped, truncated, and ignored workspace paths.
+- [ ] Add richer Data Studio table operations: sortable columns, bounded pagination, and clearer CSV query result navigation.
+- [ ] Add chart artifact preview polish: inline SVG preview for generated charts plus clearer chart config metadata.
+- [ ] Add first read-only Operations Studio inspector for Docker/Compose files and local service status, without mutating Docker state.
+
 - [x] Batch: align product docs around NexusDesk as an IDE/data/analytics studio.
 - [x] Batch: align architecture, domain, indexing, search, AI, operations, delivery, DX, brand, README, and tracker wording.
 - [x] Batch: update startup state and browser fallback copy to Studio MVP language.

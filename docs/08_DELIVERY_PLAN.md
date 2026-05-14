@@ -152,6 +152,18 @@ Current status:
 - The frontend has a smoke check for the built entrypoint, generated Wails bindings, and core shell functionality markers.
 - richer document extraction/OCR, modal approval dialogs, DuckDB SQL, and SQLite persistence are still planned.
 
+## Prepared Next Batch: Studio Hardening And Inspectors
+
+This batch should keep momentum on real functionality while cleaning up the growing shell surface:
+
+1. Add modal approval requests for higher-risk actions.
+2. Group workspace search results into file, artifact, and chat sections with clearer snippets.
+3. Extract Data Studio, Artifact metadata, and Approval Log UI from the main workbench component.
+4. Add scan/index status reporting for included, skipped, truncated, and ignored paths.
+5. Add sortable/paged CSV result navigation for Data Studio.
+6. Improve chart artifact previews and chart metadata visibility.
+7. Add a first read-only Operations Studio inspector for Docker/Compose files and local service status.
+
 ## Phase 2: Files, Documents, And Artifacts
 
 Goal: make NexusDesk useful for real documents and generated outputs.

@@ -109,6 +109,18 @@ The shell is now mostly orchestration. Feature panels own stable presentation, w
 
 `app/internal/approval/` owns the first append-only action log. Applied text writes, deletes, moves, reports, saved chat artifacts, chart artifacts, query exports, and dataset summaries append records under `.nexusdesk/approvals/log.json`. This is not the final modal policy engine yet, but it gives the studio an auditable local trail while higher-risk approval dialogs are designed.
 
+## Prepared Next Batch
+
+The next implementation batch should harden the studio around the surfaces that are already real:
+
+- Approval: add a modal request/decision flow over the existing approval records so high-risk actions have explicit user consent before backend apply.
+- Search: group file, artifact, and chat matches in the navigator and improve snippets so mixed search results are understandable.
+- Component structure: split Data Studio, artifact metadata, and approval log UI out of `WorkbenchPanel.tsx` before the shell gets harder to reason about.
+- Index visibility: expose scan/index status, skipped paths, truncation, and ignored directories so the user knows what context exists.
+- Data Studio: add sortable and paged table/query results while keeping backend query limits intact.
+- Artifacts: show generated chart SVGs and chart configuration metadata more clearly.
+- Operations Studio: start with read-only Docker/Compose and local service inspection; no Docker mutations until modal approvals are in place.
+
 ## File Writes
 
 `app/internal/workspace/write.go` owns the first text write approval boundary. The frontend can draft edits for selected text files or create a new text/code file draft, preserve drafts per editor tab, request a diff preview, and only then apply the write through a rooted workspace method. Changing a draft clears the existing diff proposal, so an apply action always corresponds to the current draft. `app/internal/workspace/delete.go` owns the first file delete boundary: selected files are backend-validated, metadata paths/directories/symlinks are rejected, and the frontend requires confirmation before removal. `app/internal/workspace/move.go` owns rename/move validation and rejects traversal, metadata targets, directories, symlinks, same-path moves, directory-like targets, and overwrites. Direct writes to `.nexusdesk/`, traversal paths, symlinks, directories, oversized previews, and binary existing files are rejected before apply.
