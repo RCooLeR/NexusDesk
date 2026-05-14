@@ -1,13 +1,42 @@
-import {StatusBadge} from '../../components/ui';
+import {Button, StatusBadge} from '../../components/ui';
 import type {ArtifactMetadata, FilePreview} from '../../types';
 
-export function ArtifactMetadataPanel({metadata, preview}: {metadata: ArtifactMetadata; preview: FilePreview | null}) {
+type ArtifactMetadataPanelProps = {
+    metadata: ArtifactMetadata;
+    preview: FilePreview | null;
+    relPath: string;
+    isArchiving: boolean;
+    isDeleting: boolean;
+    onArchive: () => void;
+    onDelete: () => void;
+    onOpenSource: () => void;
+};
+
+export function ArtifactMetadataPanel({
+    metadata,
+    preview,
+    relPath,
+    isArchiving,
+    isDeleting,
+    onArchive,
+    onDelete,
+    onOpenSource,
+}: ArtifactMetadataPanelProps) {
     const isChart = metadata.kind === 'chart-svg' || /\.svg$/i.test(preview?.name ?? '');
 
     return (
         <div className="artifact-metadata-panel">
             <strong>{metadata.title || 'Artifact metadata'}</strong>
             <p>{metadata.source || metadata.kind}</p>
+            <div className="artifact-action-row">
+                <Button disabled={!metadata.contextRelPath} onClick={onOpenSource} variant="subtle">Open source</Button>
+                <Button disabled={!relPath || isArchiving} onClick={onArchive} variant="subtle">
+                    {isArchiving ? 'Archiving...' : 'Archive'}
+                </Button>
+                <Button disabled={!relPath || isDeleting} onClick={onDelete} variant="subtle">
+                    {isDeleting ? 'Deleting...' : 'Delete'}
+                </Button>
+            </div>
             {isChart && preview?.content && (
                 <div className="artifact-chart-preview">
                     <img src={preview.content} alt={metadata.title || preview.name} />

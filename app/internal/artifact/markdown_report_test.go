@@ -2,6 +2,7 @@ package artifact
 
 import (
 	"encoding/json"
+	"errors"
 	"os"
 	"path/filepath"
 	"strings"
@@ -315,6 +316,91 @@ func TestCreateDatasetSummaryMarkdownWritesArtifact(t *testing.T) {
 	metadata := readTestMetadata(t, root, report.RelPath)
 	if metadata.Kind != "dataset-summary" {
 		t.Fatalf("unexpected metadata kind: %s", metadata.Kind)
+	}
+}
+
+func TestCreateScanReportMarkdownWritesSnapshotSummary(t *testing.T) {
+	root := t.TempDir()
+	now := time.Date(2026, 5, 13, 12, 30, 0, 0, time.UTC)
+
+	report, err := CreateScanReportMarkdown(root, workspace.WorkspaceSnapshot{
+		Name:      "sample-workspace",
+		Truncated: true,
+		Scan: workspace.ScanStatus{
+			Included:       5,
+			Ignored:        2,
+			DepthSkipped:   1,
+			MaxDepth:       10,
+			MaxEntries:     800,
+			IgnoredSamples: []string{"ignored: node_modules"},
+			SkippedSamples: []string{"depth: app/deep/file.txt"},
+		},
+	}, now)
+	if err != nil {
+		t.Fatalf("CreateScanReportMarkdown returned error: %v", err)
+	}
+
+	if report.RelPath != ".nexusdesk/artifacts/sample-workspace-scan-report-20260513-123000.md" {
+		t.Fatalf("unexpected scan report rel path: %s", report.RelPath)
+	}
+	content, err := os.ReadFile(filepath.Join(root, filepath.FromSlash(report.RelPath)))
+	if err != nil {
+		t.Fatalf("ReadFile failed: %v", err)
+	}
+	text := string(content)
+	if !strings.Contains(text, "# Workspace Scan Report: sample-workspace") || !strings.Contains(text, "| Included | 5 |") {
+		t.Fatalf("expected scan report counters, got %q", text)
+	}
+
+	metadata := readTestMetadata(t, root, report.RelPath)
+	if metadata.Kind != "scan-report" || metadata.ContextRelPath != "." {
+		t.Fatalf("unexpected scan metadata: %#v", metadata)
+	}
+}
+
+func TestArchiveMovesArtifactAndMetadata(t *testing.T) {
+	root := t.TempDir()
+	report, err := CreateMarkdownReport(root, workspace.FilePreview{Name: "notes.md", RelPath: "docs/notes.md"}, time.Date(2026, 5, 13, 12, 30, 0, 0, time.UTC))
+	if err != nil {
+		t.Fatalf("CreateMarkdownReport returned error: %v", err)
+	}
+
+	archived, err := Archive(root, report.RelPath)
+	if err != nil {
+		t.Fatalf("Archive returned error: %v", err)
+	}
+	if archived.RelPath != ".nexusdesk/artifacts/archive/notes-20260513-123000.md" {
+		t.Fatalf("unexpected archive path: %s", archived.RelPath)
+	}
+	if _, err := os.Stat(filepath.Join(root, filepath.FromSlash(report.RelPath))); !errors.Is(err, os.ErrNotExist) {
+		t.Fatalf("expected source artifact to be moved, got %v", err)
+	}
+	metadata := readTestMetadata(t, root, archived.RelPath)
+	if metadata.Kind != "markdown-report" {
+		t.Fatalf("expected metadata to move with artifact, got %#v", metadata)
+	}
+}
+
+func TestDeleteRemovesArtifactAndMetadata(t *testing.T) {
+	root := t.TempDir()
+	report, err := CreateMarkdownReport(root, workspace.FilePreview{Name: "notes.md", RelPath: "docs/notes.md"}, time.Date(2026, 5, 13, 12, 30, 0, 0, time.UTC))
+	if err != nil {
+		t.Fatalf("CreateMarkdownReport returned error: %v", err)
+	}
+
+	deleted, err := Delete(root, report.RelPath)
+	if err != nil {
+		t.Fatalf("Delete returned error: %v", err)
+	}
+	if deleted.RelPath != report.RelPath {
+		t.Fatalf("unexpected delete path: %s", deleted.RelPath)
+	}
+	if _, err := os.Stat(filepath.Join(root, filepath.FromSlash(report.RelPath))); !errors.Is(err, os.ErrNotExist) {
+		t.Fatalf("expected artifact to be removed, got %v", err)
+	}
+	metadataPath := filepath.Join(root, ".nexusdesk", "artifacts", "notes-20260513-123000.meta.json")
+	if _, err := os.Stat(metadataPath); !errors.Is(err, os.ErrNotExist) {
+		t.Fatalf("expected metadata to be removed, got %v", err)
 	}
 }
 

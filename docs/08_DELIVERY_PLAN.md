@@ -119,6 +119,7 @@ Current status:
 - CSV datasets can be queried with bounded text search or `column=value` filters.
 - CSV query results can be exported as timestamped CSV artifacts.
 - CSV queries can be saved per dataset and reused from the Data Studio panel.
+- CSV queries support text search, column filters, numeric comparisons, `contains`, `limit`, and simple `order by` clauses.
 - CSV datasets can preview bar or line chart points before generating deterministic SVG chart artifacts from category counts or numeric sums.
 - CSV datasets can generate deterministic Markdown summary artifacts with column profiles and suggested analysis questions.
 - Multiple text, CSV, and extracted-PDF previews can be pinned into a bounded context pack for chat.
@@ -147,9 +148,14 @@ Current status:
 - CSV query export artifacts now write sidecar provenance metadata with dataset source paths and query string.
 - SVG chart artifacts now write sidecar provenance metadata with dataset source paths and chart configuration.
 - The workbench lists generated Markdown, CSV, and SVG artifacts, can reselect visible artifact files from that list, and shows artifact metadata when a generated artifact is active.
+- Workspace scan reports can be saved as Markdown artifacts with scan counters and skipped/ignored path samples.
+- Artifact metadata cards can open the source context, archive generated artifacts, or delete artifacts after approval.
+- The agent sidebar shows a first backend-driven tool plan with registered workspace, dataset, artifact, and operations tools plus risk/approval labels.
 - Workspace search includes path/content matches, artifact metadata, and chat history snippets.
 - Applied write/delete/move and artifact creation actions are recorded in `.nexusdesk/approvals/log.json` and shown in a first workbench approval log.
+- Operations Studio parses selected Docker Compose files into service, image, port, volume, and dependency summaries without mutating Docker state.
 - The frontend has a smoke check for the built entrypoint, generated Wails bindings, and core shell functionality markers.
+- An optional Playwright visual smoke script can capture desktop/mobile screenshots when Playwright is installed.
 - richer document extraction/OCR, modal approval dialogs, DuckDB SQL, and SQLite persistence are still planned.
 
 ## Completed Batch: Studio Hardening And Inspectors
@@ -164,15 +170,27 @@ This batch kept momentum on real functionality while cleaning up the growing she
 6. Chart artifact metadata now has clearer configuration and inline SVG preview.
 7. Operations Studio has a first read-only inspector for Docker/Compose and local service files.
 
-## Prepared Next Batch: Agent Tools And Workspace Intelligence
+## Completed Batch: Agent Tools And Workspace Intelligence
 
-1. Add a backend tool registry for safe agent actions with names, descriptions, risk levels, and approval requirements.
-2. Add first agent tool call planning UI that shows proposed file/data/artifact actions before execution.
-3. Add persistent workspace scan report artifacts or metadata snapshots for later audit and comparison.
-4. Add richer CSV query language support for numeric comparisons, contains, and simple limit/order clauses.
-5. Add artifact actions for delete/archive and open-source-context navigation.
-6. Add Operations Studio read-only Docker Compose parsing for service names, ports, images, volumes, and dependencies.
-7. Add frontend component tests or Playwright smoke screenshots for modal approvals, grouped search, and Data Studio tables.
+This batch made more of the studio inspectable and auditable without turning on autonomous tool execution yet:
+
+1. Backend tool descriptors now live in `app/internal/agenttools/` with names, descriptions, risk levels, surfaces, and approval requirements.
+2. The agent sidebar shows a first proposed tool plan for the active file, dataset, artifact, or operations context.
+3. Workspace scan reports can be saved as Markdown artifacts under `.nexusdesk/artifacts/`.
+4. CSV queries now support numeric comparisons, `contains`, `limit`, and simple `order by` clauses.
+5. Generated artifacts can open their source context, archive to `.nexusdesk/artifacts/archive/`, or be deleted through approval prompts.
+6. Operations Studio parses selected Compose YAML into services, images, ports, volumes, and dependencies.
+7. Frontend smoke coverage now checks the new tool-planning, artifact-action, scan-report, Compose parsing, and optional visual smoke surfaces.
+
+## Prepared Next Batch: Agent Execution And Analytics Foundations
+
+1. Add a backend agent execution planner that turns proposed tool plan rows into dry-run tool requests.
+2. Add modal approval integration for executing medium/high-risk agent tools from the plan surface.
+3. Persist tool run records with input, output summary, risk, approval ID, duration, and errors.
+4. Add SQLite-backed app metadata storage for workspaces, chats, approvals, artifacts, and tool runs while keeping JSON migration compatibility.
+5. Add DuckDB-backed CSV query execution for SQL-style read-only analytics beyond the current lightweight filter syntax.
+6. Add artifact version comparison for generated reports, summaries, and dataset exports.
+7. Add mandatory Playwright visual baseline capture once Playwright is installed in the frontend dev environment.
 
 ## Phase 2: Files, Documents, And Artifacts
 

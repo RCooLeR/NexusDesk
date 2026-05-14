@@ -43,7 +43,7 @@ Runtime changes should be stored locally and optionally exportable as workspace 
 
 Studio surfaces can change which tools and panels are visible, but they must not change the underlying safety boundary. Code Studio, Data Studio, Analytics Studio, Document Studio, Operations Studio, and Artifact Studio all share the same workspace roots, path checks, approval rules, secret handling, and audit model.
 
-The current implementation has an append-only local approval/action log for applied file writes, deletes, moves, and artifact creation. It writes records under `.nexusdesk/approvals/log.json` and shows the latest entries in the workbench. This is a foundation for auditability; higher-risk modal approval policy is still planned for shell, Docker, database, and agent tool execution.
+The current implementation has an append-only local approval/action log for applied file writes, deletes, moves, artifact creation, scan-report creation, artifact archive, and artifact delete. It writes records under `.nexusdesk/approvals/log.json` and shows the latest entries in the workbench. Modal approval prompts now cover higher-risk file and artifact actions; Docker, database, and model-directed agent tool execution remain planned.
 
 ## Secrets
 
@@ -90,6 +90,8 @@ Current implementation:
 - direct `.nexusdesk/` metadata writes and deletes are blocked
 - CSV query exports are created only from bounded query results and exclusive artifact writes
 - chart artifacts are created only through bounded CSV aggregation and exclusive artifact writes
+- scan-report artifacts are created from backend scan status and exclusive artifact writes
+- artifact archive/delete actions validate workspace-relative artifact paths and move/remove sibling metadata sidecars through backend methods
 - frontend commands call Wails bindings rather than reading or mutating arbitrary paths directly
 
 ## Database Security
@@ -134,7 +136,7 @@ High-risk actions:
 
 High-risk Docker actions require approval. The UI should show the exact planned action and affected resources.
 
-Operations Studio can surface Docker state, logs, Compose files, and generated configs, but it should keep start, stop, build, run, exec, volume, and network actions behind the same high-risk approval flow.
+Operations Studio can surface Docker state, logs, Compose files, and generated configs, but it should keep start, stop, build, run, exec, volume, and network actions behind the same high-risk approval flow. The current implementation parses selected Compose files into service names, images, ports, volumes, and dependencies without calling Docker or mutating local state.
 
 ## Network Security
 

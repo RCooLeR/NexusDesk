@@ -10,9 +10,11 @@ type WorkspaceNavigatorProps = {
     isManagingRecent: boolean;
     isOpeningWorkspace: boolean;
     isRefreshingWorkspace: boolean;
+    isCreatingScanReport: boolean;
     onClearRecentWorkspaces: () => void;
     onClearWorkspaceSearch: () => void;
     onCollapseAllDirectories: () => void;
+    onCreateScanReport: () => void;
     onExpandAllDirectories: () => void;
     onOpenWorkspace: () => void;
     onRefreshWorkspace: () => void;
@@ -49,9 +51,11 @@ export function WorkspaceNavigator({
     isManagingRecent,
     isOpeningWorkspace,
     isRefreshingWorkspace,
+    isCreatingScanReport,
     onClearRecentWorkspaces,
     onClearWorkspaceSearch,
     onCollapseAllDirectories,
+    onCreateScanReport,
     onExpandAllDirectories,
     onOpenWorkspace,
     onRefreshWorkspace,
@@ -155,6 +159,9 @@ export function WorkspaceNavigator({
                             <div className="tree-tool-row">
                                 <Button onClick={onExpandAllDirectories} variant="subtle">Expand all</Button>
                                 <Button onClick={onCollapseAllDirectories} variant="subtle">Collapse all</Button>
+                                <Button onClick={onCreateScanReport} disabled={isCreatingScanReport} variant="subtle">
+                                    {isCreatingScanReport ? 'Saving scan...' : 'Save scan'}
+                                </Button>
                                 {workspaceSearchResults.length > 0 && <Button onClick={onClearWorkspaceSearch} variant="subtle">Clear results</Button>}
                             </div>
                         </div>

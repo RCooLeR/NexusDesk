@@ -13,10 +13,12 @@ The implemented desktop slice currently contains:
 - JSON-backed local stores for recent workspaces, LLM settings, and chat history
 - OS-protected sidecar credential storage where available
 - safe workspace scanner, previewer, search, context-pack builder, and file operation boundaries
-- CSV/XLSX dataset profiling, bounded CSV row queries, saved query history, and CSV query exports
-- Markdown/CSV/SVG artifact writer with provenance sidecars, metadata lookup, and artifact search
+- CSV/XLSX dataset profiling, bounded CSV row queries with lightweight filter/order/limit syntax, saved query history, and CSV query exports
+- Markdown/CSV/SVG artifact writer with provenance sidecars, metadata lookup, source navigation, archive/delete actions, and artifact search
 - CSV chart preview/artifact flow for bar and line charts from category counts or numeric sums
 - append-only workspace approval/action log for applied file and artifact operations
+- backend agent tool descriptor registry and first frontend tool-plan preview
+- read-only Compose parsing for Operations Studio
 - configurable LLM gateway
 - OpenAI-compatible chat and streaming
 
@@ -60,6 +62,7 @@ flowchart LR
   Search --> FutureAnalyticsDB[("Planned DuckDB<br/>datasets, query results")]
   Search --> FutureVectorStore["Optional local vectors"]
 
+  Tools --> Registry["Tool Registry<br/>risk, surface, approval metadata"]
   Tools --> FileTools["File Tools<br/>create, edit, delete, move"]
   Tools --> DataTools["Data Tools<br/>profile, query CSV"]
   Tools --> FutureWebTools["Planned HTTP/Search Tools"]
@@ -103,7 +106,7 @@ Responsibilities:
 - CSV table preview and XLSX sheet metadata display
 - chat UI
 - tool call timeline
-- approval dialogs, planned
+- approval dialogs for higher-risk file and artifact actions
 - first CSV chart artifacts
 - richer charts and dashboards, planned
 - settings screens
@@ -119,7 +122,7 @@ Responsibilities:
 - remember recent workspaces
 - enforce workspace root boundaries
 - track workspace configuration
-- track file scan status, planned
+- track file scan status and save scan-report artifacts
 - coordinate file watchers, planned
 - map generated artifacts back to the workspace
 
@@ -223,6 +226,7 @@ Planned provider support:
 Current responsibilities:
 
 - implement built-in tools
+- describe built-in tools through a registry before model-directed execution
 - validate input
 - enforce permissions
 - cap output size
@@ -234,6 +238,7 @@ Planned responsibilities:
 - rate-limit expensive calls
 - policy-backed approval decisions
 - model-directed tool orchestration
+- dry-run plans that can later be executed after approval
 
 Tools should be deterministic and testable.
 
@@ -244,6 +249,7 @@ Responsibilities:
 - create output directories
 - write generated files
 - track artifact metadata
+- open source context, archive, and delete generated artifacts through safe backend methods
 - create report files
 - export bounded CSV query results as CSV artifacts
 - render first deterministic SVG chart artifacts from CSV aggregations

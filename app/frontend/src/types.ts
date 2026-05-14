@@ -127,6 +127,25 @@ export type ArtifactMetadata = {
     createdAt: string;
 };
 
+export type AgentToolDescriptor = {
+    name: string;
+    title: string;
+    description: string;
+    surface: string;
+    risk: string;
+    requiresApproval: boolean;
+    inputs: string[];
+};
+
+export type AgentToolPlanItem = {
+    toolName: string;
+    title: string;
+    target: string;
+    risk: string;
+    requiresApproval: boolean;
+    status: string;
+};
+
 export type ContextPreviewFile = {
     relPath: string;
     required: boolean;

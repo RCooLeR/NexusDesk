@@ -1,6 +1,7 @@
 import {brandAssets} from '../../brand/assets';
-import type {ChatMessage, ContextPreview, LLMProbeResult, LLMSettings, ToolEvent} from '../../types';
+import type {AgentToolDescriptor, AgentToolPlanItem, ChatMessage, ContextPreview, LLMProbeResult, LLMSettings, ToolEvent} from '../../types';
 import {AgentChatCard} from './AgentChatCard';
+import {AgentToolPlanCard} from './AgentToolPlanCard';
 import {LLMSettingsCard} from './LLMSettingsCard';
 import {ToolTimeline} from './ToolTimeline';
 
@@ -10,6 +11,8 @@ type AgentPanelProps = {
     chatStatus: string;
     contextPackPreview: ContextPreview | null;
     contextPackPaths: string[];
+    agentTools: AgentToolDescriptor[];
+    agentToolPlan: AgentToolPlanItem[];
     canSaveLatestAssistantArtifact: boolean;
     isSavingSettings: boolean;
     isSavingChatArtifact: boolean;
@@ -18,6 +21,7 @@ type AgentPanelProps = {
     onChatPromptChange: (value: string) => void;
     onClearChatHistory: () => void;
     onClearContextPack: () => void;
+    onRefreshAgentPlan: () => void;
     onRemoveContextPath: (relPath: string) => void;
     onSaveLatestAssistantArtifact: () => void;
     onSaveSettings: () => void;
@@ -37,6 +41,8 @@ export function AgentPanel({
     chatStatus,
     contextPackPreview,
     contextPackPaths,
+    agentTools,
+    agentToolPlan,
     canSaveLatestAssistantArtifact,
     isSavingSettings,
     isSavingChatArtifact,
@@ -45,6 +51,7 @@ export function AgentPanel({
     onChatPromptChange,
     onClearChatHistory,
     onClearContextPack,
+    onRefreshAgentPlan,
     onRemoveContextPath,
     onSaveLatestAssistantArtifact,
     onSaveSettings,
@@ -81,6 +88,12 @@ export function AgentPanel({
                 onRemoveContextPath={onRemoveContextPath}
                 onSaveLatestAssistantArtifact={onSaveLatestAssistantArtifact}
                 onSendPrompt={onSendPrompt}
+            />
+
+            <AgentToolPlanCard
+                tools={agentTools}
+                planItems={agentToolPlan}
+                onRefreshPlan={onRefreshAgentPlan}
             />
 
             <LLMSettingsCard

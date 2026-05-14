@@ -393,6 +393,150 @@ func CreateDatasetSummaryMarkdown(root string, source workspace.FilePreview, now
 	}, nil
 }
 
+func CreateScanReportMarkdown(root string, snapshot workspace.WorkspaceSnapshot, now time.Time) (MarkdownReport, error) {
+	if strings.TrimSpace(root) == "" {
+		return MarkdownReport{}, errors.New("open a workspace before creating scan reports")
+	}
+
+	absRoot, err := filepath.Abs(root)
+	if err != nil {
+		return MarkdownReport{}, err
+	}
+
+	artifactDir := filepath.Join(absRoot, filepath.FromSlash(artifactDirRelPath))
+	if err := os.MkdirAll(artifactDir, 0o755); err != nil {
+		return MarkdownReport{}, err
+	}
+
+	name := scanReportFileName(snapshot, now)
+	path := filepath.Join(artifactDir, name)
+	if err := ensureInsideRoot(absRoot, path); err != nil {
+		return MarkdownReport{}, err
+	}
+
+	content := buildScanReportMarkdown(snapshot, now)
+	file, err := os.OpenFile(path, os.O_WRONLY|os.O_CREATE|os.O_EXCL, 0o644)
+	if err != nil {
+		return MarkdownReport{}, err
+	}
+	defer file.Close()
+
+	if _, err := file.WriteString(content); err != nil {
+		return MarkdownReport{}, err
+	}
+
+	if err := writeArtifactMetadata(absRoot, path, ArtifactMetadata{
+		Kind:           "scan-report",
+		Title:          "Workspace scan report: " + snapshot.Name,
+		Source:         "workspace scan",
+		SourcePaths:    []string{"."},
+		ContextRelPath: ".",
+		CreatedAt:      now.UTC().Format(time.RFC3339),
+	}); err != nil {
+		return MarkdownReport{}, err
+	}
+
+	info, err := file.Stat()
+	if err != nil {
+		return MarkdownReport{}, err
+	}
+	relPath, err := filepath.Rel(absRoot, path)
+	if err != nil {
+		return MarkdownReport{}, err
+	}
+	return MarkdownReport{
+		RelPath: filepath.ToSlash(relPath),
+		Name:    name,
+		Path:    path,
+		Message: "Workspace scan report artifact created inside the workspace.",
+		Size:    info.Size(),
+	}, nil
+}
+
+func Archive(root string, relPath string) (MarkdownReport, error) {
+	absRoot, artifactPath, err := resolveArtifactPath(root, relPath)
+	if err != nil {
+		return MarkdownReport{}, err
+	}
+
+	info, err := os.Stat(artifactPath)
+	if err != nil {
+		return MarkdownReport{}, err
+	}
+	if info.IsDir() {
+		return MarkdownReport{}, errors.New("artifact path must be a file")
+	}
+
+	archiveDir := filepath.Join(absRoot, filepath.FromSlash(artifactDirRelPath), "archive")
+	if err := os.MkdirAll(archiveDir, 0o755); err != nil {
+		return MarkdownReport{}, err
+	}
+
+	targetPath := filepath.Join(archiveDir, filepath.Base(artifactPath))
+	targetPath = uniqueArtifactPath(targetPath)
+	if err := ensureInsideRoot(absRoot, targetPath); err != nil {
+		return MarkdownReport{}, err
+	}
+	if err := os.Rename(artifactPath, targetPath); err != nil {
+		return MarkdownReport{}, err
+	}
+
+	sourceMetadataPath := artifactMetadataPath(artifactPath)
+	if _, err := os.Stat(sourceMetadataPath); err == nil {
+		targetMetadataPath := artifactMetadataPath(targetPath)
+		if err := os.Rename(sourceMetadataPath, targetMetadataPath); err != nil {
+			return MarkdownReport{}, err
+		}
+	}
+
+	relTarget, err := filepath.Rel(absRoot, targetPath)
+	if err != nil {
+		return MarkdownReport{}, err
+	}
+	return MarkdownReport{
+		RelPath: filepath.ToSlash(relTarget),
+		Name:    filepath.Base(targetPath),
+		Path:    targetPath,
+		Message: "Artifact archived inside .nexusdesk/artifacts/archive.",
+		Size:    info.Size(),
+	}, nil
+}
+
+func Delete(root string, relPath string) (MarkdownReport, error) {
+	absRoot, artifactPath, err := resolveArtifactPath(root, relPath)
+	if err != nil {
+		return MarkdownReport{}, err
+	}
+
+	info, err := os.Stat(artifactPath)
+	if err != nil {
+		return MarkdownReport{}, err
+	}
+	if info.IsDir() {
+		return MarkdownReport{}, errors.New("artifact path must be a file")
+	}
+
+	if err := os.Remove(artifactPath); err != nil {
+		return MarkdownReport{}, err
+	}
+	metadataPath := artifactMetadataPath(artifactPath)
+	if err := os.Remove(metadataPath); err != nil && !errors.Is(err, os.ErrNotExist) {
+		return MarkdownReport{}, err
+	}
+
+	relTarget, err := filepath.Rel(absRoot, artifactPath)
+	if err != nil {
+		return MarkdownReport{}, err
+	}
+	return MarkdownReport{
+		RelPath: filepath.ToSlash(relTarget),
+		Name:    filepath.Base(artifactPath),
+		Path:    artifactPath,
+		Message: "Artifact deleted from the workspace.",
+		Size:    info.Size(),
+	}, nil
+}
+
 func List(root string) ([]WorkspaceArtifact, error) {
 	if strings.TrimSpace(root) == "" {
 		return []WorkspaceArtifact{}, nil
@@ -581,6 +725,14 @@ func datasetSummaryFileName(source workspace.FilePreview, now time.Time) string 
 	return fmt.Sprintf("%s-%s.md", slug, now.UTC().Format("20060102-150405"))
 }
 
+func scanReportFileName(snapshot workspace.WorkspaceSnapshot, now time.Time) string {
+	slug := slugify(snapshot.Name + "-scan-report")
+	if slug == "" {
+		slug = "workspace-scan-report"
+	}
+	return fmt.Sprintf("%s-%s.md", slug, now.UTC().Format("20060102-150405"))
+}
+
 func generatedArtifactTitle(request MarkdownArtifactRequest) string {
 	base := strings.TrimSpace(request.Title)
 	if base == "" {
@@ -684,6 +836,62 @@ func buildMarkdownReport(source workspace.FilePreview, now time.Time) string {
 	builder.WriteString("- Attach supporting artifacts where needed.\n")
 
 	return builder.String()
+}
+
+func buildScanReportMarkdown(snapshot workspace.WorkspaceSnapshot, now time.Time) string {
+	scan := snapshot.Scan
+	skipped := scan.Ignored + scan.DepthSkipped + scan.EntrySkipped + scan.Unreadable
+	var builder strings.Builder
+	builder.WriteString("# Workspace Scan Report: ")
+	builder.WriteString(escapeMarkdownLine(snapshot.Name))
+	builder.WriteString("\n\n")
+	builder.WriteString("- Generated: ")
+	builder.WriteString(now.UTC().Format(time.RFC3339))
+	builder.WriteString("\n")
+	builder.WriteString("- Workspace: `")
+	builder.WriteString(strings.ReplaceAll(snapshot.Name, "`", "'"))
+	builder.WriteString("`\n")
+	builder.WriteString(fmt.Sprintf("- Indexed entries: %d\n", scan.Included))
+	builder.WriteString(fmt.Sprintf("- Skipped entries: %d\n", skipped))
+	builder.WriteString(fmt.Sprintf("- Max depth: %d\n", scan.MaxDepth))
+	builder.WriteString(fmt.Sprintf("- Entry cap: %d\n", scan.MaxEntries))
+	if snapshot.Truncated {
+		builder.WriteString("- Status: scan was capped for responsiveness\n")
+	}
+
+	builder.WriteString("\n## Counters\n\n")
+	builder.WriteString("| Counter | Value |\n")
+	builder.WriteString("|---|---:|\n")
+	builder.WriteString(fmt.Sprintf("| Included | %d |\n", scan.Included))
+	builder.WriteString(fmt.Sprintf("| Ignored | %d |\n", scan.Ignored))
+	builder.WriteString(fmt.Sprintf("| Depth skipped | %d |\n", scan.DepthSkipped))
+	builder.WriteString(fmt.Sprintf("| Entry cap skipped | %d |\n", scan.EntrySkipped))
+	builder.WriteString(fmt.Sprintf("| Unreadable | %d |\n", scan.Unreadable))
+
+	builder.WriteString("\n## Samples\n\n")
+	writeScanSamples(&builder, "Ignored", scan.IgnoredSamples)
+	writeScanSamples(&builder, "Skipped", scan.SkippedSamples)
+	builder.WriteString("\n## Next Actions\n\n")
+	builder.WriteString("- Expand the workspace tree where relevant.\n")
+	builder.WriteString("- Search for target files before adding large folders to context.\n")
+	builder.WriteString("- Review ignored or skipped samples if expected files are missing.\n")
+	return builder.String()
+}
+
+func writeScanSamples(builder *strings.Builder, title string, samples []string) {
+	builder.WriteString("### ")
+	builder.WriteString(title)
+	builder.WriteString("\n\n")
+	if len(samples) == 0 {
+		builder.WriteString("_No samples recorded._\n\n")
+		return
+	}
+	for _, sample := range samples {
+		builder.WriteString("- `")
+		builder.WriteString(strings.ReplaceAll(sample, "`", "'"))
+		builder.WriteString("`\n")
+	}
+	builder.WriteString("\n")
 }
 
 func buildDatasetQueryCSV(result workspace.DatasetQueryResult) (string, error) {
@@ -959,6 +1167,48 @@ func readArtifactMetadata(artifactPath string) ArtifactMetadata {
 func artifactMetadataPath(artifactPath string) string {
 	extension := filepath.Ext(artifactPath)
 	return strings.TrimSuffix(artifactPath, extension) + ".meta.json"
+}
+
+func resolveArtifactPath(root string, relPath string) (string, string, error) {
+	if strings.TrimSpace(root) == "" {
+		return "", "", errors.New("open a workspace before managing artifacts")
+	}
+	absRoot, err := filepath.Abs(root)
+	if err != nil {
+		return "", "", err
+	}
+	cleanRel := filepath.Clean(filepath.FromSlash(relPath))
+	if cleanRel == "." || filepath.IsAbs(cleanRel) {
+		return "", "", errors.New("artifact path must be relative")
+	}
+	normalizedRel := filepath.ToSlash(cleanRel)
+	if !strings.HasPrefix(normalizedRel, artifactDirRelPath+"/") {
+		return "", "", errors.New("artifact path must be inside .nexusdesk/artifacts")
+	}
+	path := filepath.Join(absRoot, cleanRel)
+	absPath, err := filepath.Abs(path)
+	if err != nil {
+		return "", "", err
+	}
+	if err := ensureInsideRoot(absRoot, absPath); err != nil {
+		return "", "", err
+	}
+	return absRoot, absPath, nil
+}
+
+func uniqueArtifactPath(path string) string {
+	if _, err := os.Stat(path); errors.Is(err, os.ErrNotExist) {
+		return path
+	}
+	extension := filepath.Ext(path)
+	base := strings.TrimSuffix(path, extension)
+	for index := 1; index < 1000; index++ {
+		candidate := fmt.Sprintf("%s-%d%s", base, index, extension)
+		if _, err := os.Stat(candidate); errors.Is(err, os.ErrNotExist) {
+			return candidate
+		}
+	}
+	return fmt.Sprintf("%s-%d%s", base, time.Now().UTC().UnixNano(), extension)
 }
 
 func artifactSummary(metadata ArtifactMetadata) string {

@@ -36,6 +36,8 @@ type WorkbenchPanelProps = {
     isCreatingReport: boolean;
     isCreatingDatasetChart: boolean;
     isExportingDatasetQuery: boolean;
+    isArchivingArtifact: boolean;
+    isDeletingArtifact: boolean;
     isDeletingFile: boolean;
     isMovingFile: boolean;
     isProfilingDataset: boolean;
@@ -69,7 +71,10 @@ type WorkbenchPanelProps = {
     onCreateDatasetChart: () => void;
     onCreateDatasetSummary: () => void;
     onExportDatasetQuery: () => void;
+    onArchiveArtifact: () => void;
     onCloseTab: (relPath: string) => void;
+    onDeleteArtifact: () => void;
+    onOpenArtifactSource: () => void;
     onSelectTab: (relPath: string) => void;
     onSelectArtifact: (artifact: WorkspaceArtifact) => void;
     onRefreshPreview: () => void;
@@ -105,6 +110,8 @@ export function WorkbenchPanel({
     isCreatingReport,
     isCreatingDatasetChart,
     isExportingDatasetQuery,
+    isArchivingArtifact,
+    isDeletingArtifact,
     isDeletingFile,
     isMovingFile,
     isProfilingDataset,
@@ -138,7 +145,10 @@ export function WorkbenchPanel({
     onCreateDatasetChart,
     onCreateDatasetSummary,
     onExportDatasetQuery,
+    onArchiveArtifact,
     onCloseTab,
+    onDeleteArtifact,
+    onOpenArtifactSource,
     onSelectTab,
     onSelectArtifact,
     onRefreshPreview,
@@ -416,7 +426,18 @@ export function WorkbenchPanel({
                                 />
                             )}
                             <OperationsInspector preview={filePreview} workspace={workspace} />
-                            {artifactMetadata && <ArtifactMetadataPanel metadata={artifactMetadata} preview={filePreview} />}
+                            {artifactMetadata && (
+                                <ArtifactMetadataPanel
+                                    isArchiving={isArchivingArtifact}
+                                    isDeleting={isDeletingArtifact}
+                                    metadata={artifactMetadata}
+                                    onArchive={onArchiveArtifact}
+                                    onDelete={onDeleteArtifact}
+                                    onOpenSource={onOpenArtifactSource}
+                                    preview={filePreview}
+                                    relPath={filePreview?.relPath ?? ''}
+                                />
+                            )}
                             <ApprovalLogPanel records={approvalRecords} />
                             {artifacts.length === 0 ? (
                                 <EmptyState

@@ -14,6 +14,10 @@ export function ApplyFileWrite(arg1) {
   return window['go']['main']['App']['ApplyFileWrite'](arg1);
 }
 
+export function ArchiveArtifact(arg1) {
+  return window['go']['main']['App']['ArchiveArtifact'](arg1);
+}
+
 export function AskLLM(arg1, arg2) {
   return window['go']['main']['App']['AskLLM'](arg1, arg2);
 }
@@ -58,6 +62,14 @@ export function CreateMarkdownReport(arg1) {
   return window['go']['main']['App']['CreateMarkdownReport'](arg1);
 }
 
+export function CreateScanReportArtifact() {
+  return window['go']['main']['App']['CreateScanReportArtifact']();
+}
+
+export function DeleteArtifact(arg1) {
+  return window['go']['main']['App']['DeleteArtifact'](arg1);
+}
+
 export function GetArtifactMetadata(arg1) {
   return window['go']['main']['App']['GetArtifactMetadata'](arg1);
 }
@@ -76,6 +88,10 @@ export function GetRecentWorkspaces() {
 
 export function GetStartupState() {
   return window['go']['main']['App']['GetStartupState']();
+}
+
+export function ListAgentTools() {
+  return window['go']['main']['App']['ListAgentTools']();
 }
 
 export function ListApprovals() {

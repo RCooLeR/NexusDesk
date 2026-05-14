@@ -50,6 +50,7 @@ This tracker reflects the repository as it exists today and keeps planned work s
 - [x] CSV profile stats read a larger bounded file sample than the visible text preview.
 - [x] Dataset profiles persist CSV profiles and XLSX sheet metadata under `.nexusdesk/datasets/`.
 - [x] CSV datasets can be queried with bounded row search and `column=value` filters.
+- [x] CSV datasets can be queried with numeric comparisons, `contains`, `limit`, and simple `order by` clauses.
 - [x] Bounded CSV query results can be exported as CSV artifacts.
 - [x] CSV datasets can generate a first SVG bar chart artifact from category counts or numeric sums.
 - [x] Lightweight syntax highlighting exists at `app/frontend/src/features/shell/HighlightedCode.tsx`.
@@ -128,6 +129,8 @@ This tracker reflects the repository as it exists today and keeps planned work s
 - [x] SVG chart artifacts write provenance sidecars and are listed in the artifact browser.
 - [x] Dataset summary artifacts write deterministic Markdown with column profiles and suggested questions.
 - [x] Artifact metadata can be read back through `GetArtifactMetadata` and shown in the workbench.
+- [x] Workspace scan reports can be saved as Markdown artifacts with scan counters and skipped/ignored samples.
+- [x] Generated artifacts can open source context, archive to `.nexusdesk/artifacts/archive/`, or be deleted after approval.
 - [x] Workspace search now includes artifact metadata and workspace chat history matches.
 - [x] Dataset queries can be saved per CSV dataset under `.nexusdesk/datasets/queries.json`.
 - [x] Dataset charts support bar and line modes with a deterministic backend preview before artifact creation.
@@ -137,13 +140,17 @@ This tracker reflects the repository as it exists today and keeps planned work s
 - [x] Text/code file deletes use a backend safety boundary with confirmation before workspace removal.
 - [x] Text/code files can be renamed or moved inside the workspace with no-overwrite backend validation.
 - [x] Workbench artifact browser lists generated Markdown, CSV, and SVG artifacts.
+- [x] Backend agent tool registry exists at `app/internal/agenttools/`.
+- [x] Agent panel shows a first risk-aware tool plan for active workspace, dataset, artifact, and operations context.
 - [x] Tool timeline records real workspace, preview, search, profile, write, report, and chat actions.
 - [x] Artifact rows can select the generated report preview when visible in the workspace tree.
 - [x] Helper services placeholder exists at `services/docker-compose.yml`.
+- [x] Operations Studio parses selected Docker Compose files into service names, images, ports, volumes, and dependencies.
 - [x] Workstation Ollama Compose stack lives outside this repo at `../Llm/` and pins `OLLAMA_LLM_LIBRARY=cuda_v12`.
 - [x] Repository ignore rules exist in `.gitignore`.
 - [x] Current and target directory structures are documented separately.
 - [x] Production desktop build succeeds at `app/build/bin/app.exe`.
+- [x] Optional Playwright visual smoke script exists at `app/frontend/scripts/visual-smoke.mjs`.
 
 ## Brand Integration
 
@@ -175,13 +182,23 @@ This tracker reflects the repository as it exists today and keeps planned work s
 
 ### Prepared Batch: Agent Tools And Workspace Intelligence
 
-- [ ] Add a backend tool registry for safe agent actions with names, descriptions, risk levels, and approval requirements.
-- [ ] Add first agent tool call planning UI that shows proposed file/data/artifact actions before execution.
-- [ ] Add persistent workspace scan report artifacts or metadata snapshots for later audit and comparison.
-- [ ] Add richer CSV query language support for numeric comparisons, contains, and simple limit/order clauses.
-- [ ] Add artifact actions for delete/archive and open-source-context navigation.
-- [ ] Add Operations Studio read-only Docker Compose parsing for service names, ports, images, volumes, and dependencies.
-- [ ] Add frontend component tests or Playwright smoke screenshots for modal approvals, grouped search, and Data Studio tables.
+- [x] Add a backend tool registry for safe agent actions with names, descriptions, risk levels, and approval requirements.
+- [x] Add first agent tool call planning UI that shows proposed file/data/artifact actions before execution.
+- [x] Add persistent workspace scan report artifacts or metadata snapshots for later audit and comparison.
+- [x] Add richer CSV query language support for numeric comparisons, contains, and simple limit/order clauses.
+- [x] Add artifact actions for delete/archive and open-source-context navigation.
+- [x] Add Operations Studio read-only Docker Compose parsing for service names, ports, images, volumes, and dependencies.
+- [x] Add frontend component tests or Playwright smoke screenshots for modal approvals, grouped search, and Data Studio tables.
+
+### Prepared Batch: Agent Execution And Analytics Foundations
+
+- [ ] Add a backend agent execution planner that turns proposed tool plan rows into dry-run tool requests.
+- [ ] Add modal approval integration for executing medium/high-risk agent tools from the plan surface.
+- [ ] Persist tool run records with input, output summary, risk, approval ID, duration, and errors.
+- [ ] Add SQLite-backed app metadata storage for workspaces, chats, approvals, artifacts, and tool runs while keeping JSON migration compatibility.
+- [ ] Add DuckDB-backed CSV query execution for SQL-style read-only analytics beyond the current lightweight filter syntax.
+- [ ] Add artifact version comparison for generated reports, summaries, and dataset exports.
+- [ ] Add mandatory Playwright visual baseline capture once Playwright is installed in the frontend dev environment.
 
 - [x] Batch: align product docs around NexusDesk as an IDE/data/analytics studio.
 - [x] Batch: align architecture, domain, indexing, search, AI, operations, delivery, DX, brand, README, and tracker wording.
@@ -274,6 +291,8 @@ This tracker reflects the repository as it exists today and keeps planned work s
 
 `app/internal/artifact/` owns deterministic Markdown, CSV, and SVG artifact writes, sidecar provenance metadata, listing, artifact metadata lookup, and artifact search. Source reports, saved assistant answers, first CSV query exports, first CSV chart artifacts, and first dataset summary artifacts are written under `.nexusdesk/artifacts/` with timestamped names and exclusive creation, so generated outputs stay separate from source files.
 
+`app/internal/agenttools/` owns the first backend registry for deterministic agent-capable tools. It describes workspace, dataset, artifact, and operations actions with risk and approval metadata; execution remains explicit UI/backend flows until the agent planner is added.
+
 `app/internal/approval/` owns the first append-only approval/action log for applied file and artifact operations. Records are persisted under `.nexusdesk/approvals/log.json` inside the active workspace and surfaced in the workbench while modal approval policy remains a later hardening step.
 
 `app/internal/dataset/query_history.go` owns saved Data Studio queries per dataset. It stores bounded recent queries under `.nexusdesk/datasets/queries.json` and reuses the same rooted dataset path validation as profiling.
@@ -301,6 +320,7 @@ $env:NODE_OPTIONS='--use-system-ca --dns-result-order=ipv4first'
 python scripts/generate_windows_icon.py
 npm.cmd run build
 npm.cmd run smoke
+npm.cmd run smoke:visual
 go test ./...
 wails build
 ```

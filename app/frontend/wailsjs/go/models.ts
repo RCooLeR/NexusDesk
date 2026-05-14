@@ -1,3 +1,32 @@
+export namespace agenttools {
+
+	export class Descriptor {
+	    name: string;
+	    title: string;
+	    description: string;
+	    surface: string;
+	    risk: string;
+	    requiresApproval: boolean;
+	    inputs: string[];
+
+	    static createFrom(source: any = {}) {
+	        return new Descriptor(source);
+	    }
+
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.name = source["name"];
+	        this.title = source["title"];
+	        this.description = source["description"];
+	        this.surface = source["surface"];
+	        this.risk = source["risk"];
+	        this.requiresApproval = source["requiresApproval"];
+	        this.inputs = source["inputs"];
+	    }
+	}
+
+}
+
 export namespace approval {
 
 	export class Record {

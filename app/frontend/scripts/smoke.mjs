@@ -23,6 +23,10 @@ const checks = [
             'SaveDatasetQuery',
             'ListDatasetQueries',
             'GetArtifactMetadata',
+            'ListAgentTools',
+            'ArchiveArtifact',
+            'DeleteArtifact',
+            'CreateScanReportArtifact',
             'ListApprovals',
             'SearchWorkspace',
             'ApprovalRequestModal',
@@ -59,7 +63,15 @@ const checks = [
             'previewDatasetChart',
             'saveCurrentDatasetQuery',
             'exportDatasetQuery',
+            'createScanReportArtifact',
+            'archiveActiveArtifact',
+            'deleteActiveArtifact',
+            'buildAgentToolPlan',
         ],
+    },
+    {
+        file: 'src/features/shell/AgentToolPlanCard.tsx',
+        terms: ['AgentToolPlanCard', 'Tool Plan', 'tool-plan-list', 'requiresApproval'],
     },
     {
         file: 'src/features/shell/LLMSettingsCard.tsx',
@@ -75,7 +87,7 @@ const checks = [
     },
     {
         file: 'src/features/shell/ArtifactMetadataPanel.tsx',
-        terms: ['ArtifactMetadataPanel', 'artifact-chart-preview', 'Configuration'],
+        terms: ['ArtifactMetadataPanel', 'artifact-chart-preview', 'Configuration', 'Open source', 'Archive', 'Delete'],
     },
     {
         file: 'src/features/shell/ApprovalLogPanel.tsx',
@@ -87,7 +99,7 @@ const checks = [
     },
     {
         file: 'src/features/shell/OperationsInspector.tsx',
-        terms: ['OperationsInspector', 'Read-only inspector', 'docker-compose'],
+        terms: ['OperationsInspector', 'Read-only inspector', 'docker-compose', 'parseComposeServices', 'compose-service-list'],
     },
     {
         file: 'src/features/shell/MonacoFileEditor.tsx',
@@ -119,7 +131,7 @@ const checks = [
     },
     {
         file: 'src/features/shell/WorkspaceNavigator.tsx',
-        terms: ['workspace-search', 'search-results', 'search-result-group', 'ScanStatusDetails', 'scanStatusSummary', 'Expand all', 'Collapse all'],
+        terms: ['workspace-search', 'search-results', 'search-result-group', 'ScanStatusDetails', 'scanStatusSummary', 'Expand all', 'Collapse all', 'Save scan'],
     },
     {
         file: 'src/features/shell/AgentChatCard.tsx',
@@ -152,6 +164,10 @@ const checks = [
             '.approval-log-panel',
             '.approval-modal',
             '.operations-inspector-panel',
+            '.compose-service-list',
+            '.agent-tool-plan-card',
+            '.tool-plan-list',
+            '.artifact-action-row',
             '.sortable-data-table',
             '.scan-status-details',
             '.search-result-group',
@@ -168,7 +184,11 @@ const checks = [
     },
     {
         file: 'wailsjs/go/main/App.d.ts',
-        terms: ['AskLLMContextPack', 'PreviewFileWrite', 'ApplyFileDelete', 'ApplyFileMove', 'ProfileDataset', 'CreateDatasetChartArtifact', 'CreateDatasetQueryArtifact', 'CreateDatasetSummaryArtifact', 'CreateChatMarkdownArtifact', 'PreviewChatContextPack', 'PreviewDatasetChart', 'SaveDatasetQuery', 'ListApprovals'],
+        terms: ['AskLLMContextPack', 'PreviewFileWrite', 'ApplyFileDelete', 'ApplyFileMove', 'ProfileDataset', 'CreateDatasetChartArtifact', 'CreateDatasetQueryArtifact', 'CreateDatasetSummaryArtifact', 'CreateChatMarkdownArtifact', 'CreateScanReportArtifact', 'PreviewChatContextPack', 'PreviewDatasetChart', 'SaveDatasetQuery', 'ListApprovals', 'ListAgentTools', 'ArchiveArtifact', 'DeleteArtifact'],
+    },
+    {
+        file: 'scripts/visual-smoke.mjs',
+        terms: ['playwright', 'desktop.png', 'mobile.png'],
     },
     {
         file: 'dist/index.html',

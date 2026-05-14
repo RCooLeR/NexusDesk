@@ -9,6 +9,7 @@ $env:NODE_OPTIONS='--use-system-ca --dns-result-order=ipv4first'
 go test ./...
 npm.cmd run build
 npm.cmd run smoke
+npm.cmd run smoke:visual
 wails build
 ```
 
@@ -63,7 +64,7 @@ For a healthy load, `/api/ps` should show nonzero `size_vram`, and the Ollama lo
 
 `app/internal/workspace/preview.go` keeps text previews rooted and size-limited, decodes UTF-8, UTF-16, and Windows-1251 text variants, parses CSV files into bounded table previews with lightweight column profiles from a larger capped sample, and renders common image/PDF files as capped data URLs for inline display. PDFs also expose simple embedded text extraction by page when available, and DOCX files expose basic body text extraction. Chat context accepts text previews, DOCX text, extracted PDF text, and structured CSV profiles plus bounded samples, so binary payloads and data URLs are not sent to the model as source text.
 
-`app/internal/workspace/search.go` owns the first workspace path/content search pass. It searches path names and previewable text content inside the same ignore and depth boundaries as scanning. `SearchWorkspace` now merges that result set with artifact metadata matches from `app/internal/artifact/` and persisted chat snippets from `app/internal/storage/chat_history.go`, so generated outputs and prior analysis are searchable from the same navigator surface. `app/internal/workspace/dataset_query.go` owns the first CSV query flow with bounded row results and simple `column=value` filters until a DuckDB SQL layer is added. Dataset query exports rerun that same bounded query before writing a CSV artifact, so exported rows match the backend safety boundary rather than trusting frontend table state.
+`app/internal/workspace/search.go` owns the first workspace path/content search pass. It searches path names and previewable text content inside the same ignore and depth boundaries as scanning. `SearchWorkspace` now merges that result set with artifact metadata matches from `app/internal/artifact/` and persisted chat snippets from `app/internal/storage/chat_history.go`, so generated outputs and prior analysis are searchable from the same navigator surface. `app/internal/workspace/dataset_query.go` owns the first CSV query flow with bounded row results, text search, column filters, numeric comparisons, `contains`, `limit`, and simple `order by` clauses until a DuckDB SQL layer is added. Dataset query exports rerun that same bounded query before writing a CSV artifact, so exported rows match the backend safety boundary rather than trusting frontend table state.
 
 `app/internal/workspace/context.go` owns directory/project context expansion and context-pack previews. The UI can pin a selected directory or the workspace root, but the backend still decides which files are safe and useful enough to include.
 
@@ -87,6 +88,7 @@ The shell is now mostly orchestration. Feature panels own stable presentation, w
 - `app/frontend/src/features/shell/MonacoCodePreview.tsx` owns read-only Monaco previews and search decorations for source files.
 - `app/frontend/src/features/shell/monacoRuntime.ts` owns shared Monaco lazy-loading, worker setup, theme definition, and file language detection.
 - `app/frontend/src/features/shell/AgentChatCard.tsx` owns the expanded chat presentation, full conversation scroll area, multiline prompt composer, context pack list, save-answer action surface, and delegates provider calls/history/artifact actions back to the shell.
+- `app/frontend/src/features/shell/AgentToolPlanCard.tsx` owns the first visible agent tool plan preview using backend tool descriptors and active context.
 - `app/frontend/src/features/shell/ChatMessageContent.tsx` renders safe dependency-free Markdown-style chat content, including headings, lists, tables, code fences, inline code, and bold text.
 - `app/frontend/src/features/shell/LLMSettingsCard.tsx` owns the provider settings form and delegates persistence/probe actions back to the shell.
 - `app/frontend/src/features/shell/ToolTimeline.tsx` owns the visible tool event timeline presentation.
@@ -99,39 +101,41 @@ The shell is now mostly orchestration. Feature panels own stable presentation, w
 
 ## Frontend Smoke Checks
 
-`app/frontend/scripts/smoke.mjs` checks that the built frontend and key shell source files still expose the main MVP functionality: Wails bindings, search, quick-open, command palette, Monaco preview/edit surfaces, find-in-file, context packs, file create/update/delete/move flows, dataset profiling/querying/saved queries/exporting/charting/summaries, artifact metadata, approval log styling, resizable navigator styling, and the production `dist/index.html` entrypoint. Run it after `npm.cmd run build`.
+`app/frontend/scripts/smoke.mjs` checks that the built frontend and key shell source files still expose the main MVP functionality: Wails bindings, search, quick-open, command palette, Monaco preview/edit surfaces, find-in-file, context packs, file create/update/delete/move flows, dataset profiling/querying/saved queries/exporting/charting/summaries, artifact actions, agent tool plan preview, Compose parsing, approval log styling, resizable navigator styling, and the production `dist/index.html` entrypoint. Run it after `npm.cmd run build`.
+
+`app/frontend/scripts/visual-smoke.mjs` is an optional Playwright screenshot smoke. It captures desktop and mobile screenshots from the built `dist/index.html` when Playwright is installed; otherwise it exits successfully with a skip message so the default local loop remains lightweight.
 
 ## Artifact Creation
 
-`app/internal/artifact/` owns deterministic artifact writes, provenance sidecars, metadata lookup, artifact search, and listing. The first flows create timestamped Markdown reports from selected previews, timestamped Markdown artifacts from assistant answers, timestamped CSV exports from dataset queries, timestamped SVG chart artifacts from CSV chart models, and timestamped Markdown dataset summaries under `.nexusdesk/artifacts/`, use exclusive file creation to avoid overwrites, and return the new workspace-relative path so the UI can refresh and select it. Each artifact also gets a sibling `.meta.json` file with kind, source, source paths, prompt/configuration, model when relevant, context path, and creation timestamp when available. Saved assistant answers preserve the model's Markdown and include source/context metadata before the generated body. The workbench lists Markdown, CSV, and SVG artifacts from that folder so generated outputs remain visible after creation, and it shows metadata for the active generated artifact.
+`app/internal/artifact/` owns deterministic artifact writes, provenance sidecars, metadata lookup, artifact search, listing, archive/delete, and scan-report creation. The first flows create timestamped Markdown reports from selected previews, timestamped Markdown artifacts from assistant answers, timestamped CSV exports from dataset queries, timestamped SVG chart artifacts from CSV chart models, timestamped Markdown dataset summaries, and timestamped workspace scan reports under `.nexusdesk/artifacts/`, use exclusive file creation to avoid overwrites, and return the new workspace-relative path so the UI can refresh and select it. Each artifact also gets a sibling `.meta.json` file with kind, source, source paths, prompt/configuration, model when relevant, context path, and creation timestamp when available. Saved assistant answers preserve the model's Markdown and include source/context metadata before the generated body. The workbench lists Markdown, CSV, and SVG artifacts from that folder so generated outputs remain visible after creation, shows metadata for the active generated artifact, and can open the artifact source context, archive the artifact, or delete it through approval prompts.
 
 ## Approval Log
 
-`app/internal/approval/` owns the first append-only action log. Applied text writes, deletes, moves, reports, saved chat artifacts, chart artifacts, query exports, and dataset summaries append records under `.nexusdesk/approvals/log.json`. This is not the final modal policy engine yet, but it gives the studio an auditable local trail while higher-risk approval dialogs are designed.
+`app/internal/approval/` owns the first append-only action log. Applied text writes, deletes, moves, reports, saved chat artifacts, chart artifacts, query exports, dataset summaries, scan reports, artifact archives, and artifact deletes append records under `.nexusdesk/approvals/log.json`. This is not the final agent policy engine yet, but it gives the studio an auditable local trail while higher-risk agent, Docker, and database approvals are designed.
 
-## Completed Batch: Studio Hardening And Inspectors
+## Completed Batch: Agent Tools And Workspace Intelligence
 
-The latest implementation batch hardened the studio around the surfaces that are already real:
+The latest implementation batch added the first bridge between visible studio context and deterministic agent-capable tools:
 
-- Approval: `ApprovalRequestModal.tsx` adds an explicit approve/cancel decision before high-risk file write, delete, and move applies.
-- Search: `WorkspaceNavigator.tsx` groups file, artifact, and chat matches, and scan status is visible in the workspace summary.
-- Component structure: Data Studio, artifact metadata, approval log, operations inspector, and approval modal UI now live in focused shell components.
-- Index visibility: `WorkspaceSnapshot.scan` reports included, ignored, depth-skipped, entry-capped, unreadable, and sample skipped paths.
-- Data Studio: `SortableDataTable` adds sortable columns and bounded paging for CSV previews and query results.
-- Artifacts: generated chart SVGs can render inline in the metadata panel, with chart configuration shown separately.
-- Operations Studio: `OperationsInspector.tsx` starts read-only inspection for Docker/Compose/local service files without Docker mutations.
+- Tool registry: `app/internal/agenttools/registry.go` describes deterministic workspace, dataset, artifact, and operations actions with risk/approval metadata.
+- Tool planning UI: `AgentToolPlanCard.tsx` shows proposed actions for the active context before any execution path exists.
+- Index audit: scan reports can be saved as Markdown artifacts with scan counters and skipped/ignored samples.
+- Data Studio: CSV query syntax supports comparisons, `contains`, `limit`, and `order by`.
+- Artifacts: active generated artifacts can open source context, archive, or delete through backend methods and approval prompts.
+- Operations Studio: selected Compose files are parsed into service, image, port, volume, and dependency summaries.
+- Verification: frontend smoke checks cover the new surfaces, and optional visual smoke captures screenshots when Playwright is installed.
 
 ## Prepared Next Batch
 
-The next implementation batch should move toward controlled agent tools and richer workspace intelligence:
+The next implementation batch should move from planned tool surfaces toward controlled execution and analytics foundations:
 
-- Tool registry: add backend descriptors for safe file, data, artifact, and operations actions with risk and approval requirements.
-- Tool planning UI: show proposed agent tool calls before execution, using the modal approval foundation for risky applies.
-- Scan snapshots: persist or artifact workspace scan reports so indexing decisions are auditable over time.
-- Data queries: extend the bounded CSV query syntax with numeric comparisons, contains, limit, and simple order clauses.
-- Artifact actions: add delete/archive and source-context navigation for generated artifacts.
-- Operations parsing: parse Docker Compose files into service names, images, ports, volumes, and dependency summaries.
-- Verification: add component tests or Playwright screenshots for approvals, grouped search, and Data Studio table behavior.
+- Tool execution planner: turn proposed tool plan rows into backend dry-run requests.
+- Approval integration: execute medium/high-risk agent tools only after modal approval.
+- Tool run persistence: store input, output summary, risk, approval ID, duration, and errors.
+- SQLite metadata: migrate workspaces, chats, approvals, artifacts, and tool runs from JSON-compatible stores.
+- DuckDB analytics: add read-only SQL-style CSV queries beyond the current lightweight filter syntax.
+- Artifact versions: compare generated reports, summaries, and exports.
+- Visual baselines: make Playwright screenshot capture mandatory once the dependency is installed.
 
 ## File Writes
 
@@ -163,6 +167,7 @@ app/                           Wails desktop app
 app/app.go                     Go application state and frontend bindings
 app/main.go                    Wails entrypoint
 app/internal/artifact/         Markdown artifact creation, listing, provenance
+app/internal/agenttools/       Backend tool descriptors for agent-capable actions
 app/internal/dataset/          CSV/XLSX profile persistence
 app/internal/llm/              OpenAI-compatible probe, chat, streaming
 app/internal/storage/          JSON stores for recent workspaces, LLM settings, chat history

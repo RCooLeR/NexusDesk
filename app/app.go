@@ -12,6 +12,7 @@ import (
 	"time"
 	"unicode/utf8"
 
+	"NexusDesk/internal/agenttools"
 	"NexusDesk/internal/approval"
 	"NexusDesk/internal/artifact"
 	"NexusDesk/internal/dataset"
@@ -313,6 +314,24 @@ func (a *App) CreateMarkdownReport(relPath string) (artifact.MarkdownReport, err
 	return report, nil
 }
 
+func (a *App) CreateScanReportArtifact() (artifact.MarkdownReport, error) {
+	root := a.getWorkspaceRoot()
+	if root == "" {
+		return artifact.MarkdownReport{}, errors.New("open a workspace before creating scan reports")
+	}
+
+	snapshot, err := workspace.Scan(root, workspace.ScanOptions{})
+	if err != nil {
+		return artifact.MarkdownReport{}, err
+	}
+	report, err := artifact.CreateScanReportMarkdown(root, snapshot, time.Now())
+	if err != nil {
+		return artifact.MarkdownReport{}, err
+	}
+	a.recordApproval("artifact.scan-report", report.RelPath, "low", report.Message)
+	return report, nil
+}
+
 func (a *App) CreateChatMarkdownArtifact(request artifact.MarkdownArtifactRequest) (artifact.MarkdownReport, error) {
 	root := a.getWorkspaceRoot()
 	if root == "" {
@@ -339,6 +358,34 @@ func (a *App) GetArtifactMetadata(relPath string) (artifact.ArtifactMetadata, er
 	return artifact.Metadata(root, relPath)
 }
 
+func (a *App) ArchiveArtifact(relPath string) (artifact.MarkdownReport, error) {
+	root := a.getWorkspaceRoot()
+	if root == "" {
+		return artifact.MarkdownReport{}, errors.New("open a workspace before archiving artifacts")
+	}
+
+	report, err := artifact.Archive(root, relPath)
+	if err != nil {
+		return artifact.MarkdownReport{}, err
+	}
+	a.recordApproval("artifact.archive", relPath, "medium", report.Message)
+	return report, nil
+}
+
+func (a *App) DeleteArtifact(relPath string) (artifact.MarkdownReport, error) {
+	root := a.getWorkspaceRoot()
+	if root == "" {
+		return artifact.MarkdownReport{}, errors.New("open a workspace before deleting artifacts")
+	}
+
+	report, err := artifact.Delete(root, relPath)
+	if err != nil {
+		return artifact.MarkdownReport{}, err
+	}
+	a.recordApproval("artifact.delete", relPath, "high", report.Message)
+	return report, nil
+}
+
 func (a *App) ProfileDataset(relPath string) (dataset.Profile, error) {
 	root := a.getWorkspaceRoot()
 	if root == "" {
@@ -361,6 +408,10 @@ func (a *App) QueryDataset(relPath string, query string) (workspace.DatasetQuery
 		return workspace.DatasetQueryResult{}, errors.New("open a workspace before querying datasets")
 	}
 	return workspace.QueryCSV(root, relPath, query)
+}
+
+func (a *App) ListAgentTools() []agenttools.Descriptor {
+	return agenttools.Registry()
 }
 
 func (a *App) SaveDatasetQuery(relPath string, query string, label string) (dataset.SavedQuery, error) {

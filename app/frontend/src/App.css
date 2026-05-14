@@ -443,6 +443,7 @@ button:disabled {
 .tree-tool-row,
 .dataset-query-row {
     display: flex;
+    flex-wrap: wrap;
     gap: 6px;
 }
 
@@ -1533,6 +1534,18 @@ button:disabled {
     white-space: nowrap;
 }
 
+.artifact-action-row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+}
+
+.artifact-action-row button {
+    font-size: 11px;
+    min-height: 28px;
+    padding: 0 8px;
+}
+
 .artifact-chart-preview {
     border: 1px solid var(--nd-border-soft);
     border-radius: var(--nd-radius-sm);
@@ -1597,7 +1610,9 @@ button:disabled {
 
 .operations-status-grid div,
 .operations-readonly-note,
-.operations-file-list {
+.operations-file-list,
+.compose-service-list,
+.compose-service-row {
     border: 1px solid var(--nd-border-soft);
     border-radius: var(--nd-radius-sm);
     background: #ffffff;
@@ -1609,7 +1624,8 @@ button:disabled {
 
 .operations-status-grid small,
 .operations-readonly-note small,
-.operations-file-list small {
+.operations-file-list small,
+.compose-service-list > small {
     color: var(--nd-muted-text);
     font-size: 10px;
     font-weight: 800;
@@ -1617,7 +1633,9 @@ button:disabled {
 }
 
 .operations-readonly-note p,
-.operations-file-list span {
+.operations-file-list span,
+.compose-service-row span,
+.compose-service-row small {
     color: #344054;
     font-size: 12px;
     margin: 0;
@@ -1812,6 +1830,23 @@ button:disabled {
     overflow: hidden;
 }
 
+.compose-service-list {
+    display: grid;
+    gap: 6px;
+}
+
+.compose-service-row {
+    grid-template-columns: minmax(70px, 0.75fr) minmax(0, 1fr);
+    align-items: center;
+}
+
+.compose-service-row strong {
+    font-size: 12px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
 .agent-symbol {
     width: 38px;
     height: 38px;
@@ -1868,6 +1903,66 @@ button:disabled {
     flex-wrap: wrap;
     gap: 6px;
     justify-content: flex-end;
+}
+
+.agent-tool-plan-card {
+    border: 1px solid var(--nd-border-soft);
+    border-radius: var(--nd-radius-sm);
+    background: #ffffff;
+    display: grid;
+    gap: 8px;
+    min-height: 0;
+    padding: 10px;
+}
+
+.agent-card-header {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    align-items: center;
+    gap: 8px;
+}
+
+.agent-card-header strong,
+.agent-card-header small {
+    display: block;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.agent-card-header small,
+.tool-plan-empty,
+.tool-plan-item small {
+    color: var(--nd-muted-text);
+    font-size: 12px;
+    margin: 0;
+}
+
+.tool-plan-list {
+    display: grid;
+    gap: 6px;
+}
+
+.tool-plan-item {
+    border: 1px solid var(--nd-border-soft);
+    border-radius: var(--nd-radius-sm);
+    display: grid;
+    gap: 5px;
+    padding: 8px;
+}
+
+.tool-plan-item > span,
+.tool-plan-item strong,
+.tool-plan-item small {
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.tool-plan-item > div {
+    display: flex;
+    gap: 5px;
 }
 
 .chat-thread {

@@ -10,13 +10,17 @@ import {
     AskLLMStreamContextPack,
     ClearRecentWorkspaces,
     ClearChatHistory,
+    ArchiveArtifact,
     CreateChatMarkdownArtifact,
     CreateDatasetChartArtifact,
     CreateDatasetQueryArtifact,
     CreateDatasetSummaryArtifact,
     CreateMarkdownReport,
+    CreateScanReportArtifact,
+    DeleteArtifact,
     GetArtifactMetadata,
     GetChatHistory,
+    ListAgentTools,
     ListApprovals,
     ListDatasetQueries,
     ListDatasetProfiles,
@@ -42,6 +46,8 @@ import {
 import {EventsOn} from '../../../wailsjs/runtime/runtime';
 import type {
     ApprovalRecord,
+    AgentToolDescriptor,
+    AgentToolPlanItem,
     ArtifactMetadata,
     ChatStreamEvent,
     ChatMessage,
@@ -159,6 +165,7 @@ export function NexusDeskShell({
     const [isSearchingWorkspace, setIsSearchingWorkspace] = useState(false);
     const [isSendingPrompt, setIsSendingPrompt] = useState(false);
     const [isCreatingReport, setIsCreatingReport] = useState(false);
+    const [isCreatingScanReport, setIsCreatingScanReport] = useState(false);
     const [isSavingChatArtifact, setIsSavingChatArtifact] = useState(false);
     const [isSummarizingContext, setIsSummarizingContext] = useState(false);
     const [isProfilingDataset, setIsProfilingDataset] = useState(false);
@@ -166,6 +173,8 @@ export function NexusDeskShell({
     const [isApplyingWrite, setIsApplyingWrite] = useState(false);
     const [isDeletingFile, setIsDeletingFile] = useState(false);
     const [isMovingFile, setIsMovingFile] = useState(false);
+    const [isArchivingArtifact, setIsArchivingArtifact] = useState(false);
+    const [isDeletingArtifact, setIsDeletingArtifact] = useState(false);
     const [editingFilePaths, setEditingFilePaths] = useState<string[]>([]);
     const [fileDrafts, setFileDrafts] = useState<Record<string, string>>({});
     const [writeProposals, setWriteProposals] = useState<Record<string, FileWriteProposal>>({});
@@ -175,6 +184,8 @@ export function NexusDeskShell({
     const [isCommandPaletteOpen, setIsCommandPaletteOpen] = useState(false);
     const [commandPaletteQuery, setCommandPaletteQuery] = useState('');
     const [approvalPrompt, setApprovalPrompt] = useState<ApprovalPrompt | null>(null);
+    const [agentTools, setAgentTools] = useState<AgentToolDescriptor[]>([]);
+    const [agentToolPlan, setAgentToolPlan] = useState<AgentToolPlanItem[]>([]);
     const approvalResolverRef = useRef<((approved: boolean) => void) | null>(null);
     const fileDraft = activeFile ? fileDrafts[activeFile] ?? '' : '';
     const writeProposal = activeFile ? writeProposals[activeFile] ?? null : null;
@@ -185,6 +196,14 @@ export function NexusDeskShell({
         setSettingsDraft(llmSettings);
         setSettingsStatus(llmSettings.updatedAt ? 'LLM settings loaded from local config.' : 'LLM provider not connected yet.');
     }, [llmSettings]);
+
+    useEffect(() => {
+        void refreshAgentTools();
+    }, []);
+
+    useEffect(() => {
+        setAgentToolPlan(buildAgentToolPlan(agentTools, filePreview, artifactMetadata, activeFile));
+    }, [activeFile, agentTools, artifactMetadata, filePreview]);
 
     useEffect(() => {
         if (!workspace || contextPackPaths.length === 0) {
@@ -1439,6 +1458,17 @@ export function NexusDeskShell({
         }
     }
 
+    async function refreshAgentTools() {
+        try {
+            const tools = await ListAgentTools();
+            setAgentTools(tools);
+            setAgentToolPlan(buildAgentToolPlan(tools, filePreview, artifactMetadata, activeFile));
+        } catch {
+            setAgentTools([]);
+            setAgentToolPlan([]);
+        }
+    }
+
     async function refreshChatHistory() {
         try {
             const messages = await GetChatHistory();
@@ -1743,6 +1773,37 @@ export function NexusDeskShell({
         }
     }
 
+    async function createScanReportArtifact() {
+        if (!workspace) {
+            setWorkspaceStatus('Open a workspace before creating scan reports.');
+            return;
+        }
+
+        setIsCreatingScanReport(true);
+        setWorkspaceStatus(`Saving scan report for ${workspace.name}...`);
+        try {
+            const report: MarkdownReport = await CreateScanReportArtifact();
+            const result = await RefreshWorkspace();
+            if (result.selected) {
+                onWorkspaceChange(result.snapshot);
+                await refreshArtifacts();
+                await refreshApprovals();
+                const reportNode = findWorkspaceNode(result.snapshot, report.relPath);
+                setExpandedDirectories((current) => reconcileExpandedDirectories(current, result.snapshot, reportNode));
+                await selectWorkspaceFile(result.snapshot, report.relPath);
+                setWorkspaceStatus(`${report.name} saved in .nexusdesk/artifacts.`);
+                pushToolEvent('Scan report saved', report.relPath);
+            } else {
+                setWorkspaceStatus(report.message);
+            }
+        } catch (error) {
+            const message = error instanceof Error ? error.message : '';
+            setWorkspaceStatus(message || 'Could not save scan report.');
+        } finally {
+            setIsCreatingScanReport(false);
+        }
+    }
+
     async function saveLatestAssistantArtifact() {
         if (!workspace) {
             setChatStatus('Open a workspace before saving answers as artifacts.');
@@ -2020,6 +2081,114 @@ export function NexusDeskShell({
         setWorkspaceStatus(`${artifact.name} selected from artifacts.`);
     }
 
+    async function openArtifactSource() {
+        if (!workspace || !artifactMetadata?.contextRelPath) {
+            setWorkspaceStatus('This artifact does not include source context.');
+            return;
+        }
+
+        const source = artifactMetadata.contextRelPath;
+        const node = findWorkspaceNode(workspace, source);
+        if (!node) {
+            setWorkspaceStatus(`${source} is not visible in the current workspace tree.`);
+            return;
+        }
+        await selectWorkspaceFile(workspace, source);
+        setWorkspaceStatus(`Opened source context ${source}.`);
+        pushToolEvent('Artifact source opened', source);
+    }
+
+    async function archiveActiveArtifact() {
+        if (!workspace || !filePreview || !isArtifactPath(filePreview.relPath)) {
+            setWorkspaceStatus('Select an artifact before archiving it.');
+            return;
+        }
+
+        const relPath = filePreview.relPath;
+        const approved = await requestApproval({
+            action: 'Archive artifact',
+            confirmLabel: 'Archive',
+            message: `Move ${relPath} to .nexusdesk/artifacts/archive.`,
+            risk: 'medium',
+            target: relPath,
+        });
+        if (!approved) {
+            setWorkspaceStatus(`Archive cancelled for ${relPath}.`);
+            return;
+        }
+
+        setIsArchivingArtifact(true);
+        try {
+            const archived = await ArchiveArtifact(relPath);
+            const result = await RefreshWorkspace();
+            if (result.selected) {
+                onWorkspaceChange(result.snapshot);
+                await refreshArtifacts();
+                await refreshApprovals();
+                const archiveNode = findWorkspaceNode(result.snapshot, archived.relPath);
+                setExpandedDirectories((current) => reconcileExpandedDirectories(current, result.snapshot, archiveNode));
+                await selectWorkspaceFile(result.snapshot, archived.relPath);
+            }
+            setWorkspaceStatus(archived.message);
+            pushToolEvent('Artifact archived', archived.relPath);
+        } catch (error) {
+            const message = error instanceof Error ? error.message : '';
+            setWorkspaceStatus(message || 'Could not archive artifact.');
+        } finally {
+            setIsArchivingArtifact(false);
+        }
+    }
+
+    async function deleteActiveArtifact() {
+        if (!workspace || !filePreview || !isArtifactPath(filePreview.relPath)) {
+            setWorkspaceStatus('Select an artifact before deleting it.');
+            return;
+        }
+
+        const relPath = filePreview.relPath;
+        const sourceRelPath = artifactMetadata?.contextRelPath ?? '';
+        const approved = await requestApproval({
+            action: 'Delete artifact',
+            confirmLabel: 'Delete',
+            message: `Delete ${relPath} and its metadata sidecar from the workspace.`,
+            risk: 'high',
+            target: relPath,
+        });
+        if (!approved) {
+            setWorkspaceStatus(`Delete cancelled for ${relPath}.`);
+            return;
+        }
+
+        setIsDeletingArtifact(true);
+        try {
+            const deleted = await DeleteArtifact(relPath);
+            const result = await RefreshWorkspace();
+            if (result.selected) {
+                onWorkspaceChange(result.snapshot);
+                removeOpenTabState(deleted.relPath);
+                await refreshArtifacts();
+                await refreshApprovals();
+                const sourceNode = sourceRelPath ? findWorkspaceNode(result.snapshot, sourceRelPath) : null;
+                const selectedNode = sourceNode ?? selectNodeAfterWorkspaceUpdate(result.snapshot);
+                setExpandedDirectories((current) => reconcileExpandedDirectories(current, result.snapshot, selectedNode));
+                if (selectedNode) {
+                    await previewWorkspaceNode(selectedNode, false);
+                    setActiveFile(selectedNode.relPath);
+                } else {
+                    setActiveFile(result.snapshot.name);
+                    setFilePreview(null);
+                }
+            }
+            setWorkspaceStatus(deleted.message);
+            pushToolEvent('Artifact deleted', deleted.relPath);
+        } catch (error) {
+            const message = error instanceof Error ? error.message : '';
+            setWorkspaceStatus(message || 'Could not delete artifact.');
+        } finally {
+            setIsDeletingArtifact(false);
+        }
+    }
+
     function listenForChatStream(requestId: string, assistantCreatedAt: string, fallbackContextRelPath: string) {
         if (!isWailsRuntimeAvailable()) {
             return null;
@@ -2133,9 +2302,11 @@ export function NexusDeskShell({
                 isManagingRecent={isManagingRecent}
                 isOpeningWorkspace={isOpeningWorkspace}
                 isRefreshingWorkspace={isRefreshingWorkspace}
+                isCreatingScanReport={isCreatingScanReport}
                 onClearRecentWorkspaces={() => void clearRecentWorkspaces()}
                 onClearWorkspaceSearch={() => setWorkspaceSearchResults([])}
                 onCollapseAllDirectories={collapseAllDirectories}
+                onCreateScanReport={() => void createScanReportArtifact()}
                 onExpandAllDirectories={expandAllDirectories}
                 onOpenWorkspace={() => void openWorkspace()}
                 onRefreshWorkspace={() => void refreshWorkspace()}
@@ -2191,6 +2362,8 @@ export function NexusDeskShell({
                 isCreatingDatasetChart={isCreatingDatasetChart}
                 isCreatingDatasetSummary={isCreatingDatasetSummary}
                 isExportingDatasetQuery={isExportingDatasetQuery}
+                isArchivingArtifact={isArchivingArtifact}
+                isDeletingArtifact={isDeletingArtifact}
                 isSummarizingContext={isSummarizingContext}
                 isEditingFile={isEditingFile}
                 isApplyingWrite={isApplyingWrite}
@@ -2229,7 +2402,10 @@ export function NexusDeskShell({
                 onCreateDatasetChart={() => void createDatasetChart()}
                 onCreateDatasetSummary={() => void createDatasetSummary()}
                 onExportDatasetQuery={() => void exportDatasetQuery()}
+                onArchiveArtifact={() => void archiveActiveArtifact()}
                 onCloseTab={closeOpenTab}
+                onDeleteArtifact={() => void deleteActiveArtifact()}
+                onOpenArtifactSource={() => void openArtifactSource()}
                 onSelectTab={selectOpenTab}
                 onSelectArtifact={(artifact) => void selectArtifact(artifact)}
                 onStartFileEdit={startFileEdit}
@@ -2246,6 +2422,8 @@ export function NexusDeskShell({
                 chatStatus={chatStatus}
                 contextPackPreview={contextPackPreview}
                 contextPackPaths={contextPackPaths}
+                agentTools={agentTools}
+                agentToolPlan={agentToolPlan}
                 canSaveLatestAssistantArtifact={canSaveLatestAssistantArtifact}
                 isSavingSettings={isSavingSettings}
                 isSavingChatArtifact={isSavingChatArtifact}
@@ -2254,6 +2432,7 @@ export function NexusDeskShell({
                 onChatPromptChange={setChatPrompt}
                 onClearChatHistory={() => void clearChatHistory()}
                 onClearContextPack={() => setContextPackPaths([])}
+                onRefreshAgentPlan={() => void refreshAgentTools()}
                 onRemoveContextPath={removeContextPath}
                 onSaveLatestAssistantArtifact={() => void saveLatestAssistantArtifact()}
                 onSaveSettings={() => void saveLLMSettings()}
@@ -2417,6 +2596,64 @@ function sourcePathsFromContext(contextRelPath: string) {
         return [dirMatch[1]];
     }
     return [contextRelPath];
+}
+
+function buildAgentToolPlan(
+    tools: AgentToolDescriptor[],
+    preview: FilePreview | null,
+    metadata: ArtifactMetadata | null,
+    activeFile: string
+): AgentToolPlanItem[] {
+    if (tools.length === 0) {
+        return [];
+    }
+
+    const plan: AgentToolPlanItem[] = [];
+    const byName = new Map(tools.map((tool) => [tool.name, tool]));
+    const target = preview?.relPath || activeFile;
+    const add = (toolName: string, nextTarget: string, status: string) => {
+        const tool = byName.get(toolName);
+        if (!tool || !nextTarget || plan.some((item) => item.toolName === toolName && item.target === nextTarget)) {
+            return;
+        }
+        plan.push({
+            toolName,
+            title: tool.title,
+            target: nextTarget,
+            risk: tool.risk,
+            requiresApproval: tool.requiresApproval,
+            status,
+        });
+    };
+
+    if (target) {
+        add('workspace.preview', target, 'ready');
+    }
+    if (preview?.table) {
+        add('dataset.query', preview.relPath, 'ready for filter, order, and export');
+        add('artifact.create', `${preview.relPath} summary or query result`, 'ready');
+    }
+    if (metadata) {
+        add('artifact.archive', preview?.relPath ?? target, 'requires confirmation');
+    }
+    if (preview?.kind === 'file' && !preview.table && !isArtifactPath(preview.relPath)) {
+        add('workspace.write', preview.relPath, 'draft and diff required');
+    }
+    if (preview && isOperationsContextPath(preview.relPath, preview.name)) {
+        add('operations.inspect', preview.relPath, 'read-only');
+    }
+
+    return plan.slice(0, 5);
+}
+
+function isOperationsContextPath(relPath: string, name: string) {
+    const normalizedRelPath = relPath.toLowerCase();
+    const normalizedName = name.toLowerCase();
+    return normalizedName === 'dockerfile' ||
+        normalizedName.includes('docker-compose') ||
+        /^compose\.ya?ml$/i.test(normalizedName) ||
+        normalizedRelPath.startsWith('services/') ||
+        /\.(env|ps1|sh|bat|cmd|toml|ya?ml)$/i.test(normalizedName);
 }
 
 function createRequestId() {

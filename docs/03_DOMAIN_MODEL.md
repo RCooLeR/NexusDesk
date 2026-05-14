@@ -2,7 +2,7 @@
 
 ## Current Implementation Note
 
-The current repository implements the early local-first subset of this model. Workspaces are represented by a selected root path and a scanned `WorkspaceSnapshot`; file nodes are returned by `app/internal/workspace/scanner.go`; previews, searches, context packs, dataset profiles, artifacts, LLM settings, recent workspaces, and chat history are implemented with Go structs and local JSON/provenance files rather than SQLite tables.
+The current repository implements the early local-first subset of this model. Workspaces are represented by a selected root path and a scanned `WorkspaceSnapshot`; file nodes are returned by `app/internal/workspace/scanner.go`; previews, searches, context packs, dataset profiles, artifacts, LLM settings, recent workspaces, agent tool descriptors, and chat history are implemented with Go structs and local JSON/provenance files rather than SQLite tables.
 
 The richer IDs below describe the intended durable domain model. Do not treat every listed field as a created database column yet.
 
@@ -473,9 +473,28 @@ A dataset query export is a deterministic CSV artifact created from a bounded da
 
 Current implementation:
 
-- `app/internal/workspace/dataset_query.go` returns bounded CSV rows for text search or `column=value` filters.
+- `app/internal/workspace/dataset_query.go` returns bounded CSV rows for text search, `column=value` filters, numeric comparisons, `contains`, `limit`, and simple `order by` clauses.
 - `app/internal/artifact/markdown_report.go` writes those bounded rows as a CSV artifact under `.nexusdesk/artifacts/`.
 - The export writes a provenance sidecar with source path and query string.
+
+### Workspace Scan Report
+
+A workspace scan report is an auditable Markdown snapshot of the current indexing pass.
+
+Current implementation:
+
+- `app/internal/artifact/markdown_report.go` writes included, ignored, depth-skipped, entry-cap, unreadable, max-depth, and max-entry counters.
+- Reports include skipped/ignored samples and are saved under `.nexusdesk/artifacts/` with sidecar metadata.
+
+### Agent Tool Descriptor
+
+An agent tool descriptor is the registered shape of a deterministic backend capability before autonomous execution exists.
+
+Current implementation:
+
+- `app/internal/agenttools/registry.go` exposes tool names, titles, descriptions, studio surfaces, risk levels, approval requirements, and input names.
+- The frontend uses these descriptors to show a proposed tool plan for the active workspace, dataset, artifact, or operations context.
+Execution is still handled by explicit UI flows until tool-run persistence and agent execution are added.
 
 ### Saved Dataset Query
 
