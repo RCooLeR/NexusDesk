@@ -13,6 +13,7 @@ type WorkbenchPanelProps = {
     datasetProfiles: DatasetProfile[];
     datasetQuery: string;
     datasetQueryResult: DatasetQueryResult | null;
+    dirtyTabPaths: string[];
     fileDraft: string;
     filePreview: FilePreview | null;
     isApplyingWrite: boolean;
@@ -55,6 +56,7 @@ export function WorkbenchPanel({
     datasetProfiles,
     datasetQuery,
     datasetQueryResult,
+    dirtyTabPaths,
     fileDraft,
     filePreview,
     isApplyingWrite,
@@ -103,7 +105,7 @@ export function WorkbenchPanel({
     const studioMode = resolveStudioMode(filePreview, activeDatasetProfile, activeFile);
     const findSource = isEditingFile ? fileDraft : filePreview?.content ?? filePreview?.text ?? '';
     const findMatches = countFindMatches(findSource, findQuery);
-    const isDraftDirty = Boolean(isEditingFile && filePreview && fileDraft !== filePreview.content);
+    const isDraftDirty = Boolean(filePreview && dirtyTabPaths.includes(filePreview.relPath));
 
     return (
         <main className="workbench">
@@ -160,7 +162,7 @@ export function WorkbenchPanel({
                                     title={tab.relPath}
                                 >
                                     <span>{tab.name}</span>
-                                    {isEditingFile && activeFile === tab.relPath && isDraftDirty && <i aria-label="Unsaved changes" />}
+                                    {dirtyTabPaths.includes(tab.relPath) && <i aria-label="Unsaved changes" />}
                                     <small>{tab.kind === 'pdf' ? 'pdf' : tab.fileType}</small>
                                     <button
                                         aria-label={`Close ${tab.name}`}

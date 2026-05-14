@@ -60,6 +60,9 @@ This tracker reflects the repository as it exists today and keeps planned work s
 - [x] Text/code previews include find-in-file with match counts and highlighted matches.
 - [x] Text edit drafts show dirty state and can revert to the loaded content.
 - [x] Text edit draft changes clear stale diff proposals before apply.
+- [x] Text edit drafts persist per open editor tab while navigating.
+- [x] Dirty editor tabs are marked and ask for confirmation before closing.
+- [x] Ctrl+S previews or applies the active edit draft through the safe write flow.
 - [x] Center workbench pane shows the active studio surface for code, data, document, operations, artifact, or workspace context.
 - [x] Workspace refresh preserves the selected file when it still exists.
 - [x] Workspace open/refresh auto-loads a preview for the selected or first file node.
@@ -152,6 +155,8 @@ This tracker reflects the repository as it exists today and keeps planned work s
 - [x] Add keyboard quick-open for workspace nodes and editor tabs.
 - [x] Add quick-open smoke coverage and keep docs aligned.
 - [x] Add find-in-file and dirty/revert editor state.
+- [x] Preserve edit drafts per tab and guard dirty tab close.
+- [x] Add Ctrl+S edit preview/apply shortcut.
 - [x] Add a safe workspace folder picker.
 - [x] Build a real file tree from approved workspace roots.
 - [x] Add safe text file preview for selected workspace files.
@@ -227,7 +232,7 @@ The current workstation LLM runner is the sibling Compose stack at `../Llm/`, no
 
 `app/frontend/src/features/shell/QuickOpenPalette.tsx` owns client-side quick-open over the already indexed workspace snapshot and open editor tabs. It does not read files directly; selection still flows through the shell's workspace preview path.
 
-`app/frontend/src/features/shell/WorkbenchPanel.tsx` owns local find-in-file, active draft dirty state, and revert controls. File writes still route through `app/internal/workspace/write.go` for diff preview and rooted apply.
+`app/frontend/src/features/shell/WorkbenchPanel.tsx` owns local find-in-file, visible dirty markers, and revert controls. `app/frontend/src/features/shell/NexusDeskShell.tsx` owns per-tab edit drafts, stale-proposal clearing, Ctrl+S routing, and dirty-close guards. File writes still route through `app/internal/workspace/write.go` for diff preview and rooted apply.
 
 ## Verified Commands
 

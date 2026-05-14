@@ -131,14 +131,18 @@ export function NexusDeskShell({
     const [isSavingChatArtifact, setIsSavingChatArtifact] = useState(false);
     const [isSummarizingContext, setIsSummarizingContext] = useState(false);
     const [isProfilingDataset, setIsProfilingDataset] = useState(false);
-    const [isEditingFile, setIsEditingFile] = useState(false);
     const [isPreviewingWrite, setIsPreviewingWrite] = useState(false);
     const [isApplyingWrite, setIsApplyingWrite] = useState(false);
-    const [fileDraft, setFileDraft] = useState('');
-    const [writeProposal, setWriteProposal] = useState<FileWriteProposal | null>(null);
+    const [editingFilePaths, setEditingFilePaths] = useState<string[]>([]);
+    const [fileDrafts, setFileDrafts] = useState<Record<string, string>>({});
+    const [writeProposals, setWriteProposals] = useState<Record<string, FileWriteProposal>>({});
     const [navigatorWidth, setNavigatorWidth] = useState(280);
     const [isQuickOpenOpen, setIsQuickOpenOpen] = useState(false);
     const [quickOpenQuery, setQuickOpenQuery] = useState('');
+    const fileDraft = activeFile ? fileDrafts[activeFile] ?? '' : '';
+    const writeProposal = activeFile ? writeProposals[activeFile] ?? null : null;
+    const isEditingFile = Boolean(activeFile && editingFilePaths.includes(activeFile));
+    const dirtyTabPaths = dirtyDraftPaths(fileDrafts, openTabs);
 
     useEffect(() => {
         setSettingsDraft(llmSettings);
@@ -197,6 +201,12 @@ export function NexusDeskShell({
                 return;
             }
 
+            if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === 's') {
+                event.preventDefault();
+                void saveActiveDraftShortcut();
+                return;
+            }
+
             if (isTyping) {
                 return;
             }
@@ -210,7 +220,7 @@ export function NexusDeskShell({
 
         window.addEventListener('keydown', handleGlobalKeyDown);
         return () => window.removeEventListener('keydown', handleGlobalKeyDown);
-    }, [isQuickOpenOpen]);
+    }, [activeFile, fileDraft, isApplyingWrite, isEditingFile, isPreviewingWrite, isQuickOpenOpen, writeProposal]);
 
     const selectedMeta = useMemo(() => {
         if (workspace) {
@@ -271,7 +281,6 @@ export function NexusDeskShell({
         if (updateActiveFile) {
             setActiveFile(node.relPath);
         }
-        clearFileWriteDraft();
         setDatasetQueryResult(null);
 
         if (node.kind === 'directory') {
@@ -347,22 +356,33 @@ export function NexusDeskShell({
             setWorkspaceStatus('Select a text file before editing.');
             return;
         }
-        setFileDraft(filePreview.content);
-        setWriteProposal(null);
-        setIsEditingFile(true);
+        setEditingFilePaths((current) => current.includes(filePreview.relPath) ? current : [...current, filePreview.relPath]);
+        setFileDrafts((current) => ({
+            ...current,
+            [filePreview.relPath]: current[filePreview.relPath] ?? filePreview.content,
+        }));
+        setWriteProposals((current) => omitKey(current, filePreview.relPath));
     }
 
     function clearFileWriteDraft() {
-        setIsEditingFile(false);
-        setFileDraft('');
-        setWriteProposal(null);
+        if (activeFile) {
+            setEditingFilePaths((current) => current.filter((relPath) => relPath !== activeFile));
+            setFileDrafts((current) => omitKey(current, activeFile));
+            setWriteProposals((current) => omitKey(current, activeFile));
+        }
         setIsPreviewingWrite(false);
         setIsApplyingWrite(false);
     }
 
     function updateFileDraft(content: string) {
-        setFileDraft(content);
-        setWriteProposal(null);
+        if (!activeFile) {
+            return;
+        }
+        setFileDrafts((current) => ({
+            ...current,
+            [activeFile]: content,
+        }));
+        setWriteProposals((current) => omitKey(current, activeFile));
     }
 
     async function previewFileWrite() {
@@ -374,7 +394,10 @@ export function NexusDeskShell({
         setIsPreviewingWrite(true);
         try {
             const proposal = await PreviewFileWrite({relPath: filePreview.relPath, content: fileDraft});
-            setWriteProposal(proposal);
+            setWriteProposals((current) => ({
+                ...current,
+                [proposal.relPath]: proposal,
+            }));
             setWorkspaceStatus(proposal.message);
             pushToolEvent('Write preview', proposal.relPath);
         } catch (error) {
@@ -399,7 +422,9 @@ export function NexusDeskShell({
                 onWorkspaceChange(result.snapshot);
                 await selectWorkspaceFile(result.snapshot, proposal.relPath);
             }
-            clearFileWriteDraft();
+            setEditingFilePaths((current) => current.filter((relPath) => relPath !== proposal.relPath));
+            setFileDrafts((current) => omitKey(current, proposal.relPath));
+            setWriteProposals((current) => omitKey(current, proposal.relPath));
             setWorkspaceStatus(proposal.message);
             pushToolEvent('File write applied', proposal.relPath);
         } catch (error) {
@@ -496,6 +521,9 @@ export function NexusDeskShell({
         setWorkspaceSearchResults([]);
         if (rootChanged) {
             setOpenTabs([]);
+            setEditingFilePaths([]);
+            setFileDrafts({});
+            setWriteProposals({});
         }
         await refreshChatHistory();
         await refreshArtifacts();
@@ -552,7 +580,6 @@ export function NexusDeskShell({
         if (!tab) {
             return;
         }
-        clearFileWriteDraft();
         setActiveFile(tab.relPath);
         setFilePreview(tab);
         setActiveDatasetProfile(datasetProfiles.find((profile) => profile.relPath === tab.relPath) ?? null);
@@ -563,14 +590,20 @@ export function NexusDeskShell({
         if (tabIndex === -1) {
             return;
         }
+        if (dirtyTabPaths.includes(relPath) && !window.confirm(`Discard unsaved changes in ${relPath}?`)) {
+            setWorkspaceStatus(`${relPath} is still open with unsaved changes.`);
+            return;
+        }
 
         const nextTabs = openTabs.filter((tab) => tab.relPath !== relPath);
         setOpenTabs(nextTabs);
+        setEditingFilePaths((current) => current.filter((path) => path !== relPath));
+        setFileDrafts((current) => omitKey(current, relPath));
+        setWriteProposals((current) => omitKey(current, relPath));
         if (activeFile !== relPath) {
             return;
         }
 
-        clearFileWriteDraft();
         const nextTab = nextTabs[Math.max(0, tabIndex - 1)] ?? nextTabs[0] ?? null;
         if (!nextTab) {
             setFilePreview(null);
@@ -582,6 +615,21 @@ export function NexusDeskShell({
         setActiveFile(nextTab.relPath);
         setFilePreview(nextTab);
         setActiveDatasetProfile(datasetProfiles.find((profile) => profile.relPath === nextTab.relPath) ?? null);
+    }
+
+    async function saveActiveDraftShortcut() {
+        if (!isEditingFile || !filePreview || !dirtyTabPaths.includes(filePreview.relPath)) {
+            setWorkspaceStatus('No active edit draft to save.');
+            return;
+        }
+        if (isPreviewingWrite || isApplyingWrite) {
+            return;
+        }
+        if (writeProposal) {
+            await applyFileWrite();
+        } else {
+            await previewFileWrite();
+        }
     }
 
     async function refreshSelectedPreview() {
@@ -1302,6 +1350,7 @@ export function NexusDeskShell({
                 activeDatasetProfile={activeDatasetProfile}
                 fileDraft={fileDraft}
                 filePreview={filePreview}
+                dirtyTabPaths={dirtyTabPaths}
                 isCreatingReport={isCreatingReport}
                 isProfilingDataset={isProfilingDataset}
                 isQueryingDataset={isQueryingDataset}
@@ -1366,6 +1415,21 @@ export function NexusDeskShell({
 
 function findWorkspaceNode(snapshot: WorkspaceSnapshot, relPath: string) {
     return snapshot.nodes.find((node) => node.relPath === relPath) ?? null;
+}
+
+function dirtyDraftPaths(fileDrafts: Record<string, string>, openTabs: FilePreview[]) {
+    return Object.entries(fileDrafts)
+        .filter(([relPath, draft]) => {
+            const tab = openTabs.find((current) => current.relPath === relPath);
+            return Boolean(tab && draft !== tab.content);
+        })
+        .map(([relPath]) => relPath);
+}
+
+function omitKey<T>(record: Record<string, T>, key: string) {
+    const next = {...record};
+    delete next[key];
+    return next;
 }
 
 function latestAssistantMessage(messages: ChatMessage[]) {

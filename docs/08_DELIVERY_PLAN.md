@@ -41,6 +41,8 @@ Deliverables:
 - workspace path/content search: implemented
 - keyboard quick-open palette for workspace files, folders, and open tabs: implemented
 - editor find-in-file with highlighted matches: first implementation
+- per-tab text edit drafts with dirty tab markers and close guard: first implementation
+- Ctrl+S preview/apply shortcut for the current edit draft: first implementation
 - workspace tree expand/collapse controls: implemented
 - expandable tree state across refreshes: implemented
 - fixed-height desktop shell with panel-level scrolling: implemented
@@ -116,6 +118,7 @@ Current status:
 - Markdown editor tabs can switch between raw source and rendered preview.
 - Text/code previews support a local find box with match counts and highlighted matches.
 - Text edit drafts show dirty state, can be reverted to the loaded content, and clear stale diff previews when the draft changes.
+- Text edit drafts are retained per editor tab while navigating, dirty tabs are marked, closing a dirty tab asks for confirmation, and Ctrl+S previews or applies through the same safe write flow.
 - The chat panel has an expanded conversation area, full visible history, context pack list, and multiline prompt composer.
 - Chat responses render common Markdown structures, including tables and code blocks, instead of flattening formatted model output into one paragraph.
 - Persistent chat history works through local JSON config.
@@ -267,6 +270,7 @@ Protect the core:
 - jump to files, folders, and tabs quickly
 - keep multiple files open in editor tabs
 - find text inside the active file
+- preserve unsaved drafts while switching tabs
 - chat with configurable model
 - read selected context safely
 - analyze Excel/CSV
