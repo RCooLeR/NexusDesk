@@ -51,6 +51,7 @@ This tracker reflects the repository as it exists today and keeps planned work s
 - [x] Dataset profiles persist CSV profiles and XLSX sheet metadata under `.nexusdesk/datasets/`.
 - [x] CSV datasets can be queried with bounded row search and `column=value` filters.
 - [x] Lightweight syntax highlighting exists at `app/frontend/src/features/shell/HighlightedCode.tsx`.
+- [x] Monaco-backed edit surface exists at `app/frontend/src/features/shell/MonacoFileEditor.tsx`.
 - [x] Frontend smoke script exists at `app/frontend/scripts/smoke.mjs`.
 - [x] Desktop workspace picker is bound through `SelectWorkspace`.
 - [x] Frontend switches from scaffold preview to indexed workspace nodes after folder selection.
@@ -159,6 +160,7 @@ This tracker reflects the repository as it exists today and keeps planned work s
 - [x] Add find-in-file and dirty/revert editor state.
 - [x] Preserve edit drafts per tab and guard dirty tab close.
 - [x] Add Ctrl+S edit preview/apply shortcut.
+- [x] Add Monaco-backed editing for text/code drafts.
 - [x] Add a safe workspace folder picker.
 - [x] Build a real file tree from approved workspace roots.
 - [x] Add safe text file preview for selected workspace files.

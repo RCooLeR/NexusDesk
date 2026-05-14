@@ -1009,16 +1009,16 @@ button:disabled {
     padding: 0 10px;
 }
 
-.file-write-editor textarea {
+.monaco-file-editor {
     width: 100%;
     min-height: 0;
     border: 0;
     border-bottom: 1px solid var(--nd-border-soft);
-    color: #1f2937;
-    font: 13px/1.55 "Cascadia Code", "Consolas", monospace;
+    overflow: hidden;
+}
+
+.monaco-file-editor .monaco-editor {
     outline: none;
-    padding: 14px 16px;
-    resize: none;
 }
 
 .write-diff {

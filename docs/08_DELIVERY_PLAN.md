@@ -59,7 +59,7 @@ Deliverables:
 - DOCX body text extraction: first implementation
 - lightweight syntax highlighting: implemented
 - UTF-8 BOM, UTF-16, and Windows-1251 text decoding: implemented
-- Monaco editor integration
+- Monaco editor integration: first edit-draft implementation
 - LLM settings screen: implemented
 - recommended local model dropdown capped at 26B: implemented
 - LLM connection test for OpenAI-compatible `/models`: implemented
@@ -121,16 +121,17 @@ Current status:
 - Text/code previews support a local find box with match counts and highlighted matches.
 - Text edit drafts show dirty state, can be reverted to the loaded content, and clear stale diff previews when the draft changes.
 - Text edit drafts are retained per editor tab while navigating, dirty tabs are marked, closing a dirty tab asks for confirmation, and Ctrl+S previews or applies through the same safe write flow.
+- Text/code edit drafts use a Monaco-backed editor surface with language detection while preserving the diff/apply boundary.
 - The chat panel has an expanded conversation area, full visible history, context pack list, and multiline prompt composer.
 - Chat responses render common Markdown structures, including tables and code blocks, instead of flattening formatted model output into one paragraph.
 - Persistent chat history works through local JSON config.
-- Monaco, richer document extraction/OCR, and SQLite persistence are still planned.
+- Monaco read-only preview integration, richer document extraction/OCR, and SQLite persistence are still planned.
 - Markdown report artifacts can be created under `.nexusdesk/artifacts/` without overwriting existing files.
 - Latest assistant answers can be saved as Markdown artifacts under `.nexusdesk/artifacts/` with their chat context recorded as metadata.
 - Markdown artifacts now write sidecar provenance metadata with source, prompt, model, source paths, and creation timestamp.
 - The workbench lists generated Markdown artifacts and can reselect visible report files from that list.
 - The frontend has a smoke check for the built entrypoint, generated Wails bindings, and core shell functionality markers.
-- Monaco, richer document extraction/OCR, richer approval dialogs, DuckDB SQL, and SQLite persistence are still planned.
+- Monaco read-only preview integration, richer document extraction/OCR, richer approval dialogs, DuckDB SQL, and SQLite persistence are still planned.
 
 ## Phase 2: Files, Documents, And Artifacts
 

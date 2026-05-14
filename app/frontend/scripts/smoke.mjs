@@ -38,7 +38,11 @@ const checks = [
     },
     {
         file: 'src/features/shell/WorkbenchPanel.tsx',
-        terms: ['editor-tabs', 'markdownViewMode', 'markdown-view-toggle', 'markdown-document-preview', 'studio-mode-strip', 'resolveStudioMode', 'Data Studio', 'Summarize', 'onSummarizeContext', 'onSelectTab', 'onCloseTab', 'onPinProjectContext', 'DatasetQueryPanel', 'file-write-editor', 'editor-find', 'dirty-indicator', 'dirtyTabPaths', 'countFindMatches'],
+        terms: ['editor-tabs', 'markdownViewMode', 'markdown-view-toggle', 'markdown-document-preview', 'studio-mode-strip', 'resolveStudioMode', 'Data Studio', 'Summarize', 'onSummarizeContext', 'onSelectTab', 'onCloseTab', 'onPinProjectContext', 'DatasetQueryPanel', 'file-write-editor', 'MonacoFileEditor', 'editor-find', 'dirty-indicator', 'dirtyTabPaths', 'countFindMatches'],
+    },
+    {
+        file: 'src/features/shell/MonacoFileEditor.tsx',
+        terms: ['monaco-editor', 'MonacoEnvironment', 'languageForFile', 'nexusdesk-light', 'KeyCode.KeyS'],
     },
     {
         file: 'src/features/shell/HighlightedCode.tsx',
@@ -80,6 +84,7 @@ const checks = [
             '.chat-markdown',
             '.chat-table',
             '.file-write-editor',
+            '.monaco-file-editor',
             '.dataset-profile-summary',
             '.studio-mode-strip',
             '.quick-open',

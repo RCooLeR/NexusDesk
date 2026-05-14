@@ -4,6 +4,7 @@ import {Button, EmptyState, InlineAlert, LoadingState, StatusBadge} from '../../
 import type {Capability, DatasetProfile, DatasetQueryResult, FilePreview, FileWriteProposal, TablePreview, WorkspaceArtifact, WorkspaceSnapshot} from '../../types';
 import {ChatMessageContent} from './ChatMessageContent';
 import {HighlightedCode} from './HighlightedCode';
+import {MonacoFileEditor} from './MonacoFileEditor';
 
 type WorkbenchPanelProps = {
     activeFile: string;
@@ -257,6 +258,7 @@ export function WorkbenchPanel({
                                     onPreview={onPreviewFileWrite}
                                     proposal={writeProposal}
                                     originalContent={filePreview?.content ?? ''}
+                                    fileName={filePreview?.name ?? activeFile}
                                     isDirty={isDraftDirty}
                                 />
                             ) : filePreview?.content && markdownViewMode === 'rendered' && isMarkdownFile(filePreview.name) ? (
@@ -492,9 +494,11 @@ function FileWriteEditor({
     onPreview,
     proposal,
     originalContent,
+    fileName,
     isDirty,
 }: {
     draft: string;
+    fileName: string;
     isApplying: boolean;
     isPreviewing: boolean;
     onApply: () => void;
@@ -505,6 +509,16 @@ function FileWriteEditor({
     originalContent: string;
     isDirty: boolean;
 }) {
+    function saveDraftShortcut() {
+        if (proposal && !isApplying) {
+            onApply();
+            return;
+        }
+        if (isDirty && !isPreviewing && !isApplying) {
+            onPreview();
+        }
+    }
+
     return (
         <div className="file-write-editor">
             <div className="write-toolbar">
@@ -524,10 +538,10 @@ function FileWriteEditor({
                     Cancel
                 </Button>
             </div>
-            <textarea
-                aria-label="File write draft"
-                onChange={(event) => onChange(event.target.value)}
-                spellCheck={false}
+            <MonacoFileEditor
+                fileName={fileName}
+                onChange={onChange}
+                onSave={saveDraftShortcut}
                 value={draft}
             />
             {proposal && (
