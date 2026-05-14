@@ -44,6 +44,7 @@ Deliverables:
 - editor find-in-file with highlighted matches: first implementation
 - per-tab text edit drafts with dirty tab markers and close guard: first implementation
 - Ctrl+S preview/apply shortcut for the current edit draft: first implementation
+- Ctrl+F file find focus plus Ctrl+W and Ctrl+Tab editor tab shortcuts: first implementation
 - workspace tree expand/collapse controls: implemented
 - expandable tree state across refreshes: implemented
 - fixed-height desktop shell with panel-level scrolling: implemented
@@ -122,6 +123,7 @@ Current status:
 - Text/code previews use a read-only Monaco viewer with find decorations.
 - Text edit drafts show dirty state, can be reverted to the loaded content, and clear stale diff previews when the draft changes.
 - Text edit drafts are retained per editor tab while navigating, dirty tabs are marked, closing a dirty tab asks for confirmation, and Ctrl+S previews or applies through the same safe write flow.
+- Editor keyboard support includes Ctrl+F for the in-file finder, Ctrl+W for closing the active tab, and Ctrl+Tab / Ctrl+Shift+Tab for tab cycling.
 - Text/code edit drafts use a Monaco-backed editor surface with language detection while preserving the diff/apply boundary.
 - The chat panel has an expanded conversation area, full visible history, context pack list, and multiline prompt composer.
 - Chat responses render common Markdown structures, including tables and code blocks, instead of flattening formatted model output into one paragraph.

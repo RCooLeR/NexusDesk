@@ -1,4 +1,4 @@
-import {useState} from 'react';
+import {useEffect, useRef, useState} from 'react';
 import {brandAssets, capabilityIconByTitle} from '../../brand/assets';
 import {Button, EmptyState, InlineAlert, LoadingState, StatusBadge} from '../../components/ui';
 import type {Capability, DatasetProfile, DatasetQueryResult, FilePreview, FileWriteProposal, TablePreview, WorkspaceArtifact, WorkspaceSnapshot} from '../../types';
@@ -94,6 +94,7 @@ export function WorkbenchPanel({
 }: WorkbenchPanelProps) {
     const [markdownViewMode, setMarkdownViewMode] = useState<'source' | 'rendered'>('source');
     const [findQuery, setFindQuery] = useState('');
+    const findInputRef = useRef<HTMLInputElement>(null);
     const canExplainContext = Boolean(
         workspace && (
             (filePreview?.kind === 'file' && filePreview.content) ||
@@ -108,6 +109,21 @@ export function WorkbenchPanel({
     const findSource = isEditingFile ? fileDraft : filePreview?.content ?? filePreview?.text ?? '';
     const findMatches = countFindMatches(findSource, findQuery);
     const isDraftDirty = Boolean(filePreview && dirtyTabPaths.includes(filePreview.relPath));
+
+    useEffect(() => {
+        function handleFindShortcut(event: KeyboardEvent) {
+            if (!(event.ctrlKey || event.metaKey) || event.key.toLowerCase() !== 'f' || !filePreview?.content) {
+                return;
+            }
+
+            event.preventDefault();
+            findInputRef.current?.focus();
+            findInputRef.current?.select();
+        }
+
+        window.addEventListener('keydown', handleFindShortcut);
+        return () => window.removeEventListener('keydown', handleFindShortcut);
+    }, [filePreview?.content]);
 
     return (
         <main className="workbench">
@@ -185,6 +201,7 @@ export function WorkbenchPanel({
                                         aria-label="Find in file"
                                         onChange={(event) => setFindQuery(event.target.value)}
                                         placeholder="Find"
+                                        ref={findInputRef}
                                         value={findQuery}
                                     />
                                     <small>{findQuery.trim() ? `${findMatches} matches` : 'Find in file'}</small>

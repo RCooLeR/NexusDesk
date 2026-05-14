@@ -65,6 +65,7 @@ This tracker reflects the repository as it exists today and keeps planned work s
 - [x] Text edit drafts persist per open editor tab while navigating.
 - [x] Dirty editor tabs are marked and ask for confirmation before closing.
 - [x] Ctrl+S previews or applies the active edit draft through the safe write flow.
+- [x] Editor shortcuts include Ctrl+F for file find, Ctrl+W to close the active tab, and Ctrl+Tab / Ctrl+Shift+Tab to switch tabs.
 - [x] Center workbench pane shows the active studio surface for code, data, document, operations, artifact, or workspace context.
 - [x] Workspace refresh preserves the selected file when it still exists.
 - [x] Workspace open/refresh auto-loads a preview for the selected or first file node.
@@ -163,6 +164,7 @@ This tracker reflects the repository as it exists today and keeps planned work s
 - [x] Add Ctrl+S edit preview/apply shortcut.
 - [x] Add Monaco-backed editing for text/code drafts.
 - [x] Add Monaco-backed read-only previews for text/code files.
+- [x] Add editor tab and find keyboard shortcuts.
 - [x] Add a safe workspace folder picker.
 - [x] Build a real file tree from approved workspace roots.
 - [x] Add safe text file preview for selected workspace files.

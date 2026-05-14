@@ -226,6 +226,22 @@ export function NexusDeskShell({
                 return;
             }
 
+            if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === 'w') {
+                if (openTabs.some((tab) => tab.relPath === activeFile)) {
+                    event.preventDefault();
+                    closeOpenTab(activeFile);
+                }
+                return;
+            }
+
+            if ((event.ctrlKey || event.metaKey) && event.key === 'Tab') {
+                if (openTabs.length > 1) {
+                    event.preventDefault();
+                    selectAdjacentTab(event.shiftKey ? -1 : 1);
+                }
+                return;
+            }
+
             if (isTyping) {
                 return;
             }
@@ -240,7 +256,7 @@ export function NexusDeskShell({
 
         window.addEventListener('keydown', handleGlobalKeyDown);
         return () => window.removeEventListener('keydown', handleGlobalKeyDown);
-    }, [activeFile, fileDraft, isApplyingWrite, isCommandPaletteOpen, isEditingFile, isPreviewingWrite, isQuickOpenOpen, writeProposal]);
+    }, [activeFile, fileDraft, isApplyingWrite, isCommandPaletteOpen, isEditingFile, isPreviewingWrite, isQuickOpenOpen, openTabs, writeProposal]);
 
     const selectedMeta = useMemo(() => {
         if (workspace) {
@@ -343,6 +359,33 @@ export function NexusDeskShell({
                 id: 'editor.reload-preview',
                 run: () => void refreshSelectedPreview(),
                 title: 'Reload Current Preview',
+            },
+            {
+                detail: openTabs.some((tab) => tab.relPath === activeFile) ? `Close ${activeFile}.` : 'Open a file tab before closing the active tab.',
+                disabled: !openTabs.some((tab) => tab.relPath === activeFile),
+                group: 'Editor',
+                id: 'editor.close-tab',
+                run: () => closeOpenTab(activeFile),
+                shortcut: 'Ctrl+W',
+                title: 'Close Active Tab',
+            },
+            {
+                detail: openTabs.length > 1 ? 'Move to the next open editor tab.' : 'Open at least two tabs before cycling tabs.',
+                disabled: openTabs.length < 2,
+                group: 'Editor',
+                id: 'editor.next-tab',
+                run: () => selectAdjacentTab(1),
+                shortcut: 'Ctrl+Tab',
+                title: 'Next Editor Tab',
+            },
+            {
+                detail: openTabs.length > 1 ? 'Move to the previous open editor tab.' : 'Open at least two tabs before cycling tabs.',
+                disabled: openTabs.length < 2,
+                group: 'Editor',
+                id: 'editor.previous-tab',
+                run: () => selectAdjacentTab(-1),
+                shortcut: 'Ctrl+Shift+Tab',
+                title: 'Previous Editor Tab',
             },
             {
                 detail: canEditSelectedFile ? `Start a safe edit draft for ${activeFile}.` : 'Select a text/code file before editing.',
@@ -786,6 +829,16 @@ export function NexusDeskShell({
         setActiveFile(tab.relPath);
         setFilePreview(tab);
         setActiveDatasetProfile(datasetProfiles.find((profile) => profile.relPath === tab.relPath) ?? null);
+    }
+
+    function selectAdjacentTab(direction: 1 | -1) {
+        if (openTabs.length === 0) {
+            return;
+        }
+
+        const currentIndex = Math.max(openTabs.findIndex((tab) => tab.relPath === activeFile), 0);
+        const nextIndex = (currentIndex + direction + openTabs.length) % openTabs.length;
+        selectOpenTab(openTabs[nextIndex].relPath);
     }
 
     function closeOpenTab(relPath: string) {

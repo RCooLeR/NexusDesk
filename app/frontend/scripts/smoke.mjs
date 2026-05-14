@@ -20,6 +20,9 @@ const checks = [
             'commandPaletteQuery',
             'selectQuickOpenNode',
             'saveActiveDraftShortcut',
+            'selectAdjacentTab',
+            'Close Active Tab',
+            'Next Editor Tab',
             'dirtyDraftPaths',
             'editingFilePaths',
             'writeProposals',
@@ -38,7 +41,7 @@ const checks = [
     },
     {
         file: 'src/features/shell/WorkbenchPanel.tsx',
-        terms: ['editor-tabs', 'markdownViewMode', 'markdown-view-toggle', 'markdown-document-preview', 'studio-mode-strip', 'resolveStudioMode', 'Data Studio', 'Summarize', 'onSummarizeContext', 'onSelectTab', 'onCloseTab', 'onPinProjectContext', 'DatasetQueryPanel', 'file-write-editor', 'MonacoFileEditor', 'MonacoCodePreview', 'editor-find', 'dirty-indicator', 'dirtyTabPaths', 'countFindMatches'],
+        terms: ['editor-tabs', 'markdownViewMode', 'markdown-view-toggle', 'markdown-document-preview', 'studio-mode-strip', 'resolveStudioMode', 'Data Studio', 'Summarize', 'onSummarizeContext', 'onSelectTab', 'onCloseTab', 'onPinProjectContext', 'DatasetQueryPanel', 'file-write-editor', 'MonacoFileEditor', 'MonacoCodePreview', 'editor-find', 'findInputRef', 'dirty-indicator', 'dirtyTabPaths', 'countFindMatches'],
     },
     {
         file: 'src/features/shell/MonacoFileEditor.tsx',
