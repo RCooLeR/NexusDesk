@@ -73,7 +73,7 @@ For a healthy load, `/api/ps` should show nonzero `size_vram`, and the Ollama lo
 
 `app/internal/dataset/` owns the first persistent dataset profile pass. CSV files reuse the workspace preview profiles and XLSX files expose workbook sheet names, then profiles are stored under `.nexusdesk/datasets/profiles.json` inside the active workspace.
 
-The workbench topbar now has functional Preview, Explain, Summarize, Edit, Report, and Profile actions. Preview reloads the selected workspace node from disk, Explain sends a predefined grounded prompt when text context is available, Summarize sends selected file/directory context through chat and saves the result as a Markdown artifact, Edit uses the diff/apply write flow, Report creates a Markdown artifact, and Profile persists CSV/XLSX dataset metadata. The dataset panel can run a bounded CSV row query for the selected table.
+The workbench topbar now has functional Preview, Explain, Summarize, Edit, Report, and Profile actions. Preview reloads the selected workspace node from disk, Explain sends a predefined grounded prompt when text context is available, Summarize sends selected file/directory context through chat and saves the result as a Markdown artifact, Edit uses the diff/apply write flow, Report creates a Markdown artifact, and Profile persists CSV/XLSX dataset metadata. The dataset panel can run a bounded CSV row query for the selected table. The topbar also shows the active studio surface so code, data, document, operations, artifact, and workspace contexts are explicit.
 
 ## Frontend Structure
 
@@ -86,7 +86,7 @@ The shell is now mostly orchestration. Feature panels own stable presentation, w
 - `app/frontend/src/features/shell/LLMSettingsCard.tsx` owns the provider settings form and delegates persistence/probe actions back to the shell.
 - `app/frontend/src/features/shell/ToolTimeline.tsx` owns the visible tool event timeline presentation.
 - `app/frontend/src/features/shell/WorkspaceNavigator.tsx` owns the workspace lockup, search controls, recent workspace list, fallback scaffold list, and indexed workspace tree presentation, with aligned rows inside the resizable sidebar. `NexusDeskShell.tsx` owns the resizable navigator width state.
-- `app/frontend/src/features/shell/WorkbenchPanel.tsx` owns the active context topbar, closeable editor tab strip, source preview/editor presentation, Markdown source/rendered switching, dataset query panel, fallback workflow preview, and capability cards.
+- `app/frontend/src/features/shell/WorkbenchPanel.tsx` owns the active context topbar, active studio surface indicator, closeable editor tab strip, source preview/editor presentation, Markdown source/rendered switching, dataset query panel, fallback workflow preview, and capability cards.
 - `app/frontend/src/features/shell/WorkspaceRail.tsx` owns the compact branded rail and mode icons.
 - `app/frontend/src/features/shell/AgentPanel.tsx` composes the grounded assistant header, chat card, provider settings, and tool timeline.
 
@@ -106,7 +106,7 @@ The shell is now mostly orchestration. Feature panels own stable presentation, w
 
 ## Goals
 
-NexusDesk should be easy to run, easy to test, easy to reason about, and hard to accidentally make unsafe.
+NexusDesk should be easy to run, easy to test, easy to reason about as an IDE/data/analytics studio, and hard to accidentally make unsafe.
 
 Developer setup should require:
 
@@ -332,4 +332,4 @@ Every module should document:
 - security assumptions
 - tests that protect it
 
-This keeps NexusDesk maintainable as it grows from a local prototype into a serious workbench.
+This keeps NexusDesk maintainable as it grows from a local prototype into a serious desktop studio.

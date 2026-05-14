@@ -2,9 +2,9 @@
 
 ## Goals
 
-NexusDesk should understand a workspace without overwhelming the user or the model.
+NexusDesk should understand a workspace without overwhelming the user, the model, or the studio UI.
 
-Indexing should gather enough structure to make files, documents, datasets, and artifacts searchable and useful, while avoiding unsafe or noisy content.
+Indexing should gather enough structure to make files, documents, datasets, and artifacts searchable and useful across IDE, data studio, analytics studio, document, operations, and artifact surfaces, while avoiding unsafe or noisy content.
 
 It should prefer:
 
@@ -47,7 +47,7 @@ flowchart TD
   Chunk --> Index["Update search indexes"]
   Extract --> Profile["Profile datasets"]
   Profile --> Store["Store dataset schema and summaries"]
-  Index --> Ready["Workspace ready for chat and search"]
+  Index --> Ready["Workspace ready for studio navigation, chat, search, and analytics"]
 ```
 
 ## Current Implementation Snapshot
@@ -66,6 +66,8 @@ The current app implements the first safe workspace slice:
 - Recent workspaces are stored in local JSON config through `app/internal/storage/recent_workspaces.go`.
 
 The app does not yet build persistent chunks, embeddings, or a file watcher. Those remain future indexing work.
+
+Studio implication: every indexed item should eventually be able to answer two questions: which surface should open it, and which actions make sense there.
 
 ## File Classification
 

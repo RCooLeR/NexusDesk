@@ -540,6 +540,34 @@ button:disabled {
     white-space: nowrap;
 }
 
+.studio-mode-strip {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 8px;
+    min-width: 0;
+    margin-top: 6px;
+}
+
+.studio-mode-strip span {
+    border: 1px solid #c7d7ee;
+    border-radius: var(--nd-radius-sm);
+    background: #eef6ff;
+    color: #164a7a;
+    font-size: 12px;
+    font-weight: 800;
+    line-height: 1;
+    padding: 5px 8px;
+}
+
+.studio-mode-strip small {
+    color: var(--nd-muted-text);
+    font-size: 12px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
 .topbar-actions {
     min-width: 0;
     flex-wrap: wrap;

@@ -16,19 +16,21 @@ Deliverables:
 
 Exit criteria:
 
-- product is clearly positioned as an AI workbench, not only an IDE
+- product is clearly positioned as a local-first AI IDE, data studio, and analytics studio, not a prompt-only chatbot
 - MVP modules are named
 - risky actions have approval rules
 - development stack is selected
 
 ## Phase 1: Workspace MVP
 
-Goal: create a usable local desktop app with project browsing and LLM chat.
+Goal: create a usable local desktop studio with project browsing, editor tabs, data panels, artifacts, and grounded LLM assistance.
 
 Deliverables:
 
 - Wails desktop app shell: implemented
 - frontend layout with project tree, editor area, and chat panel: implemented
+- IDE/data/analytics studio positioning in app copy and docs: implemented
+- visible studio surface vocabulary for code, data, documents, operations, and artifacts: first implementation
 - local JSON app config for recent workspaces and LLM settings: implemented
 - OS-protected API key credential storage: implemented
 - local SQLite app database: planned
@@ -57,6 +59,7 @@ Deliverables:
 - recommended local model dropdown capped at 26B: implemented
 - LLM connection test for OpenAI-compatible `/models`: implemented
 - LLM capability hints from provider model IDs: implemented
+- Ollama runtime diagnostics for endpoint, selected model, and GPU/VRAM offload: implemented
 - streaming chat with configured OpenAI-compatible LLM URL: implemented
 - chat history per workspace: implemented with local JSON config
 - read selected text file into chat context: implemented
@@ -83,6 +86,8 @@ Exit criteria:
 Current status:
 
 - The desktop shell builds on Windows through Wails.
+- NexusDesk is now documented and presented as a local-first AI IDE, data studio, and analytics studio.
+- The active center pane exposes a first studio surface indicator for Code Studio, Data Studio, Document Studio, Operations Studio, Artifact Studio, or Workspace Studio.
 - The workspace browser can open, refresh, preview, remember, search, and expand/collapse local folders, scanning up to 10 levels deep by default.
 - The window shell stays fixed-height; long file trees, previews, chat, settings, and timelines scroll inside their own panels.
 - Text preview stays inside the approved workspace root and refuses binary/unsafe paths.
@@ -95,6 +100,7 @@ Current status:
 - API keys are masked before leaving backend settings storage and saved in OS-protected credential blobs where available.
 - The LLM settings form defaults to `qwen3:8b` and offers installed local model choices no larger than 26B.
 - The local `rcooler-ollama` endpoint on `localhost:11434` is verified with CUDA 12 GPU offload through the sibling `../Llm/` Compose stack.
+- The LLM settings panel reports Ollama runtime details, including selected model, endpoint, and VRAM residency when available.
 - Streaming chat works with the configured model and optional selected file context.
 - CSV context is sent as a structured profile plus bounded row sample instead of only raw preview text.
 - CSV datasets can be queried with bounded text search or `column=value` filters.
@@ -115,7 +121,6 @@ Current status:
 - The workbench lists generated Markdown artifacts and can reselect visible report files from that list.
 - The frontend has a smoke check for the built entrypoint, generated Wails bindings, and core shell functionality markers.
 - Monaco, richer document extraction/OCR, richer approval dialogs, DuckDB SQL, and SQLite persistence are still planned.
-- In-app Ollama runtime diagnostics for endpoint, selected model, and GPU/VRAM offload are still planned.
 
 ## Phase 2: Files, Documents, And Artifacts
 
@@ -254,10 +259,12 @@ Protect the core:
 
 - open workspace
 - inspect files
+- keep multiple files open in editor tabs
 - chat with configurable model
 - read selected context safely
 - analyze Excel/CSV
 - create reports and charts
+- expose clear studio surfaces for code, data, analytics, documents, operations, and artifacts
 - log tool calls
 - require approval for writes
 

@@ -28,7 +28,11 @@ const checks = [
     },
     {
         file: 'src/features/shell/WorkbenchPanel.tsx',
-        terms: ['editor-tabs', 'markdownViewMode', 'markdown-view-toggle', 'markdown-document-preview', 'Summarize', 'onSummarizeContext', 'onSelectTab', 'onCloseTab', 'onPinProjectContext', 'DatasetQueryPanel', 'file-write-editor'],
+        terms: ['editor-tabs', 'markdownViewMode', 'markdown-view-toggle', 'markdown-document-preview', 'studio-mode-strip', 'resolveStudioMode', 'Data Studio', 'Summarize', 'onSummarizeContext', 'onSelectTab', 'onCloseTab', 'onPinProjectContext', 'DatasetQueryPanel', 'file-write-editor'],
+    },
+    {
+        file: 'src/brand/assets.ts',
+        terms: ['Code Studio', 'AI Assistant', 'Data Studio', 'Document Studio', 'Ops Studio'],
     },
     {
         file: 'src/features/shell/WorkspaceNavigator.tsx',
@@ -55,6 +59,7 @@ const checks = [
             '.chat-table',
             '.file-write-editor',
             '.dataset-profile-summary',
+            '.studio-mode-strip',
         ],
     },
     {

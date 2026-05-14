@@ -19,11 +19,11 @@ export const brandAssets = {
 };
 
 export const railItems = [
-    {label: 'Workspace', icon: codeIcon, active: true},
-    {label: 'Search', icon: aiIcon, active: false},
-    {label: 'Data', icon: dataIcon, active: false},
-    {label: 'Documents', icon: documentsIcon, active: false},
-    {label: 'Operations', icon: opsIcon, active: false},
+    {label: 'Code Studio', icon: codeIcon, active: true},
+    {label: 'AI Assistant', icon: aiIcon, active: false},
+    {label: 'Data Studio', icon: dataIcon, active: false},
+    {label: 'Document Studio', icon: documentsIcon, active: false},
+    {label: 'Ops Studio', icon: opsIcon, active: false},
 ];
 
 export const workspaceIconByName: Record<string, string> = {
@@ -33,7 +33,7 @@ export const workspaceIconByName: Record<string, string> = {
 };
 
 export const capabilityIconByTitle: Record<string, string> = {
-    'Workspace browser': codeIcon,
-    'Configurable LLM chat': aiIcon,
-    'Artifacts and approvals': documentsIcon,
+    'Project IDE': codeIcon,
+    'Data & analytics studio': dataIcon,
+    'Artifact workflow': documentsIcon,
 };

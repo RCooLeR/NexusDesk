@@ -2,7 +2,7 @@
 
 ## One-Line Vision
 
-NexusDesk is the local AI workbench that helps developers, analysts, marketers, operators, and business teams understand their files, data, documents, code, and systems from one safe desktop workspace.
+NexusDesk is a local-first AI IDE and data/analytics studio for code, documents, datasets, marketing analytics, databases, Docker, and operations.
 
 ## Problem
 
@@ -15,11 +15,11 @@ Modern work is scattered across many formats and tools:
 - Docker and local services require terminal commands and logs
 - AI tools usually work outside the user’s real workspace
 
-Users need more than a chatbot. They need an AI assistant that can see the workspace structure, understand the right files, inspect data, generate reports, create charts, explain code, and interact with tools safely.
+Users need more than a chatbot. They need a studio-grade desktop environment that can see the workspace structure, open the right files, inspect data, generate reports, create charts, explain code, and interact with tools safely.
 
 A general chatbot struggles because it cannot reliably access local files, cannot inspect a spreadsheet without a tool, and often loses the connection between answer and source. A normal IDE struggles because it is optimized for code, not business analysis, marketing data, PDFs, images, databases, and Docker.
 
-NexusDesk solves this by combining a desktop workspace, local file intelligence, data analysis tools, configurable LLM providers, and a permissioned agent loop.
+NexusDesk solves this by combining an IDE-like desktop workspace, local file intelligence, data analysis tools, configurable LLM providers, and a permissioned agent loop.
 
 ## Target Users
 
@@ -33,13 +33,15 @@ NexusDesk solves this by combining a desktop workspace, local file intelligence,
 
 ## Product Experience
 
-NexusDesk should feel like a confident workspace analyst:
+NexusDesk should feel like a serious JetBrains-style studio for mixed technical and analytical work:
 
 - The project tree is visible.
 - Files open quickly in the right viewer.
+- Open files stay in editor tabs.
 - Code is highlighted and editable.
 - Images and PDFs preview without leaving the app.
 - Spreadsheets and datasets can be profiled, queried, charted, and exported.
+- Studio modes make the current surface explicit: Code Studio, Data Studio, Analytics Studio, Document Studio, Operations Studio, and Artifact Studio.
 - Chat is tied to the current workspace and selected files.
 - The AI can ask to use tools, but the app controls permissions.
 - Tool calls are visible in the chat timeline.
@@ -114,9 +116,9 @@ NexusDesk should feel like a confident workspace analyst:
 
    The model cannot directly read, write, delete, query, or run anything. It requests tools. NexusDesk validates the request, applies policy, shows approvals when needed, and logs the result.
 
-4. Multi-domain workbench
+4. Multi-domain studio
 
-   The app is useful for code, documents, Excel, images, marketing data, databases, Docker, and operations. It is broader than an IDE and more structured than a chatbot.
+   The app is useful for code, documents, Excel, images, marketing data, databases, Docker, and operations. It should feel closer to an IDE/data studio than to a floating assistant window.
 
 5. Artifact creation
 
@@ -133,6 +135,7 @@ NexusDesk should feel like a confident workspace analyst:
 - File reading and dataset analysis work without sending the entire workspace blindly to the model.
 - The app can analyze common Excel and CSV files and produce charts.
 - Text, code, images, PDFs, and spreadsheets open in appropriate viewers.
+- The primary UI reads as a project/data/analytics studio with durable panels, tabs, source context, artifacts, and tool status.
 - Generated files are saved as artifacts and visible in the UI.
 - Risky actions require approval and are logged.
 - Docker and database tools default to read-only or inspect-only behavior.

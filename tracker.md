@@ -9,9 +9,11 @@ This tracker reflects the repository as it exists today and keeps planned work s
 - [x] Wails application scaffold exists at `app/`.
 - [x] React + TypeScript frontend exists at `app/frontend/`.
 - [x] Go backend binding exposes startup state to the frontend.
-- [x] Initial NexusDesk workbench shell replaced the Wails starter screen.
+- [x] Initial NexusDesk studio shell replaced the Wails starter screen.
+- [x] README and docs position NexusDesk as a local-first AI IDE, data studio, and analytics studio.
 - [x] Brand SVG assets are copied into `app/frontend/src/assets/brand/`.
 - [x] App shell uses NexusDesk symbol, horizontal logo, and domain icons.
+- [x] Startup copy and rail labels use studio terminology from the first screen.
 - [x] App styles use NexusDesk color/type tokens from `app/frontend/src/brand-tokens.css`.
 - [x] Wails app icon and Windows icon are sourced from the brand package.
 - [x] Windows taskbar icon is generated as a multi-size ICO from high-resolution brand PNGs.
@@ -55,6 +57,7 @@ This tracker reflects the repository as it exists today and keeps planned work s
 - [x] Center workbench pane previews selected workspace text files.
 - [x] Center workbench pane keeps recently opened previews in closeable editor tabs.
 - [x] Markdown files in the editor can switch between source and rendered preview.
+- [x] Center workbench pane shows the active studio surface for code, data, document, operations, artifact, or workspace context.
 - [x] Workspace refresh preserves the selected file when it still exists.
 - [x] Workspace open/refresh auto-loads a preview for the selected or first file node.
 - [x] Preview button reloads the selected workspace preview from disk.
@@ -133,6 +136,14 @@ This tracker reflects the repository as it exists today and keeps planned work s
 
 ## Next Work
 
+- [x] Batch: align product docs around NexusDesk as an IDE/data/analytics studio.
+- [x] Batch: align architecture, domain, indexing, search, AI, operations, delivery, DX, brand, README, and tracker wording.
+- [x] Batch: update startup state and browser fallback copy to Studio MVP language.
+- [x] Batch: rename the primary rail modes to Code Studio, AI Assistant, Data Studio, Document Studio, and Ops Studio.
+- [x] Batch: map capability cards to Project IDE, Data & analytics studio, and Artifact workflow.
+- [x] Batch: add a studio surface resolver for code, data, documents, operations, artifacts, and workspace context.
+- [x] Batch: show the active studio surface in the workbench topbar.
+- [x] Batch: extend frontend smoke checks so the studio vocabulary and UI marker are guarded.
 - [x] Add a safe workspace folder picker.
 - [x] Build a real file tree from approved workspace roots.
 - [x] Add safe text file preview for selected workspace files.
@@ -175,6 +186,8 @@ This tracker reflects the repository as it exists today and keeps planned work s
 - [x] Add first chat answer to Markdown artifact flow.
 - [x] Add provenance metadata sidecars for Markdown artifacts.
 - [x] Add approved text file write flow with diff preview.
+- [x] Reposition docs and app copy around IDE/data/analytics studio usage.
+- [x] Add first active studio surface indicator in the workbench topbar.
 - [x] Split brand-aware shell sections into smaller rail, navigator, workbench pane, agent panel, and timeline components when they need behavior.
 - [x] Add first reusable button, icon button, and status badge components.
 - [x] Add first reusable card component when panel extraction starts.
@@ -200,7 +213,7 @@ This tracker reflects the repository as it exists today and keeps planned work s
 
 The current workstation LLM runner is the sibling Compose stack at `../Llm/`, not the placeholder under `services/`. Its `rcooler-ollama` service is exposed at `http://localhost:11434` and must keep `OLLAMA_LLM_LIBRARY=cuda_v12` so Ollama uses the CUDA 12 backend instead of falling back to CPU after attempting CUDA 13.
 
-`docs/` remains the source of truth for product direction, architecture, delivery phases, developer experience, and brand assets.
+`docs/` remains the source of truth for product direction, architecture, delivery phases, developer experience, studio surface vocabulary, and brand assets.
 
 `app/frontend/src/assets/brand/` contains copied runtime assets from `docs/brand/`. Update the docs source first when changing brand assets, then refresh the app copies deliberately.
 

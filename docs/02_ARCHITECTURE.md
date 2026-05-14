@@ -2,7 +2,7 @@
 
 ## Architectural Style
 
-NexusDesk should be a modular local-first desktop application with a strong Go backend and a rich web-based frontend.
+NexusDesk should be a modular local-first desktop studio application with a strong Go backend and a rich web-based frontend. The product shape is closer to an IDE/data studio than to a chatbot shell.
 
 The recommended first version:
 
@@ -29,7 +29,7 @@ The architecture should keep clean seams for later:
 
 ```mermaid
 flowchart LR
-  UI["Desktop UI<br/>Project tree, editor, chat, charts"] --> Bridge["Wails Bridge / App API"]
+  UI["Desktop Studio UI<br/>Project tree, editor tabs, data panels, chat, charts"] --> Bridge["Wails Bridge / App API"]
 
   Bridge --> Workspace["Workspace Manager"]
   Bridge --> Files["File Service"]
@@ -87,6 +87,7 @@ Responsibilities:
 - project and workspace navigation
 - file tree
 - tabs and editor state
+- studio mode surfaces for code, data, analytics, documents, operations, and artifacts
 - code highlighting
 - image and PDF preview
 - Excel/table preview
@@ -111,7 +112,7 @@ Responsibilities:
 - coordinate file watchers
 - map generated artifacts back to the workspace
 
-A workspace can be code-focused, data-focused, marketing-focused, operations-focused, or mixed.
+A workspace can be code-focused, data-focused, marketing-focused, operations-focused, or mixed. The UI should expose those as studio surfaces rather than hiding everything behind chat.
 
 ### 4. File And Document Services
 
@@ -218,6 +219,15 @@ Responsibilities:
 - prevent silent overwrites
 
 Artifacts are the bridge between chat and real work.
+
+### 11. Studio Surface Model
+
+Responsibilities:
+
+- present Code Studio, Data Studio, Analytics Studio, Document Studio, Operations Studio, and Artifact Studio as durable app surfaces
+- keep editor tabs, dataset panels, artifact browser, tool timeline, and assistant context visually connected
+- make AI actions feel like IDE/data-studio commands, not generic chat shortcuts
+- let later modules plug into the same shell without changing the safety model
 
 ## Deployment Shape
 

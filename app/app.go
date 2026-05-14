@@ -95,34 +95,34 @@ func (a *App) startup(ctx context.Context) {
 func (a *App) GetStartupState() StartupState {
 	return StartupState{
 		ProductName: "NexusDesk",
-		Tagline:     "Local-first AI workbench for code, data, documents, and ops.",
-		BuildStage:  "Workspace MVP scaffold",
+		Tagline:     "Local-first AI IDE, data studio, and analytics studio.",
+		BuildStage:  "Studio MVP",
 		Capabilities: []Capability{
 			{
-				Title:       "Workspace browser",
-				Description: "Open local folders, inspect files, and keep access inside approved roots.",
+				Title:       "Project IDE",
+				Description: "Open local folders, inspect files, keep tabs, and stay inside approved roots.",
 				Status:      "planned",
 			},
 			{
-				Title:       "Configurable LLM chat",
-				Description: "Connect a local or remote model and ground answers in selected context.",
+				Title:       "Data & analytics studio",
+				Description: "Profile datasets, query rows, summarize sources, and prepare report artifacts.",
 				Status:      "planned",
 			},
 			{
-				Title:       "Artifacts and approvals",
-				Description: "Create reports, charts, and file changes through visible approval flows.",
+				Title:       "Artifact workflow",
+				Description: "Save reports, summaries, and file edits with provenance and visible approvals.",
 				Status:      "planned",
 			},
 		},
 		WorkspaceItems: []WorkspaceItem{
-			{Name: "app", Kind: "folder", Meta: "Wails desktop shell"},
-			{Name: "docs", Kind: "folder", Meta: "Product and engineering source of truth"},
+			{Name: "app", Kind: "folder", Meta: "Wails desktop studio shell"},
+			{Name: "docs", Kind: "folder", Meta: "Product and studio architecture docs"},
 			{Name: "services", Kind: "folder", Meta: "Development helper services"},
 		},
 		ToolEvents: []ToolEvent{
-			{Time: "now", Title: "Scaffold ready", Detail: "React + TypeScript frontend bound to Go backend."},
-			{Time: "next", Title: "Workspace opening", Detail: "Add a safe folder picker and file tree."},
-			{Time: "then", Title: "LLM settings", Detail: "Store provider URL, model, key, and capabilities."},
+			{Time: "now", Title: "Studio shell ready", Detail: "React + TypeScript frontend bound to Go backend."},
+			{Time: "next", Title: "Workspace indexing", Detail: "Open projects, preview files, and build context packs."},
+			{Time: "then", Title: "Model and artifact flows", Detail: "Ground local models in selected context and save outputs."},
 		},
 	}
 }

@@ -4,7 +4,7 @@
 
 ### Workspace
 
-A workspace is the top-level container for files, data sources, chats, tools, settings, and artifacts.
+A workspace is the top-level studio container for files, data sources, chats, tools, settings, and artifacts.
 
 Examples:
 
@@ -29,7 +29,7 @@ Fields:
 
 ### Project
 
-A project is an optional logical unit inside a workspace.
+A project is an optional logical unit inside a workspace. In the UI it should behave like an IDE/data-studio scope: a folder, dataset collection, report package, or operational environment the user can work inside.
 
 Examples:
 
@@ -168,6 +168,30 @@ Fields:
 - profile status
 - DuckDB table name
 - source hash
+
+### Studio Surface
+
+A studio surface is a durable product mode for a specific kind of work. It is not a separate app; it is a focused view over the same workspace, tool, model, and artifact system.
+
+Examples:
+
+- Code Studio
+- Data Studio
+- Analytics Studio
+- Document Studio
+- Operations Studio
+- Artifact Studio
+
+Fields:
+
+- surface ID
+- workspace ID
+- active project or scope
+- active file, dataset, connector, or artifact
+- open tabs
+- selected context pack
+- visible tools
+- last activity
 
 ### Data Profile
 
@@ -399,6 +423,7 @@ erDiagram
   WORKSPACE ||--o{ CONNECTOR : configures
   WORKSPACE ||--o{ DATASET : contains
   WORKSPACE ||--o{ ARTIFACT : creates
+  WORKSPACE ||--o{ STUDIO_SURFACE : presents
 
   FILE_NODE ||--o| DOCUMENT : extracts_to
   DOCUMENT ||--o{ SEGMENT : has

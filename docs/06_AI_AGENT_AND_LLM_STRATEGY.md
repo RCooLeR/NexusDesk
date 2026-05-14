@@ -2,7 +2,7 @@
 
 ## AI Role
 
-AI in NexusDesk should help users understand and act on workspace information. It should not bypass retrieval, permissions, or source control.
+AI in NexusDesk should behave like an integrated studio assistant inside an IDE/data/analytics environment. It should help users understand and act on workspace information, but it should not bypass retrieval, permissions, or source control.
 
 Good uses:
 
@@ -113,6 +113,8 @@ The current chat implementation requires an explicit configured model. It includ
 
 NexusDesk can expose several modes while using the same underlying agent loop.
 
+These modes should map to visible studio surfaces. The user should feel they are working in Code Studio, Data Studio, Analytics Studio, Document Studio, or Operations Studio, with AI available as one command layer inside that surface.
+
 ### General Workspace Assistant
 
 Good for:
@@ -142,6 +144,16 @@ Good for:
 - chart generation
 - report writing
 - metric interpretation
+
+### Analytics Studio
+
+Good for:
+
+- multi-source analysis
+- marketing reports
+- funnel and campaign interpretation
+- chart and dashboard creation
+- artifact-backed conclusions
 
 ### Marketing Analyst
 

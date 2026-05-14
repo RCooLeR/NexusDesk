@@ -4,11 +4,14 @@
 
 NexusDesk should return useful workspace context quickly and let AI synthesis happen separately.
 
+Search should serve the whole studio, not only chat. The same retrieval layer should power project navigation, IDE-style symbol/file lookup, dataset discovery, artifact discovery, and analytics questions.
+
 Search is used by:
 
 - the user in the UI
 - the chat agent
 - file picker suggestions
+- studio navigation and quick-open flows
 - context builder
 - report generation
 - artifact discovery
@@ -177,6 +180,7 @@ It should include:
 
 - user question
 - current workspace and project
+- current studio surface
 - selected files or datasets
 - top ranked sources
 - source excerpts

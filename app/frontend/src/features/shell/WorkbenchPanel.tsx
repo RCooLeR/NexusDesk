@@ -99,6 +99,7 @@ export function WorkbenchPanel({
     const canEditContext = Boolean(workspace && filePreview?.kind === 'file' && filePreview.content && !filePreview.table);
     const canProfileDataset = Boolean(workspace && filePreview?.fileType === 'data');
     const canRenderMarkdown = Boolean(filePreview?.kind === 'file' && filePreview.content && isMarkdownFile(filePreview.name));
+    const studioMode = resolveStudioMode(filePreview, activeDatasetProfile, activeFile);
 
     return (
         <main className="workbench">
@@ -106,6 +107,10 @@ export function WorkbenchPanel({
                 <div>
                     <p className="eyebrow">Active Context</p>
                     <h2>{activeFile}</h2>
+                    <div className="studio-mode-strip" aria-label="Active studio surface">
+                        <span>{studioMode.label}</span>
+                        <small>{studioMode.detail}</small>
+                    </div>
                 </div>
                 <div className="topbar-actions">
                     <Button disabled={!workspace || isLoadingPreview} onClick={onRefreshPreview}>
@@ -321,6 +326,58 @@ export function WorkbenchPanel({
 
 function isMarkdownFile(fileName: string) {
     return /\.mdx?$/i.test(fileName);
+}
+
+type StudioMode = {
+    label: string;
+    detail: string;
+};
+
+function resolveStudioMode(
+    preview: FilePreview | null,
+    datasetProfile: DatasetProfile | null,
+    activeFile: string
+): StudioMode {
+    const relPath = (preview?.relPath || activeFile || '').replaceAll('\\', '/').toLowerCase();
+    const fileName = (preview?.name || activeFile || '').toLowerCase();
+
+    if (relPath.startsWith('.nexusdesk/artifacts/') || relPath.includes('/.nexusdesk/artifacts/')) {
+        return {label: 'Artifact Studio', detail: 'Generated reports, summaries, and provenance'};
+    }
+
+    if (datasetProfile || preview?.table || preview?.fileType === 'data') {
+        return {label: 'Data Studio', detail: 'Tables, profiles, bounded queries, and analysis context'};
+    }
+
+    if (preview?.kind === 'pdf' || isDocumentLikeFile(fileName)) {
+        return {label: 'Document Studio', detail: 'Documents, Markdown, extracted text, and summaries'};
+    }
+
+    if (isOperationsFile(relPath, fileName)) {
+        return {label: 'Operations Studio', detail: 'Docker, services, scripts, and environment files'};
+    }
+
+    if (preview?.fileType === 'code' || isCodeLikeFile(fileName)) {
+        return {label: 'Code Studio', detail: 'Source files, editor tabs, explanations, and safe edits'};
+    }
+
+    return {label: 'Workspace Studio', detail: 'Project navigation, search, context packs, and artifacts'};
+}
+
+function isDocumentLikeFile(fileName: string) {
+    return /\.(mdx?|docx?|pdf|rtf|txt)$/i.test(fileName);
+}
+
+function isCodeLikeFile(fileName: string) {
+    return /\.(go|ts|tsx|js|jsx|json|css|scss|html|py|rs|cs|java|kt|sql|xml)$/i.test(fileName);
+}
+
+function isOperationsFile(relPath: string, fileName: string) {
+    if (fileName === 'dockerfile' || fileName.includes('docker-compose') || relPath.startsWith('services/')) {
+        return true;
+    }
+
+    return /\.(env|ps1|sh|bat|cmd|toml|ya?ml)$/i.test(fileName);
 }
 
 function DatasetQueryPanel({

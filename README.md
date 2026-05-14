@@ -1,14 +1,14 @@
 ﻿# NexusDesk
 
-NexusDesk is a local-first AI workbench for code, documents, data, marketing analytics, databases, Docker, and operations.
+NexusDesk is a local-first AI IDE, data studio, and analytics studio for code, documents, datasets, marketing analytics, databases, Docker, and operations.
 
-The goal is to give users one desktop workspace where they can open a project or business workspace, inspect files, chat with a configurable LLM, analyze spreadsheets and documents, connect to data sources, generate reports and charts, and safely create or modify artifacts.
+The goal is to give users one desktop studio where they can open a project or business workspace, inspect and edit files, analyze spreadsheets and documents, connect to data sources, generate reports and charts, and safely create or modify artifacts with AI assistance.
 
-NexusDesk is not only an IDE and not only a chatbot. It is a tool-mediated workspace platform:
+NexusDesk is not only a chatbot. It should feel like a serious IDE-style studio with AI built into the project, data, analytics, document, and operations surfaces:
 
 - browse and understand project folders
 - open text, code, images, PDFs, spreadsheets, and common document formats
-- connect to local or remote LLM endpoints
+- connect to local or remote LLM endpoints as an integrated assistant layer
 - analyze Excel, CSV, logs, traffic exports, marketing data, and database results
 - create charts, reports, dashboards, code, SQL, Dockerfiles, and Compose files
 - inspect Docker containers, images, logs, and compose projects
@@ -54,10 +54,10 @@ The fuller backend module, storage, indexing, connector, and tool layout is trac
 
 ## Product Shape
 
-NexusDesk should feel like a unified command center:
+NexusDesk should feel like a unified studio:
 
 ```text
-Workspace tree + file previews + data tables + charts + Docker views + AI chat
+Project tree + editor tabs + data tables + analytics panels + Docker views + AI assistant
 ```
 
 A typical workflow:
@@ -86,7 +86,7 @@ The first useful version should focus on:
 
 - opening local workspaces
 - configuring an LLM URL
-- file tree and editor
+- file tree, editor tabs, and studio modes
 - chat per workspace
 - safe read-only tools
 - Excel/CSV analysis
@@ -95,4 +95,4 @@ The first useful version should focus on:
 - report artifacts
 - simple Docker inspection
 
-Avoid building everything at once. A reliable workbench with a few strong tools is better than a broad agent that cannot be trusted.
+Avoid building everything at once. A reliable studio with a few strong tools is better than a broad agent that cannot be trusted.

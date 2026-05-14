@@ -26,6 +26,7 @@ Each environment should have separate:
 Configuration should be explicit and exportable:
 
 - workspaces
+- active studio surface
 - LLM profiles
 - model capability flags
 - tool enablement
@@ -35,9 +36,12 @@ Configuration should be explicit and exportable:
 - artifact paths
 - connector definitions
 - UI preferences
+- editor, data, analytics, document, operations, and artifact surface preferences
 - feature flags
 
 Runtime changes should be stored locally and optionally exportable as workspace config.
+
+Studio surfaces can change which tools and panels are visible, but they must not change the underlying safety boundary. Code Studio, Data Studio, Analytics Studio, Document Studio, Operations Studio, and Artifact Studio all share the same workspace roots, path checks, approval rules, secret handling, and audit model.
 
 ## Secrets
 
@@ -73,6 +77,8 @@ Default rules:
 - cap file read size
 - cap artifact output size
 
+IDE-style convenience must remain scoped. Quick-open, editor tabs, project context packs, source previews, and artifact navigation should all resolve through the same rooted workspace APIs instead of reading arbitrary filesystem paths from the frontend.
+
 ## Database Security
 
 Default database mode should be read-only.
@@ -86,6 +92,8 @@ Rules:
 - cap result rows
 - log query text and timing
 - redact credentials in error messages
+
+Data Studio and Analytics Studio should make read-only status visible near schema, query, chart, and report surfaces. Mutating SQL is a policy change, not a UI shortcut.
 
 ## Docker Security
 
@@ -112,6 +120,8 @@ High-risk actions:
 - execute command in container
 
 High-risk Docker actions require approval. The UI should show the exact planned action and affected resources.
+
+Operations Studio can surface Docker state, logs, Compose files, and generated configs, but it should keep start, stop, build, run, exec, volume, and network actions behind the same high-risk approval flow.
 
 ## Network Security
 
@@ -149,8 +159,11 @@ Privacy controls:
 - restricted files
 - secret redaction
 - per-workspace send-to-model policy
+- per-surface context visibility
 - chat/tool log cleanup
 - artifact cleanup
+
+Switching from one studio surface to another should not silently expand what gets sent to a model. The context pack preview remains the user's confirmation point for project, directory, document, dataset, and artifact context.
 
 ## Observability
 
@@ -195,6 +208,7 @@ NexusDesk should degrade gracefully:
 - if embeddings are unavailable, lexical search still works
 - if PDF extraction fails, PDF preview still works
 - if spreadsheet profiling fails, raw table preview can still work
+- if a studio surface fails to load, the rest of the shell stays usable
 - if Docker is unavailable, Docker panel shows connection status
 - if database connection fails, saved config remains but queries are disabled
 - if chart export fails, text summary still remains
