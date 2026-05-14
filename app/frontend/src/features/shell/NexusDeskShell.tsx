@@ -16,6 +16,7 @@ import {
     CreateChatMarkdownArtifact,
     CreateDatasetChartArtifact,
     CreateDatasetQueryArtifact,
+    CreateDatasetSQLArtifact,
     CreateDatasetSummaryArtifact,
     CreateMarkdownReport,
     CreateScanReportArtifact,
@@ -24,6 +25,7 @@ import {
     ExecuteAgentTool,
     GetArtifactMetadata,
     GetArtifactLineage,
+    InspectMetadataStore,
     GetChatHistory,
     ListAgentTools,
     ListAgentToolRuns,
@@ -74,6 +76,7 @@ import type {
     LLMProbeResult,
     LLMSettings,
     MarkdownReport,
+    MetadataBrowser,
     RecentWorkspace,
     SavedDatasetQuery,
     SQLiteMetadataStatus,
@@ -166,6 +169,7 @@ export function NexusDeskShell({
     const [savedDatasetQueries, setSavedDatasetQueries] = useState<SavedDatasetQuery[]>([]);
     const [isQueryingDataset, setIsQueryingDataset] = useState(false);
     const [isQueryingDatasetSQL, setIsQueryingDatasetSQL] = useState(false);
+    const [isExportingDatasetSQL, setIsExportingDatasetSQL] = useState(false);
     const [isSavingDatasetQuery, setIsSavingDatasetQuery] = useState(false);
     const [datasetChartType, setDatasetChartType] = useState('bar');
     const [datasetChartCategory, setDatasetChartCategory] = useState('');
@@ -195,6 +199,7 @@ export function NexusDeskShell({
     const [artifactComparison, setArtifactComparison] = useState<ArtifactComparison | null>(null);
     const [artifactLineage, setArtifactLineage] = useState<ArtifactLineage | null>(null);
     const [sqliteStatus, setSQLiteStatus] = useState<SQLiteMetadataStatus | null>(null);
+    const [metadataBrowser, setMetadataBrowser] = useState<MetadataBrowser | null>(null);
     const [workspaceFreshness, setWorkspaceFreshness] = useState<WorkspaceFreshnessStatus | null>(null);
     const [isPreparingMetadataStore, setIsPreparingMetadataStore] = useState(false);
     const [editingFilePaths, setEditingFilePaths] = useState<string[]>([]);
@@ -293,6 +298,20 @@ export function NexusDeskShell({
             cancelled = true;
         };
     }, [contextPackPaths, workspace]);
+
+    useEffect(() => {
+        if (!filePreview?.relPath || !workspaceFreshness) {
+            return;
+        }
+        const changed = new Set(workspaceFreshness.changed.map((change) => change.relPath));
+        if (!changed.has(filePreview.relPath) || !filePreview.table) {
+            return;
+        }
+        setDatasetQueryResult(null);
+        setDatasetSQLQueryResult(null);
+        setDatasetChartPreview(null);
+        setActiveDatasetProfile(null);
+    }, [filePreview?.relPath, filePreview?.table, workspaceFreshness]);
 
     useEffect(() => {
         const columns = currentDatasetColumns(filePreview, activeDatasetProfile);
@@ -1993,6 +2012,33 @@ export function NexusDeskShell({
         }
     }
 
+    async function exportDatasetSQL() {
+        if (!workspace || !filePreview?.table || !datasetSQLQuery.trim()) {
+            setWorkspaceStatus('Run or enter a read-only SQL query before exporting a SQL artifact.');
+            return;
+        }
+
+        setIsExportingDatasetSQL(true);
+        try {
+            const report = await CreateDatasetSQLArtifact({relPath: filePreview.relPath, sql: datasetSQLQuery});
+            const result = await RefreshWorkspace();
+            if (result.selected) {
+                onWorkspaceChange(result.snapshot);
+                await refreshArtifacts();
+                await refreshApprovals();
+                setExpandedDirectories((current) => reconcileExpandedDirectories(current, result.snapshot, findWorkspaceNode(result.snapshot, report.relPath)));
+                await selectWorkspaceFile(result.snapshot, report.relPath);
+            }
+            setWorkspaceStatus(report.message);
+            pushToolEvent('SQL artifact exported', report.relPath);
+        } catch (error) {
+            const message = error instanceof Error ? error.message : '';
+            setWorkspaceStatus(message || 'Could not export SQL result artifact.');
+        } finally {
+            setIsExportingDatasetSQL(false);
+        }
+    }
+
     async function saveCurrentDatasetQuery() {
         if (!workspace || !filePreview?.table) {
             setWorkspaceStatus('Select a CSV dataset before saving a query.');
@@ -2338,6 +2384,22 @@ export function NexusDeskShell({
         }
     }
 
+    async function inspectMetadataStore() {
+        if (!workspace) {
+            setWorkspaceStatus('Open a workspace before inspecting metadata storage.');
+            return;
+        }
+        try {
+            const browser = await InspectMetadataStore();
+            setMetadataBrowser(browser);
+            setWorkspaceStatus(browser.message);
+            pushToolEvent('Metadata inspected', `${browser.tables.length} tables, ${browser.datasetViews.length} dataset views`);
+        } catch (error) {
+            const message = error instanceof Error ? error.message : '';
+            setWorkspaceStatus(message || 'Could not inspect metadata store.');
+        }
+    }
+
     async function dryRunAgentTool(item: AgentToolPlanItem) {
         await runAgentTool(item, false);
     }
@@ -2606,6 +2668,7 @@ export function NexusDeskShell({
                 datasetQueryResult={datasetQueryResult}
                 datasetSQLQuery={datasetSQLQuery}
                 datasetSQLQueryResult={datasetSQLQueryResult}
+                metadataBrowser={metadataBrowser}
                 savedDatasetQueries={savedDatasetQueries}
                 artifactComparison={artifactComparison}
                 artifactLineage={artifactLineage}
@@ -2625,6 +2688,7 @@ export function NexusDeskShell({
                 isProfilingDataset={isProfilingDataset}
                 isQueryingDataset={isQueryingDataset}
                 isQueryingDatasetSQL={isQueryingDatasetSQL}
+                isExportingDatasetSQL={isExportingDatasetSQL}
                 isSavingDatasetQuery={isSavingDatasetQuery}
                 isPreparingMetadataStore={isPreparingMetadataStore}
                 isPreviewingDatasetChart={isPreviewingDatasetChart}
@@ -2669,6 +2733,7 @@ export function NexusDeskShell({
                 onProfileDataset={() => void profileSelectedDataset()}
                 onQueryDataset={() => void querySelectedDataset()}
                 onQueryDatasetSQL={() => void querySelectedDatasetSQL()}
+                onExportDatasetSQL={() => void exportDatasetSQL()}
                 onPreviewDatasetChart={() => void previewDatasetChart()}
                 onCreateDatasetChart={() => void createDatasetChart()}
                 onCreateDatasetSummary={() => void createDatasetSummary()}
@@ -2679,6 +2744,7 @@ export function NexusDeskShell({
                 onDeleteArtifact={() => void deleteActiveArtifact()}
                 onOpenArtifactSource={() => void openArtifactSource()}
                 onRefreshLineage={() => void loadArtifactLineage()}
+                onInspectMetadata={() => void inspectMetadataStore()}
                 onPrepareMetadataStore={() => void prepareSQLiteMetadataStore()}
                 onSelectTab={selectOpenTab}
                 onSelectArtifact={(artifact) => void selectArtifact(artifact)}
@@ -2696,6 +2762,7 @@ export function NexusDeskShell({
                 chatStatus={chatStatus}
                 contextPackPreview={contextPackPreview}
                 contextPackPaths={contextPackPaths}
+                staleSourcePaths={staleSourcePaths(chatMessages, contextPackPreview, workspaceFreshness)}
                 agentTools={agentTools}
                 agentToolPlan={agentToolPlan}
                 agentToolRuns={agentToolRuns}
@@ -2819,6 +2886,30 @@ function fileTypeForRelPath(relPath: string) {
 
 function latestAssistantMessage(messages: ChatMessage[]) {
     return [...messages].reverse().find((message) => message.role === 'assistant' && message.content.trim()) ?? null;
+}
+
+function staleSourcePaths(messages: ChatMessage[], contextPreview: ContextPreview | null, freshness: WorkspaceFreshnessStatus | null) {
+    if (!freshness || freshness.changed.length === 0) {
+        return [];
+    }
+    const changed = new Set(freshness.changed.map((change) => change.relPath));
+    const paths = new Set<string>();
+    for (const message of messages) {
+        for (const sourcePath of message.sourcePaths ?? []) {
+            if (changed.has(sourcePath)) {
+                paths.add(sourcePath);
+            }
+        }
+        if (message.contextRelPath && changed.has(message.contextRelPath)) {
+            paths.add(message.contextRelPath);
+        }
+    }
+    for (const file of contextPreview?.files ?? []) {
+        if (changed.has(file.relPath)) {
+            paths.add(file.relPath);
+        }
+    }
+    return [...paths];
 }
 
 function latestAssistantArtifactTitle(messages: ChatMessage[]) {

@@ -8,6 +8,7 @@ type AgentChatCardProps = {
     chatStatus: string;
     contextPackPreview: ContextPreview | null;
     contextPackPaths: string[];
+    staleSourcePaths: string[];
     canSaveLatestAssistantArtifact: boolean;
     isSavingChatArtifact: boolean;
     isSendingPrompt: boolean;
@@ -25,6 +26,7 @@ export function AgentChatCard({
     chatStatus,
     contextPackPreview,
     contextPackPaths,
+    staleSourcePaths,
     canSaveLatestAssistantArtifact,
     isSavingChatArtifact,
     isSendingPrompt,
@@ -68,6 +70,9 @@ export function AgentChatCard({
                             <strong>{message.role === 'user' ? 'You' : 'NexusDesk'}</strong>
                             <ChatMessageContent content={message.content} />
                             {message.contextRelPath && <small>{message.contextRelPath}</small>}
+                            {messageHasStaleSources(message, staleSourcePaths) && (
+                                <small className="stale-source-warning">Context changed since this answer was created.</small>
+                            )}
                         </div>
                     ))
                 )}
@@ -94,7 +99,9 @@ export function AgentChatCard({
                             {contextPackPreview.files.length > 0 && (
                                 <ul>
                                     {contextPackPreview.files.slice(0, 8).map((file) => (
-                                        <li key={file.relPath}>{file.relPath}</li>
+                                        <li className={staleSourcePaths.includes(file.relPath) ? 'stale' : ''} key={file.relPath}>
+                                            {file.relPath}{staleSourcePaths.includes(file.relPath) ? ' / changed' : ''}
+                                        </li>
                                     ))}
                                     {contextPackPreview.files.length > 8 && (
                                         <li>{contextPackPreview.files.length - 8} more files</li>
@@ -128,4 +135,12 @@ export function AgentChatCard({
 
 function contextLabel(relPath: string) {
     return relPath === '.' ? 'Workspace root' : relPath;
+}
+
+function messageHasStaleSources(message: ChatMessage, staleSourcePaths: string[]) {
+    if (staleSourcePaths.length === 0) {
+        return false;
+    }
+    return (message.sourcePaths ?? []).some((sourcePath) => staleSourcePaths.includes(sourcePath)) ||
+        Boolean(message.contextRelPath && staleSourcePaths.includes(message.contextRelPath));
 }

@@ -1,7 +1,7 @@
 import {useEffect, useRef, useState} from 'react';
 import {brandAssets, capabilityIconByTitle} from '../../brand/assets';
 import {Button, EmptyState, InlineAlert, LoadingState, StatusBadge} from '../../components/ui';
-import type {ApprovalRecord, ArtifactComparison, ArtifactLineage, ArtifactMetadata, Capability, ColumnProfile, DatasetChartResult, DatasetProfile, DatasetQueryResult, DatasetSQLQueryResult, FilePreview, FileWriteProposal, SavedDatasetQuery, SQLiteMetadataStatus, TablePreview, WorkspaceArtifact, WorkspaceFreshnessStatus, WorkspaceSnapshot} from '../../types';
+import type {ApprovalRecord, ArtifactComparison, ArtifactLineage, ArtifactMetadata, Capability, ColumnProfile, DatasetChartResult, DatasetProfile, DatasetQueryResult, DatasetSQLQueryResult, FilePreview, FileWriteProposal, MetadataBrowser, SavedDatasetQuery, SQLiteMetadataStatus, TablePreview, WorkspaceArtifact, WorkspaceFreshnessStatus, WorkspaceSnapshot} from '../../types';
 import {ApprovalLogPanel} from './ApprovalLogPanel';
 import {ArtifactMetadataPanel} from './ArtifactMetadataPanel';
 import {ChatMessageContent} from './ChatMessageContent';
@@ -28,6 +28,7 @@ type WorkbenchPanelProps = {
     datasetQueryResult: DatasetQueryResult | null;
     datasetSQLQuery: string;
     datasetSQLQueryResult: DatasetSQLQueryResult | null;
+    metadataBrowser: MetadataBrowser | null;
     savedDatasetQueries: SavedDatasetQuery[];
     artifactComparison: ArtifactComparison | null;
     artifactLineage: ArtifactLineage | null;
@@ -50,6 +51,7 @@ type WorkbenchPanelProps = {
     isPreviewingDatasetChart: boolean;
     isQueryingDataset: boolean;
     isQueryingDatasetSQL: boolean;
+    isExportingDatasetSQL: boolean;
     isSavingDatasetQuery: boolean;
     isPreparingMetadataStore: boolean;
     isCreatingDatasetSummary: boolean;
@@ -78,6 +80,7 @@ type WorkbenchPanelProps = {
     onPreviewDatasetChart: () => void;
     onQueryDataset: () => void;
     onQueryDatasetSQL: () => void;
+    onExportDatasetSQL: () => void;
     onCreateDatasetChart: () => void;
     onCreateDatasetSummary: () => void;
     onExportDatasetQuery: () => void;
@@ -87,6 +90,7 @@ type WorkbenchPanelProps = {
     onCloseTab: (relPath: string) => void;
     onDeleteArtifact: () => void;
     onOpenArtifactSource: () => void;
+    onInspectMetadata: () => void;
     onRefreshLineage: () => void;
     onSelectTab: (relPath: string) => void;
     onSelectArtifact: (artifact: WorkspaceArtifact) => void;
@@ -115,6 +119,7 @@ export function WorkbenchPanel({
     datasetQueryResult,
     datasetSQLQuery,
     datasetSQLQueryResult,
+    metadataBrowser,
     savedDatasetQueries,
     artifactComparison,
     artifactLineage,
@@ -137,6 +142,7 @@ export function WorkbenchPanel({
     isPreviewingDatasetChart,
     isQueryingDataset,
     isQueryingDatasetSQL,
+    isExportingDatasetSQL,
     isSavingDatasetQuery,
     isPreparingMetadataStore,
     isCreatingDatasetSummary,
@@ -165,6 +171,7 @@ export function WorkbenchPanel({
     onPreviewDatasetChart,
     onQueryDataset,
     onQueryDatasetSQL,
+    onExportDatasetSQL,
     onCreateDatasetChart,
     onCreateDatasetSummary,
     onExportDatasetQuery,
@@ -174,6 +181,7 @@ export function WorkbenchPanel({
     onCloseTab,
     onDeleteArtifact,
     onOpenArtifactSource,
+    onInspectMetadata,
     onRefreshLineage,
     onSelectTab,
     onSelectArtifact,
@@ -455,8 +463,10 @@ export function WorkbenchPanel({
                                     savedQueries={savedDatasetQueries}
                                     table={filePreview?.table ?? null}
                                     isQueryingSQL={isQueryingDatasetSQL}
+                                    isExportingSQL={isExportingDatasetSQL}
                                     onSQLChange={onDatasetSQLQueryChange}
                                     onSQLQuery={onQueryDatasetSQL}
+                                    onSQLExport={onExportDatasetSQL}
                                 />
                             )}
                             <OperationsInspector preview={filePreview} workspace={workspace} />
@@ -475,8 +485,10 @@ export function WorkbenchPanel({
                             )}
                             {artifactComparison && <ArtifactComparisonPanel comparison={artifactComparison} />}
                             {sqliteStatus && <MetadataStorePanel status={sqliteStatus} />}
+                            {metadataBrowser && <MetadataBrowserPanel browser={metadataBrowser} />}
                             {workspaceFreshness && <WorkspaceFreshnessPanel status={workspaceFreshness} />}
                             <ArtifactLineagePanel lineage={artifactLineage} onRefresh={onRefreshLineage} />
+                            <Button onClick={onInspectMetadata} variant="subtle">Inspect metadata</Button>
                             <ApprovalLogPanel records={approvalRecords} />
                             {artifacts.length === 0 ? (
                                 <EmptyState
@@ -698,6 +710,36 @@ function MetadataStorePanel({status}: {status: SQLiteMetadataStatus}) {
     );
 }
 
+function MetadataBrowserPanel({browser}: {browser: MetadataBrowser}) {
+    return (
+        <div className="metadata-store-panel metadata-browser-panel">
+            <strong>Metadata Browser</strong>
+            <small>{browser.message}</small>
+            {browser.tables.map((table) => (
+                <details key={table.name}>
+                    <summary>{table.name} / {table.rowCount} rows</summary>
+                    <small>{table.columns.map((column) => `${column.name}:${column.type}`).join(', ')}</small>
+                    {table.sampleRows.length > 0 && (
+                        <div className="metadata-sample">
+                            {table.sampleRows.map((row, rowIndex) => (
+                                <p key={`${table.name}-${rowIndex}`}>{row.slice(0, 4).join(' | ')}</p>
+                            ))}
+                        </div>
+                    )}
+                </details>
+            ))}
+            {browser.datasetViews.length > 0 && (
+                <div className="metadata-dataset-views">
+                    <strong>Dataset Views</strong>
+                    {browser.datasetViews.map((view) => (
+                        <p key={view.relPath}>{view.name}: {view.rows} rows, {view.columns.length} columns <small>{view.engine}</small></p>
+                    ))}
+                </div>
+            )}
+        </div>
+    );
+}
+
 function WorkspaceFreshnessPanel({status}: {status: WorkspaceFreshnessStatus}) {
     if (status.changed.length === 0 && status.staleArtifacts.length === 0) {
         return null;
@@ -717,6 +759,15 @@ function WorkspaceFreshnessPanel({status}: {status: WorkspaceFreshnessStatus}) {
 }
 
 function ArtifactLineagePanel({lineage, onRefresh}: {lineage: ArtifactLineage | null; onRefresh: () => void}) {
+    const [filter, setFilter] = useState('all');
+    const visibleEdges = lineage?.edges.filter((edge) => {
+        if (filter === 'all') {
+            return true;
+        }
+        const from = lineage.nodes.find((node) => node.id === edge.from);
+        const to = lineage.nodes.find((node) => node.id === edge.to);
+        return from?.kind === filter || to?.kind === filter;
+    }) ?? [];
     return (
         <div className="metadata-store-panel">
             <div className="panel-toolbar">
@@ -725,8 +776,17 @@ function ArtifactLineagePanel({lineage, onRefresh}: {lineage: ArtifactLineage | 
             </div>
             <small>{lineage?.message ?? 'Build graph from chats, tools, source files, and artifacts.'}</small>
             {lineage && (
+                <div className="lineage-filter-row" aria-label="Lineage filter">
+                    {['all', 'source', 'chat', 'tool', 'artifact'].map((kind) => (
+                        <button className={filter === kind ? 'selected' : ''} key={kind} onClick={() => setFilter(kind)}>
+                            {kind}
+                        </button>
+                    ))}
+                </div>
+            )}
+            {lineage && (
                 <div className="lineage-list">
-                    {lineage.edges.slice(0, 8).map((edge, index) => {
+                    {visibleEdges.slice(0, 8).map((edge, index) => {
                         const from = lineage.nodes.find((node) => node.id === edge.from);
                         const to = lineage.nodes.find((node) => node.id === edge.to);
                         return (

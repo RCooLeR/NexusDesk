@@ -11,6 +11,7 @@ type AgentPanelProps = {
     chatStatus: string;
     contextPackPreview: ContextPreview | null;
     contextPackPaths: string[];
+    staleSourcePaths: string[];
     agentTools: AgentToolDescriptor[];
     agentToolPlan: AgentToolPlanItem[];
     agentToolRuns: AgentToolRunRecord[];
@@ -47,6 +48,7 @@ export function AgentPanel({
     chatStatus,
     contextPackPreview,
     contextPackPaths,
+    staleSourcePaths,
     agentTools,
     agentToolPlan,
     agentToolRuns,
@@ -91,6 +93,7 @@ export function AgentPanel({
                 chatStatus={chatStatus}
                 contextPackPreview={contextPackPreview}
                 contextPackPaths={contextPackPaths}
+                staleSourcePaths={staleSourcePaths}
                 canSaveLatestAssistantArtifact={canSaveLatestAssistantArtifact}
                 isSavingChatArtifact={isSavingChatArtifact}
                 isSendingPrompt={isSendingPrompt}

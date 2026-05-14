@@ -25,7 +25,7 @@ The current app still uses small JSON files in the user's config directory as th
 - `llm-settings.json`
 - `chat-history.json`
 
-LLM API keys are not written into `llm-settings.json`. They are saved in a sidecar credential blob protected by the OS where available, while the JSON settings file keeps only a storage marker. `EnsureSQLiteMetadataStore` now initializes `.nexusdesk/metadata/nexusdesk.sqlite` with `modernc.org/sqlite` and applies the workspace/chat/approval/artifact/tool-run schema. These JSON stores live behind `app/internal/storage/` so the next repository migration can mirror and then replace them without changing frontend contracts.
+LLM API keys are not written into `llm-settings.json`. They are saved in a sidecar credential blob protected by the OS where available, while the JSON settings file keeps only a storage marker. `EnsureSQLiteMetadataStore` now initializes `.nexusdesk/metadata/nexusdesk.sqlite` with `modernc.org/sqlite`, applies the workspace/chat/approval/artifact/tool-run schema, and mirrors current JSON chat, approval, artifact, and tool-run records into SQLite. These JSON stores live behind `app/internal/storage/` so the next repository migration can replace read paths without changing frontend contracts.
 
 ## Chat Streaming
 
@@ -115,9 +115,9 @@ The shell is now mostly orchestration. Feature panels own stable presentation, w
 
 `app/internal/agenttools/` owns tool descriptors and tool run records. Dry-runs and explicit executions persist under `.nexusdesk/tool-runs/log.json` with inputs, output summaries, risk, approval ID, duration, and errors. The agent panel can expand recent tool runs to inspect captured inputs, output/error text, approval reference, duration, and replay/diff affordances.
 
-`app/internal/appmeta/` owns the SQLite metadata schema, manifest, and first real database initialization under `.nexusdesk/metadata/`. It mirrors the current JSON-backed workspace, chat, approval, artifact, and tool-run domains so repository migration can replace JSON stores deliberately.
+`app/internal/appmeta/` owns the SQLite metadata schema, manifest, first real database initialization, metadata browser, and JSON-to-SQLite mirror under `.nexusdesk/metadata/`. It mirrors the current JSON-backed workspace, chat, approval, artifact, and tool-run domains so repository migration can replace JSON stores deliberately. `InspectMetadataStore` returns table columns, row counts, sample rows, and dataset SQL view summaries for the workbench.
 
-`app/internal/analytics/` owns the first read-only SQL-style CSV query surface. It accepts a constrained `SELECT` subset, blocks mutation keywords, and executes through bounded CSV query primitives by default. A real DuckDB `database/sql` execution path is implemented behind the `duckdb` build tag for CGO-enabled machines; the current Windows verification loop keeps CGO disabled and therefore uses the safe fallback path.
+`app/internal/analytics/` owns the first read-only SQL-style CSV query surface. It accepts a constrained `SELECT` subset, blocks mutation keywords, and executes through bounded CSV query primitives by default. A real DuckDB `database/sql` execution path is implemented behind the `duckdb` build tag for CGO-enabled machines; the current Windows verification loop keeps CGO disabled and therefore uses the safe fallback path. SQL results can be exported as Markdown artifacts that include SQL text, engine, row counts, preview rows, and source dataset citations.
 
 `GetArtifactLineage` in `app/app.go` assembles a first lineage graph from artifact metadata, chat source paths, and persisted tool runs. `WorkbenchPanel.tsx` shows a compact lineage inspector and keeps richer graph filtering in the next batch.
 
@@ -143,17 +143,27 @@ The Agent Execution And Analytics Foundations batch turned the tool planning sur
 - Workspace freshness polling marks changed files and stale generated artifacts.
 - Playwright is installed as a dev dependency, visual smoke is enforced, and visual baselines are captured.
 
+## Completed Batch: Real Studio Workflows
+
+- SQLite metadata mirrors JSON chat, approval, artifact, and tool-run records into the active database.
+- Metadata Browser inspects SQLite metadata tables and dataset SQL views.
+- Artifact lineage filtering can focus source, chat, tool, or artifact relationships.
+- Chat messages and context-pack previews warn when cited files change.
+- Data Studio invalidates visible query/chart/profile state when the selected dataset changes on disk.
+- SQL result artifacts save SQL text, engine, row counts, preview rows, and source dataset citations.
+- Playwright visual smoke asserts navigator resizing, tool-run details, metadata browser, lineage filtering, panel scrolling, and freshness warnings.
+
 ## Prepared Next Batch
 
-The next implementation batch should turn these foundations into deeper studio workflows:
+The next implementation batch should improve scale and reliability:
 
-- SQLite repositories that mirror JSON chat, approvals, artifacts, and tool-run records into the active database.
-- A first schema browser for SQLite metadata tables and DuckDB dataset views.
-- A persistent artifact lineage view with filtering by source file, chat, tool run, and artifact kind.
-- Stale-context warnings in chat messages and context-pack previews when cited files change.
-- Dataset/profile refresh actions that react to watcher changes and invalidate stale chart/query artifacts.
-- Richer SQL result artifacts with SQL text, engine, row counts, and source dataset citations.
-- Playwright visual assertions for navigator resizing, tool-run details, and lineage/freshness panels.
+- Promote SQLite mirror writes into repository-backed primary reads for chat history, approvals, artifacts, and tool runs.
+- Add a persistent metadata/schema tab with table search, column filtering, and copyable row samples.
+- Add a real graph layout for artifact lineage with node selection, relationship counts, and open-source navigation.
+- Add stale-context refresh controls that can re-run context packs and update affected chat/artifact records.
+- Add dataset dependency invalidation for saved queries, SQL reports, chart artifacts, and summaries.
+- Add SQL history and saved SQL snippets per dataset, separate from lightweight row filters.
+- Add CI-friendly Playwright fixtures that cover mocked workspace, dataset, metadata, chat, and artifact flows without requiring Wails.
 
 ## File Writes
 

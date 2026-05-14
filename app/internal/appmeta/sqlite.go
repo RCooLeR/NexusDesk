@@ -7,6 +7,7 @@ import (
 	"encoding/json"
 	"os"
 	"path/filepath"
+	"strconv"
 	"strings"
 	"time"
 
@@ -25,6 +26,88 @@ type SQLiteStatus struct {
 	Tables        []string `json:"tables"`
 	Message       string   `json:"message"`
 	UpdatedAt     string   `json:"updatedAt"`
+}
+
+type ChatMirror struct {
+	ID             string   `json:"id"`
+	Role           string   `json:"role"`
+	Content        string   `json:"content"`
+	ContextRelPath string   `json:"contextRelPath"`
+	SourcePaths    []string `json:"sourcePaths"`
+	CreatedAt      string   `json:"createdAt"`
+}
+
+type ApprovalMirror struct {
+	ID        string `json:"id"`
+	Action    string `json:"action"`
+	Target    string `json:"target"`
+	Risk      string `json:"risk"`
+	Decision  string `json:"decision"`
+	Message   string `json:"message"`
+	CreatedAt string `json:"createdAt"`
+}
+
+type ArtifactMirror struct {
+	ID             string          `json:"id"`
+	RelPath        string          `json:"relPath"`
+	Kind           string          `json:"kind"`
+	Title          string          `json:"title"`
+	Source         string          `json:"source"`
+	ContextRelPath string          `json:"contextRelPath"`
+	Metadata       json.RawMessage `json:"metadata"`
+	CreatedAt      string          `json:"createdAt"`
+}
+
+type ToolRunMirror struct {
+	ID            string          `json:"id"`
+	ToolName      string          `json:"toolName"`
+	Target        string          `json:"target"`
+	Risk          string          `json:"risk"`
+	Status        string          `json:"status"`
+	Mode          string          `json:"mode"`
+	ApprovalID    string          `json:"approvalId"`
+	Inputs        json.RawMessage `json:"inputs"`
+	OutputSummary string          `json:"outputSummary"`
+	Error         string          `json:"error"`
+	StartedAt     string          `json:"startedAt"`
+	CompletedAt   string          `json:"completedAt"`
+	DurationMs    int64           `json:"durationMs"`
+}
+
+type MirrorData struct {
+	Chats     []ChatMirror     `json:"chats"`
+	Approvals []ApprovalMirror `json:"approvals"`
+	Artifacts []ArtifactMirror `json:"artifacts"`
+	ToolRuns  []ToolRunMirror  `json:"toolRuns"`
+}
+
+type MetadataColumn struct {
+	Name string `json:"name"`
+	Type string `json:"type"`
+}
+
+type MetadataTable struct {
+	Name       string           `json:"name"`
+	RowCount   int              `json:"rowCount"`
+	Columns    []MetadataColumn `json:"columns"`
+	SampleRows [][]string       `json:"sampleRows"`
+}
+
+type DatasetView struct {
+	Name    string   `json:"name"`
+	RelPath string   `json:"relPath"`
+	Engine  string   `json:"engine"`
+	Columns []string `json:"columns"`
+	Rows    int      `json:"rows"`
+	Message string   `json:"message"`
+}
+
+type MetadataBrowser struct {
+	Path         string          `json:"path"`
+	Tables       []MetadataTable `json:"tables"`
+	DatasetViews []DatasetView   `json:"datasetViews"`
+	Message      string          `json:"message"`
+	UpdatedAt    string          `json:"updatedAt"`
 }
 
 func Ensure(root string) (SQLiteStatus, error) {
@@ -77,14 +160,79 @@ func Ensure(root string) (SQLiteStatus, error) {
 		Message:       "SQLite metadata store is active; JSON stores remain the compatibility layer while repositories migrate incrementally.",
 		UpdatedAt:     now.Format(time.RFC3339),
 	}
-	payload, err := json.MarshalIndent(status, "", "  ")
-	if err != nil {
-		return SQLiteStatus{}, err
-	}
-	if err := os.WriteFile(filepath.Join(dir, manifestFileName), append(payload, '\n'), 0o644); err != nil {
+	if err := writeManifest(absRoot, status); err != nil {
 		return SQLiteStatus{}, err
 	}
 	return status, nil
+}
+
+func Exists(root string) bool {
+	absRoot, err := filepath.Abs(root)
+	if err != nil {
+		return false
+	}
+	_, err = os.Stat(filepath.Join(absRoot, filepath.FromSlash(metadataDirRelPath), "nexusdesk.sqlite"))
+	return err == nil
+}
+
+func Mirror(root string, data MirrorData) (SQLiteStatus, error) {
+	status, err := Ensure(root)
+	if err != nil {
+		return SQLiteStatus{}, err
+	}
+	absRoot, err := filepath.Abs(root)
+	if err != nil {
+		return SQLiteStatus{}, err
+	}
+	db, err := sql.Open("sqlite", status.Path)
+	if err != nil {
+		return SQLiteStatus{}, err
+	}
+	defer db.Close()
+
+	tx, err := db.Begin()
+	if err != nil {
+		return SQLiteStatus{}, err
+	}
+	if err := replaceMirrorData(tx, absRoot, data); err != nil {
+		_ = tx.Rollback()
+		return SQLiteStatus{}, err
+	}
+	if err := tx.Commit(); err != nil {
+		return SQLiteStatus{}, err
+	}
+
+	status.Message = "SQLite metadata store mirrored from current JSON compatibility stores."
+	status.UpdatedAt = time.Now().UTC().Format(time.RFC3339)
+	return status, writeManifest(absRoot, status)
+}
+
+func Inspect(root string, datasetViews []DatasetView) (MetadataBrowser, error) {
+	status, err := Ensure(root)
+	if err != nil {
+		return MetadataBrowser{}, err
+	}
+	db, err := sql.Open("sqlite", status.Path)
+	if err != nil {
+		return MetadataBrowser{}, err
+	}
+	defer db.Close()
+
+	tables := []MetadataTable{}
+	for _, tableName := range status.Tables {
+		table, err := inspectTable(db, tableName)
+		if err != nil {
+			return MetadataBrowser{}, err
+		}
+		tables = append(tables, table)
+	}
+	return MetadataBrowser{
+		Path:         status.Path,
+		Tables:       tables,
+		DatasetViews: datasetViews,
+		Message:      "SQLite metadata tables and dataset SQL views are available for inspection.",
+		UpdatedAt:    time.Now().UTC().Format(time.RFC3339),
+	}, nil
 }
 
 func listTables(db *sql.DB) ([]string, error) {
@@ -108,6 +256,175 @@ func listTables(db *sql.DB) ([]string, error) {
 func hashID(value string) string {
 	hash := sha256.Sum256([]byte(value))
 	return hex.EncodeToString(hash[:16])
+}
+
+func replaceMirrorData(tx *sql.Tx, workspaceRoot string, data MirrorData) error {
+	for _, table := range []string{"chats", "approvals", "artifacts", "tool_runs"} {
+		if _, err := tx.Exec("DELETE FROM "+table+" WHERE workspace_root = ?", workspaceRoot); err != nil {
+			return err
+		}
+	}
+	for index, item := range data.Chats {
+		sourcePaths, _ := json.Marshal(item.SourcePaths)
+		if _, err := tx.Exec(
+			`INSERT INTO chats (id, workspace_root, role, content, context_rel_path, source_paths_json, created_at)
+			 VALUES (?, ?, ?, ?, ?, ?, ?)`,
+			fallbackID(item.ID, workspaceRoot, "chat", index, item.Role+item.CreatedAt+item.Content),
+			workspaceRoot,
+			item.Role,
+			item.Content,
+			item.ContextRelPath,
+			string(sourcePaths),
+			fallbackTime(item.CreatedAt),
+		); err != nil {
+			return err
+		}
+	}
+	for index, item := range data.Approvals {
+		if _, err := tx.Exec(
+			`INSERT INTO approvals (id, workspace_root, action, target, risk, decision, message, created_at)
+			 VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+			fallbackID(item.ID, workspaceRoot, "approval", index, item.Action+item.Target+item.CreatedAt),
+			workspaceRoot,
+			item.Action,
+			item.Target,
+			fallbackString(item.Risk, "medium"),
+			fallbackString(item.Decision, "applied"),
+			item.Message,
+			fallbackTime(item.CreatedAt),
+		); err != nil {
+			return err
+		}
+	}
+	for index, item := range data.Artifacts {
+		if _, err := tx.Exec(
+			`INSERT INTO artifacts (id, workspace_root, rel_path, kind, title, source, context_rel_path, metadata_json, created_at)
+			 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+			fallbackID(item.ID, workspaceRoot, "artifact", index, item.RelPath+item.CreatedAt),
+			workspaceRoot,
+			item.RelPath,
+			fallbackString(item.Kind, "artifact"),
+			item.Title,
+			item.Source,
+			item.ContextRelPath,
+			string(item.Metadata),
+			fallbackTime(item.CreatedAt),
+		); err != nil {
+			return err
+		}
+	}
+	for index, item := range data.ToolRuns {
+		if _, err := tx.Exec(
+			`INSERT INTO tool_runs (id, workspace_root, tool_name, target, risk, status, mode, approval_id, inputs_json, output_summary, error, started_at, completed_at, duration_ms)
+			 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+			fallbackID(item.ID, workspaceRoot, "tool", index, item.ToolName+item.Target+item.StartedAt),
+			workspaceRoot,
+			item.ToolName,
+			item.Target,
+			fallbackString(item.Risk, "low"),
+			fallbackString(item.Status, "completed"),
+			fallbackString(item.Mode, "dry-run"),
+			item.ApprovalID,
+			string(item.Inputs),
+			item.OutputSummary,
+			item.Error,
+			fallbackTime(item.StartedAt),
+			item.CompletedAt,
+			item.DurationMs,
+		); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+func inspectTable(db *sql.DB, tableName string) (MetadataTable, error) {
+	columns, err := tableColumns(db, tableName)
+	if err != nil {
+		return MetadataTable{}, err
+	}
+	rowCount := 0
+	if err := db.QueryRow("SELECT COUNT(*) FROM " + tableName).Scan(&rowCount); err != nil {
+		return MetadataTable{}, err
+	}
+	rows, err := db.Query("SELECT * FROM " + tableName + " LIMIT 5")
+	if err != nil {
+		return MetadataTable{}, err
+	}
+	defer rows.Close()
+	sampleRows := [][]string{}
+	values := make([]sql.NullString, len(columns))
+	dest := make([]any, len(columns))
+	for index := range values {
+		dest[index] = &values[index]
+	}
+	for rows.Next() {
+		if err := rows.Scan(dest...); err != nil {
+			return MetadataTable{}, err
+		}
+		row := make([]string, len(columns))
+		for index, value := range values {
+			if value.Valid {
+				row[index] = value.String
+			}
+		}
+		sampleRows = append(sampleRows, row)
+	}
+	return MetadataTable{Name: tableName, RowCount: rowCount, Columns: columns, SampleRows: sampleRows}, rows.Err()
+}
+
+func tableColumns(db *sql.DB, tableName string) ([]MetadataColumn, error) {
+	rows, err := db.Query("PRAGMA table_info(" + tableName + ")")
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	columns := []MetadataColumn{}
+	for rows.Next() {
+		var cid int
+		var name, columnType string
+		var notNull int
+		var defaultValue sql.NullString
+		var pk int
+		if err := rows.Scan(&cid, &name, &columnType, &notNull, &defaultValue, &pk); err != nil {
+			return nil, err
+		}
+		columns = append(columns, MetadataColumn{Name: name, Type: columnType})
+	}
+	return columns, rows.Err()
+}
+
+func writeManifest(absRoot string, status SQLiteStatus) error {
+	dir := filepath.Join(absRoot, filepath.FromSlash(metadataDirRelPath))
+	payload, err := json.MarshalIndent(status, "", "  ")
+	if err != nil {
+		return err
+	}
+	return os.WriteFile(filepath.Join(dir, manifestFileName), append(payload, '\n'), 0o644)
+}
+
+func fallbackID(id string, workspaceRoot string, kind string, index int, value string) string {
+	id = strings.TrimSpace(id)
+	if id != "" {
+		return id
+	}
+	return hashID(strings.Join([]string{workspaceRoot, kind, strconv.Itoa(index), value}, "|"))
+}
+
+func fallbackTime(value string) string {
+	value = strings.TrimSpace(value)
+	if value == "" {
+		return time.Now().UTC().Format(time.RFC3339)
+	}
+	return value
+}
+
+func fallbackString(value string, next string) string {
+	value = strings.TrimSpace(value)
+	if value == "" {
+		return next
+	}
+	return value
 }
 
 func SchemaSQL() string {

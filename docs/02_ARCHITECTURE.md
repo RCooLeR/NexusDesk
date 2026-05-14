@@ -19,10 +19,12 @@ The implemented desktop slice currently contains:
 - append-only workspace approval/action log for applied file and artifact operations
 - backend agent tool descriptor registry and first frontend tool-plan preview
 - persisted tool-run dry-runs/executions with approval references
-- SQLite metadata initialization through a real driver, with JSON stores retained as the compatibility layer
+- SQLite metadata initialization and JSON-store mirroring through a real driver, with JSON stores retained as the compatibility layer
 - DuckDB-capable read-only SQL surface over datasets, with CGO-tagged driver execution and bounded CSV fallback
 - artifact comparison for generated output versions
 - artifact lineage and workspace freshness snapshots for source-aware generated outputs
+- Metadata Browser for SQLite tables, sample rows, and dataset SQL views
+- SQL result Markdown artifacts with query, engine, row count, preview, and source citation metadata
 - read-only Compose parsing for Operations Studio
 - configurable LLM gateway
 - OpenAI-compatible chat and streaming
@@ -63,7 +65,7 @@ flowchart LR
 
   Context --> Search["Path/Text Search"]
   Search --> JsonStores[("Local JSON Stores<br/>settings, chats, recent workspaces")]
-  Search --> AppDB[("SQLite Metadata DB<br/>schema initialized, repos migrating")]
+  Search --> AppDB[("SQLite Metadata DB<br/>schema initialized and mirrored, repos migrating")]
   Search --> AnalyticsDB[("DuckDB / CSV SQL<br/>datasets, query results")]
   Search --> FutureVectorStore["Optional local vectors"]
 
@@ -163,7 +165,7 @@ Current responsibilities:
 Planned responsibilities:
 
 - create chunks
-- track changed files and mark generated artifacts stale
+- track changed files, warn on stale chat/context sources, and mark generated artifacts stale
 - schedule document summaries when useful
 - store generated summaries separately from source content
 
@@ -260,7 +262,7 @@ Responsibilities:
 - create report files
 - export bounded CSV query results as CSV artifacts
 - render first deterministic SVG chart artifacts from CSV aggregations
-- link artifacts to chats, tool runs, source files, and generated outputs through lineage
+- link artifacts to chats, tool runs, source files, and generated outputs through filterable lineage
 - prevent silent overwrites
 
 Planned responsibilities:

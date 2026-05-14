@@ -1535,6 +1535,27 @@ button:disabled {
     margin: 0;
 }
 
+.metadata-browser-panel details {
+    border-top: 1px solid var(--nd-border-soft);
+    padding-top: 6px;
+}
+
+.metadata-browser-panel summary {
+    cursor: pointer;
+    font-size: 12px;
+    font-weight: 700;
+}
+
+.metadata-sample {
+    display: grid;
+    gap: 3px;
+}
+
+.metadata-dataset-views {
+    display: grid;
+    gap: 4px;
+}
+
 .panel-toolbar {
     display: flex;
     align-items: center;
@@ -1545,6 +1566,33 @@ button:disabled {
 .lineage-list {
     display: grid;
     gap: 4px;
+}
+
+.lineage-filter-row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+}
+
+.lineage-filter-row button {
+    border: 1px solid var(--nd-border-soft);
+    border-radius: var(--nd-radius-sm);
+    background: #ffffff;
+    color: var(--nd-muted-text);
+    cursor: pointer;
+    font-size: 11px;
+    padding: 4px 7px;
+}
+
+.lineage-filter-row button.selected {
+    border-color: var(--nd-sky-blue);
+    color: #16324f;
+}
+
+.stale-source-warning,
+.context-pack-preview li.stale {
+    color: #9f5f00;
+    font-weight: 700;
 }
 
 .artifact-metadata-panel dl {

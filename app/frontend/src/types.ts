@@ -213,6 +213,35 @@ export type ArtifactLineage = {
     message: string;
 };
 
+export type MetadataColumn = {
+    name: string;
+    type: string;
+};
+
+export type MetadataTable = {
+    name: string;
+    rowCount: number;
+    columns: MetadataColumn[];
+    sampleRows: string[][];
+};
+
+export type DatasetView = {
+    name: string;
+    relPath: string;
+    engine: string;
+    columns: string[];
+    rows: number;
+    message: string;
+};
+
+export type MetadataBrowser = {
+    path: string;
+    tables: MetadataTable[];
+    datasetViews: DatasetView[];
+    message: string;
+    updatedAt: string;
+};
+
 export type ContextPreviewFile = {
     relPath: string;
     required: boolean;

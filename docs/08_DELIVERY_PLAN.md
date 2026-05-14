@@ -162,6 +162,12 @@ Current status:
 - Assistant answers and saved answer artifacts include source citations from selected files and context packs.
 - Artifact lineage can be built across chats, tools, source files, and generated artifacts.
 - Workspace freshness polling marks changed files and generated artifacts that may be stale after source changes.
+- SQLite metadata now mirrors current JSON chat, approval, artifact, and tool-run records when the metadata store is prepared or inspected.
+- The workbench can inspect SQLite metadata tables, sample rows, and dataset SQL views.
+- Chat messages and context-pack previews warn when cited files changed after the answer/context was created.
+- Data Studio clears visible query/chart/profile state when the selected dataset changes on disk.
+- SQL query results can be exported as Markdown artifacts with SQL text, engine, row counts, preview rows, and dataset citations.
+- Playwright visual smoke now asserts navigator resizing, panel-level scrolling, tool-run details, metadata browser, lineage filtering, and freshness warnings.
 - richer document extraction/OCR and full SQLite repository migration are still planned.
 
 ## Completed Batch: Studio Hardening And Inspectors
@@ -208,15 +214,25 @@ This batch made more of the studio inspectable and auditable without turning on 
 6. Workspace freshness polling detects changed files and flags generated artifacts that cite stale sources.
 7. Playwright is now a dev dependency, visual smoke is enforced, and desktop/mobile visual baselines are captured.
 
-## Prepared Next Batch: Real Studio Workflows
+## Completed Batch: Real Studio Workflows
 
-1. Add SQLite repositories that mirror JSON chat, approvals, artifacts, and tool-run records into the active database.
-2. Add a first schema browser for SQLite metadata tables and DuckDB dataset views.
-3. Add a persistent artifact lineage view with filtering by source file, chat, tool run, and artifact kind.
-4. Add stale-context warnings directly in chat messages and context-pack previews when cited files change.
-5. Add dataset/profile refresh actions that react to watcher changes and invalidate stale chart/query artifacts.
-6. Add richer SQL result artifacts that save SQL text, engine, row counts, and source dataset citations.
-7. Add Playwright visual assertions for navigator resizing, tool-run details, and lineage/freshness panels.
+1. SQLite metadata mirrors JSON chat, approval, artifact, and tool-run records into the active database.
+2. Metadata Browser inspects SQLite metadata tables and dataset SQL views.
+3. Artifact lineage filtering can focus source, chat, tool, or artifact relationships.
+4. Chat messages and context-pack previews warn when cited files change.
+5. Data Studio invalidates visible query/chart/profile state when the selected dataset changes on disk.
+6. SQL result artifacts save SQL text, engine, row counts, preview rows, and source dataset citations.
+7. Playwright visual smoke asserts navigator resizing, tool-run details, metadata browser, lineage filtering, panel scrolling, and freshness warnings.
+
+## Prepared Next Batch: Studio Scale And Reliability
+
+1. Promote SQLite mirror writes into repository-backed primary reads for chat history, approvals, artifacts, and tool runs.
+2. Add a persistent metadata/schema tab with table search, column filtering, and copyable row samples.
+3. Add a real graph layout for artifact lineage with node selection, relationship counts, and open-source navigation.
+4. Add stale-context refresh controls that can re-run context packs and update affected chat/artifact records.
+5. Add dataset dependency invalidation for saved queries, SQL reports, chart artifacts, and summaries.
+6. Add SQL history and saved SQL snippets per dataset, separate from lightweight row filters.
+7. Add CI-friendly Playwright fixtures that cover mocked workspace, dataset, metadata, chat, and artifact flows without requiring Wails.
 
 ## Phase 2: Files, Documents, And Artifacts
 

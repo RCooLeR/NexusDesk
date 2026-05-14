@@ -134,6 +134,118 @@ export namespace analytics {
 
 export namespace appmeta {
 
+	export class DatasetView {
+	    name: string;
+	    relPath: string;
+	    engine: string;
+	    columns: string[];
+	    rows: number;
+	    message: string;
+
+	    static createFrom(source: any = {}) {
+	        return new DatasetView(source);
+	    }
+
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.name = source["name"];
+	        this.relPath = source["relPath"];
+	        this.engine = source["engine"];
+	        this.columns = source["columns"];
+	        this.rows = source["rows"];
+	        this.message = source["message"];
+	    }
+	}
+	export class MetadataColumn {
+	    name: string;
+	    type: string;
+
+	    static createFrom(source: any = {}) {
+	        return new MetadataColumn(source);
+	    }
+
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.name = source["name"];
+	        this.type = source["type"];
+	    }
+	}
+	export class MetadataTable {
+	    name: string;
+	    rowCount: number;
+	    columns: MetadataColumn[];
+	    sampleRows: string[][];
+
+	    static createFrom(source: any = {}) {
+	        return new MetadataTable(source);
+	    }
+
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.name = source["name"];
+	        this.rowCount = source["rowCount"];
+	        this.columns = this.convertValues(source["columns"], MetadataColumn);
+	        this.sampleRows = source["sampleRows"];
+	    }
+
+		convertValues(a: any, classs: any, asMap: boolean = false): any {
+		    if (!a) {
+		        return a;
+		    }
+		    if (a.slice && a.map) {
+		        return (a as any[]).map(elem => this.convertValues(elem, classs));
+		    } else if ("object" === typeof a) {
+		        if (asMap) {
+		            for (const key of Object.keys(a)) {
+		                a[key] = new classs(a[key]);
+		            }
+		            return a;
+		        }
+		        return new classs(a);
+		    }
+		    return a;
+		}
+	}
+	export class MetadataBrowser {
+	    path: string;
+	    tables: MetadataTable[];
+	    datasetViews: DatasetView[];
+	    message: string;
+	    updatedAt: string;
+
+	    static createFrom(source: any = {}) {
+	        return new MetadataBrowser(source);
+	    }
+
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.path = source["path"];
+	        this.tables = this.convertValues(source["tables"], MetadataTable);
+	        this.datasetViews = this.convertValues(source["datasetViews"], DatasetView);
+	        this.message = source["message"];
+	        this.updatedAt = source["updatedAt"];
+	    }
+
+		convertValues(a: any, classs: any, asMap: boolean = false): any {
+		    if (!a) {
+		        return a;
+		    }
+		    if (a.slice && a.map) {
+		        return (a as any[]).map(elem => this.convertValues(elem, classs));
+		    } else if ("object" === typeof a) {
+		        if (asMap) {
+		            for (const key of Object.keys(a)) {
+		                a[key] = new classs(a[key]);
+		            }
+		            return a;
+		        }
+		        return new classs(a);
+		    }
+		    return a;
+		}
+	}
+
+
 	export class SQLiteStatus {
 	    path: string;
 	    schemaPath: string;

@@ -18,6 +18,7 @@ const checks = [
             'QueryDataset',
             'CreateDatasetChartArtifact',
             'CreateDatasetQueryArtifact',
+            'CreateDatasetSQLArtifact',
             'CreateDatasetSummaryArtifact',
             'PreviewDatasetChart',
             'SaveDatasetQuery',
@@ -29,6 +30,9 @@ const checks = [
             'ExecuteAgentTool',
             'QueryDatasetSQL',
             'EnsureSQLiteMetadataStore',
+            'InspectMetadataStore',
+            'GetArtifactLineage',
+            'CheckWorkspaceFreshness',
             'CompareArtifacts',
             'ArchiveArtifact',
             'DeleteArtifact',
@@ -73,7 +77,9 @@ const checks = [
             'archiveActiveArtifact',
             'deleteActiveArtifact',
             'querySelectedDatasetSQL',
+            'exportDatasetSQL',
             'prepareSQLiteMetadataStore',
+            'inspectMetadataStore',
             'executeAgentTool',
             'dryRunAgentTool',
             'buildAgentToolPlan',
@@ -81,7 +87,7 @@ const checks = [
     },
     {
         file: 'src/features/shell/AgentToolPlanCard.tsx',
-        terms: ['AgentToolPlanCard', 'Tool Plan', 'tool-plan-list', 'requiresApproval', 'Dry run', 'Execute', 'tool-run-list'],
+        terms: ['AgentToolPlanCard', 'Tool Plan', 'tool-plan-list', 'requiresApproval', 'Dry run', 'Execute', 'tool-run-list', 'Replay dry run', 'Diff target'],
     },
     {
         file: 'src/features/shell/LLMSettingsCard.tsx',
@@ -89,11 +95,11 @@ const checks = [
     },
     {
         file: 'src/features/shell/WorkbenchPanel.tsx',
-        terms: ['editor-tabs', 'markdownViewMode', 'markdown-view-toggle', 'markdown-document-preview', 'studio-mode-strip', 'resolveStudioMode', 'Data Studio', 'Summarize', 'onSummarizeContext', 'onSelectTab', 'onCloseTab', 'onDeleteFile', 'onMoveFile', 'onPinProjectContext', 'DataStudioPanel', 'OperationsInspector', 'onExportDatasetQuery', 'dataset-query-csv', 'file-write-editor', 'MonacoFileEditor', 'MonacoCodePreview', 'editor-find', 'findInputRef', 'dirty-indicator', 'dirtyTabPaths', 'countFindMatches', 'ArtifactComparisonPanel', 'MetadataStorePanel'],
+        terms: ['editor-tabs', 'markdownViewMode', 'markdown-view-toggle', 'markdown-document-preview', 'studio-mode-strip', 'resolveStudioMode', 'Data Studio', 'Summarize', 'onSummarizeContext', 'onSelectTab', 'onCloseTab', 'onDeleteFile', 'onMoveFile', 'onPinProjectContext', 'DataStudioPanel', 'OperationsInspector', 'onExportDatasetQuery', 'onExportDatasetSQL', 'dataset-query-csv', 'file-write-editor', 'MonacoFileEditor', 'MonacoCodePreview', 'editor-find', 'findInputRef', 'dirty-indicator', 'dirtyTabPaths', 'countFindMatches', 'ArtifactComparisonPanel', 'MetadataStorePanel', 'MetadataBrowserPanel', 'ArtifactLineagePanel', 'WorkspaceFreshnessPanel'],
     },
     {
         file: 'src/features/shell/DataStudioPanel.tsx',
-        terms: ['DatasetQueryPanel', 'DatasetChartPanel', 'DatasetChartPreview', 'SortableDataTable', 'table-pager', 'chart-config-list', 'Read-only SQL', 'DuckDB-compatible SQL query'],
+        terms: ['DatasetQueryPanel', 'DatasetChartPanel', 'DatasetChartPreview', 'SortableDataTable', 'table-pager', 'chart-config-list', 'Read-only SQL', 'DuckDB-compatible SQL query', 'Export SQL'],
     },
     {
         file: 'src/features/shell/ArtifactMetadataPanel.tsx',
@@ -145,7 +151,7 @@ const checks = [
     },
     {
         file: 'src/features/shell/AgentChatCard.tsx',
-        terms: ['ChatMessageContent', 'chat-card-header', 'Save answer', 'textarea', 'context-pack-list', 'context-pack-preview', 'onRemoveContextPath', 'Clear pack'],
+        terms: ['ChatMessageContent', 'chat-card-header', 'Save answer', 'textarea', 'context-pack-list', 'context-pack-preview', 'onRemoveContextPath', 'Clear pack', 'staleSourcePaths', 'Context changed since this answer was created.'],
     },
     {
         file: 'src/features/shell/ChatMessageContent.tsx',
@@ -181,6 +187,9 @@ const checks = [
             '.artifact-action-row',
             '.artifact-comparison-panel',
             '.metadata-store-panel',
+            '.metadata-browser-panel',
+            '.lineage-filter-row',
+            '.stale-source-warning',
             '.dataset-sql-panel',
             '.sortable-data-table',
             '.scan-status-details',
@@ -198,11 +207,11 @@ const checks = [
     },
     {
         file: 'wailsjs/go/main/App.d.ts',
-        terms: ['AskLLMContextPack', 'PreviewFileWrite', 'ApplyFileDelete', 'ApplyFileMove', 'ProfileDataset', 'CreateDatasetChartArtifact', 'CreateDatasetQueryArtifact', 'CreateDatasetSummaryArtifact', 'CreateChatMarkdownArtifact', 'CreateScanReportArtifact', 'PreviewChatContextPack', 'PreviewDatasetChart', 'SaveDatasetQuery', 'ListApprovals', 'ListAgentTools', 'ListAgentToolRuns', 'PreviewAgentTool', 'ExecuteAgentTool', 'QueryDatasetSQL', 'EnsureSQLiteMetadataStore', 'CompareArtifacts', 'ArchiveArtifact', 'DeleteArtifact'],
+        terms: ['AskLLMContextPack', 'PreviewFileWrite', 'ApplyFileDelete', 'ApplyFileMove', 'ProfileDataset', 'CreateDatasetChartArtifact', 'CreateDatasetQueryArtifact', 'CreateDatasetSQLArtifact', 'CreateDatasetSummaryArtifact', 'CreateChatMarkdownArtifact', 'CreateScanReportArtifact', 'PreviewChatContextPack', 'PreviewDatasetChart', 'SaveDatasetQuery', 'ListApprovals', 'ListAgentTools', 'ListAgentToolRuns', 'PreviewAgentTool', 'ExecuteAgentTool', 'QueryDatasetSQL', 'EnsureSQLiteMetadataStore', 'InspectMetadataStore', 'GetArtifactLineage', 'CheckWorkspaceFreshness', 'CompareArtifacts', 'ArchiveArtifact', 'DeleteArtifact'],
     },
     {
         file: 'scripts/visual-smoke.mjs',
-        terms: ['playwright', 'desktop.png', 'mobile.png', 'visual-baselines', 'manifest.json'],
+        terms: ['playwright', 'desktop.png', 'mobile.png', 'visual-baselines', 'manifest.json', 'navigator-resize', 'tool-run-detail', 'metadata-browser'],
     },
     {
         file: 'dist/index.html',

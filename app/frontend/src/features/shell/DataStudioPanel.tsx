@@ -15,6 +15,7 @@ type DataStudioPanelProps = {
     isPreviewingChart: boolean;
     isQuerying: boolean;
     isQueryingSQL: boolean;
+    isExportingSQL: boolean;
     isSavingQuery: boolean;
     onChartCategoryChange: (value: string) => void;
     onChartTypeChange: (value: string) => void;
@@ -27,6 +28,7 @@ type DataStudioPanelProps = {
     onQueryChange: (value: string) => void;
     onSQLChange: (value: string) => void;
     onSQLQuery: () => void;
+    onSQLExport: () => void;
     onQueryLabelChange: (value: string) => void;
     onSaveQuery: () => void;
     profiles: ColumnProfile[];
@@ -52,6 +54,7 @@ export function DataStudioPanel({
     isPreviewingChart,
     isQuerying,
     isQueryingSQL,
+    isExportingSQL,
     isSavingQuery,
     onChartCategoryChange,
     onChartTypeChange,
@@ -64,6 +67,7 @@ export function DataStudioPanel({
     onQueryChange,
     onSQLChange,
     onSQLQuery,
+    onSQLExport,
     onQueryLabelChange,
     onSaveQuery,
     profiles,
@@ -95,8 +99,10 @@ export function DataStudioPanel({
                 savedQueries={savedQueries}
                 isQuerying={isQuerying}
                 isQueryingSQL={isQueryingSQL}
+                isExportingSQL={isExportingSQL}
                 onSQLChange={onSQLChange}
                 onSQLQuery={onSQLQuery}
+                onSQLExport={onSQLExport}
             />
             <DatasetChartPanel
                 categoryColumn={chartCategory}
@@ -133,12 +139,14 @@ function DatasetQueryPanel({
     savedQueries,
     isQuerying,
     isQueryingSQL,
+    isExportingSQL,
     onChange,
     onExport,
     onLabelChange,
     onQuery,
     onSQLChange,
     onSQLQuery,
+    onSQLExport,
     onSave,
 }: {
     columns: string[];
@@ -152,12 +160,14 @@ function DatasetQueryPanel({
     savedQueries: SavedDatasetQuery[];
     isQuerying: boolean;
     isQueryingSQL: boolean;
+    isExportingSQL: boolean;
     onChange: (value: string) => void;
     onExport: () => void;
     onLabelChange: (value: string) => void;
     onQuery: () => void;
     onSQLChange: (value: string) => void;
     onSQLQuery: () => void;
+    onSQLExport: () => void;
     onSave: () => void;
 }) {
     const [filterColumn, setFilterColumn] = useState(columns[0] ?? '');
@@ -261,6 +271,9 @@ function DatasetQueryPanel({
                 />
                 <Button disabled={isQueryingSQL} onClick={onSQLQuery} variant="subtle">
                     {isQueryingSQL ? 'Running...' : 'Run SQL'}
+                </Button>
+                <Button disabled={isExportingSQL || !sqlQuery.trim()} onClick={onSQLExport} variant="subtle">
+                    {isExportingSQL ? 'Exporting...' : 'Export SQL'}
                 </Button>
                 {sqlResult && (
                     <div className="dataset-query-result">

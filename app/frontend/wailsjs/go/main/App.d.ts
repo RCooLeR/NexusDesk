@@ -4,12 +4,12 @@ import {workspace} from '../models';
 import {artifact} from '../models';
 import {llm} from '../models';
 import {storage} from '../models';
+import {analytics} from '../models';
 import {appmeta} from '../models';
 import {agenttools} from '../models';
 import {main} from '../models';
 import {approval} from '../models';
 import {dataset} from '../models';
-import {analytics} from '../models';
 
 export function ApplyFileDelete(arg1:string):Promise<workspace.FileDeleteProposal>;
 
@@ -41,6 +41,8 @@ export function CreateDatasetChartArtifact(arg1:workspace.DatasetChartRequest):P
 
 export function CreateDatasetQueryArtifact(arg1:string,arg2:string):Promise<artifact.MarkdownReport>;
 
+export function CreateDatasetSQLArtifact(arg1:analytics.SQLQueryRequest):Promise<artifact.MarkdownReport>;
+
 export function CreateDatasetSummaryArtifact(arg1:string):Promise<artifact.MarkdownReport>;
 
 export function CreateMarkdownReport(arg1:string):Promise<artifact.MarkdownReport>;
@@ -64,6 +66,8 @@ export function GetLLMSettings():Promise<storage.LLMSettings>;
 export function GetRecentWorkspaces():Promise<Array<storage.RecentWorkspace>>;
 
 export function GetStartupState():Promise<main.StartupState>;
+
+export function InspectMetadataStore():Promise<appmeta.MetadataBrowser>;
 
 export function ListAgentToolRuns():Promise<Array<agenttools.RunRecord>>;
 

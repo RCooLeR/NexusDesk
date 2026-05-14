@@ -155,6 +155,13 @@ This tracker reflects the repository as it exists today and keeps planned work s
 - [x] Artifact lineage can be built from chats, tool runs, source files, and generated artifacts through `GetArtifactLineage`.
 - [x] Workspace freshness polling detects changed files and marks potentially stale generated artifacts.
 - [x] Playwright is installed as a frontend dev dependency and visual smoke now fails instead of skipping when build output or Playwright is missing.
+- [x] SQLite metadata can mirror current JSON chat, approval, artifact, and tool-run records into the active database.
+- [x] Metadata Browser inspects SQLite table columns, row counts, sample rows, and dataset SQL views.
+- [x] Artifact lineage filtering can focus relationships by source, chat, tool, or artifact kind.
+- [x] Chat messages and context-pack previews warn when cited source files have changed.
+- [x] Data Studio invalidates visible query/chart/profile state when the selected dataset changes on disk.
+- [x] Read-only SQL results can be exported as Markdown artifacts with SQL text, engine, row counts, and dataset citations.
+- [x] Playwright visual smoke asserts navigator resizing, panel-level scrolling, tool-run details, metadata browser, lineage filtering, and freshness warnings.
 - [x] Tool timeline records real workspace, preview, search, profile, write, report, and chat actions.
 - [x] Artifact rows can select the generated report preview when visible in the workspace tree.
 - [x] Helper services placeholder exists at `services/docker-compose.yml`.
@@ -225,13 +232,23 @@ This tracker reflects the repository as it exists today and keeps planned work s
 
 ### Prepared Batch: Real Studio Workflows
 
-- [ ] Add SQLite repositories that mirror JSON chat, approvals, artifacts, and tool-run records into the active database.
-- [ ] Add a first schema browser for SQLite metadata and DuckDB dataset views in Data Studio.
-- [ ] Add a persistent artifact lineage view with filtering by source file, chat, tool run, and artifact kind.
-- [ ] Add stale-context warnings directly in chat messages and context-pack previews when cited files change.
-- [ ] Add dataset/profile refresh actions that react to watcher changes and invalidate stale chart/query artifacts.
-- [ ] Add richer SQL result artifacts that save SQL text, engine, row counts, and source dataset citations.
-- [ ] Add Playwright visual assertions for navigator resizing, tool-run details, and lineage/freshness panels.
+- [x] Add SQLite repositories that mirror JSON chat, approvals, artifacts, and tool-run records into the active database.
+- [x] Add a first schema browser for SQLite metadata and DuckDB dataset views in Data Studio.
+- [x] Add a persistent artifact lineage view with filtering by source file, chat, tool run, and artifact kind.
+- [x] Add stale-context warnings directly in chat messages and context-pack previews when cited files change.
+- [x] Add dataset/profile refresh actions that react to watcher changes and invalidate stale chart/query artifacts.
+- [x] Add richer SQL result artifacts that save SQL text, engine, row counts, and source dataset citations.
+- [x] Add Playwright visual assertions for navigator resizing, tool-run details, and lineage/freshness panels.
+
+### Prepared Batch: Studio Scale And Reliability
+
+- [ ] Promote SQLite mirror writes into repository-backed primary reads for chat history, approvals, artifacts, and tool runs.
+- [ ] Add a persistent metadata/schema tab with table search, column filtering, and copyable row samples.
+- [ ] Add a real graph layout for artifact lineage with node selection, relationship counts, and open-source navigation.
+- [ ] Add stale-context refresh controls that can re-run context packs and update affected chat/artifact records.
+- [ ] Add dataset dependency invalidation for saved queries, SQL reports, chart artifacts, and summaries.
+- [ ] Add SQL history and saved SQL snippets per dataset, separate from lightweight row filters.
+- [ ] Add CI-friendly Playwright fixtures that cover mocked workspace, dataset, metadata, chat, and artifact flows without requiring Wails.
 
 - [x] Batch: align product docs around NexusDesk as an IDE/data/analytics studio.
 - [x] Batch: align architecture, domain, indexing, search, AI, operations, delivery, DX, brand, README, and tracker wording.
@@ -328,9 +345,9 @@ This tracker reflects the repository as it exists today and keeps planned work s
 
 `app/internal/agenttools/run.go` owns persisted tool run records. Dry-runs and explicit executions capture tool name, target, inputs, risk, approval ID, timing, output summary, and errors under `.nexusdesk/tool-runs/log.json`.
 
-`app/internal/appmeta/` owns the SQLite metadata schema, manifest, and first real database initialization. `EnsureSQLiteMetadataStore` writes `.nexusdesk/metadata/schema.sql`, opens `.nexusdesk/metadata/nexusdesk.sqlite` through `modernc.org/sqlite`, applies the schema, and records the active workspace row. JSON stores remain active for compatibility until repositories are migrated deliberately.
+`app/internal/appmeta/` owns the SQLite metadata schema, manifest, first real database initialization, and the mirror from JSON compatibility stores. `EnsureSQLiteMetadataStore` writes `.nexusdesk/metadata/schema.sql`, opens `.nexusdesk/metadata/nexusdesk.sqlite` through `modernc.org/sqlite`, applies the schema, records the active workspace row, and mirrors chats, approvals, artifacts, and tool runs. JSON stores remain active for compatibility until repositories are migrated deliberately.
 
-`app/internal/analytics/` owns the first read-only SQL-style CSV query surface. It accepts a constrained `SELECT` subset, blocks mutation keywords, uses a real `database/sql` DuckDB execution path when built with the `duckdb` tag on a CGO-enabled workstation, and otherwise falls back to the bounded CSV query path.
+`app/internal/analytics/` owns the first read-only SQL-style CSV query surface. It accepts a constrained `SELECT` subset, blocks mutation keywords, uses a real `database/sql` DuckDB execution path when built with the `duckdb` tag on a CGO-enabled workstation, and otherwise falls back to the bounded CSV query path. SQL result exports are written as Markdown artifacts with the SQL text, engine, row counts, preview rows, and source dataset citation.
 
 `app/internal/workspace/freshness.go` owns the first workspace freshness snapshot. The frontend polls it to show changed-file indicators and mark generated artifacts that cite changed source paths as potentially stale.
 

@@ -105,6 +105,7 @@ Current implementation:
 - The agent sidebar renders a proposed tool plan for the active context with risk and approval labels, and user-triggered dry-run/execute actions now persist tool-run records.
 - Recent tool-run rows expand into detail drawers with captured inputs, output/error text, approval references, replay, and target diff affordances.
 - Persisted assistant answers and saved Markdown answer artifacts include the source paths used for selected-file or context-pack grounding.
+- Chat messages and context-pack previews warn when their cited source paths changed after the answer/context was created.
 - `AskLLMStream` emits `nexusdesk:chat-stream` Wails events so the frontend can render partial assistant responses before final history persistence completes.
 - `app/internal/storage/chat_history.go` persists bounded chat history per workspace in local JSON config.
 - The local workstation endpoint is backed by the sibling `../Llm/` Compose stack. Its `rcooler-ollama` container must use `OLLAMA_LLM_LIBRARY=cuda_v12`; otherwise Ollama may select CUDA 13, fail GPU initialization, and fall back to CPU with zero VRAM offload.
@@ -289,6 +290,7 @@ Current implementation:
 - artifact archive/delete and scan-report creation are deterministic UI-triggered tools today, not model-directed artifact mutations
 - tool run records capture inputs, output summary, risk, approval ID, duration, and errors for later agent-loop replay/audit
 - artifact lineage can link source files, assistant answers, persisted tool runs, and generated artifacts for a first audit graph
+- lineage can be filtered in the workbench by source, chat, tool, or artifact kind
 
 ## Prompt Contracts
 
@@ -309,7 +311,7 @@ The prompt should tell the model:
 
 - do not claim access to files not provided or retrieved
 - request tools when more context is needed
-- cite files, sheets, rows, pages, or logs used; current persisted answers include file-level source citations
+- cite files, sheets, rows, pages, or logs used; current persisted answers include file-level source citations and stale-source warnings
 - create artifacts only through tools
 - do not ask for dangerous actions when safe alternatives exist
 

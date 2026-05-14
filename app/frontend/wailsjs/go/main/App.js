@@ -62,6 +62,10 @@ export function CreateDatasetQueryArtifact(arg1, arg2) {
   return window['go']['main']['App']['CreateDatasetQueryArtifact'](arg1, arg2);
 }
 
+export function CreateDatasetSQLArtifact(arg1) {
+  return window['go']['main']['App']['CreateDatasetSQLArtifact'](arg1);
+}
+
 export function CreateDatasetSummaryArtifact(arg1) {
   return window['go']['main']['App']['CreateDatasetSummaryArtifact'](arg1);
 }
@@ -108,6 +112,10 @@ export function GetRecentWorkspaces() {
 
 export function GetStartupState() {
   return window['go']['main']['App']['GetStartupState']();
+}
+
+export function InspectMetadataStore() {
+  return window['go']['main']['App']['InspectMetadataStore']();
 }
 
 export function ListAgentToolRuns() {

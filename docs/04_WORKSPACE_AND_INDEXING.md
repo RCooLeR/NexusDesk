@@ -69,6 +69,8 @@ The current app implements the first safe workspace slice:
 - Dataset summary artifacts use the bounded CSV preview/profile data to write deterministic Markdown with column profiles and suggested analysis questions.
 - Artifact metadata and chat history are included in the workspace search surface even before a full index database exists.
 - `app/internal/workspace/freshness.go` captures file fingerprints so the shell can detect changed files and mark generated artifacts that cite changed sources as stale.
+- Chat messages and context-pack previews surface stale-source warnings when their cited files change.
+- Data Studio clears visible query/chart/profile state for the active dataset when that dataset changes on disk.
 - CSV chart generation goes through `app/internal/workspace/chart.go` and returns bounded category counts or numeric sums.
 - Chat context uses the same rooted preview boundary and sends only selected text content or a bounded pack of pinned previews.
 - Workspace open/recent/refresh flows are bound through Wails methods on `app/app.go`.
@@ -330,6 +332,8 @@ Current behavior:
 - ignores `.git/` and NexusDesk metadata/tool-run internals
 - marks changed rows in the navigator
 - flags generated artifacts whose provenance references changed source files
+- warns chat messages and context-pack previews that cited files changed
+- invalidates active dataset query, SQL, chart, and profile state for changed selected datasets
 
 ## Index Run Reporting
 

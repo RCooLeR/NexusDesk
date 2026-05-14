@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"encoding/csv"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"os"
@@ -519,12 +520,23 @@ func (a *App) EnsureSQLiteMetadataStore() (appmeta.SQLiteStatus, error) {
 	if root == "" {
 		return appmeta.SQLiteStatus{}, errors.New("open a workspace before preparing metadata storage")
 	}
-	status, err := appmeta.Ensure(root)
+	status, err := a.mirrorMetadataStore(root, true)
 	if err != nil {
 		return appmeta.SQLiteStatus{}, err
 	}
 	a.recordApproval("metadata.sqlite.prepare", ".nexusdesk/metadata", "low", status.Message)
 	return status, nil
+}
+
+func (a *App) InspectMetadataStore() (appmeta.MetadataBrowser, error) {
+	root := a.getWorkspaceRoot()
+	if root == "" {
+		return appmeta.MetadataBrowser{}, errors.New("open a workspace before inspecting metadata storage")
+	}
+	if _, err := a.mirrorMetadataStore(root, true); err != nil {
+		return appmeta.MetadataBrowser{}, err
+	}
+	return appmeta.Inspect(root, a.datasetViews(root))
 }
 
 func (a *App) GetArtifactLineage() (ArtifactLineage, error) {
@@ -673,6 +685,23 @@ func (a *App) CreateDatasetQueryArtifact(relPath string, query string) (artifact
 		return artifact.MarkdownReport{}, err
 	}
 	a.recordApproval("artifact.query", report.RelPath, "low", report.Message)
+	return report, nil
+}
+
+func (a *App) CreateDatasetSQLArtifact(request analytics.SQLQueryRequest) (artifact.MarkdownReport, error) {
+	root := a.getWorkspaceRoot()
+	if root == "" {
+		return artifact.MarkdownReport{}, errors.New("open a workspace before exporting SQL results")
+	}
+	result, err := analytics.QueryCSVSQL(root, request)
+	if err != nil {
+		return artifact.MarkdownReport{}, err
+	}
+	report, err := artifact.CreateDatasetSQLMarkdown(root, result, time.Now())
+	if err != nil {
+		return artifact.MarkdownReport{}, err
+	}
+	a.recordApproval("artifact.dataset_sql.create", report.RelPath, "medium", fmt.Sprintf("Created SQL result artifact from %s using %s.", result.RelPath, result.Engine))
 	return report, nil
 }
 
@@ -917,6 +946,7 @@ func (a *App) persistChatPair(prompt string, chatRequest llm.ChatRequest, result
 		if err != nil {
 			return err
 		}
+		a.syncPreparedMetadataStore(root)
 	}
 
 	return nil
@@ -1210,6 +1240,9 @@ func (a *App) appendToolRun(root string, record agenttools.RunRecord) error {
 		return nil
 	}
 	_, err := agenttools.Append(root, record)
+	if err == nil {
+		a.syncPreparedMetadataStore(root)
+	}
 	return err
 }
 
@@ -1236,6 +1269,7 @@ func (a *App) recordApproval(action string, target string, risk string, message 
 	if len(items) == 0 {
 		return ""
 	}
+	a.syncPreparedMetadataStore(root)
 	return items[0].ID
 }
 
@@ -1317,6 +1351,145 @@ func (a *App) staleArtifactsForChanges(root string, changes []workspace.FileChan
 		}
 	}
 	return stale
+}
+
+func (a *App) syncPreparedMetadataStore(root string) {
+	if root == "" || !appmeta.Exists(root) {
+		return
+	}
+	_, _ = a.mirrorMetadataStore(root, false)
+}
+
+func (a *App) mirrorMetadataStore(root string, create bool) (appmeta.SQLiteStatus, error) {
+	if !create && !appmeta.Exists(root) {
+		return appmeta.SQLiteStatus{}, nil
+	}
+	data, err := a.metadataMirrorData(root)
+	if err != nil {
+		return appmeta.SQLiteStatus{}, err
+	}
+	return appmeta.Mirror(root, data)
+}
+
+func (a *App) metadataMirrorData(root string) (appmeta.MirrorData, error) {
+	chats, err := a.chatStore.List(root)
+	if err != nil {
+		return appmeta.MirrorData{}, err
+	}
+	approvals, err := approval.List(root)
+	if err != nil {
+		return appmeta.MirrorData{}, err
+	}
+	artifacts, err := artifact.List(root)
+	if err != nil {
+		return appmeta.MirrorData{}, err
+	}
+	toolRuns, err := agenttools.List(root)
+	if err != nil {
+		return appmeta.MirrorData{}, err
+	}
+
+	data := appmeta.MirrorData{
+		Chats:     make([]appmeta.ChatMirror, 0, len(chats)),
+		Approvals: make([]appmeta.ApprovalMirror, 0, len(approvals)),
+		Artifacts: make([]appmeta.ArtifactMirror, 0, len(artifacts)),
+		ToolRuns:  make([]appmeta.ToolRunMirror, 0, len(toolRuns)),
+	}
+	for index, message := range chats {
+		data.Chats = append(data.Chats, appmeta.ChatMirror{
+			ID:             fmt.Sprintf("chat-%03d-%s", index, hashForID(message.Role+message.CreatedAt+message.Content)),
+			Role:           message.Role,
+			Content:        message.Content,
+			ContextRelPath: message.ContextRelPath,
+			SourcePaths:    message.SourcePaths,
+			CreatedAt:      message.CreatedAt,
+		})
+	}
+	for _, record := range approvals {
+		data.Approvals = append(data.Approvals, appmeta.ApprovalMirror{
+			ID:        record.ID,
+			Action:    record.Action,
+			Target:    record.Target,
+			Risk:      record.Risk,
+			Decision:  record.Decision,
+			Message:   record.Message,
+			CreatedAt: record.CreatedAt,
+		})
+	}
+	for _, item := range artifacts {
+		metadata, _ := artifact.Metadata(root, item.RelPath)
+		payload, _ := json.Marshal(metadata)
+		data.Artifacts = append(data.Artifacts, appmeta.ArtifactMirror{
+			ID:             "artifact-" + hashForID(item.RelPath),
+			RelPath:        item.RelPath,
+			Kind:           item.Kind,
+			Title:          metadata.Title,
+			Source:         metadata.Source,
+			ContextRelPath: metadata.ContextRelPath,
+			Metadata:       payload,
+			CreatedAt:      fallbackInput(metadata.CreatedAt, item.ModifiedAt),
+		})
+	}
+	for _, run := range toolRuns {
+		inputs, _ := json.Marshal(run.Inputs)
+		data.ToolRuns = append(data.ToolRuns, appmeta.ToolRunMirror{
+			ID:            run.ID,
+			ToolName:      run.ToolName,
+			Target:        run.Target,
+			Risk:          run.Risk,
+			Status:        run.Status,
+			Mode:          run.Mode,
+			ApprovalID:    run.ApprovalID,
+			Inputs:        inputs,
+			OutputSummary: run.OutputSummary,
+			Error:         run.Error,
+			StartedAt:     run.StartedAt,
+			CompletedAt:   run.CompletedAt,
+			DurationMs:    run.DurationMs,
+		})
+	}
+	return data, nil
+}
+
+func (a *App) datasetViews(root string) []appmeta.DatasetView {
+	profiles, err := dataset.List(root)
+	if err != nil {
+		return []appmeta.DatasetView{}
+	}
+	views := []appmeta.DatasetView{}
+	for _, profile := range profiles {
+		columns := []string{}
+		for _, column := range profile.Profiles {
+			columns = append(columns, column.Name)
+		}
+		name := strings.TrimSuffix(filepath.Base(profile.RelPath), filepath.Ext(profile.RelPath))
+		if name == "" {
+			name = "dataset"
+		}
+		views = append(views, appmeta.DatasetView{
+			Name:    name,
+			RelPath: profile.RelPath,
+			Engine:  "duckdb view / csv fallback",
+			Columns: columns,
+			Rows:    profile.Rows,
+			Message: fmt.Sprintf("%s has %d columns and is addressable as dataset or %s in SQL.", profile.RelPath, profile.Columns, name),
+		})
+	}
+	return views
+}
+
+func hashForID(value string) string {
+	value = strings.TrimSpace(value)
+	if len(value) > 24 {
+		value = value[:24]
+	}
+	value = strings.ReplaceAll(value, " ", "-")
+	value = strings.ReplaceAll(value, ":", "-")
+	value = strings.Trim(value, "-")
+	if value == "" {
+		return "item"
+	}
+	return value
 }
 
 func appendSourceCitations(message string, sourcePaths []string) string {
