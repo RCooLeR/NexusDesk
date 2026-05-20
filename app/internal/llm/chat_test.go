@@ -1,10 +1,13 @@
 package llm
 
 import (
+	"bytes"
 	"context"
 	"encoding/json"
 	"net/http"
 	"net/http/httptest"
+	"strconv"
+	"strings"
 	"testing"
 	"time"
 
@@ -121,5 +124,153 @@ func TestChatStreamReadsDeltas(t *testing.T) {
 	}
 	if len(deltas) != 2 || deltas[0] != "Hello" || deltas[1] != " world" {
 		t.Fatalf("unexpected deltas: %#v", deltas)
+	}
+}
+
+func TestChatReturnsProviderErrorBodyOnHTTPFailure(t *testing.T) {
+	server := httptest.NewServer(http.HandlerFunc(func(response http.ResponseWriter, request *http.Request) {
+		response.Header().Set("Content-Type", "application/json")
+		response.WriteHeader(http.StatusBadRequest)
+		_, _ = response.Write([]byte(`{"error":{"message":"invalid api_key=secret-token in request"}}`))
+	}))
+	defer server.Close()
+
+	client := NewClient()
+	_, err := client.Chat(context.Background(), storage.LLMSettings{
+		BaseURL: server.URL,
+		Model:   "test-model",
+	}, ChatRequest{
+		Prompt: "Explain it",
+	})
+	if err == nil {
+		t.Fatal("expected provider error")
+	}
+
+	if got, want := err.Error(), "provider returned HTTP 400"; !strings.Contains(got, want) {
+		t.Fatalf("expected %q in error, got %q", want, got)
+	}
+	if strings.Contains(err.Error(), "secret-token") {
+		t.Fatalf("expected provider token to be redacted, got %q", err.Error())
+	}
+	if !strings.Contains(err.Error(), "[redacted]") {
+		t.Fatalf("expected redacted token marker, got %q", err.Error())
+	}
+}
+
+func TestChatAuditsProviderErrorRedaction(t *testing.T) {
+	server := httptest.NewServer(http.HandlerFunc(func(response http.ResponseWriter, request *http.Request) {
+		response.Header().Set("Content-Type", "application/json")
+		response.WriteHeader(http.StatusUnauthorized)
+		_, _ = response.Write([]byte(`{"error":{"message":"invalid api_key=secret-token"}}`))
+	}))
+	defer server.Close()
+
+	client := NewClient()
+	var logOutput bytes.Buffer
+	originalAuditf := providerFailureAuditf
+	providerFailureAuditf = func(endpoint string, status int, redacted bool, truncated bool, snippet string) {
+		logOutput.WriteString(strconv.Itoa(status))
+		logOutput.WriteString(" redacted=")
+		logOutput.WriteString(strconv.FormatBool(redacted))
+		logOutput.WriteString(" truncated=")
+		logOutput.WriteString(strconv.FormatBool(truncated))
+		logOutput.WriteString(" snippet=")
+		logOutput.WriteString(snippet)
+	}
+	defer func() {
+		providerFailureAuditf = originalAuditf
+	}()
+
+	_, err := client.Chat(context.Background(), storage.LLMSettings{
+		BaseURL: server.URL,
+		Model:   "test-model",
+	}, ChatRequest{
+		Prompt: "Explain it",
+	})
+	if err == nil {
+		t.Fatal("expected provider error")
+	}
+
+	line := logOutput.String()
+	if !strings.Contains(line, "redacted=true") {
+		t.Fatalf("expected redaction flag in audit log, got %q", line)
+	}
+	if !strings.Contains(line, "401") {
+		t.Fatalf("expected status code in audit log, got %q", line)
+	}
+	if strings.Contains(line, "secret-token") {
+		t.Fatalf("expected audit log to avoid raw secret, got %q", line)
+	}
+}
+
+func TestChatAuditsProviderErrorTruncation(t *testing.T) {
+	server := httptest.NewServer(http.HandlerFunc(func(response http.ResponseWriter, request *http.Request) {
+		response.Header().Set("Content-Type", "application/json")
+		response.WriteHeader(http.StatusBadGateway)
+		body := `{"error":{"message":"` + strings.Repeat("x", 2048) + `"}}`
+		_, _ = response.Write([]byte(body))
+	}))
+	defer server.Close()
+
+	client := NewClient()
+	var logOutput bytes.Buffer
+	originalAuditf := providerFailureAuditf
+	providerFailureAuditf = func(endpoint string, status int, redacted bool, truncated bool, snippet string) {
+		logOutput.WriteString(strconv.Itoa(status))
+		logOutput.WriteString(" redacted=")
+		logOutput.WriteString(strconv.FormatBool(redacted))
+		logOutput.WriteString(" truncated=")
+		logOutput.WriteString(strconv.FormatBool(truncated))
+		logOutput.WriteString(" snippet=")
+		logOutput.WriteString(snippet)
+	}
+	defer func() {
+		providerFailureAuditf = originalAuditf
+	}()
+
+	_, err := client.Chat(context.Background(), storage.LLMSettings{
+		BaseURL: server.URL,
+		Model:   "test-model",
+	}, ChatRequest{
+		Prompt: "Summarize",
+	})
+	if err == nil {
+		t.Fatal("expected provider error")
+	}
+
+	line := logOutput.String()
+	if !strings.Contains(line, "truncated=true") {
+		t.Fatalf("expected truncation flag in audit log, got %q", line)
+	}
+	if !strings.Contains(line, "502") {
+		t.Fatalf("expected status code in audit log, got %q", line)
+	}
+}
+
+func TestChatSanitizesLongProviderErrorsToSafeLength(t *testing.T) {
+	body := `{"error":{"message":"` + strings.Repeat("x", 3000) + `"}}`
+	server := httptest.NewServer(http.HandlerFunc(func(response http.ResponseWriter, request *http.Request) {
+		response.Header().Set("Content-Type", "application/json")
+		response.WriteHeader(http.StatusBadGateway)
+		_, _ = response.Write([]byte(body))
+	}))
+	defer server.Close()
+
+	client := NewClient()
+	_, err := client.Chat(context.Background(), storage.LLMSettings{
+		BaseURL: server.URL,
+		Model:   "test-model",
+	}, ChatRequest{
+		Prompt: "Summarize",
+	})
+	if err == nil {
+		t.Fatal("expected provider error")
+	}
+
+	if !strings.Contains(err.Error(), "provider returned HTTP 502") {
+		t.Fatalf("unexpected error: %q", err.Error())
+	}
+	if len(err.Error()) > 1200 {
+		t.Fatalf("expected sanitization/truncation bound, got %q", err.Error())
 	}
 }

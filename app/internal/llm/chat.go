@@ -7,16 +7,25 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"io"
+	"log"
 	"net/http"
 	"net/url"
 	"path"
 	"strings"
 	"time"
 
+	"NexusDesk/internal/safety"
 	"NexusDesk/internal/storage"
 )
 
 const chatTimeout = 5 * time.Minute
+const maxLLMErrorBodyBytes = 2048
+const maxProviderAuditSnippet = 120
+
+var providerFailureAuditf = func(endpoint string, status int, redacted bool, truncated bool, snippet string) {
+	log.Printf("provider_failure endpoint=%q status=%d redacted=%t truncated=%t snippet=%q", endpoint, status, redacted, truncated, snippet)
+}
 
 type ChatRequest struct {
 	Prompt         string   `json:"prompt"`
@@ -93,7 +102,14 @@ func (c *Client) chat(ctx context.Context, settings storage.LLMSettings, chatReq
 	defer response.Body.Close()
 
 	if response.StatusCode < 200 || response.StatusCode > 299 {
-		return ChatResult{}, fmt.Errorf("provider returned HTTP %d", response.StatusCode)
+		body, _ := io.ReadAll(io.LimitReader(response.Body, maxLLMErrorBodyBytes))
+		detail := safety.ParseProviderJSONError(body)
+		if detail == "" {
+			return ChatResult{}, fmt.Errorf("provider returned HTTP %d", response.StatusCode)
+		}
+		result := safety.SanitizeLLMErrorResult(detail)
+		auditSanitizedProviderFailure(endpoint, response.StatusCode, result)
+		return ChatResult{}, fmt.Errorf("provider returned HTTP %d: %s", response.StatusCode, result.Value)
 	}
 
 	if stream {
@@ -127,6 +143,17 @@ func (c *Client) chat(ctx context.Context, settings storage.LLMSettings, chatReq
 		ContextRelPath: strings.TrimSpace(chatRequest.ContextRelPath),
 		SourcePaths:    append([]string{}, chatRequest.SourcePaths...),
 	}, nil
+}
+
+func auditSanitizedProviderFailure(endpoint string, status int, result safety.SanitizationResult) {
+	if !result.Redacted && !result.Truncated {
+		return
+	}
+	snippet := strings.TrimSpace(result.Value)
+	if len(snippet) > maxProviderAuditSnippet {
+		snippet = snippet[:maxProviderAuditSnippet]
+	}
+	providerFailureAuditf(endpoint, status, result.Redacted, result.Truncated, snippet+"...")
 }
 
 func (c *Client) chatHTTPClient() *http.Client {

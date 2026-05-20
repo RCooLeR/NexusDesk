@@ -45,6 +45,7 @@ type WorkbenchPanelProps = {
     dirtyTabPaths: string[];
     fileDraft: string;
     filePreview: FilePreview | null;
+    rebuildingDatasetDependencyId: string;
     isApplyingWrite: boolean;
     isEditingFile: boolean;
     isSendingPrompt: boolean;
@@ -113,6 +114,7 @@ type WorkbenchPanelProps = {
     onExportLineage: () => void;
     onRefreshStaleContext: () => void;
     onOpenLineageSource: (relPath: string) => void;
+    onRebuildDatasetDependency: (dependencyId: string) => void;
     onSelectTab: (relPath: string) => void;
     onSelectArtifact: (artifact: WorkspaceArtifact) => void;
     onRefreshPreview: () => void;
@@ -157,6 +159,7 @@ export function WorkbenchPanel({
     dirtyTabPaths,
     fileDraft,
     filePreview,
+    rebuildingDatasetDependencyId,
     isApplyingWrite,
     isEditingFile,
     isSendingPrompt,
@@ -225,6 +228,7 @@ export function WorkbenchPanel({
     onExportLineage,
     onRefreshStaleContext,
     onOpenLineageSource,
+    onRebuildDatasetDependency,
     onSelectTab,
     onSelectArtifact,
     onRefreshPreview,
@@ -496,6 +500,8 @@ export function WorkbenchPanel({
                                     onQueryChange={onDatasetQueryChange}
                                     onQueryLabelChange={onDatasetQueryLabelChange}
                                     onSaveQuery={onSaveDatasetQuery}
+                                    onRebuildDependency={onRebuildDatasetDependency}
+                                    rebuildingDependencyId={rebuildingDatasetDependencyId}
                                     profiles={filePreview?.table?.profiles ?? activeDatasetProfile?.profiles ?? []}
                                     query={datasetQuery}
                                     queryLabel={datasetQueryLabel}

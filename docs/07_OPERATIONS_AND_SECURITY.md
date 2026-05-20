@@ -108,16 +108,25 @@ Rules:
 - list schemas and tables safely
 - show generated SQL before execution in debug or approval mode
 - block `DROP`, `DELETE`, `UPDATE`, `INSERT`, `ALTER`, `TRUNCATE`, and similar statements by default
+- accept exactly one SQL statement per query; reject multi-statement payloads even when they use only read-only verbs
 - allow mutations only through explicit policy and approval
 - cap result rows
 - log query text and timing
 - redact credentials in error messages
+- sanitize provider error payloads before surfacing messages to UI, and sanitize SQL text before metadata persistence
+- emit structured provider-failure audit logs whenever sanitized provider failures are redacted or truncated (`redacted`, `truncated`, endpoint, and payload snippet fields)
 
 Data Studio and Analytics Studio should make read-only status visible near schema, query, chart, and report surfaces. Mutating SQL is a policy change, not a UI shortcut.
 
-The current read-only SQL surface accepts a constrained `SELECT` subset over CSV data, blocks mutation keywords, and reuses the bounded CSV query path by default. A real DuckDB `database/sql` execution path is implemented behind the `duckdb` build tag for CGO-enabled machines; the current Windows loop keeps CGO disabled unless a C compiler is installed.
+The current read-only SQL surface accepts a constrained `SELECT` subset over CSV data, blocks mutation keywords, enforces single-statement input (including comment/quote-aware semicolon checks), and returns only a bounded preview.
 
-The first workspace database connector supports local `.sqlite`, `.sqlite3`, and `.db` files only. It opens files through `modernc.org/sqlite` in read-only mode, requires `SELECT`/`WITH`, blocks mutation-oriented SQL keywords, caps rows, and records query history/dependency metadata without storing connector credentials.
+- SQLite connector cap is enforced at 100 rows with `TotalRows` preserving full matches and `Rows` showing preview rows.
+- CSV SQL fallback queries preserve `TotalRows`/`MatchedRows` from the dataset query engine and return up to 50 preview rows by default.
+- A real DuckDB `database/sql` execution path is implemented behind the `duckdb` build tag for CGO-enabled machines; the default Windows loop keeps CGO disabled unless a C compiler is installed.
+- SQL artifact metadata now records full `TotalRows` for completed and failed SQL run records.
+- SQLite metadata search now indexes SQL run history with bounded snippets so query and error text are searchable without exposing raw credential material.
+
+The first workspace database connector supports local `.sqlite`, `.sqlite3`, and `.db` files only. It opens files through `modernc.org/sqlite` in read-only mode, requires `SELECT`/`WITH`, blocks mutation-oriented SQL keywords, rejects multi-statement payloads, caps rows, and records query history/dependency metadata without storing connector credentials.
 
 SQL result exports are artifact writes, not database mutations. They include the SQL text, engine, row counts, preview rows, and source dataset citation in a Markdown artifact plus sidecar metadata.
 

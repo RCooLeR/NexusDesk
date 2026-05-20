@@ -34,6 +34,8 @@ type DataStudioPanelProps = {
     onSQLSave: () => void;
     onQueryLabelChange: (value: string) => void;
     onSaveQuery: () => void;
+    onRebuildDependency: (id: string) => void;
+    rebuildingDependencyId: string;
     profiles: ColumnProfile[];
     query: string;
     queryLabel: string;
@@ -80,6 +82,8 @@ export function DataStudioPanel({
     onSQLSave,
     onQueryLabelChange,
     onSaveQuery,
+    onRebuildDependency,
+    rebuildingDependencyId,
     profiles,
     query,
     queryLabel,
@@ -121,6 +125,8 @@ export function DataStudioPanel({
                 onSQLExport={onSQLExport}
                 onSQLSave={onSQLSave}
                 savedSQLQueries={savedSQLQueries}
+                onRebuildDependency={onRebuildDependency}
+                rebuildingDependencyId={rebuildingDependencyId}
                 sqlRuns={sqlRuns}
                 dependencies={dependencies}
                 sqlLabel={sqlLabel}
@@ -176,6 +182,8 @@ function DatasetQueryPanel({
     sqlRuns,
     dependencies,
     sqlLabel,
+    onRebuildDependency,
+    rebuildingDependencyId,
 }: {
     columns: string[];
     isExporting: boolean;
@@ -204,6 +212,8 @@ function DatasetQueryPanel({
     sqlRuns: SQLRun[];
     dependencies: DatasetDependency[];
     sqlLabel: string;
+    onRebuildDependency: (id: string) => void;
+    rebuildingDependencyId: string;
 }) {
     const [filterColumn, setFilterColumn] = useState(columns[0] ?? '');
     const [filterValue, setFilterValue] = useState('');
@@ -354,13 +364,29 @@ function DatasetQueryPanel({
                             <p key={run.id}><strong>{run.status}</strong> {run.engine} / {run.rows} rows <small>{run.artifact || run.message}</small></p>
                         ))}
                         {dependencies.slice(0, 4).map((item) => (
-                            <p key={item.id}><strong>{item.kind}</strong> {item.target || item.artifact || item.query}</p>
+                            <p className="dataset-lineage-row" key={item.id}>
+                                <span><strong>{item.kind}</strong> {item.target || item.artifact || item.query}</span>
+                                {canRebuildDependency(item.kind) ? (
+                                    <Button
+                                        className="dataset-lineage-rebuild"
+                                        disabled={rebuildingDependencyId === item.id}
+                                        onClick={() => onRebuildDependency(item.id)}
+                                        variant="subtle"
+                                    >
+                                        {rebuildingDependencyId === item.id ? 'Rebuilding...' : 'Rebuild'}
+                                    </Button>
+                                ) : null}
+                            </p>
                         ))}
                     </div>
                 )}
             </div>
         </div>
     );
+}
+
+function canRebuildDependency(kind: string) {
+    return ['filter-export', 'sql-report', 'chart', 'summary'].includes(kind);
 }
 
 function DatasetChartPanel({

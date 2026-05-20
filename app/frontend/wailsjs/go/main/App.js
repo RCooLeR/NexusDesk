@@ -194,6 +194,10 @@ export function ProfileDataset(arg1) {
   return window['go']['main']['App']['ProfileDataset'](arg1);
 }
 
+export function RebuildDatasetDependency(arg1) {
+  return window['go']['main']['App']['RebuildDatasetDependency'](arg1);
+}
+
 export function QueryDataset(arg1, arg2) {
   return window['go']['main']['App']['QueryDataset'](arg1, arg2);
 }

@@ -53,6 +53,7 @@ import {
     RemoveRecentWorkspace,
     RefreshWorkspace,
     RefreshStaleContext,
+    RebuildDatasetDependency,
     SaveLLMSettings,
     SaveDatasetQuery,
     SaveDatasetSQLQuery,
@@ -221,6 +222,7 @@ export function NexusDeskShell({
     const [isSearchingMetadata, setIsSearchingMetadata] = useState(false);
     const [workspaceFreshness, setWorkspaceFreshness] = useState<WorkspaceFreshnessStatus | null>(null);
     const [datasetDependencies, setDatasetDependencies] = useState<DatasetDependency[]>([]);
+    const [rebuildingDatasetDependencyId, setRebuildingDatasetDependencyId] = useState('');
     const [datasetSQLRuns, setDatasetSQLRuns] = useState<SQLRun[]>([]);
     const [sqliteConnectorQuery, setSQLiteConnectorQuery] = useState('select name, type from sqlite_master where type in (\'table\', \'view\') order by name');
     const [sqliteConnectorResult, setSQLiteConnectorResult] = useState<SQLiteQueryResult | null>(null);
@@ -2294,6 +2296,37 @@ export function NexusDeskShell({
         }
     }
 
+    async function rebuildDatasetDependency(dependencyId: string) {
+        if (!dependencyId.trim()) {
+            setWorkspaceStatus('Choose a dependency before rebuilding.');
+            return;
+        }
+        if (!workspace) {
+            setWorkspaceStatus('Open a workspace before rebuilding dataset artifacts.');
+            return;
+        }
+        setRebuildingDatasetDependencyId(dependencyId);
+        try {
+            const report = await RebuildDatasetDependency(dependencyId);
+            const result = await RefreshWorkspace();
+            if (result.selected) {
+                onWorkspaceChange(result.snapshot);
+                await refreshArtifacts();
+                await refreshApprovals();
+                await refreshDatasetLineage(filePreview?.relPath ?? '');
+                setExpandedDirectories((current) => reconcileExpandedDirectories(current, result.snapshot, findWorkspaceNode(result.snapshot, report.relPath)));
+                await selectWorkspaceFile(result.snapshot, report.relPath);
+            }
+            setWorkspaceStatus(report.message);
+            pushToolEvent('Dataset dependency rebuilt', report.relPath);
+        } catch (error) {
+            const message = error instanceof Error ? error.message : '';
+            setWorkspaceStatus(message || 'Could not rebuild dataset dependency.');
+        } finally {
+            setRebuildingDatasetDependencyId('');
+        }
+    }
+
     async function selectArtifact(artifact: WorkspaceArtifact) {
         if (!workspace) {
             setWorkspaceStatus('Open a workspace before selecting artifacts.');
@@ -2836,6 +2869,7 @@ export function NexusDeskShell({
                 capabilities={state.capabilities}
                 datasetProfiles={datasetProfiles}
                 datasetDependencies={datasetDependencies}
+                rebuildingDatasetDependencyId={rebuildingDatasetDependencyId}
                 datasetSQLRuns={datasetSQLRuns}
                 datasetQuery={datasetQuery}
                 datasetQueryLabel={datasetQueryLabel}
@@ -2925,6 +2959,7 @@ export function NexusDeskShell({
                 onCreateDatasetChart={() => void createDatasetChart()}
                 onCreateDatasetSummary={() => void createDatasetSummary()}
                 onExportDatasetQuery={() => void exportDatasetQuery()}
+                onRebuildDatasetDependency={(dependencyId) => void rebuildDatasetDependency(dependencyId)}
                 onArchiveArtifact={() => void archiveActiveArtifact()}
                 onCompareArtifact={() => void compareActiveArtifactWithPrevious()}
                 onCloseTab={closeOpenTab}

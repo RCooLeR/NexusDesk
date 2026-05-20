@@ -5,6 +5,7 @@ import (
 	"database/sql"
 	"encoding/hex"
 	"encoding/json"
+	"errors"
 	"os"
 	"path/filepath"
 	"strconv"
@@ -431,6 +432,66 @@ func ListDatasetDependencies(root string, relPath string) ([]DatasetDependency, 
 	return items, rows.Err()
 }
 
+func GetDatasetDependency(root string, id string) (DatasetDependency, error) {
+	_, db, err := openExisting(root)
+	if err != nil {
+		return DatasetDependency{}, err
+	}
+	defer db.Close()
+	workspaceRoot, err := filepath.Abs(root)
+	if err != nil {
+		return DatasetDependency{}, err
+	}
+
+	var item DatasetDependency
+	row := db.QueryRow(
+		`SELECT id, rel_path, kind, target, query, artifact, created_at, last_refresh
+		 FROM dataset_dependencies
+		 WHERE workspace_root = ? AND id = ?`, workspaceRoot, strings.TrimSpace(id))
+	if err := row.Scan(&item.ID, &item.RelPath, &item.Kind, &item.Target, &item.Query, &item.Artifact, &item.CreatedAt, &item.LastRefresh); err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return DatasetDependency{}, errors.New("dataset dependency not found")
+		}
+		return DatasetDependency{}, err
+	}
+	return item, nil
+}
+
+func UpdateDatasetDependencyRefresh(root string, id string, artifactRelPath string) (string, error) {
+	_, db, err := writableDB(root)
+	if err != nil {
+		return "", err
+	}
+	defer db.Close()
+
+	workspaceRoot, err := filepath.Abs(root)
+	if err != nil {
+		return "", err
+	}
+
+	now := time.Now().UTC().Format(time.RFC3339)
+	res, err := db.Exec(
+		`UPDATE dataset_dependencies
+			SET artifact = ?, last_refresh = ?
+			WHERE workspace_root = ? AND id = ?`,
+		artifactRelPath,
+		now,
+		workspaceRoot,
+		strings.TrimSpace(id),
+	)
+	if err != nil {
+		return "", err
+	}
+	changes, err := res.RowsAffected()
+	if err != nil {
+		return "", err
+	}
+	if changes == 0 {
+		return "", errors.New("dataset dependency not found")
+	}
+	return now, nil
+}
+
 func AppendSQLRun(root string, item SQLRun) error {
 	workspaceRoot, db, err := writableDB(root)
 	if err != nil {
@@ -530,6 +591,11 @@ func Search(root string, query string, limit int) ([]MetadataSearchResult, error
 	if err := appendRows("tool", rows, err); err != nil {
 		return nil, err
 	}
+	rows, err = db.Query(`SELECT id, rel_path, coalesce(status, ''), substr(coalesce(sql_text, '') || ' ' || coalesce(message, '') || ' ' || coalesce(engine, ''), 1, 220), created_at
+		FROM sql_runs WHERE workspace_root = ? AND lower(rel_path || ' ' || coalesce(sql_text, '') || ' ' || coalesce(message, '') || ' ' || coalesce(status, '')) LIKE ? ORDER BY created_at DESC LIMIT ?`, workspaceRoot, like, limit)
+	if err := appendRows("sql-run", rows, err); err != nil {
+		return nil, err
+	}
 	if len(items) > limit {
 		items = items[:limit]
 	}
@@ -537,7 +603,7 @@ func Search(root string, query string, limit int) ([]MetadataSearchResult, error
 }
 
 func ListChats(root string) ([]ChatMirror, error) {
-	status, db, err := openExisting(root)
+	_, db, err := openExisting(root)
 	if err != nil {
 		return nil, err
 	}
@@ -552,7 +618,6 @@ func ListChats(root string) ([]ChatMirror, error) {
 		return nil, err
 	}
 	defer rows.Close()
-	_ = status
 	items := []ChatMirror{}
 	for rows.Next() {
 		var item ChatMirror
@@ -693,31 +758,32 @@ func openExisting(root string) (SQLiteStatus, *sql.DB, error) {
 	if err != nil {
 		return SQLiteStatus{}, nil, err
 	}
-	tables, err := listTables(db)
-	if err != nil {
-		db.Close()
-		return SQLiteStatus{}, nil, err
-	}
 	hash := sha256.Sum256([]byte(schemaSQL))
 	return SQLiteStatus{
 		Path:          dbPath,
 		SchemaPath:    filepath.Join(absRoot, filepath.FromSlash(metadataDirRelPath), schemaFileName),
 		SchemaVersion: 1,
 		SchemaHash:    hex.EncodeToString(hash[:]),
-		Tables:        tables,
+		Tables:        []string{},
 	}, db, nil
 }
 
 func writableDB(root string) (string, *sql.DB, error) {
-	status, err := Ensure(root)
-	if err != nil {
-		return "", nil, err
-	}
 	workspaceRoot, err := filepath.Abs(root)
 	if err != nil {
 		return "", nil, err
 	}
-	db, err := sql.Open("sqlite", status.Path)
+
+	dbPath := filepath.Join(workspaceRoot, filepath.FromSlash(metadataDirRelPath), "nexusdesk.sqlite")
+	if !Exists(workspaceRoot) {
+		status, err := Ensure(workspaceRoot)
+		if err != nil {
+			return "", nil, err
+		}
+		dbPath = status.Path
+	}
+
+	db, err := sql.Open("sqlite", dbPath)
 	if err != nil {
 		return "", nil, err
 	}

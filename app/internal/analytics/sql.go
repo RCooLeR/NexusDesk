@@ -46,6 +46,14 @@ func QueryCSVSQL(root string, request SQLQueryRequest) (SQLQueryResult, error) {
 	if sql == "" {
 		return SQLQueryResult{}, errors.New("enter a read-only SELECT query")
 	}
+	if err := validateSingleStatement(sql); err != nil {
+		return SQLQueryResult{}, err
+	}
+	sql = trimTrailingSQLSemicolons(sql)
+	sql = strings.TrimSpace(sql)
+	if sql == "" {
+		return SQLQueryResult{}, errors.New("enter a read-only SELECT query")
+	}
 	parsed, err := parseSelectSQL(sql)
 	if err != nil {
 		return SQLQueryResult{}, err
@@ -71,8 +79,12 @@ func QueryCSVSQL(root string, request SQLQueryRequest) (SQLQueryResult, error) {
 	if err != nil {
 		return SQLQueryResult{}, err
 	}
+	var returned int
 	if len(rows) > maxSQLRows {
 		rows = rows[:maxSQLRows]
+		returned = maxSQLRows
+	} else {
+		returned = len(rows)
 	}
 
 	return SQLQueryResult{
@@ -83,7 +95,7 @@ func QueryCSVSQL(root string, request SQLQueryRequest) (SQLQueryResult, error) {
 		Rows:        rows,
 		TotalRows:   result.TotalRows,
 		MatchedRows: result.MatchedRows,
-		Message:     fmt.Sprintf("DuckDB-compatible read-only query returned %d rows from %s.", len(rows), result.RelPath),
+		Message:     fmt.Sprintf("DuckDB-compatible read-only query returned %d rows from %s (showing %d).", result.TotalRows, result.RelPath, returned),
 	}, nil
 }
 
@@ -122,7 +134,7 @@ func queryDuckDB(root string, request SQLQueryRequest, query string) (SQLQueryRe
 		}
 	}
 
-	rows, err := db.Query(strings.TrimSuffix(query, ";"))
+	rows, err := db.Query(trimTrailingSQLSemicolons(query))
 	if err != nil {
 		return SQLQueryResult{}, err
 	}
@@ -131,28 +143,33 @@ func queryDuckDB(root string, request SQLQueryRequest, query string) (SQLQueryRe
 	if err != nil {
 		return SQLQueryResult{}, err
 	}
-	values := make([]sql.NullString, len(columns))
-	dest := make([]any, len(columns))
-	for index := range values {
-		dest[index] = &values[index]
-	}
 	resultRows := [][]string{}
 	totalRows := 0
+	scanners := rowScanners(len(columns))
+	skipScanners := rowScanners(len(columns))
 	for rows.Next() {
-		if err := rows.Scan(dest...); err != nil {
-			return SQLQueryResult{}, err
+		if len(resultRows) >= maxSQLRows {
+			if err := rows.Scan(skipScanners...); err != nil {
+				return SQLQueryResult{}, err
+			}
+		} else {
+			if err := rows.Scan(scanners...); err != nil {
+				return SQLQueryResult{}, err
+			}
+			row := make([]string, len(columns))
+			for index, scanner := range scanners {
+				if scanner == nil {
+					continue
+				}
+				value := scanner.(*any)
+				if value == nil || *value == nil {
+					continue
+				}
+				row[index] = stringifyValue(*value)
+			}
+			resultRows = append(resultRows, row)
 		}
 		totalRows++
-		if len(resultRows) >= maxSQLRows {
-			continue
-		}
-		row := make([]string, len(columns))
-		for index, value := range values {
-			if value.Valid {
-				row[index] = value.String
-			}
-		}
-		resultRows = append(resultRows, row)
 	}
 	if err := rows.Err(); err != nil {
 		return SQLQueryResult{}, err
@@ -166,14 +183,26 @@ func queryDuckDB(root string, request SQLQueryRequest, query string) (SQLQueryRe
 		Rows:        resultRows,
 		TotalRows:   totalRows,
 		MatchedRows: totalRows,
-		Message:     fmt.Sprintf("DuckDB returned %d rows from %s using the dataset view.", len(resultRows), request.RelPath),
+		Message:     fmt.Sprintf("DuckDB returned %d rows from %s using the dataset view (showing %d).", totalRows, request.RelPath, len(resultRows)),
 	}, nil
 }
 
+func rowScanners(columnCount int) []any {
+	scanners := make([]any, columnCount)
+	for index := range scanners {
+		var value any
+		scanners[index] = &value
+	}
+	return scanners
+}
+
 func parseSelectSQL(sql string) (parsedSelect, error) {
-	normalized := strings.TrimSpace(strings.TrimSuffix(sql, ";"))
+	normalized := strings.TrimSpace(sql)
+	normalized = trimTrailingSQLSemicolons(normalized)
+	normalized = strings.TrimSpace(normalized)
 	lower := strings.ToLower(normalized)
-	if !strings.HasPrefix(lower, "select ") {
+	tokens := strings.Fields(lower)
+	if len(tokens) == 0 || tokens[0] != "select" {
 		return parsedSelect{}, errors.New("only read-only SELECT queries are supported")
 	}
 	if containsBlockedSQL(lower) {
@@ -230,12 +259,24 @@ func parseSelectSQL(sql string) (parsedSelect, error) {
 }
 
 func containsBlockedSQL(lower string) bool {
-	for _, blocked := range []string{" insert ", " update ", " delete ", " drop ", " alter ", " truncate ", " create ", " attach ", " copy "} {
-		if strings.Contains(" "+lower+" ", blocked) {
+	for _, token := range strings.Fields(strings.ReplaceAll(strings.ToLower(lower), ";", " ")) {
+		switch token {
+		case "insert", "update", "delete", "drop", "alter", "truncate", "create", "attach", "copy":
 			return true
 		}
 	}
 	return false
+}
+
+func stringifyValue(value any) string {
+	switch typed := value.(type) {
+	case string:
+		return typed
+	case []byte:
+		return string(typed)
+	default:
+		return fmt.Sprint(typed)
+	}
 }
 
 func splitCSVList(value string) []string {
@@ -335,6 +376,106 @@ func orderSuffix(desc bool) string {
 		return " desc"
 	}
 	return ""
+}
+
+func validateSingleStatement(sql string) error {
+	segments := splitTopLevelSQLStatements(sql)
+	if len(segments) == 0 {
+		return errors.New("enter a read-only SELECT query")
+	}
+	nonEmptyCount := 0
+	for index, segment := range segments {
+		if strings.TrimSpace(segment) == "" {
+			if index < len(segments)-1 {
+				return errors.New("query must contain a single SQL statement")
+			}
+			continue
+		}
+		nonEmptyCount++
+		if nonEmptyCount > 1 {
+			return errors.New("query must contain a single SQL statement")
+		}
+	}
+	if nonEmptyCount == 0 {
+		return errors.New("enter a read-only SELECT query")
+	}
+	return nil
+}
+
+func splitTopLevelSQLStatements(query string) []string {
+	segments := []string{}
+	var builder strings.Builder
+
+	var quote rune
+	lineComment := false
+	blockComment := false
+
+	runes := []rune(query)
+	for index := 0; index < len(runes); index++ {
+		current := runes[index]
+		if lineComment {
+			if current == '\n' {
+				lineComment = false
+			}
+			continue
+		}
+		if blockComment {
+			if current == '*' && index+1 < len(runes) && runes[index+1] == '/' {
+				blockComment = false
+				index++
+			}
+			continue
+		}
+		if quote != 0 {
+			if current == quote {
+				if index+1 < len(runes) && runes[index+1] == quote {
+					builder.WriteRune(current)
+					index++
+					continue
+				}
+				quote = 0
+			}
+			builder.WriteRune(current)
+			continue
+		}
+
+		switch current {
+		case '\'':
+			quote = '\''
+			builder.WriteRune(current)
+		case '"':
+			quote = '"'
+			builder.WriteRune(current)
+		case '-':
+			if index+1 < len(runes) && runes[index+1] == '-' {
+				lineComment = true
+				index++
+				continue
+			}
+			builder.WriteRune(current)
+		case '/':
+			if index+1 < len(runes) && runes[index+1] == '*' {
+				blockComment = true
+				index++
+				continue
+			}
+			builder.WriteRune(current)
+		case ';':
+			segments = append(segments, strings.TrimSpace(builder.String()))
+			builder.Reset()
+		default:
+			builder.WriteRune(current)
+		}
+	}
+	segments = append(segments, strings.TrimSpace(builder.String()))
+	return segments
+}
+
+func trimTrailingSQLSemicolons(sql string) string {
+	for strings.HasSuffix(strings.TrimSpace(sql), ";") {
+		sql = strings.TrimSpace(strings.TrimSuffix(strings.TrimSpace(sql), ";"))
+	}
+	return strings.TrimSpace(sql)
 }
 
 func canUseDuckDBSource(source string) bool {

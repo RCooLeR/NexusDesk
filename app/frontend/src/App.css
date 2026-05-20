@@ -542,15 +542,6 @@ button:disabled {
     background: #fff8e6;
 }
 
-.tree-item strong,
-.tree-item small {
-    display: block;
-    max-width: 100%;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-}
-
 .tree-item > span:last-child {
     min-width: 0;
 }
@@ -1557,6 +1548,31 @@ button:disabled {
     margin: 0;
     min-width: 0;
     padding: 6px;
+}
+
+.dataset-lineage-row {
+    align-items: center;
+    display: flex;
+    gap: 8px;
+    justify-content: space-between;
+}
+
+.dataset-lineage-row span {
+    min-width: 0;
+}
+
+.dataset-lineage-row strong {
+    margin-right: 6px;
+}
+
+.dataset-lineage-row small {
+    display: block;
+    margin-top: 2px;
+}
+
+.dataset-lineage-rebuild {
+    flex: 0 0 auto;
+    min-width: 82px;
 }
 
 .metadata-history-results span {

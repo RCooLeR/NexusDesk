@@ -167,6 +167,7 @@ Current status:
 - The workbench can inspect SQLite metadata tables, search/filter columns, copy sample rows, and view dataset SQL views.
 - Chat messages and context-pack previews warn when cited files changed after the answer/context was created.
 - Stale-context refresh can rebuild a context preview from changed files and records the refresh in the approval/metadata trail.
+- Dataset dependency rebuild now removes the prior generated artifact before re-running so repeated refreshes avoid same-timestamp collisions.
 - Data Studio clears visible query/chart/profile state when the selected dataset changes on disk.
 - Workspace freshness reports dataset-derived views that need refresh when CSV/XLSX sources change.
 - SQL query results can be exported as Markdown artifacts with SQL text, engine, row counts, preview rows, and dataset citations.
@@ -248,17 +249,23 @@ This batch made more of the studio inspectable and auditable without turning on 
 5. Data Studio has a first read-only SQLite workspace database connector surface.
 6. Artifact lineage can be exported as JSON and imported for debugging/preview workflows.
 7. Playwright visual smoke mocks moved into a reusable fixture helper.
+8. Dataset dependency rebuild actions are now available in Data Studio for filter exports, SQL reports, charts, and summaries.
+9. Dataset dependency rebuild is now collision-safe for rapid re-runs by replacing stale regenerated artifacts before writing a new one.
 
-## Prepared Next Batch: Studio Query And Connector Maturity
+## Completed Batch: Studio Query And Connector Maturity
 
-1. Add explicit refresh/rebuild buttons for dataset dependencies so saved SQL reports, charts, summaries, and exports can be regenerated from recorded inputs.
-2. Add a richer metadata history tab with filters by kind, time, source path, and jump-to-chat/artifact/tool actions.
-3. Expand the SQLite connector with schema browsing, table previews, saved connector queries, and clearer read-only status.
-4. Add artifact lineage JSON import comparison in the UI, including validation errors and graph diff previews.
-5. Promote dataset dependency and SQL run records into first-class UI navigation from Data Studio, Artifact Studio, and Metadata Browser.
-6. Add connector approval policy docs/tests for read-only proofs, blocked SQL statements, result caps, and redacted errors.
-7. Start a DuckDB multi-file workspace dataset surface for joins across CSV/XLSX-derived tables.
-8. Split large shell orchestration state where connector/history flows start to crowd `NexusDeskShell.tsx`.
+1. Add explicit single-statement SQL validation (including quote/comment-aware semicolon checks) for SQLite connector and CSV analytics SQL inputs.
+2. Add explicit refresh/rebuild buttons for dataset dependencies so saved SQL reports, charts, summaries, and exports can be regenerated from recorded inputs.
+3. Add connector approval policy docs/tests for read-only proofs, blocked SQL statements, result caps, and redacted errors.
+
+## Prepared Batch: Studio Query And Connector Maturity
+
+1. Add a richer metadata history tab with filters by kind, time, source path, and jump-to-chat/artifact/tool actions.
+2. Expand the SQLite connector with schema browsing, table previews, saved connector queries, and clearer read-only status.
+3. Add artifact lineage JSON import comparison in the UI, including validation errors and graph diff previews.
+4. Promote dataset dependency and SQL run records into first-class UI navigation from Data Studio, Artifact Studio, and Metadata Browser.
+5. Start a DuckDB multi-file workspace dataset surface for joins across CSV/XLSX-derived tables.
+6. Split large shell orchestration state where connector/history flows start to crowd `NexusDeskShell.tsx`.
 
 ## Phase 2: Files, Documents, And Artifacts
 

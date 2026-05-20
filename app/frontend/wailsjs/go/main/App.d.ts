@@ -100,6 +100,8 @@ export function PreviewChatContextPack(arg1:Array<string>):Promise<workspace.Con
 
 export function PreviewDatasetChart(arg1:workspace.DatasetChartRequest):Promise<workspace.DatasetChartResult>;
 
+export function RebuildDatasetDependency(arg1:string):Promise<artifact.MarkdownReport>;
+
 export function PreviewFileDelete(arg1:string):Promise<workspace.FileDeleteProposal>;
 
 export function PreviewFileMove(arg1:workspace.FileMoveRequest):Promise<workspace.FileMoveProposal>;

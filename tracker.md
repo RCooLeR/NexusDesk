@@ -171,6 +171,10 @@ This tracker reflects the repository as it exists today and keeps planned work s
 - [x] Playwright visual smoke runs against Wails-free mocked workspace/data/metadata/chat/artifact fixtures.
 - [x] SQLite metadata now receives direct chat, approval, artifact, and tool-run writes once the workspace metadata store exists.
 - [x] Metadata history search can query chat, artifact, and tool-run rows through the SQLite-backed metadata surface.
+- [x] SQLite connector now normalizes query tokens before keyword checks, blocks mutation statements with tokenized scans, and safely converts mixed-value column types to string rows.
+- [x] SQLite metadata writes avoid unnecessary schema/manifest rewrites when `.nexusdesk/metadata/nexusdesk.sqlite` already exists.
+- [x] SQL metadata tracking captures connector `TotalRows` and skips metadata-search work when no search query is supplied.
+- [x] LLM/chat/safety metadata and SQLite metadata writes now reuse `app/internal/safety` for secret redaction and truncation.
 - [x] Dataset dependencies and SQL run history are recorded for saved SQL snippets, SQL reports, chart artifacts, query exports, and summaries.
 - [x] Read-only SQLite workspace database files are classified as database files and can be queried through a bounded connector surface.
 - [x] Artifact lineage can be exported as JSON and imported back for debugging/preview workflows.
@@ -272,17 +276,31 @@ This tracker reflects the repository as it exists today and keeps planned work s
 - [x] Add first database connector design surface for read-only SQLite files inside a workspace.
 - [x] Add artifact graph export/import as JSON for debugging and future team sync.
 - [x] Add reusable Playwright fixture helpers instead of inline visual-smoke mocks.
+- [x] Make dataset dependency rebuild idempotent across rapid repeated runs by removing the previous generated artifact before recreating it.
+
+### Completed Batch: Studio Query And Connector Maturity
+
+- [x] Add explicit single-statement SQL validation (with quote/comment-aware semicolon handling) for SQLite connector and read-only CSV analytics queries.
+- [x] Add explicit refresh/rebuild buttons for dataset dependencies so saved SQL reports, charts, summaries, and exports can be regenerated from their recorded inputs.
+- [x] Add connector approval policy docs/tests for read-only proofs, blocked SQL statements, and result caps.
+- [x] Add SQL connector and analytics error redaction in provider responses, logs, and metadata run records.
 
 ### Prepared Batch: Studio Query And Connector Maturity
 
-- [ ] Add explicit refresh/rebuild buttons for dataset dependencies so saved SQL reports, charts, summaries, and exports can be regenerated from their recorded inputs.
 - [ ] Add a richer metadata history tab with filters by kind, time, source path, and jump-to-chat/artifact/tool actions.
 - [ ] Expand the SQLite connector with schema browsing, table previews, saved connector queries, and clearer read-only status.
 - [ ] Add artifact lineage JSON import comparison in the UI, including validation errors and graph diff previews.
 - [ ] Promote dataset dependency and SQL run records into first-class UI navigation from Data Studio, Artifact Studio, and Metadata Browser.
-- [ ] Add connector approval policy docs/tests for read-only proofs, blocked SQL statements, result caps, and redacted errors.
 - [ ] Start a DuckDB multi-file workspace dataset surface for joins across CSV/XLSX-derived tables.
 - [ ] Split large shell orchestration state where connector/history flows start to crowd `NexusDeskShell.tsx`.
+
+### Prepared Batch: Error and Metadata Stabilization
+
+- [x] Consolidate redaction helpers with unit tests for shared behavior and edge-case secrets.
+- [x] Add end-to-end chat tests for redacted stream error events from backend -> UI bus.
+- [x] Add metadata-search regression tests for truncated SQL preview text and long provider errors.
+- [x] Add structured audit logging around sanitized provider failures (`truncated`, `redacted`).
+- [ ] Add a metrics dashboard for provider failures by kind, root path, and workspace.
 
 - [x] Batch: align product docs around NexusDesk as an IDE/data/analytics studio.
 - [x] Batch: align architecture, domain, indexing, search, AI, operations, delivery, DX, brand, README, and tracker wording.

@@ -108,13 +108,13 @@ func TestPrepareChatBuildsProjectContextPack(t *testing.T) {
 }
 
 func TestTruncateContextStringKeepsUTF8Valid(t *testing.T) {
-	content := "prefix кирилиця"
-	truncated := truncateContextString(content, len("prefix к")+1)
+	content := "prefix " + string('\u03C0')
+	truncated := truncateContextString(content, len("prefix \u03C0")+1)
 
 	if !utf8.ValidString(truncated) {
 		t.Fatalf("expected valid UTF-8, got %q", truncated)
 	}
-	if len(truncated) > len("prefix к")+1 {
+	if len(truncated) > len("prefix \u03C0")+1 {
 		t.Fatalf("expected byte cap to be respected, got %d", len(truncated))
 	}
 }

@@ -108,6 +108,10 @@ const chatContextPackMaxFiles = 32
 const chatContextPackMaxBytes = 96 * 1024
 const chatStreamEventName = "nexusdesk:chat-stream"
 
+var emitChatStreamEventFn = func(ctx context.Context, name string, event any) {
+	runtime.EventsEmit(ctx, name, event)
+}
+
 type App struct {
 	ctx           context.Context
 	llmClient     *llm.Client
@@ -478,11 +482,11 @@ func (a *App) QueryDatasetSQL(request analytics.SQLQueryRequest) (analytics.SQLQ
 	}
 	result, err := analytics.QueryCSVSQL(root, request)
 	if err != nil {
-		a.recordSQLRun(root, request.RelPath, request.SQL, "", 0, "", "failed", err.Error())
+		a.recordSQLRun(root, request.RelPath, sanitizeQueryForMetadata(request.SQL), "", 0, "", "failed", sanitizeProviderMessage(err.Error()))
 		return analytics.SQLQueryResult{}, err
 	}
-	a.recordSQLRun(root, result.RelPath, result.SQL, result.Engine, len(result.Rows), "", "completed", result.Message)
-	a.recordDatasetDependency(root, result.RelPath, "sql-run", result.SQL, result.Engine, "")
+	a.recordSQLRun(root, result.RelPath, sanitizeQueryForMetadata(result.SQL), result.Engine, result.TotalRows, "", "completed", sanitizeProviderMessage(result.Message))
+	a.recordDatasetDependency(root, result.RelPath, "sql-run", sanitizeQueryForMetadata(result.SQL), result.Engine, "")
 	return result, nil
 }
 
@@ -786,6 +790,10 @@ func (a *App) ListDatasetSQLRuns(relPath string) ([]appmeta.SQLRun, error) {
 }
 
 func (a *App) SearchMetadata(query string) ([]appmeta.MetadataSearchResult, error) {
+	query = strings.TrimSpace(query)
+	if query == "" {
+		return []appmeta.MetadataSearchResult{}, nil
+	}
 	root := a.getWorkspaceRoot()
 	if root == "" {
 		return []appmeta.MetadataSearchResult{}, nil
@@ -803,11 +811,11 @@ func (a *App) QueryWorkspaceSQLite(request dbconnector.SQLiteQueryRequest) (dbco
 	}
 	result, err := dbconnector.QuerySQLite(root, request)
 	if err != nil {
-		a.recordSQLRun(root, request.RelPath, request.SQL, "sqlite-readonly", 0, "", "failed", err.Error())
+		a.recordSQLRun(root, request.RelPath, sanitizeQueryForMetadata(request.SQL), "sqlite-readonly", 0, "", "failed", sanitizeProviderMessage(err.Error()))
 		return dbconnector.SQLiteQueryResult{}, err
 	}
-	a.recordSQLRun(root, result.RelPath, result.SQL, result.Engine, len(result.Rows), "", "completed", result.Message)
-	a.recordDatasetDependency(root, result.RelPath, "sqlite-query", result.SQL, result.Engine, "")
+	a.recordSQLRun(root, result.RelPath, sanitizeQueryForMetadata(result.SQL), result.Engine, result.TotalRows, "", "completed", sanitizeProviderMessage(result.Message))
+	a.recordDatasetDependency(root, result.RelPath, "sqlite-query", sanitizeQueryForMetadata(result.SQL), result.Engine, "")
 	return result, nil
 }
 
@@ -874,17 +882,17 @@ func (a *App) CreateDatasetSQLArtifact(request analytics.SQLQueryRequest) (artif
 	}
 	result, err := analytics.QueryCSVSQL(root, request)
 	if err != nil {
-		a.recordSQLRun(root, request.RelPath, request.SQL, "", 0, "", "failed", err.Error())
+		a.recordSQLRun(root, request.RelPath, sanitizeQueryForMetadata(request.SQL), "", 0, "", "failed", sanitizeProviderMessage(err.Error()))
 		return artifact.MarkdownReport{}, err
 	}
 	report, err := artifact.CreateDatasetSQLMarkdown(root, result, time.Now())
 	if err != nil {
-		a.recordSQLRun(root, result.RelPath, result.SQL, result.Engine, len(result.Rows), "", "failed", err.Error())
+		a.recordSQLRun(root, result.RelPath, sanitizeQueryForMetadata(result.SQL), result.Engine, result.TotalRows, "", "failed", sanitizeProviderMessage(err.Error()))
 		return artifact.MarkdownReport{}, err
 	}
 	a.persistArtifactMetadata(root, report.RelPath)
-	a.recordSQLRun(root, result.RelPath, result.SQL, result.Engine, len(result.Rows), report.RelPath, "completed", result.Message)
-	a.recordDatasetDependency(root, result.RelPath, "sql-report", result.SQL, result.Engine, report.RelPath)
+	a.recordSQLRun(root, result.RelPath, sanitizeQueryForMetadata(result.SQL), result.Engine, result.TotalRows, report.RelPath, "completed", sanitizeProviderMessage(result.Message))
+	a.recordDatasetDependency(root, result.RelPath, "sql-report", sanitizeQueryForMetadata(result.SQL), result.Engine, report.RelPath)
 	a.recordApproval("artifact.dataset_sql.create", report.RelPath, "medium", fmt.Sprintf("Created SQL result artifact from %s using %s.", result.RelPath, result.Engine))
 	return report, nil
 }
@@ -907,6 +915,136 @@ func (a *App) CreateDatasetSummaryArtifact(relPath string) (artifact.MarkdownRep
 	a.recordDatasetDependency(root, relPath, "summary", "dataset summary", "", report.RelPath)
 	a.recordApproval("artifact.dataset-summary", report.RelPath, "low", report.Message)
 	return report, nil
+}
+
+func (a *App) RebuildDatasetDependency(id string) (artifact.MarkdownReport, error) {
+	root := a.getWorkspaceRoot()
+	if root == "" {
+		return artifact.MarkdownReport{}, errors.New("open a workspace before rebuilding dataset artifacts")
+	}
+
+	dependency, err := appmeta.GetDatasetDependency(root, id)
+	if err != nil {
+		return artifact.MarkdownReport{}, err
+	}
+
+	rebuildDependency := func() error {
+		if strings.TrimSpace(dependency.Artifact) == "" {
+			return nil
+		}
+		if _, err := artifact.Delete(root, dependency.Artifact); err != nil {
+			var pathErr *os.PathError
+			if errors.As(err, &pathErr) && errors.Is(pathErr.Err, os.ErrNotExist) {
+				return nil
+			}
+			return err
+		}
+		return nil
+	}
+
+	now := time.Now()
+	switch dependency.Kind {
+	case "filter-export":
+		if err := rebuildDependency(); err != nil {
+			return artifact.MarkdownReport{}, err
+		}
+		query := strings.TrimSpace(dependency.Query)
+		if query == "" {
+			return artifact.MarkdownReport{}, errors.New("cannot rebuild filter export without query text")
+		}
+		result, err := workspace.QueryCSV(root, dependency.RelPath, query)
+		if err != nil {
+			return artifact.MarkdownReport{}, err
+		}
+		report, err := artifact.CreateDatasetQueryCSV(root, result, now)
+		if err != nil {
+			return artifact.MarkdownReport{}, err
+		}
+		a.persistArtifactMetadata(root, report.RelPath)
+		if _, err := appmeta.UpdateDatasetDependencyRefresh(root, dependency.ID, report.RelPath); err != nil {
+			return artifact.MarkdownReport{}, err
+		}
+		a.recordApproval("artifact.dataset_query.rebuild", report.RelPath, "low", fmt.Sprintf("Rebuilt dataset export for %s.", dependency.RelPath))
+		return report, nil
+
+	case "sql-report":
+		if err := rebuildDependency(); err != nil {
+			return artifact.MarkdownReport{}, err
+		}
+		query := strings.TrimSpace(dependency.Query)
+		if query == "" {
+			return artifact.MarkdownReport{}, errors.New("cannot rebuild SQL report without SQL text")
+		}
+		result, err := analytics.QueryCSVSQL(root, analytics.SQLQueryRequest{
+			RelPath: dependency.RelPath,
+			SQL:     query,
+		})
+		if err != nil {
+			a.recordSQLRun(root, dependency.RelPath, sanitizeQueryForMetadata(query), "unknown", 0, "", "failed", sanitizeProviderMessage(err.Error()))
+			return artifact.MarkdownReport{}, err
+		}
+		report, err := artifact.CreateDatasetSQLMarkdown(root, result, now)
+		if err != nil {
+			a.recordSQLRun(root, result.RelPath, sanitizeQueryForMetadata(result.SQL), result.Engine, result.TotalRows, "", "failed", sanitizeProviderMessage(err.Error()))
+			return artifact.MarkdownReport{}, err
+		}
+		a.persistArtifactMetadata(root, report.RelPath)
+		a.recordSQLRun(root, result.RelPath, sanitizeQueryForMetadata(result.SQL), result.Engine, result.TotalRows, report.RelPath, "completed", sanitizeProviderMessage(result.Message))
+		if _, err := appmeta.UpdateDatasetDependencyRefresh(root, dependency.ID, report.RelPath); err != nil {
+			return artifact.MarkdownReport{}, err
+		}
+		a.recordApproval("artifact.dataset_sql.rebuild", report.RelPath, "medium", fmt.Sprintf("Rebuilt SQL result artifact for %s using %s.", result.RelPath, result.Engine))
+		return report, nil
+
+	case "chart":
+		if err := rebuildDependency(); err != nil {
+			return artifact.MarkdownReport{}, err
+		}
+		category := strings.TrimSpace(dependency.Target)
+		if category == "" {
+			return artifact.MarkdownReport{}, errors.New("cannot rebuild chart without a category column")
+		}
+		chart, err := workspace.BuildCSVChart(root, workspace.DatasetChartRequest{
+			RelPath:        dependency.RelPath,
+			ChartType:      "bar",
+			CategoryColumn: category,
+			ValueColumn:    strings.TrimSpace(dependency.Query),
+		})
+		if err != nil {
+			return artifact.MarkdownReport{}, err
+		}
+		report, err := artifact.CreateDatasetChartSVG(root, chart, now)
+		if err != nil {
+			return artifact.MarkdownReport{}, err
+		}
+		a.persistArtifactMetadata(root, report.RelPath)
+		if _, err := appmeta.UpdateDatasetDependencyRefresh(root, dependency.ID, report.RelPath); err != nil {
+			return artifact.MarkdownReport{}, err
+		}
+		a.recordApproval("artifact.chart.rebuild", report.RelPath, "low", fmt.Sprintf("Rebuilt chart for %s from category %s.", dependency.RelPath, dependency.Target))
+		return report, nil
+
+	case "summary":
+		if err := rebuildDependency(); err != nil {
+			return artifact.MarkdownReport{}, err
+		}
+		preview, err := workspace.Preview(root, dependency.RelPath, workspace.PreviewOptions{MaxBytes: 1024 * 1024})
+		if err != nil {
+			return artifact.MarkdownReport{}, err
+		}
+		report, err := artifact.CreateDatasetSummaryMarkdown(root, preview, now)
+		if err != nil {
+			return artifact.MarkdownReport{}, err
+		}
+		a.persistArtifactMetadata(root, report.RelPath)
+		if _, err := appmeta.UpdateDatasetDependencyRefresh(root, dependency.ID, report.RelPath); err != nil {
+			return artifact.MarkdownReport{}, err
+		}
+		a.recordApproval("artifact.dataset-summary.rebuild", report.RelPath, "low", fmt.Sprintf("Rebuilt dataset summary for %s.", dependency.RelPath))
+		return report, nil
+	}
+
+	return artifact.MarkdownReport{}, fmt.Errorf("cannot rebuild dependency kind %q", dependency.Kind)
 }
 
 func (a *App) ListApprovals() ([]approval.Record, error) {
@@ -987,16 +1125,16 @@ func (a *App) ClearChatHistory() ([]storage.ChatMessage, error) {
 func (a *App) AskLLM(prompt string, relPath string) (llm.ChatResult, error) {
 	chatRequest, settings, err := a.prepareChat(prompt, []string{relPath})
 	if err != nil {
-		return llm.ChatResult{}, err
+		return llm.ChatResult{}, errors.New(sanitizeProviderMessageWithAudit(err.Error(), "ask_llm_prepare"))
 	}
 
 	result, err := a.llmClient.Chat(context.Background(), settings, chatRequest)
 	if err != nil {
-		return llm.ChatResult{}, err
+		return llm.ChatResult{}, errors.New(sanitizeProviderMessageWithAudit(err.Error(), "ask_llm_chat"))
 	}
 
 	if err := a.persistChatPair(prompt, chatRequest, result); err != nil {
-		return llm.ChatResult{}, err
+		return llm.ChatResult{}, errors.New(sanitizeProviderMessageWithAudit(err.Error(), "ask_llm_persist"))
 	}
 
 	return result, nil
@@ -1005,8 +1143,9 @@ func (a *App) AskLLM(prompt string, relPath string) (llm.ChatResult, error) {
 func (a *App) AskLLMStream(prompt string, relPath string, requestID string) (llm.ChatResult, error) {
 	chatRequest, settings, err := a.prepareChat(prompt, []string{relPath})
 	if err != nil {
-		a.emitChatStreamEvent(ChatStreamEvent{RequestID: requestID, Type: "error", Message: err.Error()})
-		return llm.ChatResult{}, err
+		sanitized := errors.New(sanitizeProviderMessageWithAudit(err.Error(), "ask_llm_stream_prepare"))
+		a.emitChatStreamEvent(ChatStreamEvent{RequestID: requestID, Type: "error", Message: sanitized.Error()})
+		return llm.ChatResult{}, sanitized
 	}
 
 	result, err := a.llmClient.ChatStream(context.Background(), settings, chatRequest, func(delta string) error {
@@ -1019,13 +1158,15 @@ func (a *App) AskLLMStream(prompt string, relPath string, requestID string) (llm
 		return nil
 	})
 	if err != nil {
-		a.emitChatStreamEvent(ChatStreamEvent{RequestID: requestID, Type: "error", Message: err.Error()})
-		return llm.ChatResult{}, err
+		sanitized := errors.New(sanitizeProviderMessageWithAudit(err.Error(), "ask_llm_stream"))
+		a.emitChatStreamEvent(ChatStreamEvent{RequestID: requestID, Type: "error", Message: sanitized.Error()})
+		return llm.ChatResult{}, sanitized
 	}
 
 	if err := a.persistChatPair(prompt, chatRequest, result); err != nil {
-		a.emitChatStreamEvent(ChatStreamEvent{RequestID: requestID, Type: "error", Message: err.Error()})
-		return llm.ChatResult{}, err
+		sanitized := errors.New(sanitizeProviderMessageWithAudit(err.Error(), "ask_llm_stream_persist"))
+		a.emitChatStreamEvent(ChatStreamEvent{RequestID: requestID, Type: "error", Message: sanitized.Error()})
+		return llm.ChatResult{}, sanitized
 	}
 
 	a.emitChatStreamEvent(ChatStreamEvent{
@@ -1044,15 +1185,15 @@ func (a *App) AskLLMStream(prompt string, relPath string, requestID string) (llm
 func (a *App) AskLLMContextPack(prompt string, relPaths []string) (llm.ChatResult, error) {
 	chatRequest, settings, err := a.prepareChat(prompt, relPaths)
 	if err != nil {
-		return llm.ChatResult{}, err
+		return llm.ChatResult{}, errors.New(sanitizeProviderMessageWithAudit(err.Error(), "ask_llm_context_pack_prepare"))
 	}
 
 	result, err := a.llmClient.Chat(context.Background(), settings, chatRequest)
 	if err != nil {
-		return llm.ChatResult{}, err
+		return llm.ChatResult{}, errors.New(sanitizeProviderMessageWithAudit(err.Error(), "ask_llm_context_pack"))
 	}
 	if err := a.persistChatPair(prompt, chatRequest, result); err != nil {
-		return llm.ChatResult{}, err
+		return llm.ChatResult{}, errors.New(sanitizeProviderMessageWithAudit(err.Error(), "ask_llm_context_pack_persist"))
 	}
 	return result, nil
 }
@@ -1060,8 +1201,9 @@ func (a *App) AskLLMContextPack(prompt string, relPaths []string) (llm.ChatResul
 func (a *App) AskLLMStreamContextPack(prompt string, relPaths []string, requestID string) (llm.ChatResult, error) {
 	chatRequest, settings, err := a.prepareChat(prompt, relPaths)
 	if err != nil {
-		a.emitChatStreamEvent(ChatStreamEvent{RequestID: requestID, Type: "error", Message: err.Error()})
-		return llm.ChatResult{}, err
+		sanitized := errors.New(sanitizeProviderMessageWithAudit(err.Error(), "ask_llm_stream_context_prepare"))
+		a.emitChatStreamEvent(ChatStreamEvent{RequestID: requestID, Type: "error", Message: sanitized.Error()})
+		return llm.ChatResult{}, sanitized
 	}
 
 	result, err := a.llmClient.ChatStream(context.Background(), settings, chatRequest, func(delta string) error {
@@ -1074,12 +1216,14 @@ func (a *App) AskLLMStreamContextPack(prompt string, relPaths []string, requestI
 		return nil
 	})
 	if err != nil {
-		a.emitChatStreamEvent(ChatStreamEvent{RequestID: requestID, Type: "error", Message: err.Error()})
-		return llm.ChatResult{}, err
+		sanitized := errors.New(sanitizeProviderMessageWithAudit(err.Error(), "ask_llm_stream_context"))
+		a.emitChatStreamEvent(ChatStreamEvent{RequestID: requestID, Type: "error", Message: sanitized.Error()})
+		return llm.ChatResult{}, sanitized
 	}
 	if err := a.persistChatPair(prompt, chatRequest, result); err != nil {
-		a.emitChatStreamEvent(ChatStreamEvent{RequestID: requestID, Type: "error", Message: err.Error()})
-		return llm.ChatResult{}, err
+		sanitized := errors.New(sanitizeProviderMessageWithAudit(err.Error(), "ask_llm_stream_context_persist"))
+		a.emitChatStreamEvent(ChatStreamEvent{RequestID: requestID, Type: "error", Message: sanitized.Error()})
+		return llm.ChatResult{}, sanitized
 	}
 	a.emitChatStreamEvent(ChatStreamEvent{
 		RequestID:      requestID,
@@ -1210,7 +1354,7 @@ func (a *App) emitChatStreamEvent(event ChatStreamEvent) {
 	if a.ctx == nil {
 		return
 	}
-	runtime.EventsEmit(a.ctx, chatStreamEventName, event)
+	emitChatStreamEventFn(a.ctx, chatStreamEventName, event)
 }
 
 func (a *App) previewChatContext(relPath string) (workspace.FilePreview, error) {

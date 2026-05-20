@@ -120,3 +120,57 @@ func TestMirrorAndInspectSQLiteMetadata(t *testing.T) {
 		t.Fatalf("ListDatasetDependencies returned unexpected data: %+v, %v", deps, err)
 	}
 }
+
+func TestGetDatasetDependencyAndUpdateRefresh(t *testing.T) {
+	root := t.TempDir()
+	if _, err := Ensure(root); err != nil {
+		t.Fatalf("Ensure returned error: %v", err)
+	}
+	if err := RecordDatasetDependency(root, DatasetDependency{
+		ID:        "dep-2",
+		RelPath:   "data/sales.csv",
+		Kind:      "filter-export",
+		Query:     "channel=Paid",
+		CreatedAt: "2026-05-16T00:00:00Z",
+	}); err != nil {
+		t.Fatalf("RecordDatasetDependency returned error: %v", err)
+	}
+
+	dependency, err := GetDatasetDependency(root, "dep-2")
+	if err != nil {
+		t.Fatalf("GetDatasetDependency returned error: %v", err)
+	}
+	if dependency.Kind != "filter-export" || dependency.Query != "channel=Paid" {
+		t.Fatalf("unexpected dependency: %+v", dependency)
+	}
+
+	timestamp, err := UpdateDatasetDependencyRefresh(root, "dep-2", ".nexusdesk/artifacts/refreshed-sales-export.md")
+	if err != nil {
+		t.Fatalf("UpdateDatasetDependencyRefresh returned error: %v", err)
+	}
+	if timestamp == "" {
+		t.Fatalf("expected non-empty refresh timestamp")
+	}
+
+	refreshed, err := GetDatasetDependency(root, "dep-2")
+	if err != nil {
+		t.Fatalf("GetDatasetDependency returned error: %v", err)
+	}
+	if refreshed.Artifact != ".nexusdesk/artifacts/refreshed-sales-export.md" {
+		t.Fatalf("expected artifact path update, got %q", refreshed.Artifact)
+	}
+	if refreshed.LastRefresh != timestamp {
+		t.Fatalf("expected last_refresh %q, got %q", timestamp, refreshed.LastRefresh)
+	}
+}
+
+func TestUpdateDatasetDependencyRefreshForMissingDependency(t *testing.T) {
+	root := t.TempDir()
+	if _, err := Ensure(root); err != nil {
+		t.Fatalf("Ensure returned error: %v", err)
+	}
+
+	if _, err := UpdateDatasetDependencyRefresh(root, "missing", "artifact.md"); err == nil {
+		t.Fatalf("expected error for missing dependency")
+	}
+}
