@@ -97,6 +97,7 @@ Current implementation:
 - SQLite metadata inspection exposes table columns, row counts, filterable columns, copyable sample rows, dataset SQL view summaries, and searchable chat/artifact/tool-run history
 - dataset dependency and SQL run metadata records tie saved snippets, reports, charts, summaries, and connector queries back to source datasets
 - workspace freshness checks ignore internal metadata/tool-run paths, detect source file changes, mark generated artifacts with stale source provenance, flag stale dataset-derived views, and warn chat/context surfaces when cited files changed
+- read-only Git refreshes and approved agent shell commands run as hidden/no-console child processes on Windows desktop builds
 - frontend commands call Wails bindings rather than reading or mutating arbitrary paths directly
 
 ## Database Security

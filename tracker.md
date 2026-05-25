@@ -262,6 +262,7 @@ Step 4.3: Git integration
 - [x] Detect git repository root.
 - [x] Show current branch.
 - [x] Show dirty summary.
+- [x] Hide automatic external Git command windows on Windows desktop builds.
 - [x] Show file status badges in tree.
 - [x] Add changed-files panel.
 - [x] Add working tree diff.
@@ -997,6 +998,8 @@ Reasoning: the app now distinguishes staged versus unstaged repository state and
 `app/internal/dbconnector/` owns workspace database connector surfaces. Today that means read-only SQLite files; future phases add server databases and dump sandboxes.
 
 `app/internal/approval/` owns append-only approval/action records.
+
+`app/process_windows.go` and `app/process_other.go` own platform-specific child process configuration. Windows desktop builds hide app-launched child processes so automatic Git refreshes and approved shell tools do not flash console windows.
 
 `app/internal/storage/` owns local app config such as recent workspaces and non-secret LLM settings. Secret values must stay in credential storage or protected sidecars.
 

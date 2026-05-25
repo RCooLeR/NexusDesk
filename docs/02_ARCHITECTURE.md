@@ -333,6 +333,8 @@ local JSON config stores today; SQLite later
 user-selected model endpoint
 ```
 
+The packaged backend may launch bounded external child processes for read-only Git status/diff inspection and approved agent shell tools. Windows builds configure those children as hidden/no-console processes so automatic workspace refreshes do not flash terminal windows over the desktop UI.
+
 ### Team Or Enterprise Future
 
 ```text

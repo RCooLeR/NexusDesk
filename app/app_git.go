@@ -247,6 +247,7 @@ func gitOutput(root string, args ...string) (string, error) {
 	ctx, cancel := context.WithTimeout(context.Background(), gitCommandTimeout)
 	defer cancel()
 	command := exec.CommandContext(ctx, "git", append([]string{"-C", root}, args...)...)
+	configureHiddenCommand(command)
 	var stdout bytes.Buffer
 	var stderr bytes.Buffer
 	command.Stdout = &stdout

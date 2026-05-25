@@ -245,6 +245,7 @@ func (a *App) agentExecuteShell(ctx context.Context, root string, call agent.Too
 	} else {
 		cmd = exec.CommandContext(shellCtx, "sh", "-c", command)
 	}
+	configureHiddenCommand(cmd)
 	cmd.Dir = root
 	output, err := cmd.CombinedOutput()
 	call.Observation = limitAgentOutput(string(output), maxAgentShellOutputBytes)

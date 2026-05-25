@@ -72,6 +72,8 @@ For a healthy load, `/api/ps` should show nonzero `size_vram`, and the Ollama lo
 
 `app/app_git.go` owns the first read-only Git visibility bridge. `GetGitStatus` runs bounded `git` commands against the active workspace root, detects the repository root, branch, short HEAD, ahead/behind text, porcelain changed-file rows, staged/unstaged groups, a capped staged diff, and a capped working-tree diff. `GetGitFileDiff` loads a capped read-only staged and unstaged diff for one selected changed file. Neither method stages, unstages, resets, checks out, or mutates repository state. Code Studio consumes these through the generated Wails binding to show branch status, dirty summary, changed files, and tree status badges; the bottom Git drawer tab owns selected changed-file review, read-only staged/unstaged diffs, unified/split diff modes, hunk navigation, AI diff summaries, and AI commit-message drafts.
 
+On Windows, external child processes launched by the app are configured as hidden/no-console processes. That keeps automatic read-only Git refreshes and approved agent shell commands from flashing transient console windows over the desktop UI.
+
 `app/frontend/src/features/shell/HighlightedCode.tsx` remains as the dependency-free fallback highlighter for non-Monaco preview paths. Text/code source previews and edit drafts now use the Monaco-backed components listed below.
 
 ## Dataset Profiles
