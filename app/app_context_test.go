@@ -7,8 +7,8 @@ import (
 	"testing"
 	"unicode/utf8"
 
-	"NexusDesk/internal/storage"
-	"NexusDesk/internal/workspace"
+	"NexusAugenticStudio/internal/storage"
+	"NexusAugenticStudio/internal/workspace"
 )
 
 func TestBuildChatContextContentUsesCSVSummary(t *testing.T) {

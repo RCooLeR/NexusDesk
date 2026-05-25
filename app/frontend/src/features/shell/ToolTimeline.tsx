@@ -9,8 +9,8 @@ export function ToolTimeline({events}: ToolTimelineProps) {
     return (
         <Card className="timeline">
             <div className="pane-title">
-                <span>Tool Timeline</span>
-                <small>Visible by design</small>
+                <span>Activity Log</span>
+                <small>Model, tools, and workspace events</small>
             </div>
             <div className="timeline-items">
                 {events.map((event) => (

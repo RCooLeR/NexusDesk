@@ -11,7 +11,7 @@ import (
 	"testing"
 	"time"
 
-	"NexusDesk/internal/storage"
+	"NexusAugenticStudio/internal/storage"
 )
 
 func TestChatCallsOpenAICompatibleChatCompletionsEndpoint(t *testing.T) {
@@ -136,6 +136,12 @@ func TestChatSendsOllamaContextOptionForLocalRunner(t *testing.T) {
 		if got := body.Options["num_ctx"]; got != float64(65536) {
 			t.Fatalf("expected num_ctx option, got %#v", body.Options)
 		}
+		if got := body.Options["num_predict"]; got != float64(4096) {
+			t.Fatalf("expected num_predict option, got %#v", body.Options)
+		}
+		if body.MaxTokens != 4096 {
+			t.Fatalf("expected max_tokens reserve, got %d", body.MaxTokens)
+		}
 
 		response.Header().Set("Content-Type", "application/json")
 		_, _ = response.Write([]byte(`{"choices":[{"message":{"role":"assistant","content":"ready"}}]}`))
@@ -162,6 +168,9 @@ func TestChatDoesNotSendProviderSpecificOptionsForRemoteRunner(t *testing.T) {
 		}
 		if len(body.Options) > 0 {
 			t.Fatalf("expected no provider-specific options, got %#v", body.Options)
+		}
+		if body.MaxTokens != 4096 {
+			t.Fatalf("expected remote max_tokens reserve, got %d", body.MaxTokens)
 		}
 
 		response.Header().Set("Content-Type", "application/json")

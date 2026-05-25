@@ -1,4 +1,5 @@
 import {useEffect, useState} from 'react';
+import {FontAwesomeIcon} from '@fortawesome/react-fontawesome';
 import {brandAssets, capabilityIconByTitle} from '../../brand/assets';
 import {Button, EmptyState, StatusBadge} from '../../components/ui';
 import type {Capability, DatasetChartResult, DatasetDependency, DatasetProfile, DatasetQueryResult, DatasetSQLQueryResult, FilePreview, MetadataBrowser, MetadataSearchResult, SavedDatasetQuery, SQLRun, SQLiteMetadataStatus, SQLiteQueryResult, WorkspaceFreshnessStatus, WorkspaceSnapshot} from '../../types';
@@ -148,7 +149,7 @@ export function DataOperationsPanel({
                 <div className="capability-list">
                     {capabilities.map((capability) => (
                         <div className="capability-card" key={capability.title}>
-                            <img src={capabilityIconByTitle[capability.title] ?? brandAssets.icons.ai} alt="" />
+                            <FontAwesomeIcon icon={capabilityIconByTitle[capability.title] ?? brandAssets.icons.ai} />
                             <strong>{capability.title}</strong>
                             <p>{capability.description}</p>
                             <StatusBadge tone="warning">{capability.status}</StatusBadge>
@@ -223,7 +224,7 @@ export function DataOperationsPanel({
                 ) : (
                     <EmptyState
                         detail="Select a CSV, spreadsheet, or saved profile to work with data."
-                        iconSrc={brandAssets.icons.data}
+                        icon={brandAssets.icons.data}
                         title="No active dataset"
                     />
                 )}

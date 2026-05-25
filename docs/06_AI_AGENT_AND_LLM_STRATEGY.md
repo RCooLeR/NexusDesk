@@ -2,7 +2,7 @@
 
 ## AI Role
 
-AI in NexusDesk should behave like an integrated studio assistant inside an IDE/data/analytics environment. It should help users understand and act on workspace information, but it should not bypass retrieval, permissions, or source control.
+AI in Nexus Augentic Studio should behave like an integrated studio assistant inside an IDE/data/analytics environment. It should help users understand and act on workspace information, but it should not bypass retrieval, permissions, or source control.
 
 Good uses:
 
@@ -100,26 +100,27 @@ Current implementation:
 - `AskLLM` and `AskLLMStream` in `app/app.go` resolve saved settings and attach selected workspace text context server-side.
 - `AskLLMContextPack` and `AskLLMStreamContextPack` build a bounded multi-file context pack from pinned previews.
 - Directory and project context use `app/internal/workspace/context.go` to expand selected folders or `.` into a capped list of previewable files before the streaming chat request is sent.
-- The saved provider settings include `maxContextTokens` and `responseReserveTokens`; chat context uses the remaining budget for selected files or context packs, and local Ollama-compatible calls send `num_ctx` to request the configured window.
+- The saved provider settings include `maxContextTokens` and `responseReserveTokens`; chat context uses the remaining budget for selected files or context packs, local Ollama-compatible calls send `num_ctx` and `num_predict`, and compatible chat calls send `max_tokens` from the response reserve.
+- The model dropdown is backed by a shared frontend catalog plus backend storage defaults. Selecting a curated model applies the largest configured context window for that model, derives the response reserve from the window, and then prefers Ollama runtime `context_length` when the connection probe can see the loaded model.
 - Workspace search and CSV row queries are deterministic backend tools, not model-side file access.
 - `app/internal/agenttools/registry.go` now exposes a first deterministic tool registry for workspace preview, file write, dataset query, artifact create/archive, and operations inspect actions.
 - `app/internal/agent/` now contains a backend-first ReAct runtime that can plan, call tools, process observations, prune working memory, and return final answers through `RunAgent`.
 - `app/agent_runtime.go` bridges that runtime to the existing workspace, dataset, artifact, shell, and registered agent-tool surfaces without giving the model direct filesystem authority.
-- The bottom Tools tab renders a proposed tool plan for the active context with risk and approval labels, and user-triggered dry-run/execute actions now persist tool-run records.
+- The AI Assistant route renders a proposed tool plan for the active context with risk and approval labels, and user-triggered dry-run/execute actions now persist tool-run records.
 - Recent tool-run rows expand into detail drawers with captured inputs, output/error text, approval references, replay, and target diff affordances.
 - Persisted assistant answers and saved Markdown answer artifacts include the source paths used for selected-file or context-pack grounding.
 - Chat messages and context-pack previews warn when their cited source paths changed after the answer/context was created.
-- `AskLLMStream` emits `nexusdesk:chat-stream` Wails events so the frontend can render partial assistant responses before final history persistence completes.
+- `AskLLMStream` emits `nexus:chat-stream` Wails events so the frontend can render partial assistant responses before final history persistence completes.
 - `app/internal/storage/chat_history.go` persists bounded chat history per workspace in local JSON config.
 - The local workstation endpoint is backed by the sibling `../Llm/` Compose stack. Its `rcooler-ollama` container must use `OLLAMA_LLM_LIBRARY=cuda_v12`; otherwise Ollama may select CUDA 13, fail GPU initialization, and fall back to CPU with zero VRAM offload.
 
 Capability hints are currently inferred from model IDs. They are useful for readiness signals, but they are not a substitute for provider-native capability metadata.
 
-The current chat implementation requires an explicit configured model. It includes either a bounded selected text preview or a bounded pinned context pack, sends selected CSV files as a structured column profile plus bounded row sample, sends DOCX text and extracted PDF text when available, cites the source paths attached to persisted assistant answers, and streams response text when the configured provider supports OpenAI-compatible streaming. Directory and project context are bounded expansions, not raw full-project dumps: ignored folders, symlinks, images, binaries, and oversized content are skipped, and the included files/bytes are capped by the configured model window after reserving response/overhead space. The Explain action uses the same selected text/code/document/directory boundary to send a deterministic explanation prompt. A backend model-directed tool loop now exists behind `RunAgent`; the existing chat panel has not yet been switched to live stream each agent step.
+The current chat implementation requires an explicit configured model. It includes either a bounded selected text preview or a bounded pinned context pack, sends selected CSV files as a structured column profile plus bounded row sample, sends DOCX text and extracted PDF text when available, cites the source paths attached to persisted assistant answers, and streams response text when the configured provider supports OpenAI-compatible streaming. Directory and project context are bounded expansions, not raw full-project dumps: ignored folders, symlinks, images, binaries, and oversized content are skipped, and the included files/bytes are capped by the configured model window after reserving response/overhead space. The Activity Log records request, context budget, first-token, completion, and failure events so slow local model runs remain observable. The Explain action uses the same selected text/code/document/directory boundary to send a deterministic explanation prompt. A backend model-directed tool loop now exists behind `RunAgent`; the existing chat panel has not yet been switched to live stream each agent step.
 
 ## Agent Modes
 
-NexusDesk can expose several modes while using the same underlying agent loop.
+Nexus Augentic Studio can expose several modes while using the same underlying agent loop.
 
 These modes should map to visible studio surfaces. The user should feel they are working in Code Studio, Data Studio, Analytics Studio, Document Studio, or Operations Studio, with AI available as one command layer inside that surface.
 
@@ -236,9 +237,9 @@ Quality bar:
 
 ## Tool Calling
 
-If the selected provider supports native tool calling, NexusDesk can use the provider’s tool format.
+If the selected provider supports native tool calling, Nexus Augentic Studio can use the provider’s tool format.
 
-If not, NexusDesk can use a controlled JSON request format:
+If not, Nexus Augentic Studio can use a controlled JSON request format:
 
 ```json
 {
@@ -343,7 +344,7 @@ Current implementation:
 - shell commands are blocked unless both high-impact approval and shell execution are enabled
 - tool run records capture inputs, output summary, risk, approval ID, duration, and errors for replay/audit
 - artifact lineage can link source files, assistant answers, persisted tool runs, and generated artifacts for an audit graph
-- lineage can be filtered in the bottom Artifact Studio tab by source, chat, tool, or artifact kind, with selectable nodes, relationship counts, and source navigation
+- lineage can be filtered in the Artifact Studio route by source, chat, tool, or artifact kind, with selectable nodes, relationship counts, and source navigation
 
 ## Prompt Contracts
 
@@ -446,7 +447,7 @@ When a source changes, related cached insights should be marked stale.
 
 ## Safety
 
-NexusDesk should enforce:
+Nexus Augentic Studio should enforce:
 
 - no hidden file writes
 - no silent destructive actions
@@ -457,4 +458,4 @@ NexusDesk should enforce:
 - no shell execution by default
 - no arbitrary HTML rendering from model output
 
-The model may suggest. NexusDesk decides what can happen.
+The model may suggest. Nexus Augentic Studio decides what can happen.

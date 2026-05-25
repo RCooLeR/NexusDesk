@@ -6,22 +6,22 @@ Goal: lock the product direction and preserve the strongest idea.
 
 Deliverables:
 
-- NexusDesk product docs
+- Nexus Augentic Studio product docs
 - brand package
 - UI wireframe
 - core workflow definition
 - LLM provider settings design
 - tool risk model
-- MVP scope guardrails
+- foundation scope guardrails
 
 Exit criteria:
 
 - product is clearly positioned as a local-first AI IDE, data studio, and analytics studio, not a prompt-only chatbot
-- MVP modules are named
+- foundation modules are named
 - risky actions have approval rules
 - development stack is selected
 
-## Phase 1: Workspace MVP
+## Phase 1: Project Foundation
 
 Goal: create a usable local desktop studio with project browsing, editor tabs, data panels, artifacts, and grounded LLM assistance.
 
@@ -97,8 +97,8 @@ Exit criteria:
 Current status:
 
 - The desktop shell builds on Windows through Wails.
-- NexusDesk is now documented and presented as a local-first AI IDE, data studio, and analytics studio.
-- The active center pane exposes a first studio surface indicator for Code Studio, Data Studio, Document Studio, Operations Studio, Artifact Studio, or Workspace Studio.
+- Nexus Augentic Studio is now documented and presented as a local-first AI IDE, data studio, and analytics studio.
+- The active center pane exposes a first studio surface indicator for Code Studio, Data Studio, Document Studio, Operations Studio, Artifact Studio, or Project Studio.
 - The workspace browser can open, refresh, preview, remember, search, and expand/collapse local folders, scanning up to 10 levels deep by default.
 - The shell has a keyboard quick-open palette for workspace files, folders, and already-open tabs, with parent directories expanded on selection.
 - The shell has a keyboard command palette for common workspace, editor, context, data, artifact, and chat actions.
@@ -147,10 +147,10 @@ Current status:
 - Markdown artifacts now write sidecar provenance metadata with source, prompt, model, source paths, and creation timestamp.
 - CSV query export artifacts now write sidecar provenance metadata with dataset source paths and query string.
 - SVG chart artifacts now write sidecar provenance metadata with dataset source paths and chart configuration.
-- The bottom Artifact Studio tab lists generated Markdown, CSV, and SVG artifacts, can reselect visible artifact files from that list, and shows artifact metadata when a generated artifact is active.
+- The Artifact Studio route lists generated Markdown, CSV, and SVG artifacts, can reselect visible artifact files from that list, and shows artifact metadata when a generated artifact is active.
 - Workspace scan reports can be saved as Markdown artifacts with scan counters and skipped/ignored path samples.
 - Artifact metadata cards can open the source context, archive generated artifacts, or delete artifacts after approval.
-- The bottom Tools tab shows a first backend-driven tool plan with registered workspace, dataset, artifact, and operations tools plus risk/approval labels.
+- The AI Assistant route shows a first backend-driven tool plan with registered workspace, dataset, artifact, and operations tools plus risk/approval labels.
 - Workspace search includes path/content matches, artifact metadata, and chat history snippets.
 - Applied write/delete/move and artifact creation actions are recorded in `.nexusdesk/approvals/log.json` and shown in the bottom Approvals tab.
 - Operations Studio parses selected Docker Compose files into service, image, port, volume, and dependency summaries without mutating Docker state.
@@ -193,7 +193,7 @@ This batch kept momentum on real functionality while cleaning up the growing she
 This batch made more of the studio inspectable and auditable without turning on autonomous tool execution yet:
 
 1. Backend tool descriptors now live in `app/internal/agenttools/` with names, descriptions, risk levels, surfaces, and approval requirements.
-2. The bottom Tools tab shows a first proposed tool plan for the active file, dataset, artifact, or operations context.
+2. The AI Assistant route shows a first proposed tool plan for the active file, dataset, artifact, or operations context.
 3. Workspace scan reports can be saved as Markdown artifacts under `.nexusdesk/artifacts/`.
 4. CSV queries now support numeric comparisons, `contains`, `limit`, and simple `order by` clauses.
 5. Generated artifacts can open their source context, archive to `.nexusdesk/artifacts/archive/`, or be deleted through approval prompts.
@@ -265,11 +265,11 @@ This batch made more of the studio inspectable and auditable without turning on 
 3. Add artifact lineage JSON import comparison in the UI, including validation errors and graph diff previews.
 4. Promote dataset dependency and SQL run records into first-class UI navigation from Data Studio, Artifact Studio, and Metadata Browser.
 5. Start a DuckDB multi-file workspace dataset surface for joins across CSV/XLSX-derived tables.
-6. Split large shell orchestration state where connector/history flows start to crowd `NexusDeskShell.tsx`.
+6. Split large shell orchestration state where connector/history flows start to crowd `NexusShell.tsx`.
 
 ## Strategic Studio Batches
 
-These batches describe the next product direction. They are broader than the current MVP and should be broken down into smaller implementation batches before coding.
+These batches describe the next product direction. They are broader than the current foundation and should be broken down into smaller implementation batches before coding.
 
 ### Batch: Main Menu And Studio Routing
 
@@ -331,7 +331,7 @@ These batches describe the next product direction. They are broader than the cur
 
 ## Phase 2: Files, Documents, And Artifacts
 
-Goal: make NexusDesk useful for real documents and generated outputs.
+Goal: make Nexus Augentic Studio useful for real documents and generated outputs.
 
 Deliverables:
 
@@ -392,7 +392,7 @@ Exit criteria:
 
 ## Phase 4: Databases And Marketing Connectors
 
-Goal: connect NexusDesk to real business data sources.
+Goal: connect Nexus Augentic Studio to real business data sources.
 
 Deliverables:
 
@@ -417,7 +417,7 @@ Exit criteria:
 
 ## Phase 5: Docker And Operations
 
-Goal: make NexusDesk useful for Docker-based development and operations.
+Goal: make Nexus Augentic Studio useful for Docker-based development and operations.
 
 Deliverables:
 
@@ -462,9 +462,9 @@ Exit criteria:
 
 - external tools can be added without breaking native safety rules
 - advanced features remain optional
-- core MVP remains fast and stable
+- core foundation remains fast and stable
 
-## MVP Scope Guardrails
+## Foundation Scope Guardrails
 
 Do not build everything at once.
 

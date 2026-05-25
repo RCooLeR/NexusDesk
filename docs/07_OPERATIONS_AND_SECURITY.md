@@ -47,7 +47,7 @@ The current implementation has an append-only local approval/action log for appl
 
 ## Secrets
 
-NexusDesk may store:
+Nexus Augentic Studio may store:
 
 - LLM API keys
 - search API keys
@@ -174,7 +174,7 @@ Rules:
 
 ## Privacy
 
-NexusDesk should assume user workspaces may contain private data.
+Nexus Augentic Studio should assume user workspaces may contain private data.
 
 Protect:
 
@@ -233,11 +233,11 @@ Back up:
 - artifact metadata
 - custom prompts and policies
 
-Workspace files themselves should not be silently backed up by NexusDesk unless the user explicitly opts in.
+Workspace files themselves should not be silently backed up by Nexus Augentic Studio unless the user explicitly opts in.
 
 ## Failure Modes
 
-NexusDesk should degrade gracefully:
+Nexus Augentic Studio should degrade gracefully:
 
 - if LLM is down, file browsing and previews still work
 - if indexing fails, the workspace still opens

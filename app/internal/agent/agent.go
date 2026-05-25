@@ -9,9 +9,9 @@ import (
 	"time"
 	"unicode/utf8"
 
-	"NexusDesk/internal/agenttools"
-	"NexusDesk/internal/llm"
-	"NexusDesk/internal/storage"
+	"NexusAugenticStudio/internal/agenttools"
+	"NexusAugenticStudio/internal/llm"
+	"NexusAugenticStudio/internal/storage"
 )
 
 const (
@@ -216,7 +216,7 @@ func (s *runState) finishPlan() {
 
 func SystemPrompt() string {
 	return strings.Join([]string{
-		"You are NexusDesk Agent, a local-first studio assistant for code, data, documents, operations, and artifacts.",
+		"You are Nexus Agent, the local-first assistant inside Nexus Augentic Studio for code, data, documents, operations, and artifacts.",
 		"Work as a permissioned co-pilot: inspect before acting, keep all actions inside the active workspace, and never claim access to files you did not inspect.",
 		"Use a ReAct loop with concise Thought, a single Action, the resulting Observation, and then a Final Answer when the task is done.",
 		"Use update_plan for multi-step work and keep exactly one step in_progress.",

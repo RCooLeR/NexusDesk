@@ -3,7 +3,7 @@ package main
 import (
 	"log"
 
-	"NexusDesk/internal/safety"
+	"NexusAugenticStudio/internal/safety"
 )
 
 const maxProviderAuditSnippet = 140

@@ -2,7 +2,7 @@
 
 ## Architectural Style
 
-NexusDesk should be a modular local-first desktop studio application with a strong Go backend and a rich web-based frontend. The product shape is closer to an IDE/data studio than to a chatbot shell.
+Nexus Augentic Studio should be a modular local-first desktop studio application with a strong Go backend and a rich web-based frontend. The product shape is closer to an IDE/data studio than to a chatbot shell.
 
 The implemented desktop slice currently contains:
 
@@ -29,6 +29,7 @@ The implemented desktop slice currently contains:
 - separate saved SQL snippets and lightweight row filters per dataset
 - SQL result Markdown artifacts with query, engine, row count, preview, and source citation metadata
 - read-only Compose parsing for Operations Studio
+- read-only Git status, branch, changed-file list, and working-tree diff for Code Studio
 - configurable LLM gateway
 - OpenAI-compatible chat and streaming
 
@@ -105,6 +106,8 @@ Responsibilities:
 
 The shell should be thin. Most behavior should live in backend modules and frontend components.
 
+Current implementation note: `app/app.go` is still the Wails-facing application adapter, while `app/app_metadata.go` now owns app-level metadata mirroring and metadata record orchestration. Future backend refactors should continue moving cohesive use cases out of the bridge file without changing Wails contracts casually.
+
 ### 2. Frontend
 
 Responsibilities:
@@ -112,6 +115,7 @@ Responsibilities:
 - project and workspace navigation
 - file tree
 - tabs and editor state
+- Code Studio git visibility and project-tree context actions
 - studio mode surfaces for code, data, analytics, documents, operations, and artifacts
 - Monaco-backed code/text previews and draft editing
 - image and PDF preview
@@ -125,6 +129,8 @@ Responsibilities:
 - artifact browser
 
 The frontend should render structured data from the backend. It should not contain business rules for file permissions, database safety, or Docker safety.
+
+Current implementation note: generated Wails bindings are imported through `app/frontend/src/api/wailsClient.ts`, not directly from feature components. `NexusShell.tsx` remains the main orchestrator, but panel resize state and studio-route state now live in focused hooks with local persistence so future workspace, chat, artifact, and data controllers can follow the same pattern.
 
 ### 3. Workspace Manager
 
@@ -182,6 +188,7 @@ Current responsibilities:
 - search filenames, paths, and previewable text content
 - build bounded context packs from selected files, directories, or the workspace root
 - avoid overloading the model context window
+- expose read-only Git repository status and working-tree diff for Code Studio
 
 Planned responsibilities:
 
@@ -319,7 +326,7 @@ ollama or custom LLM endpoint
 ### Packaged Desktop
 
 ```text
-NexusDesk app
+Nexus Augentic Studio app
 embedded frontend assets
 Go backend in same process
 local JSON config stores today; SQLite later
@@ -344,13 +351,13 @@ connector credential vault
 Docker Desktop UI extension
 Go extension backend
 Docker Engine API access
-NexusDesk agent modules
+Nexus Augentic Studio agent modules
 model runner integration
 ```
 
 ## Key Design Decisions
 
-NexusDesk should not let the LLM directly operate the machine.
+Nexus Augentic Studio should not let the LLM directly operate the machine.
 
 The safe pattern is:
 

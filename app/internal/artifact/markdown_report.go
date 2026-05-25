@@ -16,8 +16,8 @@ import (
 	"time"
 	"unicode/utf8"
 
-	"NexusDesk/internal/analytics"
-	"NexusDesk/internal/workspace"
+	"NexusAugenticStudio/internal/analytics"
+	"NexusAugenticStudio/internal/workspace"
 )
 
 const reportContentLimit = 12 * 1024
@@ -187,7 +187,7 @@ func CreateGeneratedMarkdown(root string, request MarkdownArtifactRequest, now t
 	if err := writeArtifactMetadata(absRoot, path, ArtifactMetadata{
 		Kind:           "chat-answer",
 		Title:          generatedArtifactTitle(request),
-		Source:         fallbackString(request.Source, "NexusDesk chat"),
+		Source:         fallbackString(request.Source, "Nexus chat"),
 		SourcePaths:    cleanMetadataPaths(request.SourcePaths),
 		ContextRelPath: request.ContextRelPath,
 		Prompt:         request.Prompt,

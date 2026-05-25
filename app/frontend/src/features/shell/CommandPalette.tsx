@@ -1,4 +1,5 @@
 import {useEffect, useMemo, useRef, useState} from 'react';
+import {FontAwesomeIcon} from '@fortawesome/react-fontawesome';
 import {brandAssets} from '../../brand/assets';
 
 export type CommandAction = {
@@ -59,7 +60,7 @@ export function CommandPalette({commands, isOpen, onClose, onQueryChange, query}
                 onMouseDown={(event) => event.stopPropagation()}
             >
                 <div className="quick-open-input-row">
-                    <img src={brandAssets.icons.ai} alt="" />
+                    <FontAwesomeIcon icon={brandAssets.icons.ai} />
                     <input
                         aria-label="Command palette query"
                         onChange={(event) => onQueryChange(event.target.value)}

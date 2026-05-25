@@ -1,6 +1,6 @@
-# NexusDesk Tracker
+# Nexus Augentic Studio Tracker
 
-This tracker is the working execution plan for NexusDesk. It separates implemented repository state from the long-term product plan so we do not confuse created code with intended architecture.
+This tracker is the working execution plan for Nexus Augentic Studio. It separates implemented repository state from the long-term product plan so we do not confuse created code with intended architecture.
 
 Related docs:
 
@@ -14,9 +14,9 @@ Related docs:
 
 ## Current Status
 
-NexusDesk is a runnable Wails desktop application with a Go backend, React/TypeScript frontend, local workspace scanning, file previews, editor tabs, safe file writes, configurable OpenAI-compatible LLM settings, streaming chat, first agent runtime, first data workflows, first artifact/approval metadata, and visual smoke coverage.
+Nexus Augentic Studio is a runnable Wails desktop application with a Go backend, React/TypeScript frontend, local workspace scanning, file previews, editor tabs, safe file writes, configurable OpenAI-compatible LLM settings, streaming chat, first agent runtime, first data workflows, first artifact/approval metadata, and visual smoke coverage.
 
-It is not yet a JetBrains-class IDE/data/analytics studio. Major planned surfaces are still missing: real main menu routing, IDE-grade Code Studio, git diff/status UI, mature project tree, deeper database/data support, Analytics connectors, Documents Studio, Ops Studio, and AI Assistant orchestration.
+It is not yet a JetBrains-class IDE/data/analytics studio. Major planned surfaces are still missing: IDE-grade Code Studio, git diff/status UI, deeper database/data support, Analytics connectors, Documents Studio, Ops Studio, native studio-specific layouts, and AI Assistant orchestration.
 
 ## Repository State
 
@@ -27,6 +27,10 @@ It is not yet a JetBrains-class IDE/data/analytics studio. Major planned surface
 - [x] Go backend lives under `app/`.
 - [x] React/TypeScript frontend lives under `app/frontend/`.
 - [x] Runtime brand assets live under `app/frontend/src/assets/brand/`.
+- [x] Product logos/app icon use the brand kit; UI glyphs use Font Awesome instead of repeated logos.
+- [x] Frontend generated Wails bindings are isolated behind `app/frontend/src/api/wailsClient.ts`.
+- [x] Shell resize and studio navigation state are extracted into focused hooks.
+- [x] App-level metadata mirror orchestration is split into `app/app_metadata.go`.
 - [x] Helper services placeholder lives under `services/`.
 - [x] Repository ignore rules exist in `.gitignore`.
 - [x] Workspace-local `.nexusdesk/` runtime state is ignored when this repository is opened as a test workspace.
@@ -62,7 +66,7 @@ Invoke-RestMethod http://localhost:11434/api/ps | ConvertTo-Json -Depth 10
 
 ## Phase 0: Product Baseline
 
-Goal: define NexusDesk as a local-first AI IDE, data studio, analytics studio, document studio, and operations workbench.
+Goal: define Nexus Augentic Studio as a local-first AI IDE, data studio, analytics studio, document studio, and operations workbench.
 
 Status: mostly complete for planning.
 
@@ -79,10 +83,10 @@ Steps:
 Exit criteria:
 
 - [x] Product docs explain why this is more than a chatbot.
-- [x] MVP and long-range goals are separated.
+- [x] First useful foundation and long-range goals are separated.
 - [x] Risky operations require preview, approval, and audit in the design.
 
-## Phase 1: Workspace Shell MVP
+## Phase 1: Project Shell Foundation
 
 Goal: make the desktop app usable for opening a local workspace, browsing files, previewing content, editing safely, and chatting with selected context.
 
@@ -91,7 +95,7 @@ Status: implemented as a first useful foundation.
 Steps:
 
 - [x] Create Wails desktop app.
-- [x] Replace starter screen with NexusDesk shell.
+- [x] Replace starter screen with Nexus Augentic Studio shell.
 - [x] Add branded rail, navigator, workbench, assistant, and bottom drawer layout.
 - [x] Keep whole app fixed to the window and move scrolling into panels.
 - [x] Add resizable workspace navigator.
@@ -109,7 +113,12 @@ Steps:
 - [x] Merge search results with artifact metadata and chat history snippets.
 - [x] Add quick-open palette for files, folders, and open tabs.
 - [x] Add command palette for workspace/editor/data/artifact/chat actions.
-- [ ] Replace current tree visual treatment with IDE-grade project tree in Phase 4.
+- [x] Add route-driven main studio menu selection for Code, Data, Analytics, Documents, AI Assistant, Ops, Artifacts, and Settings.
+- [x] Make main menu selections swap the primary workspace surface, not only the bottom drawer tab.
+- [x] Reuse existing drawer surfaces as temporary primary route surfaces until full studios land.
+- [x] Add first Code Studio utility surface for editor session, project status, repository status placeholder, and work queues.
+- [x] Remove duplicated route-owned tabs from the bottom drawer; keep the drawer for Approvals and Activity.
+- [x] Replace current tree visual treatment with denser IDE-style project tree foundation.
 
 Exit criteria:
 
@@ -196,8 +205,12 @@ Steps:
 - [x] Add backend preview for context packs.
 - [x] Expand selected directories and workspace root into bounded context packs.
 - [x] Add model context-window and response-reserve settings.
+- [x] Add shared curated model catalog that maxes context/reserve when a model is selected.
+- [x] Prefer loaded Ollama runtime `context_length` over catalog defaults when probing succeeds.
 - [x] Scale context-pack budget from configured model context window.
 - [x] Send `num_ctx` for local/Ollama-compatible chat requests.
+- [x] Send `num_predict` and OpenAI-compatible `max_tokens` from the configured response reserve.
+- [x] Add realtime Activity Log events for chat request, stream, first token, completion, and failures.
 - [x] Add Explain selected context action.
 - [x] Add Summarize selected context action.
 - [x] Save summaries as Markdown artifacts.
@@ -222,32 +235,34 @@ Status: planned.
 
 Step 4.1: Main code route
 
-- [ ] Add first-class Code Studio route in primary menu.
-- [ ] Persist Code Studio state independently from Data/Documents/Ops.
-- [ ] Add Code Studio toolbar and command set.
-- [ ] Keep editor and git panels available without relying on generic bottom drawer state.
+- [x] Add first-class Code Studio route in primary menu.
+- [x] Add branded studio route metadata for all planned studios.
+- [x] Create first Code Studio utility layout.
+- [x] Persist route, drawer, and panel layout state independently from transient bottom drawer state.
+- [x] Add Code Studio toolbar and command set.
+- [x] Keep editor and git panels available without relying on generic bottom drawer state.
 
 Step 4.2: Project tree
 
-- [ ] Replace current navigator feel with IDE project tree presentation.
-- [ ] Add indentation guides.
-- [ ] Add disclosure arrows.
-- [ ] Add file/folder icons by type.
-- [ ] Add selected/current file reveal.
-- [ ] Add collapse all and expand selected path.
-- [ ] Add context menu for new file, new folder, rename, move, delete, copy path, reveal in explorer.
+- [x] Replace current navigator feel with IDE project tree presentation.
+- [x] Add indentation guides.
+- [x] Add disclosure arrows.
+- [x] Add file/folder icons by type.
+- [x] Add selected/current file reveal.
+- [x] Add collapse all and expand selected path.
+- [x] Add context menu shell for new file, new folder, rename, move, delete, copy path, reveal in explorer.
 - [ ] Add cut/copy/paste file operations with preview for mutations.
 - [ ] Add ignored-file controls.
 - [ ] Add drag/drop intent design before implementing mutation.
 
 Step 4.3: Git integration
 
-- [ ] Detect git repository root.
-- [ ] Show current branch.
-- [ ] Show dirty summary.
+- [x] Detect git repository root.
+- [x] Show current branch.
+- [x] Show dirty summary.
 - [ ] Show file status badges in tree.
-- [ ] Add changed-files panel.
-- [ ] Add working tree diff.
+- [x] Add changed-files panel.
+- [x] Add working tree diff.
 - [ ] Add staged diff.
 - [ ] Add side-by-side diff viewer.
 - [ ] Add inline diff viewer.
@@ -412,13 +427,14 @@ Exit criteria:
 
 ## Phase 6: Analytics Studio
 
-Goal: make NexusDesk useful for marketing, traffic, CRM, and funnel analysis from APIs and exports.
+Goal: make Nexus Augentic Studio useful for marketing, traffic, CRM, and funnel analysis from APIs and exports.
 
 Status: planned.
 
 Step 6.1: Studio route and data model
 
-- [ ] Add first-class Analytics Studio route.
+- [x] Add first-class Analytics Studio route entry.
+- [ ] Replace Analytics fallback surface with native Analytics Studio layout.
 - [ ] Define analytics source, connector run, metric, dimension, segment, and dashboard models.
 - [ ] Bind analytics runs to workspace metadata.
 - [ ] Add date range and segment selectors.
@@ -495,7 +511,8 @@ Implemented:
 
 Step 7.1: Studio route and document library
 
-- [ ] Add first-class Documents Studio route.
+- [x] Add first-class Documents Studio route entry.
+- [ ] Replace Documents fallback surface with native Documents Studio layout.
 - [ ] Add document library view.
 - [ ] Add document set/folder grouping.
 - [ ] Add document metadata panel.
@@ -565,7 +582,8 @@ Implemented:
 
 Step 8.1: Studio route and read-only inventory
 
-- [ ] Add first-class Ops Studio route.
+- [x] Add first-class Ops Studio route entry.
+- [ ] Replace Ops fallback surface with native Ops Studio layout.
 - [ ] List Docker containers.
 - [ ] List Docker images.
 - [ ] List Docker volumes.
@@ -637,12 +655,13 @@ Implemented:
 - [x] Backend ReAct runtime under `app/internal/agent/`.
 - [x] Wails `RunAgent` binding.
 - [x] First safe Agent run button.
-- [x] First tool plan UI in bottom Tools tab.
+- [x] First tool plan UI, now surfaced through the AI Assistant main route.
 - [x] Tool run persistence.
 
 Step 9.1: Assistant workspace
 
-- [ ] Add Assistant route/main surface.
+- [x] Add Assistant route entry and first fallback main surface.
+- [ ] Replace Assistant fallback surface with native long-run assistant workspace.
 - [ ] Keep right sidebar as quick assistant output.
 - [ ] Add full assistant workspace for long runs.
 - [ ] Add run history.
@@ -720,7 +739,7 @@ Implemented:
 - [x] Dataset summary artifacts.
 - [x] Workspace scan report artifacts.
 - [x] Sidecar provenance metadata.
-- [x] Artifact list in bottom Artifact Studio tab.
+- [x] Artifact list in the Artifact Studio route surface.
 - [x] Artifact metadata panel.
 - [x] Archive artifact.
 - [x] Delete artifact with approval.
@@ -731,7 +750,8 @@ Implemented:
 
 Next steps:
 
-- [ ] Move Artifact Studio to first-class route.
+- [x] Move Artifact Studio to a first-class route entry with primary fallback surface.
+- [ ] Replace Artifact fallback surface with native route layout and filters.
 - [ ] Add artifact type filters.
 - [ ] Add artifact search.
 - [ ] Add artifact tags.
@@ -799,7 +819,7 @@ Step 11.1: Long-running job runner
 
 Exit criteria:
 
-- [ ] NexusDesk can maintain durable, searchable workspace memory over long-lived projects.
+- [ ] Nexus Augentic Studio can maintain durable, searchable workspace memory over long-lived projects.
 
 ## Phase 12: Settings, Policies, Credentials, And Security
 
@@ -809,11 +829,13 @@ Status: first LLM settings implemented; broader policy work planned.
 
 Implemented:
 
-- [x] Bottom Settings tab for LLM provider.
+- [x] Settings route surface for LLM provider.
 - [x] API key redaction.
 - [x] OS-protected credential sidecar where available.
 - [x] Model dropdown.
 - [x] Context-window and reserve controls.
+- [x] Per-model context/reserve defaults shared between Chat and Settings.
+- [x] Runtime context tuning from Ollama loaded-model diagnostics.
 - [x] Connection probe.
 - [x] Ollama diagnostics.
 - [x] Approval log.
@@ -821,7 +843,8 @@ Implemented:
 
 Next steps:
 
-- [ ] Move Settings to first-class route.
+- [x] Move Settings to a first-class route entry with primary fallback surface.
+- [ ] Replace Settings fallback surface with native route layout.
 - [ ] Add provider profiles.
 - [ ] Add connector credential vault UI.
 - [ ] Add per-workspace policy settings.
@@ -836,7 +859,7 @@ Next steps:
 
 Exit criteria:
 
-- [ ] User can understand and control what NexusDesk may read, run, write, and send to models/connectors.
+- [ ] User can understand and control what Nexus Augentic Studio may read, run, write, and send to models/connectors.
 
 ## Phase 13: Testing, Packaging, And Release Readiness
 
@@ -894,24 +917,37 @@ Steps:
 
 Exit criteria:
 
-- [ ] NexusDesk can be extended without giving external tools direct authority over files, shell, Docker, or databases.
+- [ ] Nexus Augentic Studio can be extended without giving external tools direct authority over files, shell, Docker, or databases.
 
 ## Next Logical Batch
 
-Recommended next batch: Main Menu And IDE Code Studio Foundations.
+Completed batch: Git Visibility And Code Studio Stabilization.
 
 Steps:
 
-1. Add real studio route state and main menu selection.
-2. Create first-class Code Studio layout.
-3. Convert current navigator into a denser IDE-style tree component.
-4. Add git repository detection and branch/dirty summary.
-5. Add changed-files panel.
-6. Add read-only working tree diff view.
-7. Add visual smoke coverage for Code Studio route, tree, and diff.
-8. Update docs/tracker after implementation.
+1. [x] Add git repository detection and branch/dirty summary.
+2. [x] Add changed-files panel.
+3. [x] Add read-only working tree diff view.
+4. [x] Add Code Studio toolbar actions for refresh, diff, open terminal placeholder, and command palette.
+5. [x] Add project-tree context menu shell for create, rename, move, delete, copy path, and reveal actions.
+6. [x] Persist active studio route, drawer tab, sidebar widths, and bottom drawer height.
+7. [x] Add visual smoke/code smoke coverage for rail-driven primary surfaces, Code Studio route, tree interactions, and diff.
+8. [x] Update docs/tracker after implementation.
 
-Reasoning: this addresses the biggest product mismatch right now. The app claims to be an IDE-class studio, but Code Studio still feels like a generic file browser plus editor preview. Git visibility and tree quality will make the app feel materially more serious before deeper connector work begins.
+Recommended next batch: Git Diff Review And Code Actions.
+
+Steps:
+
+1. Show git status badges directly in the project tree.
+2. Add staged diff and staged/unstaged grouping.
+3. Add side-by-side diff viewer for the selected changed file.
+4. Add hunk navigation.
+5. Add stage/unstage file preview controls.
+6. Add AI diff summary.
+7. Add AI commit message draft.
+8. Keep docs/tracker and visual smoke coverage aligned.
+
+Reasoning: read-only git visibility now exists. The next credibility gap is turning that visibility into review workflow without allowing destructive git actions before preview, approval, and audit boundaries exist.
 
 ## Directory Ownership Notes
 
@@ -925,7 +961,7 @@ Reasoning: this addresses the biggest product mismatch right now. The app claims
 
 `app/internal/agenttools/` owns deterministic tool descriptors and tool-run persistence.
 
-`app/internal/appmeta/` owns SQLite metadata schema, migrations, JSON compatibility mirroring, direct metadata writes, metadata browser, metadata search, dataset dependencies, and SQL run history.
+`app/internal/appmeta/` owns SQLite metadata schema, migrations, metadata browser queries, metadata search, dataset dependencies, and SQL run history. `app/app_metadata.go` owns application-level mirroring between JSON compatibility stores, app actions, and that SQLite metadata store.
 
 `app/internal/analytics/` owns read-only SQL-style dataset querying and DuckDB-compatible execution paths.
 
@@ -935,14 +971,26 @@ Reasoning: this addresses the biggest product mismatch right now. The app claims
 
 `app/internal/storage/` owns local app config such as recent workspaces and non-secret LLM settings. Secret values must stay in credential storage or protected sidecars.
 
-`app/frontend/src/features/shell/NexusDeskShell.tsx` is still the large shell orchestrator. It should be split as studio routes mature.
+`app/frontend/src/api/wailsClient.ts` is the frontend boundary for generated Wails bindings.
+
+`app/frontend/src/features/shell/NexusShell.tsx` is still the large shell orchestrator, but Wails imports, resize state, and studio navigation state have been extracted. It should keep shrinking as workspace, chat, artifact, and data controllers move into focused hooks.
+
+`app/frontend/src/features/shell/useStudioNavigation.ts` owns active studio route state, primary route surface mapping, and contextual bottom drawer tab state.
+
+`app/frontend/src/features/shell/useResizablePanels.ts` owns navigator, assistant, and bottom drawer sizing plus resize drag handlers.
 
 `app/frontend/src/features/shell/WorkbenchPanel.tsx` currently owns the editor/preview surface.
 
-`app/frontend/src/features/shell/DataOperationsPanel.tsx` currently owns bottom Data tab workflows.
+`app/frontend/src/features/shell/CodeStudioPanel.tsx` owns the first reusable Code Studio utility surface for editor session metrics, open tabs, workspace status, git branch/dirty summary, changed-file list, read-only working-tree diff, and placeholders that will receive staged diff/search/problem/task data.
 
-`app/frontend/src/features/shell/ArtifactStudioPanel.tsx` currently owns bottom Artifact Studio workflows.
+`app/frontend/src/features/shell/DataOperationsPanel.tsx` currently owns Data route workflows.
 
-`app/frontend/src/features/shell/BottomStudioPanel.tsx` currently hosts Settings, Data, Tools, Artifacts, Approvals, and Activity. Long term, several of these should become first-class routes.
+`app/frontend/src/features/shell/ArtifactStudioPanel.tsx` currently owns Artifact Studio route workflows.
+
+`app/frontend/src/features/shell/BottomStudioPanel.tsx` currently hosts reusable Settings, Data, Tools, Artifacts, Approvals, Activity, and Code surfaces. The visible bottom drawer exposes only Approvals and Activity; route-owned surfaces are rendered through the main nav until native studio layouts land.
+
+`app/frontend/src/features/shell/WorkspaceRail.tsx` owns the compact branded main studio menu, active route selection, route accessibility state, and pending-route markers.
+
+`app/frontend/src/brand/assets.ts` owns studio route labels, descriptions, command hints, pending-route metadata, and temporary route-to-surface mapping.
 
 `services/` is reserved for development/test services. Runtime workspace state belongs under ignored `.nexusdesk/` folders inside user workspaces, not in this repository.

@@ -2,7 +2,7 @@
 
 ## Goals
 
-NexusDesk should understand a workspace without overwhelming the user, the model, or the studio UI.
+Nexus Augentic Studio should understand a workspace without overwhelming the user, the model, or the studio UI.
 
 Indexing should gather enough structure to make files, documents, datasets, and artifacts searchable and useful across IDE, data studio, analytics studio, document, operations, and artifact surfaces, while avoiding unsafe or noisy content.
 
@@ -127,7 +127,7 @@ unsupported
 
 ## Ignore Rules
 
-NexusDesk should combine:
+Nexus Augentic Studio should combine:
 
 - global ignore rules
 - workspace ignore rules
@@ -333,7 +333,7 @@ Rules:
 Current behavior:
 
 - compares file size and modification time against the last workspace snapshot
-- ignores `.git/` and NexusDesk metadata/tool-run internals
+- ignores `.git/` and Nexus Augentic Studio metadata/tool-run internals
 - marks changed rows in the navigator
 - flags generated artifacts whose provenance references changed source files
 - warns chat messages and context-pack previews that cited files changed

@@ -1,7 +1,8 @@
 import {useEffect, useState} from 'react';
-import {GetLLMSettings, GetRecentWorkspaces, GetStartupState} from '../wailsjs/go/main/App';
+import {GetLLMSettings, GetRecentWorkspaces, GetStartupState} from './api/wailsClient';
 import {fallbackState} from './data/startupState';
-import {NexusDeskShell} from './features/shell/NexusDeskShell';
+import {NexusShell} from './features/shell/NexusShell';
+import {modelContextWindow, responseReserveForContext} from './features/shell/llmModelCatalog';
 import type {FileNode, LLMSettings, RecentWorkspace, ScanStatus, StartupState, WorkspaceSnapshot} from './types';
 import './App.css';
 
@@ -10,8 +11,8 @@ const fallbackLLMSettings: LLMSettings = {
     baseUrl: 'http://localhost:11434/v1',
     model: 'qwen3:8b',
     apiKey: '',
-    maxContextTokens: 32768,
-    responseReserveTokens: 4096,
+    maxContextTokens: modelContextWindow('qwen3:8b'),
+    responseReserveTokens: responseReserveForContext(modelContextWindow('qwen3:8b')),
     updatedAt: '',
 };
 
@@ -39,7 +40,7 @@ function App() {
     }, []);
 
     return (
-        <NexusDeskShell
+        <NexusShell
             state={state}
             workspace={workspace}
             recentWorkspaces={recentWorkspaces}
@@ -116,12 +117,13 @@ function sanitizeWorkspaceNode(node: unknown): FileNode | null {
 }
 
 function normalizeLLMSettings(settings: Partial<LLMSettings>): LLMSettings {
-    const maxContextTokens = numericLLMSetting(settings.maxContextTokens, fallbackLLMSettings.maxContextTokens);
-    const responseReserveTokens = numericLLMSetting(settings.responseReserveTokens, fallbackLLMSettings.responseReserveTokens);
+    const model = settings.model || fallbackLLMSettings.model;
+    const maxContextTokens = numericLLMSetting(settings.maxContextTokens, modelContextWindow(model));
+    const responseReserveTokens = numericLLMSetting(settings.responseReserveTokens, responseReserveForContext(maxContextTokens));
     return {
         providerName: settings.providerName || fallbackLLMSettings.providerName,
         baseUrl: settings.baseUrl || fallbackLLMSettings.baseUrl,
-        model: settings.model || fallbackLLMSettings.model,
+        model,
         apiKey: settings.apiKey || '',
         maxContextTokens,
         responseReserveTokens: responseReserveTokens >= maxContextTokens ? Math.floor(maxContextTokens / 4) : responseReserveTokens,

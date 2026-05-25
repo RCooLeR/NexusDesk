@@ -267,7 +267,7 @@ Fields:
 
 ### Docker Environment
 
-A Docker environment represents Docker state visible to NexusDesk.
+A Docker environment represents Docker state visible to Nexus Augentic Studio.
 
 Fields:
 
@@ -284,7 +284,7 @@ Fields:
 
 ### Model Profile
 
-A model profile defines how NexusDesk should call an LLM.
+A model profile defines how Nexus Augentic Studio should call an LLM.
 
 Fields:
 
@@ -541,7 +541,7 @@ Artifact lineage links generated outputs back to chats, tool runs, and source fi
 Current implementation:
 
 - `GetArtifactLineage` builds a compact graph from artifact sidecar metadata, chat source paths, and `.nexusdesk/tool-runs/log.json`.
-- The bottom Artifact Studio tab shows a selectable lineage graph, relationship counts, source/chat/tool/artifact filtering, and visible source navigation.
+- The Artifact Studio route shows a selectable lineage graph, relationship counts, source/chat/tool/artifact filtering, and visible source navigation.
 - Lineage can be exported as a JSON artifact and imported back as a preview for debugging, future sync, and graph comparison workflows.
 
 ### Workspace Freshness

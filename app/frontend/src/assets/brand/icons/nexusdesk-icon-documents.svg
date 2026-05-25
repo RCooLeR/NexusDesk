@@ -1,3 +1,0 @@
-<svg xmlns="http://www.w3.org/2000/svg" width="128" height="128" viewBox="0 0 128 128" role="img" aria-label="NexusDesk documents icon"><defs><linearGradient id="g" x1="0" y1="0" x2="128" y2="128"><stop offset="0%" stop-color="#7C3AED"/><stop offset="55%" stop-color="#2563EB"/><stop offset="100%" stop-color="#38BDF8"/></linearGradient></defs><rect width="128" height="128" fill="none"/><path d="M37 18 H78 L101 41 V110 H37 Z" fill="none" stroke="url(#g)" stroke-width="8" stroke-linejoin="round"/>
-        <path d="M78 18 V43 H101" fill="none" stroke="url(#g)" stroke-width="8" stroke-linejoin="round"/>
-        <path d="M52 61 H84 M52 78 H84 M52 95 H72" fill="none" stroke="url(#g)" stroke-width="7" stroke-linecap="round"/></svg>

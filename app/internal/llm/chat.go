@@ -15,8 +15,8 @@ import (
 	"strings"
 	"time"
 
-	"NexusDesk/internal/safety"
-	"NexusDesk/internal/storage"
+	"NexusAugenticStudio/internal/safety"
+	"NexusAugenticStudio/internal/storage"
 )
 
 const chatTimeout = 5 * time.Minute
@@ -82,8 +82,17 @@ func (c *Client) chat(ctx context.Context, settings storage.LLMSettings, chatReq
 		Temperature: 0.2,
 		Stream:      stream,
 	}
-	if shouldSendOllamaOptions(settings) && settings.MaxContextTokens > 0 {
-		chatBody.Options = map[string]any{"num_ctx": settings.MaxContextTokens}
+	if settings.ResponseReserveTokens > 0 {
+		chatBody.MaxTokens = settings.ResponseReserveTokens
+	}
+	if shouldSendOllamaOptions(settings) && (settings.MaxContextTokens > 0 || settings.ResponseReserveTokens > 0) {
+		chatBody.Options = map[string]any{}
+		if settings.MaxContextTokens > 0 {
+			chatBody.Options["num_ctx"] = settings.MaxContextTokens
+		}
+		if settings.ResponseReserveTokens > 0 {
+			chatBody.Options["num_predict"] = settings.ResponseReserveTokens
+		}
 	}
 
 	body, err := json.Marshal(chatBody)
@@ -242,7 +251,7 @@ func chatCompletionsEndpoint(baseURL string) (string, error) {
 }
 
 func systemPrompt() string {
-	return "You are NexusDesk, a local-first AI workbench assistant. Answer from provided workspace context when it is present. If more source context is needed, say what to select or inspect next. Do not claim access to files that were not provided."
+	return "You are Nexus, the assistant inside Nexus Augentic Studio. Answer from provided workspace context when it is present. If more source context is needed, say what to select or inspect next. Do not claim access to files that were not provided."
 }
 
 func buildUserPrompt(prompt string, chatRequest ChatRequest) string {
@@ -259,6 +268,7 @@ type chatCompletionRequest struct {
 	Model       string         `json:"model"`
 	Messages    []chatMessage  `json:"messages"`
 	Temperature float64        `json:"temperature"`
+	MaxTokens   int            `json:"max_tokens,omitempty"`
 	Stream      bool           `json:"stream,omitempty"`
 	Options     map[string]any `json:"options,omitempty"`
 }

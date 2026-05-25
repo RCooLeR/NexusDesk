@@ -1,6 +1,0 @@
-<svg xmlns="http://www.w3.org/2000/svg" width="128" height="128" viewBox="0 0 128 128" role="img" aria-label="NexusDesk ai icon"><defs><linearGradient id="g" x1="0" y1="0" x2="128" y2="128"><stop offset="0%" stop-color="#7C3AED"/><stop offset="55%" stop-color="#2563EB"/><stop offset="100%" stop-color="#38BDF8"/></linearGradient></defs><rect width="128" height="128" fill="none"/><circle cx="64" cy="64" r="12" fill="none" stroke="url(#g)" stroke-width="8"/>
-        <circle cx="28" cy="64" r="8" fill="none" stroke="url(#g)" stroke-width="7"/>
-        <circle cx="64" cy="28" r="8" fill="none" stroke="url(#g)" stroke-width="7"/>
-        <circle cx="100" cy="64" r="8" fill="none" stroke="url(#g)" stroke-width="7"/>
-        <circle cx="64" cy="100" r="8" fill="none" stroke="url(#g)" stroke-width="7"/>
-        <path d="M40 64 H52 M64 40 V52 M76 64 H88 M64 76 V88" fill="none" stroke="url(#g)" stroke-width="7" stroke-linecap="round"/></svg>

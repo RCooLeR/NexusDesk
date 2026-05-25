@@ -2,7 +2,7 @@ import {existsSync, mkdirSync, readFileSync, statSync, writeFileSync} from 'node
 import http from 'node:http';
 import path from 'node:path';
 import {fileURLToPath} from 'node:url';
-import {installNexusDeskMocks} from './visual-fixtures.mjs';
+import {installNexusMocks} from './visual-fixtures.mjs';
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const indexPath = path.join(root, 'dist', 'index.html');
@@ -10,7 +10,7 @@ const screenshotDir = path.join(root, 'dist', 'smoke');
 const baselineDir = path.join(root, 'visual-baselines');
 
 if (!existsSync(indexPath)) {
-    console.error('NexusDesk visual smoke failed: run npm run build first.');
+    console.error('Nexus visual smoke failed: run npm run build first.');
     process.exit(1);
 }
 
@@ -18,7 +18,7 @@ let chromium;
 try {
     ({chromium} = await import('playwright'));
 } catch {
-    console.error('NexusDesk visual smoke failed: Playwright is not installed.');
+    console.error('Nexus visual smoke failed: Playwright is not installed.');
     process.exit(1);
 }
 
@@ -27,22 +27,43 @@ mkdirSync(baselineDir, {recursive: true});
 const server = await serveDist(path.join(root, 'dist'));
 const browser = await chromium.launch();
 const page = await browser.newPage({viewport: {width: 1440, height: 960}});
-await installNexusDeskMocks(page);
+await installNexusMocks(page);
 
 try {
     await page.goto(server.url);
     await page.getByText('Open Folder').click();
-    await page.getByRole('tab', {name: 'Data', exact: true}).click();
-    await page.getByText('Inspect metadata').click();
-    await page.getByPlaceholder('Search chats, artifacts, tools').fill('Smoke');
-    await page.getByText('Search history').click({force: true});
-    await page.getByRole('tab', {name: 'Artifacts', exact: true}).click();
+    await page.locator('[data-studio-route="code"]').click();
+    for (const text of ['Active Context', 'Preview', 'Explain']) {
+        if (!(await page.getByText(text).first().isVisible())) {
+            throw new Error(`Nexus visual smoke failed: missing Code route workbench text ${text}.`);
+        }
+    }
+    for (const text of ['Repository', 'Working Tree Diff', 'Refresh git']) {
+        if (!(await page.getByText(text).first().isVisible())) {
+            throw new Error(`Nexus visual smoke failed: missing Code Studio git text ${text}.`);
+        }
+    }
+    await page.getByRole('tree', {name: 'Project tree'}).waitFor({state: 'visible'});
+    const firstTreeRow = page.locator('.project-tree .tree-item').first();
+    await firstTreeRow.scrollIntoViewIfNeeded();
+    await firstTreeRow.waitFor({state: 'visible'});
+    await page.locator('.project-tree .tree-node-badge').first().waitFor({state: 'attached'});
+    await firstTreeRow.click({button: 'right'});
+    await page.locator('.tree-context-menu').getByText('Copy path').waitFor({state: 'visible'});
+    await firstTreeRow.click();
+    await page.locator('[data-studio-route="data"]').click();
+    const dataMainSurface = page.getByLabel('Data Studio main surface');
+    await dataMainSurface.getByText('Data Studio', {exact: true}).waitFor({state: 'visible'});
+    await dataMainSurface.getByRole('button', {name: 'Inspect metadata'}).click();
+    await dataMainSurface.getByPlaceholder('Search chats, artifacts, tools').fill('Smoke');
+    await dataMainSurface.getByText('Search history').click({force: true});
+    await page.locator('[data-studio-route="artifacts"]').click();
     await page.locator('.metadata-store-panel').filter({hasText: 'Artifact Lineage'}).getByText('Refresh').click();
     await page.getByText('Export JSON').click();
     await page.getByLabel('Lineage filter').getByText('source').click();
     await page.getByRole('tab', {name: 'Approvals', exact: true}).click();
     await page.getByText('Approval Log').waitFor({state: 'visible'});
-    await page.getByRole('tab', {name: 'Tools', exact: true}).click();
+    await page.locator('[data-studio-route="assistant"]').click();
     await page.locator('.tool-run-row summary').first().click();
     await page.locator('.tool-run-detail').first().scrollIntoViewIfNeeded();
     await page.locator('.tool-run-detail').getByText('Replay dry run').waitFor({state: 'visible'});
@@ -50,7 +71,7 @@ try {
     const beforeResize = await page.locator('.navigator').boundingBox();
     const resizer = await page.locator('.navigator-resizer').boundingBox();
     if (!beforeResize || !resizer) {
-        throw new Error('NexusDesk visual smoke failed: navigator or resizer is missing.');
+        throw new Error('Nexus visual smoke failed: navigator or resizer is missing.');
     }
     await page.mouse.move(resizer.x + resizer.width / 2, resizer.y + 20);
     await page.mouse.down();
@@ -58,13 +79,13 @@ try {
     await page.mouse.up();
     const afterResize = await page.locator('.navigator').boundingBox();
     if (!afterResize || Math.abs(afterResize.width - beforeResize.width) < 20) {
-        throw new Error('NexusDesk visual smoke failed: navigator resizing did not change width.');
+        throw new Error('Nexus visual smoke failed: navigator resizing did not change width.');
     }
 
     const beforeAgentResize = await page.locator('.agent-panel').boundingBox();
     const agentResizer = await page.locator('.agent-resizer').boundingBox();
     if (!beforeAgentResize || !agentResizer) {
-        throw new Error('NexusDesk visual smoke failed: agent panel or resizer is missing.');
+        throw new Error('Nexus visual smoke failed: agent panel or resizer is missing.');
     }
     await page.mouse.move(agentResizer.x + agentResizer.width / 2, agentResizer.y + 20);
     await page.mouse.down();
@@ -72,51 +93,52 @@ try {
     await page.mouse.up();
     const afterAgentResize = await page.locator('.agent-panel').boundingBox();
     if (!afterAgentResize || Math.abs(afterAgentResize.width - beforeAgentResize.width) < 20) {
-        throw new Error('NexusDesk visual smoke failed: agent panel resizing did not change width.');
+        throw new Error('Nexus visual smoke failed: agent panel resizing did not change width.');
     }
 
-    const beforeBottomResize = await page.locator('.bottom-studio-panel').boundingBox();
+    const bottomDrawer = page.locator('.bottom-studio-panel:not(.main-studio-panel)');
+    const beforeBottomResize = await bottomDrawer.boundingBox();
     const bottomResizer = await page.locator('.bottom-panel-resizer').boundingBox();
     if (!beforeBottomResize || !bottomResizer) {
-        throw new Error('NexusDesk visual smoke failed: bottom panel or resizer is missing.');
+        throw new Error('Nexus visual smoke failed: bottom panel or resizer is missing.');
     }
     await page.mouse.move(bottomResizer.x + 80, bottomResizer.y + bottomResizer.height / 2);
     await page.mouse.down();
     await page.mouse.move(bottomResizer.x + 80, bottomResizer.y - 80);
     await page.mouse.up();
-    const afterBottomResize = await page.locator('.bottom-studio-panel').boundingBox();
+    const afterBottomResize = await bottomDrawer.boundingBox();
     if (!afterBottomResize || Math.abs(afterBottomResize.height - beforeBottomResize.height) < 20) {
-        throw new Error('NexusDesk visual smoke failed: bottom panel resizing did not change height.');
+        throw new Error('Nexus visual smoke failed: bottom panel resizing did not change height.');
     }
 
     const hasBodyScroll = await page.evaluate(() => document.scrollingElement ? document.scrollingElement.scrollHeight > window.innerHeight + 2 : false);
     if (hasBodyScroll) {
-        throw new Error('NexusDesk visual smoke failed: whole window became scrollable.');
+        throw new Error('Nexus visual smoke failed: whole window became scrollable.');
     }
 
-    await page.getByRole('tab', {name: 'Data', exact: true}).click();
+    await page.locator('[data-studio-route="data"]').click();
     for (const text of ['Metadata Browser', 'Workspace Watcher']) {
         if (!(await page.getByText(text).first().isVisible())) {
-            throw new Error(`NexusDesk visual smoke failed: missing ${text}.`);
+            throw new Error(`Nexus visual smoke failed: missing ${text}.`);
         }
     }
     for (const text of ['Context changed since this answer was created.', 'Smoke answer']) {
         if (!(await page.getByText(text).first().isVisible())) {
-            throw new Error(`NexusDesk visual smoke failed: missing ${text}.`);
+            throw new Error(`Nexus visual smoke failed: missing ${text}.`);
         }
     }
-    await page.getByRole('tab', {name: 'Artifacts', exact: true}).click();
+    await page.locator('[data-studio-route="artifacts"]').click();
     await page.getByText('Artifact Lineage').waitFor({state: 'visible'});
     await page.getByRole('tab', {name: 'Approvals', exact: true}).click();
     await page.getByText('Approval Log').waitFor({state: 'visible'});
-    await page.getByRole('tab', {name: 'Tools', exact: true}).click();
+    await page.locator('[data-studio-route="assistant"]').click();
     const replayButton = page.locator('.tool-run-detail').getByText('Replay dry run').first();
     if (!(await replayButton.isVisible())) {
         await page.locator('.tool-run-row summary').first().click();
     }
     await replayButton.scrollIntoViewIfNeeded();
     await replayButton.waitFor({state: 'visible'});
-    await page.getByRole('tab', {name: 'Settings', exact: true}).click();
+    await page.locator('[data-studio-route="settings"]').click();
     await page.getByText('LLM Provider', {exact: true}).waitFor({state: 'visible'});
 
     await page.screenshot({path: path.join(screenshotDir, 'desktop.png'), fullPage: false});
@@ -129,14 +151,14 @@ try {
         generatedAt: new Date().toISOString(),
         source: 'dist/index.html',
         viewports: ['desktop', 'mobile'],
-        assertions: ['navigator-resize', 'agent-resize', 'bottom-drawer-resize', 'panel-overflow', 'tool-run-detail', 'settings-tab', 'data-tab', 'artifacts-tab', 'approvals-tab', 'lineage-export', 'lineage-filter', 'lineage-graph', 'freshness-warning', 'metadata-browser', 'metadata-history', 'sql-snippets', 'dataset-lineage'],
+        assertions: ['navigator-resize', 'agent-resize', 'bottom-drawer-resize', 'panel-overflow', 'project-tree', 'tree-context-menu', 'tool-run-detail', 'code-route', 'code-git-diff', 'settings-route', 'data-route', 'artifacts-route', 'approvals-tab', 'lineage-export', 'lineage-filter', 'lineage-graph', 'freshness-warning', 'metadata-browser', 'metadata-history', 'sql-snippets', 'dataset-lineage'],
     }, null, 2)}\n`);
 } finally {
     await browser.close();
     await server.close();
 }
 
-console.log('NexusDesk visual smoke captured desktop/mobile screenshots and baseline metadata.');
+console.log('Nexus visual smoke captured desktop/mobile screenshots and baseline metadata.');
 
 async function serveDist(distRoot) {
     const server = http.createServer((request, response) => {

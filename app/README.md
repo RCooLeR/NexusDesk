@@ -1,6 +1,6 @@
-# NexusDesk App
+# Nexus Augentic Studio App
 
-This directory contains the first runnable NexusDesk desktop application.
+This directory contains the first runnable Nexus Augentic Studio desktop application.
 
 Stack:
 

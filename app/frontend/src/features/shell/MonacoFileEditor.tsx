@@ -1,6 +1,6 @@
 import {useEffect, useRef} from 'react';
 import type * as Monaco from 'monaco-editor/esm/vs/editor/editor.api';
-import {defineNexusDeskTheme, languageForFile, loadMonaco} from './monacoRuntime';
+import {defineNexusTheme, languageForFile, loadMonaco} from './monacoRuntime';
 
 type MonacoFileEditorProps = {
     fileName: string;
@@ -32,7 +32,7 @@ export function MonacoFileEditor({fileName, onChange, onSave, value}: MonacoFile
                 return;
             }
 
-            defineNexusDeskTheme(monaco);
+            defineNexusTheme(monaco);
             const editor = monaco.editor.create(containerRef.current, {
                 automaticLayout: true,
                 contextmenu: true,
@@ -46,7 +46,7 @@ export function MonacoFileEditor({fileName, onChange, onSave, value}: MonacoFile
                 renderLineHighlight: 'line',
                 scrollBeyondLastLine: false,
                 tabSize: 4,
-                theme: 'nexusdesk-light',
+                theme: 'nexus-light',
                 value,
                 wordWrap: 'on',
             });

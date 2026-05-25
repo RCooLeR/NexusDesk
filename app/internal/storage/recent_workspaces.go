@@ -28,7 +28,7 @@ func NewDefaultRecentWorkspaceStore() *RecentWorkspaceStore {
 		configDir = os.TempDir()
 	}
 
-	return NewRecentWorkspaceStore(filepath.Join(configDir, "NexusDesk", "recent-workspaces.json"))
+	return NewRecentWorkspaceStore(filepath.Join(configDir, "NexusAugenticStudio", "recent-workspaces.json"))
 }
 
 func NewRecentWorkspaceStore(path string) *RecentWorkspaceStore {

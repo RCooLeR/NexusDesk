@@ -4,7 +4,7 @@ import (
 	"strings"
 	"testing"
 
-	"NexusDesk/internal/appmeta"
+	"NexusAugenticStudio/internal/appmeta"
 )
 
 func TestRebuildDatasetDependencyFilterExportRoundTrip(t *testing.T) {

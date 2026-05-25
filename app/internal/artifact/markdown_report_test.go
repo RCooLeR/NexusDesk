@@ -9,7 +9,7 @@ import (
 	"testing"
 	"time"
 
-	"NexusDesk/internal/workspace"
+	"NexusAugenticStudio/internal/workspace"
 )
 
 func TestCreateMarkdownReportWritesInsideArtifactDirectory(t *testing.T) {
@@ -123,7 +123,7 @@ func TestCreateGeneratedMarkdownWritesAssistantResponse(t *testing.T) {
 		ContextRelPath: "docs/08_DELIVERY_PLAN.md",
 		Prompt:         "Summarize the architecture",
 		Model:          "qwen3:8b",
-		Source:         "NexusDesk chat",
+		Source:         "Nexus chat",
 		SourcePaths:    []string{"docs/08_DELIVERY_PLAN.md"},
 	}, now)
 	if err != nil {

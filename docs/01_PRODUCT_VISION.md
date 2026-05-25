@@ -2,7 +2,7 @@
 
 ## One-Line Vision
 
-NexusDesk is a local-first AI IDE and data/analytics studio for code, documents, datasets, marketing analytics, databases, Docker, and operations.
+Nexus Augentic Studio is a local-first AI IDE and data/analytics studio for code, documents, datasets, marketing analytics, databases, Docker, and operations.
 
 ## Problem
 
@@ -19,7 +19,7 @@ Users need more than a chatbot. They need a studio-grade desktop environment tha
 
 A general chatbot struggles because it cannot reliably access local files, cannot inspect a spreadsheet without a tool, and often loses the connection between answer and source. A normal IDE struggles because it is optimized for code, not business analysis, marketing data, PDFs, images, databases, and Docker.
 
-NexusDesk solves this by combining an IDE-like desktop workspace, local file intelligence, data analysis tools, configurable LLM providers, and a permissioned agent loop.
+Nexus Augentic Studio solves this by combining an IDE-like desktop workspace, local file intelligence, data analysis tools, configurable LLM providers, and a permissioned agent loop.
 
 ## Target Users
 
@@ -33,7 +33,7 @@ NexusDesk solves this by combining an IDE-like desktop workspace, local file int
 
 ## Product Experience
 
-NexusDesk should feel like a serious JetBrains-style studio for mixed technical and analytical work:
+Nexus Augentic Studio should feel like a serious JetBrains-style studio for mixed technical and analytical work:
 
 - The main menu/rail selects durable studios: Code, Data, Analytics, Documents, AI Assistant, Ops, Artifacts, and Settings.
 - Code Studio feels like an IDE: project tree, editor tabs, git status, diffs, search, symbols, diagnostics, tests/tasks, and patch review.
@@ -117,7 +117,7 @@ NexusDesk should feel like a serious JetBrains-style studio for mixed technical 
 - perform start/stop/build actions only with approval
 - create runbooks, health checks, `.env.example` files, and incident reports
 
-## What Makes NexusDesk Different
+## What Makes Nexus Augentic Studio Different
 
 1. Workspace-native AI
 
@@ -129,7 +129,7 @@ NexusDesk should feel like a serious JetBrains-style studio for mixed technical 
 
 3. Tool-mediated safety
 
-   The model cannot directly read, write, delete, query, or run anything. It requests tools. NexusDesk validates the request, applies policy, shows approvals when needed, and logs the result.
+   The model cannot directly read, write, delete, query, or run anything. It requests tools. Nexus Augentic Studio validates the request, applies policy, shows approvals when needed, and logs the result.
 
 4. Multi-domain studio
 
@@ -137,7 +137,7 @@ NexusDesk should feel like a serious JetBrains-style studio for mixed technical 
 
 5. Artifact creation
 
-   NexusDesk should create useful outputs: reports, charts, dashboards, generated files, SQL, code, Docker configs, and exports.
+   Nexus Augentic Studio should create useful outputs: reports, charts, dashboards, generated files, SQL, code, Docker configs, and exports.
 
 6. Explainable analysis
 

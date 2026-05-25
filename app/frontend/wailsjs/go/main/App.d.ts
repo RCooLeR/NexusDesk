@@ -67,6 +67,8 @@ export function GetArtifactMetadata(arg1:string):Promise<artifact.ArtifactMetada
 
 export function GetChatHistory():Promise<Array<storage.ChatMessage>>;
 
+export function GetGitStatus():Promise<main.GitStatus>;
+
 export function GetLLMSettings():Promise<storage.LLMSettings>;
 
 export function GetRecentWorkspaces():Promise<Array<storage.RecentWorkspace>>;

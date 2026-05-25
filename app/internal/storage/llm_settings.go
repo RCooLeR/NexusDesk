@@ -13,7 +13,10 @@ import (
 )
 
 const RedactedAPIKey = "********"
-const storedAPIKeyReference = "__nexusdesk_os_credential_store__"
+const storedAPIKeyReference = "__nexus_os_credential_store__"
+const legacyStoredAPIKeyReference = "__nexusdesk_os_credential_store__"
+const defaultLLMContextTokens = 32768
+const maxLLMContextTokens = 262144
 
 type LLMSettings struct {
 	ProviderName          string `json:"providerName"`
@@ -36,7 +39,7 @@ func NewDefaultLLMSettingsStore() *LLMSettingsStore {
 		configDir = os.TempDir()
 	}
 
-	return NewLLMSettingsStore(filepath.Join(configDir, "NexusDesk", "llm-settings.json"))
+	return NewLLMSettingsStore(filepath.Join(configDir, "NexusAugenticStudio", "llm-settings.json"))
 }
 
 func NewLLMSettingsStore(path string) *LLMSettingsStore {
@@ -49,8 +52,8 @@ func DefaultLLMSettings() LLMSettings {
 		BaseURL:               "http://localhost:11434/v1",
 		Model:                 "qwen3:8b",
 		APIKey:                "",
-		MaxContextTokens:      32768,
-		ResponseReserveTokens: 4096,
+		MaxContextTokens:      modelContextWindow("qwen3:8b"),
+		ResponseReserveTokens: responseReserveForContext(modelContextWindow("qwen3:8b")),
 	}
 }
 
@@ -62,7 +65,7 @@ func (s *LLMSettingsStore) Get() (LLMSettings, error) {
 	if err != nil {
 		return LLMSettings{}, err
 	}
-	if settings.APIKey == storedAPIKeyReference {
+	if isStoredAPIKeyReference(settings.APIKey) {
 		secret, err := s.readAPIKeySecret()
 		if err != nil {
 			return LLMSettings{}, err
@@ -128,7 +131,7 @@ func (s *LLMSettingsStore) ResolveForUse(settings LLMSettings) (LLMSettings, err
 	defer s.mu.Unlock()
 
 	settings = normalizeLLMSettings(settings)
-	if settings.APIKey != RedactedAPIKey && settings.APIKey != storedAPIKeyReference {
+	if settings.APIKey != RedactedAPIKey && !isStoredAPIKeyReference(settings.APIKey) {
 		return settings, nil
 	}
 
@@ -171,10 +174,14 @@ func (s *LLMSettingsStore) existingAPIKey() (string, error) {
 	if err != nil {
 		return "", err
 	}
-	if existing.APIKey == storedAPIKeyReference || existing.APIKey == RedactedAPIKey {
+	if isStoredAPIKeyReference(existing.APIKey) || existing.APIKey == RedactedAPIKey {
 		return "", nil
 	}
 	return existing.APIKey, nil
+}
+
+func isStoredAPIKeyReference(value string) bool {
+	return value == storedAPIKeyReference || value == legacyStoredAPIKeyReference
 }
 
 func (s *LLMSettingsStore) apiKeySecretPath() string {
@@ -228,13 +235,19 @@ func normalizeLLMSettings(settings LLMSettings) LLMSettings {
 	settings.Model = strings.TrimSpace(settings.Model)
 	settings.APIKey = strings.TrimSpace(settings.APIKey)
 	if settings.MaxContextTokens <= 0 {
-		settings.MaxContextTokens = 32768
+		settings.MaxContextTokens = modelContextWindow(settings.Model)
+	}
+	if settings.MaxContextTokens < 4096 {
+		settings.MaxContextTokens = 4096
+	}
+	if settings.MaxContextTokens > maxLLMContextTokens {
+		settings.MaxContextTokens = maxLLMContextTokens
 	}
 	if settings.ResponseReserveTokens <= 0 {
-		settings.ResponseReserveTokens = 4096
+		settings.ResponseReserveTokens = responseReserveForContext(settings.MaxContextTokens)
 	}
 	if settings.ResponseReserveTokens >= settings.MaxContextTokens {
-		settings.ResponseReserveTokens = settings.MaxContextTokens / 4
+		settings.ResponseReserveTokens = responseReserveForContext(settings.MaxContextTokens)
 	}
 
 	if settings.ProviderName == "" {
@@ -242,6 +255,41 @@ func normalizeLLMSettings(settings LLMSettings) LLMSettings {
 	}
 
 	return settings
+}
+
+func modelContextWindow(model string) int {
+	switch normalizeModelID(model) {
+	case "qwen3:4b-instruct":
+		return 32768
+	case "qwen3:8b":
+		return 40960
+	case "qwen3.5:9b", "gpt-oss:20b", "mistral-small3.2", "gemma4:26b":
+		return 131072
+	case "phi4:14b":
+		return 16384
+	case "phi4-reasoning:14b":
+		return 32768
+	default:
+		return defaultLLMContextTokens
+	}
+}
+
+func responseReserveForContext(maxContextTokens int) int {
+	if maxContextTokens <= 0 {
+		return 4096
+	}
+	reserve := maxContextTokens / 8
+	if reserve < 2048 {
+		return 2048
+	}
+	if reserve > 32768 {
+		return 32768
+	}
+	return reserve
+}
+
+func normalizeModelID(model string) string {
+	return strings.TrimSuffix(strings.ToLower(strings.TrimSpace(model)), ":latest")
 }
 
 func redactLLMSettings(settings LLMSettings) LLMSettings {

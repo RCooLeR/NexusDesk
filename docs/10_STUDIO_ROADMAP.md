@@ -1,10 +1,10 @@
 # Studio Roadmap
 
-This document describes the target product depth beyond the current MVP. It is intentionally more ambitious than the implemented feature set. `tracker.md` remains the source of truth for what exists today.
+This document describes the target product depth beyond the current foundation. It is intentionally more ambitious than the implemented feature set. `tracker.md` remains the source of truth for what exists today.
 
 ## North Star
 
-NexusDesk should feel like a JetBrains-class desktop studio for mixed engineering, data, analytics, documents, and operations work. Chat is one interaction model, but the durable product surface is a set of studios with real navigation, inspectors, history, diffs, tool runs, artifacts, and source-grounded AI.
+Nexus Augentic Studio should feel like a JetBrains-class desktop studio for mixed engineering, data, analytics, documents, and operations work. Chat is one interaction model, but the durable product surface is a set of studios with real navigation, inspectors, history, diffs, tool runs, artifacts, and source-grounded AI.
 
 ## Main Studio Menu
 

@@ -32,7 +32,7 @@ func NewDefaultChatHistoryStore() *ChatHistoryStore {
 		configDir = os.TempDir()
 	}
 
-	return NewChatHistoryStore(filepath.Join(configDir, "NexusDesk", "chat-history.json"))
+	return NewChatHistoryStore(filepath.Join(configDir, "NexusAugenticStudio", "chat-history.json"))
 }
 
 func NewChatHistoryStore(path string) *ChatHistoryStore {

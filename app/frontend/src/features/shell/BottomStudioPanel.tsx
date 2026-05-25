@@ -1,15 +1,18 @@
-import type {AgentToolDescriptor, AgentToolPlanItem, AgentToolRunRecord, ApprovalRecord, ArtifactComparison, ArtifactLineage, ArtifactMetadata, Capability, DatasetChartResult, DatasetDependency, DatasetProfile, DatasetQueryResult, DatasetSQLQueryResult, FilePreview, LLMProbeResult, LLMSettings, MetadataBrowser, MetadataSearchResult, SavedDatasetQuery, SQLRun, SQLiteMetadataStatus, SQLiteQueryResult, ToolEvent, WorkspaceArtifact, WorkspaceFreshnessStatus, WorkspaceSnapshot} from '../../types';
+import type {AgentToolDescriptor, AgentToolPlanItem, AgentToolRunRecord, ApprovalRecord, ArtifactComparison, ArtifactLineage, ArtifactMetadata, Capability, DatasetChartResult, DatasetDependency, DatasetProfile, DatasetQueryResult, DatasetSQLQueryResult, FilePreview, GitStatus, LLMProbeResult, LLMSettings, MetadataBrowser, MetadataSearchResult, SavedDatasetQuery, SQLRun, SQLiteMetadataStatus, SQLiteQueryResult, ToolEvent, WorkspaceArtifact, WorkspaceFreshnessStatus, WorkspaceSnapshot} from '../../types';
 import {AgentToolPlanCard} from './AgentToolPlanCard';
 import {ApprovalLogPanel} from './ApprovalLogPanel';
 import {ArtifactStudioPanel} from './ArtifactStudioPanel';
+import {CodeStudioPanel} from './CodeStudioPanel';
 import {DataOperationsPanel} from './DataOperationsPanel';
 import {LLMSettingsCard} from './LLMSettingsCard';
 import {ToolTimeline} from './ToolTimeline';
 
-type BottomStudioTab = 'settings' | 'data' | 'tools' | 'artifacts' | 'approvals' | 'activity';
+type BottomStudioTab = 'code' | 'settings' | 'data' | 'tools' | 'artifacts' | 'approvals' | 'activity';
 
 type BottomStudioPanelProps = {
     activeTab: BottomStudioTab;
+    activeFile: string;
+    ariaLabel?: string;
     agentTools: AgentToolDescriptor[];
     agentToolPlan: AgentToolPlanItem[];
     agentToolRuns: AgentToolRunRecord[];
@@ -34,6 +37,8 @@ type BottomStudioPanelProps = {
     datasetSQLQueryLabel: string;
     datasetSQLQueryResult: DatasetSQLQueryResult | null;
     filePreview: FilePreview | null;
+    gitStatus: GitStatus | null;
+    dirtyTabPaths: string[];
     isArchivingArtifact: boolean;
     isCreatingDatasetChart: boolean;
     isCreatingDatasetSummary: boolean;
@@ -81,11 +86,13 @@ type BottomStudioPanelProps = {
     onPrepareMetadataStore: () => void;
     onProfileDataset: () => void;
     onPreviewDatasetChart: () => void;
+    onOpenCommandPalette: () => void;
     onQueryDataset: () => void;
     onQueryDatasetSQL: () => void;
     onQuerySQLiteConnector: () => void;
     onRebuildDatasetDependency: (dependencyId: string) => void;
     onRefreshAgentPlan: () => void;
+    onRefreshGitStatus: () => void;
     onRefreshLineage: () => void;
     onRefreshStaleContext: () => void;
     onReplayAgentToolRun: (run: AgentToolRunRecord) => void;
@@ -99,6 +106,7 @@ type BottomStudioPanelProps = {
     onTabChange: (tab: BottomStudioTab) => void;
     onTestConnection: () => void;
     probeResult: LLMProbeResult | null;
+    openTabs: FilePreview[];
     rebuildingDatasetDependencyId: string;
     savedDatasetQueries: SavedDatasetQuery[];
     savedDatasetSQLQueries: SavedDatasetQuery[];
@@ -110,19 +118,19 @@ type BottomStudioPanelProps = {
     toolEvents: ToolEvent[];
     workspace: WorkspaceSnapshot | null;
     workspaceFreshness: WorkspaceFreshnessStatus | null;
+    className?: string;
+    showTabs?: boolean;
 };
 
-const tabs: Array<{id: BottomStudioTab; label: string}> = [
-    {id: 'settings', label: 'Settings'},
-    {id: 'data', label: 'Data'},
-    {id: 'tools', label: 'Tools'},
-    {id: 'artifacts', label: 'Artifacts'},
+const drawerTabs: Array<{id: BottomStudioTab; label: string}> = [
     {id: 'approvals', label: 'Approvals'},
     {id: 'activity', label: 'Activity'},
 ];
 
 export function BottomStudioPanel({
     activeTab,
+    activeFile,
+    ariaLabel = 'Studio tools and settings',
     agentTools,
     agentToolPlan,
     agentToolRuns,
@@ -147,6 +155,8 @@ export function BottomStudioPanel({
     datasetSQLQueryLabel,
     datasetSQLQueryResult,
     filePreview,
+    gitStatus,
+    dirtyTabPaths,
     isArchivingArtifact,
     isCreatingDatasetChart,
     isCreatingDatasetSummary,
@@ -194,11 +204,13 @@ export function BottomStudioPanel({
     onPrepareMetadataStore,
     onProfileDataset,
     onPreviewDatasetChart,
+    onOpenCommandPalette,
     onQueryDataset,
     onQueryDatasetSQL,
     onQuerySQLiteConnector,
     onRebuildDatasetDependency,
     onRefreshAgentPlan,
+    onRefreshGitStatus,
     onRefreshLineage,
     onRefreshStaleContext,
     onReplayAgentToolRun,
@@ -212,6 +224,7 @@ export function BottomStudioPanel({
     onTabChange,
     onTestConnection,
     probeResult,
+    openTabs,
     rebuildingDatasetDependencyId,
     savedDatasetQueries,
     savedDatasetSQLQueries,
@@ -223,23 +236,40 @@ export function BottomStudioPanel({
     toolEvents,
     workspace,
     workspaceFreshness,
+    className = '',
+    showTabs = true,
 }: BottomStudioPanelProps) {
     return (
-        <section className="bottom-studio-panel" aria-label="Studio tools and settings">
-            <div className="bottom-tabbar" role="tablist" aria-label="Studio drawer tabs">
-                {tabs.map((tab) => (
-                    <button
-                        aria-selected={activeTab === tab.id}
-                        className={activeTab === tab.id ? 'active' : ''}
-                        key={tab.id}
-                        onClick={() => onTabChange(tab.id)}
-                        role="tab"
-                    >
-                        {tab.label}
-                    </button>
-                ))}
-            </div>
+        <section className={['bottom-studio-panel', className].filter(Boolean).join(' ')} aria-label={ariaLabel}>
+            {showTabs && (
+                <div className="bottom-tabbar" role="tablist" aria-label="Studio drawer tabs">
+                    {drawerTabs.map((tab) => (
+                        <button
+                            aria-selected={activeTab === tab.id}
+                            className={activeTab === tab.id ? 'active' : ''}
+                            key={tab.id}
+                            onClick={() => onTabChange(tab.id)}
+                            role="tab"
+                        >
+                            {tab.label}
+                        </button>
+                    ))}
+                </div>
+            )}
             <div className="bottom-tab-content">
+                {activeTab === 'code' && (
+                    <CodeStudioPanel
+                        activeFile={activeFile}
+                        dirtyTabPaths={dirtyTabPaths}
+                        filePreview={filePreview}
+                        gitStatus={gitStatus}
+                        openTabs={openTabs}
+                        onOpenCommandPalette={onOpenCommandPalette}
+                        onRefreshGitStatus={onRefreshGitStatus}
+                        workspace={workspace}
+                        workspaceFreshness={workspaceFreshness}
+                    />
+                )}
                 {activeTab === 'settings' && (
                     <div className="settings-page">
                         <div className="settings-page-heading">

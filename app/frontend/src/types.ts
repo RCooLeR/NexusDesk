@@ -195,6 +195,28 @@ export type WorkspaceFreshnessStatus = {
     message: string;
 };
 
+export type GitFileChange = {
+    path: string;
+    oldPath: string;
+    index: string;
+    worktree: string;
+    summary: string;
+};
+
+export type GitStatus = {
+    available: boolean;
+    repoRoot: string;
+    branch: string;
+    head: string;
+    dirty: boolean;
+    changedFiles: GitFileChange[];
+    diff: string;
+    diffTruncated: boolean;
+    aheadBehind: string;
+    message: string;
+    generatedAt: string;
+};
+
 export type LineageNode = {
     id: string;
     kind: string;

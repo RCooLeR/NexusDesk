@@ -2,7 +2,7 @@
 
 ## Search Philosophy
 
-NexusDesk should return useful workspace context quickly and let AI synthesis happen separately.
+Nexus Augentic Studio should return useful workspace context quickly and let AI synthesis happen separately.
 
 Search should serve the whole studio, not only chat. The same retrieval layer should power project navigation, IDE-style symbol/file lookup, dataset discovery, artifact discovery, and analytics questions.
 
@@ -56,7 +56,7 @@ flowchart TD
 
 ## Intent Types
 
-NexusDesk should detect broad intent classes:
+Nexus Augentic Studio should detect broad intent classes:
 
 ```text
 code_question
@@ -254,7 +254,7 @@ Every search result should expose debug data for internal/dev mode:
 - dataset profile version
 - artifact source chain
 
-This is how NexusDesk remains trustworthy as the indexing and agent system grow.
+This is how Nexus Augentic Studio remains trustworthy as the indexing and agent system grow.
 
 ## Context Limits
 
@@ -272,7 +272,7 @@ If the model needs more context, it should ask for a specific tool call.
 
 ## Evaluation Set
 
-NexusDesk needs a permanent evaluation set:
+Nexus Augentic Studio needs a permanent evaluation set:
 
 - code questions
 - document questions

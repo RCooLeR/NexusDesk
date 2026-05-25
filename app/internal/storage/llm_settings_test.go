@@ -25,11 +25,30 @@ func TestLLMSettingsStoreReturnsDefaultsWhenMissing(t *testing.T) {
 	if settings.Model != "qwen3:8b" {
 		t.Fatalf("unexpected default model: %s", settings.Model)
 	}
-	if settings.MaxContextTokens != 32768 {
+	if settings.MaxContextTokens != 40960 {
 		t.Fatalf("unexpected default context window: %d", settings.MaxContextTokens)
 	}
-	if settings.ResponseReserveTokens != 4096 {
+	if settings.ResponseReserveTokens != 5120 {
 		t.Fatalf("unexpected default response reserve: %d", settings.ResponseReserveTokens)
+	}
+}
+
+func TestLLMSettingsStoreUsesModelContextDefaults(t *testing.T) {
+	store := NewLLMSettingsStore(filepath.Join(t.TempDir(), "settings.json"))
+
+	saved, err := store.Save(LLMSettings{
+		ProviderName: "Test Provider",
+		BaseURL:      "https://example.test/v1",
+		Model:        "mistral-small3.2:latest",
+	})
+	if err != nil {
+		t.Fatalf("Save failed: %v", err)
+	}
+	if saved.MaxContextTokens != 131072 {
+		t.Fatalf("expected long-context model window, got %d", saved.MaxContextTokens)
+	}
+	if saved.ResponseReserveTokens != 16384 {
+		t.Fatalf("expected reserve from model window, got %d", saved.ResponseReserveTokens)
 	}
 }
 
@@ -102,8 +121,8 @@ func TestLLMSettingsStoreNormalizesContextReserve(t *testing.T) {
 	if saved.MaxContextTokens != 12000 {
 		t.Fatalf("unexpected context tokens: %d", saved.MaxContextTokens)
 	}
-	if saved.ResponseReserveTokens != 3000 {
-		t.Fatalf("expected reserve to be clamped to quarter window, got %d", saved.ResponseReserveTokens)
+	if saved.ResponseReserveTokens != 2048 {
+		t.Fatalf("expected reserve to be recalculated from context window, got %d", saved.ResponseReserveTokens)
 	}
 }
 

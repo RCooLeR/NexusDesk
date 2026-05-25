@@ -10,7 +10,7 @@ import (
 	"strings"
 	"time"
 
-	"NexusDesk/internal/workspace"
+	"NexusAugenticStudio/internal/workspace"
 )
 
 const profileDirRelPath = ".nexusdesk/datasets"

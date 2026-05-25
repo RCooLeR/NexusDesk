@@ -8,8 +8,8 @@ import (
 	"strings"
 	"testing"
 
-	"NexusDesk/internal/llm"
-	"NexusDesk/internal/storage"
+	"NexusAugenticStudio/internal/llm"
+	"NexusAugenticStudio/internal/storage"
 )
 
 func TestAskLLMStreamEmitsRedactedErrorEvent(t *testing.T) {

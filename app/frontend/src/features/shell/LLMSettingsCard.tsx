@@ -1,17 +1,7 @@
 import type {ChangeEvent} from 'react';
 import {Button, Card} from '../../components/ui';
 import type {LLMProbeResult, LLMSettings} from '../../types';
-
-const recommendedModelOptions = [
-    {id: 'qwen3:4b-instruct', label: 'Qwen3 4B Instruct - fast local'},
-    {id: 'qwen3:8b', label: 'Qwen3 8B - balanced'},
-    {id: 'qwen3.5:9b', label: 'Qwen3.5 9B - workspace chat'},
-    {id: 'phi4:14b', label: 'Phi-4 14B - reasoning'},
-    {id: 'phi4-reasoning:14b', label: 'Phi-4 Reasoning 14B - deep reasoning'},
-    {id: 'gpt-oss:20b', label: 'GPT-OSS 20B - strong general'},
-    {id: 'mistral-small3.2:latest', label: 'Mistral Small 3.2 - long context'},
-    {id: 'gemma4:26b', label: 'Gemma 4 26B - max local'},
-];
+import {recommendedModelOptions} from './llmModelCatalog';
 
 type LLMSettingsCardProps = {
     isSavingSettings: boolean;
@@ -98,7 +88,7 @@ export function LLMSettingsCard({
                     </label>
                 </div>
                 <small className="settings-help-text">
-                    NexusDesk uses the remaining window for selected files and context packs, and sends num_ctx to local Ollama-compatible runners.
+                    Nexus uses the remaining window for selected files and context packs, and sends num_ctx, num_predict, and max_tokens to compatible runners.
                 </small>
                 <div className="settings-actions">
                     <small>{settingsStatus}</small>

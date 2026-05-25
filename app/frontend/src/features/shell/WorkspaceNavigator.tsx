@@ -1,4 +1,9 @@
-import {brandAssets, workspaceIconByName} from '../../brand/assets';
+import {useState} from 'react';
+import type {CSSProperties, MouseEvent as ReactMouseEvent} from 'react';
+import type {IconDefinition} from '@fortawesome/fontawesome-svg-core';
+import {faChevronRight, faRotateRight} from '@fortawesome/free-solid-svg-icons';
+import {FontAwesomeIcon} from '@fortawesome/react-fontawesome';
+import {brandAssets, productBrand, workspaceIconByName} from '../../brand/assets';
 import {Button, IconButton} from '../../components/ui';
 import type {FileNode, RecentWorkspace, WorkspaceItem, WorkspaceSearchResult, WorkspaceSnapshot} from '../../types';
 
@@ -23,6 +28,7 @@ type WorkspaceNavigatorProps = {
     onSearchWorkspace: () => void;
     onSelectFallbackItem: (name: string) => void;
     onSelectSearchResult: (result: WorkspaceSearchResult) => void;
+    onTreeContextAction: (action: TreeContextAction, node: FileNode) => void;
     onSelectWorkspaceNode: (node: FileNode) => void;
     onWorkspaceSearchQueryChange: (value: string) => void;
     recentWorkspaces: RecentWorkspace[];
@@ -35,12 +41,14 @@ type WorkspaceNavigatorProps = {
     changedFilePaths: string[];
 };
 
-const fileIconByType: Record<string, string> = {
+export type TreeContextAction = 'new-file' | 'new-folder' | 'rename' | 'move' | 'delete' | 'copy-path' | 'reveal';
+
+const fileIconByType: Record<string, IconDefinition> = {
     code: brandAssets.icons.code,
     data: brandAssets.icons.data,
     document: brandAssets.icons.documents,
     image: brandAssets.icons.documents,
-    folder: brandAssets.icons.documents,
+    folder: brandAssets.icons.workspace,
     file: brandAssets.icons.documents,
 };
 
@@ -65,6 +73,7 @@ export function WorkspaceNavigator({
     onSearchWorkspace,
     onSelectFallbackItem,
     onSelectSearchResult,
+    onTreeContextAction,
     onSelectWorkspaceNode,
     onWorkspaceSearchQueryChange,
     recentWorkspaces,
@@ -77,18 +86,24 @@ export function WorkspaceNavigator({
     changedFilePaths,
 }: WorkspaceNavigatorProps) {
     const changedFiles = new Set(changedFilePaths);
+    const [contextMenu, setContextMenu] = useState<{node: FileNode; x: number; y: number} | null>(null);
+    function openContextMenu(event: ReactMouseEvent, node: FileNode) {
+        event.preventDefault();
+        setContextMenu({node, x: event.clientX, y: event.clientY});
+    }
+    function runContextAction(action: TreeContextAction) {
+        if (!contextMenu) {
+            return;
+        }
+        onTreeContextAction(action, contextMenu.node);
+        setContextMenu(null);
+    }
     return (
-        <section className="navigator">
+        <section className="navigator" onClick={() => setContextMenu(null)}>
             <header className="navigator-header">
-                <div className="product-lockup" aria-label="NexusDesk">
-                    <img src={brandAssets.symbolDark} alt="" />
-                    <div>
-                        <h1><span>Nexus</span><strong>Desk</strong></h1>
-                        <small>AI IDE, Data &amp; Analytics Studio</small>
-                    </div>
+                <div className="product-lockup" aria-label={productBrand.name}>
+                    <img src={brandAssets.logoHorizontalDark} alt="" />
                 </div>
-                <p className="eyebrow">Workspace</p>
-                <span>{buildStage}</span>
             </header>
 
             <div className="action-row">
@@ -101,7 +116,7 @@ export function WorkspaceNavigator({
                     onClick={onRefreshWorkspace}
                     disabled={isRefreshingWorkspace}
                 >
-                    R
+                    <FontAwesomeIcon icon={faRotateRight} />
                 </IconButton>
             </div>
 
@@ -185,29 +200,36 @@ export function WorkspaceNavigator({
                                 ))}
                             </div>
                         )}
-                        {workspaceNodes.map((node) => (
-                            <button
-                                key={node.relPath}
-                                className={[
-                                    'tree-item',
-                                    activeFile === node.relPath ? 'selected' : '',
-                                    changedFiles.has(node.relPath) ? 'changed' : '',
-                                ].filter(Boolean).join(' ')}
-                                onClick={() => onSelectWorkspaceNode(node)}
-                                style={{paddingLeft: `${8 + Math.min(node.depth, 10) * 8}px`}}
+                        <div className="project-tree" role="tree" aria-label="Project tree">
+                            {workspaceNodes.map((node) => (
+                                <TreeNodeButton
+                                    activeFile={activeFile}
+                                    changed={changedFiles.has(node.relPath)}
+                                    expandedDirectories={expandedDirectories}
+                                    icon={fileIconByType[node.fileType] ?? brandAssets.icons.documents}
+                                    key={node.relPath}
+                                    node={node}
+                                    onContextMenu={openContextMenu}
+                                    onSelect={onSelectWorkspaceNode}
+                                />
+                            ))}
+                        </div>
+                        {contextMenu && (
+                            <div
+                                className="tree-context-menu"
+                                onClick={(event) => event.stopPropagation()}
+                                role="menu"
+                                style={{left: contextMenu.x, top: contextMenu.y}}
                             >
-                                <span className="tree-disclosure">
-                                    {node.kind === 'directory' ? (expandedDirectories.has(node.relPath) ? '-' : '+') : ''}
-                                </span>
-                                <span className={`file-glyph ${node.kind}`}>
-                                    <img src={fileIconByType[node.fileType] ?? brandAssets.icons.documents} alt="" />
-                                </span>
-                                <span>
-                                    <strong>{node.name}</strong>
-                                    <small>{changedFiles.has(node.relPath) ? `${node.meta} / changed` : node.meta}</small>
-                                </span>
-                            </button>
-                        ))}
+                                <button onClick={() => runContextAction('new-file')} role="menuitem">New file</button>
+                                <button onClick={() => runContextAction('new-folder')} role="menuitem">New folder</button>
+                                <button onClick={() => runContextAction('rename')} role="menuitem">Rename</button>
+                                <button onClick={() => runContextAction('move')} role="menuitem">Move</button>
+                                <button disabled={contextMenu.node.kind !== 'file'} onClick={() => runContextAction('delete')} role="menuitem">Delete</button>
+                                <button onClick={() => runContextAction('copy-path')} role="menuitem">Copy path</button>
+                                <button onClick={() => runContextAction('reveal')} role="menuitem">Reveal</button>
+                            </div>
+                        )}
                     </>
                 ) : (
                     <>
@@ -215,27 +237,102 @@ export function WorkspaceNavigator({
                             <strong>Scaffold preview</strong>
                             <small>{workspaceStatus}</small>
                         </div>
-                        {workspaceItems.map((item) => (
-                            <button
-                                key={item.name}
-                                className={activeFile.startsWith(item.name) ? 'tree-item selected' : 'tree-item'}
-                                onClick={() => onSelectFallbackItem(item.name)}
-                            >
-                                <span className="tree-disclosure" />
-                                <span className={`file-glyph ${item.kind}`}>
-                                    <img src={workspaceIconByName[item.name] ?? brandAssets.icons.documents} alt="" />
-                                </span>
-                                <span>
-                                    <strong>{item.name}</strong>
-                                    <small>{item.meta}</small>
-                                </span>
-                            </button>
-                        ))}
+                        <div className="project-tree scaffold-tree" role="tree" aria-label="Scaffold project tree">
+                            {workspaceItems.map((item) => (
+                                <button
+                                    aria-selected={activeFile.startsWith(item.name)}
+                                    className={activeFile.startsWith(item.name) ? 'tree-item depth-zero selected' : 'tree-item depth-zero'}
+                                    key={item.name}
+                                    onClick={() => onSelectFallbackItem(item.name)}
+                                    role="treeitem"
+                                    style={{'--tree-depth': 0} as CSSProperties}
+                                >
+                                    <span className="tree-indent-guide" />
+                                    <span className="tree-disclosure" />
+                                    <span className={`file-glyph ${item.kind}`}>
+                                        <FontAwesomeIcon icon={workspaceIconByName[item.name] ?? brandAssets.icons.documents} />
+                                    </span>
+                                    <span className="tree-node-main">
+                                        <strong>{item.name}</strong>
+                                        <small>{item.meta}</small>
+                                    </span>
+                                    <span className="tree-node-badge">{item.kind}</span>
+                                </button>
+                            ))}
+                        </div>
                     </>
                 )}
             </div>
         </section>
     );
+}
+
+function TreeNodeButton({
+    activeFile,
+    changed,
+    expandedDirectories,
+    icon,
+    node,
+    onContextMenu,
+    onSelect,
+}: {
+    activeFile: string;
+    changed: boolean;
+    expandedDirectories: Set<string>;
+    icon: IconDefinition;
+    node: FileNode;
+    onContextMenu: (event: ReactMouseEvent, node: FileNode) => void;
+    onSelect: (node: FileNode) => void;
+}) {
+    const isDirectory = node.kind === 'directory';
+    const isExpanded = isDirectory && expandedDirectories.has(node.relPath);
+    const depth = Math.min(Math.max(node.depth, 0), 16);
+    return (
+        <button
+            aria-expanded={isDirectory ? isExpanded : undefined}
+            aria-level={depth + 1}
+            aria-selected={activeFile === node.relPath}
+            className={[
+                'tree-item',
+                depth === 0 ? 'depth-zero' : '',
+                isDirectory ? 'directory-node' : 'file-node',
+                activeFile === node.relPath ? 'selected' : '',
+                changed ? 'changed' : '',
+            ].filter(Boolean).join(' ')}
+            data-file-type={node.fileType}
+            data-kind={node.kind}
+            onContextMenu={(event) => onContextMenu(event, node)}
+            onClick={() => onSelect(node)}
+            role="treeitem"
+            style={{'--tree-depth': depth} as CSSProperties}
+            title={node.relPath}
+        >
+            <span className="tree-indent-guide" />
+            <span className={isExpanded ? 'tree-disclosure expanded' : 'tree-disclosure'}>
+                {isDirectory ? <FontAwesomeIcon icon={faChevronRight} /> : null}
+            </span>
+            <span className={`file-glyph ${node.kind}`}>
+                <FontAwesomeIcon icon={icon} />
+            </span>
+            <span className="tree-node-main">
+                <strong>{node.name}</strong>
+                <small>{changed ? `${node.meta} / changed` : node.meta}</small>
+            </span>
+            <span className={changed ? 'tree-node-badge changed' : 'tree-node-badge'}>
+                {changed ? 'M' : treeNodeBadge(node)}
+            </span>
+        </button>
+    );
+}
+
+function treeNodeBadge(node: FileNode) {
+    if (node.kind === 'directory') {
+        return 'dir';
+    }
+    if (node.fileType) {
+        return node.fileType;
+    }
+    return 'file';
 }
 
 function scanStatusSummary(workspace: WorkspaceSnapshot, fallback: string) {

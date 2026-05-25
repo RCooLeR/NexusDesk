@@ -1,4 +1,4 @@
-module NexusDesk
+module NexusAugenticStudio
 
 go 1.24
 

@@ -11,7 +11,7 @@ import (
 	"strings"
 	"time"
 
-	"NexusDesk/internal/storage"
+	"NexusAugenticStudio/internal/storage"
 )
 
 const probeTimeout = 8 * time.Second

@@ -6,7 +6,7 @@ const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 
 const checks = [
     {
-        file: 'src/features/shell/NexusDeskShell.tsx',
+        file: 'src/features/shell/NexusShell.tsx',
         terms: [
             'AskLLMStreamContextPack',
             'PreviewFileWrite',
@@ -44,6 +44,7 @@ const checks = [
             'CreateScanReportArtifact',
             'ListApprovals',
             'SearchWorkspace',
+            'GetGitStatus',
             'ApprovalRequestModal',
             'requestApproval',
             'QuickOpenPalette',
@@ -88,19 +89,49 @@ const checks = [
             'executeAgentTool',
             'dryRunAgentTool',
             'buildAgentToolPlan',
+            'renderStudioPanel',
+            'useResizablePanels',
+            'useStudioNavigation',
+            'settingsForSelectedModel',
+            'Model request queued',
+            'First token received',
+            'refreshGitStatus',
+            'handleTreeContextAction',
+            'main-studio-panel',
+            'showTabs: false',
         ],
+    },
+    {
+        file: 'src/api/wailsClient.ts',
+        terms: ['wailsjs/go/main/App', 'wailsjs/runtime/runtime', 'EventsOn'],
+    },
+    {
+        file: 'src/features/shell/useResizablePanels.ts',
+        terms: ['useResizablePanels', 'startNavigatorResize', 'startAgentResize', 'startBottomResize', 'beginResize', 'clamp', 'localStorage', 'nexus:resizable-panels'],
+    },
+    {
+        file: 'src/features/shell/useStudioNavigation.ts',
+        terms: ['useStudioNavigation', 'studioRouteSurfaceTab', 'changeStudioRoute', 'changeBottomStudioTab', 'mainStudioTabForRoute', 'localStorage', 'nexus:studio-navigation'],
     },
     {
         file: 'src/features/shell/AgentToolPlanCard.tsx',
         terms: ['AgentToolPlanCard', 'Tool Plan', 'tool-plan-list', 'requiresApproval', 'Dry run', 'Execute', 'tool-run-list', 'Replay dry run', 'Diff target'],
     },
     {
+        file: 'src/features/shell/CodeStudioPanel.tsx',
+        terms: ['CodeStudioPanel', 'Code Studio', 'Project Session', 'Repository', 'Working Tree Diff', 'gitStatus', 'git-diff-view', 'Refresh git', 'Commands'],
+    },
+    {
         file: 'src/features/shell/LLMSettingsCard.tsx',
-        terms: ['recommendedModelOptions', 'qwen3:8b', 'gpt-oss:20b', 'gemma4:26b', '<select', 'maxContextTokens', 'responseReserveTokens', 'num_ctx', 'probe-runtime'],
+        terms: ['recommendedModelOptions', '<select', 'maxContextTokens', 'responseReserveTokens', 'num_ctx', 'num_predict', 'max_tokens', 'probe-runtime'],
+    },
+    {
+        file: 'src/features/shell/llmModelCatalog.ts',
+        terms: ['recommendedModelOptions', 'qwen3:8b', 'gpt-oss:20b', 'gemma4:26b', 'settingsForSelectedModel', 'settingsWithRuntimeContext', 'responseReserveForContext'],
     },
     {
         file: 'src/features/shell/WorkbenchPanel.tsx',
-        terms: ['editor-tabs', 'markdownViewMode', 'markdown-view-toggle', 'markdown-document-preview', 'studio-mode-strip', 'resolveStudioMode', 'Data Studio', 'Summarize', 'onSummarizeContext', 'onSelectTab', 'onCloseTab', 'onDeleteFile', 'onMoveFile', 'onPinProjectContext', 'file-write-editor', 'MonacoFileEditor', 'MonacoCodePreview', 'editor-find', 'findInputRef', 'dirty-indicator', 'dirtyTabPaths', 'countFindMatches'],
+        terms: ['editor-tabs', 'markdownViewMode', 'markdown-view-toggle', 'markdown-document-preview', 'studio-mode-strip', 'studio-route-summary', 'resolveStudioMode', 'Data Studio', 'Summarize', 'onSummarizeContext', 'onSelectTab', 'onCloseTab', 'onDeleteFile', 'onMoveFile', 'onPinProjectContext', 'file-write-editor', 'MonacoFileEditor', 'MonacoCodePreview', 'editor-find', 'findInputRef', 'dirty-indicator', 'dirtyTabPaths', 'countFindMatches'],
     },
     {
         file: 'src/features/shell/DataStudioPanel.tsx',
@@ -128,7 +159,7 @@ const checks = [
     },
     {
         file: 'src/features/shell/MonacoFileEditor.tsx',
-        terms: ['MonacoFileEditor', 'loadMonaco', 'languageForFile', 'nexusdesk-light', 'KeyCode.KeyS'],
+        terms: ['MonacoFileEditor', 'loadMonaco', 'languageForFile', 'nexus-light', 'KeyCode.KeyS'],
     },
     {
         file: 'src/features/shell/MonacoCodePreview.tsx',
@@ -136,7 +167,7 @@ const checks = [
     },
     {
         file: 'src/features/shell/monacoRuntime.ts',
-        terms: ['monaco-editor', 'MonacoEnvironment', 'loadMonaco', 'languageForFile', 'nexusdesk-light'],
+        terms: ['monaco-editor', 'MonacoEnvironment', 'loadMonaco', 'languageForFile', 'nexus-light', 'basic-languages/go/go.contribution', 'language/typescript/monaco.contribution'],
     },
     {
         file: 'src/features/shell/HighlightedCode.tsx',
@@ -152,19 +183,23 @@ const checks = [
     },
     {
         file: 'src/brand/assets.ts',
-        terms: ['Code Studio', 'AI Assistant', 'Data Studio', 'Document Studio', 'Ops Studio'],
+        terms: ['productBrand', 'Nexus Augentic Studio', 'Agentic work. Augmented by context.', 'logoHorizontalDark', 'StudioRouteId', "code: 'code'", 'Code Studio', 'AI Assistant', 'Data Studio', 'Analytics Studio', 'Documents Studio', 'Ops Studio', 'studioRouteSurfaceTab', 'studioRoutePrimarySurface'],
+    },
+    {
+        file: 'src/features/shell/WorkspaceRail.tsx',
+        terms: ['activeRoute', 'onRouteChange', 'data-studio-route', 'Main studio menu', 'studioRoutePrimarySurface'],
     },
     {
         file: 'src/features/shell/WorkspaceNavigator.tsx',
-        terms: ['workspace-search', 'search-results', 'search-result-group', 'ScanStatusDetails', 'scanStatusSummary', 'Expand all', 'Collapse all', 'Save scan'],
+        terms: ['workspace-search', 'project-tree', 'TreeNodeButton', 'tree-indent-guide', 'tree-node-badge', 'search-results', 'search-result-group', 'ScanStatusDetails', 'scanStatusSummary', 'Expand all', 'Collapse all', 'Save scan', 'TreeContextAction', 'tree-context-menu'],
     },
     {
         file: 'src/features/shell/AgentChatCard.tsx',
-        terms: ['ChatMessageContent', 'chat-card-header', 'Save answer', 'textarea', 'composer-shell', 'composer-controls', 'Submit mode', 'onModelChange', 'onRunAgent', 'Agent', 'Clear pack', 'staleSourcePaths', 'Context changed since this answer was created.'],
+        terms: ['ChatMessageContent', 'recommendedModelOptions', 'chat-card-header', 'Save answer', 'textarea', 'composer-shell', 'composer-controls', 'Submit mode', 'onModelChange', 'onRunAgent', 'Agent', 'Clear pack', 'staleSourcePaths', 'Context changed since this answer was created.'],
     },
     {
         file: 'src/features/shell/BottomStudioPanel.tsx',
-        terms: ['BottomStudioPanel', 'Settings', 'Data', 'Tools', 'Artifacts', 'Approvals', 'Activity', 'DataOperationsPanel', 'LLMSettingsCard', 'AgentToolPlanCard', 'ArtifactStudioPanel', 'ApprovalLogPanel', 'ToolTimeline', 'bottom-tabbar'],
+        terms: ['BottomStudioPanel', 'drawerTabs', 'Approvals', 'Activity', 'CodeStudioPanel', 'DataOperationsPanel', 'LLMSettingsCard', 'AgentToolPlanCard', 'ArtifactStudioPanel', 'ApprovalLogPanel', 'ToolTimeline', 'bottom-tabbar', 'showTabs'],
     },
     {
         file: 'src/features/shell/DataOperationsPanel.tsx',
@@ -183,6 +218,13 @@ const checks = [
             '.agent-resizer',
             '.bottom-panel-resizer',
             '.bottom-studio-panel',
+            '.main-studio-panel',
+            '.code-studio-panel',
+            '.code-studio-metrics',
+            '.code-studio-row',
+            '.code-studio-toolbar',
+            '.git-diff-view',
+            '.tree-context-menu',
             '.bottom-tabbar',
             '.settings-page',
             '.settings-number-grid',
@@ -230,8 +272,14 @@ const checks = [
             '.dataset-sql-panel',
             '.sortable-data-table',
             '.scan-status-details',
+            '.project-tree',
+            '.tree-indent-guide',
+            '.tree-node-main',
+            '.tree-node-badge',
             '.search-result-group',
             '.studio-mode-strip',
+            '.studio-route-summary',
+            '.studio-route-hint',
             '.quick-open',
             '.quick-open-result',
             '.command-palette',
@@ -244,15 +292,27 @@ const checks = [
     },
     {
         file: 'wailsjs/go/main/App.d.ts',
-        terms: ['AskLLMContextPack', 'RunAgent', 'PreviewFileWrite', 'ApplyFileDelete', 'ApplyFileMove', 'ProfileDataset', 'CreateDatasetChartArtifact', 'CreateDatasetQueryArtifact', 'CreateDatasetSQLArtifact', 'CreateDatasetSummaryArtifact', 'CreateChatMarkdownArtifact', 'CreateScanReportArtifact', 'PreviewChatContextPack', 'PreviewDatasetChart', 'SaveDatasetQuery', 'SaveDatasetSQLQuery', 'ListDatasetSQLQueries', 'ListDatasetDependencies', 'ListDatasetSQLRuns', 'RefreshStaleContext', 'SearchMetadata', 'QueryWorkspaceSQLite', 'ExportArtifactLineageJSON', 'ListApprovals', 'ListAgentTools', 'ListAgentToolRuns', 'PreviewAgentTool', 'ExecuteAgentTool', 'QueryDatasetSQL', 'EnsureSQLiteMetadataStore', 'InspectMetadataStore', 'GetArtifactLineage', 'CheckWorkspaceFreshness', 'CompareArtifacts', 'ArchiveArtifact', 'DeleteArtifact'],
+        terms: ['AskLLMContextPack', 'RunAgent', 'PreviewFileWrite', 'ApplyFileDelete', 'ApplyFileMove', 'ProfileDataset', 'CreateDatasetChartArtifact', 'CreateDatasetQueryArtifact', 'CreateDatasetSQLArtifact', 'CreateDatasetSummaryArtifact', 'CreateChatMarkdownArtifact', 'CreateScanReportArtifact', 'PreviewChatContextPack', 'PreviewDatasetChart', 'SaveDatasetQuery', 'SaveDatasetSQLQuery', 'ListDatasetSQLQueries', 'ListDatasetDependencies', 'ListDatasetSQLRuns', 'RefreshStaleContext', 'SearchMetadata', 'QueryWorkspaceSQLite', 'ExportArtifactLineageJSON', 'GetGitStatus', 'ListApprovals', 'ListAgentTools', 'ListAgentToolRuns', 'PreviewAgentTool', 'ExecuteAgentTool', 'QueryDatasetSQL', 'EnsureSQLiteMetadataStore', 'InspectMetadataStore', 'GetArtifactLineage', 'CheckWorkspaceFreshness', 'CompareArtifacts', 'ArchiveArtifact', 'DeleteArtifact'],
+    },
+    {
+        file: '../app_metadata.go',
+        terms: ['metadataMirrorData', 'mirrorMetadataStore', 'recordDatasetDependency', 'recordSQLRun', 'datasetViews', 'hashForID'],
+    },
+    {
+        file: '../app_git.go',
+        terms: ['GetGitStatus', 'gitDiff', 'parseGitStatus', 'gitDiffMaxBytes'],
+    },
+    {
+        file: '../internal/llm/chat.go',
+        terms: ['MaxTokens', 'max_tokens', 'num_predict', 'num_ctx'],
     },
     {
         file: 'scripts/visual-smoke.mjs',
-        terms: ['playwright', 'installNexusDeskMocks', 'desktop.png', 'mobile.png', 'visual-baselines', 'manifest.json', 'navigator-resize', 'tool-run-detail', 'metadata-browser', 'metadata-history'],
+        terms: ['playwright', 'installNexusMocks', 'desktop.png', 'mobile.png', 'visual-baselines', 'manifest.json', 'navigator-resize', 'project-tree', 'dataMainSurface', 'code-route', 'tool-run-detail', 'metadata-browser', 'metadata-history'],
     },
     {
         file: 'scripts/visual-fixtures.mjs',
-        terms: ['installNexusDeskMocks', 'ListDatasetDependencies', 'ListDatasetSQLRuns', 'SearchMetadata', 'QueryWorkspaceSQLite', 'ExportArtifactLineageJSON', 'ImportArtifactLineageJSON', 'dependencies'],
+        terms: ['installNexusMocks', 'ListDatasetDependencies', 'ListDatasetSQLRuns', 'SearchMetadata', 'QueryWorkspaceSQLite', 'ExportArtifactLineageJSON', 'ImportArtifactLineageJSON', 'dependencies'],
     },
     {
         file: 'dist/index.html',
@@ -278,11 +338,11 @@ for (const check of checks) {
 }
 
 if (failures.length > 0) {
-    console.error('NexusDesk frontend smoke failed:');
+    console.error('Nexus frontend smoke failed:');
     for (const failure of failures) {
         console.error(`- ${failure}`);
     }
     process.exit(1);
 }
 
-console.log(`NexusDesk frontend smoke passed (${checks.length} files checked).`);
+console.log(`Nexus frontend smoke passed (${checks.length} files checked).`);

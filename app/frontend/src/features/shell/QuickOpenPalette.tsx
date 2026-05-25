@@ -1,4 +1,6 @@
 import {useEffect, useMemo, useRef, useState} from 'react';
+import type {IconDefinition} from '@fortawesome/fontawesome-svg-core';
+import {FontAwesomeIcon} from '@fortawesome/react-fontawesome';
 import {brandAssets} from '../../brand/assets';
 import type {FileNode, FilePreview, WorkspaceSnapshot} from '../../types';
 
@@ -80,7 +82,7 @@ export function QuickOpenPalette({
                 onMouseDown={(event) => event.stopPropagation()}
             >
                 <div className="quick-open-input-row">
-                    <img src={brandAssets.icons.code} alt="" />
+                    <FontAwesomeIcon icon={brandAssets.icons.code} />
                     <input
                         aria-label="Quick open query"
                         onChange={(event) => onQueryChange(event.target.value)}
@@ -124,7 +126,7 @@ export function QuickOpenPalette({
                             onMouseEnter={() => setSelectedIndex(index)}
                         >
                             <span className={`file-glyph ${entry.kind}`}>
-                                <img src={iconForEntry(entry)} alt="" />
+                                <FontAwesomeIcon icon={iconForEntry(entry)} />
                             </span>
                             <span>
                                 <strong>{entry.label}</strong>
@@ -203,7 +205,7 @@ function scoreQuickOpenEntry(entry: QuickOpenEntry, query: string) {
     return 0;
 }
 
-function iconForEntry(entry: QuickOpenEntry) {
+function iconForEntry(entry: QuickOpenEntry): IconDefinition {
     if (entry.fileType === 'code') {
         return brandAssets.icons.code;
     }

@@ -6,7 +6,7 @@ import (
 	"net/http/httptest"
 	"testing"
 
-	"NexusDesk/internal/storage"
+	"NexusAugenticStudio/internal/storage"
 )
 
 func TestProbeConnectsToOpenAICompatibleModelsEndpoint(t *testing.T) {

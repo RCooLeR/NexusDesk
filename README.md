@@ -1,10 +1,10 @@
-﻿# NexusDesk
+# Nexus Augentic Studio
 
-NexusDesk is a local-first AI IDE, data studio, and analytics studio for code, documents, datasets, marketing analytics, databases, Docker, and operations.
+Nexus Augentic Studio is a local-first AI IDE, data studio, and analytics studio for code, documents, datasets, marketing analytics, databases, Docker, and operations.
 
 The goal is to give users one desktop studio where they can open a project or business workspace, inspect and edit files, analyze spreadsheets and documents, connect to data sources, generate reports and charts, and safely create or modify artifacts with AI assistance.
 
-NexusDesk is not only a chatbot. It should feel like a serious IDE-style studio with AI built into the project, data, analytics, document, and operations surfaces:
+Nexus Augentic Studio is not only a chatbot. It should feel like a serious IDE-style studio with AI built into the project, data, analytics, document, and operations surfaces:
 
 - browse and understand project folders
 - open text, code, images, PDFs, spreadsheets, and common document formats
@@ -55,7 +55,7 @@ The fuller backend module, storage, indexing, connector, and tool layout is trac
 
 ## Product Shape
 
-NexusDesk should feel like a unified studio:
+Nexus Augentic Studio should feel like a unified studio:
 
 ```text
 Project tree + editor tabs + data tables + analytics panels + Docker views + AI assistant
@@ -66,7 +66,7 @@ A typical workflow:
 ```text
 Open workspace
   ->
-NexusDesk indexes files, documents, datasets, and metadata
+Nexus Augentic Studio indexes files, documents, datasets, and metadata
   ->
 User asks a question in chat
   ->
@@ -81,7 +81,7 @@ Agent returns grounded answer
 App creates artifacts such as reports, charts, files, or configs
 ```
 
-## MVP Focus
+## First Stable Focus
 
 The first useful version should focus on:
 

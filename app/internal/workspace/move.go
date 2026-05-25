@@ -80,7 +80,7 @@ func resolveMoveTargets(root string, request FileMoveRequest) (string, string, s
 		return "", "", "", "", nil, errors.New("move target must be different from the source")
 	}
 	if strings.HasPrefix(filepath.ToSlash(cleanSource), ".nexusdesk/") || strings.HasPrefix(filepath.ToSlash(cleanTarget), ".nexusdesk/") {
-		return "", "", "", "", nil, errors.New("direct moves into or out of NexusDesk metadata are not allowed")
+		return "", "", "", "", nil, errors.New("direct moves into or out of Nexus metadata are not allowed")
 	}
 
 	absSource, err := filepath.Abs(filepath.Join(absRoot, cleanSource))

@@ -81,7 +81,7 @@ func resolveDeleteTarget(root string, relPath string) (string, string, os.FileIn
 		return "", "", nil, err
 	}
 	if strings.HasPrefix(filepath.ToSlash(cleanRel), ".nexusdesk/") {
-		return "", "", nil, errors.New("direct deletes from NexusDesk metadata are not allowed")
+		return "", "", nil, errors.New("direct deletes from Nexus metadata are not allowed")
 	}
 
 	absTarget, err := filepath.Abs(filepath.Join(absRoot, cleanRel))

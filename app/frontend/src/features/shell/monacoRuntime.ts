@@ -4,6 +4,23 @@ import cssWorker from 'monaco-editor/esm/vs/language/css/css.worker?worker';
 import htmlWorker from 'monaco-editor/esm/vs/language/html/html.worker?worker';
 import jsonWorker from 'monaco-editor/esm/vs/language/json/json.worker?worker';
 import tsWorker from 'monaco-editor/esm/vs/language/typescript/ts.worker?worker';
+import 'monaco-editor/esm/vs/basic-languages/csharp/csharp.contribution';
+import 'monaco-editor/esm/vs/basic-languages/dockerfile/dockerfile.contribution';
+import 'monaco-editor/esm/vs/basic-languages/go/go.contribution';
+import 'monaco-editor/esm/vs/basic-languages/java/java.contribution';
+import 'monaco-editor/esm/vs/basic-languages/javascript/javascript.contribution';
+import 'monaco-editor/esm/vs/basic-languages/markdown/markdown.contribution';
+import 'monaco-editor/esm/vs/basic-languages/powershell/powershell.contribution';
+import 'monaco-editor/esm/vs/basic-languages/python/python.contribution';
+import 'monaco-editor/esm/vs/basic-languages/rust/rust.contribution';
+import 'monaco-editor/esm/vs/basic-languages/sql/sql.contribution';
+import 'monaco-editor/esm/vs/basic-languages/typescript/typescript.contribution';
+import 'monaco-editor/esm/vs/basic-languages/xml/xml.contribution';
+import 'monaco-editor/esm/vs/basic-languages/yaml/yaml.contribution';
+import 'monaco-editor/esm/vs/language/css/monaco.contribution';
+import 'monaco-editor/esm/vs/language/html/monaco.contribution';
+import 'monaco-editor/esm/vs/language/json/monaco.contribution';
+import 'monaco-editor/esm/vs/language/typescript/monaco.contribution';
 import 'monaco-editor/min/vs/editor/editor.main.css';
 
 type MonacoWorkerHost = typeof self & {
@@ -40,12 +57,12 @@ export function loadMonaco() {
     return monacoLoadPromise;
 }
 
-export function defineNexusDeskTheme(monaco: typeof Monaco) {
+export function defineNexusTheme(monaco: typeof Monaco) {
     if (themeDefined) {
         return;
     }
 
-    monaco.editor.defineTheme('nexusdesk-light', {
+    monaco.editor.defineTheme('nexus-light', {
         base: 'vs',
         inherit: true,
         rules: [

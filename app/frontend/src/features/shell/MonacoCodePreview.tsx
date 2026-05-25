@@ -1,7 +1,7 @@
 import {useEffect, useRef} from 'react';
 import type {MutableRefObject} from 'react';
 import type * as Monaco from 'monaco-editor/esm/vs/editor/editor.api';
-import {defineNexusDeskTheme, languageForFile, loadMonaco} from './monacoRuntime';
+import {defineNexusTheme, languageForFile, loadMonaco} from './monacoRuntime';
 
 type MonacoCodePreviewProps = {
     content: string;
@@ -22,7 +22,7 @@ export function MonacoCodePreview({content, fileName, searchQuery}: MonacoCodePr
                 return;
             }
 
-            defineNexusDeskTheme(monaco);
+            defineNexusTheme(monaco);
             const editor = monaco.editor.create(containerRef.current, {
                 automaticLayout: true,
                 contextmenu: true,
@@ -38,7 +38,7 @@ export function MonacoCodePreview({content, fileName, searchQuery}: MonacoCodePr
                 renderLineHighlight: 'none',
                 scrollBeyondLastLine: false,
                 tabSize: 4,
-                theme: 'nexusdesk-light',
+                theme: 'nexus-light',
                 value: content,
                 wordWrap: 'on',
             });

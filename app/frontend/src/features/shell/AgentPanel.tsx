@@ -1,4 +1,4 @@
-import {brandAssets} from '../../brand/assets';
+import {brandAssets, productBrand} from '../../brand/assets';
 import type {ChatMessage, ContextPreview} from '../../types';
 import {AgentChatCard} from './AgentChatCard';
 
@@ -48,10 +48,8 @@ export function AgentPanel({
     return (
         <aside className="agent-panel">
             <header>
-                <img className="agent-symbol" src={brandAssets.symbolDark} alt="" />
-                <p className="eyebrow">Agent</p>
-                <h2>Grounded Assistant</h2>
-                <span>{tagline}</span>
+                <h2>{productBrand.shortName} Assistant</h2>
+                <span>{tagline || productBrand.tagline}</span>
             </header>
 
             <AgentChatCard

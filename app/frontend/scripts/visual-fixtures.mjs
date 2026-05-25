@@ -1,11 +1,11 @@
-export async function installNexusDeskMocks(page) {
+export async function installNexusMocks(page) {
     await page.addInitScript(() => {
         const snapshot = {
-            root: 'E:/smoke/NexusDesk',
-            name: 'NexusDesk Smoke',
+            root: 'E:/smoke/NexusAugenticStudio',
+            name: 'Nexus Smoke',
             truncated: false,
             scan: {
-                included: 3,
+                included: 5,
                 ignored: 0,
                 depthSkipped: 0,
                 entrySkipped: 0,
@@ -16,9 +16,11 @@ export async function installNexusDeskMocks(page) {
                 skippedSamples: [],
             },
             nodes: [
-                {name: 'campaigns.csv', path: 'E:/smoke/NexusDesk/data/campaigns.csv', relPath: 'data/campaigns.csv', kind: 'file', fileType: 'data', depth: 1, meta: 'csv / 128 B'},
-                {name: 'local.sqlite', path: 'E:/smoke/NexusDesk/data/local.sqlite', relPath: 'data/local.sqlite', kind: 'file', fileType: 'database', depth: 1, meta: 'sqlite / 4 KiB'},
-                {name: 'brief.md', path: 'E:/smoke/NexusDesk/docs/brief.md', relPath: 'docs/brief.md', kind: 'file', fileType: 'document', depth: 1, meta: 'markdown / 80 B'},
+                {name: 'data', path: 'E:/smoke/NexusAugenticStudio/data', relPath: 'data', kind: 'directory', fileType: 'folder', depth: 1, meta: '2 files'},
+                {name: 'campaigns.csv', path: 'E:/smoke/NexusAugenticStudio/data/campaigns.csv', relPath: 'data/campaigns.csv', kind: 'file', fileType: 'data', depth: 2, meta: 'csv / 128 B'},
+                {name: 'local.sqlite', path: 'E:/smoke/NexusAugenticStudio/data/local.sqlite', relPath: 'data/local.sqlite', kind: 'file', fileType: 'database', depth: 2, meta: 'sqlite / 4 KiB'},
+                {name: 'docs', path: 'E:/smoke/NexusAugenticStudio/docs', relPath: 'docs', kind: 'directory', fileType: 'folder', depth: 1, meta: '1 file'},
+                {name: 'brief.md', path: 'E:/smoke/NexusAugenticStudio/docs/brief.md', relPath: 'docs/brief.md', kind: 'file', fileType: 'document', depth: 2, meta: 'markdown / 80 B'},
             ],
         };
         const table = {
@@ -33,7 +35,7 @@ export async function installNexusDeskMocks(page) {
             truncated: false,
         };
         const metadataBrowser = {
-            path: 'E:/smoke/NexusDesk/.nexusdesk/metadata/nexusdesk.sqlite',
+            path: 'E:/smoke/NexusAugenticStudio/.nexusdesk/metadata/nexus.sqlite',
             message: 'SQLite metadata tables and dataset SQL views are available for inspection.',
             updatedAt: new Date().toISOString(),
             tables: [
@@ -52,8 +54,8 @@ export async function installNexusDeskMocks(page) {
             main: {
                 App: {
                     GetStartupState: async () => ({
-                        productName: 'NexusDesk',
-                        tagline: 'Local-first AI IDE, data studio, and analytics studio.',
+                        productName: 'Nexus Augentic Studio',
+                        tagline: 'Agentic work. Augmented by context.',
                         buildStage: 'Visual Smoke',
                         capabilities: [],
                         workspaceItems: [],
@@ -63,10 +65,26 @@ export async function installNexusDeskMocks(page) {
                     GetLLMSettings: async () => ({providerName: 'Local', baseUrl: 'http://localhost:11434/v1', model: 'qwen3:8b', apiKey: '', maxContextTokens: 32768, responseReserveTokens: 4096, updatedAt: ''}),
                     SelectWorkspace: async () => ({selected: true, snapshot}),
                     RefreshWorkspace: async () => ({selected: true, snapshot}),
+                    GetGitStatus: async () => ({
+                        available: true,
+                        repoRoot: 'E:/smoke/NexusAugenticStudio',
+                        branch: 'main',
+                        head: 'abc1234',
+                        dirty: true,
+                        changedFiles: [
+                            {path: 'app/frontend/src/App.tsx', oldPath: '', index: '', worktree: 'M', summary: 'modified'},
+                            {path: 'docs/09_DEVELOPER_EXPERIENCE.md', oldPath: '', index: '', worktree: 'M', summary: 'modified'},
+                        ],
+                        diff: 'diff --git a/app/frontend/src/App.tsx b/app/frontend/src/App.tsx\n@@\n- old\n+ new\n',
+                        diffTruncated: false,
+                        aheadBehind: 'ahead 1',
+                        message: 'main has 2 changed files.',
+                        generatedAt: '2026-05-14T00:00:00Z',
+                    }),
                     GetChatHistory: async () => [
                         {role: 'assistant', content: 'Smoke answer\n\nSources:\n- data/campaigns.csv', contextRelPath: 'data/campaigns.csv', sourcePaths: ['data/campaigns.csv'], createdAt: '2026-05-14T00:00:00Z'},
                     ],
-                    ListArtifacts: async () => [{relPath: '.nexusdesk/artifacts/smoke.md', name: 'smoke.md', path: 'E:/smoke/NexusDesk/.nexusdesk/artifacts/smoke.md', kind: 'chat-answer', size: 120, modifiedAt: '2026-05-14T00:00:00Z', source: 'chat', summary: 'Smoke artifact', model: 'qwen3:8b'}],
+                    ListArtifacts: async () => [{relPath: '.nexusdesk/artifacts/smoke.md', name: 'smoke.md', path: 'E:/smoke/NexusAugenticStudio/.nexusdesk/artifacts/smoke.md', kind: 'chat-answer', size: 120, modifiedAt: '2026-05-14T00:00:00Z', source: 'chat', summary: 'Smoke artifact', model: 'qwen3:8b'}],
                     ListApprovals: async () => [],
                     ListDatasetProfiles: async () => [{relPath: 'data/campaigns.csv', name: 'campaigns.csv', kind: 'csv', rows: 2, columns: 3, sheets: [], profiles: table.profiles, updatedAt: '2026-05-14T00:00:00Z', message: 'Profile ready'}],
                     ListDatasetQueries: async () => [],
@@ -84,7 +102,7 @@ export async function installNexusDeskMocks(page) {
                     CheckWorkspaceFreshness: async () => ({changed: [{relPath: 'data/campaigns.csv', kind: 'modified', message: 'data/campaigns.csv changed on disk.'}], staleArtifacts: ['.nexusdesk/artifacts/smoke.md'], staleDatasets: ['data/campaigns.csv'], message: '1 workspace file changes detected. 1 artifacts may be stale. 1 dataset-derived views need refresh.'}),
                     RefreshStaleContext: async () => ({preview: {roots: ['data/campaigns.csv'], files: [{relPath: 'data/campaigns.csv', required: true}], fileCount: 1, truncated: false, message: 'Context refreshed'}, affectedChats: 1, staleArtifacts: ['.nexusdesk/artifacts/smoke.md'], staleDatasets: ['data/campaigns.csv'], message: 'Refreshed context preview for 1 changed roots.'}),
                     GetArtifactLineage: async () => ({message: '4 lineage nodes and 3 relationships.', relationshipCounts: {cited: 1, 'dry-run': 1, generated: 1}, nodes: [{id: 'source:data/campaigns.csv', kind: 'source', label: 'campaigns.csv', relPath: 'data/campaigns.csv'}, {id: 'chat:assistant:0', kind: 'chat', label: 'Assistant answer', relPath: 'data/campaigns.csv'}, {id: 'tool:smoke-tool', kind: 'tool', label: 'Query Dataset', relPath: 'data/campaigns.csv'}, {id: 'artifact:.nexusdesk/artifacts/smoke.md', kind: 'artifact', label: 'smoke.md', relPath: '.nexusdesk/artifacts/smoke.md'}], edges: [{from: 'source:data/campaigns.csv', to: 'chat:assistant:0', label: 'cited'}, {from: 'source:data/campaigns.csv', to: 'tool:smoke-tool', label: 'dry-run'}, {from: 'chat:assistant:0', to: 'artifact:.nexusdesk/artifacts/smoke.md', label: 'generated'}]}),
-                    ExportArtifactLineageJSON: async () => ({relPath: '.nexusdesk/artifacts/lineage-smoke.json', name: 'lineage-smoke.json', kind: 'lineage-json', size: 512, path: 'E:/smoke/NexusDesk/.nexusdesk/artifacts/lineage-smoke.json'}),
+                    ExportArtifactLineageJSON: async () => ({relPath: '.nexusdesk/artifacts/lineage-smoke.json', name: 'lineage-smoke.json', kind: 'lineage-json', size: 512, path: 'E:/smoke/NexusAugenticStudio/.nexusdesk/artifacts/lineage-smoke.json'}),
                     ImportArtifactLineageJSON: async () => ({lineage: {nodes: [], edges: []}, message: 'Imported lineage preview.'}),
                     InspectMetadataStore: async () => metadataBrowser,
                     EnsureSQLiteMetadataStore: async () => ({path: metadataBrowser.path, schemaPath: 'schema.sql', schemaVersion: 1, schemaHash: 'smoke', tables: metadataBrowser.tables.map((table) => table.name), message: 'SQLite metadata store mirrored from current JSON compatibility stores.', updatedAt: metadataBrowser.updatedAt}),

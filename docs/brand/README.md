@@ -1,39 +1,19 @@
-# NexusDesk Brand Package
+# Nexus Augentic Studio - Production Brand Kit
 
-Starter brand system for **NexusDesk** -- a local-first AI IDE, data studio, and analytics studio for code, data, documents, marketing analytics, databases, and Docker/Ops workflows.
+Built from the approved generated logo files and used as the source of truth for the desktop runtime brand.
 
-## Contents
+## Includes
 
-- `brand-book/NexusDesk_Brand_Book.pdf` -- PDF brand book and usage guide.
-- `assets/svg/` -- editable vector logo system.
-- `assets/png/logo/` -- PNG logo exports at multiple sizes.
-- `assets/png/symbol/` -- PNG symbol exports at multiple sizes.
-- `assets/png/app-icons/` -- app icon exports.
-- `assets/png/favicons/` -- favicon PNGs and `.ico`.
-- `design-tokens/` -- JSON and CSS color/type tokens.
-- `source/option-3-generated-reference-board.png` -- the selected generated concept board.
+- `logos/png/` - production PNG logo, lockup, and app icon variants
+- `design-tokens/` - CSS and JSON tokens
 
-## Primary Colors
+## Brand
 
-| Token | Hex |
-|---|---|
-| Deep Indigo | `#0B0F1F` |
-| Nexus Violet | `#7C3AED` |
-| Electric Blue | `#2563EB` |
-| Sky Blue | `#38BDF8` |
-| Silver | `#D1D5DB` |
-| Pure White | `#FFFFFF` |
+- Name: Nexus Augentic Studio
+- Short name: Nexus
+- Tagline: Agentic work. Augmented by context.
+- Colors: blue `#0D6FFE`, cyan `#13B7F1`, green `#34C759`, navy `#0D0F1A`, slate `#1E2433`, light `#F2F3F7`, white `#FFFFFF`
 
-## Typography
+## Runtime Usage
 
-Recommended typeface: **Inter**.
-
-Use Semibold/Bold for product headings and Medium/Regular for UI labels and body copy.
-
-## Usage Notes
-
-- Use the orbital **N** symbol for app icons, favicons, splash screens, and compact navigation.
-- Use the horizontal logo for website headers, launch screens, presentations, and documentation.
-- Keep enough clearspace around the logo; do not stretch, rotate, recolor randomly, or place on low-contrast backgrounds.
-- The generated SVGs use live text for the wordmark; before final production, a designer can outline the text in Figma/Illustrator for maximum consistency.
-- This package is a strong starter kit, not a legal trademark clearance. Check trademarks and domains before public launch.
+The application runtime imports approved logo and app icon assets from `app/frontend/src/assets/brand/`, which mirrors this folder. Interface glyphs such as file types, route icons, chevrons, refresh, and command/search symbols are Font Awesome icons, not product logos.

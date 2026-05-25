@@ -11,7 +11,7 @@ import (
 	"strconv"
 	"strings"
 
-	"NexusDesk/internal/workspace"
+	"NexusAugenticStudio/internal/workspace"
 )
 
 const maxSQLRows = 100

@@ -1,7 +1,7 @@
 import {useEffect, useRef, useState} from 'react';
 import {brandAssets} from '../../brand/assets';
 import {Button, EmptyState, InlineAlert, LoadingState} from '../../components/ui';
-import type {DatasetProfile, FilePreview, FileWriteProposal, TablePreview, WorkspaceSnapshot} from '../../types';
+import type {DatasetProfile, FilePreview, FileWriteProposal, GitStatus, TablePreview, WorkspaceSnapshot} from '../../types';
 import {ChatMessageContent} from './ChatMessageContent';
 import {SortableDataTable} from './DataStudioPanel';
 import {HighlightedCode} from './HighlightedCode';
@@ -10,10 +10,15 @@ import {MonacoFileEditor} from './MonacoFileEditor';
 
 type WorkbenchPanelProps = {
     activeFile: string;
+    activeStudioDescription: string;
+    activeStudioHint: string;
+    activeStudioLabel: string;
+    activeStudioSurface: string;
     activeDatasetProfile: DatasetProfile | null;
     dirtyTabPaths: string[];
     fileDraft: string;
     filePreview: FilePreview | null;
+    gitStatus: GitStatus | null;
     isApplyingWrite: boolean;
     isEditingFile: boolean;
     isSendingPrompt: boolean;
@@ -27,6 +32,8 @@ type WorkbenchPanelProps = {
     onCancelFileEdit: () => void;
     onExplainContext: () => void;
     onCreateReport: () => void;
+    onOpenCommandPalette: () => void;
+    onRefreshGitStatus: () => void;
     onSummarizeContext: () => void;
     onFileDraftChange: (content: string) => void;
     onDeleteFile: () => void;
@@ -46,10 +53,15 @@ type WorkbenchPanelProps = {
 
 export function WorkbenchPanel({
     activeFile,
+    activeStudioDescription,
+    activeStudioHint,
+    activeStudioLabel,
+    activeStudioSurface,
     activeDatasetProfile,
     dirtyTabPaths,
     fileDraft,
     filePreview,
+    gitStatus,
     isApplyingWrite,
     isEditingFile,
     isSendingPrompt,
@@ -63,6 +75,8 @@ export function WorkbenchPanel({
     onCancelFileEdit,
     onExplainContext,
     onCreateReport,
+    onOpenCommandPalette,
+    onRefreshGitStatus,
     onSummarizeContext,
     onFileDraftChange,
     onDeleteFile,
@@ -119,10 +133,16 @@ export function WorkbenchPanel({
                 <div>
                     <p className="eyebrow">Active Context</p>
                     <h2>{activeFile}</h2>
+                    <div className="studio-route-summary" aria-label="Selected studio route">
+                        <strong>{activeStudioLabel}</strong>
+                        <span>{activeStudioDescription}</span>
+                        <small>{activeStudioSurface}</small>
+                    </div>
                     <div className="studio-mode-strip" aria-label="Active studio surface">
                         <span>{studioMode.label}</span>
                         <small>{studioMode.detail}</small>
                     </div>
+                    <small className="studio-route-hint">{activeStudioHint}</small>
                 </div>
                 <div className="topbar-actions">
                     <Button disabled={!workspace || isLoadingPreview} onClick={onRefreshPreview}>
@@ -154,6 +174,33 @@ export function WorkbenchPanel({
                     </Button>
                 </div>
             </header>
+
+            {activeStudioLabel === 'Code Studio' && (
+                <section className="code-studio-inline" aria-label="Code Studio git status">
+                    <strong className="code-studio-inline-title">Working Tree Diff</strong>
+                    <div className="code-studio-toolbar">
+                        <Button disabled={!workspace} onClick={onRefreshGitStatus} variant="subtle">Refresh git</Button>
+                        <Button onClick={onOpenCommandPalette} variant="subtle">Commands</Button>
+                        <Button disabled={!gitStatus?.diff} variant="subtle">Diff</Button>
+                    </div>
+                    <div className={gitStatus?.dirty ? 'git-summary dirty' : 'git-summary'}>
+                        <strong>{gitStatus?.available ? `${gitStatus.branch}${gitStatus.head ? ` @ ${gitStatus.head}` : ''}` : 'Git unavailable'}</strong>
+                        <span>{gitStatus?.message || 'Open a git-backed workspace to inspect changes.'}</span>
+                    </div>
+                    {gitStatus?.changedFiles.length ? (
+                        <div className="code-studio-inline-changes">
+                            {gitStatus.changedFiles.slice(0, 6).map((change) => (
+                                <span key={`${change.index}-${change.worktree}-${change.path}`} title={change.path}>
+                                    {change.summary}: {change.path}
+                                </span>
+                            ))}
+                        </div>
+                    ) : null}
+                    {gitStatus?.diff ? (
+                        <pre className="git-diff-view compact">{gitStatus.diff}</pre>
+                    ) : null}
+                </section>
+            )}
 
             <section className="canvas-grid">
                 <article className="editor-pane">
@@ -222,7 +269,7 @@ export function WorkbenchPanel({
                             {isLoadingPreview ? (
                                 <LoadingState
                                     detail="Reading the selected file inside the approved workspace root."
-                                    iconSrc={brandAssets.icons.documents}
+                                    icon={brandAssets.icons.documents}
                                     title="Loading preview"
                                 />
                             ) : filePreview?.kind === 'image' && filePreview.content ? (
@@ -291,14 +338,14 @@ export function WorkbenchPanel({
                             ) : (
                                 <EmptyState
                                     detail={filePreview?.message ?? 'Select a file from the workspace tree to preview it here.'}
-                                    iconSrc={brandAssets.icons.documents}
+                                    icon={brandAssets.icons.documents}
                                     title={filePreview?.kind === 'unsupported' ? 'Preview unavailable' : 'No file selected'}
                                     tone={filePreview?.kind === 'unsupported' ? 'warning' : 'neutral'}
                                 />
                             )}
                         </div>
                     ) : (
-                        <div className="code-preview" aria-label="NexusDesk workflow preview">
+                        <div className="code-preview" aria-label="Nexus workflow preview">
                             <p><span>01</span>Open a workspace root.</p>
                             <p><span>02</span>Index files, datasets, docs, and metadata.</p>
                             <p><span>03</span>Ask the agent with selected source context.</p>
@@ -443,7 +490,7 @@ function resolveStudioMode(
         return {label: 'Code Studio', detail: 'Source files, editor tabs, explanations, and safe edits'};
     }
 
-    return {label: 'Workspace Studio', detail: 'Project navigation, search, context packs, and artifacts'};
+    return {label: 'Project Studio', detail: 'Project navigation, search, context packs, and artifacts'};
 }
 
 function isDocumentLikeFile(fileName: string) {

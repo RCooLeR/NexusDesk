@@ -110,6 +110,10 @@ export function GetChatHistory() {
   return window['go']['main']['App']['GetChatHistory']();
 }
 
+export function GetGitStatus() {
+  return window['go']['main']['App']['GetGitStatus']();
+}
+
 export function GetLLMSettings() {
   return window['go']['main']['App']['GetLLMSettings']();
 }

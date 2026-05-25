@@ -1,39 +1,148 @@
-import symbolSilver from '../assets/brand/nexusdesk-symbol.svg';
-import symbolDark from '../assets/brand/nexusdesk-symbol-dark.svg';
-import aiIcon from '../assets/brand/icons/nexusdesk-icon-ai.svg';
-import codeIcon from '../assets/brand/icons/nexusdesk-icon-code.svg';
-import dataIcon from '../assets/brand/icons/nexusdesk-icon-data.svg';
-import documentsIcon from '../assets/brand/icons/nexusdesk-icon-documents.svg';
-import opsIcon from '../assets/brand/icons/nexusdesk-icon-ops.svg';
+import symbolApp from '../assets/brand/logos/nexus-app-icon.png';
+import logoHorizontalDark from '../assets/brand/logos/nexus-horizontal-dark.png';
+import logoHorizontalWhite from '../assets/brand/logos/nexus-horizontal-white.png';
+import logoVerticalDark from '../assets/brand/logos/nexus-vertical-dark.png';
+import logoVerticalWhite from '../assets/brand/logos/nexus-vertical-white.png';
+import type {IconDefinition} from '@fortawesome/fontawesome-svg-core';
+import {
+    faChartLine,
+    faCode,
+    faDatabase,
+    faFileLines,
+    faFolderTree,
+    faGear,
+    faRobot,
+    faServer,
+} from '@fortawesome/free-solid-svg-icons';
+
+export const productBrand = {
+    name: 'Nexus Augentic Studio',
+    shortName: 'Nexus',
+    tagline: 'Agentic work. Augmented by context.',
+};
 
 export const brandAssets = {
-    symbolSilver,
-    symbolDark,
+    symbolSilver: symbolApp,
+    symbolDark: symbolApp,
+    appIcon: symbolApp,
+    logoHorizontalDark,
+    logoHorizontalWhite,
+    logoVerticalDark,
+    logoVerticalWhite,
     icons: {
-        ai: aiIcon,
-        code: codeIcon,
-        data: dataIcon,
-        documents: documentsIcon,
-        ops: opsIcon,
+        ai: faRobot,
+        analytics: faChartLine,
+        code: faCode,
+        data: faDatabase,
+        documents: faFileLines,
+        ops: faServer,
+        settings: faGear,
+        workspace: faFolderTree,
     },
 };
 
-export const railItems = [
-    {label: 'Code Studio', icon: codeIcon, active: true},
-    {label: 'AI Assistant', icon: aiIcon, active: false},
-    {label: 'Data Studio', icon: dataIcon, active: false},
-    {label: 'Document Studio', icon: documentsIcon, active: false},
-    {label: 'Ops Studio', icon: opsIcon, active: false},
+export type StudioRouteId =
+    | 'code'
+    | 'data'
+    | 'analytics'
+    | 'documents'
+    | 'assistant'
+    | 'ops'
+    | 'artifacts'
+    | 'settings';
+
+export const railItems: Array<{
+    id: StudioRouteId;
+    label: string;
+    icon: IconDefinition;
+}> = [
+    {id: 'code', label: 'Code Studio', icon: brandAssets.icons.code},
+    {id: 'data', label: 'Data Studio', icon: brandAssets.icons.data},
+    {id: 'analytics', label: 'Analytics Studio', icon: brandAssets.icons.analytics},
+    {id: 'documents', label: 'Documents Studio', icon: brandAssets.icons.documents},
+    {id: 'assistant', label: 'AI Assistant', icon: brandAssets.icons.ai},
+    {id: 'ops', label: 'Ops Studio', icon: brandAssets.icons.ops},
+    {id: 'artifacts', label: 'Artifacts', icon: brandAssets.icons.documents},
+    {id: 'settings', label: 'Settings', icon: brandAssets.icons.settings},
 ];
 
-export const workspaceIconByName: Record<string, string> = {
-    app: codeIcon,
-    docs: documentsIcon,
-    services: opsIcon,
+export const studioRouteLabels: Record<StudioRouteId, string> = {
+    code: 'Code Studio',
+    data: 'Data Studio',
+    analytics: 'Analytics Studio',
+    documents: 'Documents Studio',
+    assistant: 'AI Assistant',
+    ops: 'Ops Studio',
+    artifacts: 'Artifacts',
+    settings: 'Settings',
 };
 
-export const capabilityIconByTitle: Record<string, string> = {
-    'Project IDE': codeIcon,
-    'Data & analytics studio': dataIcon,
-    'Artifact workflow': documentsIcon,
+export const studioRouteDescriptions: Record<StudioRouteId, string> = {
+    code: 'Project tree, editor tabs, search, safe edits, and upcoming git diffs.',
+    data: 'Datasets, SQL, metadata, SQLite connector, and data-derived artifacts.',
+    analytics: 'Marketing analytics, API connectors, dashboards, and report workflows.',
+    documents: 'PDF, DOCX, Markdown, document sets, summaries, and generated briefs.',
+    assistant: 'Context packs, model control, agent runs, tool plans, and citations.',
+    ops: 'Docker, Compose, services, logs, environments, and safe operations.',
+    artifacts: 'Generated reports, charts, exports, lineage, comparison, and archive.',
+    settings: 'Providers, model context, credentials, policies, diagnostics, and UI preferences.',
+};
+
+export const studioRouteSurfaceTab: Partial<Record<StudioRouteId, 'code' | 'settings' | 'data' | 'tools' | 'artifacts' | 'approvals' | 'activity'>> = {
+    code: 'code',
+    data: 'data',
+    analytics: 'data',
+    assistant: 'tools',
+    ops: 'data',
+    artifacts: 'artifacts',
+    settings: 'settings',
+};
+
+export const pendingStudioRoutes: StudioRouteId[] = [
+    'analytics',
+    'documents',
+    'ops',
+    'artifacts',
+    'settings',
+];
+
+export const studioRoutePrimarySurface: Record<StudioRouteId, string> = {
+    code: 'Workbench editor, git status, and Working Tree Diff',
+    data: 'Primary Data Studio surface',
+    analytics: 'Primary data surface until Analytics Studio lands',
+    documents: 'Workbench document preview until Documents Studio lands',
+    assistant: 'Assistant workspace and tool plan surface',
+    ops: 'Primary data operations surface until Ops Studio lands',
+    artifacts: 'Primary Artifact Studio surface',
+    settings: 'Primary Settings surface',
+};
+
+export const studioRouteCommandHint: Record<StudioRouteId, string> = {
+    code: 'Next: add staged diffs, hunk navigation, and AI commit support.',
+    data: 'Next: promote datasets, connectors, notebooks, and dump imports into a full studio.',
+    analytics: 'Next: add connector runs, dashboards, and marketing report workflows.',
+    documents: 'Next: add document library, extraction jobs, comparison, and deck/report generation.',
+    assistant: 'Next: promote long-running agent sessions and cross-studio context control.',
+    ops: 'Next: add Docker inventory, logs, health, and approval-governed operations.',
+    artifacts: 'Next: promote Artifact Studio out of the bottom drawer.',
+    settings: 'Next: promote provider, credential, policy, and diagnostic settings into a route.',
+};
+
+export const implementedStudioRoutes: StudioRouteId[] = [
+    'code',
+    'data',
+    'assistant',
+];
+
+export const workspaceIconByName: Record<string, IconDefinition> = {
+    app: brandAssets.icons.code,
+    docs: brandAssets.icons.documents,
+    services: brandAssets.icons.ops,
+    workspace: brandAssets.icons.workspace,
+};
+
+export const capabilityIconByTitle: Record<string, IconDefinition> = {
+    'Project IDE': brandAssets.icons.code,
+    'Data & analytics studio': brandAssets.icons.data,
+    'Artifact workflow': brandAssets.icons.documents,
 };

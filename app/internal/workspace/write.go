@@ -79,7 +79,7 @@ func resolveWriteTarget(root string, relPath string) (string, string, string, er
 		return "", "", "", err
 	}
 	if strings.HasPrefix(filepath.ToSlash(cleanRel), ".nexusdesk/") {
-		return "", "", "", errors.New("direct writes to NexusDesk metadata are not allowed")
+		return "", "", "", errors.New("direct writes to Nexus metadata are not allowed")
 	}
 
 	absTarget, err := filepath.Abs(filepath.Join(absRoot, cleanRel))

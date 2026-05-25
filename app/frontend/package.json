@@ -11,6 +11,9 @@
     "smoke:visual": "node scripts/visual-smoke.mjs"
   },
   "dependencies": {
+    "@fortawesome/fontawesome-svg-core": "^7.2.0",
+    "@fortawesome/free-solid-svg-icons": "^7.2.0",
+    "@fortawesome/react-fontawesome": "^3.3.1",
     "monaco-editor": "^0.43.0",
     "react": "^18.2.0",
     "react-dom": "^18.2.0"

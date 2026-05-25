@@ -12,10 +12,10 @@ import (
 	"strings"
 	"time"
 
-	"NexusDesk/internal/agent"
-	"NexusDesk/internal/agenttools"
-	"NexusDesk/internal/dataset"
-	"NexusDesk/internal/workspace"
+	"NexusAugenticStudio/internal/agent"
+	"NexusAugenticStudio/internal/agenttools"
+	"NexusAugenticStudio/internal/dataset"
+	"NexusAugenticStudio/internal/workspace"
 )
 
 const maxAgentShellOutputBytes = 12000

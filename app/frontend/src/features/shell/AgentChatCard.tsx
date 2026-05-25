@@ -1,18 +1,9 @@
 import {useState} from 'react';
+import {productBrand} from '../../brand/assets';
 import {Button, Card} from '../../components/ui';
 import type {ChatMessage, ContextPreview} from '../../types';
 import {ChatMessageContent} from './ChatMessageContent';
-
-const chatModelOptions = [
-    {id: 'qwen3:4b-instruct', label: 'Qwen3 4B'},
-    {id: 'qwen3:8b', label: 'Qwen3 8B'},
-    {id: 'qwen3.5:9b', label: 'Qwen3.5 9B'},
-    {id: 'phi4:14b', label: 'Phi-4 14B'},
-    {id: 'phi4-reasoning:14b', label: 'Phi-4 Reasoning'},
-    {id: 'gpt-oss:20b', label: 'GPT-OSS 20B'},
-    {id: 'mistral-small3.2:latest', label: 'Mistral Small'},
-    {id: 'gemma4:26b', label: 'Gemma 4 26B'},
-];
+import {recommendedModelOptions} from './llmModelCatalog';
 
 type AgentChatCardProps = {
     chatMessages: ChatMessage[];
@@ -56,6 +47,7 @@ export function AgentChatCard({
     onSendPrompt,
 }: AgentChatCardProps) {
     const [submitMode, setSubmitMode] = useState<'ask' | 'agent'>('ask');
+    const chatModelOptions = recommendedModelOptions.map((option) => ({id: option.id, label: option.chatLabel}));
     const modelOptions = currentModel && !chatModelOptions.some((option) => option.id === currentModel)
         ? [{id: currentModel, label: currentModel}, ...chatModelOptions]
         : chatModelOptions;
@@ -91,13 +83,13 @@ export function AgentChatCard({
             <div className="chat-thread">
                 {chatMessages.length === 0 ? (
                     <div className="assistant-message">
-                        <strong>NexusDesk</strong>
+                        <strong>{productBrand.shortName}</strong>
                         <ChatMessageContent content="Ready to connect a model, read selected files, and turn source context into auditable work." />
                     </div>
                 ) : (
                     chatMessages.map((message, index) => (
                         <div className={message.role === 'user' ? 'user-message' : 'assistant-message'} key={`${message.role}-${message.createdAt}-${index}`}>
-                            <strong>{message.role === 'user' ? 'You' : 'NexusDesk'}</strong>
+                            <strong>{message.role === 'user' ? 'You' : productBrand.shortName}</strong>
                             <ChatMessageContent content={message.content} />
                             {message.contextRelPath && <small>{message.contextRelPath}</small>}
                             {messageHasStaleSources(message, staleSourcePaths) && (
@@ -152,7 +144,7 @@ export function AgentChatCard({
                                 submit();
                             }
                         }}
-                        placeholder="Message NexusDesk"
+                        placeholder={`Message ${productBrand.shortName}`}
                         rows={5}
                         value={chatPrompt}
                     />

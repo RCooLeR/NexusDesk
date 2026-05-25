@@ -1,4 +1,6 @@
 import type {ButtonHTMLAttributes, ReactNode} from 'react';
+import type {IconDefinition} from '@fortawesome/fontawesome-svg-core';
+import {FontAwesomeIcon} from '@fortawesome/react-fontawesome';
 
 type ButtonVariant = 'primary' | 'secondary' | 'subtle';
 
@@ -24,6 +26,7 @@ type StateTone = 'neutral' | 'warning' | 'danger';
 
 type StateProps = {
     detail?: string;
+    icon?: IconDefinition;
     iconSrc?: string;
     title: string;
     tone?: StateTone;
@@ -64,25 +67,35 @@ export function Card({children, className = ''}: CardProps) {
     return <section className={mergeClassNames('ui-card', className)}>{children}</section>;
 }
 
-export function EmptyState({detail, iconSrc, title, tone = 'neutral'}: StateProps) {
+export function EmptyState({detail, icon, iconSrc, title, tone = 'neutral'}: StateProps) {
     return (
         <div className={mergeClassNames('state-panel', `state-panel-${tone}`)}>
-            {iconSrc && <img src={iconSrc} alt="" />}
+            <StateIcon icon={icon} iconSrc={iconSrc} />
             <strong>{title}</strong>
             {detail && <p>{detail}</p>}
         </div>
     );
 }
 
-export function LoadingState({detail, iconSrc, title}: StateProps) {
+export function LoadingState({detail, icon, iconSrc, title}: StateProps) {
     return (
         <div className="state-panel state-panel-loading">
-            {iconSrc && <img src={iconSrc} alt="" />}
+            <StateIcon icon={icon} iconSrc={iconSrc} />
             <strong>{title}</strong>
             {detail && <p>{detail}</p>}
             <span className="state-loader" aria-hidden="true" />
         </div>
     );
+}
+
+function StateIcon({icon, iconSrc}: {icon?: IconDefinition; iconSrc?: string}) {
+    if (icon) {
+        return <FontAwesomeIcon icon={icon} />;
+    }
+    if (iconSrc) {
+        return <img src={iconSrc} alt="" />;
+    }
+    return null;
 }
 
 export function InlineAlert({children, tone = 'neutral'}: InlineAlertProps) {

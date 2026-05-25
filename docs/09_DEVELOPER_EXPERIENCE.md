@@ -29,11 +29,13 @@ LLM API keys are not written into `llm-settings.json`. They are saved in a sidec
 
 ## Chat Streaming
 
-`AskLLMStream` emits `nexusdesk:chat-stream` Wails events while `app/internal/llm/chat.go` reads OpenAI-compatible server-sent response chunks. The frontend listens in `NexusDeskShell.tsx`, updates the in-flight assistant message per `delta`, then replaces it with the final persisted response or refreshed workspace chat history when the request completes. User and assistant messages in the same optimistic pair receive distinct timestamps because streaming updates use the assistant timestamp as their target key. LLM settings include a model context window and response reserve; NexusDesk uses the remaining budget for selected-file and context-pack bytes, and local Ollama-compatible requests include `num_ctx` so the runner allocates that window.
+`AskLLMStream` emits `nexus:chat-stream` Wails events while `app/internal/llm/chat.go` reads OpenAI-compatible server-sent response chunks. The frontend listens in `NexusShell.tsx`, updates the in-flight assistant message per `delta`, then replaces it with the final persisted response or refreshed workspace chat history when the request completes. User and assistant messages in the same optimistic pair receive distinct timestamps because streaming updates use the assistant timestamp as their target key. LLM settings include a model context window and response reserve; Nexus Augentic Studio uses the remaining budget for selected-file and context-pack bytes, local Ollama-compatible requests include `num_ctx` and `num_predict`, and all compatible chat requests send `max_tokens` from the reserve.
+
+Model selection is backed by `app/frontend/src/features/shell/llmModelCatalog.ts` and matching backend defaults in `app/internal/storage/llm_settings.go`. Choosing a curated local model immediately applies the largest configured context window for that model and derives the response reserve from that window. When the Ollama runtime probe reports a loaded model `context_length`, the frontend prefers that runtime value and saves the tuned setting, so the actual loaded runner wins over catalog guesses.
 
 Selected directories and the workspace root also flow through the same streaming path. `app/internal/workspace/context.go` expands a selected directory or `.` into a capped set of previewable files, then `app/app.go` builds a context pack with a small manifest and file sections. The pack budget scales from the configured model context window, while still keeping ignored-folder, symlink, path traversal, encoding, PDF text, DOCX text, and CSV-summary boundaries used by file previews.
 
-The chat panel previews pinned context packs by calling `PreviewChatContextPack`, which uses the same backend collector as the send path. That keeps the visible file list aligned with what the model will actually receive, including truncation warnings when caps are reached.
+The chat panel previews pinned context packs by calling `PreviewChatContextPack`, which uses the same backend collector as the send path. That keeps the visible file list aligned with what the model will actually receive, including truncation warnings when caps are reached. The bottom Activity Log records chat lifecycle steps such as request queued, stream listener attached, context budget reserved, first token received, stream completed, and failures, so long-running local model work has visible progress.
 
 Chat history stores the source paths attached to each user/assistant pair so saved answer artifacts can use the answer's original context instead of whatever happens to be pinned later. Persisted assistant answers now append a compact source list when context paths exist, and saved Markdown answer artifacts include the same source citations in their header and footer.
 
@@ -68,65 +70,73 @@ For a healthy load, `/api/ps` should show nonzero `size_vram`, and the Ollama lo
 
 `app/internal/workspace/context.go` owns directory/project context expansion and context-pack previews. The UI can pin a selected directory or the workspace root, but the backend still decides which files are safe and useful enough to include. `app/internal/workspace/freshness.go` owns the first file-change snapshot; the shell polls it to mark changed tree rows, warn when generated artifacts cite changed source paths, and flag dataset-derived views/snippets/reports when CSV/XLSX source files change. The workbench can refresh a stale context preview from changed files and records that action in the local approval/metadata trail.
 
+`app/app_git.go` owns the first read-only Git visibility bridge. `GetGitStatus` runs bounded `git` commands against the active workspace root, detects the repository root, branch, short HEAD, ahead/behind text, porcelain changed-file rows, and a capped working-tree diff. It does not stage, unstage, reset, checkout, or mutate repository state. Code Studio consumes this through the generated Wails binding to show branch status, dirty summary, changed files, and a read-only diff.
+
 `app/frontend/src/features/shell/HighlightedCode.tsx` remains as the dependency-free fallback highlighter for non-Monaco preview paths. Text/code source previews and edit drafts now use the Monaco-backed components listed below.
 
 ## Dataset Profiles
 
 `app/internal/dataset/` owns the first persistent dataset profile pass and saved query history. CSV files reuse the workspace preview profiles and XLSX files expose workbook sheet names, then profiles are stored under `.nexusdesk/datasets/profiles.json` inside the active workspace. Saved lightweight row filters and read-only SQL snippets are stored separately under `.nexusdesk/datasets/queries.json` and capped per dataset. `app/internal/workspace/chart.go` owns the first CSV chart model: one category column, optional numeric value column, bar or line chart mode, bounded points, and no arbitrary SQL or model-rendered pixels.
 
-The workbench topbar now has functional Preview, Explain, Summarize, Edit, and Report actions. Preview reloads the selected workspace node from disk, Explain sends a predefined grounded prompt when text context is available, Summarize sends selected file/directory context through chat and saves the result as a Markdown artifact, Edit uses the diff/apply write flow, and Report creates a Markdown artifact. The bottom Data tab owns dataset profiling plus query/chart/SQL workflows: it can persist CSV/XLSX dataset metadata, run a bounded CSV row query for the selected table, save/reuse queries, export the bounded result as a CSV artifact, preview chart points, create deterministic SVG bar or line chart artifacts, and create deterministic Markdown dataset summaries. The topbar also shows the active studio surface so code, data, document, operations, artifact, and workspace contexts are explicit. Editor previews and drafts now use Monaco with language detection for common code, document, data, and operations files. Drafts show dirty state, persist per tab while navigating, clear stale diff previews after edits, support revert before apply, guard dirty tab close, and use Ctrl+S to preview/apply through the same write path. New files start as draft tabs from Ctrl+N or the command palette, then use the same preview/apply boundary to create the file. Editor keyboard shortcuts include Ctrl+F for in-file find, Ctrl+W for active-tab close, and Ctrl+Tab / Ctrl+Shift+Tab for tab cycling. Ctrl+Shift+P opens the command palette for common workspace, editor, context, data, artifact, and chat actions.
+The workbench topbar now has functional Preview, Explain, Summarize, Edit, and Report actions. Preview reloads the selected workspace node from disk, Explain sends a predefined grounded prompt when text context is available, Summarize sends selected file/directory context through chat and saves the result as a Markdown artifact, Edit uses the diff/apply write flow, and Report creates a Markdown artifact. Code Studio now has a route-owned toolbar, persisted route/drawer/sidebar layout state, project-tree context menu shell, read-only git branch/dirty summary, changed-file panel, and capped working-tree diff. The Data route owns dataset profiling plus query/chart/SQL workflows: it can persist CSV/XLSX dataset metadata, run a bounded CSV row query for the selected table, save/reuse queries, export the bounded result as a CSV artifact, preview chart points, create deterministic SVG bar or line chart artifacts, and create deterministic Markdown dataset summaries. The topbar also shows the active studio surface so code, data, document, operations, artifact, and workspace contexts are explicit. Editor previews and drafts now use Monaco with language detection for common code, document, data, and operations files. Drafts show dirty state, persist per tab while navigating, clear stale diff previews after edits, support revert before apply, guard dirty tab close, and use Ctrl+S to preview/apply through the same write path. New files start as draft tabs from Ctrl+N or the command palette, then use the same preview/apply boundary to create the file. Editor keyboard shortcuts include Ctrl+F for in-file find, Ctrl+W for active-tab close, and Ctrl+Tab / Ctrl+Shift+Tab for tab cycling. Ctrl+Shift+P opens the command palette for common workspace, editor, context, data, artifact, and chat actions.
 
 ## Frontend Structure
 
-The shell is now mostly orchestration. Feature panels own stable presentation, while `NexusDeskShell.tsx` keeps workspace, preview, provider, and chat state wiring close to the Wails bindings:
+The shell is now mostly orchestration. Feature panels own stable presentation, while a small frontend API adapter isolates generated Wails bindings from React UI code:
 
 - `app/frontend/src/components/ui.tsx` contains reusable UI atoms such as buttons, cards, status badges, and branded state panels.
-- `app/frontend/src/features/shell/NexusDeskShell.tsx` owns the composed desktop workbench state, global quick-open/command-palette shortcuts, and cross-panel navigation wiring.
+- `app/frontend/src/api/wailsClient.ts` is the only frontend source module that imports generated Wails bindings directly. Shell and feature components import backend calls through this adapter.
+- `app/frontend/src/features/shell/NexusShell.tsx` owns the composed desktop workbench state, global quick-open/command-palette shortcuts, and cross-panel navigation wiring.
+- `app/frontend/src/features/shell/useStudioNavigation.ts` owns active studio route state, bottom drawer tab state, temporary route-to-surface mapping, and best-effort local persistence for route/drawer state.
+- `app/frontend/src/features/shell/useResizablePanels.ts` owns navigator, assistant, and bottom drawer sizing plus drag handlers and best-effort local persistence for layout dimensions.
 - `app/frontend/src/features/shell/QuickOpenPalette.tsx` owns the keyboard quick-open palette for workspace nodes and open editor tabs.
 - `app/frontend/src/features/shell/CommandPalette.tsx` owns the keyboard command palette for workspace, editor, assistant, data, and artifact actions.
+- `app/frontend/src/features/shell/CodeStudioPanel.tsx` owns reusable Code Studio session metrics, open tabs, workspace status, git branch/dirty summary, changed-file list, read-only working-tree diff, and placeholder queues for staged diff, search, problems, tasks, and code review.
 - `app/frontend/src/features/shell/MonacoFileEditor.tsx` owns the lazy-loaded Monaco edit surface, worker wiring, language detection, and editor-local Ctrl+S forwarding for draft writes.
 - `app/frontend/src/features/shell/MonacoCodePreview.tsx` owns read-only Monaco previews and search decorations for source files.
 - `app/frontend/src/features/shell/monacoRuntime.ts` owns shared Monaco lazy-loading, worker setup, theme definition, and file language detection.
 - `app/frontend/src/features/shell/AgentChatCard.tsx` owns the expanded chat presentation, full conversation scroll area, OpenAI-style composer with absolute-positioned model and Ask/Agent controls, context pack list, save-answer action surface, and delegates provider calls/history/artifact actions back to the shell.
+- `app/frontend/src/features/shell/llmModelCatalog.ts` owns the curated local model dropdown, per-model context defaults, runtime context override helpers, and response reserve derivation used by both Settings and Chat.
 - `app/frontend/src/features/shell/AgentToolPlanCard.tsx` owns the first visible agent tool plan preview, dry-run/execute controls, and recent tool-run summaries using backend tool descriptors and active context.
 - `app/frontend/src/features/shell/ChatMessageContent.tsx` renders safe dependency-free Markdown-style chat content, including headings, lists, tables, code fences, inline code, and bold text.
 - `app/frontend/src/features/shell/LLMSettingsCard.tsx` owns the provider settings form, model context-window controls, response-reserve controls, and delegates persistence/probe actions back to the shell.
 - `app/frontend/src/features/shell/ToolTimeline.tsx` owns the visible tool event timeline presentation.
-- `app/frontend/src/features/shell/BottomStudioPanel.tsx` owns the bottom tabbed studio drawer for Settings, Data, Tools, Artifacts, Approvals, and Activity, so provider configuration, data operations, agent tool plans, artifact inspection, approvals, and event history no longer compete with the assistant chat sidebar.
-- `app/frontend/src/features/shell/DataOperationsPanel.tsx` owns the bottom Data tab for dataset profiling, query/chart/SQL workflows, read-only SQLite connector queries, Operations inspector, metadata browser/search, and workspace freshness controls.
-- `app/frontend/src/features/shell/ArtifactStudioPanel.tsx` owns artifact browsing, metadata actions, comparison summaries, and selectable lineage graph presentation inside the bottom drawer.
-- `app/frontend/src/features/shell/WorkspaceNavigator.tsx` owns the workspace lockup, search controls, recent workspace list, fallback scaffold list, and indexed workspace tree presentation, with aligned rows inside the resizable sidebar. `NexusDeskShell.tsx` owns the resizable navigator width state.
-- `app/frontend/src/features/shell/WorkbenchPanel.tsx` owns the active context topbar, active studio surface indicator, closeable editor tab strip, source preview/editor presentation, find-in-file, Markdown source/rendered switching, safe edit/diff controls, and fallback workflow preview.
-- `app/frontend/src/features/shell/WorkspaceRail.tsx` owns the compact branded rail and mode icons.
-- `app/frontend/src/features/shell/AgentPanel.tsx` composes only the grounded assistant header and chat card. `NexusDeskShell.tsx` owns resizable right-sidebar width up to 50% of the window and resizable bottom-drawer height up to 70% of the window.
+- `app/frontend/src/features/shell/BottomStudioPanel.tsx` owns reusable studio utility surfaces for Code, Settings, Data, Tools, Artifacts, Approvals, and Activity. Only Approvals and Activity are exposed as bottom drawer tabs; route-owned surfaces are rendered from the main nav instead of being duplicated in the drawer.
+- `app/frontend/src/features/shell/DataOperationsPanel.tsx` owns the Data route surface for dataset profiling, query/chart/SQL workflows, read-only SQLite connector queries, Operations inspector, metadata browser/search, and workspace freshness controls.
+- `app/frontend/src/features/shell/ArtifactStudioPanel.tsx` owns artifact browsing, metadata actions, comparison summaries, and selectable lineage graph presentation inside the Artifact route.
+- `app/frontend/src/features/shell/WorkspaceNavigator.tsx` owns the workspace lockup, search controls, recent workspace list, fallback scaffold list, indexed IDE-style project tree presentation, and the first context menu shell, with depth guides, disclosure state, type badges, selected rows, and changed-file markers inside the resizable sidebar. `NexusShell.tsx` owns the resizable navigator width state.
+- `app/frontend/src/features/shell/WorkbenchPanel.tsx` owns the active context topbar, selected studio route summary, active studio surface indicator, Code Studio inline git summary/diff preview, closeable editor tab strip, source preview/editor presentation, find-in-file, Markdown source/rendered switching, safe edit/diff controls, and fallback workflow preview.
+- `app/frontend/src/features/shell/WorkspaceRail.tsx` owns the compact branded main studio menu, active route selection, accessibility state, and pending-route markers. Rail selections change the primary workspace, while the bottom drawer remains contextual.
+- `app/frontend/src/brand/assets.ts` owns product logo asset references, Font Awesome UI icon mapping, studio route labels, descriptions, command hints, pending-route metadata, and fallback route-to-surface mapping. Product logos stay reserved for app identity, while controls, route glyphs, tree chevrons, and file/data/document icons use Font Awesome.
+- `app/frontend/src/features/shell/AgentPanel.tsx` composes only the grounded assistant header and chat card. `NexusShell.tsx` owns resizable right-sidebar width up to 50% of the window and resizable bottom-drawer height up to 70% of the window.
 
-`App.css` keeps the desktop shell fixed to the window and pushes overflow into the interactive surfaces that actually need it: workspace tree/search results, quick-open and command-palette results, source preview, dataset query results, capability list, chat thread, bottom settings/data/tools/artifacts/approvals/activity tabs, and tool timeline.
+`App.css` keeps the desktop shell fixed to the window and pushes overflow into the interactive surfaces that actually need it: workspace tree/search results, quick-open and command-palette results, source preview, dataset query results, capability list, chat thread, route surfaces, bottom approvals/activity tabs, and tool timeline.
 
 ## Frontend Smoke Checks
 
-`app/frontend/scripts/smoke.mjs` checks that the built frontend and key shell source files still expose the main MVP functionality: Wails bindings, search, quick-open, command palette, Monaco preview/edit surfaces, find-in-file, context packs, file create/update/delete/move flows, dataset profiling/querying/saved queries/exporting/charting/summaries, read-only SQL, bottom-drawer artifact actions/comparison/lineage, agent tool plan dry-run/execute controls, Compose parsing, approval log styling, resizable navigator/right-sidebar/bottom-drawer styling, and the production `dist/index.html` entrypoint. Run it after `npm.cmd run build`.
+`app/frontend/scripts/smoke.mjs` checks that the built frontend and key shell source files still expose the main foundation functionality: Wails bindings, studio routing, Code Studio surface, IDE-style project tree, search, quick-open, command palette, Monaco preview/edit surfaces, find-in-file, context packs, file create/update/delete/move flows, dataset profiling/querying/saved queries/exporting/charting/summaries, read-only SQL, route-owned artifact actions/comparison/lineage, agent tool plan dry-run/execute controls, Compose parsing, approval log styling, resizable navigator/right-sidebar/bottom-drawer styling, and the production `dist/index.html` entrypoint. Run it after `npm.cmd run build`.
 
 `app/frontend/scripts/visual-smoke.mjs` is now an enforced Playwright screenshot smoke with Wails-free mocks for workspace, dataset, metadata, chat, tool-run, artifact, lineage export, and metadata history flows. Shared mocks live in `app/frontend/scripts/visual-fixtures.mjs` so future Playwright scenarios can reuse the same workspace/data/metadata setup instead of copying a large inline fixture. It captures desktop and mobile screenshots plus `visual-baselines/manifest.json` from the built `dist/index.html`, and fails if the production build or Playwright dependency is missing. On this workstation, install/run with `$env:NODE_OPTIONS='--use-system-ca'` because npm needs the system CA store.
 
 ## Artifact Creation
 
-`app/internal/artifact/` owns deterministic artifact writes, provenance sidecars, metadata lookup, artifact search, listing, archive/delete, comparison, and scan-report creation. The first flows create timestamped Markdown reports from selected previews, timestamped Markdown artifacts from assistant answers, timestamped CSV exports from dataset queries, timestamped SVG chart artifacts from CSV chart models, timestamped Markdown dataset summaries, and timestamped workspace scan reports under `.nexusdesk/artifacts/`, use exclusive file creation to avoid overwrites, and return the new workspace-relative path so the UI can refresh and select it. Each artifact also gets a sibling `.meta.json` file with kind, source, source paths, prompt/configuration, model when relevant, context path, and creation timestamp when available. Saved assistant answers preserve the model's Markdown and include source/context metadata before the generated body. The bottom Artifact Studio tab lists Markdown, CSV, and SVG artifacts from that folder so generated outputs remain visible after creation, shows metadata for the active generated artifact, and can open the artifact source context, archive the artifact, delete it through approval prompts, compare it with a prior artifact of the same kind, or inspect lineage.
+`app/internal/artifact/` owns deterministic artifact writes, provenance sidecars, metadata lookup, artifact search, listing, archive/delete, comparison, and scan-report creation. The first flows create timestamped Markdown reports from selected previews, timestamped Markdown artifacts from assistant answers, timestamped CSV exports from dataset queries, timestamped SVG chart artifacts from CSV chart models, timestamped Markdown dataset summaries, and timestamped workspace scan reports under `.nexusdesk/artifacts/`, use exclusive file creation to avoid overwrites, and return the new workspace-relative path so the UI can refresh and select it. Each artifact also gets a sibling `.meta.json` file with kind, source, source paths, prompt/configuration, model when relevant, context path, and creation timestamp when available. Saved assistant answers preserve the model's Markdown and include source/context metadata before the generated body. The Artifact Studio route lists Markdown, CSV, and SVG artifacts from that folder so generated outputs remain visible after creation, shows metadata for the active generated artifact, and can open the artifact source context, archive the artifact, delete it through approval prompts, compare it with a prior artifact of the same kind, or inspect lineage.
 
 ## Approval Log
 
 `app/internal/approval/` owns the first append-only action log. Applied text writes, deletes, moves, reports, saved chat artifacts, chart artifacts, query exports, dataset summaries, scan reports, artifact archives, and artifact deletes append records under `.nexusdesk/approvals/log.json`. The backend agent runtime also records approved high-impact write and shell actions here, and the bottom Approvals tab surfaces the current log.
 
-`app/internal/agent/` owns the first backend ReAct runtime. It builds the NexusDesk agent prompt, runs bounded Thought/Action/Observation loops, accepts `update_plan` steps, caps observations, prunes old working memory, and returns final answers with ordered tool-call output. `app/agent_runtime.go` exposes `RunAgent` and maps model-requested tools to workspace-safe filesystem, dataset, artifact, shell, and registered tool handlers.
+`app/internal/agent/` owns the first backend ReAct runtime. It builds the Nexus Augentic Studio agent prompt, runs bounded Thought/Action/Observation loops, accepts `update_plan` steps, caps observations, prunes old working memory, and returns final answers with ordered tool-call output. `app/agent_runtime.go` exposes `RunAgent` and maps model-requested tools to workspace-safe filesystem, dataset, artifact, shell, and registered tool handlers.
 
 `app/internal/agenttools/` owns tool descriptors and tool run records. Dry-runs, explicit executions, and registered-tool calls from `RunAgent` persist under `.nexusdesk/tool-runs/log.json` with inputs, output summaries, risk, approval ID, duration, and errors. The agent panel can expand recent tool runs to inspect captured inputs, output/error text, approval reference, duration, and replay/diff affordances.
 
-`app/internal/appmeta/` owns the SQLite metadata schema, manifest, real database initialization, metadata browser, JSON-to-SQLite mirror, direct fresh-row writes, metadata search, dataset dependency records, and SQL run history under `.nexusdesk/metadata/`. `InspectMetadataStore` returns table columns, row counts, sample rows, and dataset SQL view summaries for the workbench, where users can select tables, filter columns, and copy sample rows.
+`app/internal/appmeta/` owns the SQLite metadata schema, manifest, real database initialization, metadata browser, JSON-to-SQLite mirror, direct fresh-row writes, metadata search, dataset dependency records, and SQL run history under `.nexusdesk/metadata/`. `app/app_metadata.go` owns the Wails-app-level orchestration that mirrors JSON stores into that database, records artifact/dataset/SQL metadata after user actions, and converts mirrored records back into UI-facing records. `InspectMetadataStore` returns table columns, row counts, sample rows, and dataset SQL view summaries for the workbench, where users can select tables, filter columns, and copy sample rows.
 
 `app/internal/analytics/` owns the first read-only SQL-style CSV query surface. It accepts a constrained `SELECT` subset, blocks mutation keywords, and executes through bounded CSV query primitives by default. A real DuckDB `database/sql` execution path is implemented behind the `duckdb` build tag for CGO-enabled machines; the current Windows verification loop keeps CGO disabled and therefore uses the safe fallback path. SQL results can be exported as Markdown artifacts that include SQL text, engine, row counts, preview rows, and source dataset citations.
 
 `app/internal/dbconnector/` owns the first workspace SQLite connector. It opens `.sqlite`, `.sqlite3`, and `.db` files inside the active workspace in read-only mode, accepts bounded `SELECT`/`WITH` queries, blocks mutation-oriented SQL, and returns capped rows to the Data Studio connector panel. Connector queries record SQL run and dependency metadata, but this first connector does not introduce credentials or external network access.
 
-`GetArtifactLineage` in `app/app.go` assembles lineage from artifact metadata, chat source paths, and persisted tool runs. It returns relationship counts for the bottom Artifact Studio selectable graph layout, so users can filter by node kind, select nodes, inspect nearby relationships, and jump back to visible source files. The app can also export that graph as a JSON artifact and import a JSON graph preview for debugging and future sync work.
+`GetArtifactLineage` in `app/app.go` assembles lineage from artifact metadata, chat source paths, and persisted tool runs. It returns relationship counts for the Artifact Studio selectable graph layout, so users can filter by node kind, select nodes, inspect nearby relationships, and jump back to visible source files. The app can also export that graph as a JSON artifact and import a JSON graph preview for debugging and future sync work.
 
 ## Completed Batch: Agent Execution And Analytics Foundations
 
@@ -191,7 +201,7 @@ The next implementation batch should turn the new history/connector records into
 - Promote dataset dependency and SQL run records into first-class UI navigation from Data Studio, Artifact Studio, and Metadata Browser.
 - Add connector approval policy docs/tests for read-only proofs, blocked SQL statements, result caps, and redacted errors.
 - Start a DuckDB multi-file workspace dataset surface for joins across CSV/XLSX-derived tables.
-- Split large shell orchestration state where connector/history flows start to crowd `NexusDeskShell.tsx`.
+- Split large shell orchestration state where connector/history flows start to crowd `NexusShell.tsx`.
 
 ## File Writes
 
@@ -199,7 +209,7 @@ The next implementation batch should turn the new history/connector records into
 
 ## Goals
 
-NexusDesk should be easy to run, easy to test, easy to reason about as an IDE/data/analytics studio, and hard to accidentally make unsafe.
+Nexus Augentic Studio should be easy to run, easy to test, easy to reason about as an IDE/data/analytics studio, and hard to accidentally make unsafe.
 
 Current developer setup requires:
 
@@ -221,6 +231,7 @@ Current structure:
 ```text
 app/                           Wails desktop app
 app/app.go                     Go application state and frontend bindings
+app/app_metadata.go            App-level metadata mirror and record orchestration
 app/main.go                    Wails entrypoint
 app/internal/artifact/         Markdown artifact creation, listing, provenance
 app/internal/agenttools/       Backend tool descriptors for agent-capable actions
@@ -378,9 +389,9 @@ Planned command set:
 
 ```bash
 wails dev
-go run ./cmd/nexusdesk migrate
-go run ./cmd/nexusdesk index --workspace ./examples/workspace
-go run ./cmd/nexusdesk eval --suite ./examples/eval/basic.yaml
+go run ./cmd/nexus migrate
+go run ./cmd/nexus index --workspace ./examples/workspace
+go run ./cmd/nexus eval --suite ./examples/eval/basic.yaml
 ```
 
 ## Debugging Tools
@@ -434,4 +445,4 @@ Every module should document:
 - security assumptions
 - tests that protect it
 
-This keeps NexusDesk maintainable as it grows from a local prototype into a serious desktop studio.
+This keeps Nexus Augentic Studio maintainable as it grows from a local prototype into a serious desktop studio.

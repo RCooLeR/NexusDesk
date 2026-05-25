@@ -4,20 +4,13 @@ import struct
 from pathlib import Path
 
 
-ICON_SIZES = (16, 32, 48, 64, 128, 256)
-
-
 def main() -> None:
     app_dir = Path(__file__).resolve().parents[1]
     repo_dir = app_dir.parent
-    brand_dir = repo_dir / "docs" / "brand" / "assets" / "png"
+    source_path = repo_dir / "docs" / "brand" / "logos" / "png" / "nexus-app-icon.png"
     output_path = app_dir / "build" / "windows" / "icon.ico"
 
-    entries: list[tuple[int, bytes]] = []
-    for size in ICON_SIZES:
-        source_dir = brand_dir / ("favicons" if size <= 64 else "app-icons")
-        source_path = source_dir / f"nexusdesk-app-icon-{size}.png"
-        entries.append((size, source_path.read_bytes()))
+    entries = [(256, source_path.read_bytes())]
 
     header_size = 6
     directory_size = 16 * len(entries)

@@ -968,7 +968,7 @@ func SchemaSQL() string {
 	return schemaSQL
 }
 
-const schemaSQL = `-- NexusDesk SQLite metadata schema v1
+const schemaSQL = `-- Nexus Augentic Studio SQLite metadata schema v1
 -- This schema mirrors the current JSON-backed stores so the migration can be replayed safely.
 PRAGMA journal_mode = WAL;
 PRAGMA foreign_keys = ON;

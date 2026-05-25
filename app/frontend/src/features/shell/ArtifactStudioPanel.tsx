@@ -1,4 +1,5 @@
 import {useEffect, useState} from 'react';
+import {FontAwesomeIcon} from '@fortawesome/react-fontawesome';
 import {brandAssets} from '../../brand/assets';
 import {Button, EmptyState, StatusBadge} from '../../components/ui';
 import type {ArtifactComparison, ArtifactLineage, ArtifactMetadata, FilePreview, WorkspaceArtifact} from '../../types';
@@ -49,12 +50,12 @@ export function ArtifactStudioPanel({
                 {artifacts.length === 0 ? (
                     <EmptyState
                         detail="Create a report to add the first workspace artifact."
-                        iconSrc={brandAssets.icons.documents}
+                        icon={brandAssets.icons.documents}
                         title="No artifacts yet"
                     />
                 ) : artifacts.map((artifact) => (
                     <button className="artifact-item" key={artifact.relPath} onClick={() => onSelectArtifact(artifact)}>
-                        <img src={artifact.kind === 'chart-svg' || artifact.kind === 'dataset-query-csv' ? brandAssets.icons.data : brandAssets.icons.documents} alt="" />
+                        <FontAwesomeIcon icon={artifact.kind === 'chart-svg' || artifact.kind === 'dataset-query-csv' ? brandAssets.icons.data : brandAssets.icons.documents} />
                         <span>
                             <strong>{artifact.name}</strong>
                             <small>{artifact.summary || artifact.source || artifact.relPath}</small>
