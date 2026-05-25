@@ -4,10 +4,11 @@ import {ApprovalLogPanel} from './ApprovalLogPanel';
 import {ArtifactStudioPanel} from './ArtifactStudioPanel';
 import {CodeStudioPanel} from './CodeStudioPanel';
 import {DataOperationsPanel} from './DataOperationsPanel';
+import {GitDiffPanel} from './GitDiffPanel';
 import {LLMSettingsCard} from './LLMSettingsCard';
 import {ToolTimeline} from './ToolTimeline';
 
-type BottomStudioTab = 'code' | 'settings' | 'data' | 'tools' | 'artifacts' | 'approvals' | 'activity';
+type BottomStudioTab = 'code' | 'settings' | 'data' | 'tools' | 'artifacts' | 'git' | 'approvals' | 'activity';
 
 type BottomStudioPanelProps = {
     activeTab: BottomStudioTab;
@@ -127,6 +128,7 @@ type BottomStudioPanelProps = {
 };
 
 const drawerTabs: Array<{id: BottomStudioTab; label: string}> = [
+    {id: 'git', label: 'Git'},
     {id: 'approvals', label: 'Approvals'},
     {id: 'activity', label: 'Activity'},
 ];
@@ -400,6 +402,16 @@ export function BottomStudioPanel({
                         onOpenLineageSource={onOpenLineageSource}
                         onRefreshLineage={onRefreshLineage}
                         onSelectArtifact={onSelectArtifact}
+                    />
+                )}
+                {activeTab === 'git' && (
+                    <GitDiffPanel
+                        gitStatus={gitStatus}
+                        selectedGitChangePath={selectedGitChangePath}
+                        selectedGitFileDiff={selectedGitFileDiff}
+                        isLoadingGitFileDiff={isLoadingGitFileDiff}
+                        onRefreshGitStatus={onRefreshGitStatus}
+                        onSelectGitChange={onSelectGitChange}
                     />
                 )}
                 {activeTab === 'approvals' && <ApprovalLogPanel records={approvalRecords} />}

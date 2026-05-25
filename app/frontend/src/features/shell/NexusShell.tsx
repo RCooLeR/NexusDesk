@@ -1948,14 +1948,14 @@ export function NexusShell({
         const requestId = createRequestId();
         const [userCreatedAt, assistantCreatedAt] = createChatPairTimestamps();
         const userMessage: ChatMessage = {content: prompt, contextRelPath: 'agent', sourcePaths: [], createdAt: userCreatedAt, role: 'user'};
-        const assistantMessage: ChatMessage = {content: agentLogInitialContent(), contextRelPath: 'agent', sourcePaths: [], createdAt: assistantCreatedAt, role: 'assistant'};
+        const assistantMessage: ChatMessage = {content: agentActivityContent(['Queued workspace agent run.']), contextRelPath: 'agent', sourcePaths: [], createdAt: assistantCreatedAt, role: 'assistant'};
 
         setIsSendingPrompt(true);
         setChatPrompt('');
-        setChatStatus('Agent starting live model log...');
+        setChatStatus('Agent starting...');
         setChatMessages((current) => [...current, userMessage, assistantMessage]);
         const unsubscribe = listenForAgentRun(requestId, assistantMessage.createdAt);
-        pushToolEvent(unsubscribe ? 'Agent log attached' : 'Agent log unavailable', unsubscribe ? requestId : 'Desktop event stream is unavailable.');
+        pushToolEvent(unsubscribe ? 'Agent activity attached' : 'Agent activity unavailable', unsubscribe ? requestId : 'Desktop event stream is unavailable.');
 
         try {
             const result = await RunAgent({
@@ -1969,7 +1969,7 @@ export function NexusShell({
             await refreshAgentToolRuns();
             const iterationLabel = `${result.iterations} iteration${result.iterations === 1 ? '' : 's'}`;
             if (result.stopReason) {
-                setChatStatus(`Agent stopped after ${iterationLabel}; review the answer and tool calls.`);
+                setChatStatus(`Agent stopped after ${iterationLabel}; review the answer.`);
                 pushToolEvent('Agent stopped', `${result.stopReason}; ${result.toolCalls.length} tool calls`);
             } else {
                 setChatStatus(`Agent completed ${iterationLabel}.`);
@@ -2983,7 +2983,7 @@ export function NexusShell({
         }
 
         try {
-            const lines: string[] = [agentLogInitialContent()];
+            const lines: string[] = [];
             return EventsOn(agentRunEventName, (event: AgentRunEvent) => {
                 if (event.requestId !== requestId) {
                     return;
@@ -2992,7 +2992,7 @@ export function NexusShell({
                 const line = formatAgentRunEvent(event);
                 if (line) {
                     lines.push(line);
-                    replaceChatMessage(assistantCreatedAt, lines.slice(-16).join('\n'), 'agent', []);
+                    replaceChatMessage(assistantCreatedAt, agentActivityContent(lines), 'agent', []);
                 }
                 setChatStatus(agentRunStatus(event));
                 if (shouldMirrorAgentEvent(event)) {
@@ -3620,38 +3620,25 @@ type AgentRunResultView = {
 };
 
 function formatAgentRunResult(result: AgentRunResultView) {
-    const sections = [`${result.message}`.trim()];
-    if (result.stopReason === 'iteration_limit_finalized') {
-        sections.push('Run note: the agent reached its tool-iteration budget, then produced this answer from completed observations.');
-    } else if (result.stopReason === 'iteration_limit') {
-        sections.push('Run note: the agent reached its tool-iteration budget before it could produce a clean final answer.');
+    const answer = `${result.message}`.trim();
+    if (answer) {
+        return answer;
     }
-    if (result.plan && result.plan.length > 0) {
-        sections.push([
-            'Plan:',
-            ...result.plan.map((step) => `- ${step.status}: ${step.step}`),
-        ].join('\n'));
+    if (result.stopReason === 'iteration_limit' || result.stopReason === 'iteration_limit_finalized') {
+        return 'The agent reached its iteration budget before producing a final answer. See Activity for the latest model and tool events.';
     }
-    if (result.toolCalls && result.toolCalls.length > 0) {
-        sections.push([
-            'Tool calls:',
-            ...result.toolCalls.map((call, index) => {
-                const status = call.error ? `error: ${call.error}` : truncateInline(call.observation || 'completed', 180);
-                return `- ${index + 1}. ${call.name} (${call.risk || 'low'}): ${status}`;
-            }),
-        ].join('\n'));
-    }
-    if (result.truncated) {
-        sections.push('Some agent observations were truncated for context safety.');
-    }
-    return sections.filter(Boolean).join('\n\n');
+    return 'Agent run finished without a response body. See Activity for the latest model and tool events.';
 }
 
-function agentLogInitialContent() {
-    return [
-        'Agent log',
-        '- Queued workspace agent run.',
-    ].join('\n');
+function agentActivityContent(lines: string[]) {
+    const recentLines = lines
+        .map((line) => line.trim())
+        .filter(Boolean)
+        .slice(-2);
+    if (recentLines.length === 0) {
+        return 'Agent is starting...';
+    }
+    return recentLines.join('\n');
 }
 
 function formatAgentRunEvent(event: AgentRunEvent) {

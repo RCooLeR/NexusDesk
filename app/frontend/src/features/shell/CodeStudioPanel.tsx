@@ -40,11 +40,7 @@ export function CodeStudioPanel({
     const stagedFiles = gitStatus?.stagedFiles ?? [];
     const unstagedFiles = gitStatus?.unstagedFiles ?? gitStatus?.changedFiles ?? [];
     const selectedGitChange = gitStatus?.changedFiles.find((change) => change.path === selectedGitChangePath) ?? null;
-    const selectedDiff = selectedGitFileDiff?.path === selectedGitChangePath ? selectedGitFileDiff : null;
-    const stagedDiff = selectedDiff?.stagedDiff ?? gitStatus?.stagedDiff ?? '';
-    const unstagedDiff = selectedDiff?.unstagedDiff ?? gitStatus?.unstagedDiff ?? gitStatus?.diff ?? '';
-    const stagedDiffTruncated = selectedDiff?.stagedDiffTruncated ?? gitStatus?.stagedDiffTruncated;
-    const unstagedDiffTruncated = selectedDiff?.unstagedDiffTruncated ?? gitStatus?.unstagedDiffTruncated;
+    const hasSelectedDiff = selectedGitFileDiff?.path === selectedGitChangePath && Boolean(selectedGitFileDiff.stagedDiff || selectedGitFileDiff.unstagedDiff);
 
     return (
         <div className="code-studio-panel">
@@ -56,7 +52,6 @@ export function CodeStudioPanel({
                 <div className="code-studio-toolbar" aria-label="Code Studio toolbar">
                     <Button onClick={onRefreshGitStatus} disabled={!workspace} variant="subtle">Refresh git</Button>
                     <Button onClick={onOpenCommandPalette} variant="subtle">Commands</Button>
-                    <Button disabled={!gitStatus?.diff} variant="subtle">Diff</Button>
                     <Button disabled variant="subtle">Terminal</Button>
                 </div>
                 <div className="code-studio-metrics" aria-label="Code studio status">
@@ -71,9 +66,9 @@ export function CodeStudioPanel({
                     <small>{activeLanguage}</small>
                     {selectedGitChange && (
                         <>
-                            <span>Selected change</span>
-                            <strong title={selectedGitChange.path}>{selectedGitChange.path}</strong>
-                            <small>{selectedGitChange.summary} / {gitCode(selectedGitChange.index, selectedGitChange.worktree)}</small>
+                        <span>Selected change</span>
+                        <strong title={selectedGitChange.path}>{selectedGitChange.path}</strong>
+                        <small>{selectedGitChange.summary} / {gitCode(selectedGitChange.index, selectedGitChange.worktree)}{isLoadingGitFileDiff ? ' / loading diff' : hasSelectedDiff ? ' / diff loaded' : ''}</small>
                         </>
                     )}
                 </div>
@@ -129,35 +124,17 @@ export function CodeStudioPanel({
 
             <section className="code-studio-column">
                 <div className="bottom-section-heading">
-                    <strong>Git Diff</strong>
-                    <small>{isLoadingGitFileDiff ? 'Loading selected file diff...' : selectedGitChange ? `Reviewing ${selectedGitChange.path}` : stagedDiffTruncated || unstagedDiffTruncated ? 'Read-only diff truncated for responsiveness' : 'Read-only staged and unstaged diffs'}</small>
+                    <strong>Code Queues</strong>
+                    <small>Search, problems, tasks, review, and diff workflows</small>
                 </div>
-                {stagedDiff || unstagedDiff ? (
-                    <div className="git-diff-stack">
-                        {selectedDiff?.message && <small className="git-diff-message">{selectedDiff.message}</small>}
-                        {stagedDiff && (
-                            <>
-                                <strong>Staged Diff</strong>
-                                <pre className="git-diff-view">{stagedDiff}</pre>
-                            </>
-                        )}
-                        {unstagedDiff && (
-                            <>
-                                <strong>Unstaged Diff</strong>
-                                <pre className="git-diff-view">{unstagedDiff}</pre>
-                            </>
-                        )}
-                    </div>
-                ) : (
-                    <div className="code-studio-queue-grid" aria-label="Code studio queues">
-                        <QueueCard label="Search" value={workspace ? 'ready' : 'idle'} />
-                        <QueueCard label="Problems" value="pending" />
-                        <QueueCard label="Tasks" value="pending" />
-                        <QueueCard label="AI Review" value={filePreview?.fileType === 'code' ? 'ready' : 'context'} />
-                        <QueueCard label="Data files nearby" value={String(dataFiles.length)} />
-                        <QueueCard label="Diff viewer" value={gitStatus?.available ? 'clean' : 'pending'} />
-                    </div>
-                )}
+                <div className="code-studio-queue-grid" aria-label="Code studio queues">
+                    <QueueCard label="Search" value={workspace ? 'ready' : 'idle'} />
+                    <QueueCard label="Problems" value="pending" />
+                    <QueueCard label="Tasks" value="pending" />
+                    <QueueCard label="AI Review" value={filePreview?.fileType === 'code' ? 'ready' : 'context'} />
+                    <QueueCard label="Data files nearby" value={String(dataFiles.length)} />
+                    <QueueCard label="Diff viewer" value={gitStatus?.dirty ? 'bottom tab' : gitStatus?.available ? 'clean' : 'pending'} />
+                </div>
             </section>
         </div>
     );

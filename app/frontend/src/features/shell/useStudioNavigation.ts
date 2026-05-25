@@ -4,7 +4,7 @@ import type {StudioRouteId} from '../../brand/assets';
 import type {BottomStudioTab} from './BottomStudioPanel';
 
 const navigationStorageKey = 'nexus:studio-navigation';
-const bottomTabs = new Set<BottomStudioTab>(['approvals', 'activity']);
+const bottomTabs = new Set<BottomStudioTab>(['git', 'approvals', 'activity']);
 const studioRoutes = new Set<StudioRouteId>(['code', 'assistant', 'data', 'analytics', 'documents', 'ops', 'artifacts', 'settings']);
 
 export function useStudioNavigation(pushToolEvent: (title: string, detail: string) => void) {

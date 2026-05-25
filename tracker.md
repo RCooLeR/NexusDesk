@@ -117,7 +117,7 @@ Steps:
 - [x] Make main menu selections swap the primary workspace surface, not only the bottom drawer tab.
 - [x] Reuse existing drawer surfaces as temporary primary route surfaces until full studios land.
 - [x] Add first Code Studio utility surface for editor session, project status, repository status placeholder, and work queues.
-- [x] Remove duplicated route-owned tabs from the bottom drawer; keep the drawer for Approvals and Activity.
+- [x] Remove duplicated route-owned tabs from the bottom drawer; keep the drawer for Git, Approvals, and Activity.
 - [x] Replace current tree visual treatment with denser IDE-style project tree foundation.
 
 Exit criteria:
@@ -212,14 +212,14 @@ Steps:
 - [x] Send `num_predict` and OpenAI-compatible `max_tokens` from the configured response reserve.
 - [x] Add realtime Activity Log events for chat request, stream, first token, completion, and failures.
 - [x] Mark bounded agent runs that hit the tool iteration budget and force a finalization pass instead of showing the raw iteration-limit fallback as the answer.
-- [x] Replace the empty agent placeholder with a live model/tool event log while `RunAgent` is still executing.
+- [x] Replace the empty agent placeholder with the last one or two live model/tool events while `RunAgent` is still executing, then replace that activity text with the final answer.
 - [x] Add Explain selected context action.
 - [x] Add Summarize selected context action.
 - [x] Save summaries as Markdown artifacts.
 - [x] Save latest assistant answer as Markdown artifact.
 - [x] Include source citations in assistant answers and saved artifacts.
 - [x] Warn when cited source paths changed.
-- [x] Stream each agent step into chat timeline.
+- [x] Show the latest agent activity in chat while keeping the detailed run trace in Activity/tool-run records.
 - [ ] Add model comparison/retry.
 - [ ] Add weak-evidence and missing-context UI.
 - [ ] Add assistant memory and prompt profiles.
@@ -242,7 +242,7 @@ Step 4.1: Main code route
 - [x] Create first Code Studio utility layout.
 - [x] Persist route, drawer, and panel layout state independently from transient bottom drawer state.
 - [x] Add Code Studio toolbar and command set.
-- [x] Keep editor and git panels available without relying on generic bottom drawer state.
+- [x] Keep editor surfaces available through the main route and git diff review available through the bottom drawer.
 
 Step 4.2: Project tree
 
@@ -266,9 +266,10 @@ Step 4.3: Git integration
 - [x] Add changed-files panel.
 - [x] Add working tree diff.
 - [x] Add staged diff.
-- [ ] Add side-by-side diff viewer.
-- [ ] Add inline diff viewer.
-- [ ] Add hunk navigation.
+- [x] Move Git/working-tree diff review into a dedicated bottom drawer tab.
+- [x] Add side-by-side diff viewer.
+- [x] Add inline diff viewer.
+- [x] Add hunk navigation.
 - [ ] Add stage/unstage file.
 - [ ] Add stage/unstage hunk.
 - [ ] Add revert hunk with destructive approval.
@@ -969,13 +970,13 @@ Steps:
 
 1. [x] Add selected changed-file state in Code Studio.
 2. [x] Add per-file diff loading for staged and unstaged sides.
-3. [ ] Add inline/side-by-side diff mode switch.
-4. [ ] Add hunk navigation.
+3. [x] Add inline/side-by-side diff mode switch.
+4. [x] Add hunk navigation.
 5. [ ] Add AI diff summary for selected diff.
 6. [ ] Add AI commit message draft from staged/unstaged context.
 7. [ ] Keep stage/unstage/revert controls disabled or preview-only until the approval/audit git mutation boundary exists.
 
-Reasoning: the app now distinguishes staged versus unstaged repository state. The next credibility gap is making diffs navigable per file before adding git mutations.
+Reasoning: the app now distinguishes staged versus unstaged repository state. The next credibility gap is adding AI-assisted summaries and commit-message drafting before adding git mutations.
 
 ## Directory Ownership Notes
 
@@ -1009,13 +1010,15 @@ Reasoning: the app now distinguishes staged versus unstaged repository state. Th
 
 `app/frontend/src/features/shell/WorkbenchPanel.tsx` currently owns the editor/preview surface.
 
-`app/frontend/src/features/shell/CodeStudioPanel.tsx` owns the first reusable Code Studio utility surface for editor session metrics, open tabs, workspace status, git branch/dirty summary, changed-file list, read-only working-tree diff, and placeholders that will receive staged diff/search/problem/task data.
+`app/frontend/src/features/shell/CodeStudioPanel.tsx` owns the first reusable Code Studio utility surface for editor session metrics, open tabs, workspace status, git branch/dirty summary, changed-file list, and placeholders that will receive search/problem/task/review data.
+
+`app/frontend/src/features/shell/GitDiffPanel.tsx` owns the bottom-drawer Git tab for selected changed-file review and read-only staged/unstaged working-tree diffs.
 
 `app/frontend/src/features/shell/DataOperationsPanel.tsx` currently owns Data route workflows.
 
 `app/frontend/src/features/shell/ArtifactStudioPanel.tsx` currently owns Artifact Studio route workflows.
 
-`app/frontend/src/features/shell/BottomStudioPanel.tsx` currently hosts reusable Settings, Data, Tools, Artifacts, Approvals, Activity, and Code surfaces. The visible bottom drawer exposes only Approvals and Activity; route-owned surfaces are rendered through the main nav until native studio layouts land.
+`app/frontend/src/features/shell/BottomStudioPanel.tsx` currently hosts reusable Settings, Data, Tools, Artifacts, Git, Approvals, Activity, and Code surfaces. The visible bottom drawer exposes Git, Approvals, and Activity; route-owned surfaces are rendered through the main nav until native studio layouts land.
 
 `app/frontend/src/features/shell/WorkspaceRail.tsx` owns the compact branded main studio menu, active route selection, route accessibility state, and pending-route markers.
 

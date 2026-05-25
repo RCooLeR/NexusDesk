@@ -112,7 +112,7 @@ const checks = [
     },
     {
         file: 'src/features/shell/useStudioNavigation.ts',
-        terms: ['useStudioNavigation', 'studioRouteSurfaceTab', 'changeStudioRoute', 'changeBottomStudioTab', 'mainStudioTabForRoute', 'localStorage', 'nexus:studio-navigation'],
+        terms: ['useStudioNavigation', 'studioRouteSurfaceTab', 'changeStudioRoute', 'changeBottomStudioTab', 'mainStudioTabForRoute', 'localStorage', 'nexus:studio-navigation', "'git'"],
     },
     {
         file: 'src/features/shell/AgentToolPlanCard.tsx',
@@ -120,7 +120,11 @@ const checks = [
     },
     {
         file: 'src/features/shell/CodeStudioPanel.tsx',
-        terms: ['CodeStudioPanel', 'Code Studio', 'Project Session', 'Repository', 'Git Diff', 'Staged Diff', 'Unstaged Diff', 'selectedGitChangePath', 'onSelectGitChange', 'stagedFiles', 'unstagedFiles', 'git-diff-view', 'Refresh git', 'Commands'],
+        terms: ['CodeStudioPanel', 'Code Studio', 'Project Session', 'Repository', 'Code Queues', 'selectedGitChangePath', 'onSelectGitChange', 'stagedFiles', 'unstagedFiles', 'Refresh git', 'Commands'],
+    },
+    {
+        file: 'src/features/shell/GitDiffPanel.tsx',
+        terms: ['GitDiffPanel', 'Working Tree Diff', 'Staged Diff', 'Unstaged Diff', 'selectedGitChangePath', 'selectedGitFileDiff', 'diffMode', 'split', 'hunkTargets', 'Prev hunk', 'Next hunk', 'git-diff-panel', 'git-diff-split', 'git-diff-view', 'onSelectGitChange', 'Refresh git'],
     },
     {
         file: 'src/features/shell/LLMSettingsCard.tsx',
@@ -200,7 +204,7 @@ const checks = [
     },
     {
         file: 'src/features/shell/BottomStudioPanel.tsx',
-        terms: ['BottomStudioPanel', 'drawerTabs', 'Approvals', 'Activity', 'CodeStudioPanel', 'DataOperationsPanel', 'LLMSettingsCard', 'AgentToolPlanCard', 'ArtifactStudioPanel', 'ApprovalLogPanel', 'ToolTimeline', 'bottom-tabbar', 'showTabs'],
+        terms: ['BottomStudioPanel', 'drawerTabs', 'Git', 'Approvals', 'Activity', 'GitDiffPanel', 'CodeStudioPanel', 'DataOperationsPanel', 'LLMSettingsCard', 'AgentToolPlanCard', 'ArtifactStudioPanel', 'ApprovalLogPanel', 'ToolTimeline', 'bottom-tabbar', 'showTabs'],
     },
     {
         file: 'src/features/shell/DataOperationsPanel.tsx',
@@ -224,6 +228,9 @@ const checks = [
             '.code-studio-metrics',
             '.code-studio-row',
             '.code-studio-toolbar',
+            '.git-diff-panel',
+            '.git-diff-controls',
+            '.git-diff-split',
             '.git-diff-view',
             '.tree-context-menu',
             '.bottom-tabbar',
