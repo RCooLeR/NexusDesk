@@ -35,14 +35,15 @@ NexusDesk solves this by combining an IDE-like desktop workspace, local file int
 
 NexusDesk should feel like a serious JetBrains-style studio for mixed technical and analytical work:
 
-- The project tree is visible.
-- Files open quickly in the right viewer.
-- Open files stay in editor tabs.
-- Code is highlighted and editable.
-- Images and PDFs preview without leaving the app.
-- Spreadsheets and datasets can be profiled, queried, charted, and exported.
+- The main menu/rail selects durable studios: Code, Data, Analytics, Documents, AI Assistant, Ops, Artifacts, and Settings.
+- Code Studio feels like an IDE: project tree, editor tabs, git status, diffs, search, symbols, diagnostics, tests/tasks, and patch review.
+- Data Studio feels like a local data workbench: files, spreadsheets, databases, dumps, schema browser, query notebooks, profiling, charts, and imports.
+- Analytics Studio understands business data: GA4, Search Console, ad exports/APIs, CRM/marketing automation data, funnels, dashboards, and reports.
+- Documents Studio works across PDFs, DOCX, TXT, Markdown, spreadsheets, presentations, OCR, document sets, summaries, and generated decks.
+- Ops Studio inspects Docker, Compose, logs, local services, env/config files, ports, health, and safe run/build/debug flows.
+- AI Assistant orchestrates the studios with explicit context, model selection, tool plans, approvals, citations, memory, and artifact generation.
+- Generated outputs stay visible as artifacts with provenance and lineage.
 - Studio modes make the current surface explicit: Code Studio, Data Studio, Analytics Studio, Document Studio, Operations Studio, and Artifact Studio.
-- Chat is tied to the current workspace and selected files.
 - The AI can ask to use tools, but the app controls permissions.
 - Tool calls are visible in the chat timeline.
 - Generated outputs become artifacts in the workspace.
@@ -53,6 +54,10 @@ NexusDesk should feel like a serious JetBrains-style studio for mixed technical 
 ### Code And IDE Assistance
 
 - explain a file or project structure
+- browse a real project tree with git-aware file status
+- review working tree and staged diffs
+- stage, unstage, or revert hunks only through clear previews and approval where needed
+- search by file, text, regex, symbol, and open tab
 - find bugs from selected files
 - generate code files
 - propose patches with diff preview
@@ -62,9 +67,11 @@ NexusDesk should feel like a serious JetBrains-style studio for mixed technical 
 ### Document Analysis
 
 - summarize PDFs, DOCX files, Markdown files, and text files
+- extract tables, page references, headings, entities, comments, and metadata where available
 - compare two documents
 - extract action items, risks, decisions, dates, and entities
 - create reports from multiple source documents
+- generate DOCX briefs and presentations from cited source documents
 
 ### Excel And Data Analysis
 
@@ -74,15 +81,19 @@ NexusDesk should feel like a serious JetBrains-style studio for mixed technical 
 - create pivot-style summaries
 - generate charts
 - export cleaned or summarized datasets
+- inspect CSV/TSV, JSON/NDJSON, Parquet, database files, logs, and compressed exports
+- import database dumps into temporary isolated databases for read-only research
 
 ### Marketing And Traffic Analytics
 
 - analyze campaign exports
+- connect to GA4, Search Console, ad platforms, and CRM/marketing automation systems when credentials are configured
 - compare traffic sources
 - review SEO data
 - inspect landing page screenshots
 - summarize funnel performance
 - create client-ready or internal reports
+- analyze Eloqua, Mautic, HubSpot, Salesforce, and exported CRM/lead data
 
 ### Database Work
 
@@ -92,15 +103,19 @@ NexusDesk should feel like a serious JetBrains-style studio for mixed technical 
 - run read-only queries
 - turn query results into charts and explanations
 - export query output
+- import local SQL dumps into temporary Docker-backed sandboxes when appropriate
+- generate ERD/schema summaries and join suggestions
 
 ### Docker And Operations
 
 - inspect containers, images, volumes, and networks
 - read logs
+- tail, search, filter, and summarize service logs
 - explain Dockerfiles and Compose files
 - generate Compose files
 - suggest debugging steps
 - perform start/stop/build actions only with approval
+- create runbooks, health checks, `.env.example` files, and incident reports
 
 ## What Makes NexusDesk Different
 

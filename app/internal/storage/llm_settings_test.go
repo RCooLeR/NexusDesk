@@ -25,6 +25,12 @@ func TestLLMSettingsStoreReturnsDefaultsWhenMissing(t *testing.T) {
 	if settings.Model != "qwen3:8b" {
 		t.Fatalf("unexpected default model: %s", settings.Model)
 	}
+	if settings.MaxContextTokens != 32768 {
+		t.Fatalf("unexpected default context window: %d", settings.MaxContextTokens)
+	}
+	if settings.ResponseReserveTokens != 4096 {
+		t.Fatalf("unexpected default response reserve: %d", settings.ResponseReserveTokens)
+	}
 }
 
 func TestLLMSettingsStoreSavesAndReadsSettings(t *testing.T) {
@@ -32,10 +38,12 @@ func TestLLMSettingsStoreSavesAndReadsSettings(t *testing.T) {
 	store := NewLLMSettingsStore(path)
 
 	saved, err := store.Save(LLMSettings{
-		ProviderName: "Test Provider",
-		BaseURL:      "https://example.test/v1",
-		Model:        "test-model",
-		APIKey:       "secret",
+		ProviderName:          "Test Provider",
+		BaseURL:               "https://example.test/v1",
+		Model:                 "test-model",
+		APIKey:                "secret",
+		MaxContextTokens:      65536,
+		ResponseReserveTokens: 8192,
 	})
 	if err != nil {
 		t.Fatalf("Save failed: %v", err)
@@ -62,6 +70,9 @@ func TestLLMSettingsStoreSavesAndReadsSettings(t *testing.T) {
 	if read.APIKey != RedactedAPIKey {
 		t.Fatal("expected API key to be redacted")
 	}
+	if read.MaxContextTokens != 65536 || read.ResponseReserveTokens != 8192 {
+		t.Fatalf("unexpected context settings: %+v", read)
+	}
 
 	rawData, err := os.ReadFile(path)
 	if err != nil {
@@ -73,6 +84,26 @@ func TestLLMSettingsStoreSavesAndReadsSettings(t *testing.T) {
 	raw := readRawLLMSettings(t, path)
 	if raw.APIKey != storedAPIKeyReference {
 		t.Fatalf("expected settings to reference OS credential storage, got %q", raw.APIKey)
+	}
+}
+
+func TestLLMSettingsStoreNormalizesContextReserve(t *testing.T) {
+	store := NewLLMSettingsStore(filepath.Join(t.TempDir(), "settings.json"))
+
+	saved, err := store.Save(LLMSettings{
+		ProviderName:          "Test Provider",
+		BaseURL:               "https://example.test/v1",
+		MaxContextTokens:      12000,
+		ResponseReserveTokens: 12000,
+	})
+	if err != nil {
+		t.Fatalf("Save failed: %v", err)
+	}
+	if saved.MaxContextTokens != 12000 {
+		t.Fatalf("unexpected context tokens: %d", saved.MaxContextTokens)
+	}
+	if saved.ResponseReserveTokens != 3000 {
+		t.Fatalf("expected reserve to be clamped to quarter window, got %d", saved.ResponseReserveTokens)
 	}
 }
 

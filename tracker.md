@@ -1,450 +1,882 @@
 # NexusDesk Tracker
 
-This tracker reflects the repository as it exists today and keeps planned work separate from created directories.
+This tracker is the working execution plan for NexusDesk. It separates implemented repository state from the long-term product plan so we do not confuse created code with intended architecture.
 
-## Current Repository State
+Related docs:
+
+- `README.md`: project overview
+- `docs/01_PRODUCT_VISION.md`: product direction
+- `docs/02_ARCHITECTURE.md`: system architecture
+- `docs/06_AI_AGENT_AND_LLM_STRATEGY.md`: agent and model contract
+- `docs/08_DELIVERY_PLAN.md`: delivery phases
+- `docs/09_DEVELOPER_EXPERIENCE.md`: local verification and ownership notes
+- `docs/10_STUDIO_ROADMAP.md`: long-range studio roadmap
+
+## Current Status
+
+NexusDesk is a runnable Wails desktop application with a Go backend, React/TypeScript frontend, local workspace scanning, file previews, editor tabs, safe file writes, configurable OpenAI-compatible LLM settings, streaming chat, first agent runtime, first data workflows, first artifact/approval metadata, and visual smoke coverage.
+
+It is not yet a JetBrains-class IDE/data/analytics studio. Major planned surfaces are still missing: real main menu routing, IDE-grade Code Studio, git diff/status UI, mature project tree, deeper database/data support, Analytics connectors, Documents Studio, Ops Studio, and AI Assistant orchestration.
+
+## Repository State
 
 - [x] Product and engineering docs live under `docs/`.
-- [x] Brand package lives under `docs/brand/`.
-- [x] Wails application scaffold exists at `app/`.
-- [x] React + TypeScript frontend exists at `app/frontend/`.
-- [x] Go backend binding exposes startup state to the frontend.
-- [x] Initial NexusDesk studio shell replaced the Wails starter screen.
-- [x] README and docs position NexusDesk as a local-first AI IDE, data studio, and analytics studio.
-- [x] Brand SVG assets are copied into `app/frontend/src/assets/brand/`.
-- [x] App shell uses NexusDesk symbol, horizontal logo, and domain icons.
-- [x] Startup copy and rail labels use studio terminology from the first screen.
-- [x] App styles use NexusDesk color/type tokens from `app/frontend/src/brand-tokens.css`.
-- [x] Wails app icon and Windows icon are sourced from the brand package.
-- [x] Windows taskbar icon is generated as a multi-size ICO from high-resolution brand PNGs.
-- [x] Icon generation script lives at `app/scripts/generate_windows_icon.py`.
-- [x] Frontend startup state types live in `app/frontend/src/types.ts`.
-- [x] Runtime brand asset mapping lives in `app/frontend/src/brand/assets.ts`.
-- [x] Browser-safe fallback startup state lives in `app/frontend/src/data/startupState.ts`.
-- [x] First reusable button, icon button, and status badge components live in `app/frontend/src/components/ui.tsx`.
-- [x] First reusable card component lives in `app/frontend/src/components/ui.tsx`.
-- [x] Reusable branded empty, loading, and inline alert states live in `app/frontend/src/components/ui.tsx`.
-- [x] Shell layout is split into `app/frontend/src/features/shell/NexusDeskShell.tsx`.
-- [x] Agent chat card is split into `app/frontend/src/features/shell/AgentChatCard.tsx`.
-- [x] LLM settings card is split into `app/frontend/src/features/shell/LLMSettingsCard.tsx`.
-- [x] Tool timeline is split into `app/frontend/src/features/shell/ToolTimeline.tsx`.
-- [x] Workspace navigator is split into `app/frontend/src/features/shell/WorkspaceNavigator.tsx`.
-- [x] Workbench panel is split into `app/frontend/src/features/shell/WorkbenchPanel.tsx`.
-- [x] Workspace rail is split into `app/frontend/src/features/shell/WorkspaceRail.tsx`.
-- [x] Agent panel is split into `app/frontend/src/features/shell/AgentPanel.tsx`.
-- [x] Workspace scanner package exists at `app/internal/workspace/`.
-- [x] Artifact writer package exists at `app/internal/artifact/`.
-- [x] Scanner skips noisy folders, symlinks, oversized listings, and paths deeper than 10 levels.
-- [x] Workspace file preview is implemented in `app/internal/workspace/preview.go`.
-- [x] File previews are rooted, traversal-checked, symlink-aware, size-limited, and UTF-8/text-only.
-- [x] Workspace search exists at `app/internal/workspace/search.go`.
-- [x] Common workspace images render as bounded inline previews.
-- [x] Workspace PDFs render as bounded inline previews.
-- [x] Workspace PDFs expose simple page-level embedded text extraction when available.
-- [x] DOCX files expose basic body text extraction when available.
-- [x] UTF-8 BOM and UTF-16 text previews are decoded.
-- [x] BOM-less UTF-16 and Windows-1251 Cyrillic text previews are decoded.
-- [x] Source preview headers show file type, decoded encoding, size, and truncation status when available.
-- [x] CSV previews parse bounded rows/columns into a table while keeping raw text content available for chat context.
-- [x] CSV previews show bounded column profiles with inferred type, missing count, distinct count, and numeric ranges.
-- [x] CSV profile stats read a larger bounded file sample than the visible text preview.
-- [x] Dataset profiles persist CSV profiles and XLSX sheet metadata under `.nexusdesk/datasets/`.
-- [x] CSV datasets can be queried with bounded row search and `column=value` filters.
-- [x] CSV datasets can be queried with numeric comparisons, `contains`, `limit`, and simple `order by` clauses.
-- [x] Bounded CSV query results can be exported as CSV artifacts.
-- [x] CSV datasets can generate a first SVG bar chart artifact from category counts or numeric sums.
-- [x] Lightweight syntax highlighting exists at `app/frontend/src/features/shell/HighlightedCode.tsx`.
-- [x] Monaco-backed edit surface exists at `app/frontend/src/features/shell/MonacoFileEditor.tsx`.
-- [x] Frontend smoke script exists at `app/frontend/scripts/smoke.mjs`.
-- [x] Desktop workspace picker is bound through `SelectWorkspace`.
-- [x] Frontend switches from scaffold preview to indexed workspace nodes after folder selection.
-- [x] Center workbench pane previews selected workspace text files.
-- [x] Center workbench pane keeps recently opened previews in closeable editor tabs.
-- [x] Markdown files in the editor can switch between source and rendered preview.
-- [x] Text/code previews include find-in-file with match counts and highlighted matches.
-- [x] Text/code previews use a read-only Monaco viewer while retaining find match decorations.
-- [x] Text edit drafts show dirty state and can revert to the loaded content.
-- [x] Text edit draft changes clear stale diff proposals before apply.
-- [x] Text edit drafts persist per open editor tab while navigating.
-- [x] Dirty editor tabs are marked and ask for confirmation before closing.
-- [x] Ctrl+S previews or applies the active edit draft through the safe write flow.
-- [x] Editor shortcuts include Ctrl+F for file find, Ctrl+W to close the active tab, and Ctrl+Tab / Ctrl+Shift+Tab to switch tabs.
-- [x] New workspace files can be drafted from the command palette or Ctrl+N and created through the safe diff/apply flow.
-- [x] Center workbench pane shows the active studio surface for code, data, document, operations, artifact, or workspace context.
-- [x] Workspace refresh preserves the selected file when it still exists.
-- [x] Workspace open/refresh auto-loads a preview for the selected or first file node.
-- [x] Preview button reloads the selected workspace preview from disk.
-- [x] Workspace navigator renders indexed nodes as an expandable tree.
-- [x] Workspace navigator uses filesystem tree ordering instead of depth-grouped ordering.
-- [x] Workspace navigator supports 10-level default filesystem scans.
-- [x] Workspace navigator includes search results and expand/collapse controls.
-- [x] Workspace navigator width can be resized with a drag handle.
-- [x] Workspace navigator keeps fallback and file-tree rows aligned inside the resizable sidebar.
-- [x] Directory previews in the workbench now render direct children safely, with normalized path handling.
-- [x] Folder-open flow clears stale dataset/query/charts context so Data Studio state does not bleed into plain directory views.
-- [x] Workspace snapshots are sanitized at runtime before tree filtering, visibility checks, and selection so malformed payloads cannot blank the app on directory open.
-- [x] Workspace scan and freshness responses now emit empty arrays instead of null arrays, with frontend guards for scan samples and watcher changes.
-- [x] Keyboard quick-open palette exists for workspace files, folders, and open editor tabs.
-- [x] Quick-open selection expands parent folders before selecting a workspace node.
-- [x] Keyboard command palette exists for workspace, editor, context, data, artifact, and chat actions.
-- [x] App shell stays fixed to the window while long navigator, preview, chat, settings, and timeline content scroll inside their panels.
-- [x] Expanded workspace directories are reconciled and preserved across refreshes.
-- [x] Backend remembers the selected workspace root for the session.
-- [x] Refresh action rescans the active workspace through `RefreshWorkspace`.
-- [x] Recent workspace store exists at `app/internal/storage/`.
-- [x] Opened workspaces are persisted to local JSON config.
-- [x] Frontend loads and displays recent workspaces.
-- [x] Recent workspaces can be reopened through `OpenWorkspace`.
-- [x] Recent workspaces can be removed individually or cleared.
-- [x] LLM settings store exists at `app/internal/storage/llm_settings.go`.
-- [x] LLM provider settings are persisted to local JSON config.
-- [x] LLM API keys are stored in a sidecar credential blob protected by the OS where available.
-- [x] LLM settings include a curated local model dropdown capped at 26B parameters.
-- [x] Local `rcooler-ollama` runner is verified on `localhost:11434` with CUDA v12 GPU offload.
-- [x] Saved LLM API keys are redacted before settings are returned to the UI.
-- [x] Redacted LLM API keys are resolved only inside backend test/save flows that need the stored secret.
-- [x] Agent panel includes a branded LLM provider settings form.
-- [x] LLM connection probe exists at `app/internal/llm/`.
-- [x] Agent panel can test an OpenAI-compatible `/models` endpoint.
-- [x] LLM probe infers model-list, chat, embedding, vision, and reranking capability hints from provider model IDs.
-- [x] LLM probe warns when the configured model is not returned by the provider.
-- [x] Non-streaming OpenAI-compatible chat is implemented in `app/internal/llm/chat.go`.
-- [x] Streaming OpenAI-compatible chat is implemented in `app/internal/llm/chat.go`.
-- [x] Agent panel can send prompts through `AskLLM`.
-- [x] Agent chat uses a larger conversation layout with full visible history and a multiline composer.
-- [x] Agent chat renders Markdown-style headings, lists, code fences, inline code/bold, and tables.
-- [x] Explain button sends a grounded explanation prompt for selected text/code previews.
-- [x] Summarize button sends selected context through chat and saves a Markdown summary artifact.
-- [x] Agent panel streams partial assistant responses through `nexusdesk:chat-stream` Wails events.
-- [x] Selected workspace text previews can be attached as bounded chat context without sending image/PDF data URLs.
-- [x] Selected PDFs with extracted text can be attached as chat context without sending PDF data URLs.
-- [x] Selected CSV previews send a structured column profile and bounded sample as chat context.
-- [x] Multiple selected source previews can be pinned into a bounded chat context pack.
-- [x] Selected directories and the workspace root can be expanded into bounded streaming chat context packs.
-- [x] Context packs show individual pinned files and can remove one file at a time.
-- [x] Context packs preview backend-selected files before chat sends.
-- [x] Workspace chat history is persisted through `app/internal/storage/chat_history.go`.
-- [x] Workspace chat history stores source paths used by each chat pair for later artifact provenance.
-- [x] Report button creates timestamped Markdown artifacts under `.nexusdesk/artifacts/`.
-- [x] Latest assistant chat answers can be saved as Markdown artifacts under `.nexusdesk/artifacts/`.
-- [x] Markdown artifacts write provenance sidecars with source, prompt, model, and context metadata.
-- [x] Markdown report artifacts are created without overwriting existing files.
-- [x] CSV query export artifacts write provenance sidecars and are listed in the artifact browser.
-- [x] SVG chart artifacts write provenance sidecars and are listed in the artifact browser.
-- [x] Dataset summary artifacts write deterministic Markdown with column profiles and suggested questions.
-- [x] Artifact metadata can be read back through `GetArtifactMetadata` and shown in the workbench.
-- [x] Workspace scan reports can be saved as Markdown artifacts with scan counters and skipped/ignored samples.
-- [x] Generated artifacts can open source context, archive to `.nexusdesk/artifacts/archive/`, or be deleted after approval.
-- [x] Workspace search now includes artifact metadata and workspace chat history matches.
-- [x] Dataset queries can be saved per CSV dataset under `.nexusdesk/datasets/queries.json`.
-- [x] Dataset charts support bar and line modes with a deterministic backend preview before artifact creation.
-- [x] Applied file and artifact actions are appended to `.nexusdesk/approvals/log.json`.
-- [x] Workbench status pane shows a first approval log for applied write/artifact actions.
-- [x] Text file edits use a preview/apply flow with a diff before workspace writes.
-- [x] Text/code file deletes use a backend safety boundary with confirmation before workspace removal.
-- [x] Text/code files can be renamed or moved inside the workspace with no-overwrite backend validation.
-- [x] Workbench artifact browser lists generated Markdown, CSV, and SVG artifacts.
-- [x] Backend agent tool registry exists at `app/internal/agenttools/`.
-- [x] Agent panel shows a first risk-aware tool plan for active workspace, dataset, artifact, and operations context.
-- [x] Agent tool plan rows can be dry-run or executed through backend tool-run records.
-- [x] Medium/high-risk agent tool execution uses the modal approval foundation before backend execution.
-- [x] Agent tool runs persist under `.nexusdesk/tool-runs/log.json`.
-- [x] SQLite metadata schema preparation lives in `app/internal/appmeta/` and writes `.nexusdesk/metadata/schema.sql`.
-- [x] SQLite metadata preparation now opens a real SQLite database at `.nexusdesk/metadata/nexusdesk.sqlite` and applies the schema through `modernc.org/sqlite`.
-- [x] Read-only SQL-style CSV analytics live in `app/internal/analytics/` with a DuckDB-compatible surface.
-- [x] DuckDB SQL execution is implemented through `database/sql` and can be enabled with the `duckdb` build tag when CGO and a C compiler are available; the default Windows loop falls back to the bounded CSV SQL surface.
-- [x] Generated artifacts can be compared for added/removed line summaries.
-- [x] Agent tool-run rows expand into detail drawers with inputs, output/error text, approval references, replay, and target diff affordances.
-- [x] Assistant answers and saved answer artifacts include source citations from selected files and context packs.
-- [x] Artifact lineage can be built from chats, tool runs, source files, and generated artifacts through `GetArtifactLineage`.
-- [x] Workspace freshness polling detects changed files and marks potentially stale generated artifacts.
-- [x] Playwright is installed as a frontend dev dependency and visual smoke now fails instead of skipping when build output or Playwright is missing.
-- [x] SQLite metadata can mirror current JSON chat, approval, artifact, and tool-run records into the active database.
-- [x] Chat history, approval log, artifact list, and tool-run list prefer SQLite mirror reads after the metadata store exists, with JSON stores retained as compatibility writers.
-- [x] Metadata Browser inspects SQLite table columns, row counts, sample rows, and dataset SQL views.
-- [x] Metadata Browser has table selection, column filtering, and copyable row samples.
-- [x] Artifact lineage filtering can focus relationships by source, chat, tool, or artifact kind.
-- [x] Artifact lineage now has a compact graph layout with selectable nodes, relationship counts, and source navigation.
-- [x] Chat messages and context-pack previews warn when cited source files have changed.
-- [x] Stale-context refresh can rebuild a context preview for changed files and records the refresh in approvals/metadata.
-- [x] Data Studio invalidates visible query/chart/profile state when the selected dataset changes on disk.
-- [x] Workspace freshness reports stale dataset-derived views alongside stale artifacts.
-- [x] Read-only SQL results can be exported as Markdown artifacts with SQL text, engine, row counts, and dataset citations.
-- [x] Data Studio stores SQL snippets per dataset separately from lightweight row filters.
-- [x] Playwright visual smoke asserts navigator resizing, panel-level scrolling, tool-run details, metadata browser, lineage filtering, and freshness warnings.
-- [x] Playwright visual smoke runs against Wails-free mocked workspace/data/metadata/chat/artifact fixtures.
-- [x] SQLite metadata now receives direct chat, approval, artifact, and tool-run writes once the workspace metadata store exists.
-- [x] Metadata history search can query chat, artifact, and tool-run rows through the SQLite-backed metadata surface.
-- [x] SQLite connector now normalizes query tokens before keyword checks, blocks mutation statements with tokenized scans, and safely converts mixed-value column types to string rows.
-- [x] SQLite metadata writes avoid unnecessary schema/manifest rewrites when `.nexusdesk/metadata/nexusdesk.sqlite` already exists.
-- [x] SQL metadata tracking captures connector `TotalRows` and skips metadata-search work when no search query is supplied.
-- [x] LLM/chat/safety metadata and SQLite metadata writes now reuse `app/internal/safety` for secret redaction and truncation.
-- [x] Dataset dependencies and SQL run history are recorded for saved SQL snippets, SQL reports, chart artifacts, query exports, and summaries.
-- [x] Read-only SQLite workspace database files are classified as database files and can be queried through a bounded connector surface.
-- [x] Artifact lineage can be exported as JSON and imported back for debugging/preview workflows.
-- [x] Playwright visual smoke mocks live in a reusable fixture helper shared by the visual smoke scenario.
-- [x] Tool timeline records real workspace, preview, search, profile, write, report, and chat actions.
-- [x] Artifact rows can select the generated report preview when visible in the workspace tree.
-- [x] Helper services placeholder exists at `services/docker-compose.yml`.
-- [x] Operations Studio parses selected Docker Compose files into service names, images, ports, volumes, and dependencies.
-- [x] Workstation Ollama Compose stack lives outside this repo at `../Llm/` and pins `OLLAMA_LLM_LIBRARY=cuda_v12`.
+- [x] Brand assets and source brand package live under `docs/brand/`.
+- [x] Long-range studio roadmap lives at `docs/10_STUDIO_ROADMAP.md`.
+- [x] Wails app scaffold lives under `app/`.
+- [x] Go backend lives under `app/`.
+- [x] React/TypeScript frontend lives under `app/frontend/`.
+- [x] Runtime brand assets live under `app/frontend/src/assets/brand/`.
+- [x] Helper services placeholder lives under `services/`.
 - [x] Repository ignore rules exist in `.gitignore`.
-- [x] Current and target directory structures are documented separately.
-- [x] Production desktop build succeeds at `app/build/bin/app.exe`.
-- [x] Optional Playwright visual smoke script exists at `app/frontend/scripts/visual-smoke.mjs`.
+- [x] Workspace-local `.nexusdesk/` runtime state is ignored when this repository is opened as a test workspace.
 
-## Brand Integration
+## Verification Loop
 
-- [x] Use orbital NexusDesk symbol for compact app/navigation surfaces.
-- [x] Use horizontal NexusDesk logo in the workspace header.
-- [x] Use branded AI, code, data, document, and ops icons in navigation and cards.
-- [x] Keep app runtime brand assets under `app/frontend/src/assets/brand/`.
-- [x] Keep source brand package under `docs/brand/` as the design source of truth.
-- [x] Keep brand asset imports centralized in `app/frontend/src/brand/assets.ts`.
-- [x] Replace generated template font with an Inter-first system font strategy.
-- [x] Add branded empty, loading, and inline alert states.
-- [x] Add first branded approval log state for applied workspace and artifact actions.
-- [ ] Add modal approval dialogs for higher-risk tool execution.
-- [x] Add visual regression screenshots once the first interactive flows exist.
-- [ ] Confirm final app icon pipeline for Windows/macOS/Linux packaging.
-- [ ] Add macOS/Linux icon generation checks when packaging those targets.
-
-## Next Work
-
-### Prepared Batch: Studio Hardening And Inspectors
-
-- [x] Add modal approval requests for higher-risk actions with risk, target, message, and explicit approve/cancel handling before apply.
-- [x] Group workspace search results by files, artifacts, and chat history, with clearer snippets and active-result selection behavior.
-- [x] Split Data Studio, Artifact metadata, and Approval Log panels out of `WorkbenchPanel.tsx` into focused feature components.
-- [x] Add scan/index status reporting that explains included, skipped, truncated, and ignored workspace paths.
-- [x] Add richer Data Studio table operations: sortable columns, bounded pagination, and clearer CSV query result navigation.
-- [x] Add chart artifact preview polish: inline SVG preview for generated charts plus clearer chart config metadata.
-- [x] Add first read-only Operations Studio inspector for Docker/Compose files and local service status, without mutating Docker state.
-
-### Prepared Batch: Agent Tools And Workspace Intelligence
-
-- [x] Add a backend tool registry for safe agent actions with names, descriptions, risk levels, and approval requirements.
-- [x] Add first agent tool call planning UI that shows proposed file/data/artifact actions before execution.
-- [x] Add persistent workspace scan report artifacts or metadata snapshots for later audit and comparison.
-- [x] Add richer CSV query language support for numeric comparisons, contains, and simple limit/order clauses.
-- [x] Add artifact actions for delete/archive and open-source-context navigation.
-- [x] Add Operations Studio read-only Docker Compose parsing for service names, ports, images, volumes, and dependencies.
-- [x] Add frontend component tests or Playwright smoke screenshots for modal approvals, grouped search, and Data Studio tables.
-
-### Prepared Batch: Agent Execution And Analytics Foundations
-
-- [x] Add a backend agent execution planner that turns proposed tool plan rows into dry-run tool requests.
-- [x] Add modal approval integration for executing medium/high-risk agent tools from the plan surface.
-- [x] Persist tool run records with input, output summary, risk, approval ID, duration, and errors.
-- [x] Add SQLite-backed app metadata storage for workspaces, chats, approvals, artifacts, and tool runs while keeping JSON migration compatibility.
-- [x] Add DuckDB-backed CSV query execution for SQL-style read-only analytics beyond the current lightweight filter syntax.
-- [x] Add artifact version comparison for generated reports, summaries, and dataset exports.
-- [x] Add mandatory Playwright visual baseline capture once Playwright is installed in the frontend dev environment.
-
-### Prepared Batch: Context, Persistence, And Analytics Depth
-
-- [x] Add real SQLite driver-backed migration and repository implementations behind the prepared schema.
-- [x] Add DuckDB driver-backed CSV/table registration behind the SQL-compatible query surface, gated by the `duckdb` build tag for CGO-enabled workstations.
-- [x] Add tool-run detail drawer with full inputs, outputs, approval references, and replay/diff affordances.
-- [x] Add context-pack source citations in assistant answers and saved artifacts.
-- [x] Add artifact lineage graph linking chats, tool runs, source files, and generated outputs.
-- [x] Add workspace file watcher with changed-file indicators and stale dataset/artifact warnings.
-- [x] Add installable Playwright dependency and enforce visual baselines in CI/local smoke.
-
-### Prepared Batch: Real Studio Workflows
-
-- [x] Add SQLite repositories that mirror JSON chat, approvals, artifacts, and tool-run records into the active database.
-- [x] Add a first schema browser for SQLite metadata and DuckDB dataset views in Data Studio.
-- [x] Add a persistent artifact lineage view with filtering by source file, chat, tool run, and artifact kind.
-- [x] Add stale-context warnings directly in chat messages and context-pack previews when cited files change.
-- [x] Add dataset/profile refresh actions that react to watcher changes and invalidate stale chart/query artifacts.
-- [x] Add richer SQL result artifacts that save SQL text, engine, row counts, and source dataset citations.
-- [x] Add Playwright visual assertions for navigator resizing, tool-run details, and lineage/freshness panels.
-
-### Prepared Batch: Studio Scale And Reliability
-
-- [x] Promote SQLite mirror writes into repository-backed primary reads for chat history, approvals, artifacts, and tool runs.
-- [x] Add a persistent metadata/schema tab with table search, column filtering, and copyable row samples.
-- [x] Add a real graph layout for artifact lineage with node selection, relationship counts, and open-source navigation.
-- [x] Add stale-context refresh controls that can re-run context packs and update affected chat/artifact records.
-- [x] Add dataset dependency invalidation for saved queries, SQL reports, chart artifacts, and summaries.
-- [x] Add SQL history and saved SQL snippets per dataset, separate from lightweight row filters.
-- [x] Add CI-friendly Playwright fixtures that cover mocked workspace, dataset, metadata, chat, and artifact flows without requiring Wails.
-
-### Prepared Batch: Studio Depth And Connectors
-
-- [x] Move SQLite from mirrored read preference to direct repository-backed writes for chats, approvals, artifacts, and tool runs when the metadata store exists.
-- [x] Add searchable chat/artifact/tool-run history views backed by SQLite metadata queries.
-- [x] Add dataset lineage dependencies for saved SQL snippets, exported reports, chart artifacts, and summaries.
-- [x] Add saved SQL execution history with last-run status, row counts, and artifact links.
-- [x] Add first database connector design surface for read-only SQLite files inside a workspace.
-- [x] Add artifact graph export/import as JSON for debugging and future team sync.
-- [x] Add reusable Playwright fixture helpers instead of inline visual-smoke mocks.
-- [x] Make dataset dependency rebuild idempotent across rapid repeated runs by removing the previous generated artifact before recreating it.
-
-### Completed Batch: Studio Query And Connector Maturity
-
-- [x] Add explicit single-statement SQL validation (with quote/comment-aware semicolon handling) for SQLite connector and read-only CSV analytics queries.
-- [x] Add explicit refresh/rebuild buttons for dataset dependencies so saved SQL reports, charts, summaries, and exports can be regenerated from their recorded inputs.
-- [x] Add connector approval policy docs/tests for read-only proofs, blocked SQL statements, and result caps.
-- [x] Add SQL connector and analytics error redaction in provider responses, logs, and metadata run records.
-
-### Prepared Batch: Studio Query And Connector Maturity
-
-- [ ] Add a richer metadata history tab with filters by kind, time, source path, and jump-to-chat/artifact/tool actions.
-- [ ] Expand the SQLite connector with schema browsing, table previews, saved connector queries, and clearer read-only status.
-- [ ] Add artifact lineage JSON import comparison in the UI, including validation errors and graph diff previews.
-- [ ] Promote dataset dependency and SQL run records into first-class UI navigation from Data Studio, Artifact Studio, and Metadata Browser.
-- [ ] Start a DuckDB multi-file workspace dataset surface for joins across CSV/XLSX-derived tables.
-- [ ] Split large shell orchestration state where connector/history flows start to crowd `NexusDeskShell.tsx`.
-
-### Prepared Batch: Error and Metadata Stabilization
-
-- [x] Consolidate redaction helpers with unit tests for shared behavior and edge-case secrets.
-- [x] Add end-to-end chat tests for redacted stream error events from backend -> UI bus.
-- [x] Add metadata-search regression tests for truncated SQL preview text and long provider errors.
-- [x] Add structured audit logging around sanitized provider failures (`truncated`, `redacted`).
-- [ ] Add a metrics dashboard for provider failures by kind, root path, and workspace.
-
-- [x] Batch: align product docs around NexusDesk as an IDE/data/analytics studio.
-- [x] Batch: align architecture, domain, indexing, search, AI, operations, delivery, DX, brand, README, and tracker wording.
-- [x] Batch: update startup state and browser fallback copy to Studio MVP language.
-- [x] Batch: rename the primary rail modes to Code Studio, AI Assistant, Data Studio, Document Studio, and Ops Studio.
-- [x] Batch: map capability cards to Project IDE, Data & analytics studio, and Artifact workflow.
-- [x] Batch: add a studio surface resolver for code, data, documents, operations, artifacts, and workspace context.
-- [x] Batch: show the active studio surface in the workbench topbar.
-- [x] Batch: extend frontend smoke checks so the studio vocabulary and UI marker are guarded.
-- [x] Add keyboard quick-open for workspace nodes and editor tabs.
-- [x] Add quick-open smoke coverage and keep docs aligned.
-- [x] Add keyboard command palette for core IDE/data/assistant actions.
-- [x] Add find-in-file and dirty/revert editor state.
-- [x] Preserve edit drafts per tab and guard dirty tab close.
-- [x] Add Ctrl+S edit preview/apply shortcut.
-- [x] Add Monaco-backed editing for text/code drafts.
-- [x] Add Monaco-backed read-only previews for text/code files.
-- [x] Add editor tab and find keyboard shortcuts.
-- [x] Add safe new file draft creation through the existing write approval boundary.
-- [x] Add safe active file delete flow with workspace refresh.
-- [x] Add safe active file rename/move flow with workspace refresh.
-- [x] Add a safe workspace folder picker.
-- [x] Build a real file tree from approved workspace roots.
-- [x] Add safe text file preview for selected workspace files.
-- [x] Add safe image preview for selected workspace files.
-- [x] Add basic PDF preview for selected workspace files.
-- [x] Add lightweight syntax highlighting for text/code previews.
-- [x] Add first bounded CSV table preview.
-- [x] Add first bounded CSV column profiles.
-- [x] Expand CSV profiling beyond the visible preview window with a larger capped sample.
-- [x] Persist first CSV/XLSX dataset profiles in the workspace.
-- [x] Add first bounded CSV query flow.
-- [x] Add first CSV query result export artifact flow.
-- [x] Add first CSV-to-SVG chart artifact flow.
-- [x] Add first artifact preview polish with metadata cards.
-- [x] Add first saved/recent query controls for Data Studio.
-- [x] Add line chart mode and chart preview before SVG artifact creation.
-- [x] Add first append-only approval log foundation.
-- [x] Add workspace search matches for artifacts and chat history.
-- [x] Add deterministic dataset summary Markdown artifacts.
-- [x] Add workspace path/content search.
-- [x] Send structured CSV summaries as selected chat context.
-- [x] Persist recent workspaces locally.
-- [x] Add refresh behavior for the currently opened workspace.
-- [x] Preserve selected file across refreshes.
-- [x] Add expandable tree state once nested tree rendering replaces the flat indexed list.
-- [x] Add recent workspace remove/clear actions.
-- [x] Add local settings storage for LLM provider configuration.
-- [x] Add LLM connection test.
-- [x] Add LLM capability detection beyond model listing.
-- [x] Add recommended local model choices to settings.
-- [x] Add first non-streaming chat call with selected text context.
-- [x] Persist chat history per workspace.
-- [x] Add streaming chat responses.
-- [x] Add first pinned multi-file context pack for chat.
-- [x] Add closeable editor tabs for multiple opened file previews.
-- [x] Add a source/rendered preview switch for Markdown editor tabs.
-- [x] Replace the compact chat input with a readable conversation panel and multiline prompt composer.
-- [x] Add safe dependency-free Markdown-style rendering for chat responses.
-- [x] Add individual context pack file removal.
-- [x] Add bounded directory/project context packs for chat.
-- [x] Add a backend-backed context pack preview in the chat panel.
-- [x] Wire topbar Preview and Explain actions to real workspace/chat behavior.
-- [x] Add first selected-context summarize-to-artifact flow.
-- [x] Mask API keys before they leave the backend settings store.
-- [x] Migrate API keys into OS credential storage before production release.
-- [x] Add first Markdown report artifact creation flow.
-- [x] Add first artifact browser for generated Markdown reports.
-- [x] Add first chat answer to Markdown artifact flow.
-- [x] Add provenance metadata sidecars for Markdown artifacts.
-- [x] Add approved text file write flow with diff preview.
-- [x] Reposition docs and app copy around IDE/data/analytics studio usage.
-- [x] Add first active studio surface indicator in the workbench topbar.
-- [x] Split brand-aware shell sections into smaller rail, navigator, workbench pane, agent panel, and timeline components when they need behavior.
-- [x] Add first reusable button, icon button, and status badge components.
-- [x] Add first reusable card component when panel extraction starts.
-- [x] Add backend module layout only when implementation files are created.
-- [x] Split the workbench UI into feature components once behavior lands.
-- [ ] Replace the services placeholder with real development/test services when needed.
-- [x] Add an in-app Ollama runtime diagnostic that reports selected model, endpoint, and GPU/VRAM offload status.
-- [x] Add automated frontend tests after interactive behavior exists.
-
-## Directory Notes
-
-`app/` contains the Wails desktop app. The backend now has incremental `internal/` packages for workspace safety, storage, LLM access, dataset profiles, and artifact creation; keep adding modules only when real behavior lands.
-
-`app/internal/workspace/` owns safe workspace scanning, previews, search, context expansion, dataset queries, and file operations. It keeps ignore rules, depth limits, entry limits, and path safety close to the backend instead of trusting frontend filtering.
-
-`app/internal/workspace/context.go` owns directory and project context expansion for chat. It accepts selected files, selected directories, and `.` for the workspace root, then expands them into a capped list of previewable text/document/data files while preserving scanner ignore rules and symlink/path traversal protections.
-
-`app/internal/artifact/` owns deterministic Markdown, CSV, and SVG artifact writes, sidecar provenance metadata, listing, artifact metadata lookup, and artifact search. Source reports, saved assistant answers, first CSV query exports, first CSV chart artifacts, and first dataset summary artifacts are written under `.nexusdesk/artifacts/` with timestamped names and exclusive creation, so generated outputs stay separate from source files.
-
-`app/internal/agenttools/` owns the first backend registry for deterministic agent-capable tools. It describes workspace, dataset, artifact, and operations actions with risk and approval metadata; execution remains explicit UI/backend flows until the agent planner is added.
-
-`app/internal/agenttools/run.go` owns persisted tool run records. Dry-runs and explicit executions capture tool name, target, inputs, risk, approval ID, timing, output summary, and errors under `.nexusdesk/tool-runs/log.json`.
-
-`app/internal/appmeta/` owns the SQLite metadata schema, manifest, real database initialization, JSON compatibility mirroring, direct metadata writes, metadata search, dataset dependency records, and SQL run history. `EnsureSQLiteMetadataStore` writes `.nexusdesk/metadata/schema.sql`, opens `.nexusdesk/metadata/nexusdesk.sqlite` through `modernc.org/sqlite`, applies the schema, records the active workspace row, and mirrors existing compatibility records. Once the store exists, chats, approvals, artifacts, and tool runs write fresh rows directly into SQLite while JSON stores remain the compatibility fallback.
-
-`app/internal/analytics/` owns the first read-only SQL-style CSV query surface. It accepts a constrained `SELECT` subset, blocks mutation keywords, uses a real `database/sql` DuckDB execution path when built with the `duckdb` tag on a CGO-enabled workstation, and otherwise falls back to the bounded CSV query path. SQL result exports are written as Markdown artifacts with the SQL text, engine, row counts, preview rows, and source dataset citation.
-
-`app/internal/dbconnector/` owns the first workspace database connector. It opens workspace-local `.sqlite`, `.sqlite3`, and `.db` files in read-only mode, accepts bounded `SELECT`/`WITH` queries, blocks mutation-oriented SQL, and returns capped tabular rows for Data Studio inspection.
-
-`app/internal/workspace/freshness.go` owns the first workspace freshness snapshot. The frontend polls it to show changed-file indicators, mark generated artifacts that cite changed source paths as potentially stale, and flag dataset-derived views/snippets/reports that need refresh when source datasets change.
-
-`app/internal/approval/` owns the first append-only approval/action log for applied file and artifact operations. Records are persisted under `.nexusdesk/approvals/log.json` inside the active workspace and surfaced in the workbench while modal approval policy remains a later hardening step.
-
-`app/internal/dataset/query_history.go` owns saved Data Studio queries per dataset. It stores bounded recent row filters and separate read-only SQL snippets under `.nexusdesk/datasets/queries.json`, reusing the same rooted dataset path validation as profiling.
-
-`app/internal/storage/` owns local app persistence. Recent workspaces and non-secret LLM settings currently use small JSON files in the user's config directory; LLM API keys are kept in a sidecar credential blob protected by the OS where available.
-
-`services/` is reserved for Docker Compose or supporting development services. It should not contain runtime app state; local service data belongs in ignored folders such as `services/data/`.
-
-The current workstation LLM runner is the sibling Compose stack at `../Llm/`, not the placeholder under `services/`. Its `rcooler-ollama` service is exposed at `http://localhost:11434` and must keep `OLLAMA_LLM_LIBRARY=cuda_v12` so Ollama uses the CUDA 12 backend instead of falling back to CPU after attempting CUDA 13.
-
-`docs/` remains the source of truth for product direction, architecture, delivery phases, developer experience, studio surface vocabulary, and brand assets.
-
-`app/frontend/src/assets/brand/` contains copied runtime assets from `docs/brand/`. Update the docs source first when changing brand assets, then refresh the app copies deliberately.
-
-`app/frontend/src/features/shell/QuickOpenPalette.tsx` owns client-side quick-open over the already indexed workspace snapshot and open editor tabs. It does not read files directly; selection still flows through the shell's workspace preview path.
-
-`app/frontend/src/features/shell/WorkbenchPanel.tsx` owns local find-in-file, visible dirty markers, revert controls, dataset query/chart controls, artifact metadata display, and the first approval log. `app/frontend/src/features/shell/NexusDeskShell.tsx` owns per-tab edit drafts, stale-proposal clearing, Ctrl+S routing, dirty-close guards, saved query refresh, chart preview, and summary artifact orchestration. File writes still route through `app/internal/workspace/write.go` for diff preview and rooted apply.
-
-## Verified Commands
-
-Run these from `app/` on this Windows workstation:
+Run from `app/` unless noted:
 
 ```powershell
 $env:NODE_OPTIONS='--use-system-ca --dns-result-order=ipv4first'
-python scripts/generate_windows_icon.py
+go test ./...
+cd frontend
 npm.cmd run build
 npm.cmd run smoke
 npm.cmd run smoke:visual
-go test ./...
+cd ..
 wails build
 ```
 
-Local Ollama GPU check from the sibling `../Llm/` directory:
+Optional icon regeneration:
+
+```powershell
+python scripts/generate_windows_icon.py
+```
+
+Local Ollama GPU verification from sibling `../Llm/`:
 
 ```powershell
 docker compose exec ollama nvidia-smi
 docker compose logs ollama | Select-String "offloaded|model weights|cuda_v12"
 Invoke-RestMethod http://localhost:11434/api/ps | ConvertTo-Json -Depth 10
 ```
+
+## Phase 0: Product Baseline
+
+Goal: define NexusDesk as a local-first AI IDE, data studio, analytics studio, document studio, and operations workbench.
+
+Status: mostly complete for planning.
+
+Steps:
+
+- [x] Define product vision and target users.
+- [x] Define local-first/provider-agnostic/tool-mediated principles.
+- [x] Define studio vocabulary: Code, Data, Analytics, Documents, AI Assistant, Ops, Artifacts, Settings.
+- [x] Define safety principle: LLM requests tools; backend validates and runs tools.
+- [x] Define artifact-first output model.
+- [x] Add long-range studio roadmap.
+- [ ] Keep roadmap updated after each major implementation batch.
+
+Exit criteria:
+
+- [x] Product docs explain why this is more than a chatbot.
+- [x] MVP and long-range goals are separated.
+- [x] Risky operations require preview, approval, and audit in the design.
+
+## Phase 1: Workspace Shell MVP
+
+Goal: make the desktop app usable for opening a local workspace, browsing files, previewing content, editing safely, and chatting with selected context.
+
+Status: implemented as a first useful foundation.
+
+Steps:
+
+- [x] Create Wails desktop app.
+- [x] Replace starter screen with NexusDesk shell.
+- [x] Add branded rail, navigator, workbench, assistant, and bottom drawer layout.
+- [x] Keep whole app fixed to the window and move scrolling into panels.
+- [x] Add resizable workspace navigator.
+- [x] Add resizable assistant sidebar up to 50 percent of the window.
+- [x] Add resizable bottom drawer up to 70 percent of the window.
+- [x] Add workspace folder picker.
+- [x] Add recent workspace storage.
+- [x] Add workspace refresh and selected-file preservation.
+- [x] Add safe backend workspace scanning.
+- [x] Scan up to 10 workspace levels by default.
+- [x] Skip noisy folders, symlinks, deep paths, and oversized listings.
+- [x] Add expandable workspace tree.
+- [x] Preserve expanded directories across refreshes.
+- [x] Add workspace path/content search.
+- [x] Merge search results with artifact metadata and chat history snippets.
+- [x] Add quick-open palette for files, folders, and open tabs.
+- [x] Add command palette for workspace/editor/data/artifact/chat actions.
+- [ ] Replace current tree visual treatment with IDE-grade project tree in Phase 4.
+
+Exit criteria:
+
+- [x] User can open a local workspace and select files without blanking the app.
+- [x] Large folder and malformed scan responses are guarded.
+- [x] Long trees scroll inside the navigator.
+
+## Phase 2: File Preview And Editor Foundation
+
+Goal: provide safe preview/edit workflows for common source, text, document, image, and data files.
+
+Status: implemented as a first foundation.
+
+Steps:
+
+- [x] Add rooted file preview boundary.
+- [x] Refuse unsafe traversal and unsupported binary content.
+- [x] Decode UTF-8 BOM, UTF-16, BOM-less UTF-16, and Windows-1251 text.
+- [x] Add preview metadata: type, encoding, size, truncation.
+- [x] Add image previews as bounded data URLs.
+- [x] Add PDF preview as bounded data URL.
+- [x] Add PDF embedded text extraction by page when available.
+- [x] Add DOCX body text extraction when readable.
+- [x] Add CSV bounded table preview.
+- [x] Add CSV column profiles.
+- [x] Add larger capped CSV profile sample.
+- [x] Add read-only Monaco preview for text/code.
+- [x] Add Monaco edit surface for text/code drafts.
+- [x] Add closeable editor tabs.
+- [x] Add per-tab edit drafts.
+- [x] Add dirty tab markers.
+- [x] Add dirty-close guard.
+- [x] Add find-in-file with Monaco decorations.
+- [x] Add Markdown source/rendered toggle.
+- [x] Add safe new file draft creation.
+- [x] Add safe text/code edit preview with diff.
+- [x] Add safe apply flow for file writes.
+- [x] Add safe file delete.
+- [x] Add safe rename/move.
+- [x] Add Ctrl+S, Ctrl+F, Ctrl+W, Ctrl+Tab, and Ctrl+Shift+Tab editor shortcuts.
+- [ ] Add split editor groups.
+- [ ] Add pinned tabs.
+- [ ] Add breadcrumbs.
+- [ ] Add outline/symbol navigation.
+- [ ] Add formatting hooks.
+- [ ] Add file encoding selector and save-as-encoding support.
+
+Exit criteria:
+
+- [x] User can preview and safely edit text/code files.
+- [x] File writes route through diff preview and rooted backend validation.
+
+## Phase 3: LLM, Chat, Context, And Artifacts
+
+Goal: make the assistant useful with selected workspace context while keeping provenance and safety.
+
+Status: implemented as a first foundation.
+
+Steps:
+
+- [x] Add local LLM settings storage.
+- [x] Store API keys in sidecar credential blob protected by OS where available.
+- [x] Redact API keys before returning settings to UI.
+- [x] Add OpenAI-compatible `/models` connection probe.
+- [x] Infer capability hints from model IDs.
+- [x] Add curated local model dropdown capped at 26B.
+- [x] Verify `rcooler-ollama` endpoint at `localhost:11434`.
+- [x] Document CUDA 12 Ollama runner pin.
+- [x] Add Ollama runtime diagnostics for model, endpoint, and GPU/VRAM offload.
+- [x] Add non-streaming chat.
+- [x] Add streaming chat with Wails events.
+- [x] Persist chat history per workspace.
+- [x] Use distinct user/assistant timestamps so streamed deltas do not overwrite prompts.
+- [x] Add readable chat panel with Markdown-style rendering.
+- [x] Add OpenAI-style composer with model, Ask/Agent mode, and submit controls.
+- [x] Send selected text/code context.
+- [x] Send extracted PDF text context.
+- [x] Send DOCX text context.
+- [x] Send structured CSV profile/sample context.
+- [x] Add pinned multi-file context packs.
+- [x] Add individual context pack removal.
+- [x] Add backend preview for context packs.
+- [x] Expand selected directories and workspace root into bounded context packs.
+- [x] Add model context-window and response-reserve settings.
+- [x] Scale context-pack budget from configured model context window.
+- [x] Send `num_ctx` for local/Ollama-compatible chat requests.
+- [x] Add Explain selected context action.
+- [x] Add Summarize selected context action.
+- [x] Save summaries as Markdown artifacts.
+- [x] Save latest assistant answer as Markdown artifact.
+- [x] Include source citations in assistant answers and saved artifacts.
+- [x] Warn when cited source paths changed.
+- [ ] Stream each agent step into chat timeline.
+- [ ] Add model comparison/retry.
+- [ ] Add weak-evidence and missing-context UI.
+- [ ] Add assistant memory and prompt profiles.
+
+Exit criteria:
+
+- [x] User can chat with local/remote OpenAI-compatible provider using selected safe context.
+- [x] Generated answers can become artifacts with provenance.
+
+## Phase 4: IDE-Grade Code Studio
+
+Goal: make Code Studio feel and work like a serious IDE rather than a file preview shell.
+
+Status: planned.
+
+Step 4.1: Main code route
+
+- [ ] Add first-class Code Studio route in primary menu.
+- [ ] Persist Code Studio state independently from Data/Documents/Ops.
+- [ ] Add Code Studio toolbar and command set.
+- [ ] Keep editor and git panels available without relying on generic bottom drawer state.
+
+Step 4.2: Project tree
+
+- [ ] Replace current navigator feel with IDE project tree presentation.
+- [ ] Add indentation guides.
+- [ ] Add disclosure arrows.
+- [ ] Add file/folder icons by type.
+- [ ] Add selected/current file reveal.
+- [ ] Add collapse all and expand selected path.
+- [ ] Add context menu for new file, new folder, rename, move, delete, copy path, reveal in explorer.
+- [ ] Add ignored-file controls.
+- [ ] Add drag/drop intent design before implementing mutation.
+
+Step 4.3: Git integration
+
+- [ ] Detect git repository root.
+- [ ] Show current branch.
+- [ ] Show dirty summary.
+- [ ] Show file status badges in tree.
+- [ ] Add changed-files panel.
+- [ ] Add working tree diff.
+- [ ] Add staged diff.
+- [ ] Add side-by-side diff viewer.
+- [ ] Add inline diff viewer.
+- [ ] Add hunk navigation.
+- [ ] Add stage/unstage file.
+- [ ] Add stage/unstage hunk.
+- [ ] Add revert hunk with destructive approval.
+- [ ] Add AI diff summary.
+- [ ] Add AI commit message draft.
+
+Step 4.4: Search, problems, and tasks
+
+- [ ] Add path search panel.
+- [ ] Add text search panel.
+- [ ] Add regex search.
+- [ ] Add replace preview.
+- [ ] Add symbol search where language data exists.
+- [ ] Add diagnostics/problems panel.
+- [ ] Detect package scripts.
+- [ ] Detect Go tests.
+- [ ] Detect npm scripts.
+- [ ] Run tasks with captured output.
+- [ ] Save task/test runs as artifacts or metadata.
+
+Step 4.5: Code AI actions
+
+- [ ] Review current file.
+- [ ] Review git diff.
+- [ ] Generate tests for selected file/diff.
+- [ ] Propose patch with diff preview.
+- [ ] Apply accepted patch through safe write boundary.
+- [ ] Explain dependency graph.
+- [ ] Create PR summary draft.
+
+Exit criteria:
+
+- [ ] Code Studio can be used for day-to-day project navigation and diff review.
+- [ ] AI code changes remain previewed, reviewable, and auditable.
+
+## Phase 5: Data Studio Expansion
+
+Goal: make Data Studio a real local data workbench for files, databases, dumps, notebooks, profiling, charts, and LLM-assisted research.
+
+Status: first CSV/SQLite foundation implemented; deeper work planned.
+
+Implemented:
+
+- [x] CSV table preview.
+- [x] CSV column profiles.
+- [x] Dataset profile persistence under `.nexusdesk/datasets/`.
+- [x] Bounded CSV query/filter flow.
+- [x] Numeric comparisons, contains, limit, and order by.
+- [x] Saved lightweight row filters.
+- [x] Saved read-only SQL snippets.
+- [x] SQL run history.
+- [x] CSV query export artifacts.
+- [x] SVG chart artifacts.
+- [x] Dataset summary artifacts.
+- [x] DuckDB-compatible SQL surface with bounded fallback.
+- [x] CGO-gated DuckDB driver path behind `duckdb` build tag.
+- [x] Read-only SQLite workspace connector.
+- [x] SQLite mutation keyword blocking and single-statement validation.
+- [x] Dataset dependencies and rebuild actions.
+
+Step 5.1: File dataset coverage
+
+- [ ] Add TSV loader.
+- [ ] Add JSON loader.
+- [ ] Add NDJSON loader.
+- [ ] Add Parquet inspection.
+- [ ] Add log dataset profiling.
+- [ ] Add compressed export detection.
+- [ ] Add SQL dump file classification.
+- [ ] Add data source cards for each detected dataset.
+
+Step 5.2: Database connector framework
+
+- [ ] Define connector interface and metadata model.
+- [ ] Add connection profiles with secure credential references.
+- [ ] Expand SQLite schema browser.
+- [ ] Add PostgreSQL read-only connector.
+- [ ] Add MySQL/MariaDB read-only connector.
+- [ ] Add SQL Server read-only connector.
+- [ ] Add DuckDB connector.
+- [ ] Add query cancellation.
+- [ ] Add result caps and timeout controls per connector.
+- [ ] Add connector error redaction.
+
+Step 5.3: Schema and relationship explorer
+
+- [ ] Show databases and schemas.
+- [ ] Show tables and views.
+- [ ] Show columns, types, nullable, defaults.
+- [ ] Show indexes and keys.
+- [ ] Show row counts and table samples.
+- [ ] Infer relationships where metadata is absent.
+- [ ] Generate ERD-like relationship view.
+- [ ] Let AI explain schema with citations.
+
+Step 5.4: Query notebook
+
+- [ ] Add multi-cell SQL notebook UI.
+- [ ] Add result tabs.
+- [ ] Add chart cells.
+- [ ] Add saved notebooks.
+- [ ] Add query history browser.
+- [ ] Add export to CSV.
+- [ ] Add export to Markdown report.
+- [ ] Add export to Parquet when supported.
+- [ ] Add query-to-artifact lineage.
+
+Step 5.5: Temporary dump import sandboxes
+
+- [ ] Detect `.sql`, `.dump`, `.bak`, `.gz`, `.zip`, and vendor-specific dumps.
+- [ ] Ask user to create temporary import sandbox.
+- [ ] Choose matching database image when possible.
+- [ ] Start isolated Docker Compose sandbox.
+- [ ] Import dump with logs and progress.
+- [ ] Enforce storage and runtime limits.
+- [ ] Mark sandbox read-only for analysis.
+- [ ] Destroy sandbox on request.
+- [ ] Persist sandbox metadata only by explicit choice.
+- [ ] Record all operations in approval/audit log.
+
+Step 5.6: LLM data research
+
+- [ ] Let assistant create analysis plan from schema/files.
+- [ ] Let assistant propose read-only queries.
+- [ ] Run bounded queries after user approval/policy.
+- [ ] Cite rows, tables, queries, and connector runs.
+- [ ] Generate charts from query results.
+- [ ] Generate reproducible Markdown reports.
+- [ ] Mark stale reports when source data changes.
+
+Exit criteria:
+
+- [ ] User can inspect and query real files, databases, and imported dumps safely.
+- [ ] AI research over data is reproducible and source-cited.
+
+## Phase 6: Analytics Studio
+
+Goal: make NexusDesk useful for marketing, traffic, CRM, and funnel analysis from APIs and exports.
+
+Status: planned.
+
+Step 6.1: Studio route and data model
+
+- [ ] Add first-class Analytics Studio route.
+- [ ] Define analytics source, connector run, metric, dimension, segment, and dashboard models.
+- [ ] Bind analytics runs to workspace metadata.
+- [ ] Add date range and segment selectors.
+
+Step 6.2: Connectors
+
+- [ ] Add GA4 connector.
+- [ ] Add Google Search Console connector.
+- [ ] Add Google Ads connector.
+- [ ] Add Meta Ads connector.
+- [ ] Add Microsoft Ads connector.
+- [ ] Add LinkedIn Ads connector.
+- [ ] Add HubSpot connector.
+- [ ] Add Salesforce connector.
+- [ ] Add Eloqua connector.
+- [ ] Add Mautic connector.
+- [ ] Add CSV/export equivalent import profiles for each connector family.
+
+Step 6.3: Credential and policy layer
+
+- [ ] Store connector credentials securely.
+- [ ] Show scopes before connection.
+- [ ] Support token refresh.
+- [ ] Support connector test.
+- [ ] Bind credentials to workspace.
+- [ ] Add read-only connector policy by default.
+- [ ] Log connector pulls.
+
+Step 6.4: Analytics surfaces
+
+- [ ] Acquisition dashboard.
+- [ ] Channel mix dashboard.
+- [ ] Campaign ROI dashboard.
+- [ ] Funnel dashboard.
+- [ ] Cohort/retention dashboard.
+- [ ] SEO/content dashboard.
+- [ ] Landing-page performance dashboard.
+- [ ] Anomaly detection view.
+
+Step 6.5: AI analytics workflows
+
+- [ ] Explain performance changes.
+- [ ] Find anomalies.
+- [ ] Compare campaigns.
+- [ ] Summarize channel mix.
+- [ ] Generate client-ready report.
+- [ ] Generate internal action plan.
+- [ ] Cite metrics, connector runs, and source rows.
+
+Exit criteria:
+
+- [ ] User can connect or import at least one analytics data source.
+- [ ] Analytics Studio can produce cited charts and narrative reports.
+
+## Phase 7: Documents Studio
+
+Goal: make documents first-class source material and support generated reports, briefs, and presentations.
+
+Status: first PDF/DOCX text extraction exists; studio planned.
+
+Implemented:
+
+- [x] PDF preview and embedded text extraction.
+- [x] DOCX body text extraction.
+- [x] Markdown source/rendered preview.
+- [x] Text preview and encoding support.
+- [x] Summary-to-Markdown artifact flow.
+
+Step 7.1: Studio route and document library
+
+- [ ] Add first-class Documents Studio route.
+- [ ] Add document library view.
+- [ ] Add document set/folder grouping.
+- [ ] Add document metadata panel.
+- [ ] Track extraction status and freshness.
+
+Step 7.2: Extraction coverage
+
+- [ ] Improve PDF text extraction.
+- [ ] Add OCR fallback for image PDFs.
+- [ ] Extract DOCX headings and tables.
+- [ ] Extract DOCX comments where possible.
+- [ ] Extract tracked changes where possible.
+- [ ] Add HTML/RTF extraction.
+- [ ] Add PPTX text extraction.
+- [ ] Add image OCR.
+- [ ] Extract spreadsheet text/tables into document context.
+
+Step 7.3: Document analysis workflows
+
+- [ ] Summarize document.
+- [ ] Summarize document set.
+- [ ] Compare two documents.
+- [ ] Extract action items.
+- [ ] Extract decisions.
+- [ ] Extract risks.
+- [ ] Extract dates/entities.
+- [ ] Detect contradictions across documents.
+- [ ] Generate source-cited research pack.
+
+Step 7.4: Generated document outputs
+
+- [ ] Generate Markdown report.
+- [ ] Generate DOCX brief.
+- [ ] Generate PPTX presentation.
+- [ ] Generate comparison matrix.
+- [ ] Generate checklist.
+- [ ] Store document output provenance.
+- [ ] Regenerate stale document outputs.
+
+Exit criteria:
+
+- [ ] User can analyze a folder of documents and generate cited reports/decks.
+
+## Phase 8: Ops Studio
+
+Goal: make local and Docker operations inspectable, explainable, and safe.
+
+Status: first Compose parser exists; studio planned.
+
+Implemented:
+
+- [x] Operations inspector parses Docker Compose files.
+- [x] Compose services, images, ports, volumes, and dependencies are displayed.
+- [x] Backend tool registry includes first operations inspect descriptors.
+
+Step 8.1: Studio route and read-only inventory
+
+- [ ] Add first-class Ops Studio route.
+- [ ] List Docker containers.
+- [ ] List Docker images.
+- [ ] List Docker volumes.
+- [ ] List Docker networks.
+- [ ] List Compose projects.
+- [ ] Inspect service health.
+- [ ] Show ports and mounts.
+- [ ] Show environment with secret redaction.
+
+Step 8.2: Logs and diagnostics
+
+- [ ] Add log viewer.
+- [ ] Add tail mode.
+- [ ] Add log search/filter.
+- [ ] Group stack traces.
+- [ ] Summarize errors.
+- [ ] Link logs to services and configs.
+- [ ] Save incident report artifact.
+
+Step 8.3: Local services
+
+- [ ] Add port scanner where policy allows.
+- [ ] Add endpoint health checks.
+- [ ] Add local config discovery.
+- [ ] Add `.env` inspection with redaction.
+- [ ] Add runbook generation.
+
+Step 8.4: Safe operations
+
+- [ ] Preview Docker start/stop/restart/build/pull/up/down/exec commands.
+- [ ] Require approval for every mutating Docker action.
+- [ ] Require approval for shell execution.
+- [ ] Capture stdout/stderr logs.
+- [ ] Record operations in approval/audit metadata.
+- [ ] Generate Dockerfile artifacts.
+- [ ] Generate Compose artifacts.
+- [ ] Generate `.env.example`.
+- [ ] Generate health-check scripts.
+
+Step 8.5: AI ops workflows
+
+- [ ] Explain Compose topology.
+- [ ] Diagnose failed service.
+- [ ] Compare environment files.
+- [ ] Propose minimal safe fix.
+- [ ] Generate command plan.
+- [ ] Summarize logs with citations.
+
+Exit criteria:
+
+- [ ] User can inspect local/container operations and approve safe mutations with audit logs.
+
+## Phase 9: AI Assistant Orchestration
+
+Goal: promote AI Assistant from chat panel to cross-studio orchestration layer.
+
+Status: first chat, context packs, and backend ReAct runtime exist; orchestration planned.
+
+Implemented:
+
+- [x] OpenAI-compatible chat.
+- [x] Streaming chat.
+- [x] Context packs for files/directories/workspace root.
+- [x] Backend ReAct runtime under `app/internal/agent/`.
+- [x] Wails `RunAgent` binding.
+- [x] First safe Agent run button.
+- [x] First tool plan UI in bottom Tools tab.
+- [x] Tool run persistence.
+
+Step 9.1: Assistant workspace
+
+- [ ] Add Assistant route/main surface.
+- [ ] Keep right sidebar as quick assistant output.
+- [ ] Add full assistant workspace for long runs.
+- [ ] Add run history.
+- [ ] Add thread/session browser.
+- [ ] Add model/provider status panel.
+
+Step 9.2: Context sources
+
+- [ ] Add git diff context.
+- [ ] Add changed-files context.
+- [ ] Add database schema context.
+- [ ] Add query result context.
+- [ ] Add analytics connector run context.
+- [ ] Add document set context.
+- [ ] Add operations log context.
+- [ ] Add artifact lineage context.
+
+Step 9.3: Agent modes
+
+- [ ] Ask.
+- [ ] Plan.
+- [ ] Review.
+- [ ] Edit.
+- [ ] Research.
+- [ ] Analyze.
+- [ ] Debug Ops.
+- [ ] Generate Artifact.
+- [ ] Report Builder.
+
+Step 9.4: Tool planning and approval
+
+- [ ] Show proposed tool sequence before execution.
+- [ ] Show expected inputs and outputs.
+- [ ] Show risk level per action.
+- [ ] Dry-run read-only actions.
+- [ ] Pause mid-run for approvals.
+- [ ] Stream each tool call and observation.
+- [ ] Resume after approval.
+- [ ] Stop/cancel long runs.
+
+Step 9.5: Memory, citations, and quality
+
+- [ ] Add workspace memory store.
+- [ ] Store accepted facts.
+- [ ] Store decisions.
+- [ ] Store preferred report style.
+- [ ] Store ignored paths/connectors.
+- [ ] Add citation inspector.
+- [ ] Add weak-evidence warnings.
+- [ ] Add unsupported-claim warnings.
+- [ ] Add retry with another model.
+- [ ] Add compare model outputs.
+
+Exit criteria:
+
+- [ ] AI Assistant can coordinate multi-step work across Code/Data/Analytics/Documents/Ops with citations and approvals.
+
+## Phase 10: Artifact Studio And Provenance
+
+Goal: make generated outputs durable, comparable, reproducible, and easy to navigate.
+
+Status: first artifact browser, metadata, comparison, and lineage implemented.
+
+Implemented:
+
+- [x] Markdown report artifacts.
+- [x] Assistant answer artifacts.
+- [x] CSV export artifacts.
+- [x] SVG chart artifacts.
+- [x] Dataset summary artifacts.
+- [x] Workspace scan report artifacts.
+- [x] Sidecar provenance metadata.
+- [x] Artifact list in bottom Artifact Studio tab.
+- [x] Artifact metadata panel.
+- [x] Archive artifact.
+- [x] Delete artifact with approval.
+- [x] Open source context.
+- [x] Compare generated artifacts.
+- [x] Artifact lineage graph.
+- [x] Export/import lineage JSON preview.
+
+Next steps:
+
+- [ ] Move Artifact Studio to first-class route.
+- [ ] Add artifact type filters.
+- [ ] Add artifact search.
+- [ ] Add artifact tags.
+- [ ] Add artifact version timeline.
+- [ ] Add graph diff for imported lineage JSON.
+- [ ] Add stale artifact regeneration.
+- [ ] Add artifact templates.
+- [ ] Add dashboard/report bundle artifacts.
+- [ ] Add presentation artifacts.
+- [ ] Add reproducibility action that replays source queries/context where safe.
+
+Exit criteria:
+
+- [ ] User can trust and reproduce generated work.
+
+## Phase 11: Metadata, Indexing, Search, And Reliability
+
+Goal: make the app robust enough for large workspaces and long-lived projects.
+
+Status: first SQLite metadata store and search foundations implemented.
+
+Implemented:
+
+- [x] SQLite metadata schema under `app/internal/appmeta/`.
+- [x] `.nexusdesk/metadata/nexusdesk.sqlite` initialization through `modernc.org/sqlite`.
+- [x] JSON compatibility mirroring.
+- [x] Direct fresh-row writes for chat, approval, artifact, and tool-run records once metadata store exists.
+- [x] Metadata browser for tables, columns, row counts, samples, and dataset SQL views.
+- [x] Metadata history search across chat, artifacts, and tool runs.
+- [x] SQL run history.
+- [x] Dataset dependencies.
+- [x] Workspace freshness polling.
+- [x] Changed-file indicators.
+- [x] Stale artifact/dataset warnings.
+- [x] Stale context refresh action.
+- [x] Shared redaction/truncation helpers under `app/internal/safety`.
+- [x] Redacted provider and SQL errors.
+
+Next steps:
+
+- [ ] Move more local JSON stores to SQLite primary repositories.
+- [ ] Add migrations with versioned schema changes.
+- [ ] Add full-text search.
+- [ ] Add semantic search/embeddings when provider/model is configured.
+- [ ] Add task/job table.
+- [ ] Add connector run table.
+- [ ] Add document index table.
+- [ ] Add git snapshot table.
+- [ ] Add metrics dashboard for provider failures by kind, root path, and workspace.
+- [ ] Add index rebuild controls.
+- [ ] Add large-workspace performance budgets.
+- [ ] Add corruption recovery and export.
+
+Exit criteria:
+
+- [ ] NexusDesk can maintain durable, searchable workspace memory over long-lived projects.
+
+## Phase 12: Settings, Policies, Credentials, And Security
+
+Goal: centralize user control over providers, connectors, tool permissions, credentials, and workspace policies.
+
+Status: first LLM settings implemented; broader policy work planned.
+
+Implemented:
+
+- [x] Bottom Settings tab for LLM provider.
+- [x] API key redaction.
+- [x] OS-protected credential sidecar where available.
+- [x] Model dropdown.
+- [x] Context-window and reserve controls.
+- [x] Connection probe.
+- [x] Ollama diagnostics.
+- [x] Approval log.
+- [x] Modal approval foundation for high-risk UI actions.
+
+Next steps:
+
+- [ ] Move Settings to first-class route.
+- [ ] Add provider profiles.
+- [ ] Add connector credential vault UI.
+- [ ] Add per-workspace policy settings.
+- [ ] Add tool allow/deny list.
+- [ ] Add approval policy levels.
+- [ ] Add shell execution policy.
+- [ ] Add Docker mutation policy.
+- [ ] Add database mutation policy.
+- [ ] Add secret scanner settings.
+- [ ] Add audit export.
+- [ ] Add UI preferences.
+
+Exit criteria:
+
+- [ ] User can understand and control what NexusDesk may read, run, write, and send to models/connectors.
+
+## Phase 13: Testing, Packaging, And Release Readiness
+
+Goal: keep the app stable as the studio scope grows.
+
+Status: first verification loop implemented.
+
+Implemented:
+
+- [x] Go unit tests across backend packages.
+- [x] Frontend production build.
+- [x] Frontend smoke script.
+- [x] Playwright visual smoke with Wails-free mocks.
+- [x] Desktop Wails build.
+- [x] Windows icon generation script.
+- [x] Production build at `app/build/bin/app.exe`.
+
+Next steps:
+
+- [ ] Add behavior tests for main studio routing.
+- [ ] Add behavior tests for IDE tree and git diffs.
+- [ ] Add behavior tests for Data Studio notebooks/connectors.
+- [ ] Add behavior tests for Documents Studio extraction flows.
+- [ ] Add behavior tests for Ops Studio safe actions.
+- [ ] Add backend integration tests with temporary SQLite/Postgres containers.
+- [ ] Add connector contract tests.
+- [ ] Add fixture workspaces.
+- [ ] Add crash/hang regression tests for folder open.
+- [ ] Add release packaging notes.
+- [ ] Add signed build plan.
+- [ ] Add update strategy.
+
+Exit criteria:
+
+- [ ] A release candidate can be built, smoke-tested, and installed predictably.
+
+## Phase 14: Extensibility And Team Future
+
+Goal: support plugins, MCP, shared workspaces, and enterprise controls without weakening local-first safety.
+
+Status: future.
+
+Steps:
+
+- [ ] Add MCP client support.
+- [ ] Add external tool registry.
+- [ ] Add custom tool definitions.
+- [ ] Add plugin manifest model.
+- [ ] Add team/shared workspace model.
+- [ ] Add policy export/import.
+- [ ] Add central model gateway support.
+- [ ] Add audit bundle export.
+- [ ] Add Docker Desktop extension investigation.
+- [ ] Add marketplace-style template packs for reports/dashboards.
+
+Exit criteria:
+
+- [ ] NexusDesk can be extended without giving external tools direct authority over files, shell, Docker, or databases.
+
+## Next Logical Batch
+
+Recommended next batch: Main Menu And IDE Code Studio Foundations.
+
+Steps:
+
+1. Add real studio route state and main menu selection.
+2. Create first-class Code Studio layout.
+3. Convert current navigator into a denser IDE-style tree component.
+4. Add git repository detection and branch/dirty summary.
+5. Add changed-files panel.
+6. Add read-only working tree diff view.
+7. Add visual smoke coverage for Code Studio route, tree, and diff.
+8. Update docs/tracker after implementation.
+
+Reasoning: this addresses the biggest product mismatch right now. The app claims to be an IDE-class studio, but Code Studio still feels like a generic file browser plus editor preview. Git visibility and tree quality will make the app feel materially more serious before deeper connector work begins.
+
+## Directory Ownership Notes
+
+`app/internal/workspace/` owns safe workspace scanning, previews, search, context expansion, dataset queries, freshness, and file operations.
+
+`app/internal/artifact/` owns deterministic artifact writes, provenance sidecars, listing, search, comparison, archive/delete, and scan-report creation.
+
+`app/internal/agent/` owns the backend ReAct runtime, system prompt, action parsing, plan updates, observation handling, and working-memory pruning.
+
+`app/agent_runtime.go` exposes `RunAgent` and maps model-requested tools to workspace-safe handlers.
+
+`app/internal/agenttools/` owns deterministic tool descriptors and tool-run persistence.
+
+`app/internal/appmeta/` owns SQLite metadata schema, migrations, JSON compatibility mirroring, direct metadata writes, metadata browser, metadata search, dataset dependencies, and SQL run history.
+
+`app/internal/analytics/` owns read-only SQL-style dataset querying and DuckDB-compatible execution paths.
+
+`app/internal/dbconnector/` owns workspace database connector surfaces. Today that means read-only SQLite files; future phases add server databases and dump sandboxes.
+
+`app/internal/approval/` owns append-only approval/action records.
+
+`app/internal/storage/` owns local app config such as recent workspaces and non-secret LLM settings. Secret values must stay in credential storage or protected sidecars.
+
+`app/frontend/src/features/shell/NexusDeskShell.tsx` is still the large shell orchestrator. It should be split as studio routes mature.
+
+`app/frontend/src/features/shell/WorkbenchPanel.tsx` currently owns the editor/preview surface.
+
+`app/frontend/src/features/shell/DataOperationsPanel.tsx` currently owns bottom Data tab workflows.
+
+`app/frontend/src/features/shell/ArtifactStudioPanel.tsx` currently owns bottom Artifact Studio workflows.
+
+`app/frontend/src/features/shell/BottomStudioPanel.tsx` currently hosts Settings, Data, Tools, Artifacts, Approvals, and Activity. Long term, several of these should become first-class routes.
+
+`services/` is reserved for development/test services. Runtime workspace state belongs under ignored `.nexusdesk/` folders inside user workspaces, not in this repository.

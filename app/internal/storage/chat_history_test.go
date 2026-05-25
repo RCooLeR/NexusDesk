@@ -23,6 +23,9 @@ func TestChatHistoryStoreAppendsAndListsWorkspaceMessages(t *testing.T) {
 	if messages[0].CreatedAt == "" || messages[1].CreatedAt == "" {
 		t.Fatal("expected timestamps")
 	}
+	if messages[0].CreatedAt == messages[1].CreatedAt {
+		t.Fatalf("expected unique message timestamps, got %q", messages[0].CreatedAt)
+	}
 
 	read, err := store.List(workspace)
 	if err != nil {
@@ -30,6 +33,24 @@ func TestChatHistoryStoreAppendsAndListsWorkspaceMessages(t *testing.T) {
 	}
 	if len(read) != 2 {
 		t.Fatalf("expected persisted messages, got %d", len(read))
+	}
+}
+
+func TestChatHistoryStoreDisambiguatesProvidedPairTimestamps(t *testing.T) {
+	store := NewChatHistoryStore(filepath.Join(t.TempDir(), "chat.json"))
+	workspace := filepath.Join(t.TempDir(), "workspace")
+	createdAt := "2026-05-25T12:00:00Z"
+
+	messages, err := store.AppendPair(
+		workspace,
+		ChatMessage{Content: "Question", CreatedAt: createdAt},
+		ChatMessage{Content: "Answer", CreatedAt: createdAt},
+	)
+	if err != nil {
+		t.Fatalf("AppendPair failed: %v", err)
+	}
+	if messages[0].CreatedAt == messages[1].CreatedAt {
+		t.Fatalf("expected unique timestamps, got %#v", messages)
 	}
 }
 

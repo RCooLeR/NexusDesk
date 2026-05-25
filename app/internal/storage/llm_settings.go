@@ -16,11 +16,13 @@ const RedactedAPIKey = "********"
 const storedAPIKeyReference = "__nexusdesk_os_credential_store__"
 
 type LLMSettings struct {
-	ProviderName string `json:"providerName"`
-	BaseURL      string `json:"baseUrl"`
-	Model        string `json:"model"`
-	APIKey       string `json:"apiKey"`
-	UpdatedAt    string `json:"updatedAt"`
+	ProviderName          string `json:"providerName"`
+	BaseURL               string `json:"baseUrl"`
+	Model                 string `json:"model"`
+	APIKey                string `json:"apiKey"`
+	MaxContextTokens      int    `json:"maxContextTokens"`
+	ResponseReserveTokens int    `json:"responseReserveTokens"`
+	UpdatedAt             string `json:"updatedAt"`
 }
 
 type LLMSettingsStore struct {
@@ -43,10 +45,12 @@ func NewLLMSettingsStore(path string) *LLMSettingsStore {
 
 func DefaultLLMSettings() LLMSettings {
 	return LLMSettings{
-		ProviderName: "Local OpenAI-compatible",
-		BaseURL:      "http://localhost:11434/v1",
-		Model:        "qwen3:8b",
-		APIKey:       "",
+		ProviderName:          "Local OpenAI-compatible",
+		BaseURL:               "http://localhost:11434/v1",
+		Model:                 "qwen3:8b",
+		APIKey:                "",
+		MaxContextTokens:      32768,
+		ResponseReserveTokens: 4096,
 	}
 }
 
@@ -223,6 +227,15 @@ func normalizeLLMSettings(settings LLMSettings) LLMSettings {
 	settings.BaseURL = strings.TrimSpace(settings.BaseURL)
 	settings.Model = strings.TrimSpace(settings.Model)
 	settings.APIKey = strings.TrimSpace(settings.APIKey)
+	if settings.MaxContextTokens <= 0 {
+		settings.MaxContextTokens = 32768
+	}
+	if settings.ResponseReserveTokens <= 0 {
+		settings.ResponseReserveTokens = 4096
+	}
+	if settings.ResponseReserveTokens >= settings.MaxContextTokens {
+		settings.ResponseReserveTokens = settings.MaxContextTokens / 4
+	}
 
 	if settings.ProviderName == "" {
 		settings.ProviderName = "OpenAI-compatible"

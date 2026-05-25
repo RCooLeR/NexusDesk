@@ -10,6 +10,8 @@ const fallbackLLMSettings: LLMSettings = {
     baseUrl: 'http://localhost:11434/v1',
     model: 'qwen3:8b',
     apiKey: '',
+    maxContextTokens: 32768,
+    responseReserveTokens: 4096,
     updatedAt: '',
 };
 
@@ -32,7 +34,7 @@ function App() {
 
         Promise.resolve()
             .then(() => GetLLMSettings())
-            .then(setLLMSettings)
+            .then((settings) => setLLMSettings(normalizeLLMSettings(settings)))
             .catch(() => setLLMSettings(fallbackLLMSettings));
     }, []);
 
@@ -111,6 +113,24 @@ function sanitizeWorkspaceNode(node: unknown): FileNode | null {
         depth,
         meta: typeof candidate.meta === 'string' ? candidate.meta : 'File',
     };
+}
+
+function normalizeLLMSettings(settings: Partial<LLMSettings>): LLMSettings {
+    const maxContextTokens = numericLLMSetting(settings.maxContextTokens, fallbackLLMSettings.maxContextTokens);
+    const responseReserveTokens = numericLLMSetting(settings.responseReserveTokens, fallbackLLMSettings.responseReserveTokens);
+    return {
+        providerName: settings.providerName || fallbackLLMSettings.providerName,
+        baseUrl: settings.baseUrl || fallbackLLMSettings.baseUrl,
+        model: settings.model || fallbackLLMSettings.model,
+        apiKey: settings.apiKey || '',
+        maxContextTokens,
+        responseReserveTokens: responseReserveTokens >= maxContextTokens ? Math.floor(maxContextTokens / 4) : responseReserveTokens,
+        updatedAt: settings.updatedAt || '',
+    };
+}
+
+function numericLLMSetting(value: unknown, fallback: number) {
+    return typeof value === 'number' && Number.isFinite(value) && value > 0 ? value : fallback;
 }
 
 export default App;

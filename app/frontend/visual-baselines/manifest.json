@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-05-14T17:41:07.063Z",
+  "generatedAt": "2026-05-25T13:45:28.717Z",
   "source": "dist/index.html",
   "viewports": [
     "desktop",
@@ -7,8 +7,14 @@
   ],
   "assertions": [
     "navigator-resize",
+    "agent-resize",
+    "bottom-drawer-resize",
     "panel-overflow",
     "tool-run-detail",
+    "settings-tab",
+    "data-tab",
+    "artifacts-tab",
+    "approvals-tab",
     "lineage-export",
     "lineage-filter",
     "lineage-graph",

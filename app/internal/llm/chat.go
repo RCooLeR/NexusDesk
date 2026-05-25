@@ -52,10 +52,12 @@ func (c *Client) ChatStream(ctx context.Context, settings storage.LLMSettings, c
 
 func (c *Client) chat(ctx context.Context, settings storage.LLMSettings, chatRequest ChatRequest, stream bool, onDelta func(string) error) (ChatResult, error) {
 	settings = storage.LLMSettings{
-		ProviderName: strings.TrimSpace(settings.ProviderName),
-		BaseURL:      strings.TrimSpace(settings.BaseURL),
-		Model:        strings.TrimSpace(settings.Model),
-		APIKey:       strings.TrimSpace(settings.APIKey),
+		ProviderName:          strings.TrimSpace(settings.ProviderName),
+		BaseURL:               strings.TrimSpace(settings.BaseURL),
+		Model:                 strings.TrimSpace(settings.Model),
+		APIKey:                strings.TrimSpace(settings.APIKey),
+		MaxContextTokens:      settings.MaxContextTokens,
+		ResponseReserveTokens: settings.ResponseReserveTokens,
 	}
 
 	prompt := strings.TrimSpace(chatRequest.Prompt)
@@ -71,7 +73,7 @@ func (c *Client) chat(ctx context.Context, settings storage.LLMSettings, chatReq
 		return ChatResult{}, err
 	}
 
-	body, err := json.Marshal(chatCompletionRequest{
+	chatBody := chatCompletionRequest{
 		Model: settings.Model,
 		Messages: []chatMessage{
 			{Role: "system", Content: systemPrompt()},
@@ -79,7 +81,12 @@ func (c *Client) chat(ctx context.Context, settings storage.LLMSettings, chatReq
 		},
 		Temperature: 0.2,
 		Stream:      stream,
-	})
+	}
+	if shouldSendOllamaOptions(settings) && settings.MaxContextTokens > 0 {
+		chatBody.Options = map[string]any{"num_ctx": settings.MaxContextTokens}
+	}
+
+	body, err := json.Marshal(chatBody)
 	if err != nil {
 		return ChatResult{}, err
 	}
@@ -249,10 +256,11 @@ func buildUserPrompt(prompt string, chatRequest ChatRequest) string {
 }
 
 type chatCompletionRequest struct {
-	Model       string        `json:"model"`
-	Messages    []chatMessage `json:"messages"`
-	Temperature float64       `json:"temperature"`
-	Stream      bool          `json:"stream,omitempty"`
+	Model       string         `json:"model"`
+	Messages    []chatMessage  `json:"messages"`
+	Temperature float64        `json:"temperature"`
+	Stream      bool           `json:"stream,omitempty"`
+	Options     map[string]any `json:"options,omitempty"`
 }
 
 type chatMessage struct {
@@ -274,4 +282,13 @@ type chatCompletionStreamResponse struct {
 
 type chatStreamChoice struct {
 	Delta chatMessage `json:"delta"`
+}
+
+func shouldSendOllamaOptions(settings storage.LLMSettings) bool {
+	provider := strings.ToLower(settings.ProviderName)
+	baseURL := strings.ToLower(settings.BaseURL)
+	return strings.Contains(provider, "ollama") ||
+		strings.Contains(provider, "local") ||
+		strings.Contains(baseURL, "localhost:11434") ||
+		strings.Contains(baseURL, "127.0.0.1:11434")
 }

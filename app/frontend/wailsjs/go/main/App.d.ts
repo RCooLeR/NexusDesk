@@ -11,6 +11,9 @@ import {main} from '../models';
 import {approval} from '../models';
 import {dataset} from '../models';
 import {dbconnector} from '../models';
+import {agent} from '../models';
+
+export function AgentSystemPrompt():Promise<string>;
 
 export function ApplyFileDelete(arg1:string):Promise<workspace.FileDeleteProposal>;
 
@@ -100,8 +103,6 @@ export function PreviewChatContextPack(arg1:Array<string>):Promise<workspace.Con
 
 export function PreviewDatasetChart(arg1:workspace.DatasetChartRequest):Promise<workspace.DatasetChartResult>;
 
-export function RebuildDatasetDependency(arg1:string):Promise<artifact.MarkdownReport>;
-
 export function PreviewFileDelete(arg1:string):Promise<workspace.FileDeleteProposal>;
 
 export function PreviewFileMove(arg1:workspace.FileMoveRequest):Promise<workspace.FileMoveProposal>;
@@ -118,11 +119,15 @@ export function QueryWorkspaceSQLite(arg1:dbconnector.SQLiteQueryRequest):Promis
 
 export function ReadWorkspaceFile(arg1:string):Promise<workspace.FilePreview>;
 
+export function RebuildDatasetDependency(arg1:string):Promise<artifact.MarkdownReport>;
+
 export function RefreshStaleContext(arg1:Array<string>):Promise<main.StaleContextRefresh>;
 
 export function RefreshWorkspace():Promise<main.WorkspaceOpenResult>;
 
 export function RemoveRecentWorkspace(arg1:string):Promise<Array<storage.RecentWorkspace>>;
+
+export function RunAgent(arg1:agent.RunRequest):Promise<agent.RunResult>;
 
 export function SaveDatasetQuery(arg1:string,arg2:string,arg3:string):Promise<dataset.SavedQuery>;
 

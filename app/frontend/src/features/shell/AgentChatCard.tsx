@@ -1,6 +1,18 @@
+import {useState} from 'react';
 import {Button, Card} from '../../components/ui';
 import type {ChatMessage, ContextPreview} from '../../types';
 import {ChatMessageContent} from './ChatMessageContent';
+
+const chatModelOptions = [
+    {id: 'qwen3:4b-instruct', label: 'Qwen3 4B'},
+    {id: 'qwen3:8b', label: 'Qwen3 8B'},
+    {id: 'qwen3.5:9b', label: 'Qwen3.5 9B'},
+    {id: 'phi4:14b', label: 'Phi-4 14B'},
+    {id: 'phi4-reasoning:14b', label: 'Phi-4 Reasoning'},
+    {id: 'gpt-oss:20b', label: 'GPT-OSS 20B'},
+    {id: 'mistral-small3.2:latest', label: 'Mistral Small'},
+    {id: 'gemma4:26b', label: 'Gemma 4 26B'},
+];
 
 type AgentChatCardProps = {
     chatMessages: ChatMessage[];
@@ -8,6 +20,7 @@ type AgentChatCardProps = {
     chatStatus: string;
     contextPackPreview: ContextPreview | null;
     contextPackPaths: string[];
+    currentModel: string;
     staleSourcePaths: string[];
     canSaveLatestAssistantArtifact: boolean;
     isSavingChatArtifact: boolean;
@@ -15,7 +28,9 @@ type AgentChatCardProps = {
     onChatPromptChange: (value: string) => void;
     onClearChatHistory: () => void;
     onClearContextPack: () => void;
+    onModelChange: (model: string) => void;
     onRemoveContextPath: (relPath: string) => void;
+    onRunAgent: () => void;
     onSaveLatestAssistantArtifact: () => void;
     onSendPrompt: () => void;
 };
@@ -26,6 +41,7 @@ export function AgentChatCard({
     chatStatus,
     contextPackPreview,
     contextPackPaths,
+    currentModel,
     staleSourcePaths,
     canSaveLatestAssistantArtifact,
     isSavingChatArtifact,
@@ -33,10 +49,24 @@ export function AgentChatCard({
     onChatPromptChange,
     onClearChatHistory,
     onClearContextPack,
+    onModelChange,
     onRemoveContextPath,
+    onRunAgent,
     onSaveLatestAssistantArtifact,
     onSendPrompt,
 }: AgentChatCardProps) {
+    const [submitMode, setSubmitMode] = useState<'ask' | 'agent'>('ask');
+    const modelOptions = currentModel && !chatModelOptions.some((option) => option.id === currentModel)
+        ? [{id: currentModel, label: currentModel}, ...chatModelOptions]
+        : chatModelOptions;
+    const submit = () => {
+        if (submitMode === 'agent') {
+            onRunAgent();
+            return;
+        }
+        onSendPrompt();
+    };
+
     return (
         <Card className="chat-card">
             <div className="chat-card-header">
@@ -113,21 +143,34 @@ export function AgentChatCard({
                 </div>
             )}
             <div className="prompt-box">
-                <textarea
-                    aria-label="Ask about the workspace"
-                    onChange={(event) => onChatPromptChange(event.target.value)}
-                    onKeyDown={(event) => {
-                        if (event.key === 'Enter' && (event.ctrlKey || event.metaKey)) {
-                            onSendPrompt();
-                        }
-                    }}
-                    placeholder="Ask about the workspace..."
-                    rows={4}
-                    value={chatPrompt}
-                />
-                <Button disabled={isSendingPrompt} onClick={onSendPrompt} title="Send prompt" variant="primary">
-                    {isSendingPrompt ? 'Sending...' : 'Send'}
-                </Button>
+                <div className="composer-shell">
+                    <textarea
+                        aria-label="Ask about the workspace"
+                        onChange={(event) => onChatPromptChange(event.target.value)}
+                        onKeyDown={(event) => {
+                            if (event.key === 'Enter' && (event.ctrlKey || event.metaKey)) {
+                                submit();
+                            }
+                        }}
+                        placeholder="Message NexusDesk"
+                        rows={5}
+                        value={chatPrompt}
+                    />
+                    <div className="composer-controls">
+                        <select aria-label="Chat model" value={currentModel} onChange={(event) => onModelChange(event.target.value)}>
+                            {modelOptions.map((option) => (
+                                <option key={option.id} value={option.id}>{option.label}</option>
+                            ))}
+                        </select>
+                        <select aria-label="Submit mode" value={submitMode} onChange={(event) => setSubmitMode(event.target.value === 'agent' ? 'agent' : 'ask')}>
+                            <option value="ask">Ask</option>
+                            <option value="agent">Agent</option>
+                        </select>
+                        <button className="composer-submit" disabled={isSendingPrompt || !chatPrompt.trim()} onClick={submit} title={submitMode === 'agent' ? 'Run agent' : 'Send prompt'} type="button">
+                            {isSendingPrompt ? '...' : String.fromCharCode(8593)}
+                        </button>
+                    </div>
+                </div>
             </div>
         </Card>
     );

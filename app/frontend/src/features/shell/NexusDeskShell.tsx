@@ -59,6 +59,7 @@ import {
     SaveDatasetSQLQuery,
     SearchMetadata,
     SearchWorkspace,
+    RunAgent,
     SelectWorkspace,
     TestLLMConnection,
 } from '../../../wailsjs/go/main/App';
@@ -104,6 +105,7 @@ import type {
 } from '../../types';
 import {AgentPanel} from './AgentPanel';
 import {ApprovalRequestModal, type ApprovalPrompt} from './ApprovalRequestModal';
+import {BottomStudioPanel, type BottomStudioTab} from './BottomStudioPanel';
 import {CommandPalette, type CommandAction} from './CommandPalette';
 import {QuickOpenPalette} from './QuickOpenPalette';
 import {WorkbenchPanel} from './WorkbenchPanel';
@@ -141,6 +143,10 @@ type AssistantArtifactWriteRequest = {
 const chatStreamEventName = 'nexusdesk:chat-stream';
 const navigatorMinWidth = 220;
 const navigatorMaxWidth = 460;
+const agentMinWidth = 360;
+const agentDefaultWidth = 480;
+const bottomMinHeight = 150;
+const bottomDefaultHeight = 300;
 const railWidth = 56;
 
 export function NexusDeskShell({
@@ -233,6 +239,9 @@ export function NexusDeskShell({
     const [fileDrafts, setFileDrafts] = useState<Record<string, string>>({});
     const [writeProposals, setWriteProposals] = useState<Record<string, FileWriteProposal>>({});
     const [navigatorWidth, setNavigatorWidth] = useState(280);
+    const [agentWidth, setAgentWidth] = useState(agentDefaultWidth);
+    const [bottomPanelHeight, setBottomPanelHeight] = useState(bottomDefaultHeight);
+    const [activeBottomTab, setActiveBottomTab] = useState<BottomStudioTab>('settings');
     const [isQuickOpenOpen, setIsQuickOpenOpen] = useState(false);
     const [quickOpenQuery, setQuickOpenQuery] = useState('');
     const [isCommandPaletteOpen, setIsCommandPaletteOpen] = useState(false);
@@ -1686,21 +1695,24 @@ export function NexusDeskShell({
     function updateSettingsDraft(field: keyof LLMSettings, value: string) {
         setSettingsDraft((current) => ({
             ...current,
-            [field]: value,
+            [field]: field === 'maxContextTokens' || field === 'responseReserveTokens'
+                ? Number.parseInt(value, 10) || 0
+                : value,
         }));
     }
 
-    async function saveLLMSettings() {
+    async function saveLLMSettings(nextSettings: LLMSettings = settingsDraft) {
         setIsSavingSettings(true);
         setSettingsStatus('Saving LLM settings...');
 
         try {
-            const saved = await SaveLLMSettings(settingsDraft);
-            onLLMSettingsChange(saved);
-            setSettingsDraft(saved);
+            const saved = await SaveLLMSettings(nextSettings);
+            const normalized = normalizeLLMSettings(saved as Partial<LLMSettings>, nextSettings);
+            onLLMSettingsChange(normalized);
+            setSettingsDraft(normalized);
             setProbeResult(null);
             setSettingsStatus('LLM settings saved locally.');
-            pushToolEvent('LLM settings saved', saved.model || saved.baseUrl);
+            pushToolEvent('LLM settings saved', normalized.model || normalized.baseUrl);
         } catch (error) {
             const message = error instanceof Error ? error.message : '';
             if (message.includes('undefined') || message.includes('window')) {
@@ -1711,6 +1723,12 @@ export function NexusDeskShell({
         } finally {
             setIsSavingSettings(false);
         }
+    }
+
+    function changeChatModel(model: string) {
+        const next = normalizeLLMSettings({model}, settingsDraft);
+        setSettingsDraft(next);
+        void saveLLMSettings(next);
     }
 
     async function testLLMConnection() {
@@ -1742,6 +1760,47 @@ export function NexusDeskShell({
 
     async function sendPrompt() {
         await sendPromptText(chatPrompt, {clearComposer: true});
+    }
+
+    async function runAgentPrompt() {
+        if (!workspace) {
+            setChatStatus('Open a workspace before running the agent.');
+            return;
+        }
+
+        const prompt = chatPrompt.trim();
+        if (!prompt) {
+            setChatStatus('Write a prompt before running the agent.');
+            return;
+        }
+
+        const [userCreatedAt, assistantCreatedAt] = createChatPairTimestamps();
+        const userMessage: ChatMessage = {content: prompt, contextRelPath: 'agent', sourcePaths: [], createdAt: userCreatedAt, role: 'user'};
+        const assistantMessage: ChatMessage = {content: '', contextRelPath: 'agent', sourcePaths: [], createdAt: assistantCreatedAt, role: 'assistant'};
+
+        setIsSendingPrompt(true);
+        setChatPrompt('');
+        setChatStatus('Agent running bounded workspace loop...');
+        setChatMessages((current) => [...current, userMessage, assistantMessage]);
+
+        try {
+            const result = await RunAgent({
+                prompt,
+                maxIterations: 6,
+                approveHighImpact: false,
+                allowShellCommands: false,
+            });
+            replaceChatMessage(assistantMessage.createdAt, formatAgentRunResult(result), 'agent', agentRunSourcePaths(result));
+            await refreshAgentToolRuns();
+            setChatStatus(`Agent completed ${result.iterations} iteration${result.iterations === 1 ? '' : 's'}.`);
+            pushToolEvent('Agent completed', `${result.toolCalls.length} tool calls`);
+        } catch (error) {
+            const message = error instanceof Error ? error.message : '';
+            replaceChatMessage(assistantMessage.createdAt, message || 'Agent run failed.', 'agent', []);
+            setChatStatus(message || 'Agent run failed.');
+        } finally {
+            setIsSendingPrompt(false);
+        }
     }
 
     async function explainSelectedContext() {
@@ -1797,8 +1856,9 @@ export function NexusDeskShell({
             ? contextPackPreview.files.map((file) => file.relPath)
             : sourcePathsFromContext(contextRelPath);
         const requestId = createRequestId();
-        const userMessage: ChatMessage = {content: prompt, contextRelPath, sourcePaths, createdAt: new Date().toISOString(), role: 'user'};
-        const assistantMessage: ChatMessage = {content: '', contextRelPath, sourcePaths, createdAt: new Date().toISOString(), role: 'assistant'};
+        const [userCreatedAt, assistantCreatedAt] = createChatPairTimestamps();
+        const userMessage: ChatMessage = {content: prompt, contextRelPath, sourcePaths, createdAt: userCreatedAt, role: 'user'};
+        const assistantMessage: ChatMessage = {content: '', contextRelPath, sourcePaths, createdAt: assistantCreatedAt, role: 'assistant'};
 
         setIsSendingPrompt(true);
         setChatStatus(contextRelPath ? `Streaming with ${contextRelPath} as context...` : 'Streaming without selected file context...');
@@ -2805,8 +2865,57 @@ export function NexusDeskShell({
         window.addEventListener('mouseup', stopResize);
     }
 
+    function startAgentResize(event: ReactMouseEvent<HTMLDivElement>) {
+        event.preventDefault();
+
+        function resize(moveEvent: MouseEvent) {
+            const maxWidth = Math.max(agentMinWidth, Math.floor(window.innerWidth * 0.5));
+            setAgentWidth(clamp(window.innerWidth - moveEvent.clientX, agentMinWidth, maxWidth));
+        }
+
+        function stopResize() {
+            document.body.style.cursor = '';
+            document.body.style.userSelect = '';
+            window.removeEventListener('mousemove', resize);
+            window.removeEventListener('mouseup', stopResize);
+        }
+
+        document.body.style.cursor = 'col-resize';
+        document.body.style.userSelect = 'none';
+        window.addEventListener('mousemove', resize);
+        window.addEventListener('mouseup', stopResize);
+    }
+
+    function startBottomResize(event: ReactMouseEvent<HTMLDivElement>) {
+        event.preventDefault();
+
+        function resize(moveEvent: MouseEvent) {
+            const maxHeight = Math.max(bottomMinHeight, Math.floor(window.innerHeight * 0.7));
+            setBottomPanelHeight(clamp(window.innerHeight - moveEvent.clientY, bottomMinHeight, maxHeight));
+        }
+
+        function stopResize() {
+            document.body.style.cursor = '';
+            document.body.style.userSelect = '';
+            window.removeEventListener('mousemove', resize);
+            window.removeEventListener('mouseup', stopResize);
+        }
+
+        document.body.style.cursor = 'row-resize';
+        document.body.style.userSelect = 'none';
+        window.addEventListener('mousemove', resize);
+        window.addEventListener('mouseup', stopResize);
+    }
+
     return (
-        <div className="app-shell" style={{'--navigator-width': `${navigatorWidth}px`} as CSSProperties}>
+        <div
+            className="app-shell"
+            style={{
+                '--navigator-width': `${navigatorWidth}px`,
+                '--agent-width': `${agentWidth}px`,
+                '--bottom-panel-height': `${bottomPanelHeight}px`,
+            } as CSSProperties}
+        >
             <WorkspaceRail />
             <QuickOpenPalette
                 activeFile={activeFile}
@@ -2874,35 +2983,6 @@ export function NexusDeskShell({
 
             <WorkbenchPanel
                 activeFile={activeFile}
-                artifacts={artifacts}
-                artifactMetadata={artifactMetadata}
-                approvalRecords={approvalRecords}
-                capabilities={state.capabilities}
-                datasetProfiles={datasetProfiles}
-                datasetDependencies={datasetDependencies}
-                rebuildingDatasetDependencyId={rebuildingDatasetDependencyId}
-                datasetSQLRuns={datasetSQLRuns}
-                datasetQuery={datasetQuery}
-                datasetQueryLabel={datasetQueryLabel}
-                datasetQueryResult={datasetQueryResult}
-                datasetSQLQuery={datasetSQLQuery}
-                datasetSQLQueryLabel={datasetSQLQueryLabel}
-                datasetSQLQueryResult={datasetSQLQueryResult}
-                metadataBrowser={metadataBrowser}
-                metadataSearchQuery={metadataSearchQuery}
-                metadataSearchResults={metadataSearchResults}
-                savedDatasetQueries={savedDatasetQueries}
-                savedDatasetSQLQueries={savedDatasetSQLQueries}
-                artifactComparison={artifactComparison}
-                artifactLineage={artifactLineage}
-                sqliteStatus={sqliteStatus}
-                sqliteConnectorQuery={sqliteConnectorQuery}
-                sqliteConnectorResult={sqliteConnectorResult}
-                workspaceFreshness={workspaceFreshness}
-                datasetChartPreview={datasetChartPreview}
-                datasetChartCategory={datasetChartCategory}
-                datasetChartType={datasetChartType}
-                datasetChartValue={datasetChartValue}
                 activeDatasetProfile={activeDatasetProfile}
                 fileDraft={fileDraft}
                 filePreview={filePreview}
@@ -2910,22 +2990,6 @@ export function NexusDeskShell({
                 isCreatingReport={isCreatingReport}
                 isDeletingFile={isDeletingFile}
                 isMovingFile={isMovingFile}
-                isProfilingDataset={isProfilingDataset}
-                isQueryingDataset={isQueryingDataset}
-                isQueryingDatasetSQL={isQueryingDatasetSQL}
-                isExportingDatasetSQL={isExportingDatasetSQL}
-                isSavingDatasetQuery={isSavingDatasetQuery}
-                isSavingDatasetSQLQuery={isSavingDatasetSQLQuery}
-                isRefreshingStaleContext={isRefreshingStaleContext}
-                isPreparingMetadataStore={isPreparingMetadataStore}
-                isSearchingMetadata={isSearchingMetadata}
-                isQueryingSQLiteConnector={isQueryingSQLiteConnector}
-                isPreviewingDatasetChart={isPreviewingDatasetChart}
-                isCreatingDatasetChart={isCreatingDatasetChart}
-                isCreatingDatasetSummary={isCreatingDatasetSummary}
-                isExportingDatasetQuery={isExportingDatasetQuery}
-                isArchivingArtifact={isArchivingArtifact}
-                isDeletingArtifact={isDeletingArtifact}
                 isSummarizingContext={isSummarizingContext}
                 isEditingFile={isEditingFile}
                 isApplyingWrite={isApplyingWrite}
@@ -2935,13 +2999,112 @@ export function NexusDeskShell({
                 onApplyFileWrite={() => void applyFileWrite()}
                 onCancelFileEdit={clearFileWriteDraft}
                 onCreateReport={() => void createMarkdownReport()}
-                onDatasetQueryChange={setDatasetQuery}
-                onDatasetSQLQueryChange={setDatasetSQLQuery}
-                onSQLiteConnectorQueryChange={setSQLiteConnectorQuery}
-                onDatasetQueryLabelChange={setDatasetQueryLabel}
-                onDatasetSQLQueryLabelChange={setDatasetSQLQueryLabel}
-                onSaveDatasetQuery={() => void saveCurrentDatasetQuery()}
-                onSaveDatasetSQLQuery={() => void saveCurrentDatasetSQLQuery()}
+                onDeleteFile={() => void deleteActiveFile()}
+                onMoveFile={() => void moveActiveFile()}
+                onFileDraftChange={updateFileDraft}
+                onExplainContext={() => void explainSelectedContext()}
+                onSummarizeContext={() => void summarizeSelectedContext()}
+                onPinContext={pinSelectedContext}
+                onPinProjectContext={pinProjectContext}
+                onPreviewFileWrite={() => void previewFileWrite()}
+                onCloseTab={closeOpenTab}
+                onSelectTab={selectOpenTab}
+                onStartFileEdit={startFileEdit}
+                onRefreshPreview={() => void refreshSelectedPreview()}
+                openTabs={openTabs}
+                selectedMeta={selectedMeta}
+                writeProposal={writeProposal}
+                workspace={workspace}
+            />
+
+            <div
+                aria-label="Resize assistant output"
+                className="agent-resizer"
+                onMouseDown={startAgentResize}
+                role="separator"
+            />
+
+            <AgentPanel
+                chatMessages={chatMessages}
+                chatPrompt={chatPrompt}
+                chatStatus={chatStatus}
+                contextPackPreview={contextPackPreview}
+                contextPackPaths={contextPackPaths}
+                currentModel={settingsDraft.model}
+                staleSourcePaths={staleSourcePaths(chatMessages, contextPackPreview, workspaceFreshness)}
+                canSaveLatestAssistantArtifact={canSaveLatestAssistantArtifact}
+                isSavingChatArtifact={isSavingChatArtifact}
+                isSendingPrompt={isSendingPrompt}
+                onChatPromptChange={setChatPrompt}
+                onClearChatHistory={() => void clearChatHistory()}
+                onClearContextPack={() => setContextPackPaths([])}
+                onModelChange={changeChatModel}
+                onRemoveContextPath={removeContextPath}
+                onRunAgent={() => void runAgentPrompt()}
+                onSaveLatestAssistantArtifact={() => void saveLatestAssistantArtifact()}
+                onSendPrompt={() => void sendPrompt()}
+                tagline={state.tagline}
+            />
+
+            <div
+                aria-label="Resize studio drawer"
+                className="bottom-panel-resizer"
+                onMouseDown={startBottomResize}
+                role="separator"
+            />
+            <BottomStudioPanel
+                activeTab={activeBottomTab}
+                agentTools={agentTools}
+                agentToolPlan={agentToolPlan}
+                agentToolRuns={agentToolRuns}
+                approvalRecords={approvalRecords}
+                artifacts={artifacts}
+                artifactComparison={artifactComparison}
+                artifactLineage={artifactLineage}
+                artifactMetadata={artifactMetadata}
+                activeDatasetProfile={activeDatasetProfile}
+                capabilities={state.capabilities}
+                datasetProfiles={datasetProfiles}
+                datasetDependencies={datasetDependencies}
+                datasetSQLRuns={datasetSQLRuns}
+                datasetChartCategory={datasetChartCategory}
+                datasetChartPreview={datasetChartPreview}
+                datasetChartType={datasetChartType}
+                datasetChartValue={datasetChartValue}
+                datasetQuery={datasetQuery}
+                datasetQueryLabel={datasetQueryLabel}
+                datasetQueryResult={datasetQueryResult}
+                datasetSQLQuery={datasetSQLQuery}
+                datasetSQLQueryLabel={datasetSQLQueryLabel}
+                datasetSQLQueryResult={datasetSQLQueryResult}
+                filePreview={filePreview}
+                isArchivingArtifact={isArchivingArtifact}
+                isCreatingDatasetChart={isCreatingDatasetChart}
+                isCreatingDatasetSummary={isCreatingDatasetSummary}
+                isDeletingArtifact={isDeletingArtifact}
+                isExportingDatasetQuery={isExportingDatasetQuery}
+                isExportingDatasetSQL={isExportingDatasetSQL}
+                isPreparingMetadataStore={isPreparingMetadataStore}
+                isProfilingDataset={isProfilingDataset}
+                isPreviewingDatasetChart={isPreviewingDatasetChart}
+                isQueryingDataset={isQueryingDataset}
+                isQueryingDatasetSQL={isQueryingDatasetSQL}
+                isQueryingSQLiteConnector={isQueryingSQLiteConnector}
+                isRefreshingStaleContext={isRefreshingStaleContext}
+                isRunningAgentTool={isRunningAgentTool}
+                isSavingDatasetQuery={isSavingDatasetQuery}
+                isSavingDatasetSQLQuery={isSavingDatasetSQLQuery}
+                isSavingSettings={isSavingSettings}
+                isSearchingMetadata={isSearchingMetadata}
+                isTestingConnection={isTestingConnection}
+                metadataBrowser={metadataBrowser}
+                metadataSearchQuery={metadataSearchQuery}
+                metadataSearchResults={metadataSearchResults}
+                onArchiveArtifact={() => void archiveActiveArtifact()}
+                onCompareAgentToolRunTarget={(run) => void compareAgentToolRunTarget(run)}
+                onCompareArtifact={() => void compareActiveArtifactWithPrevious()}
+                onCreateDatasetChart={() => void createDatasetChart()}
+                onCreateDatasetSummary={() => void createDatasetSummary()}
                 onDatasetChartCategoryChange={(value) => {
                     setDatasetChartCategory(value);
                     setDatasetChartPreview(null);
@@ -2954,82 +3117,52 @@ export function NexusDeskShell({
                     setDatasetChartValue(value);
                     setDatasetChartPreview(null);
                 }}
-                onDeleteFile={() => void deleteActiveFile()}
-                onMoveFile={() => void moveActiveFile()}
-                onFileDraftChange={updateFileDraft}
-                onExplainContext={() => void explainSelectedContext()}
-                onSummarizeContext={() => void summarizeSelectedContext()}
-                onPinContext={pinSelectedContext}
-                onPinProjectContext={pinProjectContext}
-                onPreviewFileWrite={() => void previewFileWrite()}
-                onProfileDataset={() => void profileSelectedDataset()}
-                onQueryDataset={() => void querySelectedDataset()}
-                onQueryDatasetSQL={() => void querySelectedDatasetSQL()}
-                onExportDatasetSQL={() => void exportDatasetSQL()}
-                onPreviewDatasetChart={() => void previewDatasetChart()}
-                onCreateDatasetChart={() => void createDatasetChart()}
-                onCreateDatasetSummary={() => void createDatasetSummary()}
-                onExportDatasetQuery={() => void exportDatasetQuery()}
-                onRebuildDatasetDependency={(dependencyId) => void rebuildDatasetDependency(dependencyId)}
-                onArchiveArtifact={() => void archiveActiveArtifact()}
-                onCompareArtifact={() => void compareActiveArtifactWithPrevious()}
-                onCloseTab={closeOpenTab}
+                onDatasetQueryChange={setDatasetQuery}
+                onDatasetQueryLabelChange={setDatasetQueryLabel}
+                onDatasetSQLQueryChange={setDatasetSQLQuery}
+                onDatasetSQLQueryLabelChange={setDatasetSQLQueryLabel}
                 onDeleteArtifact={() => void deleteActiveArtifact()}
-                onOpenArtifactSource={() => void openArtifactSource()}
-                onRefreshLineage={() => void loadArtifactLineage()}
-                onExportLineage={() => void exportArtifactLineage()}
-                onRefreshStaleContext={() => void refreshStaleContextFromWorkspace()}
-                onOpenLineageSource={(relPath) => void openLineageSource(relPath)}
-                onInspectMetadata={() => void inspectMetadataStore()}
-                onMetadataSearchQueryChange={setMetadataSearchQuery}
-                onSearchMetadata={() => void searchMetadataHistory()}
-                onQuerySQLiteConnector={() => void queryActiveSQLiteFile()}
-                onPrepareMetadataStore={() => void prepareSQLiteMetadataStore()}
-                onSelectTab={selectOpenTab}
-                onSelectArtifact={(artifact) => void selectArtifact(artifact)}
-                onStartFileEdit={startFileEdit}
-                onRefreshPreview={() => void refreshSelectedPreview()}
-                openTabs={openTabs}
-                selectedMeta={selectedMeta}
-                writeProposal={writeProposal}
-                workspace={workspace}
-            />
-
-            <AgentPanel
-                chatMessages={chatMessages}
-                chatPrompt={chatPrompt}
-                chatStatus={chatStatus}
-                contextPackPreview={contextPackPreview}
-                contextPackPaths={contextPackPaths}
-                staleSourcePaths={staleSourcePaths(chatMessages, contextPackPreview, workspaceFreshness)}
-                agentTools={agentTools}
-                agentToolPlan={agentToolPlan}
-                agentToolRuns={agentToolRuns}
-                canSaveLatestAssistantArtifact={canSaveLatestAssistantArtifact}
-                isSavingSettings={isSavingSettings}
-                isSavingChatArtifact={isSavingChatArtifact}
-                isSendingPrompt={isSendingPrompt}
-                isTestingConnection={isTestingConnection}
-                isRunningAgentTool={isRunningAgentTool}
-                onChatPromptChange={setChatPrompt}
-                onClearChatHistory={() => void clearChatHistory()}
-                onClearContextPack={() => setContextPackPaths([])}
                 onDryRunAgentTool={(item) => void dryRunAgentTool(item)}
                 onExecuteAgentTool={(item) => void executeAgentTool(item)}
-                onReplayAgentToolRun={(run) => void replayAgentToolRun(run)}
-                onCompareAgentToolRunTarget={(run) => void compareAgentToolRunTarget(run)}
+                onExportDatasetQuery={() => void exportDatasetQuery()}
+                onExportDatasetSQL={() => void exportDatasetSQL()}
+                onExportLineage={() => void exportArtifactLineage()}
+                onInspectMetadata={() => void inspectMetadataStore()}
+                onMetadataSearchQueryChange={setMetadataSearchQuery}
+                onOpenArtifactSource={() => void openArtifactSource()}
+                onOpenLineageSource={(relPath) => void openLineageSource(relPath)}
+                onPrepareMetadataStore={() => void prepareSQLiteMetadataStore()}
+                onProfileDataset={() => void profileSelectedDataset()}
+                onPreviewDatasetChart={() => void previewDatasetChart()}
+                onQueryDataset={() => void querySelectedDataset()}
+                onQueryDatasetSQL={() => void querySelectedDatasetSQL()}
+                onQuerySQLiteConnector={() => void queryActiveSQLiteFile()}
+                onRebuildDatasetDependency={(dependencyId) => void rebuildDatasetDependency(dependencyId)}
                 onRefreshAgentPlan={() => void refreshAgentTools()}
-                onRemoveContextPath={removeContextPath}
-                onSaveLatestAssistantArtifact={() => void saveLatestAssistantArtifact()}
+                onRefreshLineage={() => void loadArtifactLineage()}
+                onRefreshStaleContext={() => void refreshStaleContextFromWorkspace()}
+                onReplayAgentToolRun={(run) => void replayAgentToolRun(run)}
+                onSaveDatasetQuery={() => void saveCurrentDatasetQuery()}
+                onSaveDatasetSQLQuery={() => void saveCurrentDatasetSQLQuery()}
                 onSaveSettings={() => void saveLLMSettings()}
-                onSendPrompt={() => void sendPrompt()}
+                onSelectArtifact={(artifact) => void selectArtifact(artifact)}
                 onSettingsDraftChange={updateSettingsDraft}
+                onSearchMetadata={() => void searchMetadataHistory()}
+                onSQLiteConnectorQueryChange={setSQLiteConnectorQuery}
+                onTabChange={setActiveBottomTab}
                 onTestConnection={() => void testLLMConnection()}
                 probeResult={probeResult}
+                rebuildingDatasetDependencyId={rebuildingDatasetDependencyId}
+                savedDatasetQueries={savedDatasetQueries}
+                savedDatasetSQLQueries={savedDatasetSQLQueries}
                 settingsDraft={settingsDraft}
                 settingsStatus={settingsStatus}
-                tagline={state.tagline}
+                sqliteConnectorQuery={sqliteConnectorQuery}
+                sqliteConnectorResult={sqliteConnectorResult}
+                sqliteStatus={sqliteStatus}
                 toolEvents={localToolEvents}
+                workspace={workspace}
+                workspaceFreshness={workspaceFreshness}
             />
         </div>
     );
@@ -3223,6 +3356,29 @@ function findLatestAssistantIndex(messages: ChatMessage[]) {
     return -1;
 }
 
+function createChatPairTimestamps() {
+    const now = Date.now();
+    return [new Date(now).toISOString(), new Date(now + 1).toISOString()];
+}
+
+function normalizeLLMSettings(settings: Partial<LLMSettings>, fallback: LLMSettings): LLMSettings {
+    const maxContextTokens = numericLLMSetting(settings.maxContextTokens, fallback.maxContextTokens);
+    const responseReserveTokens = numericLLMSetting(settings.responseReserveTokens, fallback.responseReserveTokens);
+    return {
+        providerName: settings.providerName || fallback.providerName,
+        baseUrl: settings.baseUrl || fallback.baseUrl,
+        model: settings.model || fallback.model,
+        apiKey: settings.apiKey ?? fallback.apiKey,
+        maxContextTokens,
+        responseReserveTokens: responseReserveTokens >= maxContextTokens ? Math.floor(maxContextTokens / 4) : responseReserveTokens,
+        updatedAt: settings.updatedAt || fallback.updatedAt,
+    };
+}
+
+function numericLLMSetting(value: unknown, fallback: number) {
+    return typeof value === 'number' && Number.isFinite(value) && value > 0 ? value : fallback;
+}
+
 function sourcePathsFromContext(contextRelPath: string) {
     if (!contextRelPath) {
         return [];
@@ -3239,6 +3395,56 @@ function sourcePathsFromContext(contextRelPath: string) {
         return [dirMatch[1]];
     }
     return [contextRelPath];
+}
+
+type AgentRunResultView = {
+    message: string;
+    plan?: Array<{step: string; status: string}>;
+    toolCalls?: Array<{name: string; arguments?: Record<string, string>; observation: string; error: string; risk: string}>;
+    iterations: number;
+    truncated: boolean;
+};
+
+function formatAgentRunResult(result: AgentRunResultView) {
+    const sections = [`${result.message}`.trim()];
+    if (result.plan && result.plan.length > 0) {
+        sections.push([
+            'Plan:',
+            ...result.plan.map((step) => `- ${step.status}: ${step.step}`),
+        ].join('\n'));
+    }
+    if (result.toolCalls && result.toolCalls.length > 0) {
+        sections.push([
+            'Tool calls:',
+            ...result.toolCalls.map((call, index) => {
+                const status = call.error ? `error: ${call.error}` : truncateInline(call.observation || 'completed', 180);
+                return `- ${index + 1}. ${call.name} (${call.risk || 'low'}): ${status}`;
+            }),
+        ].join('\n'));
+    }
+    if (result.truncated) {
+        sections.push('Some agent observations were truncated for context safety.');
+    }
+    return sections.filter(Boolean).join('\n\n');
+}
+
+function agentRunSourcePaths(result: AgentRunResultView) {
+    const paths = new Set<string>();
+    for (const call of result.toolCalls ?? []) {
+        const relPath = call.arguments?.relPath || call.arguments?.path || call.arguments?.sourcePath;
+        if (relPath) {
+            paths.add(relPath);
+        }
+    }
+    return Array.from(paths);
+}
+
+function truncateInline(value: string, maxLength: number) {
+    const normalized = value.replace(/\s+/g, ' ').trim();
+    if (normalized.length <= maxLength) {
+        return normalized;
+    }
+    return `${normalized.slice(0, maxLength - 3)}...`;
 }
 
 function buildAgentToolPlan(

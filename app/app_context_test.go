@@ -107,6 +107,36 @@ func TestPrepareChatBuildsProjectContextPack(t *testing.T) {
 	}
 }
 
+func TestPrepareChatUsesConfiguredContextWindowBudget(t *testing.T) {
+	root := t.TempDir()
+	largeContent := strings.Repeat("a", 110*1024) + "\nTAIL-MARKER\n"
+	writeAppTestFile(t, root, "large.md", largeContent)
+
+	settingsPath := filepath.Join(t.TempDir(), "llm-settings.json")
+	store := storage.NewLLMSettingsStore(settingsPath)
+	if _, err := store.Save(storage.LLMSettings{
+		ProviderName:          "Local OpenAI-compatible",
+		BaseURL:               "http://localhost:11434/v1",
+		Model:                 "qwen3:8b",
+		MaxContextTokens:      65536,
+		ResponseReserveTokens: 4096,
+	}); err != nil {
+		t.Fatalf("Save settings failed: %v", err)
+	}
+
+	app := NewApp()
+	app.llmStore = store
+	app.setWorkspaceRoot(root)
+
+	request, _, err := app.prepareChat("use the full context", []string{"large.md"})
+	if err != nil {
+		t.Fatalf("prepareChat returned error: %v", err)
+	}
+	if !strings.Contains(request.ContextContent, "TAIL-MARKER") {
+		t.Fatalf("expected configured context budget to include tail marker, got %d bytes", len(request.ContextContent))
+	}
+}
+
 func TestTruncateContextStringKeepsUTF8Valid(t *testing.T) {
 	content := "prefix " + string('\u03C0')
 	truncated := truncateContextString(content, len("prefix \u03C0")+1)

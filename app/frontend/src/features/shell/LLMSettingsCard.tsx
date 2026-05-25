@@ -75,6 +75,31 @@ export function LLMSettingsCard({
                         type="password"
                     />
                 </label>
+                <div className="settings-number-grid">
+                    <label>
+                        <span>Context window</span>
+                        <input
+                            min={4096}
+                            step={1024}
+                            type="number"
+                            value={settingsDraft.maxContextTokens}
+                            onChange={updateField('maxContextTokens')}
+                        />
+                    </label>
+                    <label>
+                        <span>Response reserve</span>
+                        <input
+                            min={512}
+                            step={512}
+                            type="number"
+                            value={settingsDraft.responseReserveTokens}
+                            onChange={updateField('responseReserveTokens')}
+                        />
+                    </label>
+                </div>
+                <small className="settings-help-text">
+                    NexusDesk uses the remaining window for selected files and context packs, and sends num_ctx to local Ollama-compatible runners.
+                </small>
                 <div className="settings-actions">
                     <small>{settingsStatus}</small>
                     <div className="settings-button-row">

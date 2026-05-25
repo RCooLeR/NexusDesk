@@ -61,8 +61,13 @@ func (s *ChatHistoryStore) AppendPair(workspaceRoot string, userMessage ChatMess
 	}
 
 	key := workspaceHistoryKey(workspaceRoot)
-	now := time.Now().UTC().Format(time.RFC3339)
-	next := append(cloneChatMessages(items[key]), normalizeChatMessage(userMessage, "user", now), normalizeChatMessage(assistantMessage, "assistant", now))
+	now := time.Now().UTC()
+	user := normalizeChatMessage(userMessage, "user", now.Format(time.RFC3339Nano))
+	assistant := normalizeChatMessage(assistantMessage, "assistant", now.Add(time.Millisecond).Format(time.RFC3339Nano))
+	if assistant.CreatedAt == user.CreatedAt {
+		assistant.CreatedAt = nextChatTimestamp(user.CreatedAt)
+	}
+	next := append(cloneChatMessages(items[key]), user, assistant)
 	if len(next) > chatHistoryLimit {
 		next = next[len(next)-chatHistoryLimit:]
 	}
@@ -73,6 +78,14 @@ func (s *ChatHistoryStore) AppendPair(workspaceRoot string, userMessage ChatMess
 	}
 
 	return cloneChatMessages(next), nil
+}
+
+func nextChatTimestamp(createdAt string) string {
+	parsed, err := time.Parse(time.RFC3339Nano, createdAt)
+	if err != nil {
+		return time.Now().UTC().Add(time.Millisecond).Format(time.RFC3339Nano)
+	}
+	return parsed.Add(time.Millisecond).Format(time.RFC3339Nano)
 }
 
 func (s *ChatHistoryStore) Clear(workspaceRoot string) ([]ChatMessage, error) {

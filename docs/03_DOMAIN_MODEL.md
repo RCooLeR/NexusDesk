@@ -486,16 +486,18 @@ Current implementation:
 - `app/internal/artifact/markdown_report.go` writes included, ignored, depth-skipped, entry-cap, unreadable, max-depth, and max-entry counters.
 - Reports include skipped/ignored samples and are saved under `.nexusdesk/artifacts/` with sidecar metadata.
 
-### Agent Tool Descriptor
+### Agent Runtime And Tool Descriptor
 
-An agent tool descriptor is the registered shape of a deterministic backend capability before autonomous execution exists.
+An agent runtime is the model-directed loop that can plan, request tools, receive observations, and produce a final answer. An agent tool descriptor is the registered shape of a deterministic backend capability available to that runtime and to explicit UI tool-plan actions.
 
 Current implementation:
 
+- `app/internal/agent/agent.go` runs a bounded ReAct loop, parses `Action: tool({...})` calls, normalizes visible plan steps, prunes working memory, and returns final answers with ordered tool-call observations.
+- `app/agent_runtime.go` exposes `RunAgent` and `AgentSystemPrompt` through the Wails backend and maps tool calls to workspace-safe handlers.
 - `app/internal/agenttools/registry.go` exposes tool names, titles, descriptions, studio surfaces, risk levels, approval requirements, and input names.
 - The frontend uses these descriptors to show a proposed tool plan for the active workspace, dataset, artifact, or operations context.
 - Dry-runs and explicit executions are persisted under `.nexusdesk/tool-runs/log.json` with inputs, output summary, risk, approval ID, timing, and errors.
-Model-directed autonomous tool loops are still planned; current execution is initiated by the user from the tool plan surface.
+- Model-directed writes and shell commands are blocked unless explicit high-impact approval is supplied to `RunAgent`; the visible frontend flow still prefers user-triggered preview/apply actions.
 
 ### SQLite Metadata Store
 
@@ -539,7 +541,7 @@ Artifact lineage links generated outputs back to chats, tool runs, and source fi
 Current implementation:
 
 - `GetArtifactLineage` builds a compact graph from artifact sidecar metadata, chat source paths, and `.nexusdesk/tool-runs/log.json`.
-- The workbench shows a selectable lineage graph, relationship counts, source/chat/tool/artifact filtering, and visible source navigation.
+- The bottom Artifact Studio tab shows a selectable lineage graph, relationship counts, source/chat/tool/artifact filtering, and visible source navigation.
 - Lineage can be exported as a JSON artifact and imported back as a preview for debugging, future sync, and graph comparison workflows.
 
 ### Workspace Freshness

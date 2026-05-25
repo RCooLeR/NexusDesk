@@ -1,3 +1,102 @@
+export namespace agent {
+
+	export class PlanStep {
+	    step: string;
+	    status: string;
+
+	    static createFrom(source: any = {}) {
+	        return new PlanStep(source);
+	    }
+
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.step = source["step"];
+	        this.status = source["status"];
+	    }
+	}
+	export class RunRequest {
+	    prompt: string;
+	    maxIterations: number;
+	    approveHighImpact: boolean;
+	    allowShellCommands: boolean;
+
+	    static createFrom(source: any = {}) {
+	        return new RunRequest(source);
+	    }
+
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.prompt = source["prompt"];
+	        this.maxIterations = source["maxIterations"];
+	        this.approveHighImpact = source["approveHighImpact"];
+	        this.allowShellCommands = source["allowShellCommands"];
+	    }
+	}
+	export class ToolCall {
+	    name: string;
+	    arguments: Record<string, string>;
+	    observation: string;
+	    error: string;
+	    risk: string;
+	    startedAt: string;
+	    completedAt: string;
+
+	    static createFrom(source: any = {}) {
+	        return new ToolCall(source);
+	    }
+
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.name = source["name"];
+	        this.arguments = source["arguments"];
+	        this.observation = source["observation"];
+	        this.error = source["error"];
+	        this.risk = source["risk"];
+	        this.startedAt = source["startedAt"];
+	        this.completedAt = source["completedAt"];
+	    }
+	}
+	export class RunResult {
+	    message: string;
+	    plan: PlanStep[];
+	    toolCalls: ToolCall[];
+	    iterations: number;
+	    truncated: boolean;
+
+	    static createFrom(source: any = {}) {
+	        return new RunResult(source);
+	    }
+
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.message = source["message"];
+	        this.plan = this.convertValues(source["plan"], PlanStep);
+	        this.toolCalls = this.convertValues(source["toolCalls"], ToolCall);
+	        this.iterations = source["iterations"];
+	        this.truncated = source["truncated"];
+	    }
+
+		convertValues(a: any, classs: any, asMap: boolean = false): any {
+		    if (!a) {
+		        return a;
+		    }
+		    if (a.slice && a.map) {
+		        return (a as any[]).map(elem => this.convertValues(elem, classs));
+		    } else if ("object" === typeof a) {
+		        if (asMap) {
+		            for (const key of Object.keys(a)) {
+		                a[key] = new classs(a[key]);
+		            }
+		            return a;
+		        }
+		        return new classs(a);
+		    }
+		    return a;
+		}
+	}
+
+}
+
 export namespace agenttools {
 
 	export class Descriptor {
@@ -1051,6 +1150,8 @@ export namespace storage {
 	    baseUrl: string;
 	    model: string;
 	    apiKey: string;
+	    maxContextTokens: number;
+	    responseReserveTokens: number;
 	    updatedAt: string;
 
 	    static createFrom(source: any = {}) {
@@ -1063,6 +1164,8 @@ export namespace storage {
 	        this.baseUrl = source["baseUrl"];
 	        this.model = source["model"];
 	        this.apiKey = source["apiKey"];
+	        this.maxContextTokens = source["maxContextTokens"];
+	        this.responseReserveTokens = source["responseReserveTokens"];
 	        this.updatedAt = source["updatedAt"];
 	    }
 	}

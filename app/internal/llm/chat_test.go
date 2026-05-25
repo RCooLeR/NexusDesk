@@ -127,6 +127,60 @@ func TestChatStreamReadsDeltas(t *testing.T) {
 	}
 }
 
+func TestChatSendsOllamaContextOptionForLocalRunner(t *testing.T) {
+	server := httptest.NewServer(http.HandlerFunc(func(response http.ResponseWriter, request *http.Request) {
+		var body chatCompletionRequest
+		if err := json.NewDecoder(request.Body).Decode(&body); err != nil {
+			t.Fatalf("Decode failed: %v", err)
+		}
+		if got := body.Options["num_ctx"]; got != float64(65536) {
+			t.Fatalf("expected num_ctx option, got %#v", body.Options)
+		}
+
+		response.Header().Set("Content-Type", "application/json")
+		_, _ = response.Write([]byte(`{"choices":[{"message":{"role":"assistant","content":"ready"}}]}`))
+	}))
+	defer server.Close()
+
+	client := NewClient()
+	if _, err := client.Chat(context.Background(), storage.LLMSettings{
+		ProviderName:          "Ollama",
+		BaseURL:               server.URL + "/v1",
+		Model:                 "test-model",
+		MaxContextTokens:      65536,
+		ResponseReserveTokens: 4096,
+	}, ChatRequest{Prompt: "Hello"}); err != nil {
+		t.Fatalf("Chat returned error: %v", err)
+	}
+}
+
+func TestChatDoesNotSendProviderSpecificOptionsForRemoteRunner(t *testing.T) {
+	server := httptest.NewServer(http.HandlerFunc(func(response http.ResponseWriter, request *http.Request) {
+		var body chatCompletionRequest
+		if err := json.NewDecoder(request.Body).Decode(&body); err != nil {
+			t.Fatalf("Decode failed: %v", err)
+		}
+		if len(body.Options) > 0 {
+			t.Fatalf("expected no provider-specific options, got %#v", body.Options)
+		}
+
+		response.Header().Set("Content-Type", "application/json")
+		_, _ = response.Write([]byte(`{"choices":[{"message":{"role":"assistant","content":"ready"}}]}`))
+	}))
+	defer server.Close()
+
+	client := NewClient()
+	if _, err := client.Chat(context.Background(), storage.LLMSettings{
+		ProviderName:          "Remote",
+		BaseURL:               server.URL + "/v1",
+		Model:                 "test-model",
+		MaxContextTokens:      65536,
+		ResponseReserveTokens: 4096,
+	}, ChatRequest{Prompt: "Hello"}); err != nil {
+		t.Fatalf("Chat returned error: %v", err)
+	}
+}
+
 func TestChatReturnsProviderErrorBodyOnHTTPFailure(t *testing.T) {
 	server := httptest.NewServer(http.HandlerFunc(func(response http.ResponseWriter, request *http.Request) {
 		response.Header().Set("Content-Type", "application/json")

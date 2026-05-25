@@ -39,6 +39,7 @@ build/bin/
 app/build/bin/
 
 # Local app data and generated artifacts
+.nexusdesk/
 data/
 artifacts/
 workspace-cache/

@@ -32,15 +32,20 @@ await installNexusDeskMocks(page);
 try {
     await page.goto(server.url);
     await page.getByText('Open Folder').click();
-    await page.locator('.metadata-store-panel').filter({hasText: 'Artifact Lineage'}).getByText('Refresh').click();
-    await page.getByText('Export JSON').click();
+    await page.getByRole('tab', {name: 'Data', exact: true}).click();
     await page.getByText('Inspect metadata').click();
     await page.getByPlaceholder('Search chats, artifacts, tools').fill('Smoke');
     await page.getByText('Search history').click({force: true});
+    await page.getByRole('tab', {name: 'Artifacts', exact: true}).click();
+    await page.locator('.metadata-store-panel').filter({hasText: 'Artifact Lineage'}).getByText('Refresh').click();
+    await page.getByText('Export JSON').click();
+    await page.getByLabel('Lineage filter').getByText('source').click();
+    await page.getByRole('tab', {name: 'Approvals', exact: true}).click();
+    await page.getByText('Approval Log').waitFor({state: 'visible'});
+    await page.getByRole('tab', {name: 'Tools', exact: true}).click();
     await page.locator('.tool-run-row summary').first().click();
     await page.locator('.tool-run-detail').first().scrollIntoViewIfNeeded();
     await page.locator('.tool-run-detail').getByText('Replay dry run').waitFor({state: 'visible'});
-    await page.getByLabel('Lineage filter').getByText('source').click();
 
     const beforeResize = await page.locator('.navigator').boundingBox();
     const resizer = await page.locator('.navigator-resizer').boundingBox();
@@ -56,16 +61,63 @@ try {
         throw new Error('NexusDesk visual smoke failed: navigator resizing did not change width.');
     }
 
+    const beforeAgentResize = await page.locator('.agent-panel').boundingBox();
+    const agentResizer = await page.locator('.agent-resizer').boundingBox();
+    if (!beforeAgentResize || !agentResizer) {
+        throw new Error('NexusDesk visual smoke failed: agent panel or resizer is missing.');
+    }
+    await page.mouse.move(agentResizer.x + agentResizer.width / 2, agentResizer.y + 20);
+    await page.mouse.down();
+    await page.mouse.move(agentResizer.x - 80, agentResizer.y + 20);
+    await page.mouse.up();
+    const afterAgentResize = await page.locator('.agent-panel').boundingBox();
+    if (!afterAgentResize || Math.abs(afterAgentResize.width - beforeAgentResize.width) < 20) {
+        throw new Error('NexusDesk visual smoke failed: agent panel resizing did not change width.');
+    }
+
+    const beforeBottomResize = await page.locator('.bottom-studio-panel').boundingBox();
+    const bottomResizer = await page.locator('.bottom-panel-resizer').boundingBox();
+    if (!beforeBottomResize || !bottomResizer) {
+        throw new Error('NexusDesk visual smoke failed: bottom panel or resizer is missing.');
+    }
+    await page.mouse.move(bottomResizer.x + 80, bottomResizer.y + bottomResizer.height / 2);
+    await page.mouse.down();
+    await page.mouse.move(bottomResizer.x + 80, bottomResizer.y - 80);
+    await page.mouse.up();
+    const afterBottomResize = await page.locator('.bottom-studio-panel').boundingBox();
+    if (!afterBottomResize || Math.abs(afterBottomResize.height - beforeBottomResize.height) < 20) {
+        throw new Error('NexusDesk visual smoke failed: bottom panel resizing did not change height.');
+    }
+
     const hasBodyScroll = await page.evaluate(() => document.scrollingElement ? document.scrollingElement.scrollHeight > window.innerHeight + 2 : false);
     if (hasBodyScroll) {
         throw new Error('NexusDesk visual smoke failed: whole window became scrollable.');
     }
 
-    for (const text of ['Metadata Browser', 'Workspace Watcher', 'Artifact Lineage', 'Replay dry run', 'Context changed since this answer was created.', 'Smoke answer']) {
+    await page.getByRole('tab', {name: 'Data', exact: true}).click();
+    for (const text of ['Metadata Browser', 'Workspace Watcher']) {
         if (!(await page.getByText(text).first().isVisible())) {
             throw new Error(`NexusDesk visual smoke failed: missing ${text}.`);
         }
     }
+    for (const text of ['Context changed since this answer was created.', 'Smoke answer']) {
+        if (!(await page.getByText(text).first().isVisible())) {
+            throw new Error(`NexusDesk visual smoke failed: missing ${text}.`);
+        }
+    }
+    await page.getByRole('tab', {name: 'Artifacts', exact: true}).click();
+    await page.getByText('Artifact Lineage').waitFor({state: 'visible'});
+    await page.getByRole('tab', {name: 'Approvals', exact: true}).click();
+    await page.getByText('Approval Log').waitFor({state: 'visible'});
+    await page.getByRole('tab', {name: 'Tools', exact: true}).click();
+    const replayButton = page.locator('.tool-run-detail').getByText('Replay dry run').first();
+    if (!(await replayButton.isVisible())) {
+        await page.locator('.tool-run-row summary').first().click();
+    }
+    await replayButton.scrollIntoViewIfNeeded();
+    await replayButton.waitFor({state: 'visible'});
+    await page.getByRole('tab', {name: 'Settings', exact: true}).click();
+    await page.getByText('LLM Provider', {exact: true}).waitFor({state: 'visible'});
 
     await page.screenshot({path: path.join(screenshotDir, 'desktop.png'), fullPage: false});
     await page.screenshot({path: path.join(baselineDir, 'desktop.png'), fullPage: false});
@@ -77,7 +129,7 @@ try {
         generatedAt: new Date().toISOString(),
         source: 'dist/index.html',
         viewports: ['desktop', 'mobile'],
-        assertions: ['navigator-resize', 'panel-overflow', 'tool-run-detail', 'lineage-export', 'lineage-filter', 'lineage-graph', 'freshness-warning', 'metadata-browser', 'metadata-history', 'sql-snippets', 'dataset-lineage'],
+        assertions: ['navigator-resize', 'agent-resize', 'bottom-drawer-resize', 'panel-overflow', 'tool-run-detail', 'settings-tab', 'data-tab', 'artifacts-tab', 'approvals-tab', 'lineage-export', 'lineage-filter', 'lineage-graph', 'freshness-warning', 'metadata-browser', 'metadata-history', 'sql-snippets', 'dataset-lineage'],
     }, null, 2)}\n`);
 } finally {
     await browser.close();

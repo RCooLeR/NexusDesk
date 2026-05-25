@@ -391,6 +391,8 @@ export type LLMSettings = {
     baseUrl: string;
     model: string;
     apiKey: string;
+    maxContextTokens: number;
+    responseReserveTokens: number;
     updatedAt: string;
 };
 

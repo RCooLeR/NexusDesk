@@ -102,10 +102,14 @@ type ArtifactLineageImport struct {
 	Message string          `json:"message"`
 }
 
-const chatContextMaxBytes = 16 * 1024
+const chatContextFallbackMaxBytes = 16 * 1024
 const chatCSVContextMaxRows = 20
-const chatContextPackMaxFiles = 32
-const chatContextPackMaxBytes = 96 * 1024
+const chatContextFallbackMaxFiles = 32
+const chatContextMinBudgetBytes = 16 * 1024
+const chatContextMaxBudgetBytes = 4 * 1024 * 1024
+const chatContextTokenByteEstimate = 4
+const chatContextOverheadTokens = 2048
+const chatContextMaxFilesCap = 256
 const chatStreamEventName = "nexusdesk:chat-stream"
 
 var emitChatStreamEventFn = func(ctx context.Context, name string, event any) {
@@ -342,7 +346,7 @@ func (a *App) CreateMarkdownReport(relPath string) (artifact.MarkdownReport, err
 		Name:    "workspace-report",
 	}
 	if relPath != "" {
-		preview, err := workspace.Preview(root, relPath, workspace.PreviewOptions{MaxBytes: chatContextMaxBytes})
+		preview, err := workspace.Preview(root, relPath, workspace.PreviewOptions{MaxBytes: chatContextFallbackMaxBytes})
 		if err != nil {
 			return artifact.MarkdownReport{}, err
 		}
@@ -1248,7 +1252,11 @@ func (a *App) PreviewChatContextPack(relPaths []string) (workspace.ContextPrevie
 		return workspace.ContextPreview{}, errors.New("open a workspace before previewing context packs")
 	}
 
-	return workspace.PreviewContextFiles(root, relPaths, workspace.ContextCollectOptions{MaxFiles: chatContextPackMaxFiles})
+	settings, err := a.llmStore.Get()
+	if err != nil {
+		return workspace.ContextPreview{}, err
+	}
+	return workspace.PreviewContextFiles(root, relPaths, workspace.ContextCollectOptions{MaxFiles: chatContextMaxFiles(settings)})
 }
 
 func (a *App) RefreshStaleContext(relPaths []string) (StaleContextRefresh, error) {
@@ -1260,7 +1268,11 @@ func (a *App) RefreshStaleContext(relPaths []string) (StaleContextRefresh, error
 	if len(paths) == 0 {
 		return StaleContextRefresh{}, errors.New("choose changed files before refreshing stale context")
 	}
-	preview, err := workspace.PreviewContextFiles(root, paths, workspace.ContextCollectOptions{MaxFiles: chatContextPackMaxFiles})
+	settings, settingsErr := a.llmStore.Get()
+	if settingsErr != nil {
+		return StaleContextRefresh{}, settingsErr
+	}
+	preview, err := workspace.PreviewContextFiles(root, paths, workspace.ContextCollectOptions{MaxFiles: chatContextMaxFiles(settings)})
 	if err != nil {
 		return StaleContextRefresh{}, err
 	}
@@ -1306,7 +1318,7 @@ func (a *App) prepareChat(prompt string, relPaths []string) (llm.ChatRequest, st
 
 	contextPaths := cleanContextPaths(relPaths)
 	if len(contextPaths) == 1 && !a.contextPathRequiresPack(contextPaths[0]) {
-		contextPreview, err := a.previewChatContext(contextPaths[0])
+		contextPreview, err := a.previewChatContext(contextPaths[0], chatContextBudgetBytes(resolvedSettings))
 		if err != nil {
 			return llm.ChatRequest{}, storage.LLMSettings{}, err
 		}
@@ -1314,7 +1326,7 @@ func (a *App) prepareChat(prompt string, relPaths []string) (llm.ChatRequest, st
 		chatRequest.ContextContent = contextPreview.Content
 		chatRequest.SourcePaths = []string{contextPreview.RelPath}
 	} else if len(contextPaths) > 0 {
-		contextRelPath, contextContent, sourcePaths, err := a.buildContextPack(contextPaths)
+		contextRelPath, contextContent, sourcePaths, err := a.buildContextPack(contextPaths, resolvedSettings)
 		if err != nil {
 			return llm.ChatRequest{}, storage.LLMSettings{}, err
 		}
@@ -1362,13 +1374,16 @@ func (a *App) emitChatStreamEvent(event ChatStreamEvent) {
 	emitChatStreamEventFn(a.ctx, chatStreamEventName, event)
 }
 
-func (a *App) previewChatContext(relPath string) (workspace.FilePreview, error) {
+func (a *App) previewChatContext(relPath string, maxBytes int) (workspace.FilePreview, error) {
 	root := a.getWorkspaceRoot()
 	if root == "" {
 		return workspace.FilePreview{}, errors.New("open a workspace before sending selected file context")
 	}
+	if maxBytes <= 0 {
+		maxBytes = chatContextFallbackMaxBytes
+	}
 
-	contextPreview, err := workspace.Preview(root, relPath, workspace.PreviewOptions{MaxBytes: chatContextMaxBytes})
+	contextPreview, err := workspace.Preview(root, relPath, workspace.PreviewOptions{MaxBytes: maxBytes})
 	if err != nil {
 		return workspace.FilePreview{}, err
 	}
@@ -1431,13 +1446,14 @@ func buildChatContextContent(preview workspace.FilePreview) string {
 	return builder.String()
 }
 
-func (a *App) buildContextPack(relPaths []string) (string, string, []string, error) {
+func (a *App) buildContextPack(relPaths []string, settings storage.LLMSettings) (string, string, []string, error) {
 	root := a.getWorkspaceRoot()
 	if root == "" {
 		return "", "", nil, errors.New("open a workspace before sending context packs")
 	}
 
-	collection, err := workspace.CollectContextFiles(root, relPaths, workspace.ContextCollectOptions{MaxFiles: chatContextPackMaxFiles})
+	contextBudgetBytes := chatContextBudgetBytes(settings)
+	collection, err := workspace.CollectContextFiles(root, relPaths, workspace.ContextCollectOptions{MaxFiles: chatContextMaxFiles(settings)})
 	if err != nil {
 		return "", "", nil, err
 	}
@@ -1455,7 +1471,11 @@ func (a *App) buildContextPack(relPaths []string) (string, string, []string, err
 	builder.WriteString("\n")
 
 	for _, file := range collection.Files {
-		preview, err := a.previewChatContext(file.RelPath)
+		remaining := contextBudgetBytes - builder.Len()
+		if remaining <= 0 {
+			break
+		}
+		preview, err := a.previewChatContext(file.RelPath, remaining)
 		if err != nil {
 			if file.Required {
 				return "", "", nil, err
@@ -1464,10 +1484,6 @@ func (a *App) buildContextPack(relPaths []string) (string, string, []string, err
 		}
 
 		entry := "\n\n# Workspace context: " + preview.RelPath + "\n\n" + preview.Content
-		remaining := chatContextPackMaxBytes - builder.Len()
-		if remaining <= 0 {
-			break
-		}
 		truncated := len(entry) > remaining
 		if truncated {
 			entry = truncateContextString(entry, remaining)
@@ -1533,6 +1549,41 @@ func truncateContextString(content string, maxBytes int) string {
 	return truncated
 }
 
+func chatContextBudgetBytes(settings storage.LLMSettings) int {
+	maxTokens := settings.MaxContextTokens
+	if maxTokens <= 0 {
+		maxTokens = storage.DefaultLLMSettings().MaxContextTokens
+	}
+	reserveTokens := settings.ResponseReserveTokens
+	if reserveTokens <= 0 {
+		reserveTokens = storage.DefaultLLMSettings().ResponseReserveTokens
+	}
+	availableTokens := maxTokens - reserveTokens - chatContextOverheadTokens
+	if availableTokens <= 0 {
+		availableTokens = maxTokens / 2
+	}
+	budget := availableTokens * chatContextTokenByteEstimate
+	if budget < chatContextMinBudgetBytes {
+		return chatContextMinBudgetBytes
+	}
+	if budget > chatContextMaxBudgetBytes {
+		return chatContextMaxBudgetBytes
+	}
+	return budget
+}
+
+func chatContextMaxFiles(settings storage.LLMSettings) int {
+	budget := chatContextBudgetBytes(settings)
+	files := budget / (8 * 1024)
+	if files < chatContextFallbackMaxFiles {
+		return chatContextFallbackMaxFiles
+	}
+	if files > chatContextMaxFilesCap {
+		return chatContextMaxFilesCap
+	}
+	return files
+}
+
 func cleanContextPaths(relPaths []string) []string {
 	seen := map[string]bool{}
 	cleaned := []string{}
@@ -1586,7 +1637,7 @@ func (a *App) agentToolSummary(root string, request agenttools.RunRequest, descr
 		if mode == "dry-run" {
 			return "Ready to preview " + target + " inside the active workspace.", nil
 		}
-		preview, err := workspace.Preview(root, target, workspace.PreviewOptions{MaxBytes: chatContextMaxBytes})
+		preview, err := workspace.Preview(root, target, workspace.PreviewOptions{MaxBytes: chatContextFallbackMaxBytes})
 		if err != nil {
 			return "", err
 		}
@@ -1628,7 +1679,7 @@ func (a *App) agentToolSummary(root string, request agenttools.RunRequest, descr
 		if mode == "dry-run" {
 			return "Ready to inspect operations context " + target + " without mutating Docker state.", nil
 		}
-		preview, err := workspace.Preview(root, target, workspace.PreviewOptions{MaxBytes: chatContextMaxBytes})
+		preview, err := workspace.Preview(root, target, workspace.PreviewOptions{MaxBytes: chatContextFallbackMaxBytes})
 		if err != nil {
 			return "", err
 		}

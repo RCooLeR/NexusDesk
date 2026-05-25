@@ -25,6 +25,7 @@ NexusDesk is not only a chatbot. It should feel like a serious IDE-style studio 
 - [Operations And Security](docs/07_OPERATIONS_AND_SECURITY.md)
 - [Delivery Plan](docs/08_DELIVERY_PLAN.md)
 - [Developer Experience](docs/09_DEVELOPER_EXPERIENCE.md)
+- [Studio Roadmap](docs/10_STUDIO_ROADMAP.md)
 - [Implementation Tracker](tracker.md)
 
 ## Current Project Layout

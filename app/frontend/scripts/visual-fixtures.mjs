@@ -60,7 +60,7 @@ export async function installNexusDeskMocks(page) {
                         toolEvents: [],
                     }),
                     GetRecentWorkspaces: async () => [],
-                    GetLLMSettings: async () => ({providerName: 'Local', baseUrl: 'http://localhost:11434/v1', model: 'qwen3:8b', apiKey: '', updatedAt: ''}),
+                    GetLLMSettings: async () => ({providerName: 'Local', baseUrl: 'http://localhost:11434/v1', model: 'qwen3:8b', apiKey: '', maxContextTokens: 32768, responseReserveTokens: 4096, updatedAt: ''}),
                     SelectWorkspace: async () => ({selected: true, snapshot}),
                     RefreshWorkspace: async () => ({selected: true, snapshot}),
                     GetChatHistory: async () => [

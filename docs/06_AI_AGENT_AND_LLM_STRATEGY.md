@@ -100,9 +100,12 @@ Current implementation:
 - `AskLLM` and `AskLLMStream` in `app/app.go` resolve saved settings and attach selected workspace text context server-side.
 - `AskLLMContextPack` and `AskLLMStreamContextPack` build a bounded multi-file context pack from pinned previews.
 - Directory and project context use `app/internal/workspace/context.go` to expand selected folders or `.` into a capped list of previewable files before the streaming chat request is sent.
+- The saved provider settings include `maxContextTokens` and `responseReserveTokens`; chat context uses the remaining budget for selected files or context packs, and local Ollama-compatible calls send `num_ctx` to request the configured window.
 - Workspace search and CSV row queries are deterministic backend tools, not model-side file access.
 - `app/internal/agenttools/registry.go` now exposes a first deterministic tool registry for workspace preview, file write, dataset query, artifact create/archive, and operations inspect actions.
-- The agent sidebar renders a proposed tool plan for the active context with risk and approval labels, and user-triggered dry-run/execute actions now persist tool-run records.
+- `app/internal/agent/` now contains a backend-first ReAct runtime that can plan, call tools, process observations, prune working memory, and return final answers through `RunAgent`.
+- `app/agent_runtime.go` bridges that runtime to the existing workspace, dataset, artifact, shell, and registered agent-tool surfaces without giving the model direct filesystem authority.
+- The bottom Tools tab renders a proposed tool plan for the active context with risk and approval labels, and user-triggered dry-run/execute actions now persist tool-run records.
 - Recent tool-run rows expand into detail drawers with captured inputs, output/error text, approval references, replay, and target diff affordances.
 - Persisted assistant answers and saved Markdown answer artifacts include the source paths used for selected-file or context-pack grounding.
 - Chat messages and context-pack previews warn when their cited source paths changed after the answer/context was created.
@@ -112,7 +115,7 @@ Current implementation:
 
 Capability hints are currently inferred from model IDs. They are useful for readiness signals, but they are not a substitute for provider-native capability metadata.
 
-The current chat implementation requires an explicit configured model. It includes either a bounded selected text preview or a bounded pinned context pack, sends selected CSV files as a structured column profile plus bounded row sample, sends DOCX text and extracted PDF text when available, cites the source paths attached to persisted assistant answers, and streams response text when the configured provider supports OpenAI-compatible streaming. Directory and project context are bounded expansions, not raw full-project dumps: ignored folders, symlinks, images, binaries, and oversized content are skipped, and the included files/bytes are capped. The Explain action uses the same selected text/code/document/directory boundary to send a deterministic explanation prompt. It does not yet run a model-directed tool loop.
+The current chat implementation requires an explicit configured model. It includes either a bounded selected text preview or a bounded pinned context pack, sends selected CSV files as a structured column profile plus bounded row sample, sends DOCX text and extracted PDF text when available, cites the source paths attached to persisted assistant answers, and streams response text when the configured provider supports OpenAI-compatible streaming. Directory and project context are bounded expansions, not raw full-project dumps: ignored folders, symlinks, images, binaries, and oversized content are skipped, and the included files/bytes are capped by the configured model window after reserving response/overhead space. The Explain action uses the same selected text/code/document/directory boundary to send a deterministic explanation prompt. A backend model-directed tool loop now exists behind `RunAgent`; the existing chat panel has not yet been switched to live stream each agent step.
 
 ## Agent Modes
 
@@ -128,6 +131,8 @@ Good for:
 - file navigation
 - summarization
 - asking what is inside a workspace
+- choosing the right studio and tool for the task
+- explaining what context is loaded and what evidence is missing
 
 ### Code Assistant
 
@@ -139,6 +144,10 @@ Good for:
 - patch proposals
 - dependency analysis
 - Dockerfile and Compose creation
+- git diff review
+- test generation
+- commit message and PR summary drafting
+- symbol-aware navigation when language services exist
 
 ### Data Analyst
 
@@ -146,6 +155,10 @@ Good for:
 
 - Excel and CSV analysis
 - DuckDB queries
+- database schema exploration
+- read-only SQL over configured connectors
+- SQL dump import planning
+- temporary database sandbox research
 - chart generation
 - report writing
 - metric interpretation
@@ -157,6 +170,8 @@ Good for:
 - multi-source analysis
 - marketing reports
 - funnel and campaign interpretation
+- GA4, Search Console, ads, CRM, Eloqua, and Mautic connector runs
+- exported marketing and CRM data normalization
 - chart and dashboard creation
 - artifact-backed conclusions
 
@@ -170,6 +185,8 @@ Good for:
 - landing page screenshots
 - funnel reports
 - UTM analysis
+- lead quality and CRM handoff analysis
+- paid media performance explanations
 
 ### Operations Assistant
 
@@ -180,6 +197,42 @@ Good for:
 - Compose explanation
 - environment analysis
 - safe troubleshooting steps
+- port/process/service checks where policy allows
+- generated runbooks and health checks
+- command plan previews for start/stop/build/exec actions
+
+### Document Analyst
+
+Good for:
+
+- PDF, DOCX, Markdown, TXT, spreadsheet, and presentation analysis
+- document-set summaries
+- extraction of decisions, risks, entities, dates, and action items
+- document comparison and contradiction checks
+- source-cited briefs, reports, and generated presentations
+
+## AI Assistant Product Contract
+
+The AI Assistant is not just the right sidebar chat. It should become the shared intelligence layer across all studios.
+
+Responsibilities:
+
+- maintain explicit context packs from files, folders, git diffs, documents, database schemas, query results, analytics connector runs, logs, and artifacts
+- expose model/provider selection, context-window budget, response reserve, capability hints, GPU/local runner diagnostics, and streaming/tool-call status
+- offer agent modes such as Ask, Plan, Review, Edit, Research, Analyze, Debug Ops, Generate Artifact, and Report Builder
+- show proposed tool calls before execution with target, inputs, risk, approval requirement, expected output, and dry-run result
+- cite every substantive answer with files, pages, rows, queries, connector runs, logs, or tool outputs
+- keep lightweight workspace memory for accepted facts, decisions, preferred report formats, ignored paths, and reusable prompts
+- warn when cited source files, data extracts, connector runs, or logs are stale
+- create artifacts rather than leaving valuable work trapped in chat
+
+Quality bar:
+
+- ask for missing context instead of inventing it
+- separate observed facts from inference
+- mark weak evidence
+- make it easy to retry with another model or compare outputs
+- preserve auditability for every tool-mediated action
 
 ## Tool Calling
 
@@ -279,18 +332,18 @@ Loop limits:
 
 Current implementation:
 
-- one user prompt maps to one non-streaming provider request
-- no tool loop is active yet
-- first tool descriptors, frontend plan preview, dry-runs, and explicit user-triggered executions are active, but autonomous model-directed loops remain planned
+- normal chat still maps one user prompt/context pack to provider calls, with optional streaming
+- `RunAgent` executes a bounded ReAct loop with plan updates, tool calls, observations, context pruning, and final-answer extraction
+- registered agent tools can be executed through the loop and persisted as tool-run records
+- direct agent tools include directory listing, bounded file reads, workspace search, approved file write/append, approved shell execution, dataset analysis, and Markdown artifact creation
+- the chat composer exposes a safe `Agent` button that runs `RunAgent` without write or shell approval by default and summarizes the returned plan/tool observations into the conversation
 - selected file context is read through the same rooted preview boundary as the source preview pane
 - chat history is persisted per workspace in local JSON config
-- file create/update/delete/rename/move actions are deterministic UI-triggered tools today, not model-directed tool calls
-- first CSV query exports are deterministic UI-triggered tools today, not model-directed file writes
-- first CSV chart artifacts are deterministic UI-triggered tools today, not model-directed chart rendering
-- artifact archive/delete and scan-report creation are deterministic UI-triggered tools today, not model-directed artifact mutations
-- tool run records capture inputs, output summary, risk, approval ID, duration, and errors for later agent-loop replay/audit
+- file create/update/delete/rename/move actions remain deterministic UI-triggered tools in the main workbench; model-directed writes are blocked unless high-impact approval is explicitly supplied to `RunAgent`
+- shell commands are blocked unless both high-impact approval and shell execution are enabled
+- tool run records capture inputs, output summary, risk, approval ID, duration, and errors for replay/audit
 - artifact lineage can link source files, assistant answers, persisted tool runs, and generated artifacts for an audit graph
-- lineage can be filtered in the workbench by source, chat, tool, or artifact kind, with selectable nodes, relationship counts, and source navigation
+- lineage can be filtered in the bottom Artifact Studio tab by source, chat, tool, or artifact kind, with selectable nodes, relationship counts, and source navigation
 
 ## Prompt Contracts
 

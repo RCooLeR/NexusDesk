@@ -1,73 +1,25 @@
 import {useEffect, useRef, useState} from 'react';
-import {brandAssets, capabilityIconByTitle} from '../../brand/assets';
-import {Button, EmptyState, InlineAlert, LoadingState, StatusBadge} from '../../components/ui';
-import type {ApprovalRecord, ArtifactComparison, ArtifactLineage, ArtifactMetadata, Capability, ColumnProfile, DatasetChartResult, DatasetDependency, DatasetProfile, DatasetQueryResult, DatasetSQLQueryResult, FilePreview, FileWriteProposal, MetadataBrowser, MetadataSearchResult, SavedDatasetQuery, SQLRun, SQLiteMetadataStatus, SQLiteQueryResult, TablePreview, WorkspaceArtifact, WorkspaceFreshnessStatus, WorkspaceSnapshot} from '../../types';
-import {ApprovalLogPanel} from './ApprovalLogPanel';
-import {ArtifactMetadataPanel} from './ArtifactMetadataPanel';
+import {brandAssets} from '../../brand/assets';
+import {Button, EmptyState, InlineAlert, LoadingState} from '../../components/ui';
+import type {DatasetProfile, FilePreview, FileWriteProposal, TablePreview, WorkspaceSnapshot} from '../../types';
 import {ChatMessageContent} from './ChatMessageContent';
-import {DataStudioPanel, SortableDataTable} from './DataStudioPanel';
+import {SortableDataTable} from './DataStudioPanel';
 import {HighlightedCode} from './HighlightedCode';
 import {MonacoCodePreview} from './MonacoCodePreview';
 import {MonacoFileEditor} from './MonacoFileEditor';
-import {OperationsInspector} from './OperationsInspector';
 
 type WorkbenchPanelProps = {
     activeFile: string;
     activeDatasetProfile: DatasetProfile | null;
-    artifacts: WorkspaceArtifact[];
-    artifactMetadata: ArtifactMetadata | null;
-    approvalRecords: ApprovalRecord[];
-    capabilities: Capability[];
-    datasetProfiles: DatasetProfile[];
-    datasetDependencies: DatasetDependency[];
-    datasetSQLRuns: SQLRun[];
-    datasetChartCategory: string;
-    datasetChartPreview: DatasetChartResult | null;
-    datasetChartType: string;
-    datasetChartValue: string;
-    datasetQuery: string;
-    datasetQueryLabel: string;
-    datasetQueryResult: DatasetQueryResult | null;
-    datasetSQLQuery: string;
-    datasetSQLQueryLabel: string;
-    datasetSQLQueryResult: DatasetSQLQueryResult | null;
-    metadataBrowser: MetadataBrowser | null;
-    metadataSearchQuery: string;
-    metadataSearchResults: MetadataSearchResult[];
-    savedDatasetQueries: SavedDatasetQuery[];
-    savedDatasetSQLQueries: SavedDatasetQuery[];
-    artifactComparison: ArtifactComparison | null;
-    artifactLineage: ArtifactLineage | null;
-    sqliteStatus: SQLiteMetadataStatus | null;
-    sqliteConnectorQuery: string;
-    sqliteConnectorResult: SQLiteQueryResult | null;
-    workspaceFreshness: WorkspaceFreshnessStatus | null;
     dirtyTabPaths: string[];
     fileDraft: string;
     filePreview: FilePreview | null;
-    rebuildingDatasetDependencyId: string;
     isApplyingWrite: boolean;
     isEditingFile: boolean;
     isSendingPrompt: boolean;
     isCreatingReport: boolean;
-    isCreatingDatasetChart: boolean;
-    isExportingDatasetQuery: boolean;
-    isArchivingArtifact: boolean;
-    isDeletingArtifact: boolean;
     isDeletingFile: boolean;
     isMovingFile: boolean;
-    isProfilingDataset: boolean;
-    isPreviewingDatasetChart: boolean;
-    isQueryingDataset: boolean;
-    isQueryingDatasetSQL: boolean;
-    isExportingDatasetSQL: boolean;
-    isSavingDatasetQuery: boolean;
-    isSavingDatasetSQLQuery: boolean;
-    isRefreshingStaleContext: boolean;
-    isPreparingMetadataStore: boolean;
-    isSearchingMetadata: boolean;
-    isQueryingSQLiteConnector: boolean;
-    isCreatingDatasetSummary: boolean;
     isSummarizingContext: boolean;
     isLoadingPreview: boolean;
     isPreviewingWrite: boolean;
@@ -77,46 +29,13 @@ type WorkbenchPanelProps = {
     onCreateReport: () => void;
     onSummarizeContext: () => void;
     onFileDraftChange: (content: string) => void;
-    onDatasetQueryChange: (content: string) => void;
-    onDatasetSQLQueryChange: (content: string) => void;
-    onSQLiteConnectorQueryChange: (content: string) => void;
-    onDatasetQueryLabelChange: (content: string) => void;
-    onDatasetSQLQueryLabelChange: (content: string) => void;
-    onSaveDatasetQuery: () => void;
-    onSaveDatasetSQLQuery: () => void;
-    onDatasetChartCategoryChange: (content: string) => void;
-    onDatasetChartTypeChange: (content: string) => void;
-    onDatasetChartValueChange: (content: string) => void;
     onDeleteFile: () => void;
     onMoveFile: () => void;
     onPinContext: () => void;
     onPinProjectContext: () => void;
     onPreviewFileWrite: () => void;
-    onProfileDataset: () => void;
-    onPreviewDatasetChart: () => void;
-    onQueryDataset: () => void;
-    onQueryDatasetSQL: () => void;
-    onExportDatasetSQL: () => void;
-    onCreateDatasetChart: () => void;
-    onCreateDatasetSummary: () => void;
-    onExportDatasetQuery: () => void;
-    onArchiveArtifact: () => void;
-    onCompareArtifact: () => void;
-    onPrepareMetadataStore: () => void;
     onCloseTab: (relPath: string) => void;
-    onDeleteArtifact: () => void;
-    onOpenArtifactSource: () => void;
-    onInspectMetadata: () => void;
-    onMetadataSearchQueryChange: (content: string) => void;
-    onSearchMetadata: () => void;
-    onQuerySQLiteConnector: () => void;
-    onRefreshLineage: () => void;
-    onExportLineage: () => void;
-    onRefreshStaleContext: () => void;
-    onOpenLineageSource: (relPath: string) => void;
-    onRebuildDatasetDependency: (dependencyId: string) => void;
     onSelectTab: (relPath: string) => void;
-    onSelectArtifact: (artifact: WorkspaceArtifact) => void;
     onRefreshPreview: () => void;
     onStartFileEdit: () => void;
     openTabs: FilePreview[];
@@ -128,60 +47,15 @@ type WorkbenchPanelProps = {
 export function WorkbenchPanel({
     activeFile,
     activeDatasetProfile,
-    artifacts,
-    artifactMetadata,
-    approvalRecords,
-    capabilities,
-    datasetProfiles,
-    datasetDependencies,
-    datasetSQLRuns,
-    datasetChartCategory,
-    datasetChartPreview,
-    datasetChartType,
-    datasetChartValue,
-    datasetQuery,
-    datasetQueryLabel,
-    datasetQueryResult,
-    datasetSQLQuery,
-    datasetSQLQueryLabel,
-    datasetSQLQueryResult,
-    metadataBrowser,
-    metadataSearchQuery,
-    metadataSearchResults,
-    savedDatasetQueries,
-    savedDatasetSQLQueries,
-    artifactComparison,
-    artifactLineage,
-    sqliteStatus,
-    sqliteConnectorQuery,
-    sqliteConnectorResult,
-    workspaceFreshness,
     dirtyTabPaths,
     fileDraft,
     filePreview,
-    rebuildingDatasetDependencyId,
     isApplyingWrite,
     isEditingFile,
     isSendingPrompt,
     isCreatingReport,
-    isCreatingDatasetChart,
-    isExportingDatasetQuery,
-    isArchivingArtifact,
-    isDeletingArtifact,
     isDeletingFile,
     isMovingFile,
-    isProfilingDataset,
-    isPreviewingDatasetChart,
-    isQueryingDataset,
-    isQueryingDatasetSQL,
-    isExportingDatasetSQL,
-    isSavingDatasetQuery,
-    isSavingDatasetSQLQuery,
-    isRefreshingStaleContext,
-    isPreparingMetadataStore,
-    isSearchingMetadata,
-    isQueryingSQLiteConnector,
-    isCreatingDatasetSummary,
     isSummarizingContext,
     isLoadingPreview,
     isPreviewingWrite,
@@ -191,46 +65,13 @@ export function WorkbenchPanel({
     onCreateReport,
     onSummarizeContext,
     onFileDraftChange,
-    onDatasetQueryChange,
-    onDatasetSQLQueryChange,
-    onSQLiteConnectorQueryChange,
-    onDatasetQueryLabelChange,
-    onDatasetSQLQueryLabelChange,
-    onSaveDatasetQuery,
-    onSaveDatasetSQLQuery,
-    onDatasetChartCategoryChange,
-    onDatasetChartTypeChange,
-    onDatasetChartValueChange,
     onDeleteFile,
     onMoveFile,
     onPinContext,
     onPinProjectContext,
     onPreviewFileWrite,
-    onProfileDataset,
-    onPreviewDatasetChart,
-    onQueryDataset,
-    onQueryDatasetSQL,
-    onExportDatasetSQL,
-    onCreateDatasetChart,
-    onCreateDatasetSummary,
-    onExportDatasetQuery,
-    onArchiveArtifact,
-    onCompareArtifact,
-    onPrepareMetadataStore,
     onCloseTab,
-    onDeleteArtifact,
-    onOpenArtifactSource,
-    onInspectMetadata,
-    onMetadataSearchQueryChange,
-    onSearchMetadata,
-    onQuerySQLiteConnector,
-    onRefreshLineage,
-    onExportLineage,
-    onRefreshStaleContext,
-    onOpenLineageSource,
-    onRebuildDatasetDependency,
     onSelectTab,
-    onSelectArtifact,
     onRefreshPreview,
     onStartFileEdit,
     openTabs,
@@ -251,7 +92,6 @@ export function WorkbenchPanel({
     const canEditContext = Boolean(workspace && filePreview?.kind === 'file' && !filePreview.table);
     const canDeleteContext = Boolean(workspace && filePreview?.kind === 'file' && !isEditingFile);
     const canMoveContext = Boolean(workspace && filePreview?.kind === 'file' && !isEditingFile);
-    const canProfileDataset = Boolean(workspace && filePreview?.fileType === 'data');
     const canRenderMarkdown = Boolean(filePreview?.kind === 'file' && filePreview.content && isMarkdownFile(filePreview.name));
     const studioMode = resolveStudioMode(filePreview, activeDatasetProfile, activeFile);
     const findSource = isEditingFile ? fileDraft : filePreview?.content ?? filePreview?.text ?? '';
@@ -311,12 +151,6 @@ export function WorkbenchPanel({
                     </Button>
                     <Button disabled={!workspace || isCreatingReport} onClick={onCreateReport}>
                         {isCreatingReport ? 'Creating...' : 'Report'}
-                    </Button>
-                    <Button disabled={!canProfileDataset || isProfilingDataset} onClick={onProfileDataset}>
-                        {isProfilingDataset ? 'Profiling...' : 'Profile'}
-                    </Button>
-                    <Button disabled={!workspace || isPreparingMetadataStore} onClick={onPrepareMetadataStore} variant="subtle">
-                        {isPreparingMetadataStore ? 'Preparing...' : 'Metadata'}
                     </Button>
                 </div>
             </header>
@@ -470,139 +304,6 @@ export function WorkbenchPanel({
                             <p><span>03</span>Ask the agent with selected source context.</p>
                             <p><span>04</span>Approve writes, Docker actions, and database mutations.</p>
                             <p><span>05</span>Save reports, charts, diffs, and generated configs as artifacts.</p>
-                        </div>
-                    )}
-                </article>
-
-                <article className="status-pane">
-                    <div className="pane-title">
-                        <span>{workspace ? 'Artifacts & Data' : 'MVP Capabilities'}</span>
-                        <small>{workspace ? `${artifacts.length} artifacts / ${datasetProfiles.length} profiles` : 'Phase 1 focus'}</small>
-                    </div>
-                    {workspace ? (
-                        <div className="artifact-list">
-                            {(activeDatasetProfile || filePreview?.table) && (
-                                <DataStudioPanel
-                                    activeDatasetProfile={activeDatasetProfile}
-                                    chartCategory={datasetChartCategory}
-                                    chartPreview={datasetChartPreview}
-                                    chartType={datasetChartType}
-                                    chartValue={datasetChartValue}
-                                    columns={filePreview?.table?.columns ?? activeDatasetProfile?.profiles.map((profile) => profile.name) ?? []}
-                                    isCreatingChart={isCreatingDatasetChart}
-                                    isCreatingSummary={isCreatingDatasetSummary}
-                                    isExporting={isExportingDatasetQuery}
-                                    isPreviewingChart={isPreviewingDatasetChart}
-                                    isQuerying={isQueryingDataset}
-                                    isSavingQuery={isSavingDatasetQuery}
-                                    onChartCategoryChange={onDatasetChartCategoryChange}
-                                    onChartTypeChange={onDatasetChartTypeChange}
-                                    onChartValueChange={onDatasetChartValueChange}
-                                    onCreateChart={onCreateDatasetChart}
-                                    onCreateSummary={onCreateDatasetSummary}
-                                    onExportQuery={onExportDatasetQuery}
-                                    onPreviewChart={onPreviewDatasetChart}
-                                    onQuery={onQueryDataset}
-                                    onQueryChange={onDatasetQueryChange}
-                                    onQueryLabelChange={onDatasetQueryLabelChange}
-                                    onSaveQuery={onSaveDatasetQuery}
-                                    onRebuildDependency={onRebuildDatasetDependency}
-                                    rebuildingDependencyId={rebuildingDatasetDependencyId}
-                                    profiles={filePreview?.table?.profiles ?? activeDatasetProfile?.profiles ?? []}
-                                    query={datasetQuery}
-                                    queryLabel={datasetQueryLabel}
-                                    queryResult={datasetQueryResult}
-                                    sqlQuery={datasetSQLQuery}
-                                    sqlLabel={datasetSQLQueryLabel}
-                                    sqlResult={datasetSQLQueryResult}
-                                    savedQueries={savedDatasetQueries}
-                                    savedSQLQueries={savedDatasetSQLQueries}
-                                    sqlRuns={datasetSQLRuns}
-                                    dependencies={datasetDependencies}
-                                    table={filePreview?.table ?? null}
-                                    isQueryingSQL={isQueryingDatasetSQL}
-                                    isExportingSQL={isExportingDatasetSQL}
-                                    isSavingSQL={isSavingDatasetSQLQuery}
-                                    onSQLChange={onDatasetSQLQueryChange}
-                                    onSQLLabelChange={onDatasetSQLQueryLabelChange}
-                                    onSQLQuery={onQueryDatasetSQL}
-                                    onSQLExport={onExportDatasetSQL}
-                                    onSQLSave={onSaveDatasetSQLQuery}
-                                />
-                            )}
-                            <OperationsInspector preview={filePreview} workspace={workspace} />
-                            {filePreview?.fileType === 'database' && (
-                                <SQLiteConnectorPanel
-                                    isQuerying={isQueryingSQLiteConnector}
-                                    onChange={onSQLiteConnectorQueryChange}
-                                    onQuery={onQuerySQLiteConnector}
-                                    query={sqliteConnectorQuery}
-                                    result={sqliteConnectorResult}
-                                />
-                            )}
-                            {artifactMetadata && (
-                                <ArtifactMetadataPanel
-                                    isArchiving={isArchivingArtifact}
-                                    isDeleting={isDeletingArtifact}
-                                    metadata={artifactMetadata}
-                                    onArchive={onArchiveArtifact}
-                                    onCompare={onCompareArtifact}
-                                    onDelete={onDeleteArtifact}
-                                    onOpenSource={onOpenArtifactSource}
-                                    preview={filePreview}
-                                    relPath={filePreview?.relPath ?? ''}
-                                />
-                            )}
-                            {artifactComparison && <ArtifactComparisonPanel comparison={artifactComparison} />}
-                            {sqliteStatus && <MetadataStorePanel status={sqliteStatus} />}
-                            {metadataBrowser && (
-                                <MetadataBrowserPanel
-                                    browser={metadataBrowser}
-                                    isSearching={isSearchingMetadata}
-                                    onQueryChange={onMetadataSearchQueryChange}
-                                    onSearch={onSearchMetadata}
-                                    query={metadataSearchQuery}
-                                    results={metadataSearchResults}
-                                />
-                            )}
-                            {workspaceFreshness && (
-                                <WorkspaceFreshnessPanel
-                                    isRefreshing={isRefreshingStaleContext}
-                                    onRefreshContext={onRefreshStaleContext}
-                                    status={workspaceFreshness}
-                                />
-                            )}
-                            <ArtifactLineagePanel lineage={artifactLineage} onExport={onExportLineage} onOpenSource={onOpenLineageSource} onRefresh={onRefreshLineage} />
-                            <Button onClick={onInspectMetadata} variant="subtle">Inspect metadata</Button>
-                            <ApprovalLogPanel records={approvalRecords} />
-                            {artifacts.length === 0 ? (
-                                <EmptyState
-                                    detail="Create a report to add the first workspace artifact."
-                                    iconSrc={brandAssets.icons.documents}
-                                    title="No artifacts yet"
-                                />
-                            ) : artifacts.map((artifact) => (
-                                <button className="artifact-item" key={artifact.relPath} onClick={() => onSelectArtifact(artifact)}>
-                                    <img src={artifact.kind === 'chart-svg' || artifact.kind === 'dataset-query-csv' ? brandAssets.icons.data : brandAssets.icons.documents} alt="" />
-                                    <span>
-                                        <strong>{artifact.name}</strong>
-                                        <small>{artifact.summary || artifact.source || artifact.relPath}</small>
-                                        {artifact.model && <small>{artifact.model}</small>}
-                                    </span>
-                                    <StatusBadge tone="warning">{artifact.kind}</StatusBadge>
-                                </button>
-                            ))}
-                        </div>
-                    ) : (
-                        <div className="capability-list">
-                            {capabilities.map((capability) => (
-                                <div className="capability-card" key={capability.title}>
-                                    <img src={capabilityIconByTitle[capability.title] ?? brandAssets.icons.ai} alt="" />
-                                    <strong>{capability.title}</strong>
-                                    <p>{capability.description}</p>
-                                    <StatusBadge tone="warning">{capability.status}</StatusBadge>
-                                </div>
-                            ))}
                         </div>
                     )}
                 </article>
@@ -833,326 +534,4 @@ function FileWriteEditor({
 
 function CsvTablePreview({table}: {table: TablePreview}) {
     return <SortableDataTable table={table} title="CSV Preview" />;
-}
-
-function ArtifactComparisonPanel({comparison}: {comparison: ArtifactComparison}) {
-    return (
-        <div className="artifact-comparison-panel">
-            <strong>Artifact Comparison</strong>
-            <small>{comparison.leftTitle} {'->'} {comparison.rightTitle}</small>
-            <dl>
-                <div><dt>Kind</dt><dd>{comparison.sameKind ? 'same' : 'different'}</dd></div>
-                <div><dt>Size delta</dt><dd>{comparison.sizeDelta} bytes</dd></div>
-            </dl>
-            <div className="artifact-diff-grid">
-                <span>
-                    <strong>Removed</strong>
-                    {comparison.removedLines.length === 0 ? <small>No removed lines</small> : comparison.removedLines.map((line) => <small key={line}>- {line}</small>)}
-                </span>
-                <span>
-                    <strong>Added</strong>
-                    {comparison.addedLines.length === 0 ? <small>No added lines</small> : comparison.addedLines.map((line) => <small key={line}>+ {line}</small>)}
-                </span>
-            </div>
-        </div>
-    );
-}
-
-function MetadataStorePanel({status}: {status: SQLiteMetadataStatus}) {
-    return (
-        <div className="metadata-store-panel">
-            <strong>SQLite Metadata</strong>
-            <small>{status.message}</small>
-            <p>{status.tables.join(', ')}</p>
-            <small>Schema v{status.schemaVersion}: {status.schemaHash.slice(0, 12)}</small>
-        </div>
-    );
-}
-
-function MetadataBrowserPanel({
-    browser,
-    isSearching,
-    onQueryChange,
-    onSearch,
-    query,
-    results,
-}: {
-    browser: MetadataBrowser;
-    isSearching: boolean;
-    onQueryChange: (value: string) => void;
-    onSearch: () => void;
-    query: string;
-    results: MetadataSearchResult[];
-}) {
-    const [columnQuery, setColumnQuery] = useState('');
-    const [selectedTable, setSelectedTable] = useState(browser.tables[0]?.name ?? '');
-    const normalizedQuery = columnQuery.trim().toLowerCase();
-    const selected = browser.tables.find((table) => table.name === selectedTable) ?? browser.tables[0] ?? null;
-    const visibleColumns = selected?.columns.filter((column) => {
-        if (!normalizedQuery) {
-            return true;
-        }
-        return column.name.toLowerCase().includes(normalizedQuery) || column.type.toLowerCase().includes(normalizedQuery);
-    }) ?? [];
-    const visibleColumnIndexes = visibleColumns.map((column) => selected?.columns.findIndex((item) => item.name === column.name) ?? -1).filter((index) => index >= 0);
-    const sampleText = selected ? selected.sampleRows.map((row) => visibleColumnIndexes.map((index) => row[index] ?? '').join('\t')).join('\n') : '';
-
-    useEffect(() => {
-        setSelectedTable((current) => browser.tables.some((table) => table.name === current) ? current : browser.tables[0]?.name ?? '');
-    }, [browser]);
-
-    return (
-        <div className="metadata-store-panel metadata-browser-panel">
-            <strong>Metadata Browser</strong>
-            <small>{browser.message}</small>
-            <div className="metadata-browser-controls">
-                <select aria-label="Metadata table" onChange={(event) => setSelectedTable(event.target.value)} value={selected?.name ?? ''}>
-                    {browser.tables.map((table) => (
-                        <option key={table.name} value={table.name}>{table.name} / {table.rowCount}</option>
-                    ))}
-                </select>
-                <input aria-label="Column search" onChange={(event) => setColumnQuery(event.target.value)} placeholder="Search columns" value={columnQuery} />
-                <Button disabled={!sampleText} onClick={() => void navigator.clipboard?.writeText(sampleText)} variant="subtle">Copy rows</Button>
-            </div>
-            <div className="metadata-browser-controls">
-                <input
-                    aria-label="Metadata history search"
-                    onChange={(event) => onQueryChange(event.target.value)}
-                    onKeyDown={(event) => {
-                        if (event.key === 'Enter') {
-                            onSearch();
-                        }
-                    }}
-                    placeholder="Search chats, artifacts, tools"
-                    value={query}
-                />
-                <Button disabled={isSearching || !query.trim()} onClick={onSearch} variant="subtle">
-                    {isSearching ? 'Searching...' : 'Search history'}
-                </Button>
-            </div>
-            {results.length > 0 && (
-                <div className="metadata-history-results">
-                    {results.map((result) => (
-                        <p key={`${result.kind}-${result.id}`}>
-                            <strong>{result.kind}</strong> {result.title} <small>{result.target}</small>
-                            <span>{result.snippet}</span>
-                        </p>
-                    ))}
-                </div>
-            )}
-            {selected && (
-                <>
-                    <div className="metadata-column-grid">
-                        {visibleColumns.map((column) => (
-                            <span key={column.name}><strong>{column.name}</strong><small>{column.type || 'TEXT'}</small></span>
-                        ))}
-                    </div>
-                    {selected.sampleRows.length > 0 && (
-                        <div className="metadata-sample">
-                            {selected.sampleRows.map((row, rowIndex) => (
-                                <p key={`${selected.name}-${rowIndex}`}>
-                                    {visibleColumnIndexes.map((index) => row[index] ?? '').slice(0, 6).join(' | ')}
-                                </p>
-                            ))}
-                        </div>
-                    )}
-                </>
-            )}
-            {browser.datasetViews.length > 0 && (
-                <div className="metadata-dataset-views">
-                    <strong>Dataset Views</strong>
-                    {browser.datasetViews.map((view) => (
-                        <p key={view.relPath}>{view.name}: {view.rows} rows, {view.columns.length} columns <small>{view.engine}</small></p>
-                    ))}
-                </div>
-            )}
-        </div>
-    );
-}
-
-function SQLiteConnectorPanel({
-    isQuerying,
-    onChange,
-    onQuery,
-    query,
-    result,
-}: {
-    isQuerying: boolean;
-    onChange: (value: string) => void;
-    onQuery: () => void;
-    query: string;
-    result: SQLiteQueryResult | null;
-}) {
-    return (
-        <div className="metadata-store-panel sqlite-connector-panel">
-            <strong>SQLite Connector</strong>
-            <small>Read-only workspace database query surface.</small>
-            <textarea aria-label="Workspace SQLite query" onChange={(event) => onChange(event.target.value)} value={query} />
-            <Button disabled={isQuerying || !query.trim()} onClick={onQuery} variant="subtle">
-                {isQuerying ? 'Querying...' : 'Run read-only query'}
-            </Button>
-            {result && (
-                <SortableDataTable
-                    pageSize={8}
-                    table={{columns: result.columns, rows: result.rows, profiles: [], totalRows: result.totalRows, truncated: result.rows.length < result.totalRows}}
-                    title={result.engine}
-                />
-            )}
-        </div>
-    );
-}
-
-function WorkspaceFreshnessPanel({
-    isRefreshing,
-    onRefreshContext,
-    status,
-}: {
-    isRefreshing: boolean;
-    onRefreshContext: () => void;
-    status: WorkspaceFreshnessStatus;
-}) {
-    const changed = safeWorkspaceChanges(status.changed);
-    const staleArtifacts = safeStringArray(status.staleArtifacts);
-    const staleDatasets = safeStringArray(status.staleDatasets);
-    if (changed.length === 0 && staleArtifacts.length === 0 && staleDatasets.length === 0) {
-        return null;
-    }
-    return (
-        <div className="metadata-store-panel">
-            <div className="panel-toolbar">
-                <strong>Workspace Watcher</strong>
-                <Button disabled={changed.length === 0 || isRefreshing} onClick={onRefreshContext} variant="subtle">
-                    {isRefreshing ? 'Refreshing...' : 'Refresh context'}
-                </Button>
-            </div>
-            <small>{status.message}</small>
-            {changed.slice(0, 5).map((change) => (
-                <p key={`${change.kind}-${change.relPath}`}>{change.kind}: {change.relPath}</p>
-            ))}
-            {staleArtifacts.length > 0 && (
-                <small>Stale artifacts: {staleArtifacts.slice(0, 4).join(', ')}</small>
-            )}
-            {staleDatasets.length > 0 && (
-                <small>Dataset refresh needed: {staleDatasets.slice(0, 4).join(', ')}</small>
-            )}
-        </div>
-    );
-}
-
-function safeWorkspaceChanges(value: unknown) {
-    return Array.isArray(value)
-        ? value.filter((change): change is {relPath: string; kind: string} => {
-            return Boolean(change && typeof change.relPath === 'string' && change.relPath.trim().length > 0);
-        })
-        : [];
-}
-
-function safeStringArray(value: unknown) {
-    return Array.isArray(value) ? value.filter((item): item is string => typeof item === 'string') : [];
-}
-
-function ArtifactLineagePanel({
-    lineage,
-    onExport,
-    onOpenSource,
-    onRefresh,
-}: {
-    lineage: ArtifactLineage | null;
-    onExport: () => void;
-    onOpenSource: (relPath: string) => void;
-    onRefresh: () => void;
-}) {
-    const [filter, setFilter] = useState('all');
-    const [selectedNodeId, setSelectedNodeId] = useState('');
-    const visibleEdges = lineage?.edges.filter((edge) => {
-        if (filter === 'all') {
-            return true;
-        }
-        const from = lineage.nodes.find((node) => node.id === edge.from);
-        const to = lineage.nodes.find((node) => node.id === edge.to);
-        return from?.kind === filter || to?.kind === filter;
-    }) ?? [];
-    const visibleNodeIds = new Set(visibleEdges.flatMap((edge) => [edge.from, edge.to]));
-    const visibleNodes = lineage?.nodes.filter((node) => filter === 'all' || node.kind === filter || visibleNodeIds.has(node.id)) ?? [];
-    const selectedNode = lineage?.nodes.find((node) => node.id === selectedNodeId) ?? visibleNodes[0] ?? null;
-    const relationshipText = lineage?.relationshipCounts
-        ? Object.entries(lineage.relationshipCounts).map(([label, count]) => `${label}: ${count}`).join(', ')
-        : '';
-
-    useEffect(() => {
-        if (!selectedNodeId && visibleNodes[0]) {
-            setSelectedNodeId(visibleNodes[0].id);
-        }
-    }, [selectedNodeId, visibleNodes]);
-
-    return (
-        <div className="metadata-store-panel">
-            <div className="panel-toolbar">
-                <strong>Artifact Lineage</strong>
-                <span>
-                    <Button onClick={onRefresh} variant="subtle">Refresh</Button>
-                    <Button disabled={!lineage} onClick={onExport} variant="subtle">Export JSON</Button>
-                </span>
-            </div>
-            <small>{lineage?.message ?? 'Build graph from chats, tools, source files, and artifacts.'}</small>
-            {relationshipText && <small>{relationshipText}</small>}
-            {lineage && (
-                <div className="lineage-filter-row" aria-label="Lineage filter">
-                    {['all', 'source', 'chat', 'tool', 'artifact'].map((kind) => (
-                        <button className={filter === kind ? 'selected' : ''} key={kind} onClick={() => setFilter(kind)}>
-                            {kind}
-                        </button>
-                    ))}
-                </div>
-            )}
-            {lineage && (
-                <div className="lineage-graph-layout">
-                    <div className="lineage-node-cloud" aria-label="Lineage graph">
-                        {visibleNodes.slice(0, 18).map((node, index) => (
-                            <button
-                                className={`lineage-node ${node.kind} ${selectedNode?.id === node.id ? 'selected' : ''}`}
-                                key={node.id}
-                                onClick={() => setSelectedNodeId(node.id)}
-                                style={{
-                                    gridColumn: `${(index % 3) + 1}`,
-                                    gridRow: `${Math.floor(index / 3) + 1}`,
-                                }}
-                            >
-                                <span>{node.kind}</span>
-                                <strong>{node.label}</strong>
-                            </button>
-                        ))}
-                    </div>
-                    <div className="lineage-detail">
-                        {selectedNode ? (
-                            <>
-                                <strong>{selectedNode.label}</strong>
-                                <small>{selectedNode.kind}</small>
-                                {selectedNode.relPath && <p>{selectedNode.relPath}</p>}
-                                <small>
-                                    {visibleEdges.filter((edge) => edge.from === selectedNode.id || edge.to === selectedNode.id).length} relationships
-                                </small>
-                                {selectedNode.relPath && (
-                                    <Button onClick={() => onOpenSource(selectedNode.relPath)} variant="subtle">Open source</Button>
-                                )}
-                            </>
-                        ) : (
-                            <small>No lineage node selected.</small>
-                        )}
-                    </div>
-                    <div className="lineage-list">
-                        {visibleEdges.slice(0, 8).map((edge, index) => {
-                            const from = lineage.nodes.find((node) => node.id === edge.from);
-                            const to = lineage.nodes.find((node) => node.id === edge.to);
-                            return (
-                                <p key={`${edge.from}-${edge.to}-${index}`}>
-                                    {from?.label ?? edge.from} {'->'} {to?.label ?? edge.to} <small>{edge.label}</small>
-                                </p>
-                            );
-                        })}
-                    </div>
-                </div>
-            )}
-        </div>
-    );
 }

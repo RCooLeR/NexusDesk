@@ -200,13 +200,21 @@ Current responsibilities:
 - call the LLM gateway
 - feed tool results back to the model
 - create final answers and artifacts
+- parse tool requests
+- apply tool policies
+- stop loops safely
+
+Current implementation:
+
+- `app/internal/agent/` owns the backend ReAct loop, system prompt, plan updates, action parsing, observation handling, and memory pruning.
+- `app/agent_runtime.go` exposes `RunAgent` and maps model-requested tools to deterministic workspace, data, artifact, shell, and registered agent-tool handlers.
+- High-impact tools are blocked unless the backend request explicitly enables approval, and shell commands require a separate shell flag.
 
 Planned responsibilities:
 
-- parse tool requests
-- apply tool policies
-- request user approvals when needed
-- stop loops safely
+- stream each agent step into the frontend as it happens
+- request interactive user approvals mid-loop instead of requiring approval flags before the call starts
+- add a structured patch validator before exposing raw patch application
 
 The agent owns flow control. The LLM owns language generation and reasoning attempts, not permissions.
 
@@ -280,9 +288,21 @@ Artifacts are the bridge between chat and real work.
 Responsibilities:
 
 - present Code Studio, Data Studio, Analytics Studio, Document Studio, Operations Studio, and Artifact Studio as durable app surfaces
+- make the primary rail/main menu a real workspace router, not just a visual label strip
+- preserve per-studio state: selected tab, open resources, filters, query history, task state, and assistant context
 - keep editor tabs, dataset panels, artifact browser, tool timeline, and assistant context visually connected
 - make AI actions feel like IDE/data-studio commands, not generic chat shortcuts
 - let later modules plug into the same shell without changing the safety model
+
+Target studio ownership:
+
+- Code Studio owns IDE navigation, git status/diffs, editor groups, search, problems, symbols, tests/tasks, and code patch workflows.
+- Data Studio owns file datasets, spreadsheets, database connectors, dump imports, temporary Docker-backed database sandboxes, schemas, query notebooks, profiling, charts, and data research artifacts.
+- Analytics Studio owns GA4/Search Console/ads/CRM connectors, marketing exports, dashboards, funnel/cohort/channel analysis, and recurring narrative reports.
+- Document Studio owns document extraction, OCR, document sets, comparison, redline/comment workflows, generated reports, and generated presentations.
+- AI Assistant owns context selection, model/provider controls, tool plans, agent modes, citations, memory, and cross-studio orchestration.
+- Operations Studio owns Docker/Compose inspection, logs, local services, ports, health checks, safe operations, and generated runbooks/configs.
+- Artifact Studio owns generated outputs, lineage, comparison, reproducibility metadata, archive/delete, and source navigation.
 
 ## Deployment Shape
 

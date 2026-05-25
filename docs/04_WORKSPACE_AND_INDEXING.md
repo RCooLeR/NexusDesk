@@ -177,9 +177,9 @@ Current implementation:
 - renders PDF files as capped inline data URLs and extracts simple embedded text by page when available
 - extracts basic DOCX body text from `word/document.xml`
 - searches workspace path names and previewable text/PDF/DOCX content
-- sends selected chat context with a smaller 16 KB cap
+- sends selected chat context using the active model context-window budget after response reserve and overhead
 - sends selected CSV chat context as a structured column profile plus bounded row sample
-- builds bounded multi-file context packs from pinned text, CSV, and extracted-PDF previews
+- builds bounded multi-file context packs from pinned text, CSV, and extracted-PDF previews using the active model context-window budget
 - trims partial UTF-8 characters at truncation boundaries
 - shows unsupported state for binary or unsupported text-encoding files
 - excludes image and PDF data URLs from text chat context, but allows extracted PDF text as context
