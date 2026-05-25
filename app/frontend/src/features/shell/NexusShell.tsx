@@ -1321,9 +1321,10 @@ export function NexusShell({
     async function refreshGitStatus() {
         try {
             const status = await GetGitStatus();
-            setGitStatus(status);
-            if (status.available) {
-                pushToolEvent('Git status refreshed', status.message);
+            const safeStatus = normalizeGitStatus(status);
+            setGitStatus(safeStatus);
+            if (safeStatus.available) {
+                pushToolEvent('Git status refreshed', safeStatus.message);
             }
         } catch (error) {
             const message = error instanceof Error ? error.message : '';
@@ -1364,6 +1365,9 @@ export function NexusShell({
         const rootChanged = workspace?.root !== safeSnapshot.root;
         const selectedNode = selectNodeAfterWorkspaceUpdate(safeSnapshot);
 
+        setGitStatus(emptyGitStatus('Git status not loaded. Press Refresh git when you need repository status.'));
+        setSelectedGitChangePath('');
+        setSelectedGitFileDiff(null);
         onWorkspaceChange(safeSnapshot);
         setWorkspaceSearchResults([]);
         if (rootChanged) {
@@ -1377,7 +1381,6 @@ export function NexusShell({
         await refreshApprovals();
         await refreshDatasetProfiles();
         await refreshAgentToolRuns();
-        await refreshGitStatus();
         setExpandedDirectories((current) => reconcileExpandedDirectories(current, safeSnapshot, selectedNode));
         if (selectedNode) {
             setActiveFile(selectedNode.relPath);
@@ -2121,7 +2124,7 @@ export function NexusShell({
             return '';
         }
 
-        const selectedChange = gitStatus?.changedFiles.find((change) => change.path === selectedGitChangePath);
+        const selectedChange = (gitStatus?.changedFiles ?? []).find((change) => change.path === selectedGitChangePath);
         const header = [
             'Git diff context',
             `Branch: ${gitStatus?.branch || 'unknown'}`,
@@ -3425,6 +3428,21 @@ function getSafeWorkspaceSnapshot(snapshot: WorkspaceSnapshot): WorkspaceSnapsho
             depth: typeof node.depth === 'number' && node.depth >= 0 ? node.depth : node.relPath.split('/').filter(Boolean).length,
             meta: node.meta || 'File',
         })),
+    };
+}
+
+function normalizeGitStatus(status: GitStatus | null | undefined): GitStatus {
+    if (!status) {
+        return emptyGitStatus('Git status is unavailable.');
+    }
+    return {
+        ...status,
+        changedFiles: Array.isArray(status.changedFiles) ? status.changedFiles : [],
+        stagedFiles: Array.isArray(status.stagedFiles) ? status.stagedFiles : [],
+        unstagedFiles: Array.isArray(status.unstagedFiles) ? status.unstagedFiles : [],
+        diff: typeof status.diff === 'string' ? status.diff : '',
+        stagedDiff: typeof status.stagedDiff === 'string' ? status.stagedDiff : '',
+        unstagedDiff: typeof status.unstagedDiff === 'string' ? status.unstagedDiff : '',
     };
 }
 

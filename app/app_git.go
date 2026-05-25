@@ -55,12 +55,12 @@ type GitFileDiff struct {
 func (a *App) GetGitStatus() (GitStatus, error) {
 	root := a.getWorkspaceRoot()
 	if root == "" {
-		return GitStatus{Available: false, Message: "Open a workspace before reading git status."}, nil
+		return unavailableGitStatus("Open a workspace before reading git status."), nil
 	}
 
 	repoRoot, err := gitOutput(root, "rev-parse", "--show-toplevel")
 	if err != nil {
-		return GitStatus{Available: false, Message: "Workspace is not inside a git repository.", GeneratedAt: time.Now().UTC().Format(time.RFC3339)}, nil
+		return unavailableGitStatus("Workspace is not inside a git repository."), nil
 	}
 
 	branch := strings.TrimSpace(mustGitOutput(root, "branch", "--show-current"))
@@ -93,6 +93,17 @@ func (a *App) GetGitStatus() (GitStatus, error) {
 		Message:               gitStatusMessage(branch, changedFiles),
 		GeneratedAt:           time.Now().UTC().Format(time.RFC3339),
 	}, nil
+}
+
+func unavailableGitStatus(message string) GitStatus {
+	return GitStatus{
+		Available:     false,
+		ChangedFiles:  []GitFileChange{},
+		StagedFiles:   []GitFileChange{},
+		UnstagedFiles: []GitFileChange{},
+		Message:       message,
+		GeneratedAt:   time.Now().UTC().Format(time.RFC3339),
+	}
 }
 
 func (a *App) GetGitFileDiff(relPath string) (GitFileDiff, error) {

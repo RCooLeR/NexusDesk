@@ -37,9 +37,10 @@ export function CodeStudioPanel({
     const dataFiles = nodes.filter((node) => node.kind === 'file' && node.fileType === 'data');
     const changedFiles = workspaceFreshness?.changed ?? [];
     const activeLanguage = resolveActiveLanguage(filePreview, activeFile);
+    const gitChangedFiles = gitStatus?.changedFiles ?? [];
     const stagedFiles = gitStatus?.stagedFiles ?? [];
-    const unstagedFiles = gitStatus?.unstagedFiles ?? gitStatus?.changedFiles ?? [];
-    const selectedGitChange = gitStatus?.changedFiles.find((change) => change.path === selectedGitChangePath) ?? null;
+    const unstagedFiles = gitStatus?.unstagedFiles ?? gitChangedFiles;
+    const selectedGitChange = gitChangedFiles.find((change) => change.path === selectedGitChangePath) ?? null;
     const hasSelectedDiff = selectedGitFileDiff?.path === selectedGitChangePath && Boolean(selectedGitFileDiff.stagedDiff || selectedGitFileDiff.unstagedDiff);
 
     return (
@@ -99,13 +100,13 @@ export function CodeStudioPanel({
                 </div>
                 {gitStatus?.available && (
                     <div className={gitStatus.dirty ? 'git-summary dirty' : 'git-summary'}>
-                        <strong>{gitStatus.dirty ? `${gitStatus.changedFiles.length} changed` : 'Clean'}</strong>
+                        <strong>{gitStatus.dirty ? `${gitChangedFiles.length} changed` : 'Clean'}</strong>
                         <span>{stagedFiles.length} staged / {unstagedFiles.length} unstaged</span>
                         <span>{gitStatus.aheadBehind || gitStatus.message}</span>
                     </div>
                 )}
                 <div className="code-studio-list" aria-label="Changed workspace files">
-                    {gitStatus?.available && gitStatus.changedFiles.length > 0 ? (
+                    {gitStatus?.available && gitChangedFiles.length > 0 ? (
                         <>
                             <GitChangeGroup changes={stagedFiles} label="Staged" onSelect={onSelectGitChange} selectedPath={selectedGitChangePath} />
                             <GitChangeGroup changes={unstagedFiles} label="Unstaged" onSelect={onSelectGitChange} selectedPath={selectedGitChangePath} />

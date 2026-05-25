@@ -65,31 +65,9 @@ export async function installNexusMocks(page) {
                     GetLLMSettings: async () => ({providerName: 'Local', baseUrl: 'http://localhost:11434/v1', model: 'qwen3:8b', apiKey: '', maxContextTokens: 32768, responseReserveTokens: 4096, updatedAt: ''}),
                     SelectWorkspace: async () => ({selected: true, snapshot}),
                     RefreshWorkspace: async () => ({selected: true, snapshot}),
-                    GetGitStatus: async () => ({
-                        available: true,
-                        repoRoot: 'E:/smoke/NexusAugenticStudio',
-                        branch: 'main',
-                        head: 'abc1234',
-                        dirty: true,
-                        changedFiles: [
-                            {path: 'app/frontend/src/App.tsx', oldPath: '', index: '', worktree: 'M', summary: 'modified'},
-                            {path: 'docs/09_DEVELOPER_EXPERIENCE.md', oldPath: '', index: '', worktree: 'M', summary: 'modified'},
-                        ],
-                        stagedFiles: [],
-                        unstagedFiles: [
-                            {path: 'app/frontend/src/App.tsx', oldPath: '', index: '', worktree: 'M', summary: 'modified'},
-                            {path: 'docs/09_DEVELOPER_EXPERIENCE.md', oldPath: '', index: '', worktree: 'M', summary: 'modified'},
-                        ],
-                        diff: 'diff --git a/app/frontend/src/App.tsx b/app/frontend/src/App.tsx\n@@\n- old\n+ new\n',
-                        diffTruncated: false,
-                        stagedDiff: '',
-                        stagedDiffTruncated: false,
-                        unstagedDiff: 'diff --git a/app/frontend/src/App.tsx b/app/frontend/src/App.tsx\n@@\n- old\n+ new\n',
-                        unstagedDiffTruncated: false,
-                        aheadBehind: 'ahead 1',
-                        message: 'main has 2 changed files.',
-                        generatedAt: '2026-05-14T00:00:00Z',
-                    }),
+                    GetGitStatus: async () => {
+                        throw new Error('Git status should only load after an explicit Refresh git action.');
+                    },
                     GetGitFileDiff: async (relPath) => ({
                         path: relPath,
                         stagedDiff: '',

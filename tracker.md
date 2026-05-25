@@ -263,6 +263,7 @@ Step 4.3: Git integration
 - [x] Show current branch.
 - [x] Show dirty summary.
 - [x] Avoid running Git automatically on workspace open.
+- [x] Normalize unavailable Git responses so null changed-file arrays cannot blank the shell.
 - [x] Hide external Git command windows on Windows desktop builds.
 - [x] Show file status badges in tree.
 - [x] Add changed-files panel.
@@ -941,7 +942,8 @@ Steps:
 7. [x] Add Unified, Split, and Diff Only review modes.
 8. [x] Replace visible hunk text buttons with compact icon controls.
 9. [x] Avoid automatic Git refresh on folder open to prevent desktop command-window flashes.
-10. [x] Keep docs, tracker, smoke checks, and visual baselines aligned.
+10. [x] Normalize unavailable Git state so opening non-git folders cannot crash the Workbench or Git drawer.
+11. [x] Keep docs, tracker, smoke checks, and visual baselines aligned.
 
 Recommended next batch: Safe Git Mutations And Workbench Utility Panels.
 

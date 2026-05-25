@@ -99,6 +99,7 @@ Current status:
 - The desktop shell builds on Windows through Wails.
 - Nexus Augentic Studio is now documented and presented as a local-first AI Workbench with Data & Analytics, Artifacts, Settings, and always-visible assistant surfaces.
 - The primary rail is intentionally limited to implemented product surfaces instead of roadmap-only studios.
+- Opening a workspace no longer triggers automatic Git refresh; Git status is manual so folder open cannot launch Git work or render malformed unavailable Git responses.
 - The workspace browser can open, refresh, preview, remember, search, and expand/collapse local folders, scanning up to 10 levels deep by default.
 - The shell has a keyboard quick-open palette for workspace files, folders, and already-open tabs, with parent directories expanded on selection.
 - The shell has a keyboard command palette for common workspace, editor, context, data, artifact, and chat actions.

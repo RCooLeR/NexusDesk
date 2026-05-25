@@ -101,9 +101,11 @@ const checks = [
             'draftGitCommitMessage',
             'selectedGitDiffPromptContext',
             'handleTreeContextAction',
+            'normalizeGitStatus',
             'main-studio-panel',
             'showTabs: false',
         ],
+        absentTerms: ['await refreshGitStatus();'],
     },
     {
         file: 'src/api/wailsClient.ts',
@@ -343,6 +345,11 @@ for (const check of checks) {
     for (const term of check.terms) {
         if (!content.includes(term)) {
             failures.push(`${check.file} does not contain ${term}`);
+        }
+    }
+    for (const term of check.absentTerms ?? []) {
+        if (content.includes(term)) {
+            failures.push(`${check.file} should not contain ${term}`);
         }
     }
 }

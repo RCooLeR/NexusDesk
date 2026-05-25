@@ -58,9 +58,10 @@ export function GitDiffPanel({
     const [diffMode, setDiffMode] = useState<DiffMode>('unified');
     const [activeHunkIndex, setActiveHunkIndex] = useState(0);
     const diffScrollRef = useRef<HTMLDivElement | null>(null);
+    const changedFiles = gitStatus?.changedFiles ?? [];
     const stagedFiles = gitStatus?.stagedFiles ?? [];
-    const unstagedFiles = gitStatus?.unstagedFiles ?? gitStatus?.changedFiles ?? [];
-    const selectedGitChange = gitStatus?.changedFiles.find((change) => change.path === selectedGitChangePath) ?? null;
+    const unstagedFiles = gitStatus?.unstagedFiles ?? changedFiles;
+    const selectedGitChange = changedFiles.find((change) => change.path === selectedGitChangePath) ?? null;
     const selectedDiff = selectedGitFileDiff?.path === selectedGitChangePath ? selectedGitFileDiff : null;
     const stagedDiff = selectedDiff?.stagedDiff ?? gitStatus?.stagedDiff ?? '';
     const unstagedDiff = selectedDiff?.unstagedDiff ?? gitStatus?.unstagedDiff ?? gitStatus?.diff ?? '';
@@ -109,13 +110,13 @@ export function GitDiffPanel({
                 </div>
                 {gitStatus?.available && (
                     <div className={gitStatus.dirty ? 'git-summary dirty' : 'git-summary'}>
-                        <strong>{gitStatus.dirty ? `${gitStatus.changedFiles.length} changed` : 'Clean'}</strong>
+                        <strong>{gitStatus.dirty ? `${changedFiles.length} changed` : 'Clean'}</strong>
                         <span>{stagedFiles.length} staged / {unstagedFiles.length} unstaged</span>
                         <span>{gitStatus.aheadBehind || gitStatus.message}</span>
                     </div>
                 )}
                 <div className="code-studio-list" aria-label="Working tree changed files">
-                    {gitStatus?.available && gitStatus.changedFiles.length > 0 ? (
+                    {gitStatus?.available && changedFiles.length > 0 ? (
                         <>
                             <GitChangeGroup changes={stagedFiles} label="Staged" onSelect={onSelectGitChange} selectedPath={selectedGitChangePath} />
                             <GitChangeGroup changes={unstagedFiles} label="Unstaged" onSelect={onSelectGitChange} selectedPath={selectedGitChangePath} />
