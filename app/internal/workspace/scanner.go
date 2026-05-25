@@ -65,11 +65,14 @@ func Scan(root string, options ScanOptions) (WorkspaceSnapshot, error) {
 	}
 
 	snapshot := WorkspaceSnapshot{
-		Root: absRoot,
-		Name: filepath.Base(absRoot),
+		Root:  absRoot,
+		Name:  filepath.Base(absRoot),
+		Nodes: []FileNode{},
 		Scan: ScanStatus{
-			MaxDepth:   maxDepth,
-			MaxEntries: maxEntries,
+			MaxDepth:       maxDepth,
+			MaxEntries:     maxEntries,
+			IgnoredSamples: []string{},
+			SkippedSamples: []string{},
 		},
 	}
 

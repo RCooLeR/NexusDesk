@@ -80,6 +80,10 @@ This tracker reflects the repository as it exists today and keeps planned work s
 - [x] Workspace navigator includes search results and expand/collapse controls.
 - [x] Workspace navigator width can be resized with a drag handle.
 - [x] Workspace navigator keeps fallback and file-tree rows aligned inside the resizable sidebar.
+- [x] Directory previews in the workbench now render direct children safely, with normalized path handling.
+- [x] Folder-open flow clears stale dataset/query/charts context so Data Studio state does not bleed into plain directory views.
+- [x] Workspace snapshots are sanitized at runtime before tree filtering, visibility checks, and selection so malformed payloads cannot blank the app on directory open.
+- [x] Workspace scan and freshness responses now emit empty arrays instead of null arrays, with frontend guards for scan samples and watcher changes.
 - [x] Keyboard quick-open palette exists for workspace files, folders, and open editor tabs.
 - [x] Quick-open selection expands parent folders before selecting a workspace node.
 - [x] Keyboard command palette exists for workspace, editor, context, data, artifact, and chat actions.

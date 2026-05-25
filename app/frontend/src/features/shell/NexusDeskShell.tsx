@@ -96,6 +96,7 @@ import type {
     StartupState,
     ToolEvent,
     WorkspaceArtifact,
+    WorkspaceFileChange,
     WorkspaceFreshnessStatus,
     WorkspaceSearchResult,
     WorkspaceOpenResult,
@@ -329,7 +330,7 @@ export function NexusDeskShell({
         if (!filePreview?.relPath || !workspaceFreshness) {
             return;
         }
-        const changed = new Set(workspaceFreshness.changed.map((change) => change.relPath));
+        const changed = new Set(safeWorkspaceChanges(workspaceFreshness.changed).map((change) => change.relPath));
         if (!changed.has(filePreview.relPath) || !filePreview.table) {
             return;
         }
@@ -487,7 +488,8 @@ export function NexusDeskShell({
                 return previewMeta(filePreview);
             }
 
-            return workspace.nodes.find((node) => node.relPath === activeFile)?.meta ?? workspace.root;
+            const nodes = getSafeWorkspaceNodes(workspace);
+            return nodes.find((node) => node.relPath === activeFile)?.meta ?? workspace.root;
         }
 
         return state.workspaceItems.find((item) => activeFile.startsWith(item.name))?.meta ?? 'Selected planning source';
@@ -498,7 +500,8 @@ export function NexusDeskShell({
             return [];
         }
 
-        return workspace.nodes.filter((node) => isWorkspaceNodeVisible(node, expandedDirectories));
+        return getSafeWorkspaceNodes(workspace)
+            .filter((node) => isWorkspaceNodeVisible(node, expandedDirectories));
     }, [expandedDirectories, workspace]);
 
     const canSaveLatestAssistantArtifact = useMemo(() => {
@@ -799,6 +802,11 @@ export function NexusDeskShell({
 
         if (node.kind === 'directory') {
             setIsLoadingPreview(false);
+            setActiveDatasetProfile(null);
+            setDatasetQuery('');
+            setDatasetSQLQuery('');
+            setDatasetQueryLabel('');
+            setDatasetSQLQueryLabel('');
             const directoryPreview = createDirectoryPreview(node);
             setFilePreview(directoryPreview);
             return;
@@ -923,7 +931,7 @@ export function NexusDeskShell({
             return;
         }
 
-        const existingNode = workspace.nodes.find((node) => node.relPath === relPath);
+        const existingNode = getSafeWorkspaceNodes(workspace).find((node) => node.relPath === relPath);
         if (existingNode) {
             void selectWorkspaceNode(existingNode);
             setWorkspaceStatus(`${relPath} already exists. Opened existing file instead.`);
@@ -1257,10 +1265,11 @@ export function NexusDeskShell({
             return false;
         }
 
-        const rootChanged = workspace?.root !== result.snapshot.root;
-        const selectedNode = selectNodeAfterWorkspaceUpdate(result.snapshot);
+        const safeSnapshot = getSafeWorkspaceSnapshot(result.snapshot);
+        const rootChanged = workspace?.root !== safeSnapshot.root;
+        const selectedNode = selectNodeAfterWorkspaceUpdate(safeSnapshot);
 
-        onWorkspaceChange(result.snapshot);
+        onWorkspaceChange(safeSnapshot);
         setWorkspaceSearchResults([]);
         if (rootChanged) {
             setOpenTabs([]);
@@ -1273,25 +1282,26 @@ export function NexusDeskShell({
         await refreshApprovals();
         await refreshDatasetProfiles();
         await refreshAgentToolRuns();
-        setExpandedDirectories((current) => reconcileExpandedDirectories(current, result.snapshot, selectedNode));
+        setExpandedDirectories((current) => reconcileExpandedDirectories(current, safeSnapshot, selectedNode));
         if (selectedNode) {
             setActiveFile(selectedNode.relPath);
             await previewWorkspaceNode(selectedNode, false);
         } else {
-            setActiveFile(result.snapshot.name);
+            setActiveFile(safeSnapshot.name);
             setFilePreview(null);
         }
-        setWorkspaceStatus(`${result.snapshot.nodes.length} items ${verb} from ${result.snapshot.name}.`);
+        setWorkspaceStatus(`${safeSnapshot.nodes.length} items ${verb} from ${safeSnapshot.name}.`);
         return true;
     }
 
     function selectNodeAfterWorkspaceUpdate(snapshot: WorkspaceSnapshot) {
-        const previousSelection = snapshot.nodes.find((node) => node.relPath === activeFile);
+        const nodes = getSafeWorkspaceNodes(snapshot);
+        const previousSelection = nodes.find((node) => node.relPath === activeFile);
         if (previousSelection) {
             return previousSelection;
         }
 
-        return snapshot.nodes.find((node) => node.kind === 'file') ?? snapshot.nodes[0] ?? null;
+        return nodes.find((node) => node.kind === 'file') ?? nodes[0] ?? null;
     }
 
     async function selectWorkspaceFile(snapshot: WorkspaceSnapshot, relPath: string) {
@@ -1470,7 +1480,7 @@ export function NexusDeskShell({
         if (!workspace) {
             return;
         }
-        setExpandedDirectories(new Set(workspace.nodes.filter((node) => node.kind === 'directory').map((node) => node.relPath)));
+        setExpandedDirectories(new Set(getSafeWorkspaceNodes(workspace).filter((node) => node.kind === 'directory').map((node) => node.relPath)));
     }
 
     function collapseAllDirectories() {
@@ -1478,7 +1488,7 @@ export function NexusDeskShell({
     }
 
     function reconcileExpandedDirectories(current: Set<string>, snapshot: WorkspaceSnapshot, selectedNode: FileNode | null) {
-        const directoryPaths = new Set(snapshot.nodes.filter((node) => node.kind === 'directory').map((node) => node.relPath));
+        const directoryPaths = new Set(getSafeWorkspaceNodes(snapshot).filter((node) => node.kind === 'directory').map((node) => node.relPath));
         const next = new Set<string>();
 
         current.forEach((relPath) => {
@@ -1487,7 +1497,7 @@ export function NexusDeskShell({
             }
         });
 
-        snapshot.nodes.forEach((node) => {
+        getSafeWorkspaceNodes(snapshot).forEach((node) => {
             if (node.kind === 'directory' && node.depth === 1) {
                 next.add(node.relPath);
             }
@@ -2138,11 +2148,12 @@ export function NexusDeskShell({
     }
 
     async function refreshStaleContextFromWorkspace() {
-        if (!workspaceFreshness || workspaceFreshness.changed.length === 0) {
+        const changes = safeWorkspaceChanges(workspaceFreshness?.changed);
+        if (!workspaceFreshness || changes.length === 0) {
             setWorkspaceStatus('No changed workspace files need context refresh.');
             return;
         }
-        const changedPaths = workspaceFreshness.changed.map((change) => change.relPath);
+        const changedPaths = changes.map((change) => change.relPath);
         setIsRefreshingStaleContext(true);
         try {
             const refresh = await RefreshStaleContext(changedPaths);
@@ -3025,7 +3036,31 @@ export function NexusDeskShell({
 }
 
 function findWorkspaceNode(snapshot: WorkspaceSnapshot, relPath: string) {
-    return snapshot.nodes.find((node) => node.relPath === relPath) ?? null;
+    return getSafeWorkspaceNodes(snapshot).find((node) => node.relPath === relPath) ?? null;
+}
+
+function getSafeWorkspaceNodes(snapshot: WorkspaceSnapshot | null) {
+    if (!snapshot || !Array.isArray(snapshot.nodes)) {
+        return [];
+    }
+    return snapshot.nodes.filter((node): node is FileNode => {
+        return Boolean(node && typeof node.relPath === 'string' && node.relPath.trim().length > 0);
+    });
+}
+
+function getSafeWorkspaceSnapshot(snapshot: WorkspaceSnapshot): WorkspaceSnapshot {
+    return {
+        ...snapshot,
+        nodes: getSafeWorkspaceNodes(snapshot).map((node) => ({
+            name: node.name?.trim() ? node.name : (node.relPath.split('/').at(-1) ?? node.relPath),
+            path: node.path || node.relPath,
+            relPath: node.relPath,
+            kind: node.kind || 'file',
+            fileType: node.fileType || 'file',
+            depth: typeof node.depth === 'number' && node.depth >= 0 ? node.depth : node.relPath.split('/').filter(Boolean).length,
+            meta: node.meta || 'File',
+        })),
+    };
 }
 
 function dirtyDraftPaths(fileDrafts: Record<string, string>, openTabs: FilePreview[]) {
@@ -3117,10 +3152,11 @@ function latestAssistantMessage(messages: ChatMessage[]) {
 }
 
 function staleSourcePaths(messages: ChatMessage[], contextPreview: ContextPreview | null, freshness: WorkspaceFreshnessStatus | null) {
-    if (!freshness || freshness.changed.length === 0) {
+    const changes = safeWorkspaceChanges(freshness?.changed);
+    if (!freshness || changes.length === 0) {
         return [];
     }
-    const changed = new Set(freshness.changed.map((change) => change.relPath));
+    const changed = new Set(changes.map((change) => change.relPath));
     const paths = new Set<string>();
     for (const message of messages) {
         for (const sourcePath of message.sourcePaths ?? []) {
@@ -3138,6 +3174,14 @@ function staleSourcePaths(messages: ChatMessage[], contextPreview: ContextPrevie
         }
     }
     return [...paths];
+}
+
+function safeWorkspaceChanges(value: unknown): WorkspaceFileChange[] {
+    return Array.isArray(value)
+        ? value.filter((change): change is WorkspaceFileChange => {
+            return Boolean(change && typeof change.relPath === 'string' && change.relPath.trim().length > 0);
+        })
+        : [];
 }
 
 function latestAssistantArtifactTitle(messages: ChatMessage[]) {

@@ -242,8 +242,12 @@ function scanStatusSummary(workspace: WorkspaceSnapshot, fallback: string) {
     if (!workspace.scan) {
         return workspace.truncated ? `${workspace.nodes.length} indexed items; scan capped for responsiveness.` : fallback;
     }
-    const skipped = workspace.scan.ignored + workspace.scan.depthSkipped + workspace.scan.entrySkipped + workspace.scan.unreadable;
-    return `${workspace.scan.included} indexed, ${skipped} skipped. Depth ${workspace.scan.maxDepth}, cap ${workspace.scan.maxEntries}.`;
+    const included = numericScanValue(workspace.scan.included);
+    const skipped = numericScanValue(workspace.scan.ignored)
+        + numericScanValue(workspace.scan.depthSkipped)
+        + numericScanValue(workspace.scan.entrySkipped)
+        + numericScanValue(workspace.scan.unreadable);
+    return `${included} indexed, ${skipped} skipped. Depth ${numericScanValue(workspace.scan.maxDepth)}, cap ${numericScanValue(workspace.scan.maxEntries)}.`;
 }
 
 function ScanStatusDetails({workspace}: {workspace: WorkspaceSnapshot}) {
@@ -251,26 +255,35 @@ function ScanStatusDetails({workspace}: {workspace: WorkspaceSnapshot}) {
     if (!scan) {
         return null;
     }
+    const samples = [...safeStringArray(scan.ignoredSamples), ...safeStringArray(scan.skippedSamples)];
 
     return (
         <details className="scan-status-details">
             <summary>Scan status</summary>
             <dl>
-                <div><dt>Included</dt><dd>{scan.included}</dd></div>
-                <div><dt>Ignored</dt><dd>{scan.ignored}</dd></div>
-                <div><dt>Depth skipped</dt><dd>{scan.depthSkipped}</dd></div>
-                <div><dt>Entry cap</dt><dd>{scan.entrySkipped}</dd></div>
-                <div><dt>Unreadable</dt><dd>{scan.unreadable}</dd></div>
+                <div><dt>Included</dt><dd>{numericScanValue(scan.included)}</dd></div>
+                <div><dt>Ignored</dt><dd>{numericScanValue(scan.ignored)}</dd></div>
+                <div><dt>Depth skipped</dt><dd>{numericScanValue(scan.depthSkipped)}</dd></div>
+                <div><dt>Entry cap</dt><dd>{numericScanValue(scan.entrySkipped)}</dd></div>
+                <div><dt>Unreadable</dt><dd>{numericScanValue(scan.unreadable)}</dd></div>
             </dl>
-            {[...scan.ignoredSamples, ...scan.skippedSamples].length > 0 && (
+            {samples.length > 0 && (
                 <ul>
-                    {[...scan.ignoredSamples, ...scan.skippedSamples].slice(0, 6).map((sample) => (
+                    {samples.slice(0, 6).map((sample) => (
                         <li key={sample}>{sample}</li>
                     ))}
                 </ul>
             )}
         </details>
     );
+}
+
+function safeStringArray(value: unknown) {
+    return Array.isArray(value) ? value.filter((item): item is string => typeof item === 'string') : [];
+}
+
+function numericScanValue(value: unknown) {
+    return typeof value === 'number' && Number.isFinite(value) ? value : 0;
 }
 
 function groupSearchResults(results: WorkspaceSearchResult[]) {

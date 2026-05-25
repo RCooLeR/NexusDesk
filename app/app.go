@@ -547,7 +547,12 @@ func (a *App) CheckWorkspaceFreshness() (workspace.FreshnessStatus, error) {
 	a.fingerprints = current
 	a.watchMu.Unlock()
 	if previous == nil {
-		return workspace.FreshnessStatus{Message: "Workspace watcher baseline captured."}, nil
+		return workspace.FreshnessStatus{
+			Changed:        []workspace.FileChange{},
+			StaleArtifacts: []string{},
+			StaleDatasets:  []string{},
+			Message:        "Workspace watcher baseline captured.",
+		}, nil
 	}
 
 	changes := workspace.CompareFingerprints(previous, current)

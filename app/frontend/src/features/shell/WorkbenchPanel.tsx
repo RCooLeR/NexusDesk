@@ -398,6 +398,12 @@ export function WorkbenchPanel({
                                         <img src={filePreview.content} alt={filePreview.name} />
                                     </div>
                                 </>
+                            ) : filePreview?.kind === 'directory' ? (
+                                <DirectoryPreviewSafe
+                                    directory={filePreview.relPath}
+                                    filePreviewMessage={filePreview.message}
+                                    workspace={workspace}
+                                />
                             ) : filePreview?.kind === 'pdf' && filePreview.content ? (
                                 <>
                                     {filePreview.message && <InlineAlert>{filePreview.message}</InlineAlert>}
@@ -607,6 +613,80 @@ export function WorkbenchPanel({
 
 function isMarkdownFile(fileName: string) {
     return /\.mdx?$/i.test(fileName);
+}
+
+function DirectoryPreviewSafe({
+    directory,
+    filePreviewMessage,
+    workspace,
+}: {
+    directory: string;
+    filePreviewMessage: string;
+    workspace: WorkspaceSnapshot | null;
+}) {
+    const nodes = workspace?.nodes ?? [];
+    const normalizedDirectory = normalizeRelPath(directory);
+    const isRoot = normalizedDirectory === '';
+
+    const directChildren = nodes.filter((node) => {
+        if (!node || typeof node.relPath !== 'string') {
+            return false;
+        }
+
+        const normalizedPath = normalizeRelPath(node.relPath);
+        if (normalizedPath === normalizedDirectory) {
+            return false;
+        }
+        if (isRoot) {
+            return normalizedPath.length > 0 && !normalizedPath.includes('/');
+        }
+        if (!normalizedPath.startsWith(`${normalizedDirectory}/`)) {
+            return false;
+        }
+        const remainder = normalizedPath.slice(normalizedDirectory.length + 1);
+        return remainder.length > 0 && !remainder.includes('/');
+    });
+
+    const sortedChildren = [...directChildren]
+        .sort((left, right) => {
+            const leftKind = left.kind || '';
+            const rightKind = right.kind || '';
+            if (leftKind !== rightKind) {
+                return leftKind === 'directory' ? -1 : 1;
+            }
+            return (left.name || '').localeCompare(right.name || '');
+        })
+        .slice(0, 120);
+
+    return (
+        <div className="directory-preview">
+            <div className="directory-preview-heading">
+                <strong>{directory || 'Workspace root'}</strong>
+                <small>Directory preview</small>
+            </div>
+            {filePreviewMessage && <InlineAlert>{filePreviewMessage}</InlineAlert>}
+            {sortedChildren.length > 0 ? (
+                <div className="directory-entries">
+                    {sortedChildren.map((child) => (
+                        <div className="directory-entry" key={child.relPath}>
+                            <span>{child.kind === 'directory' ? '[DIR]' : 'file'}</span>
+                            <span>{child.name}</span>
+                            <small>{child.meta ?? ''}</small>
+                        </div>
+                    ))}
+                </div>
+            ) : (
+                <div className="directory-empty">No indexed items found in this directory.</div>
+            )}
+        </div>
+    );
+}
+
+function normalizeRelPath(path: string) {
+    return String(path || '')
+        .replace(/\\/g, '/')
+        .replace(/\/+$/g, '')
+        .replace(/^\/+/, '');
 }
 
 function countFindMatches(content: string, query: string) {
@@ -931,29 +1011,44 @@ function WorkspaceFreshnessPanel({
     onRefreshContext: () => void;
     status: WorkspaceFreshnessStatus;
 }) {
-    if (status.changed.length === 0 && status.staleArtifacts.length === 0 && (status.staleDatasets?.length ?? 0) === 0) {
+    const changed = safeWorkspaceChanges(status.changed);
+    const staleArtifacts = safeStringArray(status.staleArtifacts);
+    const staleDatasets = safeStringArray(status.staleDatasets);
+    if (changed.length === 0 && staleArtifacts.length === 0 && staleDatasets.length === 0) {
         return null;
     }
     return (
         <div className="metadata-store-panel">
             <div className="panel-toolbar">
                 <strong>Workspace Watcher</strong>
-                <Button disabled={status.changed.length === 0 || isRefreshing} onClick={onRefreshContext} variant="subtle">
+                <Button disabled={changed.length === 0 || isRefreshing} onClick={onRefreshContext} variant="subtle">
                     {isRefreshing ? 'Refreshing...' : 'Refresh context'}
                 </Button>
             </div>
             <small>{status.message}</small>
-            {status.changed.slice(0, 5).map((change) => (
+            {changed.slice(0, 5).map((change) => (
                 <p key={`${change.kind}-${change.relPath}`}>{change.kind}: {change.relPath}</p>
             ))}
-            {status.staleArtifacts.length > 0 && (
-                <small>Stale artifacts: {status.staleArtifacts.slice(0, 4).join(', ')}</small>
+            {staleArtifacts.length > 0 && (
+                <small>Stale artifacts: {staleArtifacts.slice(0, 4).join(', ')}</small>
             )}
-            {status.staleDatasets?.length > 0 && (
-                <small>Dataset refresh needed: {status.staleDatasets.slice(0, 4).join(', ')}</small>
+            {staleDatasets.length > 0 && (
+                <small>Dataset refresh needed: {staleDatasets.slice(0, 4).join(', ')}</small>
             )}
         </div>
     );
+}
+
+function safeWorkspaceChanges(value: unknown) {
+    return Array.isArray(value)
+        ? value.filter((change): change is {relPath: string; kind: string} => {
+            return Boolean(change && typeof change.relPath === 'string' && change.relPath.trim().length > 0);
+        })
+        : [];
+}
+
+function safeStringArray(value: unknown) {
+    return Array.isArray(value) ? value.filter((item): item is string => typeof item === 'string') : [];
 }
 
 function ArtifactLineagePanel({
