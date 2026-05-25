@@ -15,6 +15,7 @@ export namespace agent {
 	    }
 	}
 	export class RunRequest {
+	    requestId: string;
 	    prompt: string;
 	    maxIterations: number;
 	    approveHighImpact: boolean;
@@ -26,6 +27,7 @@ export namespace agent {
 
 	    constructor(source: any = {}) {
 	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.requestId = source["requestId"];
 	        this.prompt = source["prompt"];
 	        this.maxIterations = source["maxIterations"];
 	        this.approveHighImpact = source["approveHighImpact"];
@@ -1003,8 +1005,14 @@ export namespace main {
 	    head: string;
 	    dirty: boolean;
 	    changedFiles: GitFileChange[];
+	    stagedFiles: GitFileChange[];
+	    unstagedFiles: GitFileChange[];
 	    diff: string;
 	    diffTruncated: boolean;
+	    stagedDiff: string;
+	    stagedDiffTruncated: boolean;
+	    unstagedDiff: string;
+	    unstagedDiffTruncated: boolean;
 	    aheadBehind: string;
 	    message: string;
 	    generatedAt: string;
@@ -1021,8 +1029,14 @@ export namespace main {
 	        this.head = source["head"];
 	        this.dirty = source["dirty"];
 	        this.changedFiles = this.convertValues(source["changedFiles"], GitFileChange);
+	        this.stagedFiles = this.convertValues(source["stagedFiles"], GitFileChange);
+	        this.unstagedFiles = this.convertValues(source["unstagedFiles"], GitFileChange);
 	        this.diff = source["diff"];
 	        this.diffTruncated = source["diffTruncated"];
+	        this.stagedDiff = source["stagedDiff"];
+	        this.stagedDiffTruncated = source["stagedDiffTruncated"];
+	        this.unstagedDiff = source["unstagedDiff"];
+	        this.unstagedDiffTruncated = source["unstagedDiffTruncated"];
 	        this.aheadBehind = source["aheadBehind"];
 	        this.message = source["message"];
 	        this.generatedAt = source["generatedAt"];

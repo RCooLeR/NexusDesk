@@ -14,17 +14,23 @@ const gitCommandTimeout = 4 * time.Second
 const gitDiffMaxBytes = 220 * 1024
 
 type GitStatus struct {
-	Available     bool            `json:"available"`
-	RepoRoot      string          `json:"repoRoot"`
-	Branch        string          `json:"branch"`
-	Head          string          `json:"head"`
-	Dirty         bool            `json:"dirty"`
-	ChangedFiles  []GitFileChange `json:"changedFiles"`
-	Diff          string          `json:"diff"`
-	DiffTruncated bool            `json:"diffTruncated"`
-	AheadBehind   string          `json:"aheadBehind"`
-	Message       string          `json:"message"`
-	GeneratedAt   string          `json:"generatedAt"`
+	Available             bool            `json:"available"`
+	RepoRoot              string          `json:"repoRoot"`
+	Branch                string          `json:"branch"`
+	Head                  string          `json:"head"`
+	Dirty                 bool            `json:"dirty"`
+	ChangedFiles          []GitFileChange `json:"changedFiles"`
+	StagedFiles           []GitFileChange `json:"stagedFiles"`
+	UnstagedFiles         []GitFileChange `json:"unstagedFiles"`
+	Diff                  string          `json:"diff"`
+	DiffTruncated         bool            `json:"diffTruncated"`
+	StagedDiff            string          `json:"stagedDiff"`
+	StagedDiffTruncated   bool            `json:"stagedDiffTruncated"`
+	UnstagedDiff          string          `json:"unstagedDiff"`
+	UnstagedDiffTruncated bool            `json:"unstagedDiffTruncated"`
+	AheadBehind           string          `json:"aheadBehind"`
+	Message               string          `json:"message"`
+	GeneratedAt           string          `json:"generatedAt"`
 }
 
 type GitFileChange struct {
@@ -53,29 +59,60 @@ func (a *App) GetGitStatus() (GitStatus, error) {
 	head := strings.TrimSpace(mustGitOutput(root, "rev-parse", "--short", "HEAD"))
 	statusText := mustGitOutput(root, "status", "--porcelain=v1", "--branch")
 	changedFiles, aheadBehind := parseGitStatus(statusText)
-	diff, truncated := gitDiff(root)
+	stagedFiles, unstagedFiles := splitGitChanges(changedFiles)
+	unstagedDiff, unstagedTruncated := gitDiff(root)
+	stagedDiff, stagedTruncated := gitStagedDiff(root)
 
 	return GitStatus{
-		Available:     true,
-		RepoRoot:      strings.TrimSpace(repoRoot),
-		Branch:        branch,
-		Head:          head,
-		Dirty:         len(changedFiles) > 0,
-		ChangedFiles:  changedFiles,
-		Diff:          diff,
-		DiffTruncated: truncated,
-		AheadBehind:   aheadBehind,
-		Message:       gitStatusMessage(branch, changedFiles),
-		GeneratedAt:   time.Now().UTC().Format(time.RFC3339),
+		Available:             true,
+		RepoRoot:              strings.TrimSpace(repoRoot),
+		Branch:                branch,
+		Head:                  head,
+		Dirty:                 len(changedFiles) > 0,
+		ChangedFiles:          changedFiles,
+		StagedFiles:           stagedFiles,
+		UnstagedFiles:         unstagedFiles,
+		Diff:                  unstagedDiff,
+		DiffTruncated:         unstagedTruncated,
+		StagedDiff:            stagedDiff,
+		StagedDiffTruncated:   stagedTruncated,
+		UnstagedDiff:          unstagedDiff,
+		UnstagedDiffTruncated: unstagedTruncated,
+		AheadBehind:           aheadBehind,
+		Message:               gitStatusMessage(branch, changedFiles),
+		GeneratedAt:           time.Now().UTC().Format(time.RFC3339),
 	}, nil
 }
 
 func gitDiff(root string) (string, bool) {
 	diff := mustGitOutput(root, "diff", "--no-ext-diff", "--unified=80", "--")
+	return limitGitDiff(diff)
+}
+
+func gitStagedDiff(root string) (string, bool) {
+	diff := mustGitOutput(root, "diff", "--cached", "--no-ext-diff", "--unified=80", "--")
+	return limitGitDiff(diff)
+}
+
+func limitGitDiff(diff string) (string, bool) {
 	if len(diff) <= gitDiffMaxBytes {
 		return diff, false
 	}
 	return diff[:gitDiffMaxBytes], true
+}
+
+func splitGitChanges(changes []GitFileChange) ([]GitFileChange, []GitFileChange) {
+	staged := []GitFileChange{}
+	unstaged := []GitFileChange{}
+	for _, change := range changes {
+		if change.Index != "" && change.Index != "?" {
+			staged = append(staged, change)
+		}
+		if change.Worktree != "" || change.Index == "?" {
+			unstaged = append(unstaged, change)
+		}
+	}
+	return staged, unstaged
 }
 
 func parseGitStatus(statusText string) ([]GitFileChange, string) {

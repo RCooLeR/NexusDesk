@@ -737,6 +737,12 @@ button:disabled {
     color: #7c4a03;
 }
 
+.tree-item[data-kind="directory"].changed .tree-node-badge.changed {
+    background: #eef6ff;
+    border-color: #b7d4ff;
+    color: #165a9f;
+}
+
 .quick-open-backdrop {
     position: fixed;
     inset: 0;
@@ -2594,6 +2600,30 @@ button:disabled {
 
 .git-diff-view.compact {
     max-height: 170px;
+}
+
+.git-diff-stack {
+    display: grid;
+    gap: 8px;
+    min-height: 0;
+}
+
+.git-diff-stack > strong,
+.git-change-group > small {
+    color: var(--nd-muted-text);
+    font-size: 11px;
+    font-weight: 800;
+    text-transform: uppercase;
+}
+
+.git-diff-stack.compact {
+    max-height: 240px;
+    overflow: auto;
+}
+
+.git-change-group {
+    display: grid;
+    gap: 6px;
 }
 
 .code-studio-inline {

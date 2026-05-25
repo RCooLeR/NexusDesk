@@ -39,6 +39,7 @@ type ToolCall struct {
 }
 
 type RunRequest struct {
+	RequestID          string `json:"requestId"`
 	Prompt             string `json:"prompt"`
 	MaxIterations      int    `json:"maxIterations"`
 	ApproveHighImpact  bool   `json:"approveHighImpact"`
@@ -56,6 +57,23 @@ type RunResult struct {
 
 type ToolExecutor func(ctx context.Context, call ToolCall, request RunRequest) (ToolCall, error)
 
+type RunEvent struct {
+	RequestID   string            `json:"requestId"`
+	Type        string            `json:"type"`
+	Iteration   int               `json:"iteration"`
+	Message     string            `json:"message"`
+	Model       string            `json:"model"`
+	ToolName    string            `json:"toolName"`
+	ToolArgs    map[string]string `json:"toolArgs"`
+	Observation string            `json:"observation"`
+	Error       string            `json:"error"`
+	Risk        string            `json:"risk"`
+	Plan        []PlanStep        `json:"plan,omitempty"`
+	Timestamp   string            `json:"timestamp"`
+}
+
+type RunObserver func(RunEvent)
+
 type Agent struct {
 	llmClient *llm.Client
 	llmStore  *storage.LLMSettingsStore
@@ -65,7 +83,7 @@ func New(client *llm.Client, store *storage.LLMSettingsStore) *Agent {
 	return &Agent{llmClient: client, llmStore: store}
 }
 
-func (a *Agent) Run(ctx context.Context, request RunRequest, execute ToolExecutor) (RunResult, error) {
+func (a *Agent) Run(ctx context.Context, request RunRequest, execute ToolExecutor, observe RunObserver) (RunResult, error) {
 	request.Prompt = strings.TrimSpace(request.Prompt)
 	if request.Prompt == "" {
 		return RunResult{}, fmt.Errorf("agent prompt is required")
@@ -89,23 +107,29 @@ func (a *Agent) Run(ctx context.Context, request RunRequest, execute ToolExecuto
 		plan:       []PlanStep{{Step: "Understand the user request", Status: "in_progress"}},
 		history:    []string{},
 	}
+	emitRunEvent(request, observe, RunEvent{Type: "start", Message: "Agent started.", Plan: state.plan})
 
 	for iteration := 0; iteration < maxIterations; iteration++ {
+		emitRunEvent(request, observe, RunEvent{Type: "model_request", Iteration: iteration + 1, Message: fmt.Sprintf("Iteration %d: asking model for the next step.", iteration+1), Plan: state.plan})
 		prompt := state.prompt()
 		result, err := a.llmClient.Chat(ctx, settings, llm.ChatRequest{Prompt: prompt})
 		if err != nil {
+			emitRunEvent(request, observe, RunEvent{Type: "error", Iteration: iteration + 1, Error: err.Error(), Message: "Model request failed."})
 			return RunResult{}, err
 		}
 
 		message := strings.TrimSpace(result.Message)
 		state.appendHistory("Assistant", message)
+		emitRunEvent(request, observe, RunEvent{Type: "model_response", Iteration: iteration + 1, Message: limitEventText(message, 2000), Model: result.Model})
 
 		if steps, ok := parsePlanUpdate(message); ok {
 			state.plan = steps
+			emitRunEvent(request, observe, RunEvent{Type: "plan_update", Iteration: iteration + 1, Message: "Plan updated.", Plan: state.plan})
 		}
 
 		if final := parseFinalAnswer(message); final != "" {
 			state.finishPlan()
+			emitRunEvent(request, observe, RunEvent{Type: "final", Iteration: iteration + 1, Message: limitEventText(final, 2000), Plan: state.plan})
 			return RunResult{
 				Message:    final,
 				Plan:       state.plan,
@@ -118,6 +142,7 @@ func (a *Agent) Run(ctx context.Context, request RunRequest, execute ToolExecuto
 		call, ok := parseAction(message)
 		if !ok {
 			state.finishPlan()
+			emitRunEvent(request, observe, RunEvent{Type: "final", Iteration: iteration + 1, Message: limitEventText(message, 2000), Plan: state.plan})
 			return RunResult{
 				Message:    message,
 				Plan:       state.plan,
@@ -128,6 +153,7 @@ func (a *Agent) Run(ctx context.Context, request RunRequest, execute ToolExecuto
 		}
 
 		call.StartedAt = time.Now().UTC().Format(time.RFC3339Nano)
+		emitRunEvent(request, observe, RunEvent{Type: "tool_start", Iteration: iteration + 1, Message: "Tool requested.", ToolName: call.Name, ToolArgs: call.Arguments})
 		completed, runErr := execute(ctx, call, request)
 		completed.CompletedAt = time.Now().UTC().Format(time.RFC3339Nano)
 		if runErr != nil && completed.Error == "" {
@@ -135,6 +161,20 @@ func (a *Agent) Run(ctx context.Context, request RunRequest, execute ToolExecuto
 		}
 		completed.Observation, state.truncated = truncateUTF8(completed.Observation, maxObservationBytes, state.truncated)
 		state.toolCalls = append(state.toolCalls, completed)
+		eventType := "tool_done"
+		if completed.Error != "" {
+			eventType = "tool_error"
+		}
+		emitRunEvent(request, observe, RunEvent{
+			Type:        eventType,
+			Iteration:   iteration + 1,
+			Message:     "Tool completed.",
+			ToolName:    completed.Name,
+			ToolArgs:    completed.Arguments,
+			Observation: limitEventText(completed.Observation, 2000),
+			Error:       completed.Error,
+			Risk:        completed.Risk,
+		})
 
 		observation := completed.Observation
 		if completed.Error != "" {
@@ -145,7 +185,8 @@ func (a *Agent) Run(ctx context.Context, request RunRequest, execute ToolExecuto
 	}
 
 	state.finishPlan()
-	message, finalized := a.finalizeStoppedRun(ctx, settings, &state)
+	emitRunEvent(request, observe, RunEvent{Type: "finalizing", Message: "Iteration budget reached. Asking model for a no-tool final answer.", Plan: state.plan})
+	message, finalized := a.finalizeStoppedRun(ctx, settings, &state, request, observe)
 	stopReason := stopReasonIterationLimit
 	if finalized {
 		stopReason = stopReasonIterationLimitFinalized
@@ -160,19 +201,23 @@ func (a *Agent) Run(ctx context.Context, request RunRequest, execute ToolExecuto
 	}, nil
 }
 
-func (a *Agent) finalizeStoppedRun(ctx context.Context, settings storage.LLMSettings, state *runState) (string, bool) {
+func (a *Agent) finalizeStoppedRun(ctx context.Context, settings storage.LLMSettings, state *runState, request RunRequest, observe RunObserver) (string, bool) {
 	result, err := a.llmClient.Chat(ctx, settings, llm.ChatRequest{Prompt: state.finalizationPrompt()})
 	if err != nil {
+		emitRunEvent(request, observe, RunEvent{Type: "stopped", Message: "Agent stopped at the iteration budget.", Error: err.Error(), Plan: state.plan})
 		return stoppedRunMessage(state), false
 	}
 
 	message := strings.TrimSpace(result.Message)
 	if final := parseFinalAnswer(message); final != "" {
+		emitRunEvent(request, observe, RunEvent{Type: "stopped_finalized", Message: limitEventText(final, 2000), Model: result.Model, Plan: state.plan})
 		return final, true
 	}
 	if message != "" && !strings.Contains(strings.ToLower(message), "action:") {
+		emitRunEvent(request, observe, RunEvent{Type: "stopped_finalized", Message: limitEventText(message, 2000), Model: result.Model, Plan: state.plan})
 		return message, true
 	}
+	emitRunEvent(request, observe, RunEvent{Type: "stopped", Message: "Agent stopped at the iteration budget.", Model: result.Model, Plan: state.plan})
 	return stoppedRunMessage(state), false
 }
 
@@ -285,6 +330,22 @@ func stoppedRunMessage(state *runState) string {
 		toolCount,
 		toolLabel,
 	)
+}
+
+func emitRunEvent(request RunRequest, observe RunObserver, event RunEvent) {
+	if observe == nil {
+		return
+	}
+	event.RequestID = request.RequestID
+	if event.Timestamp == "" {
+		event.Timestamp = time.Now().UTC().Format(time.RFC3339Nano)
+	}
+	observe(event)
+}
+
+func limitEventText(value string, maxBytes int) string {
+	trimmed, _ := truncateUTF8(strings.TrimSpace(value), maxBytes, false)
+	return trimmed
 }
 
 func SystemPrompt() string {

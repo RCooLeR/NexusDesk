@@ -186,6 +186,7 @@ export function WorkbenchPanel({
                     <div className={gitStatus?.dirty ? 'git-summary dirty' : 'git-summary'}>
                         <strong>Repository</strong>
                         <span>{gitStatus?.available ? `${gitStatus.branch}${gitStatus.head ? ` @ ${gitStatus.head}` : ''}` : 'Git unavailable'}</span>
+                        {gitStatus?.available && <span>{(gitStatus.stagedFiles ?? []).length} staged / {(gitStatus.unstagedFiles ?? gitStatus.changedFiles).length} unstaged</span>}
                         <span>{gitStatus?.message || 'Open a git-backed workspace to inspect changes.'}</span>
                     </div>
                     {gitStatus?.changedFiles.length ? (
@@ -197,8 +198,21 @@ export function WorkbenchPanel({
                             ))}
                         </div>
                     ) : null}
-                    {gitStatus?.diff ? (
-                        <pre className="git-diff-view compact">{gitStatus.diff}</pre>
+                    {gitStatus?.stagedDiff || gitStatus?.unstagedDiff || gitStatus?.diff ? (
+                        <div className="git-diff-stack compact">
+                            {gitStatus.stagedDiff && (
+                                <>
+                                    <strong>Staged Diff</strong>
+                                    <pre className="git-diff-view compact">{gitStatus.stagedDiff}</pre>
+                                </>
+                            )}
+                            {(gitStatus.unstagedDiff || gitStatus.diff) && (
+                                <>
+                                    <strong>Unstaged Diff</strong>
+                                    <pre className="git-diff-view compact">{gitStatus.unstagedDiff || gitStatus.diff}</pre>
+                                </>
+                            )}
+                        </div>
                     ) : null}
                 </section>
             )}

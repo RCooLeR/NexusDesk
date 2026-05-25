@@ -29,6 +29,8 @@ export function CodeStudioPanel({
     const dataFiles = nodes.filter((node) => node.kind === 'file' && node.fileType === 'data');
     const changedFiles = workspaceFreshness?.changed ?? [];
     const activeLanguage = resolveActiveLanguage(filePreview, activeFile);
+    const stagedFiles = gitStatus?.stagedFiles ?? [];
+    const unstagedFiles = gitStatus?.unstagedFiles ?? gitStatus?.changedFiles ?? [];
 
     return (
         <div className="code-studio-panel">
@@ -82,17 +84,17 @@ export function CodeStudioPanel({
                 {gitStatus?.available && (
                     <div className={gitStatus.dirty ? 'git-summary dirty' : 'git-summary'}>
                         <strong>{gitStatus.dirty ? `${gitStatus.changedFiles.length} changed` : 'Clean'}</strong>
+                        <span>{stagedFiles.length} staged / {unstagedFiles.length} unstaged</span>
                         <span>{gitStatus.aheadBehind || gitStatus.message}</span>
                     </div>
                 )}
                 <div className="code-studio-list" aria-label="Changed workspace files">
-                    {gitStatus?.available && gitStatus.changedFiles.length > 0 ? gitStatus.changedFiles.slice(0, 10).map((change) => (
-                        <div className="code-studio-row" key={`${change.index}-${change.worktree}-${change.path}`}>
-                            <span>{change.summary}</span>
-                            <strong title={change.path}>{change.path}</strong>
-                            <small>{gitCode(change.index, change.worktree)}{change.oldPath ? ` from ${change.oldPath}` : ''}</small>
-                        </div>
-                    )) : changedFiles.length > 0 ? changedFiles.slice(0, 8).map((change) => (
+                    {gitStatus?.available && gitStatus.changedFiles.length > 0 ? (
+                        <>
+                            <GitChangeGroup label="Staged" changes={stagedFiles} />
+                            <GitChangeGroup label="Unstaged" changes={unstagedFiles} />
+                        </>
+                    ) : changedFiles.length > 0 ? changedFiles.slice(0, 8).map((change) => (
                         <div className="code-studio-row" key={change.relPath}>
                             <span>{change.kind || 'changed'}</span>
                             <strong title={change.relPath}>{change.relPath}</strong>
@@ -106,11 +108,24 @@ export function CodeStudioPanel({
 
             <section className="code-studio-column">
                 <div className="bottom-section-heading">
-                    <strong>Working Tree Diff</strong>
-                    <small>{gitStatus?.diffTruncated ? 'Read-only diff truncated for responsiveness' : 'Read-only working tree diff'}</small>
+                    <strong>Git Diff</strong>
+                    <small>{gitStatus?.stagedDiffTruncated || gitStatus?.unstagedDiffTruncated ? 'Read-only diff truncated for responsiveness' : 'Read-only staged and unstaged diffs'}</small>
                 </div>
-                {gitStatus?.diff ? (
-                    <pre className="git-diff-view">{gitStatus.diff}</pre>
+                {gitStatus?.stagedDiff || gitStatus?.unstagedDiff || gitStatus?.diff ? (
+                    <div className="git-diff-stack">
+                        {gitStatus.stagedDiff && (
+                            <>
+                                <strong>Staged Diff</strong>
+                                <pre className="git-diff-view">{gitStatus.stagedDiff}</pre>
+                            </>
+                        )}
+                        {(gitStatus.unstagedDiff || gitStatus.diff) && (
+                            <>
+                                <strong>Unstaged Diff</strong>
+                                <pre className="git-diff-view">{gitStatus.unstagedDiff || gitStatus.diff}</pre>
+                            </>
+                        )}
+                    </div>
                 ) : (
                     <div className="code-studio-queue-grid" aria-label="Code studio queues">
                         <QueueCard label="Search" value={workspace ? 'ready' : 'idle'} />
@@ -122,6 +137,23 @@ export function CodeStudioPanel({
                     </div>
                 )}
             </section>
+        </div>
+    );
+}
+
+function GitChangeGroup({label, changes}: {label: string; changes: Array<{path: string; oldPath: string; index: string; worktree: string; summary: string}>}) {
+    return (
+        <div className="git-change-group">
+            <small>{label} ({changes.length})</small>
+            {changes.length > 0 ? changes.slice(0, 8).map((change) => (
+                <div className="code-studio-row" key={`${label}-${change.index}-${change.worktree}-${change.path}`}>
+                    <span>{change.summary}</span>
+                    <strong title={change.path}>{change.path}</strong>
+                    <small>{gitCode(change.index, change.worktree)}{change.oldPath ? ` from ${change.oldPath}` : ''}</small>
+                </div>
+            )) : (
+                <div className="code-studio-empty">No {label.toLowerCase()} files.</div>
+            )}
         </div>
     );
 }

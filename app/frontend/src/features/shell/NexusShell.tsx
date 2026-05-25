@@ -76,6 +76,7 @@ import type {
     AgentToolDescriptor,
     AgentToolPlanItem,
     AgentToolRunRecord,
+    AgentRunEvent,
     ArtifactComparison,
     ArtifactLineage,
     ArtifactMetadata,
@@ -157,6 +158,7 @@ type AssistantArtifactWriteRequest = {
 };
 
 const chatStreamEventName = 'nexus:chat-stream';
+const agentRunEventName = 'nexus:agent-run';
 
 export function NexusShell({
     state,
@@ -1314,8 +1316,14 @@ export function NexusShell({
                 head: '',
                 dirty: false,
                 changedFiles: [],
+                stagedFiles: [],
+                unstagedFiles: [],
                 diff: '',
                 diffTruncated: false,
+                stagedDiff: '',
+                stagedDiffTruncated: false,
+                unstagedDiff: '',
+                unstagedDiffTruncated: false,
                 aheadBehind: '',
                 message: message || 'Git status is unavailable.',
                 generatedAt: '',
@@ -1888,17 +1896,21 @@ export function NexusShell({
             return;
         }
 
+        const requestId = createRequestId();
         const [userCreatedAt, assistantCreatedAt] = createChatPairTimestamps();
         const userMessage: ChatMessage = {content: prompt, contextRelPath: 'agent', sourcePaths: [], createdAt: userCreatedAt, role: 'user'};
-        const assistantMessage: ChatMessage = {content: '', contextRelPath: 'agent', sourcePaths: [], createdAt: assistantCreatedAt, role: 'assistant'};
+        const assistantMessage: ChatMessage = {content: agentLogInitialContent(), contextRelPath: 'agent', sourcePaths: [], createdAt: assistantCreatedAt, role: 'assistant'};
 
         setIsSendingPrompt(true);
         setChatPrompt('');
-        setChatStatus('Agent running bounded workspace loop...');
+        setChatStatus('Agent starting live model log...');
         setChatMessages((current) => [...current, userMessage, assistantMessage]);
+        const unsubscribe = listenForAgentRun(requestId, assistantMessage.createdAt);
+        pushToolEvent(unsubscribe ? 'Agent log attached' : 'Agent log unavailable', unsubscribe ? requestId : 'Desktop event stream is unavailable.');
 
         try {
             const result = await RunAgent({
+                requestId,
                 prompt,
                 maxIterations: 6,
                 approveHighImpact: false,
@@ -1919,6 +1931,7 @@ export function NexusShell({
             replaceChatMessage(assistantMessage.createdAt, message || 'Agent run failed.', 'agent', []);
             setChatStatus(message || 'Agent run failed.');
         } finally {
+            unsubscribe?.();
             setIsSendingPrompt(false);
         }
     }
@@ -2915,6 +2928,33 @@ export function NexusShell({
         }
     }
 
+    function listenForAgentRun(requestId: string, assistantCreatedAt: string) {
+        if (!isWailsRuntimeAvailable()) {
+            return null;
+        }
+
+        try {
+            const lines: string[] = [agentLogInitialContent()];
+            return EventsOn(agentRunEventName, (event: AgentRunEvent) => {
+                if (event.requestId !== requestId) {
+                    return;
+                }
+
+                const line = formatAgentRunEvent(event);
+                if (line) {
+                    lines.push(line);
+                    replaceChatMessage(assistantCreatedAt, lines.slice(-16).join('\n'), 'agent', []);
+                }
+                setChatStatus(agentRunStatus(event));
+                if (shouldMirrorAgentEvent(event)) {
+                    pushToolEvent(agentRunToolEventTitle(event), agentRunToolEventDetail(event));
+                }
+            });
+        } catch {
+            return null;
+        }
+    }
+
     function listenForChatStream(requestId: string, assistantCreatedAt: string, fallbackContextRelPath: string) {
         if (!isWailsRuntimeAvailable()) {
             return null;
@@ -3176,7 +3216,7 @@ export function NexusShell({
                 workspace={workspace}
                 workspaceItems={state.workspaceItems}
                 workspaceNodes={workspaceNodes}
-                changedFilePaths={workspaceFreshness?.changed.map((change) => change.relPath) ?? []}
+                gitFileChanges={gitStatus?.changedFiles ?? []}
                 workspaceSearchQuery={workspaceSearchQuery}
                 workspaceSearchResults={workspaceSearchResults}
                 workspaceStatus={workspaceStatus}
@@ -3548,6 +3588,119 @@ function formatAgentRunResult(result: AgentRunResultView) {
         sections.push('Some agent observations were truncated for context safety.');
     }
     return sections.filter(Boolean).join('\n\n');
+}
+
+function agentLogInitialContent() {
+    return [
+        'Agent log',
+        '- Queued workspace agent run.',
+    ].join('\n');
+}
+
+function formatAgentRunEvent(event: AgentRunEvent) {
+    const prefix = agentEventPrefix(event);
+    switch (event.type) {
+    case 'start':
+        return `${prefix} Started.`;
+    case 'model_request':
+        return `${prefix} Asking model for the next step.`;
+    case 'model_response':
+        return `${prefix} Model: ${truncateInline(agentEventMainText(event.message), 260)}`;
+    case 'plan_update':
+        return `${prefix} Plan updated${event.plan?.length ? ` (${event.plan.length} steps)` : ''}.`;
+    case 'tool_start':
+        return `${prefix} Tool ${event.toolName || 'unknown'} ${formatAgentToolArgs(event.toolArgs)} started.`;
+    case 'tool_done':
+        return `${prefix} Tool ${event.toolName || 'unknown'} completed: ${truncateInline(event.observation || event.message || 'done', 220)}`;
+    case 'tool_error':
+        return `${prefix} Tool ${event.toolName || 'unknown'} blocked/error: ${truncateInline(event.error || event.observation || 'failed', 220)}`;
+    case 'finalizing':
+        return `${prefix} Iteration budget reached; requesting no-tool final answer.`;
+    case 'stopped_finalized':
+        return `${prefix} Finalized after budget: ${truncateInline(event.message || 'final answer ready', 220)}`;
+    case 'stopped':
+        return `${prefix} Stopped after budget: ${truncateInline(event.error || event.message || 'no final answer', 220)}`;
+    case 'final':
+        return `${prefix} Final answer ready.`;
+    case 'error':
+        return `${prefix} Error: ${truncateInline(event.error || event.message || 'failed', 220)}`;
+    default:
+        return `${prefix} ${truncateInline(event.message || event.type, 220)}`;
+    }
+}
+
+function agentEventPrefix(event: AgentRunEvent) {
+    const iteration = event.iteration > 0 ? `i${event.iteration}` : 'run';
+    return `- ${iteration}`;
+}
+
+function agentRunStatus(event: AgentRunEvent) {
+    switch (event.type) {
+    case 'model_request':
+        return `Agent iteration ${event.iteration}: waiting for model.`;
+    case 'model_response':
+        return `Agent iteration ${event.iteration}: model responded.`;
+    case 'tool_start':
+        return `Agent running ${event.toolName}.`;
+    case 'tool_done':
+        return `Agent completed ${event.toolName}.`;
+    case 'tool_error':
+        return `Agent tool ${event.toolName} needs attention.`;
+    case 'finalizing':
+        return 'Agent finalizing after iteration budget.';
+    case 'stopped':
+    case 'stopped_finalized':
+        return 'Agent stopped after bounded run.';
+    case 'final':
+        return 'Agent final answer ready.';
+    case 'error':
+        return event.error || 'Agent run failed.';
+    default:
+        return event.message || 'Agent running.';
+    }
+}
+
+function shouldMirrorAgentEvent(event: AgentRunEvent) {
+    return ['start', 'model_request', 'model_response', 'tool_start', 'tool_done', 'tool_error', 'finalizing', 'stopped', 'stopped_finalized', 'final', 'error'].includes(event.type);
+}
+
+function agentRunToolEventTitle(event: AgentRunEvent) {
+    if (event.type.startsWith('tool_')) {
+        return `Agent ${event.toolName || 'tool'}`;
+    }
+    if (event.type === 'model_request' || event.type === 'model_response') {
+        return 'Agent model';
+    }
+    return 'Agent run';
+}
+
+function agentRunToolEventDetail(event: AgentRunEvent) {
+    if (event.error) {
+        return event.error;
+    }
+    if (event.toolName) {
+        return `${event.type}: ${event.toolName}`;
+    }
+    return event.message || event.type;
+}
+
+function agentEventMainText(value: string) {
+    return value
+        .replace(/^Thought:\s*/i, '')
+        .replace(/\nAction:/i, ' / Action:')
+        .replace(/\s+/g, ' ')
+        .trim();
+}
+
+function formatAgentToolArgs(args?: Record<string, string>) {
+    if (!args) {
+        return '';
+    }
+    const entries = Object.entries(args).filter(([, value]) => value).slice(0, 2);
+    if (entries.length === 0) {
+        return '';
+    }
+    return `(${entries.map(([key, value]) => `${key}=${truncateInline(value, 48)}`).join(', ')})`;
 }
 
 function agentRunSourcePaths(result: AgentRunResultView) {

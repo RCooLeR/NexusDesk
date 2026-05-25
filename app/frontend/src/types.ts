@@ -210,8 +210,14 @@ export type GitStatus = {
     head: string;
     dirty: boolean;
     changedFiles: GitFileChange[];
+    stagedFiles: GitFileChange[];
+    unstagedFiles: GitFileChange[];
     diff: string;
     diffTruncated: boolean;
+    stagedDiff: string;
+    stagedDiffTruncated: boolean;
+    unstagedDiff: string;
+    unstagedDiffTruncated: boolean;
     aheadBehind: string;
     message: string;
     generatedAt: string;
@@ -464,6 +470,21 @@ export type ChatStreamEvent = {
     endpoint: string;
     contextRelPath: string;
     sourcePaths: string[];
+};
+
+export type AgentRunEvent = {
+    requestId: string;
+    type: string;
+    iteration: number;
+    message: string;
+    model: string;
+    toolName: string;
+    toolArgs?: Record<string, string>;
+    observation: string;
+    error: string;
+    risk: string;
+    plan?: Array<{step: string; status: string}>;
+    timestamp: string;
 };
 
 export type ChatMessage = {

@@ -5,7 +5,7 @@ import {faChevronRight, faRotateRight} from '@fortawesome/free-solid-svg-icons';
 import {FontAwesomeIcon} from '@fortawesome/react-fontawesome';
 import {brandAssets, productBrand, workspaceIconByName} from '../../brand/assets';
 import {Button, IconButton} from '../../components/ui';
-import type {FileNode, RecentWorkspace, WorkspaceItem, WorkspaceSearchResult, WorkspaceSnapshot} from '../../types';
+import type {FileNode, GitFileChange, RecentWorkspace, WorkspaceItem, WorkspaceSearchResult, WorkspaceSnapshot} from '../../types';
 
 type WorkspaceNavigatorProps = {
     activeFile: string;
@@ -38,7 +38,7 @@ type WorkspaceNavigatorProps = {
     workspaceSearchQuery: string;
     workspaceSearchResults: WorkspaceSearchResult[];
     workspaceStatus: string;
-    changedFilePaths: string[];
+    gitFileChanges: GitFileChange[];
 };
 
 export type TreeContextAction = 'new-file' | 'new-folder' | 'rename' | 'move' | 'delete' | 'copy-path' | 'reveal';
@@ -83,9 +83,9 @@ export function WorkspaceNavigator({
     workspaceSearchQuery,
     workspaceSearchResults,
     workspaceStatus,
-    changedFilePaths,
+    gitFileChanges,
 }: WorkspaceNavigatorProps) {
-    const changedFiles = new Set(changedFilePaths);
+    const gitStatusByPath = buildGitStatusMap(gitFileChanges);
     const [contextMenu, setContextMenu] = useState<{node: FileNode; x: number; y: number} | null>(null);
     function openContextMenu(event: ReactMouseEvent, node: FileNode) {
         event.preventDefault();
@@ -204,8 +204,8 @@ export function WorkspaceNavigator({
                             {workspaceNodes.map((node) => (
                                 <TreeNodeButton
                                     activeFile={activeFile}
-                                    changed={changedFiles.has(node.relPath)}
                                     expandedDirectories={expandedDirectories}
+                                    gitBadge={gitBadgeForNode(node, gitStatusByPath)}
                                     icon={fileIconByType[node.fileType] ?? brandAssets.icons.documents}
                                     key={node.relPath}
                                     node={node}
@@ -269,16 +269,16 @@ export function WorkspaceNavigator({
 
 function TreeNodeButton({
     activeFile,
-    changed,
     expandedDirectories,
+    gitBadge,
     icon,
     node,
     onContextMenu,
     onSelect,
 }: {
     activeFile: string;
-    changed: boolean;
     expandedDirectories: Set<string>;
+    gitBadge: string;
     icon: IconDefinition;
     node: FileNode;
     onContextMenu: (event: ReactMouseEvent, node: FileNode) => void;
@@ -287,6 +287,7 @@ function TreeNodeButton({
     const isDirectory = node.kind === 'directory';
     const isExpanded = isDirectory && expandedDirectories.has(node.relPath);
     const depth = Math.min(Math.max(node.depth, 0), 16);
+    const changed = gitBadge !== '';
     return (
         <button
             aria-expanded={isDirectory ? isExpanded : undefined}
@@ -316,13 +317,61 @@ function TreeNodeButton({
             </span>
             <span className="tree-node-main">
                 <strong>{node.name}</strong>
-                <small>{changed ? `${node.meta} / changed` : node.meta}</small>
+                <small>{changed ? `${node.meta} / git ${gitBadge}` : node.meta}</small>
             </span>
             <span className={changed ? 'tree-node-badge changed' : 'tree-node-badge'}>
-                {changed ? 'M' : treeNodeBadge(node)}
+                {changed ? gitBadge : treeNodeBadge(node)}
             </span>
         </button>
     );
+}
+
+function buildGitStatusMap(changes: GitFileChange[]) {
+    const byPath = new Map<string, string>();
+    for (const change of changes) {
+        byPath.set(change.path, gitBadgeForChange(change));
+        if (change.oldPath) {
+            byPath.set(change.oldPath, 'R');
+        }
+    }
+    return byPath;
+}
+
+function gitBadgeForNode(node: FileNode, byPath: Map<string, string>) {
+    const direct = byPath.get(node.relPath);
+    if (direct) {
+        return direct;
+    }
+    if (node.kind !== 'directory') {
+        return '';
+    }
+    const prefix = node.relPath ? `${node.relPath}/` : '';
+    for (const [path, badge] of byPath) {
+        if (path.startsWith(prefix)) {
+            return badge === '?' ? '?' : '*';
+        }
+    }
+    return '';
+}
+
+function gitBadgeForChange(change: GitFileChange) {
+    const combined = `${change.index}${change.worktree}`.trim();
+    if (combined.includes('?')) {
+        return '?';
+    }
+    if (combined.includes('R')) {
+        return 'R';
+    }
+    if (combined.includes('A')) {
+        return 'A';
+    }
+    if (combined.includes('D')) {
+        return 'D';
+    }
+    if (combined.includes('M')) {
+        return 'M';
+    }
+    return '*';
 }
 
 function treeNodeBadge(node: FileNode) {

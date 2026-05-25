@@ -111,6 +111,7 @@ const chatContextTokenByteEstimate = 4
 const chatContextOverheadTokens = 2048
 const chatContextMaxFilesCap = 256
 const chatStreamEventName = "nexus:chat-stream"
+const agentRunEventName = "nexus:agent-run"
 
 var emitChatStreamEventFn = func(ctx context.Context, name string, event any) {
 	runtime.EventsEmit(ctx, name, event)

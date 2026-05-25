@@ -20,3 +20,20 @@ func TestParseGitStatus(t *testing.T) {
 		t.Fatalf("unexpected untracked change: %#v", changes[3])
 	}
 }
+
+func TestSplitGitChanges(t *testing.T) {
+	changes := []GitFileChange{
+		{Path: "staged.go", Index: "M"},
+		{Path: "unstaged.go", Worktree: "M"},
+		{Path: "both.go", Index: "M", Worktree: "M"},
+		{Path: "new.go", Index: "?", Worktree: "?"},
+	}
+
+	staged, unstaged := splitGitChanges(changes)
+	if len(staged) != 2 {
+		t.Fatalf("expected two staged changes, got %#v", staged)
+	}
+	if len(unstaged) != 3 {
+		t.Fatalf("expected three unstaged changes, got %#v", unstaged)
+	}
+}

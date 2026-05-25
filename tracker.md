@@ -212,13 +212,14 @@ Steps:
 - [x] Send `num_predict` and OpenAI-compatible `max_tokens` from the configured response reserve.
 - [x] Add realtime Activity Log events for chat request, stream, first token, completion, and failures.
 - [x] Mark bounded agent runs that hit the tool iteration budget and force a finalization pass instead of showing the raw iteration-limit fallback as the answer.
+- [x] Replace the empty agent placeholder with a live model/tool event log while `RunAgent` is still executing.
 - [x] Add Explain selected context action.
 - [x] Add Summarize selected context action.
 - [x] Save summaries as Markdown artifacts.
 - [x] Save latest assistant answer as Markdown artifact.
 - [x] Include source citations in assistant answers and saved artifacts.
 - [x] Warn when cited source paths changed.
-- [ ] Stream each agent step into chat timeline.
+- [x] Stream each agent step into chat timeline.
 - [ ] Add model comparison/retry.
 - [ ] Add weak-evidence and missing-context UI.
 - [ ] Add assistant memory and prompt profiles.
@@ -261,10 +262,10 @@ Step 4.3: Git integration
 - [x] Detect git repository root.
 - [x] Show current branch.
 - [x] Show dirty summary.
-- [ ] Show file status badges in tree.
+- [x] Show file status badges in tree.
 - [x] Add changed-files panel.
 - [x] Add working tree diff.
-- [ ] Add staged diff.
+- [x] Add staged diff.
 - [ ] Add side-by-side diff viewer.
 - [ ] Add inline diff viewer.
 - [ ] Add hunk navigation.
@@ -949,6 +950,32 @@ Steps:
 8. Keep docs/tracker and visual smoke coverage aligned.
 
 Reasoning: read-only git visibility now exists. The next credibility gap is turning that visibility into review workflow without allowing destructive git actions before preview, approval, and audit boundaries exist.
+
+Completed batch: Live Agent Log And Read-Only Git Diff Grouping.
+
+Steps:
+
+1. [x] Stream model/tool/finalization events from `RunAgent` through `nexus:agent-run`.
+2. [x] Replace the empty agent placeholder with a rolling live agent log while the backend loop is running.
+3. [x] Keep bounded agent stop/finalization notes visible and auditable.
+4. [x] Add read-only staged diff alongside unstaged/working-tree diff.
+5. [x] Split git changed files into staged and unstaged groups.
+6. [x] Show git file status badges directly in the project tree, including directory badges for nested changes.
+7. [x] Keep docs/tracker and smoke coverage aligned.
+
+Recommended next batch: Read-Only Diff Review Surface.
+
+Steps:
+
+1. Add selected changed-file state in Code Studio.
+2. Add per-file diff loading for staged and unstaged sides.
+3. Add inline/side-by-side diff mode switch.
+4. Add hunk navigation.
+5. Add AI diff summary for selected diff.
+6. Add AI commit message draft from staged/unstaged context.
+7. Keep stage/unstage/revert controls disabled or preview-only until the approval/audit git mutation boundary exists.
+
+Reasoning: the app now distinguishes staged versus unstaged repository state. The next credibility gap is making diffs navigable per file before adding git mutations.
 
 ## Directory Ownership Notes
 

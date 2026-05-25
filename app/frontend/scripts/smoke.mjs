@@ -119,7 +119,7 @@ const checks = [
     },
     {
         file: 'src/features/shell/CodeStudioPanel.tsx',
-        terms: ['CodeStudioPanel', 'Code Studio', 'Project Session', 'Repository', 'Working Tree Diff', 'gitStatus', 'git-diff-view', 'Refresh git', 'Commands'],
+        terms: ['CodeStudioPanel', 'Code Studio', 'Project Session', 'Repository', 'Git Diff', 'Staged Diff', 'Unstaged Diff', 'stagedFiles', 'unstagedFiles', 'git-diff-view', 'Refresh git', 'Commands'],
     },
     {
         file: 'src/features/shell/LLMSettingsCard.tsx',

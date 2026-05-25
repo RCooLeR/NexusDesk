@@ -33,6 +33,8 @@ func (a *App) RunAgent(request agent.RunRequest) (agent.RunResult, error) {
 	runner := agent.New(a.llmClient, a.llmStore)
 	return runner.Run(ctx, request, func(ctx context.Context, call agent.ToolCall, request agent.RunRequest) (agent.ToolCall, error) {
 		return a.executeAgentRuntimeTool(ctx, root, call, request)
+	}, func(event agent.RunEvent) {
+		emitChatStreamEventFn(ctx, agentRunEventName, event)
 	})
 }
 
