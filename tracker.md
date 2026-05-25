@@ -154,6 +154,8 @@ Steps:
 - [ ] Add pinned tabs.
 - [ ] Add breadcrumbs.
 - [ ] Add outline/symbol navigation.
+- [ ] Add minimap toggle.
+- [ ] Add go-to-definition hook where language services exist.
 - [ ] Add formatting hooks.
 - [ ] Add file encoding selector and save-as-encoding support.
 
@@ -234,6 +236,7 @@ Step 4.2: Project tree
 - [ ] Add selected/current file reveal.
 - [ ] Add collapse all and expand selected path.
 - [ ] Add context menu for new file, new folder, rename, move, delete, copy path, reveal in explorer.
+- [ ] Add cut/copy/paste file operations with preview for mutations.
 - [ ] Add ignored-file controls.
 - [ ] Add drag/drop intent design before implementing mutation.
 
@@ -266,6 +269,7 @@ Step 4.4: Search, problems, and tasks
 - [ ] Detect package scripts.
 - [ ] Detect Go tests.
 - [ ] Detect npm scripts.
+- [ ] Detect Docker Compose tasks.
 - [ ] Run tasks with captured output.
 - [ ] Save task/test runs as artifacts or metadata.
 
@@ -278,6 +282,7 @@ Step 4.5: Code AI actions
 - [ ] Apply accepted patch through safe write boundary.
 - [ ] Explain dependency graph.
 - [ ] Create PR summary draft.
+- [ ] Create PR description draft.
 
 Exit criteria:
 
@@ -312,9 +317,11 @@ Implemented:
 Step 5.1: File dataset coverage
 
 - [ ] Add TSV loader.
+- [ ] Add richer XLSX/XLS workbook inspector for sheets, formulas, named ranges, pivots, and table ranges.
 - [ ] Add JSON loader.
 - [ ] Add NDJSON loader.
 - [ ] Add Parquet inspection.
+- [ ] Add SQLite file dataset cards separate from connector sessions.
 - [ ] Add log dataset profiling.
 - [ ] Add compressed export detection.
 - [ ] Add SQL dump file classification.
@@ -349,12 +356,31 @@ Step 5.4: Query notebook
 - [ ] Add multi-cell SQL notebook UI.
 - [ ] Add result tabs.
 - [ ] Add chart cells.
+- [ ] Add explain-plan display where connector supports it.
 - [ ] Add saved notebooks.
 - [ ] Add query history browser.
+- [ ] Add visible result caps and timeout controls.
 - [ ] Add export to CSV.
 - [ ] Add export to Markdown report.
 - [ ] Add export to Parquet when supported.
 - [ ] Add query-to-artifact lineage.
+
+Step 5.4b: Data profiling and cleaning
+
+- [ ] Add missing-value profiles.
+- [ ] Add distinct-count profiles.
+- [ ] Add distribution charts.
+- [ ] Add range and date detection.
+- [ ] Add outlier hints.
+- [ ] Add duplicate detection.
+- [ ] Add primary-key candidate detection.
+- [ ] Add join suggestions.
+- [ ] Add preview transformations.
+- [ ] Add derived columns.
+- [ ] Add date normalization.
+- [ ] Add split/merge column actions.
+- [ ] Add dedupe preview.
+- [ ] Write cleaned artifacts only after approval.
 
 Step 5.5: Temporary dump import sandboxes
 
@@ -428,9 +454,15 @@ Step 6.4: Analytics surfaces
 - [ ] Campaign ROI dashboard.
 - [ ] Funnel dashboard.
 - [ ] Cohort/retention dashboard.
+- [ ] Attribution dashboard.
 - [ ] SEO/content dashboard.
 - [ ] Landing-page performance dashboard.
+- [ ] Lead quality dashboard.
 - [ ] Anomaly detection view.
+- [ ] Saved dashboard widgets.
+- [ ] Dashboard filters and date ranges.
+- [ ] Segment comparison.
+- [ ] Narrative report blocks attached to charts.
 
 Step 6.5: AI analytics workflows
 
@@ -474,8 +506,12 @@ Step 7.2: Extraction coverage
 - [ ] Improve PDF text extraction.
 - [ ] Add OCR fallback for image PDFs.
 - [ ] Extract DOCX headings and tables.
+- [ ] Extract document images where practical.
+- [ ] Extract footnotes where practical.
 - [ ] Extract DOCX comments where possible.
 - [ ] Extract tracked changes where possible.
+- [ ] Extract page references and section anchors.
+- [ ] Extract document metadata.
 - [ ] Add HTML/RTF extraction.
 - [ ] Add PPTX text extraction.
 - [ ] Add image OCR.
@@ -502,6 +538,14 @@ Step 7.4: Generated document outputs
 - [ ] Generate checklist.
 - [ ] Store document output provenance.
 - [ ] Regenerate stale document outputs.
+
+Step 7.5: Review workflows
+
+- [ ] Add redline/change review view.
+- [ ] Add document comments view.
+- [ ] Add confidence and coverage indicators for generated analysis.
+- [ ] Add reusable document/report templates.
+- [ ] Add page/section citation inspector.
 
 Exit criteria:
 
@@ -530,6 +574,8 @@ Step 8.1: Studio route and read-only inventory
 - [ ] Inspect service health.
 - [ ] Show ports and mounts.
 - [ ] Show environment with secret redaction.
+- [ ] Show Docker/Compose resource usage.
+- [ ] List local processes/services where policy allows.
 
 Step 8.2: Logs and diagnostics
 
@@ -552,6 +598,7 @@ Step 8.3: Local services
 Step 8.4: Safe operations
 
 - [ ] Preview Docker start/stop/restart/build/pull/up/down/exec commands.
+- [ ] Show environment preview before mutating operations.
 - [ ] Require approval for every mutating Docker action.
 - [ ] Require approval for shell execution.
 - [ ] Capture stdout/stderr logs.
@@ -560,6 +607,8 @@ Step 8.4: Safe operations
 - [ ] Generate Compose artifacts.
 - [ ] Generate `.env.example`.
 - [ ] Generate health-check scripts.
+- [ ] Generate deployment notes.
+- [ ] Generate troubleshooting guides.
 
 Step 8.5: AI ops workflows
 
@@ -599,6 +648,8 @@ Step 9.1: Assistant workspace
 - [ ] Add run history.
 - [ ] Add thread/session browser.
 - [ ] Add model/provider status panel.
+- [ ] Add model suitability hints for selected task/context.
+- [ ] Add tool-calling support indicator.
 
 Step 9.2: Context sources
 
@@ -633,6 +684,8 @@ Step 9.4: Tool planning and approval
 - [ ] Stream each tool call and observation.
 - [ ] Resume after approval.
 - [ ] Stop/cancel long runs.
+- [ ] Summarize what changed after multi-step runs.
+- [ ] Compare generated outputs from a run.
 
 Step 9.5: Memory, citations, and quality
 
@@ -646,6 +699,7 @@ Step 9.5: Memory, citations, and quality
 - [ ] Add unsupported-claim warnings.
 - [ ] Add retry with another model.
 - [ ] Add compare model outputs.
+- [ ] Add ask-for-missing-context prompts.
 
 Exit criteria:
 
@@ -687,6 +741,8 @@ Next steps:
 - [ ] Add artifact templates.
 - [ ] Add dashboard/report bundle artifacts.
 - [ ] Add presentation artifacts.
+- [ ] Add generated config artifacts.
+- [ ] Add diff/patch artifacts.
 - [ ] Add reproducibility action that replays source queries/context where safe.
 
 Exit criteria:
@@ -724,12 +780,22 @@ Next steps:
 - [ ] Add semantic search/embeddings when provider/model is configured.
 - [ ] Add task/job table.
 - [ ] Add connector run table.
+- [ ] Add tab/session state table.
 - [ ] Add document index table.
 - [ ] Add git snapshot table.
+- [ ] Add artifact lineage indexes for reports, charts, decks, data exports, configs, and code patches.
 - [ ] Add metrics dashboard for provider failures by kind, root path, and workspace.
 - [ ] Add index rebuild controls.
 - [ ] Add large-workspace performance budgets.
 - [ ] Add corruption recovery and export.
+
+Step 11.1: Long-running job runner
+
+- [ ] Add job runner for imports, OCR, dump restores, connector pulls, report generation, and large indexing work.
+- [ ] Add cancelable task progress.
+- [ ] Add task logs.
+- [ ] Add retry failed task.
+- [ ] Link task output to generated artifacts.
 
 Exit criteria:
 
