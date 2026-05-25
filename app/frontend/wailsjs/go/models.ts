@@ -62,6 +62,7 @@ export namespace agent {
 	    toolCalls: ToolCall[];
 	    iterations: number;
 	    truncated: boolean;
+	    stopReason?: string;
 
 	    static createFrom(source: any = {}) {
 	        return new RunResult(source);
@@ -74,6 +75,7 @@ export namespace agent {
 	        this.toolCalls = this.convertValues(source["toolCalls"], ToolCall);
 	        this.iterations = source["iterations"];
 	        this.truncated = source["truncated"];
+	        this.stopReason = source["stopReason"];
 	    }
 
 		convertValues(a: any, classs: any, asMap: boolean = false): any {

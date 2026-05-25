@@ -14,9 +14,9 @@ Related docs:
 
 ## Current Status
 
-Nexus Augentic Studio is a runnable Wails desktop application with a Go backend, React/TypeScript frontend, local workspace scanning, file previews, editor tabs, safe file writes, configurable OpenAI-compatible LLM settings, streaming chat, first agent runtime, first data workflows, first artifact/approval metadata, and visual smoke coverage.
+Nexus Augentic Studio is a runnable Wails desktop application with a Go backend, React/TypeScript frontend, local workspace scanning, file previews, editor tabs, safe file writes, configurable OpenAI-compatible LLM settings, streaming chat, first agent runtime, first read-only git status/diff visibility, first data workflows, first artifact/approval metadata, and visual smoke coverage.
 
-It is not yet a JetBrains-class IDE/data/analytics studio. Major planned surfaces are still missing: IDE-grade Code Studio, git diff/status UI, deeper database/data support, Analytics connectors, Documents Studio, Ops Studio, native studio-specific layouts, and AI Assistant orchestration.
+It is not yet a JetBrains-class IDE/data/analytics studio. Major planned surfaces are still missing: IDE-grade Code Studio editing/refactoring, staged diff workflows, deeper database/data support, Analytics connectors, Documents Studio, Ops Studio, native studio-specific layouts, and AI Assistant orchestration.
 
 ## Repository State
 
@@ -211,6 +211,7 @@ Steps:
 - [x] Send `num_ctx` for local/Ollama-compatible chat requests.
 - [x] Send `num_predict` and OpenAI-compatible `max_tokens` from the configured response reserve.
 - [x] Add realtime Activity Log events for chat request, stream, first token, completion, and failures.
+- [x] Mark bounded agent runs that hit the tool iteration budget and force a finalization pass instead of showing the raw iteration-limit fallback as the answer.
 - [x] Add Explain selected context action.
 - [x] Add Summarize selected context action.
 - [x] Save summaries as Markdown artifacts.

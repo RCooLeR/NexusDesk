@@ -18,6 +18,9 @@ const (
 	DefaultMaxIterations = 6
 	maxObservationBytes  = 6000
 	maxHistoryItems      = 10
+
+	stopReasonIterationLimit          = "iteration_limit"
+	stopReasonIterationLimitFinalized = "iteration_limit_finalized"
 )
 
 type PlanStep struct {
@@ -48,6 +51,7 @@ type RunResult struct {
 	ToolCalls  []ToolCall `json:"toolCalls"`
 	Iterations int        `json:"iterations"`
 	Truncated  bool       `json:"truncated"`
+	StopReason string     `json:"stopReason,omitempty"`
 }
 
 type ToolExecutor func(ctx context.Context, call ToolCall, request RunRequest) (ToolCall, error)
@@ -140,13 +144,36 @@ func (a *Agent) Run(ctx context.Context, request RunRequest, execute ToolExecuto
 		state.pruneHistory()
 	}
 
+	state.finishPlan()
+	message, finalized := a.finalizeStoppedRun(ctx, settings, &state)
+	stopReason := stopReasonIterationLimit
+	if finalized {
+		stopReason = stopReasonIterationLimitFinalized
+	}
 	return RunResult{
-		Message:    "Agent reached the iteration limit before producing a final answer.",
+		Message:    message,
 		Plan:       state.plan,
 		ToolCalls:  state.toolCalls,
 		Iterations: maxIterations,
 		Truncated:  state.truncated,
+		StopReason: stopReason,
 	}, nil
+}
+
+func (a *Agent) finalizeStoppedRun(ctx context.Context, settings storage.LLMSettings, state *runState) (string, bool) {
+	result, err := a.llmClient.Chat(ctx, settings, llm.ChatRequest{Prompt: state.finalizationPrompt()})
+	if err != nil {
+		return stoppedRunMessage(state), false
+	}
+
+	message := strings.TrimSpace(result.Message)
+	if final := parseFinalAnswer(message); final != "" {
+		return final, true
+	}
+	if message != "" && !strings.Contains(strings.ToLower(message), "action:") {
+		return message, true
+	}
+	return stoppedRunMessage(state), false
 }
 
 type runState struct {
@@ -190,6 +217,39 @@ func (s *runState) prompt() string {
 	return builder.String()
 }
 
+func (s *runState) finalizationPrompt() string {
+	var builder strings.Builder
+	builder.WriteString("The Nexus Agent reached its tool iteration budget. Do not request more tools and do not output another Action.\n")
+	builder.WriteString("Produce a concise user-facing answer now using only the completed observations and working memory. ")
+	builder.WriteString("If the work is incomplete, say exactly where it stopped and what the next safe step is.\n")
+	builder.WriteString("Use this exact prefix:\nFinal Answer: ...\n\n")
+	builder.WriteString("User request:\n")
+	builder.WriteString(s.userPrompt)
+	builder.WriteString("\n\nCurrent plan:\n")
+	for _, step := range s.plan {
+		builder.WriteString(fmt.Sprintf("- [%s] %s\n", step.Status, step.Step))
+	}
+	builder.WriteString("\nCompleted tool calls:\n")
+	if len(s.toolCalls) == 0 {
+		builder.WriteString("- none\n")
+	} else {
+		for index, call := range s.toolCalls {
+			status := strings.TrimSpace(call.Observation)
+			if call.Error != "" {
+				status = "ERROR: " + call.Error
+			}
+			status, _ = truncateUTF8(status, 900, false)
+			builder.WriteString(fmt.Sprintf("- %d. %s: %s\n", index+1, call.Name, status))
+		}
+	}
+	builder.WriteString("\nRecent working memory:\n")
+	for _, item := range s.history {
+		builder.WriteString(item)
+		builder.WriteString("\n")
+	}
+	return builder.String()
+}
+
 func (s *runState) appendHistory(role string, content string) {
 	content, s.truncated = truncateUTF8(strings.TrimSpace(content), maxObservationBytes, s.truncated)
 	if content == "" {
@@ -212,6 +272,19 @@ func (s *runState) finishPlan() {
 			s.plan[index].Status = "completed"
 		}
 	}
+}
+
+func stoppedRunMessage(state *runState) string {
+	toolCount := len(state.toolCalls)
+	toolLabel := "tool calls"
+	if toolCount == 1 {
+		toolLabel = "tool call"
+	}
+	return fmt.Sprintf(
+		"I used the available agent iterations before I could finish cleanly. I completed %d %s. The plan and tool calls below show where I stopped; run the agent again with a narrower follow-up to continue from this point.",
+		toolCount,
+		toolLabel,
+	)
 }
 
 func SystemPrompt() string {

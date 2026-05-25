@@ -1,6 +1,9 @@
 package agent
 
-import "testing"
+import (
+	"strings"
+	"testing"
+)
 
 func TestParseJSONAction(t *testing.T) {
 	call, ok := parseAction(`Thought: inspect file.
@@ -50,5 +53,32 @@ func TestNormalizePlanAllowsOneInProgress(t *testing.T) {
 	})
 	if steps[0].Status != "in_progress" || steps[1].Status != "pending" {
 		t.Fatalf("unexpected statuses: %#v", steps)
+	}
+}
+
+func TestFinalizationPromptForbidsMoreActions(t *testing.T) {
+	state := runState{
+		userPrompt: "Check the project",
+		plan: []PlanStep{
+			{Step: "Inspect", Status: "completed"},
+			{Step: "Summarize", Status: "in_progress"},
+		},
+		toolCalls: []ToolCall{{Name: "list_directory", Observation: "README.md\napp/"}},
+		history:   []string{"Observation: README.md"},
+	}
+
+	prompt := state.finalizationPrompt()
+	if !strings.Contains(prompt, "Do not request more tools") || !strings.Contains(prompt, "Final Answer:") {
+		t.Fatalf("finalization prompt does not force a final answer:\n%s", prompt)
+	}
+	if !strings.Contains(prompt, "list_directory") || !strings.Contains(prompt, "Check the project") {
+		t.Fatalf("finalization prompt is missing run context:\n%s", prompt)
+	}
+}
+
+func TestStoppedRunMessageIncludesToolCount(t *testing.T) {
+	message := stoppedRunMessage(&runState{toolCalls: []ToolCall{{Name: "read_file"}}})
+	if !strings.Contains(message, "1 tool call") || strings.Contains(message, "1 tool calls") {
+		t.Fatalf("unexpected stopped run message: %q", message)
 	}
 }

@@ -184,7 +184,8 @@ export function WorkbenchPanel({
                         <Button disabled={!gitStatus?.diff} variant="subtle">Diff</Button>
                     </div>
                     <div className={gitStatus?.dirty ? 'git-summary dirty' : 'git-summary'}>
-                        <strong>{gitStatus?.available ? `${gitStatus.branch}${gitStatus.head ? ` @ ${gitStatus.head}` : ''}` : 'Git unavailable'}</strong>
+                        <strong>Repository</strong>
+                        <span>{gitStatus?.available ? `${gitStatus.branch}${gitStatus.head ? ` @ ${gitStatus.head}` : ''}` : 'Git unavailable'}</span>
                         <span>{gitStatus?.message || 'Open a git-backed workspace to inspect changes.'}</span>
                     </div>
                     {gitStatus?.changedFiles.length ? (

@@ -1906,8 +1906,14 @@ export function NexusShell({
             });
             replaceChatMessage(assistantMessage.createdAt, formatAgentRunResult(result), 'agent', agentRunSourcePaths(result));
             await refreshAgentToolRuns();
-            setChatStatus(`Agent completed ${result.iterations} iteration${result.iterations === 1 ? '' : 's'}.`);
-            pushToolEvent('Agent completed', `${result.toolCalls.length} tool calls`);
+            const iterationLabel = `${result.iterations} iteration${result.iterations === 1 ? '' : 's'}`;
+            if (result.stopReason) {
+                setChatStatus(`Agent stopped after ${iterationLabel}; review the answer and tool calls.`);
+                pushToolEvent('Agent stopped', `${result.stopReason}; ${result.toolCalls.length} tool calls`);
+            } else {
+                setChatStatus(`Agent completed ${iterationLabel}.`);
+                pushToolEvent('Agent completed', `${result.toolCalls.length} tool calls`);
+            }
         } catch (error) {
             const message = error instanceof Error ? error.message : '';
             replaceChatMessage(assistantMessage.createdAt, message || 'Agent run failed.', 'agent', []);
@@ -3513,10 +3519,16 @@ type AgentRunResultView = {
     toolCalls?: Array<{name: string; arguments?: Record<string, string>; observation: string; error: string; risk: string}>;
     iterations: number;
     truncated: boolean;
+    stopReason?: string;
 };
 
 function formatAgentRunResult(result: AgentRunResultView) {
     const sections = [`${result.message}`.trim()];
+    if (result.stopReason === 'iteration_limit_finalized') {
+        sections.push('Run note: the agent reached its tool-iteration budget, then produced this answer from completed observations.');
+    } else if (result.stopReason === 'iteration_limit') {
+        sections.push('Run note: the agent reached its tool-iteration budget before it could produce a clean final answer.');
+    }
     if (result.plan && result.plan.length > 0) {
         sections.push([
             'Plan:',
