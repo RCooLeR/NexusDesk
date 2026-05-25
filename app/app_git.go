@@ -6,6 +6,7 @@ import (
 	"errors"
 	"fmt"
 	"os/exec"
+	"path/filepath"
 	"strings"
 	"time"
 )
@@ -39,6 +40,16 @@ type GitFileChange struct {
 	Index    string `json:"index"`
 	Worktree string `json:"worktree"`
 	Summary  string `json:"summary"`
+}
+
+type GitFileDiff struct {
+	Path                  string `json:"path"`
+	StagedDiff            string `json:"stagedDiff"`
+	StagedDiffTruncated   bool   `json:"stagedDiffTruncated"`
+	UnstagedDiff          string `json:"unstagedDiff"`
+	UnstagedDiffTruncated bool   `json:"unstagedDiffTruncated"`
+	Message               string `json:"message"`
+	GeneratedAt           string `json:"generatedAt"`
 }
 
 func (a *App) GetGitStatus() (GitStatus, error) {
@@ -84,6 +95,37 @@ func (a *App) GetGitStatus() (GitStatus, error) {
 	}, nil
 }
 
+func (a *App) GetGitFileDiff(relPath string) (GitFileDiff, error) {
+	root := a.getWorkspaceRoot()
+	if root == "" {
+		return GitFileDiff{Message: "Open a workspace before reading git diff."}, nil
+	}
+
+	cleanPath, err := cleanGitRelPath(relPath)
+	if err != nil {
+		return GitFileDiff{Path: relPath, Message: err.Error(), GeneratedAt: time.Now().UTC().Format(time.RFC3339)}, nil
+	}
+	if _, err := gitOutput(root, "rev-parse", "--show-toplevel"); err != nil {
+		return GitFileDiff{Path: cleanPath, Message: "Workspace is not inside a git repository.", GeneratedAt: time.Now().UTC().Format(time.RFC3339)}, nil
+	}
+
+	unstagedDiff, unstagedTruncated := gitFileDiff(root, cleanPath)
+	stagedDiff, stagedTruncated := gitStagedFileDiff(root, cleanPath)
+	message := "No diff for " + cleanPath + "."
+	if stagedDiff != "" || unstagedDiff != "" {
+		message = "Loaded read-only diff for " + cleanPath + "."
+	}
+	return GitFileDiff{
+		Path:                  cleanPath,
+		StagedDiff:            stagedDiff,
+		StagedDiffTruncated:   stagedTruncated,
+		UnstagedDiff:          unstagedDiff,
+		UnstagedDiffTruncated: unstagedTruncated,
+		Message:               message,
+		GeneratedAt:           time.Now().UTC().Format(time.RFC3339),
+	}, nil
+}
+
 func gitDiff(root string) (string, bool) {
 	diff := mustGitOutput(root, "diff", "--no-ext-diff", "--unified=80", "--")
 	return limitGitDiff(diff)
@@ -91,6 +133,16 @@ func gitDiff(root string) (string, bool) {
 
 func gitStagedDiff(root string) (string, bool) {
 	diff := mustGitOutput(root, "diff", "--cached", "--no-ext-diff", "--unified=80", "--")
+	return limitGitDiff(diff)
+}
+
+func gitFileDiff(root string, relPath string) (string, bool) {
+	diff := mustGitOutput(root, "diff", "--no-ext-diff", "--unified=80", "--", relPath)
+	return limitGitDiff(diff)
+}
+
+func gitStagedFileDiff(root string, relPath string) (string, bool) {
+	diff := mustGitOutput(root, "diff", "--cached", "--no-ext-diff", "--unified=80", "--", relPath)
 	return limitGitDiff(diff)
 }
 
@@ -207,6 +259,20 @@ func gitOutput(root string, args ...string) (string, error) {
 		return "", errors.New(detail)
 	}
 	return stdout.String(), nil
+}
+
+func cleanGitRelPath(value string) (string, error) {
+	value = strings.TrimSpace(value)
+	value = strings.Trim(value, `"'`)
+	value = filepath.ToSlash(value)
+	value = strings.TrimPrefix(value, "/")
+	if value == "" || value == "." {
+		return "", errors.New("git diff path is required")
+	}
+	if filepath.IsAbs(value) || value == ".." || strings.HasPrefix(value, "../") || strings.Contains(value, "/../") || strings.HasPrefix(value, "-") {
+		return "", errors.New("git diff path must stay inside the workspace")
+	}
+	return value, nil
 }
 
 func mustGitOutput(root string, args ...string) string {

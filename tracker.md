@@ -967,13 +967,13 @@ Recommended next batch: Read-Only Diff Review Surface.
 
 Steps:
 
-1. Add selected changed-file state in Code Studio.
-2. Add per-file diff loading for staged and unstaged sides.
-3. Add inline/side-by-side diff mode switch.
-4. Add hunk navigation.
-5. Add AI diff summary for selected diff.
-6. Add AI commit message draft from staged/unstaged context.
-7. Keep stage/unstage/revert controls disabled or preview-only until the approval/audit git mutation boundary exists.
+1. [x] Add selected changed-file state in Code Studio.
+2. [x] Add per-file diff loading for staged and unstaged sides.
+3. [ ] Add inline/side-by-side diff mode switch.
+4. [ ] Add hunk navigation.
+5. [ ] Add AI diff summary for selected diff.
+6. [ ] Add AI commit message draft from staged/unstaged context.
+7. [ ] Keep stage/unstage/revert controls disabled or preview-only until the approval/audit git mutation boundary exists.
 
 Reasoning: the app now distinguishes staged versus unstaged repository state. The next credibility gap is making diffs navigable per file before adding git mutations.
 

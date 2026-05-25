@@ -1,14 +1,18 @@
 import {Button} from '../../components/ui';
-import type {FilePreview, GitStatus, WorkspaceFreshnessStatus, WorkspaceSnapshot} from '../../types';
+import type {FilePreview, GitFileChange, GitFileDiff, GitStatus, WorkspaceFreshnessStatus, WorkspaceSnapshot} from '../../types';
 
 type CodeStudioPanelProps = {
     activeFile: string;
     dirtyTabPaths: string[];
     filePreview: FilePreview | null;
     gitStatus: GitStatus | null;
+    selectedGitChangePath: string;
+    selectedGitFileDiff: GitFileDiff | null;
+    isLoadingGitFileDiff: boolean;
     openTabs: FilePreview[];
     onOpenCommandPalette: () => void;
     onRefreshGitStatus: () => void;
+    onSelectGitChange: (path: string) => void;
     workspace: WorkspaceSnapshot | null;
     workspaceFreshness: WorkspaceFreshnessStatus | null;
 };
@@ -18,9 +22,13 @@ export function CodeStudioPanel({
     dirtyTabPaths,
     filePreview,
     gitStatus,
+    selectedGitChangePath,
+    selectedGitFileDiff,
+    isLoadingGitFileDiff,
     openTabs,
     onOpenCommandPalette,
     onRefreshGitStatus,
+    onSelectGitChange,
     workspace,
     workspaceFreshness,
 }: CodeStudioPanelProps) {
@@ -31,6 +39,12 @@ export function CodeStudioPanel({
     const activeLanguage = resolveActiveLanguage(filePreview, activeFile);
     const stagedFiles = gitStatus?.stagedFiles ?? [];
     const unstagedFiles = gitStatus?.unstagedFiles ?? gitStatus?.changedFiles ?? [];
+    const selectedGitChange = gitStatus?.changedFiles.find((change) => change.path === selectedGitChangePath) ?? null;
+    const selectedDiff = selectedGitFileDiff?.path === selectedGitChangePath ? selectedGitFileDiff : null;
+    const stagedDiff = selectedDiff?.stagedDiff ?? gitStatus?.stagedDiff ?? '';
+    const unstagedDiff = selectedDiff?.unstagedDiff ?? gitStatus?.unstagedDiff ?? gitStatus?.diff ?? '';
+    const stagedDiffTruncated = selectedDiff?.stagedDiffTruncated ?? gitStatus?.stagedDiffTruncated;
+    const unstagedDiffTruncated = selectedDiff?.unstagedDiffTruncated ?? gitStatus?.unstagedDiffTruncated;
 
     return (
         <div className="code-studio-panel">
@@ -55,6 +69,13 @@ export function CodeStudioPanel({
                     <span>Active file</span>
                     <strong title={activeFile}>{activeFile || 'Workspace root'}</strong>
                     <small>{activeLanguage}</small>
+                    {selectedGitChange && (
+                        <>
+                            <span>Selected change</span>
+                            <strong title={selectedGitChange.path}>{selectedGitChange.path}</strong>
+                            <small>{selectedGitChange.summary} / {gitCode(selectedGitChange.index, selectedGitChange.worktree)}</small>
+                        </>
+                    )}
                 </div>
             </section>
 
@@ -91,8 +112,8 @@ export function CodeStudioPanel({
                 <div className="code-studio-list" aria-label="Changed workspace files">
                     {gitStatus?.available && gitStatus.changedFiles.length > 0 ? (
                         <>
-                            <GitChangeGroup label="Staged" changes={stagedFiles} />
-                            <GitChangeGroup label="Unstaged" changes={unstagedFiles} />
+                            <GitChangeGroup changes={stagedFiles} label="Staged" onSelect={onSelectGitChange} selectedPath={selectedGitChangePath} />
+                            <GitChangeGroup changes={unstagedFiles} label="Unstaged" onSelect={onSelectGitChange} selectedPath={selectedGitChangePath} />
                         </>
                     ) : changedFiles.length > 0 ? changedFiles.slice(0, 8).map((change) => (
                         <div className="code-studio-row" key={change.relPath}>
@@ -109,20 +130,21 @@ export function CodeStudioPanel({
             <section className="code-studio-column">
                 <div className="bottom-section-heading">
                     <strong>Git Diff</strong>
-                    <small>{gitStatus?.stagedDiffTruncated || gitStatus?.unstagedDiffTruncated ? 'Read-only diff truncated for responsiveness' : 'Read-only staged and unstaged diffs'}</small>
+                    <small>{isLoadingGitFileDiff ? 'Loading selected file diff...' : selectedGitChange ? `Reviewing ${selectedGitChange.path}` : stagedDiffTruncated || unstagedDiffTruncated ? 'Read-only diff truncated for responsiveness' : 'Read-only staged and unstaged diffs'}</small>
                 </div>
-                {gitStatus?.stagedDiff || gitStatus?.unstagedDiff || gitStatus?.diff ? (
+                {stagedDiff || unstagedDiff ? (
                     <div className="git-diff-stack">
-                        {gitStatus.stagedDiff && (
+                        {selectedDiff?.message && <small className="git-diff-message">{selectedDiff.message}</small>}
+                        {stagedDiff && (
                             <>
                                 <strong>Staged Diff</strong>
-                                <pre className="git-diff-view">{gitStatus.stagedDiff}</pre>
+                                <pre className="git-diff-view">{stagedDiff}</pre>
                             </>
                         )}
-                        {(gitStatus.unstagedDiff || gitStatus.diff) && (
+                        {unstagedDiff && (
                             <>
                                 <strong>Unstaged Diff</strong>
-                                <pre className="git-diff-view">{gitStatus.unstagedDiff || gitStatus.diff}</pre>
+                                <pre className="git-diff-view">{unstagedDiff}</pre>
                             </>
                         )}
                     </div>
@@ -141,16 +163,32 @@ export function CodeStudioPanel({
     );
 }
 
-function GitChangeGroup({label, changes}: {label: string; changes: Array<{path: string; oldPath: string; index: string; worktree: string; summary: string}>}) {
+function GitChangeGroup({
+    label,
+    changes,
+    selectedPath,
+    onSelect,
+}: {
+    label: string;
+    changes: GitFileChange[];
+    selectedPath: string;
+    onSelect: (path: string) => void;
+}) {
     return (
         <div className="git-change-group">
             <small>{label} ({changes.length})</small>
             {changes.length > 0 ? changes.slice(0, 8).map((change) => (
-                <div className="code-studio-row" key={`${label}-${change.index}-${change.worktree}-${change.path}`}>
+                <button
+                    aria-pressed={selectedPath === change.path}
+                    className={selectedPath === change.path ? 'code-studio-row selected' : 'code-studio-row'}
+                    key={`${label}-${change.index}-${change.worktree}-${change.path}`}
+                    onClick={() => onSelect(change.path)}
+                    type="button"
+                >
                     <span>{change.summary}</span>
                     <strong title={change.path}>{change.path}</strong>
                     <small>{gitCode(change.index, change.worktree)}{change.oldPath ? ` from ${change.oldPath}` : ''}</small>
-                </div>
+                </button>
             )) : (
                 <div className="code-studio-empty">No {label.toLowerCase()} files.</div>
             )}

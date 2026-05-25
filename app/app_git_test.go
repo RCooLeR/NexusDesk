@@ -37,3 +37,19 @@ func TestSplitGitChanges(t *testing.T) {
 		t.Fatalf("expected three unstaged changes, got %#v", unstaged)
 	}
 }
+
+func TestCleanGitRelPath(t *testing.T) {
+	path, err := cleanGitRelPath(`"app/frontend/src/App.tsx"`)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if path != "app/frontend/src/App.tsx" {
+		t.Fatalf("unexpected path: %q", path)
+	}
+
+	for _, value := range []string{"", "..", "../outside.go", "app/../outside.go", "-bad"} {
+		if _, err := cleanGitRelPath(value); err == nil {
+			t.Fatalf("expected %q to be rejected", value)
+		}
+	}
+}

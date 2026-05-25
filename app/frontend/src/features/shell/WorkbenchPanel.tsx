@@ -1,7 +1,7 @@
 import {useEffect, useRef, useState} from 'react';
 import {brandAssets} from '../../brand/assets';
 import {Button, EmptyState, InlineAlert, LoadingState} from '../../components/ui';
-import type {DatasetProfile, FilePreview, FileWriteProposal, GitStatus, TablePreview, WorkspaceSnapshot} from '../../types';
+import type {DatasetProfile, FilePreview, FileWriteProposal, GitFileDiff, GitStatus, TablePreview, WorkspaceSnapshot} from '../../types';
 import {ChatMessageContent} from './ChatMessageContent';
 import {SortableDataTable} from './DataStudioPanel';
 import {HighlightedCode} from './HighlightedCode';
@@ -19,6 +19,9 @@ type WorkbenchPanelProps = {
     fileDraft: string;
     filePreview: FilePreview | null;
     gitStatus: GitStatus | null;
+    selectedGitChangePath: string;
+    selectedGitFileDiff: GitFileDiff | null;
+    isLoadingGitFileDiff: boolean;
     isApplyingWrite: boolean;
     isEditingFile: boolean;
     isSendingPrompt: boolean;
@@ -34,6 +37,7 @@ type WorkbenchPanelProps = {
     onCreateReport: () => void;
     onOpenCommandPalette: () => void;
     onRefreshGitStatus: () => void;
+    onSelectGitChange: (path: string) => void;
     onSummarizeContext: () => void;
     onFileDraftChange: (content: string) => void;
     onDeleteFile: () => void;
@@ -62,6 +66,9 @@ export function WorkbenchPanel({
     fileDraft,
     filePreview,
     gitStatus,
+    selectedGitChangePath,
+    selectedGitFileDiff,
+    isLoadingGitFileDiff,
     isApplyingWrite,
     isEditingFile,
     isSendingPrompt,
@@ -77,6 +84,7 @@ export function WorkbenchPanel({
     onCreateReport,
     onOpenCommandPalette,
     onRefreshGitStatus,
+    onSelectGitChange,
     onSummarizeContext,
     onFileDraftChange,
     onDeleteFile,
@@ -111,6 +119,10 @@ export function WorkbenchPanel({
     const findSource = isEditingFile ? fileDraft : filePreview?.content ?? filePreview?.text ?? '';
     const findMatches = countFindMatches(findSource, findQuery);
     const isDraftDirty = Boolean(filePreview && dirtyTabPaths.includes(filePreview.relPath));
+    const selectedGitChange = gitStatus?.changedFiles.find((change) => change.path === selectedGitChangePath) ?? null;
+    const selectedDiff = selectedGitFileDiff?.path === selectedGitChangePath ? selectedGitFileDiff : null;
+    const stagedDiff = selectedDiff?.stagedDiff ?? gitStatus?.stagedDiff ?? '';
+    const unstagedDiff = selectedDiff?.unstagedDiff ?? gitStatus?.unstagedDiff ?? gitStatus?.diff ?? '';
 
     useEffect(() => {
         function handleFindShortcut(event: KeyboardEvent) {
@@ -192,24 +204,32 @@ export function WorkbenchPanel({
                     {gitStatus?.changedFiles.length ? (
                         <div className="code-studio-inline-changes">
                             {gitStatus.changedFiles.slice(0, 6).map((change) => (
-                                <span key={`${change.index}-${change.worktree}-${change.path}`} title={change.path}>
+                                <button
+                                    className={selectedGitChangePath === change.path ? 'selected' : ''}
+                                    key={`${change.index}-${change.worktree}-${change.path}`}
+                                    onClick={() => onSelectGitChange(change.path)}
+                                    title={change.path}
+                                    type="button"
+                                >
                                     {change.summary}: {change.path}
-                                </span>
+                                </button>
                             ))}
                         </div>
                     ) : null}
-                    {gitStatus?.stagedDiff || gitStatus?.unstagedDiff || gitStatus?.diff ? (
+                    {stagedDiff || unstagedDiff || isLoadingGitFileDiff ? (
                         <div className="git-diff-stack compact">
-                            {gitStatus.stagedDiff && (
+                            {isLoadingGitFileDiff && <small className="git-diff-message">Loading selected file diff...</small>}
+                            {selectedDiff?.message && <small className="git-diff-message">{selectedDiff.message}</small>}
+                            {stagedDiff && (
                                 <>
-                                    <strong>Staged Diff</strong>
-                                    <pre className="git-diff-view compact">{gitStatus.stagedDiff}</pre>
+                                    <strong>{selectedGitChange ? `Staged Diff / ${selectedGitChange.path}` : 'Staged Diff'}</strong>
+                                    <pre className="git-diff-view compact">{stagedDiff}</pre>
                                 </>
                             )}
-                            {(gitStatus.unstagedDiff || gitStatus.diff) && (
+                            {unstagedDiff && (
                                 <>
-                                    <strong>Unstaged Diff</strong>
-                                    <pre className="git-diff-view compact">{gitStatus.unstagedDiff || gitStatus.diff}</pre>
+                                    <strong>{selectedGitChange ? `Unstaged Diff / ${selectedGitChange.path}` : 'Unstaged Diff'}</strong>
+                                    <pre className="git-diff-view compact">{unstagedDiff}</pre>
                                 </>
                             )}
                         </div>

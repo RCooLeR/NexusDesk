@@ -29,7 +29,7 @@ The implemented desktop slice currently contains:
 - separate saved SQL snippets and lightweight row filters per dataset
 - SQL result Markdown artifacts with query, engine, row count, preview, and source citation metadata
 - read-only Compose parsing for Operations Studio
-- read-only Git status, branch, changed-file list, staged/unstaged grouping, staged diff, and working-tree diff for Code Studio
+- read-only Git status, branch, changed-file list, staged/unstaged grouping, staged diff, working-tree diff, and selected-file diff loading for Code Studio
 - configurable LLM gateway
 - OpenAI-compatible chat and streaming
 

@@ -223,6 +223,16 @@ export type GitStatus = {
     generatedAt: string;
 };
 
+export type GitFileDiff = {
+    path: string;
+    stagedDiff: string;
+    stagedDiffTruncated: boolean;
+    unstagedDiff: string;
+    unstagedDiffTruncated: boolean;
+    message: string;
+    generatedAt: string;
+};
+
 export type LineageNode = {
     id: string;
     kind: string;

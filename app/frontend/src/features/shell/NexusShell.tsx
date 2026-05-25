@@ -30,6 +30,7 @@ import {
     EnsureSQLiteMetadataStore,
     ExecuteAgentTool,
     ExportArtifactLineageJSON,
+    GetGitFileDiff,
     GetGitStatus,
     GetArtifactMetadata,
     GetArtifactLineage,
@@ -91,6 +92,7 @@ import type {
     FileNode,
     FilePreview,
     FileWriteProposal,
+    GitFileDiff,
     GitStatus,
     LLMChatResult,
     LLMProbeResult,
@@ -240,6 +242,9 @@ export function NexusShell({
     const [isSearchingMetadata, setIsSearchingMetadata] = useState(false);
     const [workspaceFreshness, setWorkspaceFreshness] = useState<WorkspaceFreshnessStatus | null>(null);
     const [gitStatus, setGitStatus] = useState<GitStatus | null>(null);
+    const [selectedGitChangePath, setSelectedGitChangePath] = useState('');
+    const [selectedGitFileDiff, setSelectedGitFileDiff] = useState<GitFileDiff | null>(null);
+    const [isLoadingGitFileDiff, setIsLoadingGitFileDiff] = useState(false);
     const [datasetDependencies, setDatasetDependencies] = useState<DatasetDependency[]>([]);
     const [rebuildingDatasetDependencyId, setRebuildingDatasetDependencyId] = useState('');
     const [datasetSQLRuns, setDatasetSQLRuns] = useState<SQLRun[]>([]);
@@ -549,6 +554,26 @@ export function NexusShell({
     }, [chatMessages, isSendingPrompt]);
 
     const commandActions = buildCommandActions();
+
+    useEffect(() => {
+        const changes = gitStatus?.changedFiles ?? [];
+        if (changes.length === 0) {
+            setSelectedGitChangePath('');
+            setSelectedGitFileDiff(null);
+            return;
+        }
+        if (!selectedGitChangePath || !changes.some((change) => change.path === selectedGitChangePath)) {
+            setSelectedGitChangePath(changes[0].path);
+        }
+    }, [gitStatus?.generatedAt, gitStatus?.changedFiles, selectedGitChangePath]);
+
+    useEffect(() => {
+        if (!selectedGitChangePath || !gitStatus?.available) {
+            setSelectedGitFileDiff(null);
+            return;
+        }
+        void refreshSelectedGitFileDiff(selectedGitChangePath);
+    }, [gitStatus?.generatedAt, selectedGitChangePath, gitStatus?.available]);
 
     function pushToolEvent(title: string, detail: string) {
         setLocalToolEvents((current) => [
@@ -1328,6 +1353,30 @@ export function NexusShell({
                 message: message || 'Git status is unavailable.',
                 generatedAt: '',
             });
+        }
+    }
+
+    async function refreshSelectedGitFileDiff(path: string) {
+        setIsLoadingGitFileDiff(true);
+        try {
+            const diff = await GetGitFileDiff(path);
+            setSelectedGitFileDiff(diff);
+            if (diff.message) {
+                pushToolEvent('Git file diff loaded', diff.message);
+            }
+        } catch (error) {
+            const message = error instanceof Error ? error.message : '';
+            setSelectedGitFileDiff({
+                path,
+                stagedDiff: '',
+                stagedDiffTruncated: false,
+                unstagedDiff: '',
+                unstagedDiffTruncated: false,
+                message: message || 'Git file diff is unavailable.',
+                generatedAt: '',
+            });
+        } finally {
+            setIsLoadingGitFileDiff(false);
         }
     }
 
@@ -3055,6 +3104,8 @@ export function NexusShell({
                 datasetSQLQueryResult={datasetSQLQueryResult}
                 filePreview={filePreview}
                 gitStatus={gitStatus}
+                selectedGitChangePath={selectedGitChangePath}
+                selectedGitFileDiff={selectedGitFileDiff}
                 dirtyTabPaths={dirtyTabPaths}
                 isArchivingArtifact={isArchivingArtifact}
                 isCreatingDatasetChart={isCreatingDatasetChart}
@@ -3062,6 +3113,7 @@ export function NexusShell({
                 isDeletingArtifact={isDeletingArtifact}
                 isExportingDatasetQuery={isExportingDatasetQuery}
                 isExportingDatasetSQL={isExportingDatasetSQL}
+                isLoadingGitFileDiff={isLoadingGitFileDiff}
                 isPreparingMetadataStore={isPreparingMetadataStore}
                 isProfilingDataset={isProfilingDataset}
                 isPreviewingDatasetChart={isPreviewingDatasetChart}
@@ -3108,6 +3160,7 @@ export function NexusShell({
                 onInspectMetadata={() => void inspectMetadataStore()}
                 onMetadataSearchQueryChange={setMetadataSearchQuery}
                 onOpenArtifactSource={() => void openArtifactSource()}
+                onSelectGitChange={setSelectedGitChangePath}
                 onOpenLineageSource={(relPath) => void openLineageSource(relPath)}
                 onPrepareMetadataStore={() => void prepareSQLiteMetadataStore()}
                 onProfileDataset={() => void profileSelectedDataset()}
@@ -3240,6 +3293,9 @@ export function NexusShell({
                     fileDraft={fileDraft}
                     filePreview={filePreview}
                     gitStatus={gitStatus}
+                    selectedGitChangePath={selectedGitChangePath}
+                    selectedGitFileDiff={selectedGitFileDiff}
+                    isLoadingGitFileDiff={isLoadingGitFileDiff}
                     dirtyTabPaths={dirtyTabPaths}
                     isCreatingReport={isCreatingReport}
                     isDeletingFile={isDeletingFile}
@@ -3263,6 +3319,7 @@ export function NexusShell({
                         setCommandPaletteQuery('');
                     }}
                     onRefreshGitStatus={() => void refreshGitStatus()}
+                    onSelectGitChange={setSelectedGitChangePath}
                     onSummarizeContext={() => void summarizeSelectedContext()}
                     onPinContext={pinSelectedContext}
                     onPinProjectContext={pinProjectContext}

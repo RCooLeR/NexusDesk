@@ -1,4 +1,4 @@
-import type {AgentToolDescriptor, AgentToolPlanItem, AgentToolRunRecord, ApprovalRecord, ArtifactComparison, ArtifactLineage, ArtifactMetadata, Capability, DatasetChartResult, DatasetDependency, DatasetProfile, DatasetQueryResult, DatasetSQLQueryResult, FilePreview, GitStatus, LLMProbeResult, LLMSettings, MetadataBrowser, MetadataSearchResult, SavedDatasetQuery, SQLRun, SQLiteMetadataStatus, SQLiteQueryResult, ToolEvent, WorkspaceArtifact, WorkspaceFreshnessStatus, WorkspaceSnapshot} from '../../types';
+import type {AgentToolDescriptor, AgentToolPlanItem, AgentToolRunRecord, ApprovalRecord, ArtifactComparison, ArtifactLineage, ArtifactMetadata, Capability, DatasetChartResult, DatasetDependency, DatasetProfile, DatasetQueryResult, DatasetSQLQueryResult, FilePreview, GitFileDiff, GitStatus, LLMProbeResult, LLMSettings, MetadataBrowser, MetadataSearchResult, SavedDatasetQuery, SQLRun, SQLiteMetadataStatus, SQLiteQueryResult, ToolEvent, WorkspaceArtifact, WorkspaceFreshnessStatus, WorkspaceSnapshot} from '../../types';
 import {AgentToolPlanCard} from './AgentToolPlanCard';
 import {ApprovalLogPanel} from './ApprovalLogPanel';
 import {ArtifactStudioPanel} from './ArtifactStudioPanel';
@@ -38,6 +38,8 @@ type BottomStudioPanelProps = {
     datasetSQLQueryResult: DatasetSQLQueryResult | null;
     filePreview: FilePreview | null;
     gitStatus: GitStatus | null;
+    selectedGitChangePath: string;
+    selectedGitFileDiff: GitFileDiff | null;
     dirtyTabPaths: string[];
     isArchivingArtifact: boolean;
     isCreatingDatasetChart: boolean;
@@ -45,6 +47,7 @@ type BottomStudioPanelProps = {
     isDeletingArtifact: boolean;
     isExportingDatasetQuery: boolean;
     isExportingDatasetSQL: boolean;
+    isLoadingGitFileDiff: boolean;
     isPreparingMetadataStore: boolean;
     isProfilingDataset: boolean;
     isPreviewingDatasetChart: boolean;
@@ -82,6 +85,7 @@ type BottomStudioPanelProps = {
     onInspectMetadata: () => void;
     onMetadataSearchQueryChange: (content: string) => void;
     onOpenArtifactSource: () => void;
+    onSelectGitChange: (path: string) => void;
     onOpenLineageSource: (relPath: string) => void;
     onPrepareMetadataStore: () => void;
     onProfileDataset: () => void;
@@ -156,6 +160,8 @@ export function BottomStudioPanel({
     datasetSQLQueryResult,
     filePreview,
     gitStatus,
+    selectedGitChangePath,
+    selectedGitFileDiff,
     dirtyTabPaths,
     isArchivingArtifact,
     isCreatingDatasetChart,
@@ -163,6 +169,7 @@ export function BottomStudioPanel({
     isDeletingArtifact,
     isExportingDatasetQuery,
     isExportingDatasetSQL,
+    isLoadingGitFileDiff,
     isPreparingMetadataStore,
     isProfilingDataset,
     isPreviewingDatasetChart,
@@ -200,6 +207,7 @@ export function BottomStudioPanel({
     onInspectMetadata,
     onMetadataSearchQueryChange,
     onOpenArtifactSource,
+    onSelectGitChange,
     onOpenLineageSource,
     onPrepareMetadataStore,
     onProfileDataset,
@@ -263,9 +271,13 @@ export function BottomStudioPanel({
                         dirtyTabPaths={dirtyTabPaths}
                         filePreview={filePreview}
                         gitStatus={gitStatus}
+                        selectedGitChangePath={selectedGitChangePath}
+                        selectedGitFileDiff={selectedGitFileDiff}
+                        isLoadingGitFileDiff={isLoadingGitFileDiff}
                         openTabs={openTabs}
                         onOpenCommandPalette={onOpenCommandPalette}
                         onRefreshGitStatus={onRefreshGitStatus}
+                        onSelectGitChange={onSelectGitChange}
                         workspace={workspace}
                         workspaceFreshness={workspaceFreshness}
                     />

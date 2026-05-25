@@ -998,6 +998,30 @@ export namespace main {
 	        this.summary = source["summary"];
 	    }
 	}
+	export class GitFileDiff {
+	    path: string;
+	    stagedDiff: string;
+	    stagedDiffTruncated: boolean;
+	    unstagedDiff: string;
+	    unstagedDiffTruncated: boolean;
+	    message: string;
+	    generatedAt: string;
+
+	    static createFrom(source: any = {}) {
+	        return new GitFileDiff(source);
+	    }
+
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.path = source["path"];
+	        this.stagedDiff = source["stagedDiff"];
+	        this.stagedDiffTruncated = source["stagedDiffTruncated"];
+	        this.unstagedDiff = source["unstagedDiff"];
+	        this.unstagedDiffTruncated = source["unstagedDiffTruncated"];
+	        this.message = source["message"];
+	        this.generatedAt = source["generatedAt"];
+	    }
+	}
 	export class GitStatus {
 	    available: boolean;
 	    repoRoot: string;

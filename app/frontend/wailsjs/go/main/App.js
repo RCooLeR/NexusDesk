@@ -110,6 +110,10 @@ export function GetChatHistory() {
   return window['go']['main']['App']['GetChatHistory']();
 }
 
+export function GetGitFileDiff(arg1) {
+  return window['go']['main']['App']['GetGitFileDiff'](arg1);
+}
+
 export function GetGitStatus() {
   return window['go']['main']['App']['GetGitStatus']();
 }

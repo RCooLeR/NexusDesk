@@ -90,6 +90,15 @@ export async function installNexusMocks(page) {
                         message: 'main has 2 changed files.',
                         generatedAt: '2026-05-14T00:00:00Z',
                     }),
+                    GetGitFileDiff: async (relPath) => ({
+                        path: relPath,
+                        stagedDiff: '',
+                        stagedDiffTruncated: false,
+                        unstagedDiff: `diff --git a/${relPath} b/${relPath}\n@@\n- old\n+ new\n`,
+                        unstagedDiffTruncated: false,
+                        message: `Loaded read-only diff for ${relPath}.`,
+                        generatedAt: '2026-05-14T00:00:00Z',
+                    }),
                     GetChatHistory: async () => [
                         {role: 'assistant', content: 'Smoke answer\n\nSources:\n- data/campaigns.csv', contextRelPath: 'data/campaigns.csv', sourcePaths: ['data/campaigns.csv'], createdAt: '2026-05-14T00:00:00Z'},
                     ],

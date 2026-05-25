@@ -2543,6 +2543,22 @@ button:disabled {
     padding: 8px;
 }
 
+button.code-studio-row {
+    color: inherit;
+    cursor: pointer;
+    text-align: left;
+}
+
+button.code-studio-row:hover,
+button.code-studio-row.selected {
+    background: #edf4ff;
+    border-color: #b7d4ff;
+}
+
+button.code-studio-row.selected {
+    box-shadow: inset 2px 0 0 var(--nd-electric-blue);
+}
+
 .code-studio-row small {
     grid-column: 2;
     overflow: hidden;
@@ -2616,6 +2632,11 @@ button:disabled {
     text-transform: uppercase;
 }
 
+.git-diff-message {
+    color: var(--nd-muted-text);
+    font-size: 12px;
+}
+
 .git-diff-stack.compact {
     max-height: 240px;
     overflow: auto;
@@ -2644,17 +2665,25 @@ button:disabled {
     gap: 6px;
 }
 
-.code-studio-inline-changes span {
+.code-studio-inline-changes button {
     background: var(--nd-panel-soft);
     border: 1px solid var(--nd-border-soft);
     border-radius: var(--nd-radius-sm);
     color: var(--nd-muted-text);
+    cursor: pointer;
     font-size: 12px;
     max-width: 260px;
     overflow: hidden;
     padding: 5px 7px;
     text-overflow: ellipsis;
     white-space: nowrap;
+}
+
+.code-studio-inline-changes button:hover,
+.code-studio-inline-changes button.selected {
+    background: #edf4ff;
+    border-color: #b7d4ff;
+    color: var(--nd-electric-blue);
 }
 
 .settings-page {

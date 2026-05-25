@@ -45,6 +45,7 @@ const checks = [
             'ListApprovals',
             'SearchWorkspace',
             'GetGitStatus',
+            'GetGitFileDiff',
             'ApprovalRequestModal',
             'requestApproval',
             'QuickOpenPalette',
@@ -119,7 +120,7 @@ const checks = [
     },
     {
         file: 'src/features/shell/CodeStudioPanel.tsx',
-        terms: ['CodeStudioPanel', 'Code Studio', 'Project Session', 'Repository', 'Git Diff', 'Staged Diff', 'Unstaged Diff', 'stagedFiles', 'unstagedFiles', 'git-diff-view', 'Refresh git', 'Commands'],
+        terms: ['CodeStudioPanel', 'Code Studio', 'Project Session', 'Repository', 'Git Diff', 'Staged Diff', 'Unstaged Diff', 'selectedGitChangePath', 'onSelectGitChange', 'stagedFiles', 'unstagedFiles', 'git-diff-view', 'Refresh git', 'Commands'],
     },
     {
         file: 'src/features/shell/LLMSettingsCard.tsx',
@@ -292,7 +293,7 @@ const checks = [
     },
     {
         file: 'wailsjs/go/main/App.d.ts',
-        terms: ['AskLLMContextPack', 'RunAgent', 'PreviewFileWrite', 'ApplyFileDelete', 'ApplyFileMove', 'ProfileDataset', 'CreateDatasetChartArtifact', 'CreateDatasetQueryArtifact', 'CreateDatasetSQLArtifact', 'CreateDatasetSummaryArtifact', 'CreateChatMarkdownArtifact', 'CreateScanReportArtifact', 'PreviewChatContextPack', 'PreviewDatasetChart', 'SaveDatasetQuery', 'SaveDatasetSQLQuery', 'ListDatasetSQLQueries', 'ListDatasetDependencies', 'ListDatasetSQLRuns', 'RefreshStaleContext', 'SearchMetadata', 'QueryWorkspaceSQLite', 'ExportArtifactLineageJSON', 'GetGitStatus', 'ListApprovals', 'ListAgentTools', 'ListAgentToolRuns', 'PreviewAgentTool', 'ExecuteAgentTool', 'QueryDatasetSQL', 'EnsureSQLiteMetadataStore', 'InspectMetadataStore', 'GetArtifactLineage', 'CheckWorkspaceFreshness', 'CompareArtifacts', 'ArchiveArtifact', 'DeleteArtifact'],
+        terms: ['AskLLMContextPack', 'RunAgent', 'PreviewFileWrite', 'ApplyFileDelete', 'ApplyFileMove', 'ProfileDataset', 'CreateDatasetChartArtifact', 'CreateDatasetQueryArtifact', 'CreateDatasetSQLArtifact', 'CreateDatasetSummaryArtifact', 'CreateChatMarkdownArtifact', 'CreateScanReportArtifact', 'PreviewChatContextPack', 'PreviewDatasetChart', 'SaveDatasetQuery', 'SaveDatasetSQLQuery', 'ListDatasetSQLQueries', 'ListDatasetDependencies', 'ListDatasetSQLRuns', 'RefreshStaleContext', 'SearchMetadata', 'QueryWorkspaceSQLite', 'ExportArtifactLineageJSON', 'GetGitStatus', 'GetGitFileDiff', 'ListApprovals', 'ListAgentTools', 'ListAgentToolRuns', 'PreviewAgentTool', 'ExecuteAgentTool', 'QueryDatasetSQL', 'EnsureSQLiteMetadataStore', 'InspectMetadataStore', 'GetArtifactLineage', 'CheckWorkspaceFreshness', 'CompareArtifacts', 'ArchiveArtifact', 'DeleteArtifact'],
     },
     {
         file: '../app_metadata.go',
@@ -300,7 +301,7 @@ const checks = [
     },
     {
         file: '../app_git.go',
-        terms: ['GetGitStatus', 'gitDiff', 'parseGitStatus', 'gitDiffMaxBytes'],
+        terms: ['GetGitStatus', 'GetGitFileDiff', 'gitFileDiff', 'cleanGitRelPath', 'parseGitStatus', 'gitDiffMaxBytes'],
     },
     {
         file: '../internal/llm/chat.go',
