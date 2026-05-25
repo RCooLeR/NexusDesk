@@ -48,6 +48,7 @@ type BottomStudioPanelProps = {
     isDeletingArtifact: boolean;
     isExportingDatasetQuery: boolean;
     isExportingDatasetSQL: boolean;
+    isGeneratingGitInsight: boolean;
     isLoadingGitFileDiff: boolean;
     isPreparingMetadataStore: boolean;
     isProfilingDataset: boolean;
@@ -79,6 +80,7 @@ type BottomStudioPanelProps = {
     onDatasetSQLQueryLabelChange: (content: string) => void;
     onDeleteArtifact: () => void;
     onDryRunAgentTool: (item: AgentToolPlanItem) => void;
+    onDraftGitCommitMessage: () => void;
     onExecuteAgentTool: (item: AgentToolPlanItem) => void;
     onExportDatasetQuery: () => void;
     onExportDatasetSQL: () => void;
@@ -108,6 +110,7 @@ type BottomStudioPanelProps = {
     onSettingsDraftChange: (field: keyof LLMSettings, value: string) => void;
     onSearchMetadata: () => void;
     onSQLiteConnectorQueryChange: (content: string) => void;
+    onSummarizeGitDiff: () => void;
     onTabChange: (tab: BottomStudioTab) => void;
     onTestConnection: () => void;
     probeResult: LLMProbeResult | null;
@@ -171,6 +174,7 @@ export function BottomStudioPanel({
     isDeletingArtifact,
     isExportingDatasetQuery,
     isExportingDatasetSQL,
+    isGeneratingGitInsight,
     isLoadingGitFileDiff,
     isPreparingMetadataStore,
     isProfilingDataset,
@@ -202,6 +206,7 @@ export function BottomStudioPanel({
     onDatasetSQLQueryLabelChange,
     onDeleteArtifact,
     onDryRunAgentTool,
+    onDraftGitCommitMessage,
     onExecuteAgentTool,
     onExportDatasetQuery,
     onExportDatasetSQL,
@@ -231,6 +236,7 @@ export function BottomStudioPanel({
     onSettingsDraftChange,
     onSearchMetadata,
     onSQLiteConnectorQueryChange,
+    onSummarizeGitDiff,
     onTabChange,
     onTestConnection,
     probeResult,
@@ -409,9 +415,12 @@ export function BottomStudioPanel({
                         gitStatus={gitStatus}
                         selectedGitChangePath={selectedGitChangePath}
                         selectedGitFileDiff={selectedGitFileDiff}
+                        isGeneratingGitInsight={isGeneratingGitInsight}
                         isLoadingGitFileDiff={isLoadingGitFileDiff}
+                        onDraftCommitMessage={onDraftGitCommitMessage}
                         onRefreshGitStatus={onRefreshGitStatus}
                         onSelectGitChange={onSelectGitChange}
+                        onSummarizeDiff={onSummarizeGitDiff}
                     />
                 )}
                 {activeTab === 'approvals' && <ApprovalLogPanel records={approvalRecords} />}

@@ -273,8 +273,8 @@ Step 4.3: Git integration
 - [ ] Add stage/unstage file.
 - [ ] Add stage/unstage hunk.
 - [ ] Add revert hunk with destructive approval.
-- [ ] Add AI diff summary.
-- [ ] Add AI commit message draft.
+- [x] Add AI diff summary.
+- [x] Add AI commit message draft.
 
 Step 4.4: Search, problems, and tasks
 
@@ -972,11 +972,11 @@ Steps:
 2. [x] Add per-file diff loading for staged and unstaged sides.
 3. [x] Add inline/side-by-side diff mode switch.
 4. [x] Add hunk navigation.
-5. [ ] Add AI diff summary for selected diff.
-6. [ ] Add AI commit message draft from staged/unstaged context.
+5. [x] Add AI diff summary for selected diff.
+6. [x] Add AI commit message draft from staged/unstaged context.
 7. [ ] Keep stage/unstage/revert controls disabled or preview-only until the approval/audit git mutation boundary exists.
 
-Reasoning: the app now distinguishes staged versus unstaged repository state. The next credibility gap is adding AI-assisted summaries and commit-message drafting before adding git mutations.
+Reasoning: the app now distinguishes staged versus unstaged repository state and can ask the assistant for review summaries and commit-message drafts from bounded diff context. The next credibility gap is designing preview/approval/audit boundaries for actual git mutations.
 
 ## Directory Ownership Notes
 

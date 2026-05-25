@@ -20,18 +20,24 @@ type GitDiffPanelProps = {
     gitStatus: GitStatus | null;
     selectedGitChangePath: string;
     selectedGitFileDiff: GitFileDiff | null;
+    isGeneratingGitInsight: boolean;
     isLoadingGitFileDiff: boolean;
+    onDraftCommitMessage: () => void;
     onRefreshGitStatus: () => void;
     onSelectGitChange: (path: string) => void;
+    onSummarizeDiff: () => void;
 };
 
 export function GitDiffPanel({
     gitStatus,
     selectedGitChangePath,
     selectedGitFileDiff,
+    isGeneratingGitInsight,
     isLoadingGitFileDiff,
+    onDraftCommitMessage,
     onRefreshGitStatus,
     onSelectGitChange,
+    onSummarizeDiff,
 }: GitDiffPanelProps) {
     const [diffMode, setDiffMode] = useState<DiffMode>('unified');
     const [activeHunkIndex, setActiveHunkIndex] = useState(0);
@@ -47,6 +53,7 @@ export function GitDiffPanel({
     const statusMessage = gitStatus?.available
         ? `${gitStatus.branch}${gitStatus.head ? ` @ ${gitStatus.head}` : ''}`
         : gitStatus?.message ?? 'Open a git-backed workspace to inspect changes.';
+    const hasDiff = Boolean(stagedDiff || unstagedDiff);
     const hunkTargets = useMemo(() => [
         ...collectHunks('staged', stagedDiff),
         ...collectHunks('unstaged', unstagedDiff),
@@ -81,6 +88,8 @@ export function GitDiffPanel({
                 </div>
                 <div className="code-studio-toolbar" aria-label="Git diff toolbar">
                     <Button onClick={onRefreshGitStatus} variant="subtle">Refresh git</Button>
+                    <Button disabled={!hasDiff || isGeneratingGitInsight} onClick={onSummarizeDiff} variant="subtle">Summarize diff</Button>
+                    <Button disabled={!hasDiff || isGeneratingGitInsight} onClick={onDraftCommitMessage} variant="subtle">Draft commit</Button>
                 </div>
                 {gitStatus?.available && (
                     <div className={gitStatus.dirty ? 'git-summary dirty' : 'git-summary'}>

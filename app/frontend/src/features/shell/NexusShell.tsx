@@ -2024,6 +2024,42 @@ export function NexusShell({
         }
     }
 
+    async function summarizeGitDiff() {
+        const diffContext = selectedGitDiffPromptContext();
+        if (!diffContext) {
+            setChatStatus('Select a changed file or refresh git status before summarizing a diff.');
+            return;
+        }
+        const prompt = [
+            'Summarize this git diff for code review.',
+            'Return concise Markdown with: intent, user-visible behavior changes, files touched, risk areas, and test suggestions.',
+            'Stay grounded in the diff. Do not invent unstated behavior.',
+            '',
+            diffContext,
+        ].join('\n');
+        pushToolEvent('Git diff summary requested', selectedGitChangePath || gitStatus?.branch || 'working tree');
+        await sendPromptText(prompt, {clearComposer: false});
+    }
+
+    async function draftGitCommitMessage() {
+        const diffContext = selectedGitDiffPromptContext();
+        if (!diffContext) {
+            setChatStatus('Select a changed file or refresh git status before drafting a commit message.');
+            return;
+        }
+        const prompt = [
+            'Draft a Conventional Commit message for this git diff.',
+            'Return only:',
+            '1. A single commit subject under 72 characters.',
+            '2. An optional short body with 2-4 bullets when useful.',
+            'Do not claim tests passed unless the diff or prompt states that.',
+            '',
+            diffContext,
+        ].join('\n');
+        pushToolEvent('Git commit draft requested', selectedGitChangePath || gitStatus?.branch || 'working tree');
+        await sendPromptText(prompt, {clearComposer: false});
+    }
+
     async function sendPromptText(rawPrompt: string, options: SendPromptOptions) {
         const prompt = rawPrompt.trim();
         if (!prompt) {
@@ -2100,6 +2136,29 @@ export function NexusShell({
             unsubscribe?.();
             setIsSendingPrompt(false);
         }
+    }
+
+    function selectedGitDiffPromptContext() {
+        const diff = selectedGitFileDiff?.path === selectedGitChangePath ? selectedGitFileDiff : null;
+        const stagedDiff = diff?.stagedDiff ?? gitStatus?.stagedDiff ?? '';
+        const unstagedDiff = diff?.unstagedDiff ?? gitStatus?.unstagedDiff ?? gitStatus?.diff ?? '';
+        if (!stagedDiff && !unstagedDiff) {
+            return '';
+        }
+
+        const selectedChange = gitStatus?.changedFiles.find((change) => change.path === selectedGitChangePath);
+        const header = [
+            'Git diff context',
+            `Branch: ${gitStatus?.branch || 'unknown'}`,
+            `Head: ${gitStatus?.head || 'unknown'}`,
+            selectedGitChangePath ? `Selected file: ${selectedGitChangePath}` : 'Selected file: full working tree',
+            selectedChange ? `Status: ${selectedChange.summary} / ${gitCodeLabel(selectedChange.index, selectedChange.worktree)}` : '',
+        ].filter(Boolean).join('\n');
+        const sections = [
+            stagedDiff ? `Staged diff:\n\`\`\`diff\n${limitGitPromptDiff(stagedDiff)}\n\`\`\`` : '',
+            unstagedDiff ? `Unstaged diff:\n\`\`\`diff\n${limitGitPromptDiff(unstagedDiff)}\n\`\`\`` : '',
+        ].filter(Boolean);
+        return [header, ...sections].join('\n\n');
     }
 
     function selectedTextContextRelPath() {
@@ -3113,6 +3172,7 @@ export function NexusShell({
                 isDeletingArtifact={isDeletingArtifact}
                 isExportingDatasetQuery={isExportingDatasetQuery}
                 isExportingDatasetSQL={isExportingDatasetSQL}
+                isGeneratingGitInsight={isSendingPrompt}
                 isLoadingGitFileDiff={isLoadingGitFileDiff}
                 isPreparingMetadataStore={isPreparingMetadataStore}
                 isProfilingDataset={isProfilingDataset}
@@ -3153,6 +3213,7 @@ export function NexusShell({
                 onDatasetSQLQueryLabelChange={setDatasetSQLQueryLabel}
                 onDeleteArtifact={() => void deleteActiveArtifact()}
                 onDryRunAgentTool={(item) => void dryRunAgentTool(item)}
+                onDraftGitCommitMessage={() => void draftGitCommitMessage()}
                 onExecuteAgentTool={(item) => void executeAgentTool(item)}
                 onExportDatasetQuery={() => void exportDatasetQuery()}
                 onExportDatasetSQL={() => void exportDatasetSQL()}
@@ -3186,6 +3247,7 @@ export function NexusShell({
                 onSettingsDraftChange={updateSettingsDraft}
                 onSearchMetadata={() => void searchMetadataHistory()}
                 onSQLiteConnectorQueryChange={setSQLiteConnectorQuery}
+                onSummarizeGitDiff={() => void summarizeGitDiff()}
                 onTabChange={changeBottomStudioTab}
                 onTestConnection={() => void testLLMConnection()}
                 probeResult={probeResult}
@@ -3608,6 +3670,19 @@ function sourcePathsFromContext(contextRelPath: string) {
         return [dirMatch[1]];
     }
     return [contextRelPath];
+}
+
+function limitGitPromptDiff(value: string) {
+    const maxChars = 18000;
+    if (value.length <= maxChars) {
+        return value;
+    }
+    return `${value.slice(0, maxChars)}\n\n[diff truncated before sending to model]`;
+}
+
+function gitCodeLabel(index: string, worktree: string) {
+    const code = `${index || ' '}${worktree || ' '}`.trim();
+    return code || 'tracked';
 }
 
 type AgentRunResultView = {

@@ -118,6 +118,8 @@ Capability hints are currently inferred from model IDs. They are useful for read
 
 The current chat implementation requires an explicit configured model. It includes either a bounded selected text preview or a bounded pinned context pack, sends selected CSV files as a structured column profile plus bounded row sample, sends DOCX text and extracted PDF text when available, cites the source paths attached to persisted assistant answers, and streams response text when the configured provider supports OpenAI-compatible streaming. Directory and project context are bounded expansions, not raw full-project dumps: ignored folders, symlinks, images, binaries, and oversized content are skipped, and the included files/bytes are capped by the configured model window after reserving response/overhead space. The Activity Log records request, context budget, first-token, completion, failure, model-step, tool-step, and bounded-agent stop events so slow local model runs remain observable. The Explain action uses the same selected text/code/document/directory boundary to send a deterministic explanation prompt. `RunAgent` emits `nexus:agent-run` events while the bounded backend loop is running; the chat placeholder shows only the last one or two model/tool activity messages until the final answer replaces it.
 
+The bottom Git drawer can ask the assistant for a diff summary or commit-message draft from the selected staged/unstaged diff. These actions send bounded diff text through the same chat path and are intentionally read-only: they do not stage, unstage, revert, commit, or mutate repository state.
+
 ## Agent Modes
 
 Nexus Augentic Studio can expose several modes while using the same underlying agent loop.

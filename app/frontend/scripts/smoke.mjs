@@ -97,6 +97,9 @@ const checks = [
             'Model request queued',
             'First token received',
             'refreshGitStatus',
+            'summarizeGitDiff',
+            'draftGitCommitMessage',
+            'selectedGitDiffPromptContext',
             'handleTreeContextAction',
             'main-studio-panel',
             'showTabs: false',
@@ -124,7 +127,7 @@ const checks = [
     },
     {
         file: 'src/features/shell/GitDiffPanel.tsx',
-        terms: ['GitDiffPanel', 'Working Tree Diff', 'Staged Diff', 'Unstaged Diff', 'selectedGitChangePath', 'selectedGitFileDiff', 'diffMode', 'split', 'hunkTargets', 'Prev hunk', 'Next hunk', 'git-diff-panel', 'git-diff-split', 'git-diff-view', 'onSelectGitChange', 'Refresh git'],
+        terms: ['GitDiffPanel', 'Working Tree Diff', 'Staged Diff', 'Unstaged Diff', 'selectedGitChangePath', 'selectedGitFileDiff', 'diffMode', 'split', 'hunkTargets', 'Prev hunk', 'Next hunk', 'Summarize diff', 'Draft commit', 'isGeneratingGitInsight', 'git-diff-panel', 'git-diff-split', 'git-diff-view', 'onSelectGitChange', 'Refresh git'],
     },
     {
         file: 'src/features/shell/LLMSettingsCard.tsx',
@@ -204,7 +207,7 @@ const checks = [
     },
     {
         file: 'src/features/shell/BottomStudioPanel.tsx',
-        terms: ['BottomStudioPanel', 'drawerTabs', 'Git', 'Approvals', 'Activity', 'GitDiffPanel', 'CodeStudioPanel', 'DataOperationsPanel', 'LLMSettingsCard', 'AgentToolPlanCard', 'ArtifactStudioPanel', 'ApprovalLogPanel', 'ToolTimeline', 'bottom-tabbar', 'showTabs'],
+        terms: ['BottomStudioPanel', 'drawerTabs', 'Git', 'Approvals', 'Activity', 'GitDiffPanel', 'onSummarizeGitDiff', 'onDraftGitCommitMessage', 'CodeStudioPanel', 'DataOperationsPanel', 'LLMSettingsCard', 'AgentToolPlanCard', 'ArtifactStudioPanel', 'ApprovalLogPanel', 'ToolTimeline', 'bottom-tabbar', 'showTabs'],
     },
     {
         file: 'src/features/shell/DataOperationsPanel.tsx',
