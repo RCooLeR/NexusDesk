@@ -5,7 +5,7 @@ import type {BottomStudioTab} from './BottomStudioPanel';
 
 const navigationStorageKey = 'nexus:studio-navigation';
 const bottomTabs = new Set<BottomStudioTab>(['git', 'approvals', 'activity']);
-const studioRoutes = new Set<StudioRouteId>(['code', 'assistant', 'data', 'analytics', 'documents', 'ops', 'artifacts', 'settings']);
+const studioRoutes = new Set<StudioRouteId>(['code', 'data', 'artifacts', 'settings']);
 
 export function useStudioNavigation(pushToolEvent: (title: string, detail: string) => void) {
     const initial = readNavigationSettings();
@@ -37,11 +37,8 @@ export function useStudioNavigation(pushToolEvent: (title: string, detail: strin
 }
 
 function mainStudioTabForRoute(route: StudioRouteId): BottomStudioTab | null {
-    if (route === 'code' || route === 'documents') {
+    if (route === 'code') {
         return null;
-    }
-    if (route === 'analytics' || route === 'ops') {
-        return 'data';
     }
     return studioRouteSurfaceTab[route] ?? null;
 }

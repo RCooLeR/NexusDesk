@@ -41,7 +41,7 @@ Configuration should be explicit and exportable:
 
 Runtime changes should be stored locally and optionally exportable as workspace config.
 
-Studio surfaces can change which tools and panels are visible, but they must not change the underlying safety boundary. Code Studio, Data Studio, Analytics Studio, Document Studio, Operations Studio, and Artifact Studio all share the same workspace roots, path checks, approval rules, secret handling, and audit model.
+Product surfaces can change which tools and panels are visible, but they must not change the underlying safety boundary. Workbench, Data & Analytics, Artifacts, Settings, and future analytics/document/operations capabilities all share the same workspace roots, path checks, approval rules, secret handling, and audit model.
 
 The current implementation has an append-only local approval/action log for applied file writes, deletes, moves, artifact creation, scan-report creation, artifact archive, artifact delete, and approved agent tool executions. It writes records under `.nexusdesk/approvals/log.json` and mirrors fresh records into SQLite metadata when the store exists. Modal approval prompts now cover higher-risk file, artifact, and explicit agent tool actions; mutating Docker/database actions and autonomous model-directed agent tool execution remain planned.
 
@@ -97,7 +97,7 @@ Current implementation:
 - SQLite metadata inspection exposes table columns, row counts, filterable columns, copyable sample rows, dataset SQL view summaries, and searchable chat/artifact/tool-run history
 - dataset dependency and SQL run metadata records tie saved snippets, reports, charts, summaries, and connector queries back to source datasets
 - workspace freshness checks ignore internal metadata/tool-run paths, detect source file changes, mark generated artifacts with stale source provenance, flag stale dataset-derived views, and warn chat/context surfaces when cited files changed
-- read-only Git refreshes and approved agent shell commands run as hidden/no-console child processes on Windows desktop builds
+- read-only Git refreshes are user-triggered rather than automatic on workspace open, and approved agent shell commands run as hidden/no-console child processes on Windows desktop builds
 - frontend commands call Wails bindings rather than reading or mutating arbitrary paths directly
 
 ## Database Security
@@ -117,7 +117,7 @@ Rules:
 - sanitize provider error payloads before surfacing messages to UI, and sanitize SQL text before metadata persistence
 - emit structured provider-failure audit logs whenever sanitized provider failures are redacted or truncated (`redacted`, `truncated`, endpoint, and payload snippet fields)
 
-Data Studio and Analytics Studio should make read-only status visible near schema, query, chart, and report surfaces. Mutating SQL is a policy change, not a UI shortcut.
+Data & Analytics should make read-only status visible near schema, query, chart, connector, and report surfaces. Mutating SQL is a policy change, not a UI shortcut.
 
 The current read-only SQL surface accepts a constrained `SELECT` subset over CSV data, blocks mutation keywords, enforces single-statement input (including comment/quote-aware semicolon checks), and returns only a bounded preview.
 

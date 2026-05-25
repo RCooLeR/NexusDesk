@@ -106,7 +106,7 @@ Current implementation:
 - `app/internal/agenttools/registry.go` now exposes a first deterministic tool registry for workspace preview, file write, dataset query, artifact create/archive, and operations inspect actions.
 - `app/internal/agent/` now contains a backend-first ReAct runtime that can plan, call tools, process observations, prune working memory, emit live run events for model/tool steps, force a no-tool finalization pass when the iteration budget is exhausted, and return final answers through `RunAgent`.
 - `app/agent_runtime.go` bridges that runtime to the existing workspace, dataset, artifact, shell, and registered agent-tool surfaces without giving the model direct filesystem authority.
-- The AI Assistant route renders a proposed tool plan for the active context with risk and approval labels, and user-triggered dry-run/execute actions now persist tool-run records.
+- The always-visible assistant renders a proposed tool plan for the active context with risk and approval labels, and user-triggered dry-run/execute actions now persist tool-run records.
 - Recent tool-run rows expand into detail drawers with captured inputs, output/error text, approval references, replay, and target diff affordances.
 - Persisted assistant answers and saved Markdown answer artifacts include the source paths used for selected-file or context-pack grounding.
 - Chat messages and context-pack previews warn when their cited source paths changed after the answer/context was created.
@@ -124,7 +124,7 @@ The bottom Git drawer can ask the assistant for a diff summary or commit-message
 
 Nexus Augentic Studio can expose several modes while using the same underlying agent loop.
 
-These modes should map to visible studio surfaces. The user should feel they are working in Code Studio, Data Studio, Analytics Studio, Document Studio, or Operations Studio, with AI available as one command layer inside that surface.
+These modes should map to the visible product surfaces. The user should feel they are working in Workbench, Data & Analytics, Artifacts, or Settings, with AI available as one command layer inside that surface. Analytics, document, and operations capabilities remain contextual domains until they justify native screens.
 
 ### General Workspace Assistant
 
@@ -166,7 +166,7 @@ Good for:
 - report writing
 - metric interpretation
 
-### Analytics Studio
+### Analytics Capabilities
 
 Good for:
 

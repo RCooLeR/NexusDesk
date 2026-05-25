@@ -123,11 +123,11 @@ const checks = [
     },
     {
         file: 'src/features/shell/CodeStudioPanel.tsx',
-        terms: ['CodeStudioPanel', 'Code Studio', 'Project Session', 'Repository', 'Code Queues', 'selectedGitChangePath', 'onSelectGitChange', 'stagedFiles', 'unstagedFiles', 'Refresh git', 'Commands'],
+        terms: ['CodeStudioPanel', 'Workbench', 'Project Session', 'Repository', 'Code Queues', 'selectedGitChangePath', 'onSelectGitChange', 'stagedFiles', 'unstagedFiles', 'Refresh git', 'Commands'],
     },
     {
         file: 'src/features/shell/GitDiffPanel.tsx',
-        terms: ['GitDiffPanel', 'Working Tree Diff', 'Staged Diff', 'Unstaged Diff', 'selectedGitChangePath', 'selectedGitFileDiff', 'diffMode', 'split', 'hunkTargets', 'Prev hunk', 'Next hunk', 'Summarize diff', 'Draft commit', 'isGeneratingGitInsight', 'git-diff-panel', 'git-diff-split', 'git-diff-view', 'onSelectGitChange', 'Refresh git'],
+        terms: ['GitDiffPanel', 'Working Tree Diff', 'Staged Diff', 'Unstaged Diff', 'selectedGitChangePath', 'selectedGitFileDiff', 'diffMode', 'changes', 'Diff Only', 'collectChangedRows', 'hunkTargets', 'Previous hunk', 'Next hunk', 'Summarize diff', 'Draft commit', 'isGeneratingGitInsight', 'git-diff-panel', 'git-diff-split', 'git-diff-changes', 'git-diff-view', 'onSelectGitChange', 'Refresh git', 'buildGitChangeTree', 'git-change-tree'],
     },
     {
         file: 'src/features/shell/LLMSettingsCard.tsx',
@@ -139,7 +139,7 @@ const checks = [
     },
     {
         file: 'src/features/shell/WorkbenchPanel.tsx',
-        terms: ['editor-tabs', 'markdownViewMode', 'markdown-view-toggle', 'markdown-document-preview', 'studio-mode-strip', 'studio-route-summary', 'resolveStudioMode', 'Data Studio', 'Summarize', 'onSummarizeContext', 'onSelectTab', 'onCloseTab', 'onDeleteFile', 'onMoveFile', 'onPinProjectContext', 'file-write-editor', 'MonacoFileEditor', 'MonacoCodePreview', 'editor-find', 'findInputRef', 'dirty-indicator', 'dirtyTabPaths', 'countFindMatches'],
+        terms: ['editor-tabs', 'markdownViewMode', 'markdown-view-toggle', 'markdown-document-preview', 'Summarize', 'onSummarizeContext', 'onSelectTab', 'onCloseTab', 'onDeleteFile', 'onMoveFile', 'onPinProjectContext', 'file-write-editor', 'MonacoFileEditor', 'MonacoCodePreview', 'editor-find', 'findInputRef', 'dirty-indicator', 'dirtyTabPaths', 'countFindMatches'],
     },
     {
         file: 'src/features/shell/DataStudioPanel.tsx',
@@ -191,7 +191,7 @@ const checks = [
     },
     {
         file: 'src/brand/assets.ts',
-        terms: ['productBrand', 'Nexus Augentic Studio', 'Agentic work. Augmented by context.', 'logoHorizontalDark', 'StudioRouteId', "code: 'code'", 'Code Studio', 'AI Assistant', 'Data Studio', 'Analytics Studio', 'Documents Studio', 'Ops Studio', 'studioRouteSurfaceTab', 'studioRoutePrimarySurface'],
+        terms: ['productBrand', 'Nexus Augentic Studio', 'Agentic work. Augmented by context.', 'logoHorizontalDark', 'StudioRouteId', "code: 'code'", 'Workbench', 'Data & Analytics', 'Artifacts', 'Settings', 'studioRouteSurfaceTab', 'studioRoutePrimarySurface'],
     },
     {
         file: 'src/features/shell/WorkspaceRail.tsx',
@@ -199,7 +199,7 @@ const checks = [
     },
     {
         file: 'src/features/shell/WorkspaceNavigator.tsx',
-        terms: ['workspace-search', 'project-tree', 'TreeNodeButton', 'tree-indent-guide', 'tree-node-badge', 'search-results', 'search-result-group', 'ScanStatusDetails', 'scanStatusSummary', 'Expand all', 'Collapse all', 'Save scan', 'TreeContextAction', 'tree-context-menu'],
+        terms: ['workspace-search', 'project-tree', 'TreeNodeButton', 'tree-indent-guide', 'tree-node-badge', 'search-results', 'search-result-group', 'workspace.root', 'Expand all', 'Collapse all', 'Save scan', 'TreeContextAction', 'tree-context-menu'],
     },
     {
         file: 'src/features/shell/AgentChatCard.tsx',
@@ -211,7 +211,7 @@ const checks = [
     },
     {
         file: 'src/features/shell/DataOperationsPanel.tsx',
-        terms: ['DataOperationsPanel', 'Data Studio', 'Operations', 'Metadata', 'Profile dataset', 'OperationsInspector', 'MetadataBrowserPanel', 'SQLiteConnectorPanel', 'WorkspaceFreshnessPanel'],
+        terms: ['DataOperationsPanel', 'Data & Analytics', 'Operations', 'Metadata', 'Profile dataset', 'OperationsInspector', 'MetadataBrowserPanel', 'SQLiteConnectorPanel', 'WorkspaceFreshnessPanel'],
     },
     {
         file: 'src/features/shell/ChatMessageContent.tsx',
@@ -231,8 +231,11 @@ const checks = [
             '.code-studio-metrics',
             '.code-studio-row',
             '.code-studio-toolbar',
+            '.git-change-tree',
+            '.git-change-file',
             '.git-diff-panel',
             '.git-diff-controls',
+            '.git-diff-changes',
             '.git-diff-split',
             '.git-diff-view',
             '.tree-context-menu',
@@ -282,15 +285,11 @@ const checks = [
             '.stale-source-warning',
             '.dataset-sql-panel',
             '.sortable-data-table',
-            '.scan-status-details',
             '.project-tree',
             '.tree-indent-guide',
             '.tree-node-main',
             '.tree-node-badge',
             '.search-result-group',
-            '.studio-mode-strip',
-            '.studio-route-summary',
-            '.studio-route-hint',
             '.quick-open',
             '.quick-open-result',
             '.command-palette',

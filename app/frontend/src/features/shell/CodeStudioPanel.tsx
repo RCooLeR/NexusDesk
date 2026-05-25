@@ -46,10 +46,10 @@ export function CodeStudioPanel({
         <div className="code-studio-panel">
             <section className="code-studio-column code-studio-overview">
                 <div className="bottom-section-heading">
-                    <strong>Code Studio</strong>
+                    <strong>Workbench</strong>
                     <small>{workspace ? workspace.name : 'No workspace open'}</small>
                 </div>
-                <div className="code-studio-toolbar" aria-label="Code Studio toolbar">
+                <div className="code-studio-toolbar" aria-label="Workbench toolbar">
                     <Button onClick={onRefreshGitStatus} disabled={!workspace} variant="subtle">Refresh git</Button>
                     <Button onClick={onOpenCommandPalette} variant="subtle">Commands</Button>
                     <Button disabled variant="subtle">Terminal</Button>

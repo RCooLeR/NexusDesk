@@ -167,7 +167,7 @@ export function DataOperationsPanel({
         <div className="data-operations-panel">
             <div className="data-operations-column primary">
                 <div className="bottom-section-heading">
-                    <strong>Data Studio</strong>
+                    <strong>Data & Analytics</strong>
                     <small>{datasetProfiles.length} profiles available for this workspace.</small>
                     <Button disabled={!canProfileDataset || isProfilingDataset} onClick={onProfileDataset} variant="subtle">
                         {isProfilingDataset ? 'Profiling...' : 'Profile dataset'}

@@ -16,7 +16,7 @@ Related docs:
 
 Nexus Augentic Studio is a runnable Wails desktop application with a Go backend, React/TypeScript frontend, local workspace scanning, file previews, editor tabs, safe file writes, configurable OpenAI-compatible LLM settings, streaming chat, first agent runtime, first read-only git status/diff visibility, first data workflows, first artifact/approval metadata, and visual smoke coverage.
 
-It is not yet a JetBrains-class IDE/data/analytics studio. Major planned surfaces are still missing: IDE-grade Code Studio editing/refactoring, staged diff workflows, deeper database/data support, Analytics connectors, Documents Studio, Ops Studio, native studio-specific layouts, and AI Assistant orchestration.
+It is not yet a JetBrains-class IDE/data/analytics studio. Major planned capabilities are still missing: IDE-grade Workbench editing/refactoring, staged diff workflows, deeper database/data support, analytics connectors, document intelligence, operations tooling, and AI orchestration.
 
 ## Repository State
 
@@ -66,7 +66,7 @@ Invoke-RestMethod http://localhost:11434/api/ps | ConvertTo-Json -Depth 10
 
 ## Phase 0: Product Baseline
 
-Goal: define Nexus Augentic Studio as a local-first AI IDE, data studio, analytics studio, document studio, and operations workbench.
+Goal: define Nexus Augentic Studio as a local-first AI workbench with IDE, data, analytics, document, and operations capabilities.
 
 Status: mostly complete for planning.
 
@@ -74,7 +74,7 @@ Steps:
 
 - [x] Define product vision and target users.
 - [x] Define local-first/provider-agnostic/tool-mediated principles.
-- [x] Define studio vocabulary: Code, Data, Analytics, Documents, AI Assistant, Ops, Artifacts, Settings.
+- [x] Define simplified product navigation: Workbench, Data & Analytics, Artifacts, and Settings.
 - [x] Define safety principle: LLM requests tools; backend validates and runs tools.
 - [x] Define artifact-first output model.
 - [x] Add long-range studio roadmap.
@@ -113,10 +113,10 @@ Steps:
 - [x] Merge search results with artifact metadata and chat history snippets.
 - [x] Add quick-open palette for files, folders, and open tabs.
 - [x] Add command palette for workspace/editor/data/artifact/chat actions.
-- [x] Add route-driven main studio menu selection for Code, Data, Analytics, Documents, AI Assistant, Ops, Artifacts, and Settings.
+- [x] Add route-driven main menu selection for Workbench, Data & Analytics, Artifacts, and Settings.
 - [x] Make main menu selections swap the primary workspace surface, not only the bottom drawer tab.
 - [x] Reuse existing drawer surfaces as temporary primary route surfaces until full studios land.
-- [x] Add first Code Studio utility surface for editor session, project status, repository status placeholder, and work queues.
+- [x] Add first Workbench utility surface for editor session, project status, repository status placeholder, and work queues.
 - [x] Remove duplicated route-owned tabs from the bottom drawer; keep the drawer for Git, Approvals, and Activity.
 - [x] Replace current tree visual treatment with denser IDE-style project tree foundation.
 
@@ -229,19 +229,19 @@ Exit criteria:
 - [x] User can chat with local/remote OpenAI-compatible provider using selected safe context.
 - [x] Generated answers can become artifacts with provenance.
 
-## Phase 4: IDE-Grade Code Studio
+## Phase 4: IDE-Grade Workbench
 
-Goal: make Code Studio feel and work like a serious IDE rather than a file preview shell.
+Goal: make Workbench feel and work like a serious IDE rather than a file preview shell.
 
 Status: planned.
 
 Step 4.1: Main code route
 
-- [x] Add first-class Code Studio route in primary menu.
-- [x] Add branded studio route metadata for all planned studios.
-- [x] Create first Code Studio utility layout.
+- [x] Add first-class Workbench route in primary menu.
+- [x] Collapse visible rail to implemented top-level surfaces instead of roadmap-only studios.
+- [x] Create first Workbench utility layout.
 - [x] Persist route, drawer, and panel layout state independently from transient bottom drawer state.
-- [x] Add Code Studio toolbar and command set.
+- [x] Add Workbench toolbar and command set.
 - [x] Keep editor surfaces available through the main route and git diff review available through the bottom drawer.
 
 Step 4.2: Project tree
@@ -262,15 +262,19 @@ Step 4.3: Git integration
 - [x] Detect git repository root.
 - [x] Show current branch.
 - [x] Show dirty summary.
-- [x] Hide automatic external Git command windows on Windows desktop builds.
+- [x] Avoid running Git automatically on workspace open.
+- [x] Hide external Git command windows on Windows desktop builds.
 - [x] Show file status badges in tree.
 - [x] Add changed-files panel.
+- [x] Render Git changed files as a directory tree instead of a flat repeated path list.
 - [x] Add working tree diff.
 - [x] Add staged diff.
 - [x] Move Git/working-tree diff review into a dedicated bottom drawer tab.
 - [x] Add side-by-side diff viewer.
 - [x] Add inline diff viewer.
+- [x] Add diff-only side-by-side viewer for changed lines.
 - [x] Add hunk navigation.
+- [x] Replace text hunk controls with compact IDE-style icon controls.
 - [ ] Add stage/unstage file.
 - [ ] Add stage/unstage hunk.
 - [ ] Add revert hunk with destructive approval.
@@ -305,12 +309,12 @@ Step 4.5: Code AI actions
 
 Exit criteria:
 
-- [ ] Code Studio can be used for day-to-day project navigation and diff review.
+- [ ] Workbench can be used for day-to-day project navigation and diff review.
 - [ ] AI code changes remain previewed, reviewable, and auditable.
 
-## Phase 5: Data Studio Expansion
+## Phase 5: Data & Analytics Expansion
 
-Goal: make Data Studio a real local data workbench for files, databases, dumps, notebooks, profiling, charts, and LLM-assisted research.
+Goal: make Data & Analytics a real local data workbench for files, databases, dumps, notebooks, marketing/CRM exports, profiling, charts, and LLM-assisted research.
 
 Status: first CSV/SQLite foundation implemented; deeper work planned.
 
@@ -429,7 +433,7 @@ Exit criteria:
 - [ ] User can inspect and query real files, databases, and imported dumps safely.
 - [ ] AI research over data is reproducible and source-cited.
 
-## Phase 6: Analytics Studio
+## Phase 6: Analytics Capabilities
 
 Goal: make Nexus Augentic Studio useful for marketing, traffic, CRM, and funnel analysis from APIs and exports.
 
@@ -437,8 +441,8 @@ Status: planned.
 
 Step 6.1: Studio route and data model
 
-- [x] Add first-class Analytics Studio route entry.
-- [ ] Replace Analytics fallback surface with native Analytics Studio layout.
+- [x] Fold analytics planning into Data & Analytics instead of exposing a separate top-level route.
+- [ ] Add native analytics connector/layout sections inside Data & Analytics.
 - [ ] Define analytics source, connector run, metric, dimension, segment, and dashboard models.
 - [ ] Bind analytics runs to workspace metadata.
 - [ ] Add date range and segment selectors.
@@ -497,9 +501,9 @@ Step 6.5: AI analytics workflows
 Exit criteria:
 
 - [ ] User can connect or import at least one analytics data source.
-- [ ] Analytics Studio can produce cited charts and narrative reports.
+- [ ] Analytics capabilities can produce cited charts and narrative reports.
 
-## Phase 7: Documents Studio
+## Phase 7: Document Capabilities
 
 Goal: make documents first-class source material and support generated reports, briefs, and presentations.
 
@@ -515,8 +519,8 @@ Implemented:
 
 Step 7.1: Studio route and document library
 
-- [x] Add first-class Documents Studio route entry.
-- [ ] Replace Documents fallback surface with native Documents Studio layout.
+- [x] Keep document workflows contextual instead of exposing a separate top-level route.
+- [ ] Add native document library/extraction sections when the workflow depth justifies it.
 - [ ] Add document library view.
 - [ ] Add document set/folder grouping.
 - [ ] Add document metadata panel.
@@ -572,7 +576,7 @@ Exit criteria:
 
 - [ ] User can analyze a folder of documents and generate cited reports/decks.
 
-## Phase 8: Ops Studio
+## Phase 8: Operations Capabilities
 
 Goal: make local and Docker operations inspectable, explainable, and safe.
 
@@ -586,8 +590,8 @@ Implemented:
 
 Step 8.1: Studio route and read-only inventory
 
-- [x] Add first-class Ops Studio route entry.
-- [ ] Replace Ops fallback surface with native Ops Studio layout.
+- [x] Keep operations workflows contextual instead of exposing a separate top-level route.
+- [ ] Add native operations layout sections when the workflow depth justifies it.
 - [ ] List Docker containers.
 - [ ] List Docker images.
 - [ ] List Docker volumes.
@@ -659,14 +663,13 @@ Implemented:
 - [x] Backend ReAct runtime under `app/internal/agent/`.
 - [x] Wails `RunAgent` binding.
 - [x] First safe Agent run button.
-- [x] First tool plan UI, now surfaced through the AI Assistant main route.
+- [x] First tool plan UI, surfaced through the always-visible AI Assistant sidebar.
 - [x] Tool run persistence.
 
 Step 9.1: Assistant workspace
 
-- [x] Add Assistant route entry and first fallback main surface.
-- [ ] Replace Assistant fallback surface with native long-run assistant workspace.
-- [ ] Keep right sidebar as quick assistant output.
+- [x] Keep right sidebar as the always-visible quick assistant output.
+- [ ] Add optional native long-run assistant workspace when multi-step work outgrows the sidebar.
 - [ ] Add full assistant workspace for long runs.
 - [ ] Add run history.
 - [ ] Add thread/session browser.
@@ -726,7 +729,7 @@ Step 9.5: Memory, citations, and quality
 
 Exit criteria:
 
-- [ ] AI Assistant can coordinate multi-step work across Code/Data/Analytics/Documents/Ops with citations and approvals.
+- [ ] AI Assistant can coordinate multi-step work across Workbench, Data & Analytics, document, operations, and artifact contexts with citations and approvals.
 
 ## Phase 10: Artifact Studio And Provenance
 
@@ -885,9 +888,9 @@ Next steps:
 
 - [ ] Add behavior tests for main studio routing.
 - [ ] Add behavior tests for IDE tree and git diffs.
-- [ ] Add behavior tests for Data Studio notebooks/connectors.
-- [ ] Add behavior tests for Documents Studio extraction flows.
-- [ ] Add behavior tests for Ops Studio safe actions.
+- [ ] Add behavior tests for Data & Analytics notebooks/connectors.
+- [ ] Add behavior tests for document extraction flows.
+- [ ] Add behavior tests for operations safe actions.
 - [ ] Add backend integration tests with temporary SQLite/Postgres containers.
 - [ ] Add connector contract tests.
 - [ ] Add fixture workspaces.
@@ -925,59 +928,35 @@ Exit criteria:
 
 ## Next Logical Batch
 
-Completed batch: Git Visibility And Code Studio Stabilization.
+Completed batch: Navigation Cleanup And Git Diff Review.
 
 Steps:
 
-1. [x] Add git repository detection and branch/dirty summary.
-2. [x] Add changed-files panel.
-3. [x] Add read-only working tree diff view.
-4. [x] Add Code Studio toolbar actions for refresh, diff, open terminal placeholder, and command palette.
-5. [x] Add project-tree context menu shell for create, rename, move, delete, copy path, and reveal actions.
-6. [x] Persist active studio route, drawer tab, sidebar widths, and bottom drawer height.
-7. [x] Add visual smoke/code smoke coverage for rail-driven primary surfaces, Code Studio route, tree interactions, and diff.
-8. [x] Update docs/tracker after implementation.
+1. [x] Reduce the primary rail to Workbench, Data & Analytics, Artifacts, and Settings.
+2. [x] Keep AI Assistant as an always-visible orchestration sidebar instead of a separate route.
+3. [x] Remove roadmap metadata and scan diagnostics from the default visible workbench chrome.
+4. [x] Move Git/working-tree diff review into the bottom Git drawer.
+5. [x] Render changed Git files as a directory tree.
+6. [x] Add staged/unstaged per-file diffs.
+7. [x] Add Unified, Split, and Diff Only review modes.
+8. [x] Replace visible hunk text buttons with compact icon controls.
+9. [x] Avoid automatic Git refresh on folder open to prevent desktop command-window flashes.
+10. [x] Keep docs, tracker, smoke checks, and visual baselines aligned.
 
-Recommended next batch: Git Diff Review And Code Actions.
-
-Steps:
-
-1. Show git status badges directly in the project tree.
-2. Add staged diff and staged/unstaged grouping.
-3. Add side-by-side diff viewer for the selected changed file.
-4. Add hunk navigation.
-5. Add stage/unstage file preview controls.
-6. Add AI diff summary.
-7. Add AI commit message draft.
-8. Keep docs/tracker and visual smoke coverage aligned.
-
-Reasoning: read-only git visibility now exists. The next credibility gap is turning that visibility into review workflow without allowing destructive git actions before preview, approval, and audit boundaries exist.
-
-Completed batch: Live Agent Log And Read-Only Git Diff Grouping.
+Recommended next batch: Safe Git Mutations And Workbench Utility Panels.
 
 Steps:
 
-1. [x] Stream model/tool/finalization events from `RunAgent` through `nexus:agent-run`.
-2. [x] Replace the empty agent placeholder with a rolling live agent log while the backend loop is running.
-3. [x] Keep bounded agent stop/finalization notes visible and auditable.
-4. [x] Add read-only staged diff alongside unstaged/working-tree diff.
-5. [x] Split git changed files into staged and unstaged groups.
-6. [x] Show git file status badges directly in the project tree, including directory badges for nested changes.
-7. [x] Keep docs/tracker and smoke coverage aligned.
+1. Design a Git mutation approval model for stage, unstage, revert, and discard actions.
+2. Add backend Git commands for stage/unstage file with dry-run/status refresh outputs.
+3. Add preview-only frontend controls for stage/unstage file in the bottom Git drawer.
+4. Add hunk-level selection model without mutation first.
+5. Add destructive approval flow for revert/discard hunk.
+6. Add Workbench path/text search panel as a real utility panel, not only command palette search.
+7. Detect npm scripts and Go tests into a Tasks panel with read-only listing.
+8. Keep visual smoke focused on no blank screen, no whole-window scroll, Git drawer behavior, and route switching.
 
-Recommended next batch: Read-Only Diff Review Surface.
-
-Steps:
-
-1. [x] Add selected changed-file state in Code Studio.
-2. [x] Add per-file diff loading for staged and unstaged sides.
-3. [x] Add inline/side-by-side diff mode switch.
-4. [x] Add hunk navigation.
-5. [x] Add AI diff summary for selected diff.
-6. [x] Add AI commit message draft from staged/unstaged context.
-7. [ ] Keep stage/unstage/revert controls disabled or preview-only until the approval/audit git mutation boundary exists.
-
-Reasoning: the app now distinguishes staged versus unstaged repository state and can ask the assistant for review summaries and commit-message drafts from bounded diff context. The next credibility gap is designing preview/approval/audit boundaries for actual git mutations.
+Reasoning: read-only navigation and diff review are now credible. The next gap is letting users act on Git state and inspect project tasks without weakening the approval/audit safety model.
 
 ## Directory Ownership Notes
 
@@ -999,7 +978,7 @@ Reasoning: the app now distinguishes staged versus unstaged repository state and
 
 `app/internal/approval/` owns append-only approval/action records.
 
-`app/process_windows.go` and `app/process_other.go` own platform-specific child process configuration. Windows desktop builds hide app-launched child processes so automatic Git refreshes and approved shell tools do not flash console windows.
+`app/process_windows.go` and `app/process_other.go` own platform-specific child process configuration. Windows desktop builds hide app-launched child processes so user-triggered Git refreshes and approved shell tools do not flash console windows.
 
 `app/internal/storage/` owns local app config such as recent workspaces and non-secret LLM settings. Secret values must stay in credential storage or protected sidecars.
 
@@ -1011,9 +990,11 @@ Reasoning: the app now distinguishes staged versus unstaged repository state and
 
 `app/frontend/src/features/shell/useResizablePanels.ts` owns navigator, assistant, and bottom drawer sizing plus resize drag handlers.
 
-`app/frontend/src/features/shell/WorkbenchPanel.tsx` currently owns the editor/preview surface.
+Workspace scan counters are diagnostic data, not primary navigation content. Keep them in scan reports/diagnostics instead of the always-visible sidebar header.
 
-`app/frontend/src/features/shell/CodeStudioPanel.tsx` owns the first reusable Code Studio utility surface for editor session metrics, open tabs, workspace status, git branch/dirty summary, changed-file list, and placeholders that will receive search/problem/task/review data.
+`app/frontend/src/features/shell/WorkbenchPanel.tsx` currently owns the editor/preview surface. Git status, working-tree diff output, and roadmap/studio-route metadata should not render above the editor tabs; those surfaces belong to Workbench utility panels, the bottom Git drawer, or documentation.
+
+`app/frontend/src/features/shell/CodeStudioPanel.tsx` owns the first reusable Workbench utility surface for editor session metrics, open tabs, workspace status, git branch/dirty summary, changed-file list, and placeholders that will receive search/problem/task/review data.
 
 `app/frontend/src/features/shell/GitDiffPanel.tsx` owns the bottom-drawer Git tab for selected changed-file review and read-only staged/unstaged working-tree diffs.
 

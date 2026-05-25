@@ -35,12 +35,17 @@ try {
     await page.locator('[data-studio-route="code"]').click();
     for (const text of ['Active Context', 'Preview', 'Explain']) {
         if (!(await page.getByText(text).first().isVisible())) {
-            throw new Error(`Nexus visual smoke failed: missing Code route workbench text ${text}.`);
+            throw new Error(`Nexus visual smoke failed: missing Workbench route text ${text}.`);
         }
     }
-    for (const text of ['Repository', 'Working Tree Diff', 'Refresh git']) {
+    if ((await page.locator('.code-studio-inline').count()) > 0) {
+        throw new Error('Nexus visual smoke failed: Workbench route rendered the removed inline Git panel above editor tabs.');
+    }
+    await page.locator('.editor-tabs').waitFor({state: 'visible'});
+    await page.getByRole('tab', {name: 'Git', exact: true}).click();
+    for (const text of ['Git', 'Working Tree Diff', 'Refresh git']) {
         if (!(await page.getByText(text).first().isVisible())) {
-            throw new Error(`Nexus visual smoke failed: missing Code Studio git text ${text}.`);
+            throw new Error(`Nexus visual smoke failed: missing bottom Git drawer text ${text}.`);
         }
     }
     await page.getByRole('tree', {name: 'Project tree'}).waitFor({state: 'visible'});
@@ -52,8 +57,8 @@ try {
     await page.locator('.tree-context-menu').getByText('Copy path').waitFor({state: 'visible'});
     await firstTreeRow.click();
     await page.locator('[data-studio-route="data"]').click();
-    const dataMainSurface = page.getByLabel('Data Studio main surface');
-    await dataMainSurface.getByText('Data Studio', {exact: true}).waitFor({state: 'visible'});
+    const dataMainSurface = page.getByLabel('Data & Analytics main surface');
+    await dataMainSurface.getByText('Data & Analytics', {exact: true}).waitFor({state: 'visible'});
     await dataMainSurface.getByRole('button', {name: 'Inspect metadata'}).click();
     await dataMainSurface.getByPlaceholder('Search chats, artifacts, tools').fill('Smoke');
     await dataMainSurface.getByText('Search history').click({force: true});
@@ -63,10 +68,8 @@ try {
     await page.getByLabel('Lineage filter').getByText('source').click();
     await page.getByRole('tab', {name: 'Approvals', exact: true}).click();
     await page.getByText('Approval Log').waitFor({state: 'visible'});
-    await page.locator('[data-studio-route="assistant"]').click();
-    await page.locator('.tool-run-row summary').first().click();
-    await page.locator('.tool-run-detail').first().scrollIntoViewIfNeeded();
-    await page.locator('.tool-run-detail').getByText('Replay dry run').waitFor({state: 'visible'});
+    await page.locator('.agent-panel').getByText('Nexus Assistant').waitFor({state: 'visible'});
+    await page.locator('.agent-panel').getByLabel('Submit mode').waitFor({state: 'visible'});
 
     const beforeResize = await page.locator('.navigator').boundingBox();
     const resizer = await page.locator('.navigator-resizer').boundingBox();
@@ -131,13 +134,7 @@ try {
     await page.getByText('Artifact Lineage').waitFor({state: 'visible'});
     await page.getByRole('tab', {name: 'Approvals', exact: true}).click();
     await page.getByText('Approval Log').waitFor({state: 'visible'});
-    await page.locator('[data-studio-route="assistant"]').click();
-    const replayButton = page.locator('.tool-run-detail').getByText('Replay dry run').first();
-    if (!(await replayButton.isVisible())) {
-        await page.locator('.tool-run-row summary').first().click();
-    }
-    await replayButton.scrollIntoViewIfNeeded();
-    await replayButton.waitFor({state: 'visible'});
+    await page.locator('.agent-panel').getByText('Nexus Assistant').waitFor({state: 'visible'});
     await page.locator('[data-studio-route="settings"]').click();
     await page.getByText('LLM Provider', {exact: true}).waitFor({state: 'visible'});
 

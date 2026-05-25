@@ -74,7 +74,7 @@ The current app implements the first safe workspace slice:
 - Dataset dependency and SQL run records preserve which saved snippets, SQL reports, chart artifacts, query exports, summaries, and connector queries came from a dataset path.
 - Chat messages and context-pack previews surface stale-source warnings when their cited files change.
 - The workbench can rebuild a context preview from changed files and records that stale-context refresh in the local approval/metadata trail.
-- Data Studio clears visible query/chart/profile state for the active dataset when that dataset changes on disk.
+- Data & Analytics clears visible query/chart/profile state for the active dataset when that dataset changes on disk.
 - CSV chart generation goes through `app/internal/workspace/chart.go` and returns bounded category counts or numeric sums.
 - Chat context uses the same rooted preview boundary and sends only selected text content or a bounded pack of pinned previews.
 - Workspace open/recent/refresh flows are bound through Wails methods on `app/app.go`.

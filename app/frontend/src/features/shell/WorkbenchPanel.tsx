@@ -1,7 +1,7 @@
 import {useEffect, useRef, useState} from 'react';
 import {brandAssets} from '../../brand/assets';
 import {Button, EmptyState, InlineAlert, LoadingState} from '../../components/ui';
-import type {DatasetProfile, FilePreview, FileWriteProposal, GitFileDiff, GitStatus, TablePreview, WorkspaceSnapshot} from '../../types';
+import type {FilePreview, FileWriteProposal, TablePreview, WorkspaceSnapshot} from '../../types';
 import {ChatMessageContent} from './ChatMessageContent';
 import {SortableDataTable} from './DataStudioPanel';
 import {HighlightedCode} from './HighlightedCode';
@@ -10,18 +10,9 @@ import {MonacoFileEditor} from './MonacoFileEditor';
 
 type WorkbenchPanelProps = {
     activeFile: string;
-    activeStudioDescription: string;
-    activeStudioHint: string;
-    activeStudioLabel: string;
-    activeStudioSurface: string;
-    activeDatasetProfile: DatasetProfile | null;
     dirtyTabPaths: string[];
     fileDraft: string;
     filePreview: FilePreview | null;
-    gitStatus: GitStatus | null;
-    selectedGitChangePath: string;
-    selectedGitFileDiff: GitFileDiff | null;
-    isLoadingGitFileDiff: boolean;
     isApplyingWrite: boolean;
     isEditingFile: boolean;
     isSendingPrompt: boolean;
@@ -35,9 +26,6 @@ type WorkbenchPanelProps = {
     onCancelFileEdit: () => void;
     onExplainContext: () => void;
     onCreateReport: () => void;
-    onOpenCommandPalette: () => void;
-    onRefreshGitStatus: () => void;
-    onSelectGitChange: (path: string) => void;
     onSummarizeContext: () => void;
     onFileDraftChange: (content: string) => void;
     onDeleteFile: () => void;
@@ -57,18 +45,9 @@ type WorkbenchPanelProps = {
 
 export function WorkbenchPanel({
     activeFile,
-    activeStudioDescription,
-    activeStudioHint,
-    activeStudioLabel,
-    activeStudioSurface,
-    activeDatasetProfile,
     dirtyTabPaths,
     fileDraft,
     filePreview,
-    gitStatus,
-    selectedGitChangePath,
-    selectedGitFileDiff,
-    isLoadingGitFileDiff,
     isApplyingWrite,
     isEditingFile,
     isSendingPrompt,
@@ -82,9 +61,6 @@ export function WorkbenchPanel({
     onCancelFileEdit,
     onExplainContext,
     onCreateReport,
-    onOpenCommandPalette,
-    onRefreshGitStatus,
-    onSelectGitChange,
     onSummarizeContext,
     onFileDraftChange,
     onDeleteFile,
@@ -115,14 +91,9 @@ export function WorkbenchPanel({
     const canDeleteContext = Boolean(workspace && filePreview?.kind === 'file' && !isEditingFile);
     const canMoveContext = Boolean(workspace && filePreview?.kind === 'file' && !isEditingFile);
     const canRenderMarkdown = Boolean(filePreview?.kind === 'file' && filePreview.content && isMarkdownFile(filePreview.name));
-    const studioMode = resolveStudioMode(filePreview, activeDatasetProfile, activeFile);
     const findSource = isEditingFile ? fileDraft : filePreview?.content ?? filePreview?.text ?? '';
     const findMatches = countFindMatches(findSource, findQuery);
     const isDraftDirty = Boolean(filePreview && dirtyTabPaths.includes(filePreview.relPath));
-    const selectedGitChange = gitStatus?.changedFiles.find((change) => change.path === selectedGitChangePath) ?? null;
-    const selectedDiff = selectedGitFileDiff?.path === selectedGitChangePath ? selectedGitFileDiff : null;
-    const stagedDiff = selectedDiff?.stagedDiff ?? gitStatus?.stagedDiff ?? '';
-    const unstagedDiff = selectedDiff?.unstagedDiff ?? gitStatus?.unstagedDiff ?? gitStatus?.diff ?? '';
 
     useEffect(() => {
         function handleFindShortcut(event: KeyboardEvent) {
@@ -145,16 +116,6 @@ export function WorkbenchPanel({
                 <div>
                     <p className="eyebrow">Active Context</p>
                     <h2>{activeFile}</h2>
-                    <div className="studio-route-summary" aria-label="Selected studio route">
-                        <strong>{activeStudioLabel}</strong>
-                        <span>{activeStudioDescription}</span>
-                        <small>{activeStudioSurface}</small>
-                    </div>
-                    <div className="studio-mode-strip" aria-label="Active studio surface">
-                        <span>{studioMode.label}</span>
-                        <small>{studioMode.detail}</small>
-                    </div>
-                    <small className="studio-route-hint">{activeStudioHint}</small>
                 </div>
                 <div className="topbar-actions">
                     <Button disabled={!workspace || isLoadingPreview} onClick={onRefreshPreview}>
@@ -186,56 +147,6 @@ export function WorkbenchPanel({
                     </Button>
                 </div>
             </header>
-
-            {activeStudioLabel === 'Code Studio' && (
-                <section className="code-studio-inline" aria-label="Code Studio git status">
-                    <strong className="code-studio-inline-title">Working Tree Diff</strong>
-                    <div className="code-studio-toolbar">
-                        <Button disabled={!workspace} onClick={onRefreshGitStatus} variant="subtle">Refresh git</Button>
-                        <Button onClick={onOpenCommandPalette} variant="subtle">Commands</Button>
-                        <Button disabled={!gitStatus?.diff} variant="subtle">Diff</Button>
-                    </div>
-                    <div className={gitStatus?.dirty ? 'git-summary dirty' : 'git-summary'}>
-                        <strong>Repository</strong>
-                        <span>{gitStatus?.available ? `${gitStatus.branch}${gitStatus.head ? ` @ ${gitStatus.head}` : ''}` : 'Git unavailable'}</span>
-                        {gitStatus?.available && <span>{(gitStatus.stagedFiles ?? []).length} staged / {(gitStatus.unstagedFiles ?? gitStatus.changedFiles).length} unstaged</span>}
-                        <span>{gitStatus?.message || 'Open a git-backed workspace to inspect changes.'}</span>
-                    </div>
-                    {gitStatus?.changedFiles.length ? (
-                        <div className="code-studio-inline-changes">
-                            {gitStatus.changedFiles.slice(0, 6).map((change) => (
-                                <button
-                                    className={selectedGitChangePath === change.path ? 'selected' : ''}
-                                    key={`${change.index}-${change.worktree}-${change.path}`}
-                                    onClick={() => onSelectGitChange(change.path)}
-                                    title={change.path}
-                                    type="button"
-                                >
-                                    {change.summary}: {change.path}
-                                </button>
-                            ))}
-                        </div>
-                    ) : null}
-                    {stagedDiff || unstagedDiff || isLoadingGitFileDiff ? (
-                        <div className="git-diff-stack compact">
-                            {isLoadingGitFileDiff && <small className="git-diff-message">Loading selected file diff...</small>}
-                            {selectedDiff?.message && <small className="git-diff-message">{selectedDiff.message}</small>}
-                            {stagedDiff && (
-                                <>
-                                    <strong>{selectedGitChange ? `Staged Diff / ${selectedGitChange.path}` : 'Staged Diff'}</strong>
-                                    <pre className="git-diff-view compact">{stagedDiff}</pre>
-                                </>
-                            )}
-                            {unstagedDiff && (
-                                <>
-                                    <strong>{selectedGitChange ? `Unstaged Diff / ${selectedGitChange.path}` : 'Unstaged Diff'}</strong>
-                                    <pre className="git-diff-view compact">{unstagedDiff}</pre>
-                                </>
-                            )}
-                        </div>
-                    ) : null}
-                </section>
-            )}
 
             <section className="canvas-grid">
                 <article className="editor-pane">
@@ -490,58 +401,6 @@ function countFindMatches(content: string, query: string) {
         cursor = index + Math.max(needle.length, 1);
     }
     return count;
-}
-
-type StudioMode = {
-    label: string;
-    detail: string;
-};
-
-function resolveStudioMode(
-    preview: FilePreview | null,
-    datasetProfile: DatasetProfile | null,
-    activeFile: string
-): StudioMode {
-    const relPath = (preview?.relPath || activeFile || '').replaceAll('\\', '/').toLowerCase();
-    const fileName = (preview?.name || activeFile || '').toLowerCase();
-
-    if (relPath.startsWith('.nexusdesk/artifacts/') || relPath.includes('/.nexusdesk/artifacts/')) {
-        return {label: 'Artifact Studio', detail: 'Generated reports, summaries, and provenance'};
-    }
-
-    if (datasetProfile || preview?.table || preview?.fileType === 'data') {
-        return {label: 'Data Studio', detail: 'Tables, profiles, bounded queries, and analysis context'};
-    }
-
-    if (preview?.kind === 'pdf' || isDocumentLikeFile(fileName)) {
-        return {label: 'Document Studio', detail: 'Documents, Markdown, extracted text, and summaries'};
-    }
-
-    if (isOperationsFile(relPath, fileName)) {
-        return {label: 'Operations Studio', detail: 'Docker, services, scripts, and environment files'};
-    }
-
-    if (preview?.fileType === 'code' || isCodeLikeFile(fileName)) {
-        return {label: 'Code Studio', detail: 'Source files, editor tabs, explanations, and safe edits'};
-    }
-
-    return {label: 'Project Studio', detail: 'Project navigation, search, context packs, and artifacts'};
-}
-
-function isDocumentLikeFile(fileName: string) {
-    return /\.(mdx?|docx?|pdf|rtf|txt)$/i.test(fileName);
-}
-
-function isCodeLikeFile(fileName: string) {
-    return /\.(go|ts|tsx|js|jsx|json|css|scss|html|py|rs|cs|java|kt|sql|xml)$/i.test(fileName);
-}
-
-function isOperationsFile(relPath: string, fileName: string) {
-    if (fileName === 'dockerfile' || fileName.includes('docker-compose') || relPath.startsWith('services/')) {
-        return true;
-    }
-
-    return /\.(env|ps1|sh|bat|cmd|toml|ya?ml)$/i.test(fileName);
 }
 
 function FileWriteEditor({

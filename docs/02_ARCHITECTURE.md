@@ -29,7 +29,7 @@ The implemented desktop slice currently contains:
 - separate saved SQL snippets and lightweight row filters per dataset
 - SQL result Markdown artifacts with query, engine, row count, preview, and source citation metadata
 - read-only Compose parsing for Operations Studio
-- read-only Git status, branch, changed-file list, staged/unstaged grouping, staged diff, working-tree diff, and selected-file diff loading for Code Studio
+- read-only Git status, branch, changed-file list, staged/unstaged grouping, staged diff, working-tree diff, and selected-file diff loading for Workbench
 - configurable LLM gateway
 - OpenAI-compatible chat and streaming
 
@@ -115,7 +115,7 @@ Responsibilities:
 - project and workspace navigation
 - file tree
 - tabs and editor state
-- Code Studio git visibility and project-tree context actions
+- Workbench git visibility and project-tree context actions
 - studio mode surfaces for code, data, analytics, documents, operations, and artifacts
 - Monaco-backed code/text previews and draft editing
 - image and PDF preview
@@ -188,7 +188,7 @@ Current responsibilities:
 - search filenames, paths, and previewable text content
 - build bounded context packs from selected files, directories, or the workspace root
 - avoid overloading the model context window
-- expose read-only Git repository status and working-tree diff for Code Studio
+- expose read-only Git repository status and working-tree diff for Workbench
 
 Planned responsibilities:
 
@@ -294,8 +294,9 @@ Artifacts are the bridge between chat and real work.
 
 Responsibilities:
 
-- present Code Studio, Data Studio, Analytics Studio, Document Studio, Operations Studio, and Artifact Studio as durable app surfaces
-- make the primary rail/main menu a real workspace router, not just a visual label strip
+- present Workbench, Data & Analytics, Artifacts, and Settings as durable app surfaces
+- keep Analytics, Documents, Operations, and AI orchestration as context-aware capability domains until they justify first-class surfaces
+- make the primary rail/main menu a real workspace router, not a roadmap label strip
 - preserve per-studio state: selected tab, open resources, filters, query history, task state, and assistant context
 - keep editor tabs, dataset panels, artifact browser, tool timeline, and assistant context visually connected
 - make AI actions feel like IDE/data-studio commands, not generic chat shortcuts
@@ -303,12 +304,12 @@ Responsibilities:
 
 Target studio ownership:
 
-- Code Studio owns IDE navigation, git status/diffs, editor groups, search, problems, symbols, tests/tasks, and code patch workflows.
-- Data Studio owns file datasets, spreadsheets, database connectors, dump imports, temporary Docker-backed database sandboxes, schemas, query notebooks, profiling, charts, and data research artifacts.
-- Analytics Studio owns GA4/Search Console/ads/CRM connectors, marketing exports, dashboards, funnel/cohort/channel analysis, and recurring narrative reports.
+- Workbench owns IDE navigation, git status/diffs, editor groups, search, problems, symbols, tests/tasks, and code patch workflows.
+- Data & Analytics owns file datasets, spreadsheets, database connectors, dump imports, temporary Docker-backed database sandboxes, schemas, query notebooks, profiling, charts, data research artifacts, and marketing/CRM analytics imports.
+- Analytics-specific connectors are a subdomain of Data & Analytics until they need a dedicated layout.
 - Document Studio owns document extraction, OCR, document sets, comparison, redline/comment workflows, generated reports, and generated presentations.
-- AI Assistant owns context selection, model/provider controls, tool plans, agent modes, citations, memory, and cross-studio orchestration.
-- Operations Studio owns Docker/Compose inspection, logs, local services, ports, health checks, safe operations, and generated runbooks/configs.
+- AI Assistant owns context selection, model/provider controls, tool plans, agent modes, citations, memory, and cross-surface orchestration as an always-visible layer.
+- Operations owns Docker/Compose inspection, logs, local services, ports, health checks, safe operations, and generated runbooks/configs as a capability domain until native Ops screens land.
 - Artifact Studio owns generated outputs, lineage, comparison, reproducibility metadata, archive/delete, and source navigation.
 
 ## Deployment Shape
@@ -333,7 +334,7 @@ local JSON config stores today; SQLite later
 user-selected model endpoint
 ```
 
-The packaged backend may launch bounded external child processes for read-only Git status/diff inspection and approved agent shell tools. Windows builds configure those children as hidden/no-console processes so automatic workspace refreshes do not flash terminal windows over the desktop UI.
+The packaged backend may launch bounded external child processes for user-triggered read-only Git status/diff inspection and approved agent shell tools. Windows builds configure those children as hidden/no-console processes so workspace tooling does not flash terminal windows over the desktop UI.
 
 ### Team Or Enterprise Future
 

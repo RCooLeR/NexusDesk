@@ -35,15 +35,13 @@ Nexus Augentic Studio solves this by combining an IDE-like desktop workspace, lo
 
 Nexus Augentic Studio should feel like a serious JetBrains-style studio for mixed technical and analytical work:
 
-- The main menu/rail selects durable studios: Code, Data, Analytics, Documents, AI Assistant, Ops, Artifacts, and Settings.
-- Code Studio feels like an IDE: project tree, editor tabs, git status, diffs, search, symbols, diagnostics, tests/tasks, and patch review.
-- Data Studio feels like a local data workbench: files, spreadsheets, databases, dumps, schema browser, query notebooks, profiling, charts, and imports.
-- Analytics Studio understands business data: GA4, Search Console, ad exports/APIs, CRM/marketing automation data, funnels, dashboards, and reports.
-- Documents Studio works across PDFs, DOCX, TXT, Markdown, spreadsheets, presentations, OCR, document sets, summaries, and generated decks.
-- Ops Studio inspects Docker, Compose, logs, local services, env/config files, ports, health, and safe run/build/debug flows.
-- AI Assistant orchestrates the studios with explicit context, model selection, tool plans, approvals, citations, memory, and artifact generation.
+- The main rail stays small and maps to real product surfaces: Workbench, Data & Analytics, Artifacts, and Settings.
+- Workbench feels like an IDE: project tree, editor tabs, git status, diffs, search, symbols, diagnostics, tests/tasks, and patch review.
+- Data & Analytics feels like a local data workbench: files, spreadsheets, databases, dumps, schema browser, query notebooks, profiling, charts, imports, and marketing/CRM analytics data.
+- Documents and operations workflows appear as context-aware capabilities until they are deep enough to deserve first-class surfaces.
+- The AI Assistant is always present as the orchestration layer with explicit context, model selection, tool plans, approvals, citations, memory, and artifact generation.
 - Generated outputs stay visible as artifacts with provenance and lineage.
-- Studio modes make the current surface explicit: Code Studio, Data Studio, Analytics Studio, Document Studio, Operations Studio, and Artifact Studio.
+- The UI should not expose roadmap-only studios as top-level menu items.
 - The AI can ask to use tools, but the app controls permissions.
 - Tool calls are visible in the chat timeline.
 - Generated outputs become artifacts in the workspace.

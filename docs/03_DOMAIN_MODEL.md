@@ -184,14 +184,14 @@ Fields:
 
 A studio surface is a durable product mode for a specific kind of work. It is not a separate app; it is a focused view over the same workspace, tool, model, and artifact system.
 
-Examples:
+Current top-level surfaces:
 
-- Code Studio
-- Data Studio
-- Analytics Studio
-- Document Studio
-- Operations Studio
-- Artifact Studio
+- Workbench
+- Data & Analytics
+- Artifacts
+- Settings
+
+Roadmap capability domains such as analytics connectors, document intelligence, and operations tools can later become native surfaces if their workflows become deep enough.
 
 Fields:
 
@@ -521,7 +521,7 @@ Current implementation:
 - `.sqlite`, `.sqlite3`, and `.db` files are classified as database files in the workspace tree.
 - `app/internal/dbconnector/` opens those files read-only through `modernc.org/sqlite`.
 - Only bounded `SELECT`/`WITH` queries are accepted, mutation-oriented keywords are blocked, and result rows are capped before they reach the frontend.
-- Data Studio can use this for local inspection without introducing stored credentials or external database access.
+- Data & Analytics can use this for local inspection without introducing stored credentials or external database access.
 
 ### Read-only Dataset SQL
 
@@ -553,7 +553,7 @@ Current implementation:
 - `app/internal/workspace/freshness.go` snapshots file size and modification time by workspace-relative path.
 - `CheckWorkspaceFreshness` compares snapshots, ignores internal metadata/tool-run paths, and marks generated artifacts stale when their provenance references changed source paths.
 - Chat messages and context-pack previews warn when cited paths have changed.
-- Data Studio clears visible query/chart/profile state when the selected dataset changes on disk, and freshness reports dataset-derived views/snippets/reports that should be refreshed.
+- Data & Analytics clears visible query/chart/profile state when the selected dataset changes on disk, and freshness reports dataset-derived views/snippets/reports that should be refreshed.
 
 ### Artifact Comparison
 
@@ -565,7 +565,7 @@ Current implementation:
 
 ### Saved Dataset Query
 
-A saved dataset query is a reusable Data Studio query tied to one workspace-relative dataset path.
+A saved dataset query is a reusable Data & Analytics query tied to one workspace-relative dataset path.
 
 Current implementation:
 

@@ -1,11 +1,6 @@
 import {useEffect, useMemo, useRef, useState} from 'react';
 import type {CSSProperties} from 'react';
-import {
-    studioRouteCommandHint,
-    studioRouteDescriptions,
-    studioRouteLabels,
-    studioRoutePrimarySurface,
-} from '../../brand/assets';
+import {studioRouteLabels} from '../../brand/assets';
 import {
     ApplyFileWrite,
     ApplyFileDelete,
@@ -295,11 +290,9 @@ export function NexusShell({
     }, []);
 
     useEffect(() => {
-        if (!workspace) {
-            setGitStatus(null);
-            return;
-        }
-        void refreshGitStatus();
+        setGitStatus(workspace ? emptyGitStatus('Git status not loaded. Press Refresh git when you need repository status.') : null);
+        setSelectedGitChangePath('');
+        setSelectedGitFileDiff(null);
     }, [workspace?.root]);
 
     useEffect(() => {
@@ -787,7 +780,7 @@ export function NexusShell({
             {
                 detail: canUseSelectedDataset ? `Profile ${activeFile} and persist dataset metadata.` : 'Select a CSV or workbook dataset first.',
                 disabled: !canUseSelectedDataset || isProfilingDataset,
-                group: 'Data Studio',
+                group: 'Data & Analytics',
                 id: 'data.profile',
                 run: () => void profileSelectedDataset(),
                 title: 'Profile Current Dataset',
@@ -795,7 +788,7 @@ export function NexusShell({
             {
                 detail: canUseSelectedDataset ? 'Run the bounded dataset query/filter currently in the data panel.' : 'Select a CSV dataset before querying.',
                 disabled: !canUseSelectedDataset || isQueryingDataset,
-                group: 'Data Studio',
+                group: 'Data & Analytics',
                 id: 'data.query',
                 run: () => void querySelectedDataset(),
                 title: 'Query Current Dataset',
@@ -803,7 +796,7 @@ export function NexusShell({
             {
                 detail: canChartSelectedDataset ? `Create a ${datasetChartType} chart from ${activeFile}.` : 'Select a CSV dataset and chart category first.',
                 disabled: !canChartSelectedDataset || isCreatingDatasetChart,
-                group: 'Data Studio',
+                group: 'Data & Analytics',
                 id: 'data.create-chart',
                 run: () => void createDatasetChart(),
                 title: 'Create Dataset Chart',
@@ -811,7 +804,7 @@ export function NexusShell({
             {
                 detail: canExportDatasetQuery ? `Export the current ${activeFile} query result as a CSV artifact.` : 'Run a CSV dataset query before exporting the result.',
                 disabled: !canExportDatasetQuery || isExportingDatasetQuery,
-                group: 'Data Studio',
+                group: 'Data & Analytics',
                 id: 'data.export-query',
                 run: () => void exportDatasetQuery(),
                 title: 'Export Dataset Query',
@@ -1334,25 +1327,7 @@ export function NexusShell({
             }
         } catch (error) {
             const message = error instanceof Error ? error.message : '';
-            setGitStatus({
-                available: false,
-                repoRoot: '',
-                branch: '',
-                head: '',
-                dirty: false,
-                changedFiles: [],
-                stagedFiles: [],
-                unstagedFiles: [],
-                diff: '',
-                diffTruncated: false,
-                stagedDiff: '',
-                stagedDiffTruncated: false,
-                unstagedDiff: '',
-                unstagedDiffTruncated: false,
-                aheadBehind: '',
-                message: message || 'Git status is unavailable.',
-                generatedAt: '',
-            });
+            setGitStatus(emptyGitStatus(message || 'Git status is unavailable.'));
         }
     }
 
@@ -3347,17 +3322,8 @@ export function NexusShell({
             {mainStudioTab === null ? (
                 <WorkbenchPanel
                     activeFile={activeFile}
-                    activeStudioDescription={studioRouteDescriptions[activeStudioRoute]}
-                    activeStudioHint={studioRouteCommandHint[activeStudioRoute]}
-                    activeStudioLabel={studioRouteLabels[activeStudioRoute]}
-                    activeStudioSurface={studioRoutePrimarySurface[activeStudioRoute]}
-                    activeDatasetProfile={activeDatasetProfile}
                     fileDraft={fileDraft}
                     filePreview={filePreview}
-                    gitStatus={gitStatus}
-                    selectedGitChangePath={selectedGitChangePath}
-                    selectedGitFileDiff={selectedGitFileDiff}
-                    isLoadingGitFileDiff={isLoadingGitFileDiff}
                     dirtyTabPaths={dirtyTabPaths}
                     isCreatingReport={isCreatingReport}
                     isDeletingFile={isDeletingFile}
@@ -3375,13 +3341,6 @@ export function NexusShell({
                     onMoveFile={() => void moveActiveFile()}
                     onFileDraftChange={updateFileDraft}
                     onExplainContext={() => void explainSelectedContext()}
-                    onOpenCommandPalette={() => {
-                        setIsQuickOpenOpen(false);
-                        setIsCommandPaletteOpen(true);
-                        setCommandPaletteQuery('');
-                    }}
-                    onRefreshGitStatus={() => void refreshGitStatus()}
-                    onSelectGitChange={setSelectedGitChangePath}
                     onSummarizeContext={() => void summarizeSelectedContext()}
                     onPinContext={pinSelectedContext}
                     onPinProjectContext={pinProjectContext}
@@ -3670,6 +3629,28 @@ function sourcePathsFromContext(contextRelPath: string) {
         return [dirMatch[1]];
     }
     return [contextRelPath];
+}
+
+function emptyGitStatus(message: string): GitStatus {
+    return {
+        available: false,
+        repoRoot: '',
+        branch: '',
+        head: '',
+        dirty: false,
+        changedFiles: [],
+        stagedFiles: [],
+        unstagedFiles: [],
+        diff: '',
+        diffTruncated: false,
+        stagedDiff: '',
+        stagedDiffTruncated: false,
+        unstagedDiff: '',
+        unstagedDiffTruncated: false,
+        aheadBehind: '',
+        message,
+        generatedAt: '',
+    };
 }
 
 function limitGitPromptDiff(value: string) {

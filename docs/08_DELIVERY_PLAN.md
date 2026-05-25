@@ -30,7 +30,7 @@ Deliverables:
 - Wails desktop app shell: implemented
 - frontend layout with project tree, editor area, and chat panel: implemented
 - IDE/data/analytics studio positioning in app copy and docs: implemented
-- visible studio surface vocabulary for code, data, documents, operations, and artifacts: first implementation
+- visible product surface vocabulary for Workbench, Data & Analytics, Artifacts, and Settings: first implementation
 - local JSON app config for recent workspaces and LLM settings: implemented
 - OS-protected API key credential storage: implemented
 - local SQLite app database: initialized through a real driver with direct fresh-row metadata writes and compatibility mirroring
@@ -97,8 +97,8 @@ Exit criteria:
 Current status:
 
 - The desktop shell builds on Windows through Wails.
-- Nexus Augentic Studio is now documented and presented as a local-first AI IDE, data studio, and analytics studio.
-- The active center pane exposes a first studio surface indicator for Code Studio, Data Studio, Document Studio, Operations Studio, Artifact Studio, or Project Studio.
+- Nexus Augentic Studio is now documented and presented as a local-first AI Workbench with Data & Analytics, Artifacts, Settings, and always-visible assistant surfaces.
+- The primary rail is intentionally limited to implemented product surfaces instead of roadmap-only studios.
 - The workspace browser can open, refresh, preview, remember, search, and expand/collapse local folders, scanning up to 10 levels deep by default.
 - The shell has a keyboard quick-open palette for workspace files, folders, and already-open tabs, with parent directories expanded on selection.
 - The shell has a keyboard command palette for common workspace, editor, context, data, artifact, and chat actions.
@@ -118,7 +118,7 @@ Current status:
 - CSV context is sent as a structured profile plus bounded row sample instead of only raw preview text.
 - CSV datasets can be queried with bounded text search or `column=value` filters.
 - CSV query results can be exported as timestamped CSV artifacts.
-- CSV queries can be saved per dataset and reused from the Data Studio panel.
+- CSV queries can be saved per dataset and reused from the Data & Analytics panel.
 - CSV queries support text search, column filters, numeric comparisons, `contains`, `limit`, and simple `order by` clauses.
 - CSV datasets can preview bar or line chart points before generating deterministic SVG chart artifacts from category counts or numeric sums.
 - CSV datasets can generate deterministic Markdown summary artifacts with column profiles and suggested analysis questions.
@@ -150,10 +150,10 @@ Current status:
 - The Artifact Studio route lists generated Markdown, CSV, and SVG artifacts, can reselect visible artifact files from that list, and shows artifact metadata when a generated artifact is active.
 - Workspace scan reports can be saved as Markdown artifacts with scan counters and skipped/ignored path samples.
 - Artifact metadata cards can open the source context, archive generated artifacts, or delete artifacts after approval.
-- The AI Assistant route shows a first backend-driven tool plan with registered workspace, dataset, artifact, and operations tools plus risk/approval labels.
+- The always-visible assistant shows a first backend-driven tool plan with registered workspace, dataset, artifact, and operations tools plus risk/approval labels.
 - Workspace search includes path/content matches, artifact metadata, and chat history snippets.
 - Applied write/delete/move and artifact creation actions are recorded in `.nexusdesk/approvals/log.json` and shown in the bottom Approvals tab.
-- Operations Studio parses selected Docker Compose files into service, image, port, volume, and dependency summaries without mutating Docker state.
+- Operations capabilities parse selected Docker Compose files into service, image, port, volume, and dependency summaries without mutating Docker state.
 - The frontend has a smoke check for the built entrypoint, generated Wails bindings, and core shell functionality markers.
 - Playwright is installed as a frontend dev dependency and visual smoke captures desktop/mobile baselines from the production build.
 - SQLite metadata initialization now applies the schema to `.nexusdesk/metadata/nexusdesk.sqlite`, while JSON stores remain the compatibility layer until repositories migrate.
@@ -168,10 +168,10 @@ Current status:
 - Chat messages and context-pack previews warn when cited files changed after the answer/context was created.
 - Stale-context refresh can rebuild a context preview from changed files and records the refresh in the approval/metadata trail.
 - Dataset dependency rebuild now removes the prior generated artifact before re-running so repeated refreshes avoid same-timestamp collisions.
-- Data Studio clears visible query/chart/profile state when the selected dataset changes on disk.
+- Data & Analytics clears visible query/chart/profile state when the selected dataset changes on disk.
 - Workspace freshness reports dataset-derived views that need refresh when CSV/XLSX sources change.
 - SQL query results can be exported as Markdown artifacts with SQL text, engine, row counts, preview rows, and dataset citations.
-- Data Studio saves read-only SQL snippets separately from lightweight row filters.
+- Data & Analytics saves read-only SQL snippets separately from lightweight row filters.
 - Artifact lineage has a selectable graph layout with relationship counts and source navigation.
 - Playwright visual smoke now asserts navigator resizing, panel-level scrolling, tool-run details, metadata browser, lineage graph/filtering, SQL snippets, and freshness warnings using Wails-free mocks.
 - richer document extraction/OCR and broader SQLite repository coverage are still planned.
@@ -182,22 +182,22 @@ This batch kept momentum on real functionality while cleaning up the growing she
 
 1. Modal approval requests now cover higher-risk file write/delete/move applies.
 2. Workspace search results are grouped into file, artifact, and chat sections.
-3. Data Studio, Artifact Studio, Approval Log, Operations inspector, and approval modal UI are split into focused components.
-4. Scan status now reports included, ignored, depth-skipped, entry-capped, and unreadable paths.
+3. Data & Analytics, Artifacts, Approval Log, Operations inspector, and approval modal UI are split into focused components.
+4. Scan reports now capture included, ignored, depth-skipped, entry-capped, and unreadable paths without crowding the default navigator header.
 5. CSV preview/query tables support sortable columns and bounded pagination.
 6. Chart artifact metadata now has clearer configuration and inline SVG preview.
-7. Operations Studio has a first read-only inspector for Docker/Compose and local service files.
+7. Operations capabilities have a first read-only inspector for Docker/Compose and local service files.
 
 ## Completed Batch: Agent Tools And Workspace Intelligence
 
 This batch made more of the studio inspectable and auditable without turning on autonomous tool execution yet:
 
 1. Backend tool descriptors now live in `app/internal/agenttools/` with names, descriptions, risk levels, surfaces, and approval requirements.
-2. The AI Assistant route shows a first proposed tool plan for the active file, dataset, artifact, or operations context.
+2. The always-visible assistant shows a first proposed tool plan for the active file, dataset, artifact, or operations context.
 3. Workspace scan reports can be saved as Markdown artifacts under `.nexusdesk/artifacts/`.
 4. CSV queries now support numeric comparisons, `contains`, `limit`, and simple `order by` clauses.
 5. Generated artifacts can open their source context, archive to `.nexusdesk/artifacts/archive/`, or be deleted through approval prompts.
-6. Operations Studio parses selected Compose YAML into services, images, ports, volumes, and dependencies.
+6. Operations capabilities parse selected Compose YAML into services, images, ports, volumes, and dependencies.
 7. Frontend smoke coverage now checks the new tool-planning, artifact-action, scan-report, Compose parsing, and optional visual smoke surfaces.
 
 ## Completed Batch: Agent Execution And Analytics Foundations
@@ -206,7 +206,7 @@ This batch made more of the studio inspectable and auditable without turning on 
 2. Medium/high-risk plan executions use modal approval before backend execution.
 3. Tool run records persist input, output summary, risk, approval ID, duration, and errors under `.nexusdesk/tool-runs/`.
 4. SQLite metadata schema preparation now writes a migration-compatible schema and manifest under `.nexusdesk/metadata/`.
-5. Data Studio has a read-only DuckDB-compatible SQL surface over CSV datasets, using the bounded CSV query path until the real driver lands.
+5. Data & Analytics has a read-only DuckDB-compatible SQL surface over CSV datasets, using the bounded CSV query path until the real driver lands.
 6. Artifact comparison shows added/removed line summaries and size delta between generated outputs.
 7. Visual smoke now writes baseline screenshots and a manifest whenever Playwright is installed.
 
@@ -226,7 +226,7 @@ This batch made more of the studio inspectable and auditable without turning on 
 2. Metadata Browser inspects SQLite metadata tables and dataset SQL views.
 3. Artifact lineage filtering can focus source, chat, tool, or artifact relationships.
 4. Chat messages and context-pack previews warn when cited files change.
-5. Data Studio invalidates visible query/chart/profile state when the selected dataset changes on disk.
+5. Data & Analytics invalidates visible query/chart/profile state when the selected dataset changes on disk.
 6. SQL result artifacts save SQL text, engine, row counts, preview rows, and source dataset citations.
 7. Playwright visual smoke asserts navigator resizing, tool-run details, metadata browser, lineage filtering, panel scrolling, and freshness warnings.
 
@@ -246,10 +246,10 @@ This batch made more of the studio inspectable and auditable without turning on 
 2. Metadata history search returns chat, artifact, and tool-run snippets backed by SQLite metadata queries.
 3. Dataset lineage dependencies are recorded for saved SQL snippets, exported reports, chart artifacts, query exports, and summaries.
 4. Saved SQL execution history records status, row counts, messages, and artifact links.
-5. Data Studio has a first read-only SQLite workspace database connector surface.
+5. Data & Analytics has a first read-only SQLite workspace database connector surface.
 6. Artifact lineage can be exported as JSON and imported for debugging/preview workflows.
 7. Playwright visual smoke mocks moved into a reusable fixture helper.
-8. Dataset dependency rebuild actions are now available in Data Studio for filter exports, SQL reports, charts, and summaries.
+8. Dataset dependency rebuild actions are now available in Data & Analytics for filter exports, SQL reports, charts, and summaries.
 9. Dataset dependency rebuild is now collision-safe for rapid re-runs by replacing stale regenerated artifacts before writing a new one.
 
 ## Completed Batch: Studio Query And Connector Maturity
@@ -263,7 +263,7 @@ This batch made more of the studio inspectable and auditable without turning on 
 1. Add a richer metadata history tab with filters by kind, time, source path, and jump-to-chat/artifact/tool actions.
 2. Expand the SQLite connector with schema browsing, table previews, saved connector queries, and clearer read-only status.
 3. Add artifact lineage JSON import comparison in the UI, including validation errors and graph diff previews.
-4. Promote dataset dependency and SQL run records into first-class UI navigation from Data Studio, Artifact Studio, and Metadata Browser.
+4. Promote dataset dependency and SQL run records into first-class UI navigation from Data & Analytics, Artifacts, and Metadata Browser.
 5. Start a DuckDB multi-file workspace dataset surface for joins across CSV/XLSX-derived tables.
 6. Split large shell orchestration state where connector/history flows start to crowd `NexusShell.tsx`.
 
@@ -271,15 +271,16 @@ This batch made more of the studio inspectable and auditable without turning on 
 
 These batches describe the next product direction. They are broader than the current foundation and should be broken down into smaller implementation batches before coding.
 
-### Batch: Main Menu And Studio Routing
+### Batch: Main Menu And Product Surfaces
 
-1. Turn the primary rail into a real main menu with Code, Data, Analytics, Documents, AI Assistant, Ops, Artifacts, and Settings routes.
-2. Persist per-studio state: active resource, open tabs, filters, selected connector, selected artifact, and assistant context.
-3. Give every studio a command surface, empty state, toolbar, and keyboard shortcuts that match its domain.
-4. Keep the right sidebar focused on assistant output while studio-specific inspectors live in the selected studio or bottom drawer.
-5. Update visual smoke to cover route switching and per-studio state restoration.
+1. Keep the primary rail focused on implemented surfaces: Workbench, Data & Analytics, Artifacts, and Settings.
+2. Keep AI Assistant as the always-visible right-side orchestrator instead of a separate rail destination.
+3. Keep Analytics, Documents, and Ops as capability domains until they have native layouts deep enough to justify top-level navigation.
+4. Persist per-surface state: active resource, open tabs, filters, selected connector, selected artifact, and assistant context.
+5. Keep the right sidebar focused on assistant output while surface-specific inspectors live in the selected surface or bottom drawer.
+6. Update visual smoke to cover route switching and per-surface state restoration.
 
-### Batch: IDE-Grade Code Studio
+### Batch: IDE-Grade Workbench
 
 1. Replace the current navigator feel with a JetBrains-style project tree: indentation, disclosure arrows, icons, context menus, reveal current file, collapse all, and ignored-file controls.
 2. Add git repository detection, branch display, dirty summary, and file-level status badges.
@@ -288,7 +289,7 @@ These batches describe the next product direction. They are broader than the cur
 5. Add editor improvements: split editor groups, pinned tabs, breadcrumbs, outline/symbol navigation, encoding controls, and format action hooks.
 6. Add AI code actions for review diff, explain change, generate tests, propose patch, create commit message, and summarize branch.
 
-### Batch: Data Studio Expansion
+### Batch: Data & Analytics Expansion
 
 1. Expand file dataset support to TSV, JSON, NDJSON, Parquet, logs, compressed exports, and SQL/database dump files.
 2. Build database connector framework for SQLite, PostgreSQL, MySQL/MariaDB, SQL Server, and DuckDB with read-only defaults.
@@ -297,7 +298,7 @@ These batches describe the next product direction. They are broader than the cur
 5. Add temporary Docker-backed import sandboxes for SQL dumps with explicit lifecycle, storage limits, and read-only analysis mode.
 6. Add LLM research workflow that creates an analysis plan, runs bounded read-only queries, cites rows/queries, and produces reproducible reports.
 
-### Batch: Analytics Studio Connectors
+### Batch: Analytics Connectors
 
 1. Add connector framework for GA4, Google Search Console, Google Ads, Meta Ads, Microsoft Ads, LinkedIn Ads, HubSpot, Salesforce, Eloqua, and Mautic.
 2. Add secure credential storage, scope display, connector test, token refresh, and workspace binding.
@@ -305,7 +306,7 @@ These batches describe the next product direction. They are broader than the cur
 4. Add dashboard widgets for acquisition, channel mix, funnels, cohorts, campaign ROI, content/SEO, landing-page performance, and anomaly detection.
 5. Add LLM analytics workflows for explaining performance changes, finding anomalies, comparing campaigns, and generating client/internal reports with metric citations.
 
-### Batch: Documents Studio
+### Batch: Document Capabilities
 
 1. Expand document extraction for PDF, DOCX, TXT, MD/MDX, HTML, RTF, XLS/XLSX, CSV, PPTX, and image OCR.
 2. Add document set indexing with page/section/table/entity metadata and source citations.
@@ -313,7 +314,7 @@ These batches describe the next product direction. They are broader than the cur
 4. Add generated outputs: Markdown reports, DOCX briefs, presentation decks, comparison matrices, checklists, and research packs.
 5. Add stale-source regeneration for generated reports and presentations.
 
-### Batch: Ops Studio
+### Batch: Operations Capabilities
 
 1. Expand Docker/Compose inspection to containers, images, volumes, networks, Compose projects, services, ports, health, env, mounts, resource usage, and logs.
 2. Add local service views for ports, endpoint checks, config discovery, and redacted `.env` inspection where policy allows.

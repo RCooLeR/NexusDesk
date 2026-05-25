@@ -414,45 +414,6 @@ button:disabled {
     white-space: nowrap;
 }
 
-.scan-status-details {
-    margin-top: 8px;
-}
-
-.scan-status-details summary {
-    color: #475467;
-    cursor: pointer;
-    font-size: 12px;
-    font-weight: 700;
-}
-
-.scan-status-details dl {
-    display: grid;
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-    gap: 5px;
-    margin: 8px 0 0;
-}
-
-.scan-status-details dt {
-    color: var(--nd-muted-text);
-    font-size: 10px;
-    font-weight: 800;
-    text-transform: uppercase;
-}
-
-.scan-status-details dd {
-    margin: 0;
-    font-size: 12px;
-}
-
-.scan-status-details ul {
-    color: var(--nd-muted-text);
-    font-size: 11px;
-    line-height: 1.35;
-    list-style: none;
-    margin: 8px 0 0;
-    padding: 0;
-}
-
 .tree-tools {
     display: grid;
     gap: 7px;
@@ -927,59 +888,6 @@ button:disabled {
 }
 
 .topbar h2 {
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-}
-
-.studio-mode-strip {
-    display: flex;
-    align-items: center;
-    flex-wrap: wrap;
-    gap: 8px;
-    min-width: 0;
-    margin-top: 6px;
-}
-
-.studio-route-summary {
-    display: grid;
-    gap: 2px;
-    margin: 6px 0;
-    max-width: min(760px, 58vw);
-}
-
-.studio-route-summary strong {
-    color: var(--nd-charcoal);
-    font-size: 13px;
-}
-
-.studio-route-summary span,
-.studio-route-summary small,
-.studio-route-hint {
-    color: var(--nd-muted-text);
-    font-size: 12px;
-    line-height: 1.35;
-}
-
-.studio-route-hint {
-    display: block;
-    margin-top: 5px;
-}
-
-.studio-mode-strip span {
-    border: 1px solid #c7d7ee;
-    border-radius: var(--nd-radius-sm);
-    background: #eef6ff;
-    color: #164a7a;
-    font-size: 12px;
-    font-weight: 800;
-    line-height: 1;
-    padding: 5px 8px;
-}
-
-.studio-mode-strip small {
-    color: var(--nd-muted-text);
-    font-size: 12px;
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
@@ -2813,6 +2721,27 @@ button.code-studio-row.selected {
     background: #10151d;
 }
 
+.git-diff-changes {
+    background: #10151d;
+    border: 1px solid #263241;
+    border-radius: var(--nd-radius-sm);
+    display: grid;
+    font-family: "Cascadia Code", Consolas, monospace;
+    font-size: 12px;
+    overflow: auto;
+}
+
+.git-diff-empty {
+    color: #9aa4b2;
+    padding: 10px;
+}
+
+.hunk-nav-button {
+    min-height: 28px;
+    min-width: 28px;
+    padding: 0;
+}
+
 .git-diff-view.compact {
     max-height: 170px;
 }
@@ -2846,43 +2775,88 @@ button.code-studio-row.selected {
     gap: 6px;
 }
 
-.code-studio-inline {
-    border-bottom: 1px solid var(--nd-border-soft);
+.git-change-tree,
+.git-change-dir-children {
     display: grid;
-    gap: 8px;
-    padding: 10px 14px;
+    gap: 3px;
+    min-width: 0;
 }
 
-.code-studio-inline-title {
-    color: var(--nd-charcoal);
-    font-size: 13px;
+.git-change-dir {
+    display: grid;
+    gap: 3px;
+    min-width: 0;
 }
 
-.code-studio-inline-changes {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 6px;
+.git-change-dir-children {
+    border-left: 1px solid var(--nd-border-soft);
+    margin-left: 8px;
+    padding-left: 8px;
 }
 
-.code-studio-inline-changes button {
-    background: var(--nd-panel-soft);
-    border: 1px solid var(--nd-border-soft);
-    border-radius: var(--nd-radius-sm);
+.git-change-dir-label {
     color: var(--nd-muted-text);
-    cursor: pointer;
     font-size: 12px;
-    max-width: 260px;
+    font-weight: 800;
+    min-width: 0;
     overflow: hidden;
-    padding: 5px 7px;
+    padding: 4px 2px;
     text-overflow: ellipsis;
     white-space: nowrap;
 }
 
-.code-studio-inline-changes button:hover,
-.code-studio-inline-changes button.selected {
+.git-change-dir-label span::before {
+    color: #94a3b8;
+    content: "v";
+    margin-right: 6px;
+}
+
+.git-change-file {
+    align-items: center;
+    background: transparent;
+    border: 1px solid transparent;
+    border-radius: var(--nd-radius-sm);
+    color: inherit;
+    cursor: pointer;
+    display: grid;
+    gap: 2px 8px;
+    grid-template-columns: 58px minmax(0, 1fr) 28px;
+    min-width: 0;
+    padding: 6px 7px;
+    text-align: left;
+}
+
+.git-change-file:hover,
+.git-change-file.selected {
     background: #edf4ff;
     border-color: #b7d4ff;
-    color: var(--nd-electric-blue);
+}
+
+.git-change-file.selected {
+    box-shadow: inset 2px 0 0 var(--nd-electric-blue);
+}
+
+.git-change-file span,
+.git-change-file small {
+    color: var(--nd-muted-text);
+    font-size: 11px;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.git-change-file strong {
+    color: var(--nd-charcoal);
+    font-size: 12px;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.git-change-file small {
+    text-align: right;
 }
 
 .settings-page {

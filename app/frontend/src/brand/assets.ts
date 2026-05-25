@@ -56,30 +56,26 @@ export const railItems: Array<{
     label: string;
     icon: IconDefinition;
 }> = [
-    {id: 'code', label: 'Code Studio', icon: brandAssets.icons.code},
-    {id: 'data', label: 'Data Studio', icon: brandAssets.icons.data},
-    {id: 'analytics', label: 'Analytics Studio', icon: brandAssets.icons.analytics},
-    {id: 'documents', label: 'Documents Studio', icon: brandAssets.icons.documents},
-    {id: 'assistant', label: 'AI Assistant', icon: brandAssets.icons.ai},
-    {id: 'ops', label: 'Ops Studio', icon: brandAssets.icons.ops},
+    {id: 'code', label: 'Workbench', icon: brandAssets.icons.code},
+    {id: 'data', label: 'Data & Analytics', icon: brandAssets.icons.data},
     {id: 'artifacts', label: 'Artifacts', icon: brandAssets.icons.documents},
     {id: 'settings', label: 'Settings', icon: brandAssets.icons.settings},
 ];
 
 export const studioRouteLabels: Record<StudioRouteId, string> = {
-    code: 'Code Studio',
-    data: 'Data Studio',
-    analytics: 'Analytics Studio',
-    documents: 'Documents Studio',
+    code: 'Workbench',
+    data: 'Data & Analytics',
+    analytics: 'Analytics Capabilities',
+    documents: 'Document Capabilities',
     assistant: 'AI Assistant',
-    ops: 'Ops Studio',
+    ops: 'Operations Capabilities',
     artifacts: 'Artifacts',
     settings: 'Settings',
 };
 
 export const studioRouteDescriptions: Record<StudioRouteId, string> = {
-    code: 'Project tree, editor tabs, search, safe edits, and upcoming git diffs.',
-    data: 'Datasets, SQL, metadata, SQLite connector, and data-derived artifacts.',
+    code: 'Project tree, editor tabs, search, git, and safe edits.',
+    data: 'Datasets, analytics imports, SQL, metadata, connectors, and data-derived artifacts.',
     analytics: 'Marketing analytics, API connectors, dashboards, and report workflows.',
     documents: 'PDF, DOCX, Markdown, document sets, summaries, and generated briefs.',
     assistant: 'Context packs, model control, agent runs, tool plans, and citations.',
@@ -102,17 +98,15 @@ export const pendingStudioRoutes: StudioRouteId[] = [
     'analytics',
     'documents',
     'ops',
-    'artifacts',
-    'settings',
 ];
 
 export const studioRoutePrimarySurface: Record<StudioRouteId, string> = {
-    code: 'Workbench editor, git status, and Working Tree Diff',
-    data: 'Primary Data Studio surface',
-    analytics: 'Primary data surface until Analytics Studio lands',
-    documents: 'Workbench document preview until Documents Studio lands',
+    code: 'Workbench editor, file tabs, previews, and safe edits',
+    data: 'Unified data, analytics, SQL, and connector surface',
+    analytics: 'Data & Analytics connector surface',
+    documents: 'Workbench document preview and artifact surface',
     assistant: 'Assistant workspace and tool plan surface',
-    ops: 'Primary data operations surface until Ops Studio lands',
+    ops: 'Operations inspector and tool surface',
     artifacts: 'Primary Artifact Studio surface',
     settings: 'Primary Settings surface',
 };
@@ -131,7 +125,8 @@ export const studioRouteCommandHint: Record<StudioRouteId, string> = {
 export const implementedStudioRoutes: StudioRouteId[] = [
     'code',
     'data',
-    'assistant',
+    'artifacts',
+    'settings',
 ];
 
 export const workspaceIconByName: Record<string, IconDefinition> = {

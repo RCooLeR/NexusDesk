@@ -1,8 +1,10 @@
 import {useEffect, useMemo, useRef, useState} from 'react';
-import {Button} from '../../components/ui';
+import {faChevronDown, faChevronUp} from '@fortawesome/free-solid-svg-icons';
+import {FontAwesomeIcon} from '@fortawesome/react-fontawesome';
+import {Button, IconButton} from '../../components/ui';
 import type {GitFileChange, GitFileDiff, GitStatus} from '../../types';
 
-type DiffMode = 'unified' | 'split';
+type DiffMode = 'unified' | 'split' | 'changes';
 
 type HunkTarget = {
     key: string;
@@ -15,6 +17,20 @@ type DiffRow =
     | {type: 'context'; oldLine: number; newLine: number; oldText: string; newText: string}
     | {type: 'delete'; oldLine: number; oldText: string}
     | {type: 'add'; newLine: number; newText: string};
+
+type ChangedRow = {
+    oldLine?: number;
+    oldText: string;
+    newLine?: number;
+    newText: string;
+};
+
+type GitChangeTreeNode = {
+    name: string;
+    path: string;
+    children: Map<string, GitChangeTreeNode>;
+    change?: GitFileChange;
+};
 
 type GitDiffPanelProps = {
     gitStatus: GitStatus | null;
@@ -52,7 +68,7 @@ export function GitDiffPanel({
     const unstagedDiffTruncated = selectedDiff?.unstagedDiffTruncated ?? gitStatus?.unstagedDiffTruncated;
     const statusMessage = gitStatus?.available
         ? `${gitStatus.branch}${gitStatus.head ? ` @ ${gitStatus.head}` : ''}`
-        : gitStatus?.message ?? 'Open a git-backed workspace to inspect changes.';
+        : gitStatus?.message ?? 'Open a workspace, then press Refresh git when you need repository status.';
     const hasDiff = Boolean(stagedDiff || unstagedDiff);
     const hunkTargets = useMemo(() => [
         ...collectHunks('staged', stagedDiff),
@@ -105,7 +121,7 @@ export function GitDiffPanel({
                             <GitChangeGroup changes={unstagedFiles} label="Unstaged" onSelect={onSelectGitChange} selectedPath={selectedGitChangePath} />
                         </>
                     ) : (
-                        <div className="code-studio-empty">{gitStatus?.available ? 'No git changes detected.' : 'Git status is unavailable for this workspace.'}</div>
+                        <div className="code-studio-empty">{gitStatus?.available ? 'No git changes detected.' : statusMessage}</div>
                     )}
                 </div>
             </section>
@@ -120,11 +136,16 @@ export function GitDiffPanel({
                             <div className="segmented-control" role="group" aria-label="Diff view mode">
                                 <button aria-pressed={diffMode === 'unified'} className={diffMode === 'unified' ? 'active' : ''} onClick={() => setDiffMode('unified')} type="button">Unified</button>
                                 <button aria-pressed={diffMode === 'split'} className={diffMode === 'split' ? 'active' : ''} onClick={() => setDiffMode('split')} type="button">Split</button>
+                                <button aria-pressed={diffMode === 'changes'} className={diffMode === 'changes' ? 'active' : ''} onClick={() => setDiffMode('changes')} type="button">Diff Only</button>
                             </div>
                             <div className="hunk-nav" aria-label="Hunk navigation">
-                                <Button disabled={hunkTargets.length === 0} onClick={() => moveHunk(-1)} variant="subtle">Prev hunk</Button>
+                                <IconButton className="hunk-nav-button" disabled={hunkTargets.length === 0} label="Previous hunk" onClick={() => moveHunk(-1)}>
+                                    <FontAwesomeIcon icon={faChevronUp} />
+                                </IconButton>
                                 <span>{hunkTargets.length > 0 ? `${activeHunkIndex + 1} / ${hunkTargets.length}` : '0 / 0'}</span>
-                                <Button disabled={hunkTargets.length === 0} onClick={() => moveHunk(1)} variant="subtle">Next hunk</Button>
+                                <IconButton className="hunk-nav-button" disabled={hunkTargets.length === 0} label="Next hunk" onClick={() => moveHunk(1)}>
+                                    <FontAwesomeIcon icon={faChevronDown} />
+                                </IconButton>
                             </div>
                         </div>
                         {selectedDiff?.message && <small className="git-diff-message">{selectedDiff.message}</small>}
@@ -156,11 +177,69 @@ function DiffBlock({activeHunkKey, diff, kind, mode, title}: {activeHunkKey: str
                     </div>
                     {rows.map((row, index) => renderSplitRow(row, index, activeHunkKey))}
                 </div>
+            ) : mode === 'changes' ? (
+                <ChangedLinesDiff rows={rows} title={title} />
             ) : (
                 <pre className="git-diff-view">{rows.map((row, index) => renderUnifiedRow(row, index, activeHunkKey))}</pre>
             )}
         </div>
     );
+}
+
+function ChangedLinesDiff({rows, title}: {rows: DiffRow[]; title: string}) {
+    const changedRows = useMemo(() => collectChangedRows(rows), [rows]);
+    return (
+        <div className="git-diff-changes" role="table" aria-label={`${title} changed lines only`}>
+            <div className="git-diff-split-header" role="row">
+                <span>Old</span>
+                <span>New</span>
+            </div>
+            {changedRows.length > 0 ? changedRows.map((row, index) => (
+                <div className="git-diff-split-row" key={`${index}-${row.oldLine ?? ''}-${row.newLine ?? ''}-${row.oldText}-${row.newText}`} role="row">
+                    {row.oldLine ? <DiffCell line={row.oldLine} text={row.oldText} type="delete" /> : <DiffCell text="" type="blank" />}
+                    {row.newLine ? <DiffCell line={row.newLine} text={row.newText} type="add" /> : <DiffCell text="" type="blank" />}
+                </div>
+            )) : (
+                <div className="git-diff-empty">No changed lines in this diff.</div>
+            )}
+        </div>
+    );
+}
+
+function collectChangedRows(rows: DiffRow[]) {
+    const changedRows: ChangedRow[] = [];
+    let pendingDeletes: Array<{line: number; text: string}> = [];
+    let pendingAdds: Array<{line: number; text: string}> = [];
+
+    function flush() {
+        const count = Math.max(pendingDeletes.length, pendingAdds.length);
+        for (let index = 0; index < count; index += 1) {
+            const deletion = pendingDeletes[index];
+            const addition = pendingAdds[index];
+            changedRows.push({
+                oldLine: deletion?.line,
+                oldText: deletion?.text ?? '',
+                newLine: addition?.line,
+                newText: addition?.text ?? '',
+            });
+        }
+        pendingDeletes = [];
+        pendingAdds = [];
+    }
+
+    for (const row of rows) {
+        if (row.type === 'delete') {
+            pendingDeletes.push({line: row.oldLine, text: row.oldText});
+            continue;
+        }
+        if (row.type === 'add') {
+            pendingAdds.push({line: row.newLine, text: row.newText});
+            continue;
+        }
+        flush();
+    }
+    flush();
+    return changedRows;
 }
 
 function renderUnifiedRow(row: DiffRow, index: number, activeHunkKey: string) {
@@ -236,26 +315,100 @@ function GitChangeGroup({
     selectedPath: string;
     onSelect: (path: string) => void;
 }) {
+    const tree = useMemo(() => buildGitChangeTree(changes), [changes]);
+
     return (
         <div className="git-change-group">
             <small>{label} ({changes.length})</small>
-            {changes.length > 0 ? changes.slice(0, 12).map((change) => (
-                <button
-                    aria-pressed={selectedPath === change.path}
-                    className={selectedPath === change.path ? 'code-studio-row selected' : 'code-studio-row'}
-                    key={`${label}-${change.index}-${change.worktree}-${change.path}`}
-                    onClick={() => onSelect(change.path)}
-                    type="button"
-                >
-                    <span>{change.summary}</span>
-                    <strong title={change.path}>{change.path}</strong>
-                    <small>{gitCode(change.index, change.worktree)}{change.oldPath ? ` from ${change.oldPath}` : ''}</small>
-                </button>
-            )) : (
+            {changes.length > 0 ? (
+                <div className="git-change-tree" role="tree" aria-label={`${label} changed files`}>
+                    {tree.map((node) => (
+                        <GitChangeTreeNodeView
+                            key={node.path}
+                            node={node}
+                            onSelect={onSelect}
+                            selectedPath={selectedPath}
+                        />
+                    ))}
+                </div>
+            ) : (
                 <div className="code-studio-empty">No {label.toLowerCase()} files.</div>
             )}
         </div>
     );
+}
+
+function GitChangeTreeNodeView({
+    node,
+    onSelect,
+    selectedPath,
+}: {
+    node: GitChangeTreeNode;
+    onSelect: (path: string) => void;
+    selectedPath: string;
+}) {
+    if (node.change) {
+        const change = node.change;
+        return (
+            <button
+                aria-pressed={selectedPath === change.path}
+                className={selectedPath === change.path ? 'git-change-file selected' : 'git-change-file'}
+                onClick={() => onSelect(change.path)}
+                role="treeitem"
+                title={change.path}
+                type="button"
+            >
+                <span>{change.summary}</span>
+                <strong>{node.name}</strong>
+                <small>{gitCode(change.index, change.worktree)}{change.oldPath ? ` from ${change.oldPath}` : ''}</small>
+            </button>
+        );
+    }
+
+    return (
+        <div className="git-change-dir" role="group">
+            <div className="git-change-dir-label" role="treeitem" aria-expanded="true">
+                <span>{node.name}</span>
+            </div>
+            <div className="git-change-dir-children">
+                {sortedGitTreeChildren(node).map((child) => (
+                    <GitChangeTreeNodeView
+                        key={child.path}
+                        node={child}
+                        onSelect={onSelect}
+                        selectedPath={selectedPath}
+                    />
+                ))}
+            </div>
+        </div>
+    );
+}
+
+function buildGitChangeTree(changes: GitFileChange[]) {
+    const root: GitChangeTreeNode = {name: '', path: '', children: new Map()};
+    for (const change of changes) {
+        const parts = change.path.split('/').filter(Boolean);
+        let current = root;
+        parts.forEach((part, index) => {
+            const path = parts.slice(0, index + 1).join('/');
+            const next: GitChangeTreeNode = current.children.get(part) ?? {name: part, path, children: new Map<string, GitChangeTreeNode>()};
+            if (index === parts.length - 1) {
+                next.change = change;
+            }
+            current.children.set(part, next);
+            current = next;
+        });
+    }
+    return sortedGitTreeChildren(root);
+}
+
+function sortedGitTreeChildren(node: GitChangeTreeNode) {
+    return Array.from(node.children.values()).sort((left, right) => {
+        if (Boolean(left.change) !== Boolean(right.change)) {
+            return left.change ? 1 : -1;
+        }
+        return left.name.localeCompare(right.name);
+    });
 }
 
 function diffHeading(isLoading: boolean, selectedPath: string | undefined, isTruncated: boolean | undefined) {

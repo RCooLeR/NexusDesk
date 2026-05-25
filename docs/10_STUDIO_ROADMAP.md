@@ -6,24 +6,20 @@ This document describes the target product depth beyond the current foundation. 
 
 Nexus Augentic Studio should feel like a JetBrains-class desktop studio for mixed engineering, data, analytics, documents, and operations work. Chat is one interaction model, but the durable product surface is a set of studios with real navigation, inspectors, history, diffs, tool runs, artifacts, and source-grounded AI.
 
-## Main Studio Menu
+## Main Product Menu
 
-The primary rail/main menu should become a real navigation system, not just labels:
+The primary rail/main menu should stay small and only expose durable surfaces that exist in the product:
 
-- `Code Studio`: repository tree, editor tabs, git status, diffs, search, problems, symbols, tests, task runner, and code-aware AI actions.
-- `Data Studio`: databases, CSV, Excel, JSON/NDJSON, Parquet, logs, SQL dumps, schema browsers, query notebooks, import/export jobs, and temporary database sandboxes.
-- `Analytics Studio`: GA4, Search Console, ads platforms, CRM/marketing automation data, exported marketing datasets, attribution/funnel views, dashboards, and recurring report artifacts.
-- `Documents Studio`: PDF, DOCX, TXT, MD, XLS/XLSX, HTML, presentations, OCR, document sets, cross-document analysis, generated reports, and presentation creation.
-- `AI Assistant`: model/provider control, context packs, agent runs, tool plan review, memory, prompt profiles, citations, and cross-studio orchestration.
-- `Ops Studio`: Docker, Compose, logs, environment files, local services, ports, health checks, build/run/debug actions, generated configs, and approval-governed mutations.
+- `Workbench`: repository tree, editor tabs, git status, diffs, search, problems, symbols, tests, task runner, and code-aware AI actions.
+- `Data & Analytics`: databases, CSV, Excel, JSON/NDJSON, Parquet, logs, SQL dumps, schema browsers, query notebooks, import/export jobs, temporary database sandboxes, marketing exports, and business analytics connectors.
 - `Artifacts`: generated reports, charts, exports, diffs, presentations, configs, lineage, comparisons, archive/delete, and reproducibility metadata.
 - `Settings`: providers, credentials, policies, workspace rules, connector credentials, model context windows, UI preferences, and diagnostics.
 
-Each studio should own its commands, tabs, side panels, and empty states. The bottom drawer can remain useful for secondary panes, but the main menu should select first-class work modes.
+AI Assistant stays visible as the shared orchestration layer rather than a separate rail destination. Documents, operations, and analytics-specific workflows are capability domains inside Workbench, Data & Analytics, Artifacts, and the assistant until they are deep enough to justify their own native screens.
 
-## Code Studio
+## Workbench
 
-Current Code Studio is still primitive. The target is an IDE-grade surface:
+Current Workbench is still primitive. The target is an IDE-grade surface:
 
 - filesystem tree that behaves like an IDE project tree: folders/files, indentation, disclosure arrows, icons, selection, drag/drop intent, context menu, rename/move/new file/new folder, cut/copy/paste, reveal current file, collapse all, and ignored-file controls
 - git status in the tree: modified/added/deleted/renamed/untracked/ignored, branch indicator, changed-file grouping, and repository dirty summary
@@ -33,9 +29,9 @@ Current Code Studio is still primitive. The target is an IDE-grade surface:
 - tests/tasks: detect package scripts, Go tests, npm scripts, Docker Compose tasks, run selected tasks with logs, and save run artifacts
 - AI code actions: explain file/project, review changes, generate tests, propose patch, apply patch through diff preview, summarize git diff, create commit message, and create PR description later
 
-## Data Studio
+## Data & Analytics
 
-Data Studio should be a real local data workbench:
+Data & Analytics should be a real local data workbench:
 
 - file datasets: CSV/TSV, Excel/XLSX/XLS, JSON, NDJSON, Parquet, SQLite, database dumps, logs, and compressed exports
 - database connectors: SQLite first, then PostgreSQL, MySQL/MariaDB, SQL Server, DuckDB, and external JDBC/ODBC-style adapters where practical
@@ -46,9 +42,9 @@ Data Studio should be a real local data workbench:
 - data cleaning: preview transformations, derive columns, normalize dates, split/merge columns, dedupe, and write cleaned artifacts only after approval
 - LLM research over data: generate hypotheses, choose relevant tables/files, create analysis plan, run bounded read-only queries, cite rows/queries, build charts, and create reproducible report artifacts
 
-## Analytics Studio
+## Analytics Capabilities
 
-Analytics Studio should focus on business and marketing analysis rather than generic tables:
+Analytics capabilities should focus on business and marketing analysis rather than generic tables, initially inside Data & Analytics:
 
 - API connectors: GA4, Google Search Console, Google Ads, Meta Ads, Microsoft Ads, LinkedIn Ads, HubSpot, Salesforce, Eloqua, Mautic, and CSV/export equivalents
 - credential flow: secure local credential storage, scopes display, token refresh, connector test, and explicit workspace binding
@@ -57,9 +53,9 @@ Analytics Studio should focus on business and marketing analysis rather than gen
 - dashboard builder: saved widgets, filters, date ranges, segment comparison, chart artifacts, and narrative report blocks
 - LLM analytics workflows: find anomalies, explain channel shifts, compare campaigns, write client/internal reports, generate follow-up questions, and cite metrics, connector runs, and source rows
 
-## Documents Studio
+## Document Capabilities
 
-Documents Studio should treat business documents as first-class source material:
+Document capabilities should treat business documents as first-class source material, initially through Workbench previews, Artifacts, and the assistant:
 
 - file support: DOCX, PDF, TXT, MD/MDX, HTML, RTF, XLS/XLSX, CSV, PPTX, images with OCR, and document bundles/folders
 - extraction: text, headings, tables, images, footnotes, comments, tracked changes when possible, metadata, page references, and OCR fallback
@@ -81,9 +77,9 @@ The AI Assistant should become the orchestration layer across all studios, not a
 - multi-step work: plan, execute read-only exploration, pause for approval, create artifacts, compare outputs, and summarize what changed
 - quality controls: retry with different model, compare model outputs, ask for missing context, detect weak evidence, and mark unsupported claims
 
-## Ops Studio
+## Operations Capabilities
 
-Ops Studio should make local and containerized systems inspectable and debuggable:
+Operations capabilities should make local and containerized systems inspectable and debuggable, initially through Workbench, Data & Analytics metadata, and approval-governed tools:
 
 - Docker/Compose: containers, images, volumes, networks, Compose projects, services, ports, health, env, mounts, resource usage, and logs
 - local services: port scanner, process/service list where allowed, endpoint checks, config file discovery, `.env` inspection with secret redaction, and generated runbooks
@@ -92,7 +88,7 @@ Ops Studio should make local and containerized systems inspectable and debuggabl
 - generated ops artifacts: Dockerfile, Compose files, `.env.example`, health-check scripts, deployment notes, troubleshooting guides, and incident reports
 - LLM ops workflows: explain Compose topology, diagnose why a service fails, compare environment files, propose a minimal fix, generate a safe command plan, and summarize logs with citations
 
-Ops Studio should default to read-only inspection. Anything that mutates containers, files, databases, networks, volumes, or shell state must go through the shared approval and audit model.
+Operations workflows should default to read-only inspection. Anything that mutates containers, files, databases, networks, volumes, or shell state must go through the shared approval and audit model.
 
 ## Cross-Studio Foundations
 

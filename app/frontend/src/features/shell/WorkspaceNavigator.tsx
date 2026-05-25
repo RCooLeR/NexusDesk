@@ -154,8 +154,7 @@ export function WorkspaceNavigator({
                     <>
                         <div className="workspace-summary">
                             <strong>{workspace.name}</strong>
-                            <small>{scanStatusSummary(workspace, workspaceStatus)}</small>
-                            <ScanStatusDetails workspace={workspace} />
+                            <small title={workspaceStatus}>{workspace.root}</small>
                         </div>
                         <div className="tree-tools">
                             <div className="workspace-search">
@@ -382,54 +381,6 @@ function treeNodeBadge(node: FileNode) {
         return node.fileType;
     }
     return 'file';
-}
-
-function scanStatusSummary(workspace: WorkspaceSnapshot, fallback: string) {
-    if (!workspace.scan) {
-        return workspace.truncated ? `${workspace.nodes.length} indexed items; scan capped for responsiveness.` : fallback;
-    }
-    const included = numericScanValue(workspace.scan.included);
-    const skipped = numericScanValue(workspace.scan.ignored)
-        + numericScanValue(workspace.scan.depthSkipped)
-        + numericScanValue(workspace.scan.entrySkipped)
-        + numericScanValue(workspace.scan.unreadable);
-    return `${included} indexed, ${skipped} skipped. Depth ${numericScanValue(workspace.scan.maxDepth)}, cap ${numericScanValue(workspace.scan.maxEntries)}.`;
-}
-
-function ScanStatusDetails({workspace}: {workspace: WorkspaceSnapshot}) {
-    const scan = workspace.scan;
-    if (!scan) {
-        return null;
-    }
-    const samples = [...safeStringArray(scan.ignoredSamples), ...safeStringArray(scan.skippedSamples)];
-
-    return (
-        <details className="scan-status-details">
-            <summary>Scan status</summary>
-            <dl>
-                <div><dt>Included</dt><dd>{numericScanValue(scan.included)}</dd></div>
-                <div><dt>Ignored</dt><dd>{numericScanValue(scan.ignored)}</dd></div>
-                <div><dt>Depth skipped</dt><dd>{numericScanValue(scan.depthSkipped)}</dd></div>
-                <div><dt>Entry cap</dt><dd>{numericScanValue(scan.entrySkipped)}</dd></div>
-                <div><dt>Unreadable</dt><dd>{numericScanValue(scan.unreadable)}</dd></div>
-            </dl>
-            {samples.length > 0 && (
-                <ul>
-                    {samples.slice(0, 6).map((sample) => (
-                        <li key={sample}>{sample}</li>
-                    ))}
-                </ul>
-            )}
-        </details>
-    );
-}
-
-function safeStringArray(value: unknown) {
-    return Array.isArray(value) ? value.filter((item): item is string => typeof item === 'string') : [];
-}
-
-function numericScanValue(value: unknown) {
-    return typeof value === 'number' && Number.isFinite(value) ? value : 0;
 }
 
 function groupSearchResults(results: WorkspaceSearchResult[]) {
