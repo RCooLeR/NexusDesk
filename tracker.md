@@ -232,6 +232,7 @@ Goal: make Workbench credible as an IDE-like surface.
 - [x] Add changed-file tree grouped by directories.
 - [x] Add first read-only Git file diff service and unified diff panel.
 - [x] Add unified/split/diff-only diff views.
+- [x] Add confirmed file-level staged/unstaged controls.
 - [ ] Add hunk selection and approval-backed hunk actions.
 - [ ] Add AI diff summary and commit draft once assistant service exists.
 - [ ] Add task discovery and safe task-run service.
@@ -307,6 +308,6 @@ Exit criteria:
 
 1. Configure Windows CGO compiler and verify `nexus-app` runs.
 2. Port OpenAI-compatible/Ollama client using the native settings store.
-3. Add staged/unstaged controls after Git diff preview exists.
-4. Add hunk selection and approval-backed hunk actions.
+3. Add hunk selection and approval-backed hunk actions.
+4. Add native task discovery and safe task-run service.
 5. Add richer navigator context menus once the first action strip is validated in Fyne.

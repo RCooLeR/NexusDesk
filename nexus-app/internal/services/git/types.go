@@ -33,3 +33,18 @@ type FileDiff struct {
 	Message               string
 	GeneratedAt           time.Time
 }
+
+type FileAction string
+
+const (
+	FileActionStage   FileAction = "stage"
+	FileActionUnstage FileAction = "unstage"
+)
+
+type FileActionResult struct {
+	Path        string
+	Action      FileAction
+	Message     string
+	Status      Status
+	GeneratedAt time.Time
+}

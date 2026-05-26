@@ -32,7 +32,14 @@ func (v *View) newGitPanel() fyne.CanvasObject {
 		}
 	})
 	diffMode.SetSelected(gitDiffModeUnified.Label())
-	diffHeader := container.NewBorder(nil, nil, v.gitDiffStatus, diffMode)
+	stage := widget.NewButtonWithIcon("Stage", theme.ContentAddIcon(), func() {
+		v.confirmGitFileAction(gitSvc.FileActionStage)
+	})
+	unstage := widget.NewButtonWithIcon("Unstage", theme.ContentRemoveIcon(), func() {
+		v.confirmGitFileAction(gitSvc.FileActionUnstage)
+	})
+	actions := container.NewHBox(stage, unstage, diffMode)
+	diffHeader := container.NewBorder(nil, nil, v.gitDiffStatus, actions)
 	diff := container.NewBorder(diffHeader, nil, nil, nil, v.gitDiffText)
 	split := container.NewVSplit(scroll, diff)
 	split.Offset = 0.42
@@ -63,6 +70,39 @@ func (v *View) openGitDiff(path string) {
 	v.gitDiffStatus.SetText(diff.Message)
 	v.gitDiffText.SetText(formatGitDiff(diff, v.gitDiffMode))
 	v.addActivity(diff.Message)
+}
+
+func (v *View) confirmGitFileAction(action gitSvc.FileAction) {
+	if v.gitLastDiff.Path == "" {
+		v.addActivity("Select a changed file before running a Git action.")
+		return
+	}
+	title := "Stage file"
+	message := "Stage " + v.gitLastDiff.Path + "?"
+	if action == gitSvc.FileActionUnstage {
+		title = "Unstage file"
+		message = "Unstage " + v.gitLastDiff.Path + "?"
+	}
+	dialog.ShowConfirm(title, message, func(confirm bool) {
+		if !confirm {
+			return
+		}
+		v.applyGitFileAction(action)
+	}, v.window)
+}
+
+func (v *View) applyGitFileAction(action gitSvc.FileAction) {
+	workspace := v.state.Workspace()
+	result, err := v.gitService.ApplyFileAction(workspace.Root, v.gitLastDiff.Path, action)
+	if err != nil {
+		dialog.ShowError(err, v.window)
+		return
+	}
+	v.gitStatus.SetText(gitStatusLabel(result.Status))
+	v.gitResults.Objects = v.gitRows(result.Status)
+	v.gitResults.Refresh()
+	v.addActivity(result.Message)
+	v.openGitDiff(result.Path)
 }
 
 func gitStatusLabel(status gitSvc.Status) string {

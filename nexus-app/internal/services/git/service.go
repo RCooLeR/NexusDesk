@@ -90,6 +90,63 @@ func (s *Service) FileDiff(root string, relPath string) (FileDiff, error) {
 	}, nil
 }
 
+func (s *Service) ApplyFileAction(root string, relPath string, action FileAction) (FileActionResult, error) {
+	generatedAt := time.Now().UTC()
+	root = strings.TrimSpace(root)
+	if root == "" {
+		return FileActionResult{Path: relPath, Action: action, Message: "Open a workspace before changing Git state.", GeneratedAt: generatedAt}, nil
+	}
+	absRoot, err := filepath.Abs(root)
+	if err != nil {
+		return FileActionResult{}, err
+	}
+	cleanPath, err := cleanRelPath(relPath)
+	if err != nil {
+		return FileActionResult{Path: relPath, Action: action, Message: err.Error(), GeneratedAt: generatedAt}, nil
+	}
+	if _, err := gitOutput(absRoot, "rev-parse", "--show-toplevel"); err != nil {
+		return FileActionResult{Path: cleanPath, Action: action, Message: "Workspace is not inside a Git repository.", GeneratedAt: generatedAt}, nil
+	}
+	if err := runFileAction(absRoot, cleanPath, action); err != nil {
+		return FileActionResult{}, err
+	}
+	status, err := s.Status(absRoot)
+	if err != nil {
+		return FileActionResult{}, err
+	}
+	return FileActionResult{
+		Path:        cleanPath,
+		Action:      action,
+		Message:     fileActionMessage(cleanPath, action),
+		Status:      status,
+		GeneratedAt: generatedAt,
+	}, nil
+}
+
+func runFileAction(root string, relPath string, action FileAction) error {
+	switch action {
+	case FileActionStage:
+		_, err := gitOutput(root, "add", "--", relPath)
+		return err
+	case FileActionUnstage:
+		_, err := gitOutput(root, "restore", "--staged", "--", relPath)
+		return err
+	default:
+		return fmt.Errorf("unsupported Git file action %q", action)
+	}
+}
+
+func fileActionMessage(relPath string, action FileAction) string {
+	switch action {
+	case FileActionStage:
+		return "Staged " + relPath + "."
+	case FileActionUnstage:
+		return "Unstaged " + relPath + "."
+	default:
+		return "Updated " + relPath + "."
+	}
+}
+
 func unavailableStatus(message string) Status {
 	return Status{Available: false, Message: message, GeneratedAt: time.Now().UTC()}
 }
