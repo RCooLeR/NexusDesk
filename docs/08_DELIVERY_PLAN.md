@@ -482,7 +482,7 @@ Deliverables:
 Exit criteria:
 
 - AI can create a report artifact from selected source files
-- user can approve or reject text file creates and updates after reviewing a diff
+- user can approve or reject text/code file creates and updates after reviewing a diff, and binary writes after reviewing size/SHA-256 metadata
 - user can delete a selected workspace file only after backend validation and confirmation
 - user can rename or move a selected workspace file without overwriting existing files
 - generated artifacts are linked to conversations and source context: first sidecar provenance flow implemented

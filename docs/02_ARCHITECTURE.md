@@ -2,17 +2,24 @@
 
 ## Architectural Style
 
-Nexus Augentic Studio should be a modular local-first desktop studio application with a strong Go backend and a rich web-based frontend. The product shape is closer to an IDE/data studio than to a chatbot shell.
+Nexus Augentic Studio should be a modular local-first desktop studio application with a strong Go backend and a native desktop frontend. The product shape is closer to an IDE/data studio than to a chatbot shell.
 
-The implemented desktop slice currently contains:
+The project is now in a breaking migration from Wails/React to Fyne:
 
-- Wails desktop shell
+- `app-wails/` preserves the existing Wails/React implementation as the reference application.
+- `nexus-app/` is the new Fyne-native application.
+- The target root rule for `nexus-app/` is strict: keep `main.go`, `go.mod`, and `go.sum` at the module root; put application code under `internal/` by domain, service, platform, and UI responsibility.
+- New backend services should be ported into `nexus-app/internal/services/`, not copied into a giant app root.
+
+The preserved Wails reference slice currently contains:
+
+- Wails desktop shell, now under `app-wails/`
 - Go backend
 - React frontend
 - Monaco-backed source preview and text/code draft editing
 - JSON-backed local stores for recent workspaces, LLM settings, and chat history
 - OS-protected sidecar credential storage where available
-- safe workspace scanner, previewer, search, context-pack builder, and file operation boundaries
+- safe workspace scanner, previewer, search, context-pack builder, file operation boundaries, and bounded rollback snapshots for approved file mutations
 - CSV/XLSX dataset profiling, bounded CSV row queries with lightweight filter/order/limit syntax, saved query history, and CSV query exports
 - Markdown/CSV/SVG artifact writer with provenance sidecars, metadata lookup, source navigation, archive/delete actions, and artifact search
 - CSV chart preview/artifact flow for bar and line charts from category counts or numeric sums
@@ -35,11 +42,11 @@ The implemented desktop slice currently contains:
 - separate saved SQL snippets and lightweight row filters per dataset
 - SQL result Markdown artifacts with query, engine, row count, preview, and source citation metadata
 - read-only Compose parsing for Operations Studio
-- read-only Git status, branch, changed-file list, staged/unstaged grouping, staged diff, working-tree diff, selected-file diff loading, and approval-backed stage/unstage/hunk actions for Workbench
+- read-only Git status, branch, changed-file list, staged/unstaged grouping, staged diff, working-tree diff, selected-file diff loading, bounded history/blame context, and approval-backed stage/unstage/hunk actions for Workbench
 - configurable LLM gateway
 - OpenAI-compatible chat and streaming
 
-The architecture keeps clean seams for later:
+The Fyne migration keeps clean seams for later:
 
 - SQLite for app state
 - DuckDB for local analytics
@@ -57,13 +64,13 @@ The architecture keeps clean seams for later:
 
 ```mermaid
 flowchart LR
-  UI["Desktop Studio UI<br/>Project tree, editor tabs, data panels, chat, charts"] --> Bridge["Wails Bridge / App API"]
+  UI["Fyne Native Studio UI<br/>Project tree, editor tabs, data panels, chat, charts"] --> App["App Services"]
 
-  Bridge --> Workspace["Workspace Manager"]
-  Bridge --> Files["File Service"]
-  Bridge --> Agent["Agent Orchestrator"]
-  Bridge --> Artifacts["Artifact Manager"]
-  Bridge --> Settings["Settings Manager"]
+  App --> Workspace["Workspace Manager"]
+  App --> Files["File Service"]
+  App --> Agent["Agent Orchestrator"]
+  App --> Artifacts["Artifact Manager"]
+  App --> Settings["Settings Manager"]
 
   Workspace --> Scanner["Safe Scanner"]
   Files --> Previewer["Safe Preview / File Operations"]
@@ -110,9 +117,9 @@ Responsibilities:
 - support Windows, macOS, and Linux builds
 - keep app packaging separate from business logic
 
-The shell should be thin. Most behavior should live in backend modules and frontend components.
+The shell should be thin. Most behavior should live in backend services and focused native UI components.
 
-Current implementation note: `app/app.go` is still the Wails-facing application adapter. `app/workspace_service.go` now owns workspace open/refresh/search/read/file mutation/freshness orchestration, `app/artifact_service.go` owns core artifact report/list/metadata/archive/delete/compare orchestration, `app/dataset_service.go` owns profiling/query/SQL/connector/chart/summary/dependency rebuild orchestration, and `app/app_metadata.go` owns app-level metadata mirroring and metadata record orchestration. Future backend refactors should continue moving cohesive use cases out of the bridge file without changing Wails contracts casually.
+Current migration note: `app-wails/` keeps the old Wails adapter and services for reference. `nexus-app/internal/app/` owns only native app lifecycle and window setup. New code should place domain models in `nexus-app/internal/domain/`, UI-independent use cases in `nexus-app/internal/services/`, and Fyne widgets/layouts in `nexus-app/internal/ui/`.
 
 ### 2. Frontend
 
@@ -143,18 +150,18 @@ Current implementation note: generated Wails bindings are imported through `app/
 Review status as of the latest full project pass:
 
 - The product shape is still sound: a small primary rail for Workbench, Data & Analytics, Artifacts, and Settings, with the AI assistant always visible.
-- The backend has useful service facades for workspace, dataset, artifact, and git workflows, but `app/app.go` is still large and still owns chat/context, metadata orchestration, and several bridge-specific helpers.
-- The frontend has good feature panels and the Wails API adapter boundary is clean, but `NexusShell.tsx` remains the main state owner. SQLite connector caps/timeouts/cancellation and PostgreSQL profile test/inspect actions are now wired through that shell; further connector growth should move into a focused data/controller hook before adding notebooks or more engines.
+- The Wails backend has useful service facades for workspace, dataset, artifact, git, and agent-runtime workflows. Those should be ported capability-by-capability into `nexus-app/internal/services/`.
+- The React frontend has good workflow references, but it should not dictate the new native structure. Fyne UI should be rebuilt around native panels, menus, dialogs, tabs, jobs, and approval surfaces.
 - Git work is correctly manual on folder open, so opening a workspace should not launch external Git commands or desktop command windows.
 - Code AI actions now reuse the chat/artifact pipeline and route accepted single-file patch drafts through the existing safe write preview/apply boundary.
 - Slow or external future work, especially OCR, dump imports, connector pulls, deeper indexing, and long agent runs, must go through a job runner before it is attached to folder-open or route-load flows.
 
 Near-term architecture corrections:
 
-- Extract chat/context/agent state into a `useChatController` and a backend `ChatService`.
-- Extract artifact and dataset frontend state into controller hooks before adding more route depth.
-- Complete ArtifactService ownership for lineage/regeneration so artifact workflows do not drift back into `app/app.go`.
-- Add a durable job model and keep folder open limited to bounded first-render scanning.
+- Configure Windows CGO/Fyne toolchain and verify the native app runs.
+- Port safe workspace preview/write services from `app-wails` into `nexus-app/internal/services/workspace`.
+- Port Git, LLM/agent, data, artifact, and metadata services without recreating a bridge-shaped root package.
+- Add a durable job model before wiring slow indexing, OCR, dump imports, connector pulls, or long agent runs.
 - Promote SQLite metadata repositories to primary persistence once migration/recovery tests exist.
 
 ### 3. Workspace Manager

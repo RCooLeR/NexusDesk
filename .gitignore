@@ -37,6 +37,9 @@ coverage/
 frontend/dist/
 build/bin/
 app/build/bin/
+app-wails/build/bin/
+nexus-app/bin/
+nexus-app/build/
 
 # Local app data and generated artifacts
 .nexusdesk/

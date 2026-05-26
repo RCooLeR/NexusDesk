@@ -1,1218 +1,305 @@
 # Nexus Augentic Studio Tracker
 
-This tracker is the working execution plan for Nexus Augentic Studio. It separates implemented repository state from the long-term product plan so we do not confuse created code with intended architecture.
+This tracker is now centered on the Fyne migration. The Wails/React application is preserved as `app-wails/` and remains the reference implementation until feature parity is intentionally restored in `nexus-app/`.
 
-Related docs:
+## Current Decision
 
-- `README.md`: project overview
-- `docs/01_PRODUCT_VISION.md`: product direction
-- `docs/02_ARCHITECTURE.md`: system architecture
-- `docs/06_AI_AGENT_AND_LLM_STRATEGY.md`: agent and model contract
-- `docs/08_DELIVERY_PLAN.md`: delivery phases
-- `docs/09_DEVELOPER_EXPERIENCE.md`: local verification and ownership notes
-- `docs/10_STUDIO_ROADMAP.md`: long-range studio roadmap
+We are moving away from Wails because the product wants to become a native, local-first IDE/data/document/operations studio, and the browser bridge has been creating recurring friction:
 
-## Current Status
+- generated bindings and bridge glue make large refactors noisy;
+- Wails/webview lifecycle issues have caused blank or gray windows on folder open;
+- React shell state grew too large while backend use cases also stayed too close to `app.go`;
+- desktop behaviors such as dialogs, menus, layout, process handling, and long-running jobs should be first-class Go concerns;
+- a native Fyne app keeps the whole product in one Go module and makes modular internal packages easier to enforce.
 
-Nexus Augentic Studio is a runnable Wails desktop application with a Go backend, React/TypeScript frontend, local workspace scanning, file previews, editor tabs, safe file writes, configurable OpenAI-compatible LLM settings, streaming chat, first agent runtime, first read-only git status/diff visibility, first data workflows, first artifact/approval metadata, and visual smoke coverage.
-
-It is not yet a JetBrains-class IDE/data/analytics studio. Major planned capabilities are still missing: IDE-grade Workbench editing/refactoring, staged diff workflows, deeper database/data support, analytics connectors, document intelligence, operations tooling, and AI orchestration.
+This is a breaking migration, not an incremental UI refresh.
 
 ## Repository State
 
-- [x] Product and engineering docs live under `docs/`.
-- [x] Brand assets and source brand package live under `docs/brand/`.
-- [x] Long-range studio roadmap lives at `docs/10_STUDIO_ROADMAP.md`.
-- [x] Wails app scaffold lives under `app/`.
-- [x] Go backend lives under `app/`.
-- [x] React/TypeScript frontend lives under `app/frontend/`.
-- [x] Runtime brand assets live under `app/frontend/src/assets/brand/`.
-- [x] Product logos/app icon use the brand kit; UI glyphs use Font Awesome instead of repeated logos.
-- [x] Frontend generated Wails bindings are isolated behind `app/frontend/src/api/wailsClient.ts`.
-- [x] Shell resize and studio navigation state are extracted into focused hooks.
-- [x] App-level metadata mirror orchestration is split into `app/app_metadata.go`.
-- [x] Helper services placeholder lives under `services/`.
-- [x] Repository ignore rules exist in `.gitignore`.
-- [x] Workspace-local `.nexusdesk/` runtime state is ignored when this repository is opened as a test workspace.
+- [x] `app-wails/` preserves the existing Wails application and all current migration source code.
+- [x] `nexus-app/` is the new Fyne-native application root.
+- [x] `nexus-app/main.go` is the only executable root file.
+- [x] `nexus-app/go.mod` owns the new Fyne dependency graph.
+- [x] `nexus-app/internal/app/` owns desktop lifecycle and window setup.
+- [x] `nexus-app/internal/domain/` owns framework-free domain models.
+- [x] `nexus-app/internal/services/` owns UI-independent application services.
+- [x] `nexus-app/internal/ui/` owns Fyne views, layouts, widgets, and theme.
+- [x] `.gitignore` covers Wails legacy build output and new Fyne build output.
 
-## Verification Loop
+## Verification
 
-Run from `app/` unless noted:
+Current shell verification that does not require a Windows CGO compiler:
 
 ```powershell
-$env:NODE_OPTIONS='--use-system-ca --dns-result-order=ipv4first'
-go test ./...
-cd frontend
-npm.cmd run build
-npm.cmd run smoke
-npm.cmd run smoke:visual
-npm.cmd run smoke:gallery
-cd ..
-wails build
+cd nexus-app
+go test ./internal/domain ./internal/services/workspace ./internal/ui/shell ./internal/ui/theme
 ```
 
-Optional icon regeneration:
+Full Fyne app run/build requires CGO and a C compiler on Windows:
 
 ```powershell
-python scripts/generate_windows_icon.py
+cd nexus-app
+$env:CGO_ENABLED='1'
+go run .
 ```
 
-Local Ollama GPU verification from sibling `../Llm/`:
+The current Codex shell has `CGO_ENABLED=0`, so `go test ./...` reaches the Fyne OpenGL driver and fails until a compiler-backed CGO environment is enabled.
 
-```powershell
-docker compose exec ollama nvidia-smi
-docker compose logs ollama | Select-String "offloaded|model weights|cuda_v12"
-Invoke-RestMethod http://localhost:11434/api/ps | ConvertTo-Json -Depth 10
-```
+## Migration Principles
 
-## Phase 0: Product Baseline
+- Keep Wails code as read-only reference unless explicitly patching a critical source bug.
+- Port services by capability, not by copying giant files.
+- Avoid giant source files. Prefer packages, small files by responsibility, and tests near the code they protect.
+- Design code so external contributors can understand ownership quickly.
+- Domain and service packages must not import Fyne.
+- UI packages may import services and domain models, but business rules stay in services.
+- Long-running work must be represented as jobs before it is wired to UI events.
+- Opening a workspace must never start Git, Docker, OCR, connector pulls, dump imports, model calls, or shell commands.
+- Approval, rollback, audit, and path safety remain backend service responsibilities.
+- Do not chase feature parity blindly; rebuild only the workflows that fit the native product direction.
 
-Goal: define Nexus Augentic Studio as a local-first AI workbench with IDE, data, analytics, document, and operations capabilities.
+## Preserved Long-Term Functionality Backlog
 
-Status: mostly complete for planning.
+The Fyne migration must not drop product ambition. These planned capabilities remain in scope after the native foundation is stable.
 
-Steps:
+### Workbench / Code Studio
 
-- [x] Define product vision and target users.
-- [x] Define local-first/provider-agnostic/tool-mediated principles.
-- [x] Define simplified product navigation: Workbench, Data & Analytics, Artifacts, and Settings.
-- [x] Define safety principle: LLM requests tools; backend validates and runs tools.
-- [x] Define artifact-first output model.
-- [x] Add long-range studio roadmap.
-- [x] Keep roadmap updated after each major implementation batch.
+- [ ] Native IDE-style project tree with lazy loading, ignored-path controls, file status badges, context menus, and safe copy/move/delete/rename.
+- [ ] Multi-tab editor with pinned tabs, dirty state, close guards, split editor groups, breadcrumbs, outline, minimap, find, format, and go-to-definition where available.
+- [ ] Syntax highlighting strategy for common languages, Markdown, SQL, JSON/YAML/XML, Docker/Compose, logs, and config files.
+- [ ] Markdown source/rendered toggle.
+- [ ] Safe edit preview/apply/rollback for text, code, patches, appends, encoding changes, and allowed binary writes.
+- [ ] Workspace search over paths, text, symbols, artifacts, and chat history.
+- [ ] Problems panel for TODO/FIXME/HACK/BUG markers, merge conflicts, JSON errors, and later language diagnostics.
+- [ ] Git status, branch, changed-file tree, staged/unstaged groups, file diff, split/unified/diff-only views, hunk actions, history, blame, AI review, test suggestions, commit draft, and PR draft.
+- [ ] Task discovery and approved task runs for npm, Go, Docker Compose validation, and future project-specific tasks.
 
-Exit criteria:
+### Data & Analytics Studio
 
-- [x] Product docs explain why this is more than a chatbot.
-- [x] First useful foundation and long-range goals are separated.
-- [x] Risky operations require preview, approval, and audit in the design.
+- [ ] Dataset profiling for CSV, TSV, JSON, NDJSON, XLSX, Parquet metadata, logs, and database exports.
+- [ ] Bounded filter/query/order/limit workflows for table-like files.
+- [ ] DuckDB-capable SQL over datasets when the optional CGO-backed build is available.
+- [ ] SQL notebooks with multiple cells, saved notebooks, run history, reuse/rerun, explain output, and artifact export.
+- [ ] SQLite workspace database browser with schema, views, indexes, samples, row caps, query cancellation, saved queries, CSV/Markdown exports, and lineage.
+- [ ] External database profiles for PostgreSQL, MySQL/MariaDB, SQL Server, DuckDB files, and future engines with protected credentials.
+- [ ] Read-only SQL guard with strong comment/string handling, mutation blocking, caps, timeouts, cancellation, and redacted errors.
+- [ ] Database dump import jobs using temporary isolated environments before any direct mutation workflows exist.
+- [ ] Native table/grid strategy suitable for large result sets.
+- [ ] Chart preview/artifact generation for bar, line, and later richer dashboard visuals.
 
-## Phase 1: Project Shell Foundation
+### Analytics Connectors
 
-Goal: make the desktop app usable for opening a local workspace, browsing files, previewing content, editing safely, and chatting with selected context.
+- [ ] Google Analytics API connector and exported-data importer.
+- [ ] Ads platform exported-data importer and later API connectors.
+- [ ] CRM/contact-platform connectors for Eloqua, Mautic, and similar systems.
+- [ ] Connector job model for sync, cancellation, credentials, redaction, audit, and retry.
+- [ ] Cross-source analysis workflows that can cite rows, queries, connector runs, and generated artifacts.
 
-Status: implemented as a first useful foundation.
+### Documents Studio / Document Intelligence
 
-Steps:
+- [ ] Native preview and text extraction for TXT, Markdown, PDF, DOCX, XLSX, HTML, XML, images, and common office-like files.
+- [ ] OCR job pipeline for scanned PDFs/images.
+- [ ] Document set analysis with bounded context, source citations, summary artifacts, and lineage.
+- [ ] Report and presentation generation from document sets and data sources.
+- [ ] Comparison/version workflows for generated and source documents.
 
-- [x] Create Wails desktop app.
-- [x] Replace starter screen with Nexus Augentic Studio shell.
-- [x] Add branded rail, navigator, workbench, assistant, and bottom drawer layout.
-- [x] Keep whole app fixed to the window and move scrolling into panels.
-- [x] Add resizable workspace navigator.
-- [x] Add resizable assistant sidebar up to 50 percent of the window.
-- [x] Add resizable bottom drawer up to 70 percent of the window.
-- [x] Add workspace folder picker.
-- [x] Add recent workspace storage.
-- [x] Add workspace refresh and selected-file preservation.
-- [x] Add safe backend workspace scanning.
-- [x] Scan up to 10 workspace levels by default.
-- [x] Skip noisy folders, symlinks, deep paths, and oversized listings.
-- [x] Add expandable workspace tree.
-- [x] Preserve expanded directories across refreshes.
-- [x] Add workspace path/content search.
-- [x] Merge search results with artifact metadata and chat history snippets.
-- [x] Add quick-open palette for files, folders, and open tabs.
-- [x] Add command palette for workspace/editor/data/artifact/chat actions.
-- [x] Add route-driven main menu selection for Workbench, Data & Analytics, Artifacts, and Settings.
-- [x] Make main menu selections swap the primary workspace surface, not only the bottom drawer tab.
-- [x] Reuse existing drawer surfaces as temporary primary route surfaces until full studios land.
-- [x] Add first Workbench utility surface for editor session, project status, repository status placeholder, and work queues.
-- [x] Remove duplicated route-owned tabs from the bottom drawer; keep the drawer for Git, Approvals, and Activity.
-- [x] Run visual QA across Workbench, Data & Analytics, Artifacts, Settings, drawer tabs, command palette, and quick open; fix main-route panel overflow so route pages scroll internally instead of horizontally.
-- [x] Add shared styled UI button baseline so route panels do not fall back to native browser buttons.
-- [x] Add route-local tabs for Data & Analytics and Artifact Studio so dense workflows are grouped instead of stacked into one long panel.
-- [x] Add route-local Provider and Connectors tabs for Settings.
-- [x] Extract route-local tab rendering into a shared `SurfaceTabs` UI component.
-- [x] Make Workbench action buttons scroll inside the topbar on compact widths instead of clipping.
-- [x] Cover the real approval modal in visual smoke through a mocked delete-preview flow.
-- [x] Replace current tree visual treatment with denser IDE-style project tree foundation.
-- [x] Keep the bottom Git drawer command toolbar as a horizontal action rail so repository actions do not consume the changed-file/diff viewport.
-- [x] Tighten compact mobile shell chrome so the navigator exposes workspace/search controls instead of duplicating the full product lockup.
-- [x] Capture a full manual UI gallery from the production build for Workbench, route tabs, drawer tabs, overlays, modal, and compact mobile views.
-- [x] Add repeatable visual gallery contact sheet for route, drawer, modal, overlay, and compact mobile review.
-- [x] Close project-tree context menus on Escape so transient overlays do not leak across studio routes.
-- [x] Remove duplicate navigator product header and move brand identity into an expandable desktop main rail with the full horizontal logo.
-- [x] Add Font Awesome icons to the workspace action row, tree tools, and file context menu so the shell chrome reads closer to an IDE-grade desktop product.
+### AI Assistant And Agent
 
-Exit criteria:
+- [ ] Provider settings for Ollama/OpenAI-compatible endpoints, curated local model catalog, runtime context-window detection, response reserve, GPU diagnostics, and provider probes.
+- [ ] Streaming chat with selected files/directories/project context, token-budgeted history, source citation, weak-evidence warnings, retries, and answer comparison.
+- [ ] Local assistant memory and prompt profiles.
+- [ ] Agent runtime with plan updates, bounded observations, model-driven tool calls, no frontend iteration cap, emergency backend loop guard, and final-answer fallback when context is exhausted.
+- [ ] Unified tool registry and dispatcher for deterministic tools and model-requested tools.
+- [ ] Agent tools for read context, read changed files, git diff/history/blame, problems, tasks, artifacts, artifact lineage, datasets, SQL, documents, operations files, web fetch, safe writes, patches, copy/move/delete, rollback, and approved shell.
+- [ ] Live activity tail that shows the last one or two model/tool steps while preserving full trace in Activity.
 
-- [x] User can open a local workspace and select files without blanking the app.
-- [x] Large folder and malformed scan responses are guarded.
-- [x] Long trees scroll inside the navigator.
+### Artifacts And Provenance
 
-## Phase 2: File Preview And Editor Foundation
+- [ ] Markdown, CSV, SVG/chart, SQL result, scan report, task report, chat answer, and future presentation artifacts.
+- [ ] Provenance sidecars with source files, chat IDs, tool run IDs, dataset/query IDs, and generated timestamps.
+- [ ] Artifact browser with search, metadata, preview, compare, archive, delete, restore, and open-source navigation.
+- [ ] Artifact lineage graph import/export and stale-source warnings.
+- [ ] Regeneration workflows that reuse original source context and parameters.
 
-Goal: provide safe preview/edit workflows for common source, text, document, image, and data files.
+### Operations Studio
 
-Status: implemented as a first foundation.
+- [ ] Read-only Dockerfile, Compose, env/config, script, and log inspection.
+- [ ] Compose service topology and config validation.
+- [ ] Container/image/log workflows only after approval policy and job model are mature.
+- [ ] Runbook artifacts and operations summaries with source citations.
+- [ ] Strict separation between read-only inspection and mutating Docker/system actions.
 
-Steps:
+### Security, Access, And Audit
 
-- [x] Add rooted file preview boundary.
-- [x] Refuse unsafe traversal and unsupported binary content.
-- [x] Decode UTF-8 BOM, UTF-16, BOM-less UTF-16, and Windows-1251 text.
-- [x] Add preview metadata: type, encoding, size, truncation.
-- [x] Add image previews as bounded data URLs.
-- [x] Add PDF preview as bounded data URL.
-- [x] Add PDF embedded text extraction by page when available.
-- [x] Add DOCX body text extraction when readable.
-- [x] Add CSV bounded table preview.
-- [x] Add CSV column profiles.
-- [x] Add larger capped CSV profile sample.
-- [x] Add read-only Monaco preview for text/code.
-- [x] Add Monaco edit surface for text/code drafts.
-- [x] Add closeable editor tabs.
-- [x] Add per-tab edit drafts.
-- [x] Add dirty tab markers.
-- [x] Add dirty-close guard.
-- [x] Add find-in-file with Monaco decorations.
-- [x] Add Markdown source/rendered toggle.
-- [x] Add safe new file draft creation.
-- [x] Add safe text/code edit preview with diff.
-- [x] Add safe apply flow for file writes.
-- [x] Decouple write content size from inline diff rendering so known large text files can still be overwritten through the safe write boundary.
-- [x] Replace line-index write diffs with LCS-based diffs so inserted/deleted lines do not make every following line look rewritten.
-- [x] Add append-only backend write path for agent append operations so large files are not truncated by bounded preview reads.
-- [x] Add safe file delete.
-- [x] Add safe rename/move.
-- [x] Add Ctrl+S, Ctrl+F, Ctrl+W, Ctrl+Tab, and Ctrl+Shift+Tab editor shortcuts.
-- [x] Add split editor groups.
-- [x] Add pinned tabs.
-- [x] Add breadcrumbs.
-- [x] Add outline/symbol navigation.
-- [x] Add minimap toggle.
-- [x] Add go-to-definition hook where language services exist.
-- [x] Add formatting hooks.
-- [x] Add file encoding selector and save-as-encoding support.
+- [ ] Native approval queue and modal flows for high-risk actions.
+- [ ] Full-access project policy with clear scope, expiration, and visible status.
+- [ ] Path-root enforcement, traversal protection, ignored-state protection, and `.nexusdesk` protection.
+- [ ] Rollback snapshots for approved mutations where practical.
+- [ ] OS-protected secrets on Windows, macOS Keychain, and Linux Secret Service/libsecret.
+- [ ] Append-only audit records for approvals, tool runs, file changes, tasks, connector queries, jobs, and artifacts.
+- [ ] Export/backup flows for local-first data.
+
+### Jobs, Persistence, And Observability
+
+- [ ] SQLite-first metadata store for chats, approvals, artifacts, tool runs, jobs, SQL runs, dataset dependencies, and search metadata.
+- [ ] JSON compatibility import from Wails-era workspaces.
+- [ ] Durable job model with progress, log tail, cancellation, retry, outputs, and artifact links.
+- [ ] Folder open remains cheap: no Git, Docker, OCR, connector pulls, dump imports, model calls, shell commands, or deep indexing.
+- [ ] Diagnostics panel for app logs, provider status, GPU/model status, metadata health, and job history.
+
+### Extensibility And Community
+
+- [ ] Package ownership docs for every major `internal/` area.
+- [ ] Contributor setup guide, coding standards, tests, and architecture decision records.
+- [ ] Plugin/MCP strategy after native core tools are stable.
+- [ ] Stable service interfaces for community-contributed connectors and document parsers.
+- [ ] CI matrix for Windows first, then Linux/macOS once platform secrets and Fyne builds are ready.
+
+## Phase 0: Migration Baseline
+
+Goal: preserve the old app, establish the native shell, and make the new architecture explicit.
+
+- [x] Rename `app/` to `app-wails/`.
+- [x] Create `nexus-app/` with Fyne dependency and native app entrypoint.
+- [x] Add first native shell layout: rail, toolbar, navigator, editor tabs, assistant panel, bottom activity/git/approval tabs.
+- [x] Add first framework-free workspace domain model.
+- [x] Add first lazy workspace listing service with entry cap, ignored folders, symlink skip, traversal protection, and unreadable tracking.
+- [x] Document CGO/Fyne toolchain requirement.
+- [ ] Install/configure a Windows CGO compiler and verify `go run .`.
+- [ ] Add app icon and brand assets from `docs/brand/`.
+- [ ] Add native main menu: File, Edit, View, Navigate, Tools, Help.
+- [ ] Add keyboard shortcut registry for common IDE actions.
 
 Exit criteria:
 
-- [x] User can preview and safely edit text/code files.
-- [x] File writes route through diff preview and rooted backend validation.
+- [ ] `nexus-app` opens as a native Fyne desktop window on the workstation.
+- [ ] The old Wails implementation is still available as reference.
+- [ ] New code follows the root-thin/internal-structured rule.
 
-## Phase 3: LLM, Chat, Context, And Artifacts
+## Phase 1: Native Workbench Foundation
 
-Goal: make the assistant useful with selected workspace context while keeping provenance and safety.
+Goal: recreate the useful local project workbench without Wails or React.
 
-Status: implemented as a first foundation.
-
-Steps:
-
-- [x] Add local LLM settings storage.
-- [x] Store API keys in sidecar credential blob protected by OS where available.
-- [x] Redact API keys before returning settings to UI.
-- [x] Add OpenAI-compatible `/models` connection probe.
-- [x] Infer capability hints from model IDs.
-- [x] Add curated local model dropdown capped at 26B.
-- [x] Verify `rcooler-ollama` endpoint at `localhost:11434`.
-- [x] Document CUDA 12 Ollama runner pin.
-- [x] Add Ollama runtime diagnostics for model, endpoint, and GPU/VRAM offload.
-- [x] Add non-streaming chat.
-- [x] Add streaming chat with Wails events.
-- [x] Resolve redacted LLM API-key references before backend agent model calls.
-- [x] Quote workspace context with sentinel delimiters and escape context-provided fences/sentinels before provider calls.
-- [x] Preserve nested JSON object/array action arguments as JSON strings when parsing agent tool calls.
-- [x] Persist chat history per workspace.
-- [x] Send recent token-budgeted user/assistant chat history turns to the model before the current prompt.
-- [x] Use distinct user/assistant timestamps so streamed deltas do not overwrite prompts.
-- [x] Add readable chat panel with Markdown-style rendering.
-- [x] Add OpenAI-style composer with model, Ask/Agent mode, and submit controls.
-- [x] Send selected text/code context.
-- [x] Send extracted PDF text context.
-- [x] Send DOCX text context.
-- [x] Send structured CSV profile/sample context.
-- [x] Add pinned multi-file context packs.
-- [x] Add individual context pack removal.
-- [x] Add backend preview for context packs.
-- [x] Expand selected directories and workspace root into bounded context packs.
-- [x] Add model context-window and response-reserve settings.
-- [x] Add shared curated model catalog that maxes context/reserve when a model is selected.
-- [x] Prefer loaded Ollama runtime `context_length` over catalog defaults when probing succeeds.
-- [x] Scale context-pack budget from configured model context window.
-- [x] Send `num_ctx` for local/Ollama-compatible chat requests.
-- [x] Send `num_predict` and OpenAI-compatible `max_tokens` from the configured response reserve.
-- [x] Add realtime Activity Log events for chat request, stream, first token, completion, and failures.
-- [x] Mark bounded agent runs that hit the tool iteration budget and force a finalization pass instead of showing the raw iteration-limit fallback as the answer.
-- [x] Replace the empty agent placeholder with the last one or two live model/tool events while `RunAgent` is still executing, then replace that activity text with the final answer.
-- [x] Add Explain selected context action.
-- [x] Add Summarize selected context action.
-- [x] Save summaries as Markdown artifacts.
-- [x] Save latest assistant answer as Markdown artifact.
-- [x] Include source citations in assistant answers and saved artifacts.
-- [x] Warn when cited source paths changed.
-- [x] Show the latest agent activity in chat while keeping the detailed run trace in Activity/tool-run records.
-- [x] Constrain approved model-directed shell execution to argv-parsed allow-listed commands instead of shell-interpreted strings.
-- [x] Add model comparison/retry.
-- [x] Add weak-evidence and missing-context UI.
-- [x] Add assistant memory and prompt profiles.
+- [x] Add folder open flow using native Fyne dialog.
+- [x] Render first workspace tree from the service scan.
+- [x] Add lazy child loading for large workspace trees.
+- [x] Add first native file preview service with rooted text preview, UTF-8/UTF-8 BOM/UTF-16/Windows-1251 decoding, binary detection, traversal protection, and size cap.
+- [x] Add first native editor tab lifecycle with close cleanup and same-file tab reuse.
+- [ ] Add dirty/pinned tab states.
+- [ ] Add text/code editor widget decision: Fyne text editor first, Scintilla/LSP-backed editor later if needed.
+- [ ] Add Markdown source/rendered toggle.
+- [ ] Add image/PDF/document preview surfaces.
+- [ ] Add safe write preview/apply/rollback service port.
+- [ ] Add file create/delete/rename/move/copy operations with approval where needed.
+- [ ] Add workspace search service and native result panel.
+- [ ] Add Problems panel from the bounded marker/JSON scanner.
 
 Exit criteria:
 
-- [x] User can chat with local/remote OpenAI-compatible provider using selected safe context.
-- [x] Generated answers can become artifacts with provenance.
+- [ ] A user can open a real project, browse files, preview content, and safely edit text/code files.
 
-## Phase 4: IDE-Grade Workbench
+## Phase 2: Native Assistant And Agent
 
-Goal: make Workbench feel and work like a serious IDE rather than a file preview shell.
+Goal: port the LLM and agent runtime without recreating the Wails bridge problems.
 
-Status: planned.
-
-Step 4.1: Main code route
-
-- [x] Add first-class Workbench route in primary menu.
-- [x] Collapse visible rail to implemented top-level surfaces instead of roadmap-only studios.
-- [x] Create first Workbench utility layout.
-- [x] Persist route, drawer, and panel layout state independently from transient bottom drawer state.
-- [x] Add Workbench toolbar and command set.
-- [x] Keep editor surfaces available through the main route and git diff review available through the bottom drawer.
-
-Step 4.2: Project tree
-
-- [x] Replace current navigator feel with IDE project tree presentation.
-- [x] Add indentation guides.
-- [x] Add disclosure arrows.
-- [x] Add file/folder icons by type.
-- [x] Add selected/current file reveal.
-- [x] Add collapse all and expand selected path.
-- [x] Add context menu shell for new file, new folder, rename, move, delete, copy path, reveal in explorer.
-- [x] Add cut/copy/paste file operations with preview for mutations.
-- [x] Add ignored-file controls.
-- [x] Add drag/drop intent design before implementing mutation.
-
-Step 4.3: Git integration
-
-- [x] Detect git repository root.
-- [x] Show current branch.
-- [x] Show dirty summary.
-- [x] Avoid running Git automatically on workspace open.
-- [x] Normalize unavailable Git responses so null changed-file arrays cannot blank the shell.
-- [x] Hide external Git command windows on Windows desktop builds.
-- [x] Show file status badges in tree.
-- [x] Add changed-files panel.
-- [x] Render Git changed files as a directory tree instead of a flat repeated path list.
-- [x] Add working tree diff.
-- [x] Add staged diff.
-- [x] Move Git/working-tree diff review into a dedicated bottom drawer tab.
-- [x] Add side-by-side diff viewer.
-- [x] Add inline diff viewer.
-- [x] Add diff-only side-by-side viewer for changed lines.
-- [x] Add hunk navigation.
-- [x] Replace text hunk controls with compact IDE-style icon controls.
-- [x] Add stage/unstage file.
-- [x] Add stage/unstage hunk.
-- [x] Add revert hunk with destructive approval.
-- [x] Add AI diff summary.
-- [x] Add AI commit message draft.
-
-Step 4.4: Search, problems, and tasks
-
-- [x] Add path search panel.
-- [x] Add text search panel.
-- [x] Add regex search.
-- [x] Add replace preview.
-- [x] Add symbol search where language data exists.
-- [x] Add diagnostics/problems panel.
-- [x] Detect package scripts.
-- [x] Detect Go tests.
-- [x] Detect npm scripts.
-- [x] Detect Docker Compose tasks.
-- [x] Run tasks with captured output.
-- [x] Save task/test runs as artifacts or metadata.
-
-Step 4.5: Code AI actions
-
-- [x] Review current file.
-- [x] Review git diff.
-- [x] Generate tests for selected file/diff.
-- [x] Propose patch with diff preview.
-- [x] Apply accepted patch through safe write boundary.
-- [x] Explain dependency graph.
-- [x] Create PR summary draft.
-- [x] Create PR description draft.
+- [ ] Port settings store and secret handling.
+- [ ] Port OpenAI-compatible/Ollama client.
+- [ ] Add native provider/model settings page.
+- [ ] Add streaming assistant panel using Go channels/events instead of Wails events.
+- [ ] Port context-pack builder.
+- [ ] Port agent runtime as an internal service, not a UI callback.
+- [ ] Unify registered tools and agent tools behind one dispatcher.
+- [ ] Add approval queue UI and full-access policy UI.
+- [ ] Add rollback browser for model-authored file mutations.
+- [ ] Add live activity tail with final-answer replacement behavior.
 
 Exit criteria:
 
-- [x] Workbench can be used for day-to-day project navigation and diff review.
-- [x] AI code changes remain previewed, reviewable, and auditable.
+- [ ] The assistant can answer with selected workspace context and can request approved tools safely.
 
-## Phase 5: Data & Analytics Expansion
+## Phase 3: Git And IDE Operations
 
-Goal: make Data & Analytics a real local data workbench for files, databases, dumps, notebooks, marketing/CRM exports, profiling, charts, and LLM-assisted research.
+Goal: make Workbench credible as an IDE-like surface.
 
-Status: first CSV/TSV/JSON/NDJSON/SQLite foundation implemented; deeper work planned.
-
-Implemented:
-
-- [x] CSV table preview.
-- [x] CSV column profiles.
-- [x] TSV, JSON, and NDJSON table previews.
-- [x] TSV, JSON, and NDJSON column profiles.
-- [x] Parquet footer metadata inspection.
-- [x] Log dataset profiling.
-- [x] Dataset profile persistence under `.nexusdesk/datasets/`.
-- [x] Bounded CSV/TSV/JSON/NDJSON query/filter flow.
-- [x] Numeric comparisons, contains, limit, and order by.
-- [x] Saved lightweight row filters.
-- [x] Saved read-only SQL snippets.
-- [x] SQL run history.
-- [x] CSV query export artifacts.
-- [x] SVG chart artifacts.
-- [x] Dataset summary artifacts.
-- [x] DuckDB-compatible SQL surface with bounded fallback.
-- [x] Data & Analytics route-local tabs for Sources, Operations, and Metadata.
-- [x] CGO-gated DuckDB driver path behind `duckdb` build tag.
-- [x] Read-only SQLite workspace connector.
-- [x] SQLite connector metadata inspection.
-- [x] SQLite mutation keyword blocking and single-statement validation.
-- [x] Make read-only SQL mutation keyword checks ignore comments and string literals to avoid false positives.
-- [x] Connector profile storage with protected credential references.
-- [x] Dataset dependencies and rebuild actions.
-
-Step 5.1: File dataset coverage
-
-- [x] Add TSV loader.
-- [x] Add richer XLSX workbook inspector for sheets, formulas, named ranges, pivots, and table ranges.
-- [x] Add legacy binary XLS workbook inspector or explicit conversion/import guidance.
-- [x] Add JSON loader.
-- [x] Add NDJSON loader.
-- [x] Add Parquet inspection.
-- [x] Add SQLite file dataset cards separate from connector sessions.
-- [x] Add log dataset profiling.
-- [x] Add compressed export detection.
-- [x] Add SQL dump file classification.
-- [x] Add data source cards for each detected dataset.
-
-Step 5.2: Database connector framework
-
-- [x] Define connector interface and metadata model.
-- [x] Add connection profiles with secure credential references.
-- [x] Expand SQLite schema browser.
-- [x] Add PostgreSQL read-only connector.
-- [x] Add MySQL/MariaDB read-only connector.
-- [x] Add SQL Server read-only connector.
-- [x] Add DuckDB connector.
-- [x] Add SQLite query cancellation plumbing.
-- [x] Add SQLite result cap and timeout controls.
-- [x] Add connector error redaction helper for SQLite connector failures.
-- [x] Add first external connector profile test, inspect, and guarded query methods for PostgreSQL.
-- [x] Add external connector profile test, inspect, and guarded query methods for MySQL/MariaDB.
-- [x] Add external connector profile test, inspect, and guarded query methods for SQL Server.
-- [x] Add DuckDB profile validation, read-only DSN construction, default build guard, and CGO-tagged test/inspect/query runner.
-- [x] Generalize query cancellation across external database connectors.
-- [x] Generalize result caps and timeout controls across external database connectors.
-- [x] Generalize connector error redaction across external database connectors.
-- [x] Add connector profile query request IDs and app-level cancellation registry for PostgreSQL, MySQL/MariaDB, SQL Server, and DuckDB.
-
-Step 5.3: Schema and relationship explorer
-
-- [x] Show SQLite database file schema objects in the connector inspector.
-- [x] Show SQLite tables and views.
-- [x] Show SQLite columns, types, nullable, defaults, and primary-key markers.
-- [x] Show SQLite indexes.
-- [x] Show SQLite row counts and capped table samples.
-- [x] Generalize database/schema navigation for external connectors.
-- [x] Generalize tables and views for external connectors.
-- [x] Generalize columns, types, nullable, defaults, indexes, keys, row counts, and samples for external connectors.
-- [x] Add capped sample rows for PostgreSQL, MySQL/MariaDB, SQL Server, and DuckDB profile inspections, with DuckDB row counts when built behind the optional driver tag.
-- [x] Extract reusable connector metadata browser and use it for SQLite files plus saved PostgreSQL/MySQL/MariaDB/SQL Server/DuckDB profile inspections.
-- [x] Infer first SQLite relationships where metadata is absent via conservative `*_id` hints.
-- [x] Generate ERD-like relationship view.
-- [x] Add clickable connector relationship map with selected-object highlighting, table/view nodes, primary-key hints, and FK/inferred link rows.
-- [x] Let AI explain selected SQLite schema objects with inspected columns, indexes, samples, and relationship hints as citations.
-- [x] Generalize relationship inference and AI schema explanation across external connectors.
-- [x] Reuse the connector schema explanation prompt for saved PostgreSQL/MySQL/MariaDB/SQL Server/DuckDB profile metadata from Settings.
-
-Step 5.4: Query notebook
-
-- [x] Add multi-cell SQL notebook UI.
-- [x] Add first dataset SQL notebook shell with multiple local cells, active-cell editing, add/delete cell controls, saved snippet loading, and active-cell execution through the existing bounded SQL runner.
-- [x] Add result tabs.
-- [x] Add SQL notebook result tabs for rows, run summary, and SQL history/lineage.
-- [x] Add chart cells.
-- [x] Add first local chart cell type that embeds bounded dataset chart preview/create controls inside the SQL notebook.
-- [x] Add explain-plan display where connector supports it.
-- [x] Add SQL notebook Plan tab backed by dataset SQL plan lines: native DuckDB `EXPLAIN` when available, deterministic fallback plan lines otherwise.
-- [x] Add saved notebooks.
-- [x] Add per-dataset SQL notebook save/load flow backed by `.nexusdesk/datasets/notebooks.json`, including SQL/chart cell persistence and lineage dependency records.
-- [x] Add query history browser.
-- [x] Add SQL notebook History browser with status/text filters, selected-run detail, and Use SQL / Run Again actions backed by persisted SQL run records.
-- [ ] Add visible result caps and timeout controls.
-- [ ] Add export to CSV.
-- [ ] Add export to Markdown report.
-- [ ] Add export to Parquet when supported.
-- [ ] Add query-to-artifact lineage.
-
-Step 5.4b: Data profiling and cleaning
-
-- [ ] Add missing-value profiles.
-- [ ] Add distinct-count profiles.
-- [ ] Add distribution charts.
-- [ ] Add range and date detection.
-- [ ] Add outlier hints.
-- [ ] Add duplicate detection.
-- [ ] Add primary-key candidate detection.
-- [ ] Add join suggestions.
-- [ ] Add preview transformations.
-- [ ] Add derived columns.
-- [ ] Add date normalization.
-- [ ] Add split/merge column actions.
-- [ ] Add dedupe preview.
-- [ ] Write cleaned artifacts only after approval.
-
-Step 5.5: Temporary dump import sandboxes
-
-- [ ] Detect `.sql`, `.dump`, `.bak`, `.gz`, `.zip`, and vendor-specific dumps.
-- [ ] Ask user to create temporary import sandbox.
-- [ ] Choose matching database image when possible.
-- [ ] Start isolated Docker Compose sandbox.
-- [ ] Import dump with logs and progress.
-- [ ] Enforce storage and runtime limits.
-- [ ] Mark sandbox read-only for analysis.
-- [ ] Destroy sandbox on request.
-- [ ] Persist sandbox metadata only by explicit choice.
-- [ ] Record all operations in approval/audit log.
-
-Step 5.6: LLM data research
-
-- [ ] Let assistant create analysis plan from schema/files.
-- [ ] Let assistant propose read-only queries.
-- [ ] Run bounded queries after user approval/policy.
-- [ ] Cite rows, tables, queries, and connector runs.
-- [ ] Generate charts from query results.
-- [ ] Generate reproducible Markdown reports.
-- [ ] Mark stale reports when source data changes.
+- [ ] Port `app-wails/internal/gitservice` into `nexus-app/internal/services/git`.
+- [ ] Add manual-only Git refresh.
+- [ ] Add changed-file tree grouped by directories.
+- [ ] Add unified/split/diff-only diff views.
+- [ ] Add hunk selection and approval-backed hunk actions.
+- [ ] Add AI diff summary and commit draft once assistant service exists.
+- [ ] Add task discovery and safe task-run service.
+- [ ] Add native activity/job log for task output.
 
 Exit criteria:
 
-- [ ] User can inspect and query real files, databases, and imported dumps safely.
-- [ ] AI research over data is reproducible and source-cited.
+- [ ] Workbench can inspect repository state and run approved project tasks without command-window flashes.
 
-## Phase 6: Analytics Capabilities
+## Phase 4: Data And Analytics
 
-Goal: make Nexus Augentic Studio useful for marketing, traffic, CRM, and funnel analysis from APIs and exports.
+Goal: rebuild Data & Analytics as native data tooling, not a crowded web panel.
 
-Status: planned.
-
-Step 6.1: Studio route and data model
-
-- [x] Fold analytics planning into Data & Analytics instead of exposing a separate top-level route.
-- [ ] Add native analytics connector/layout sections inside Data & Analytics.
-- [ ] Define analytics source, connector run, metric, dimension, segment, and dashboard models.
-- [ ] Bind analytics runs to workspace metadata.
-- [ ] Add date range and segment selectors.
-
-Step 6.2: Connectors
-
-- [ ] Add GA4 connector.
-- [ ] Add Google Search Console connector.
-- [ ] Add Google Ads connector.
-- [ ] Add Meta Ads connector.
-- [ ] Add Microsoft Ads connector.
-- [ ] Add LinkedIn Ads connector.
-- [ ] Add HubSpot connector.
-- [ ] Add Salesforce connector.
-- [ ] Add Eloqua connector.
-- [ ] Add Mautic connector.
-- [ ] Add CSV/export equivalent import profiles for each connector family.
-
-Step 6.3: Credential and policy layer
-
-- [ ] Store connector credentials securely.
-- [ ] Show scopes before connection.
-- [ ] Support token refresh.
-- [ ] Support connector test.
-- [ ] Bind credentials to workspace.
-- [ ] Add read-only connector policy by default.
-- [ ] Log connector pulls.
-
-Step 6.4: Analytics surfaces
-
-- [ ] Acquisition dashboard.
-- [ ] Channel mix dashboard.
-- [ ] Campaign ROI dashboard.
-- [ ] Funnel dashboard.
-- [ ] Cohort/retention dashboard.
-- [ ] Attribution dashboard.
-- [ ] SEO/content dashboard.
-- [ ] Landing-page performance dashboard.
-- [ ] Lead quality dashboard.
-- [ ] Anomaly detection view.
-- [ ] Saved dashboard widgets.
-- [ ] Dashboard filters and date ranges.
-- [ ] Segment comparison.
-- [ ] Narrative report blocks attached to charts.
-
-Step 6.5: AI analytics workflows
-
-- [ ] Explain performance changes.
-- [ ] Find anomalies.
-- [ ] Compare campaigns.
-- [ ] Summarize channel mix.
-- [ ] Generate client-ready report.
-- [ ] Generate internal action plan.
-- [ ] Cite metrics, connector runs, and source rows.
+- [ ] Port dataset profiling for CSV, TSV, JSON, NDJSON, XLSX, Parquet metadata, and logs.
+- [ ] Port bounded row query/filter/order service.
+- [ ] Port SQL notebook model.
+- [ ] Port SQLite workspace connector.
+- [ ] Port external DB profile storage and read-only query guards.
+- [ ] Add native table/grid widget strategy.
+- [ ] Add chart preview/artifact generation.
+- [ ] Add dump import job design before any Docker/database imports.
 
 Exit criteria:
 
-- [ ] User can connect or import at least one analytics data source.
-- [ ] Analytics capabilities can produce cited charts and narrative reports.
+- [ ] A user can inspect local datasets and run bounded read-only analysis workflows.
 
-## Phase 7: Document Capabilities
+## Phase 5: Artifacts, Documents, And Operations
 
-Goal: make documents first-class source material and support generated reports, briefs, and presentations.
+Goal: restore generated-output workflows with provenance and native inspection.
 
-Status: first PDF/DOCX text extraction exists; studio planned.
-
-Implemented:
-
-- [x] PDF preview and embedded text extraction.
-- [x] DOCX body text extraction.
-- [x] Markdown source/rendered preview.
-- [x] Text preview and encoding support.
-- [x] Summary-to-Markdown artifact flow.
-
-Step 7.1: Studio route and document library
-
-- [x] Keep document workflows contextual instead of exposing a separate top-level route.
-- [ ] Add native document library/extraction sections when the workflow depth justifies it.
-- [ ] Add document library view.
-- [ ] Add document set/folder grouping.
-- [ ] Add document metadata panel.
-- [ ] Track extraction status and freshness.
-
-Step 7.2: Extraction coverage
-
-- [ ] Improve PDF text extraction.
-- [ ] Add OCR fallback for image PDFs.
-- [ ] Extract DOCX headings and tables.
-- [ ] Extract document images where practical.
-- [ ] Extract footnotes where practical.
-- [ ] Extract DOCX comments where possible.
-- [ ] Extract tracked changes where possible.
-- [ ] Extract page references and section anchors.
-- [ ] Extract document metadata.
-- [ ] Add HTML/RTF extraction.
-- [ ] Add PPTX text extraction.
-- [ ] Add image OCR.
-- [ ] Extract spreadsheet text/tables into document context.
-
-Step 7.3: Document analysis workflows
-
-- [ ] Summarize document.
-- [ ] Summarize document set.
-- [ ] Compare two documents.
-- [ ] Extract action items.
-- [ ] Extract decisions.
-- [ ] Extract risks.
-- [ ] Extract dates/entities.
-- [ ] Detect contradictions across documents.
-- [ ] Generate source-cited research pack.
-
-Step 7.4: Generated document outputs
-
-- [ ] Generate Markdown report.
-- [ ] Generate DOCX brief.
-- [ ] Generate PPTX presentation.
-- [ ] Generate comparison matrix.
-- [ ] Generate checklist.
-- [ ] Store document output provenance.
-- [ ] Regenerate stale document outputs.
-
-Step 7.5: Review workflows
-
-- [ ] Add redline/change review view.
-- [ ] Add document comments view.
-- [ ] Add confidence and coverage indicators for generated analysis.
-- [ ] Add reusable document/report templates.
-- [ ] Add page/section citation inspector.
+- [ ] Port artifact writer, metadata, search, compare, archive, delete, and lineage.
+- [ ] Add native artifact browser.
+- [ ] Add document preview/extraction for Markdown, TXT, PDF, DOCX, XLSX, HTML/XML.
+- [ ] Add presentation/report generation targets after artifact lineage is stable.
+- [ ] Add read-only operations scanners for Dockerfiles, Compose, env/config/logs.
+- [ ] Add job-based OCR/document extraction before heavy parsing.
 
 Exit criteria:
 
-- [ ] User can analyze a folder of documents and generate cited reports/decks.
+- [ ] Generated outputs are traceable to sources, chats, tool runs, and data queries.
 
-## Phase 8: Operations Capabilities
+## Phase 6: Job System And Persistence
 
-Goal: make local and Docker operations inspectable, explainable, and safe.
+Goal: make slow and durable workflows reliable.
 
-Status: first Compose parser exists; studio planned.
-
-Implemented:
-
-- [x] Operations inspector parses Docker Compose files.
-- [x] Compose services, images, ports, volumes, and dependencies are displayed.
-- [x] Backend tool registry includes first operations inspect descriptors.
-
-Step 8.1: Studio route and read-only inventory
-
-- [x] Keep operations workflows contextual instead of exposing a separate top-level route.
-- [ ] Add native operations layout sections when the workflow depth justifies it.
-- [ ] List Docker containers.
-- [ ] List Docker images.
-- [ ] List Docker volumes.
-- [ ] List Docker networks.
-- [ ] List Compose projects.
-- [ ] Inspect service health.
-- [ ] Show ports and mounts.
-- [ ] Show environment with secret redaction.
-- [ ] Show Docker/Compose resource usage.
-- [ ] List local processes/services where policy allows.
-
-Step 8.2: Logs and diagnostics
-
-- [ ] Add log viewer.
-- [ ] Add tail mode.
-- [ ] Add log search/filter.
-- [ ] Group stack traces.
-- [ ] Summarize errors.
-- [ ] Link logs to services and configs.
-- [ ] Save incident report artifact.
-
-Step 8.3: Local services
-
-- [ ] Add port scanner where policy allows.
-- [ ] Add endpoint health checks.
-- [ ] Add local config discovery.
-- [ ] Add `.env` inspection with redaction.
-- [ ] Add runbook generation.
-
-Step 8.4: Safe operations
-
-- [ ] Preview Docker start/stop/restart/build/pull/up/down/exec commands.
-- [ ] Show environment preview before mutating operations.
-- [ ] Require approval for every mutating Docker action.
-- [ ] Require approval for shell execution.
-- [ ] Capture stdout/stderr logs.
-- [ ] Record operations in approval/audit metadata.
-- [ ] Generate Dockerfile artifacts.
-- [ ] Generate Compose artifacts.
-- [ ] Generate `.env.example`.
-- [ ] Generate health-check scripts.
-- [ ] Generate deployment notes.
-- [ ] Generate troubleshooting guides.
-
-Step 8.5: AI ops workflows
-
-- [ ] Explain Compose topology.
-- [ ] Diagnose failed service.
-- [ ] Compare environment files.
-- [ ] Propose minimal safe fix.
-- [ ] Generate command plan.
-- [ ] Summarize logs with citations.
+- [ ] Define job model: id, kind, root, status, progress, log tail, cancel, timestamps, outputs.
+- [ ] Add SQLite primary metadata store in `nexus-app`.
+- [ ] Add repositories for chats, approvals, artifacts, tool runs, jobs, SQL runs, and dataset dependencies.
+- [ ] Migrate/import relevant `.nexusdesk` data from Wails-era workspaces.
+- [ ] Route long indexing, OCR, dump imports, connector pulls, report generation, and long agent runs through jobs.
+- [ ] Add native job monitor with cancel/retry/open-output actions.
 
 Exit criteria:
 
-- [ ] User can inspect local/container operations and approve safe mutations with audit logs.
+- [ ] Slow work is cancelable, inspectable, and never blocks folder open.
 
-## Phase 9: AI Assistant Orchestration
+## Phase 7: Retire Wails
 
-Goal: promote AI Assistant from chat panel to cross-studio orchestration layer.
+Goal: remove the old app only after the Fyne app earns it.
 
-Status: first chat, context packs, and backend ReAct runtime exist; orchestration planned.
-
-Implemented:
-
-- [x] OpenAI-compatible chat.
-- [x] Streaming chat.
-- [x] Context packs for files/directories/workspace root.
-- [x] Backend ReAct runtime under `app/internal/agent/`.
-- [x] Wails `RunAgent` binding.
-- [x] First safe Agent run button.
-- [x] First tool plan UI, surfaced through the always-visible AI Assistant sidebar.
-- [x] Tool run persistence.
-
-Step 9.1: Assistant workspace
-
-- [x] Keep right sidebar as the always-visible quick assistant output.
-- [ ] Add optional native long-run assistant workspace when multi-step work outgrows the sidebar.
-- [ ] Add full assistant workspace for long runs.
-- [ ] Add run history.
-- [ ] Add thread/session browser.
-- [ ] Add model/provider status panel.
-- [ ] Add model suitability hints for selected task/context.
-- [ ] Add tool-calling support indicator.
-
-Step 9.2: Context sources
-
-- [ ] Add git diff context.
-- [ ] Add changed-files context.
-- [ ] Add database schema context.
-- [ ] Add query result context.
-- [ ] Add analytics connector run context.
-- [ ] Add document set context.
-- [ ] Add operations log context.
-- [ ] Add artifact lineage context.
-
-Step 9.3: Agent modes
-
-- [ ] Ask.
-- [ ] Plan.
-- [ ] Review.
-- [ ] Edit.
-- [ ] Research.
-- [ ] Analyze.
-- [ ] Debug Ops.
-- [ ] Generate Artifact.
-- [ ] Report Builder.
-
-Step 9.4: Tool planning and approval
-
-- [ ] Show proposed tool sequence before execution.
-- [ ] Show expected inputs and outputs.
-- [ ] Show risk level per action.
-- [ ] Dry-run read-only actions.
-- [ ] Pause mid-run for approvals.
-- [ ] Stream each tool call and observation.
-- [ ] Resume after approval.
-- [ ] Stop/cancel long runs.
-- [ ] Summarize what changed after multi-step runs.
-- [ ] Compare generated outputs from a run.
-
-Step 9.5: Memory, citations, and quality
-
-- [ ] Add workspace memory store.
-- [ ] Store accepted facts.
-- [ ] Store decisions.
-- [ ] Store preferred report style.
-- [ ] Store ignored paths/connectors.
-- [ ] Add citation inspector.
-- [ ] Add weak-evidence warnings.
-- [ ] Add unsupported-claim warnings.
-- [ ] Add retry with another model.
-- [ ] Add compare model outputs.
-- [ ] Add ask-for-missing-context prompts.
+- [ ] Identify any Wails-only features still missing in Fyne.
+- [ ] Decide whether any React/Monaco code should be replaced, embedded, or permanently dropped.
+- [ ] Freeze `app-wails` after feature parity milestone.
+- [ ] Remove Wails build instructions from primary docs.
+- [ ] Archive or delete `app-wails` after explicit approval.
 
 Exit criteria:
 
-- [ ] AI Assistant can coordinate multi-step work across Workbench, Data & Analytics, document, operations, and artifact contexts with citations and approvals.
-
-## Phase 10: Artifact Studio And Provenance
-
-Goal: make generated outputs durable, comparable, reproducible, and easy to navigate.
-
-Status: first artifact browser, metadata, comparison, and lineage implemented.
-
-Implemented:
-
-- [x] Markdown report artifacts.
-- [x] Assistant answer artifacts.
-- [x] CSV export artifacts.
-- [x] SVG chart artifacts.
-- [x] Dataset summary artifacts.
-- [x] Workspace scan report artifacts.
-- [x] Sidecar provenance metadata.
-- [x] Artifact list in the Artifact Studio route surface.
-- [x] Artifact Studio route-local tabs for Library, Metadata, and Lineage.
-- [x] Artifact metadata panel.
-- [x] Archive artifact.
-- [x] Delete artifact with approval.
-- [x] Open source context.
-- [x] Compare generated artifacts.
-- [x] Artifact lineage graph.
-- [x] Export/import lineage JSON preview.
-
-Next steps:
-
-- [x] Move Artifact Studio to a first-class route entry with primary fallback surface.
-- [x] Replace Artifact fallback surface with first native tabbed route layout.
-- [ ] Add richer artifact filters inside the native route layout.
-- [ ] Add artifact type filters.
-- [ ] Add artifact search.
-- [ ] Add artifact tags.
-- [ ] Add artifact version timeline.
-- [ ] Add graph diff for imported lineage JSON.
-- [ ] Add stale artifact regeneration.
-- [ ] Add artifact templates.
-- [ ] Add dashboard/report bundle artifacts.
-- [ ] Add presentation artifacts.
-- [ ] Add generated config artifacts.
-- [ ] Add diff/patch artifacts.
-- [ ] Add reproducibility action that replays source queries/context where safe.
-
-Exit criteria:
-
-- [ ] User can trust and reproduce generated work.
-
-## Phase 11: Metadata, Indexing, Search, And Reliability
-
-Goal: make the app robust enough for large workspaces and long-lived projects.
-
-Status: first SQLite metadata store and search foundations implemented.
-
-Implemented:
-
-- [x] SQLite metadata schema under `app/internal/appmeta/`.
-- [x] `.nexusdesk/metadata/nexusdesk.sqlite` initialization through `modernc.org/sqlite`.
-- [x] JSON compatibility mirroring.
-- [x] Direct fresh-row writes for chat, approval, artifact, and tool-run records once metadata store exists.
-- [x] Metadata browser for tables, columns, row counts, samples, and dataset SQL views.
-- [x] Metadata history search across chat, artifacts, and tool runs.
-- [x] SQL run history.
-- [x] Dataset dependencies.
-- [x] Workspace freshness polling.
-- [x] Changed-file indicators.
-- [x] Stale artifact/dataset warnings.
-- [x] Stale context refresh action.
-- [x] Shared redaction/truncation helpers under `app/internal/safety`.
-- [x] Redacted provider and SQL errors.
-
-Next steps:
-
-- [ ] Move more local JSON stores to SQLite primary repositories.
-- [ ] Make SQLite the primary store for chats, approvals, artifacts, tool runs, SQL runs, and dataset dependencies.
-- [ ] Keep JSON stores only as compatibility, migration, backup, or export fallback after SQLite repositories are primary.
-- [ ] Add migrations with versioned schema changes.
-- [ ] Add full-text search.
-- [ ] Add semantic search/embeddings when provider/model is configured.
-- [ ] Add task/job table.
-- [ ] Add connector run table.
-- [ ] Add tab/session state table.
-- [ ] Add document index table.
-- [ ] Add git snapshot table.
-- [ ] Add artifact lineage indexes for reports, charts, decks, data exports, configs, and code patches.
-- [ ] Add metrics dashboard for provider failures by kind, root path, and workspace.
-- [ ] Add index rebuild controls.
-- [ ] Add large-workspace performance budgets.
-- [ ] Add corruption recovery and export.
-
-Step 11.1: Long-running job runner
-
-- [ ] Add job runner for imports, OCR, dump restores, connector pulls, report generation, and large indexing work.
-- [ ] Route slow/external work through jobs instead of blocking the shell: indexing, OCR, imports, connector pulls, dump restore, report generation, and long agent runs.
-- [ ] Add cancelable task progress.
-- [ ] Add task logs.
-- [ ] Add retry failed task.
-- [ ] Link task output to generated artifacts.
-
-Exit criteria:
-
-- [ ] Nexus Augentic Studio can maintain durable, searchable workspace memory over long-lived projects.
-
-## Phase 12: Settings, Policies, Credentials, And Security
-
-Goal: centralize user control over providers, connectors, tool permissions, credentials, and workspace policies.
-
-Status: first LLM settings implemented; broader policy work planned.
-
-Implemented:
-
-- [x] Settings route surface for LLM provider.
-- [x] API key redaction.
-- [x] OS-protected credential sidecar where available.
-- [x] Model dropdown.
-- [x] Context-window and reserve controls.
-- [x] Per-model context/reserve defaults shared between Chat and Settings.
-- [x] Runtime context tuning from Ollama loaded-model diagnostics.
-- [x] Connection probe.
-- [x] Ollama diagnostics.
-- [x] Approval log.
-- [x] Modal approval foundation for high-risk UI actions.
-
-Next steps:
-
-- [x] Move Settings to a first-class route entry with primary fallback surface.
-- [ ] Replace Settings fallback surface with native route layout.
-- [ ] Add provider profiles.
-- [x] Add first connector credential/profile UI.
-- [ ] Add per-workspace policy settings.
-- [ ] Add tool allow/deny list.
-- [ ] Add approval policy levels.
-- [ ] Add shell execution policy.
-- [ ] Add Docker mutation policy.
-- [ ] Add database mutation policy.
-- [ ] Add secret scanner settings.
-- [ ] Add audit export.
-- [ ] Add UI preferences.
-
-Exit criteria:
-
-- [ ] User can understand and control what Nexus Augentic Studio may read, run, write, and send to models/connectors.
-
-## Phase 13: Testing, Packaging, And Release Readiness
-
-Goal: keep the app stable as the studio scope grows.
-
-Status: first verification loop implemented.
-
-Implemented:
-
-- [x] Go unit tests across backend packages.
-- [x] Frontend production build.
-- [x] Frontend smoke script.
-- [x] Playwright visual smoke with Wails-free mocks.
-- [x] Desktop Wails build.
-- [x] Windows icon generation script.
-- [x] Production build at `app/build/bin/app.exe`.
-
-Next steps:
-
-- [ ] Add behavior tests for main studio routing.
-- [ ] Add behavior tests for IDE tree and git diffs.
-- [ ] Add regression coverage that opening a workspace never auto-runs Git, long indexing, OCR, connector pulls, or other external/slow work.
-- [ ] Add behavior tests for Data & Analytics notebooks/connectors.
-- [ ] Add behavior tests for document extraction flows.
-- [ ] Add behavior tests for operations safe actions.
-- [ ] Add backend integration tests with temporary SQLite/Postgres containers.
-- [ ] Add connector contract tests.
-- [ ] Add fixture workspaces.
-- [ ] Add crash/hang regression tests for folder open.
-- [ ] Add release packaging notes.
-- [ ] Add signed build plan.
-- [ ] Add update strategy.
-
-Exit criteria:
-
-- [ ] A release candidate can be built, smoke-tested, and installed predictably.
-
-## Phase 14: Extensibility And Team Future
-
-Goal: support plugins, MCP, shared workspaces, and enterprise controls without weakening local-first safety.
-
-Status: future.
-
-Steps:
-
-- [ ] Add MCP client support.
-- [ ] Add external tool registry.
-- [ ] Add custom tool definitions.
-- [ ] Add plugin manifest model.
-- [ ] Add team/shared workspace model.
-- [ ] Add policy export/import.
-- [ ] Add central model gateway support.
-- [ ] Add audit bundle export.
-- [ ] Add Docker Desktop extension investigation.
-- [ ] Add marketplace-style template packs for reports/dashboards.
-
-Exit criteria:
-
-- [ ] Nexus Augentic Studio can be extended without giving external tools direct authority over files, shell, Docker, or databases.
-
-## Phase 15: Architecture Hardening
-
-Goal: keep the product architecture simple to reason about as features deepen, with small Wails adapters, focused frontend controllers, primary SQLite persistence, job-based long work, and a restrained product menu.
-
-Status: first hardening slice expanded with Git backend/frontend extraction, preview-only stage/unstage planning, generated Wails binding isolation, editor-outline extraction from the Workbench panel, and first workspace/artifact/dataset backend service facades.
-
-Latest full review finding: the architecture direction is still good, but the next risk is orchestration mass, not product shape. `NexusShell.tsx`, `BottomStudioPanel.tsx`, `WorkbenchPanel.tsx`, `GitDiffPanel.tsx`, and `app/app.go` are now the largest files. Keep extracting owned controllers, pure helpers, and backend services before adding deep connector/document/operations workflows. Folder open must stay bounded and must never start Git, Docker, OCR, connector pulls, dump imports, or long agent jobs.
-
-Step 15.1: Backend service facades
-
-- [x] Keep Wails method names stable while moving orchestration out of `app/app.go`.
-- [x] Create a `WorkspaceService` facade for open/refresh/search/preview/context/freshness/file operations.
-- [ ] Create an `ArtifactService` facade for report creation, metadata, lineage, archive/delete, comparison, and regeneration. Core report/list/metadata/archive/delete/compare operations now dispatch through `ArtifactService`; lineage and regeneration still need a separate extraction.
-- [x] Create a `DatasetService` facade for profiling, queries, SQL runs, dependencies, charts, summaries, and connector routing.
-- [ ] Create a `ChatService` facade for settings-aware chat requests, streaming, context packs, history persistence, and saved answer artifacts.
-- [x] Create a `GitService` facade for read-only status/diffs first, then approval-governed stage/unstage/revert actions.
-- [ ] Keep `app/app.go` as a thin Wails adapter that validates runtime availability and dispatches to services.
-- [ ] Move helper functions from `app/app.go` into owned service packages when they stop being bridge-specific.
-
-Step 15.2: Frontend controller hooks
-
-- [ ] Split workspace state and actions from `NexusShell.tsx` into `useWorkspaceController`.
-- [x] Split Git state and actions into `useGitController`.
-- [ ] Split artifact state and actions into `useArtifactController`.
-- [ ] Split dataset/SQL/connector state and actions into `useDatasetController`.
-- [ ] Split chat/context/agent state and actions into `useChatController`.
-- [ ] Keep `NexusShell.tsx` focused on layout composition, cross-panel wiring, modals, global shortcuts, and route/drawer placement.
-- [x] Add smoke checks that generated Wails bindings remain isolated behind `app/frontend/src/api/wailsClient.ts`.
-- [x] Extract Code AI prompt builders and assistant patch parsing from `NexusShell.tsx`.
-- [ ] Split command palette action assembly out of `NexusShell.tsx` once more route actions accumulate.
-- [ ] Split assistant patch preview orchestration into a Code AI controller after chat/file-write controllers exist.
-- [ ] Add focused tests for assistant unified-diff parsing, including fenced diffs, path-matched diffs, mismatched hunks, and no-final-newline patches.
-
-Step 15.3: Persistence simplification
-
-- [ ] Promote SQLite metadata repositories to primary reads/writes for chats, approvals, artifacts, tool runs, SQL runs, and dataset dependencies.
-- [ ] Add one migration path from existing JSON compatibility stores into SQLite.
-- [ ] Keep JSON compatibility stores as export/backup/fallback only after primary SQLite reads are stable.
-- [ ] Add repository tests proving SQLite and JSON fallback records do not diverge during migration.
-- [ ] Add corruption/export recovery path before removing JSON-first assumptions.
-
-Step 15.4: Job-based slow work
-
-- [ ] Define a job model with ID, kind, workspace root, status, progress, log tail, started/completed timestamps, artifact outputs, and cancel state.
-- [ ] Route long indexing, OCR, dump imports, connector pulls, report generation, and long agent runs through the job runner.
-- [ ] Surface jobs in a Workbench/Activity panel with cancel, retry, inspect logs, and open artifact actions.
-- [ ] Ensure folder open only scans the bounded tree needed for first render; deeper indexing must run as a cancelable job.
-- [ ] Persist job records in SQLite and link outputs to artifacts/lineage.
-- [ ] Add regression coverage that folder open cannot trigger Git, Docker, OCR, connector pulls, dump import, long indexing, or shell execution.
-
-Step 15.5: Navigation discipline
-
-- [ ] Keep the primary rail limited to Workbench, Data & Analytics, Artifacts, and Settings until a capability has enough native workflow depth.
-- [ ] Keep analytics connectors inside Data & Analytics until they justify a separate surface.
-- [ ] Keep document intelligence contextual through Workbench, Artifacts, and Assistant until it justifies a separate surface.
-- [ ] Keep operations capabilities contextual/read-only first, then promote only if Docker/log/runbook workflows become deep enough.
-- [ ] Keep AI Assistant always visible as orchestration, not a default top-level route.
-
-Step 15.6: Static review hardening backlog
-
-- [x] Resolve redacted LLM credentials before agent runtime provider calls.
-- [x] Replace model-directed append rewrite behavior with an append-only backend path.
-- [x] Decouple write content size from inline diff size for large text-file overwrites.
-- [x] Replace Markdown-fenced selected context with escaped sentinel-delimited quoted context.
-- [x] Replace shell-interpreted model commands with argv parsing and a small command/subcommand allow-list.
-- [ ] Add macOS Keychain and Linux Secret Service/libsecret credential storage; until then, non-Windows builds refuse secret persistence on unsupported platforms.
-- [x] Feed token-budgeted prior chat turns into normal chat requests so the assistant behaves conversationally.
-- [x] Keep streaming chat `done` events and returned chat results aligned with persisted source citations.
-- [x] Replace line-index write diffs with a real LCS diff.
-- [ ] Unify registered tool execution and agent runtime tool execution behind one dispatcher and generate the tool prompt from the registry.
-- [ ] Add frontend unit/component tests for shell hooks, Wails adapter normalization, model catalog, and patch/diff helpers.
-- [x] Reduce SQL read-only guard false positives for mutation keywords inside comments and string literals.
-- [ ] Refresh frontend toolchain versions and migrate smoke/visual checks after the upgrade.
-- [x] Switch SQL Server driver from `github.com/denisenkom/go-mssqldb` to the maintained Microsoft fork before deepening SQL Server support.
-- [ ] Move chat/approval/history backup and restore into explicit local-first export flows.
-
-Exit criteria:
-
-- [ ] `app/app.go` is a thin Wails adapter instead of the main use-case owner.
-- [ ] `NexusShell.tsx` composes focused controllers instead of owning most application workflows.
-- [ ] SQLite is the primary metadata store for durable workspace records.
-- [ ] Slow and external work is cancelable, logged, and never blocks folder open.
-- [ ] Product navigation remains small while capability depth grows inside existing surfaces.
-
-## Next Logical Batch
-
-Completed batch: Log Dataset Profiling.
-
-Steps:
-
-1. [x] Add read-only Data Source cards for detected table files, workbooks, SQLite files, dumps, compressed exports, logs, and Parquet files.
-2. [x] Show profile status on cards when a CSV/TSV/JSON/NDJSON/XLSX source already has persisted metadata.
-3. [x] Show SQLite database files as data sources separate from the live read-only connector panel.
-4. [x] Detect compressed exports and SQL/dump/bak database dump files without starting imports.
-5. [x] Add explicit legacy binary XLS guidance: convert to XLSX or CSV before profiling.
-6. [x] Keep source cards bounded to the already-scanned workspace tree so folder open remains cheap and side-effect free.
-7. [x] Add bounded Parquet footer/magic inspection without scanning full columnar data.
-8. [x] Persist Parquet profile metadata under `.nexusdesk/datasets/`.
-9. [x] Show profiled Parquet footer/data byte summaries in Data & Analytics.
-10. [x] Classify `.log`, `.out`, and `.trace` files as data candidates for explicit profiling.
-11. [x] Add bounded log profiles with sampled line counts, level counts, timestamp counts, stack trace counts, and repeated patterns.
-12. [x] Show profiled log summaries in Data & Analytics source cards and profile summaries.
-
-Completed batch: Connector Profile Foundation.
-
-Steps:
-
-1. [x] Add Parquet metadata inspection.
-2. [x] Add log dataset profiling.
-3. [x] Start the connector metadata interface needed by future database and analytics sources.
-4. [x] Define connection profiles with secure credential references.
-5. [x] Expand SQLite schema browsing beyond the first connector query surface.
-6. [x] Add data source card actions for open, profile, inspect connector, and planned import workflows.
-
-Completed batch: Data Source Card Actions.
-
-Steps:
-
-1. [x] Add data source card actions for open, profile, inspect connector, and planned import workflows.
-2. [x] Route SQLite source-card Inspect to the read-only schema inspector without opening arbitrary connectors on folder open.
-3. [x] Route profile-capable table/workbook/log/Parquet cards to existing explicit profile actions.
-4. [x] Add disabled planned actions for dump/import and compressed-export workflows with clear lifecycle copy.
-5. [x] Keep all card actions user-triggered and bounded to the already-scanned workspace tree.
-
-Completed batch: Connector Guardrails And Query Controls.
-
-Steps:
-
-1. [x] Add visible result cap and timeout controls to SQLite connector queries.
-2. [x] Apply per-query caps/timeouts through connector request types instead of hardcoded defaults.
-3. [x] Add connector error redaction helpers and tests.
-4. [x] Add query cancellation plumbing for in-flight connector calls.
-5. [x] Keep connector execution user-triggered and record SQL/dependency metadata after completion/failure.
-
-Completed batch: SQLite Schema Explorer Foundation.
-
-Steps:
-
-1. [x] Add table/view selection inside the SQLite schema inspector.
-2. [x] Add user-triggered capped table preview from selected schema nodes.
-3. [x] Add saved SQLite connector queries separate from dataset SQL snippets.
-4. [x] Add connector query history with status, cap, timeout, row count, and source path filters.
-5. [x] Add clearer read-only proof/status copy near every connector execution surface.
-6. [x] Keep every schema/query action user-triggered and avoid connector work on folder open.
-
-Recommended next batch: SQLite Connector Query Workflow.
-
-Steps:
-
-1. [x] Add query result export to CSV for SQLite connector results.
-2. [x] Add query result export to Markdown report with SQL, cap, timeout, and source database citation.
-3. [x] Add connector query-to-artifact lineage that links saved query, SQL run, source database, and exported artifact.
-4. [x] Add AI explain-schema action for the selected SQLite table/view with cited columns/indexes/sample rows.
-5. [x] Add relationship hints from SQLite foreign keys and obvious `*_id` columns.
-6. [x] Keep exports and AI actions user-triggered and bounded to selected schema/query context.
-
-Completed batch: connector query exports are user-triggered, bounded by the visible cap/timeout controls, persisted as CSV or Markdown artifacts, and recorded in SQL run plus dataset dependency metadata using the source SQLite database path. Schema intelligence now includes declared SQLite foreign keys, conservative `*_id` relationship hints, and an explicit Explain schema action that sends only the selected table/view schema, indexes, sample rows, and relationship hints to the assistant.
-
-## Directory Ownership Notes
-
-`app/internal/workspace/` owns safe workspace scanning, previews, search, context expansion, dataset queries, freshness, and file operations. Its bounded table-preview/query path currently supports CSV, TSV, JSON arrays/objects, and NDJSON records.
-
-`app/internal/artifact/` owns deterministic artifact writes, provenance sidecars, listing, search, comparison, archive/delete, and scan-report creation.
-
-`app/internal/agent/` owns the backend ReAct runtime, system prompt, action parsing, plan updates, observation handling, and working-memory pruning.
-
-`app/agent_runtime.go` exposes `RunAgent` and maps model-requested tools to workspace-safe handlers.
-
-`app/app_git.go` owns Wails-facing Git API types and bridge methods. `app/git_service.go` owns the first Git service facade for read-only status/diff operations, preview/apply file stage/unstage actions, and approval-backed selected-hunk stage/unstage/discard/revert patch application while preserving existing Wails contracts.
-
-`app/app_tasks.go` owns Wails-facing workspace task discovery and user-triggered task runs. It scans bounded workspace paths, skips noisy output/dependency folders, parses `package.json` scripts, detects Go module test commands, and returns task metadata. `RunWorkspaceTask` re-discovers and validates a task ID before running, captures capped output, records approval metadata, and saves a task-run artifact.
-
-`app/workspace_service.go`, `app/artifact_service.go`, and `app/dataset_service.go` own the first backend service facades for workspace, artifact, and data workflows. `app/app.go` keeps stable Wails method names and delegates these use cases instead of owning the full orchestration directly.
-
-`app/internal/agenttools/` owns deterministic tool descriptors and tool-run persistence.
-
-`app/internal/appmeta/` owns SQLite metadata schema, migrations, metadata browser queries, metadata search, dataset dependencies, and SQL run history. `app/app_metadata.go` owns application-level mirroring between JSON compatibility stores, app actions, and that SQLite metadata store.
-
-`app/internal/analytics/` owns read-only SQL-style dataset querying and DuckDB-compatible execution paths.
-
-`app/internal/dbconnector/` owns workspace database connector surfaces. Today that means read-only SQLite files, guarded read-only SQL execution with per-query result caps, timeouts, cancellation, and redacted connector errors, plus user-triggered SQLite connector metadata inspection for tables, views, columns, indexes, row counts, capped samples, declared foreign keys, and conservative `*_id` relationship hints. It also owns explicit saved-profile runners for PostgreSQL, MySQL/MariaDB, SQL Server, and DuckDB; DuckDB uses a default build guard plus a real `duckdb` build-tag path because the driver requires CGO. External profile query requests now carry request IDs, visible caps/timeouts, sanitized error messages, and app-level cancellation callbacks. Future phases add deeper credential-backed server database workflows and dump sandboxes.
-
-`app/internal/approval/` owns append-only approval/action records.
-
-`app/process_windows.go` and `app/process_other.go` own platform-specific child process configuration. Windows desktop builds hide app-launched child processes so user-triggered Git refreshes and approved shell tools do not flash console windows.
-
-`app/internal/storage/` owns local app config such as recent workspaces, non-secret LLM settings, connector profile metadata, chat history, and assistant prompt profile/memory preferences. Secret values must stay in credential storage or protected sidecars. Connector profile passwords/tokens are represented by redacted credential references when returned to the frontend.
-
-`app/frontend/src/api/wailsClient.ts` is the frontend boundary for generated Wails bindings.
-
-`app/frontend/src/features/shell/NexusShell.tsx` is still the large shell orchestrator, but Wails imports, resize state, and studio navigation state have been extracted. It should keep shrinking as workspace, chat, artifact, and data controllers move into focused hooks.
-
-`app/frontend/src/features/shell/useStudioNavigation.ts` owns active studio route state, primary route surface mapping, and contextual bottom drawer tab state.
-
-`app/frontend/src/features/shell/useResizablePanels.ts` owns navigator, assistant, and bottom drawer sizing plus resize drag handlers.
-
-`app/frontend/src/features/shell/useGitController.ts` owns Git status refresh, selected changed-file state, selected-file diff loading, file stage/unstage preview/apply state, hunk action preview/apply state, null-response normalization, and the manual-only Git refresh boundary.
-
-`app/frontend/src/features/shell/codeAiActions.ts` owns pure Code AI prompt builders and single-file unified-diff parsing for assistant patch drafts. `NexusShell.tsx` still orchestrates the model calls and safe write preview/apply boundary, but prompt templates and patch parsing should not drift back into the shell.
-
-`app/frontend/src/features/shell/ConnectorProfilesCard.tsx` owns the first local connector profile form and saved-profile list. It only receives redacted credential markers from the backend and delegates save/delete/test/inspect actions back to the shell. Inspected external connector metadata is shown through the shared connector metadata browser.
-
-`app/frontend/src/features/shell/ConnectorMetadataBrowser.tsx` owns the shared schema object browser for connector metadata. It presents inspected tables/views, columns, indexes, row samples when present, and relationships for both workspace SQLite files and saved external connector profiles.
-
-Workspace scan counters are diagnostic data, not primary navigation content. Keep them in scan reports/diagnostics instead of the always-visible sidebar header.
-
-`app/frontend/src/features/shell/WorkbenchPanel.tsx` currently owns the editor/preview surface, pinned tabs, breadcrumbs, split editor group presentation, Monaco minimap control, composition of editor-adjacent panels, and the active-file AI review entrypoint. Git status, working-tree diff output, and roadmap/studio-route metadata should not render above the editor tabs; those surfaces belong to Workbench utility panels, the bottom Git drawer, or documentation.
-
-`app/frontend/src/features/shell/EditorOutlinePanel.tsx` owns the editor outline side panel presentation and symbol-selection callbacks.
-
-`app/internal/workspace/symbols.go` and `app/frontend/src/features/shell/editorOutline.ts` own lightweight symbol extraction for Markdown, TypeScript/JavaScript, Go, CSS, JSON, and YAML. This is intentionally regex/structure based until language-service-backed symbol indexing lands.
-
-`app/internal/workspace/problems.go` owns the first read-only lightweight Problems scan for TODO/FIXME/HACK/BUG markers, merge-conflict markers, and invalid JSON.
-
-`app/frontend/src/features/shell/CodeStudioPanel.tsx` owns the first reusable Workbench utility surface for editor session metrics, open tabs, workspace status, git branch/dirty summary, changed-file list, Workbench search results/actions, active-file and git-diff review/test/patch/dependency/PR draft triggers, lightweight Problems results, detected task listings, latest task-run output, and placeholders that will receive deeper review records.
-
-`app/frontend/src/features/shell/GitDiffPanel.tsx` owns the bottom-drawer Git tab for selected changed-file review, file stage/unstage controls, hunk selection state, approval-backed hunk stage/unstage/discard/revert controls, and read-only staged/unstaged working-tree diffs.
-
-`app/frontend/src/features/shell/DataOperationsPanel.tsx` currently owns Data route workflows, including bounded data source cards, explicit Open/Profile/Inspect actions, and the SQLite connector query panel with visible row cap, timeout, cancel controls, schema object selection via the shared connector metadata browser, relationship hints, explicit row preview, selected-object schema explanation, saved connector queries, and connector query history. Planned dump/import and compressed-export actions are visible but disabled until the job/sandbox lifecycle exists.
-
-`app/frontend/src/features/shell/ArtifactStudioPanel.tsx` currently owns Artifact Studio route workflows.
-
-`app/frontend/src/features/shell/BottomStudioPanel.tsx` currently hosts reusable Settings, Data, Tools, Artifacts, Git, Approvals, Activity, and Code surfaces. The visible bottom drawer exposes Git, Approvals, and Activity; route-owned surfaces are rendered through the main nav until native studio layouts land.
-
-`app/frontend/src/features/shell/WorkspaceRail.tsx` owns the compact branded main studio menu, active route selection, route accessibility state, and pending-route markers.
-
-`app/frontend/src/brand/assets.ts` owns studio route labels, descriptions, command hints, pending-route metadata, and temporary route-to-surface mapping.
-
-`services/` is reserved for development/test services. Runtime workspace state belongs under ignored `.nexusdesk/` folders inside user workspaces, not in this repository.
+- [ ] The default developer and user path is `nexus-app`.
+- [ ] Wails is no longer needed for day-to-day development.
+
+## Next Batch
+
+1. Configure Windows CGO compiler and verify `nexus-app` runs.
+2. Add brand icon/logo assets to the Fyne shell.
+3. Add dirty/pinned tab state and close guards before enabling edits.
+4. Port richer preview support from `app-wails/internal/workspace`: images, PDFs, DOCX, CSV/table previews.
+5. Add brand icon/logo assets to the Fyne shell once CGO-run verification is available.

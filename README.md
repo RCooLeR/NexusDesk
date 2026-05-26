@@ -26,22 +26,23 @@ Nexus Augentic Studio is not only a chatbot. It should feel like a serious IDE-s
 - [Delivery Plan](docs/08_DELIVERY_PLAN.md)
 - [Developer Experience](docs/09_DEVELOPER_EXPERIENCE.md)
 - [Studio Roadmap](docs/10_STUDIO_ROADMAP.md)
+- [Fyne Migration Plan](docs/11_FYNE_MIGRATION_PLAN.md)
 - [Implementation Tracker](tracker.md)
 
 ## Current Project Layout
 
-The repository has a runnable Wails desktop application plus product and engineering docs. The directories that exist now are:
+The repository is migrating from the preserved Wails prototype to a Fyne-native desktop application. The directories that exist now are:
 
 ```text
-app/                 Wails desktop app with Go backend and React/TypeScript frontend.
-app/internal/        Backend packages for workspace, artifacts, datasets, metadata, LLM, agent, safety, and storage.
-app/frontend/src/    React shell, feature panels, Wails API adapter, brand assets, and reusable UI.
-docs/                Product, architecture, delivery, security, and developer-experience documentation.
-services/            Development and testing helper services.
-tracker.md           Long-range implementation tracker and current architecture hardening checklist.
+app-wails/            Preserved Wails desktop app with Go backend and React/TypeScript frontend.
+nexus-app/            New Fyne-native Go desktop app.
+nexus-app/internal/   Native app code grouped by app, domain, services, and UI.
+docs/                 Product, architecture, delivery, security, migration, and developer-experience documentation.
+services/             Development and testing helper services.
+tracker.md            Fyne migration tracker and current execution plan.
 ```
 
-Generated runtime state such as `.nexusdesk/`, frontend build output, Wails binaries, and dependency folders are ignored.
+Generated runtime state such as `.nexusdesk/`, frontend build output, Wails binaries, Fyne build output, and dependency folders are ignored.
 
 ## Core Principles
 

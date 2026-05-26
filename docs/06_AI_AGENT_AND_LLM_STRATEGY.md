@@ -104,9 +104,11 @@ Current implementation:
 - The saved provider settings include `maxContextTokens` and `responseReserveTokens`; chat context uses the remaining budget for selected files or context packs, local Ollama-compatible calls send `num_ctx` and `num_predict`, and compatible chat calls send `max_tokens` from the response reserve.
 - The model dropdown is backed by a shared frontend catalog plus backend storage defaults. Selecting a curated model applies the largest configured context window for that model, derives the response reserve from the window, and then prefers Ollama runtime `context_length` when the connection probe can see the loaded model.
 - Workspace search and CSV row queries are deterministic backend tools, not model-side file access.
-- `app/internal/agenttools/registry.go` now exposes a first deterministic tool registry for workspace preview, file write, dataset query, artifact create/archive, and operations inspect actions.
-- `app/internal/agent/` now contains a backend-first ReAct runtime that can plan, call tools, process observations, prune working memory, emit live run events for model/tool steps, force a no-tool finalization pass when the iteration budget is exhausted, and return final answers through `RunAgent`.
-- `app/agent_runtime.go` bridges that runtime to the existing workspace, dataset, artifact, shell, and registered agent-tool surfaces without giving the model direct filesystem authority.
+- `app/internal/agenttools/registry.go` now exposes a first deterministic tool registry for workspace preview/context, git diff context, file mutation, dataset profile/query/SQL, SQLite inspect/query, artifact list/read/create/archive, and operations inspect actions.
+- `app/internal/agent/` now contains a backend-first ReAct runtime that can plan, call tools, process observations, prune working memory, emit live run events for model/tool steps, continue without a frontend-supplied iteration cap, wrap up when the selected model context is full or an emergency loop guard trips, and return final answers through `RunAgent`.
+- Persistent workspace changes are now treated as a trust boundary: if a prompt asks to create, edit, fix, implement, document, or otherwise persist a workspace change and write access is approved, the runtime rejects premature final answers until a successful `write_file`, `write_binary_file`, `apply_patch`, `append_file`, or workspace-write tool record exists. Text/code/config/document writes use diff-previewed `write_file`; multi-file or precise code edits should use `apply_patch`, which applies standard unified diffs only after exact hunk matching and approval; binary files such as images, archives, fonts, databases, Office files, or generated PDFs use `write_binary_file` with standard base64 bytes and size/SHA-256 review metadata. Direct model-authored executable binary writes such as `.exe`, `.dll`, `.msi`, and `.scr` are blocked; executable artifacts should come from source builds and a signed release pipeline. If the model still claims a mutation without a successful mutating tool, the final answer receives a verification warning.
+- Final answers are post-checked for unverified workspace side-effect claims. If the model says it created, saved, wrote, generated, or modified a file/artifact but the run has no successful mutating tool record, the backend appends a verification warning instead of letting the claim stand unqualified.
+- `app/agent_runtime.go` bridges that runtime to the existing workspace, dataset, SQLite, artifact, shell, and registered agent-tool surfaces without giving the model direct filesystem or database authority.
 - The always-visible assistant renders a proposed tool plan for the active context with risk and approval labels, and user-triggered dry-run/execute actions now persist tool-run records.
 - Recent tool-run rows expand into detail drawers with captured inputs, output/error text, approval references, replay, and target diff affordances.
 - Persisted assistant answers and saved Markdown answer artifacts include the source paths used for selected-file or context-pack grounding.
@@ -266,6 +268,28 @@ The app must validate:
 
 The model should never receive raw authority to perform actions.
 
+## Tool Capability Matrix
+
+Nexus should target Codex-class local workbench capability first, then go beyond Codex for data, documents, analytics, and operations. The executable tool registry must only expose tools that are actually implemented; planned tools belong in this matrix and tracker until their backend validation, approval policy, audit logging, and UI affordances exist.
+
+| Capability family | Current state | Target |
+| --- | --- | --- |
+| Plan/state | `update_plan`, live model/tool events, tool-run audit | resumable runs, checkpoints, cancelled/resumed jobs, evaluation traces |
+| Workspace discovery | list directory, preview file, path/text search, chat and agent-readable context packs, changed-file context, lightweight Problems context | ranked project map, semantic/symbol index, dependency graph, project memory |
+| File mutation | text/code write, binary write, append, patch-native multi-file text edits, copy, move/rename, delete, bounded rollback snapshots and approval-gated restore/remove | conflict-aware merge assistance, generated file trees |
+| Shell/tasks | allow-listed workspace shell, discovered task listing, approval-gated task runner | richer task graph, long-running process supervision, terminal sessions, command approvals |
+| Git | status, file diff, agent-readable diff context, changed-file previews, read-only history/blame context, hunk/file stage/unstage, assistant summaries | branch operations, commits, revert/cherry-pick, PR drafting, conflict resolution |
+| Data | agent-readable CSV/TSV/JSON/NDJSON/XLSX/Parquet/log profiles, bounded row queries, read-only dataset SQL, and read-only SQLite schema/query context | dump import, temporary DB sandboxes, joins across files/connectors, data quality checks |
+| Documents | agent-readable Markdown/TXT/PDF/DOCX/HTML/XML document-set context, text/Markdown/PDF/DOCX extraction, and reports | DOCX/PPTX generation, redline/comment workflows, OCR, document comparison, presentation synthesis |
+| Artifacts | list/read artifacts, agent-readable lineage graph context, create Markdown reports, archive artifacts | artifact comparison/rebuild actions, export bundles |
+| Browser/web | approval-gated HTTP(S) text fetch with redirect, size, content-type, local-network, and optional domain allow-list guards | browser automation, screenshots, network capture, richer page extraction, cached/source-attributed web research |
+| Images/media | image/PDF preview, binary writes | image generation/editing, OCR, thumbnails, media metadata, visual regression diffing |
+| Connectors/MCP | connector profiles and read-only DB workflows | MCP servers, GitHub/Jira/GA4/ads/CRM connectors, permissioned connector tool registry |
+| Automation | not implemented | scheduled runs, monitors, reminders, background jobs, notifications |
+| Ops/Docker | agent-readable read-only operations file inspection with env-secret redaction, constrained Docker shell subcommands | compose lifecycle, logs, health checks, exec/build controls, runbook generation |
+
+Codex-parity tools that Nexus still needs include richer shell sessions, browser automation, GitHub/PR operations, plugin/MCP discovery, image/document generation, and automation scheduling. Nexus-specific extensions should include database sandboxing, analytics connectors, document intelligence, and operations runbooks.
+
 ## Tool Risk Levels
 
 ### Low Risk
@@ -342,9 +366,16 @@ Current implementation:
 - `RunAgent` executes a bounded ReAct loop with plan updates, tool calls, observations, context pruning, and final-answer extraction
 - registered agent tools can be executed through the loop and persisted as tool-run records
 - JSON action parsing preserves nested object/array arguments as JSON strings so structured tool inputs do not collapse into Go map formatting
-- direct agent tools include directory listing, bounded file reads, workspace search, approved file write/append, approved shell execution, dataset analysis, and Markdown artifact creation
+- direct agent tools include directory listing, bounded file reads, workspace search, bounded directory/project context packs, changed-file previews, bounded git status/diff/history/blame context, lightweight Problems scanning, discovered task listing, approved task execution, artifact list/read/lineage context, dataset profile/query/SQL context, read-only SQLite schema/query context, document-set context, read-only operations file/log/config context with environment-secret redaction, approval-gated web text fetch, approved file write/append/patch/copy/move/delete, rollback listing/application for approved file mutations, approved shell execution, and Markdown artifact creation
+- data and database tools are read-only by default: `profile_dataset` creates bounded metadata, `query_dataset` returns capped table rows, `query_dataset_sql` validates a single read-only SELECT before using DuckDB or the bounded fallback, `inspect_sqlite` opens workspace SQLite files read-only, and `query_sqlite` accepts only bounded read-only SELECT/WITH statements with cap and timeout inputs
+- `web_fetch` is not browser automation: it is an approval-gated HTTP(S) GET for text-like content only, with body caps, redirect limits, content-type checks, optional domain allow-lists, and private/loopback/link-local host blocking unless local access is explicitly allowed
+- the agent prompt explicitly teaches the model that `write_file` creates or replaces text/code/config/document files, `apply_patch` performs exact-match unified diff edits across one or more text files, `write_binary_file` creates or replaces binary files from base64 bytes with size/SHA-256 metadata, and `append_file` adds text without replacing existing content; all mutation tools require high-impact approval before changing the workspace
 - agent runtime settings are resolved for use before provider calls, so redacted API-key placeholders returned to the UI are never sent as bearer tokens
+- final answers with file/artifact mutation claims are checked against successful mutating tool records and marked unverified when the trace does not prove the side effect
 - model-directed append operations use an append-only backend write path instead of reading a bounded preview and overwriting the whole file
+- approved file mutations create bounded pre-change rollback snapshots under `.nexusdesk/rollbacks`; `list_rollbacks` can inspect available snapshots and `rollback_file_mutation` restores prior file content or removes files that were created by the mutation after high-impact approval
+- the chat Agent mode exposes an explicit write-access toggle and high-risk approval prompt before setting `approveHighImpact`; shell execution remains disabled from the chat composer
+- Settings now includes an Access & Approvals surface for guarded versus full workspace trust. Full project access is scoped to the active workspace root and lets trusted agent runs use approved safe write tools without prompting again each run; changing workspaces resets that project-file trust. Data-source full access is documented as read-only guarded inspection/query access with caps and timeouts, while shell remains a separate disabled/approval policy and is not enabled from chat.
 - the chat composer exposes a safe `Agent` button that runs `RunAgent` without write or shell approval by default and summarizes the returned plan/tool observations into the conversation
 - selected file context is read through the same rooted preview boundary as the source preview pane
 - selected workspace context is quoted with Nexus sentinel delimiters instead of Markdown fences, and delimiter/fence text from files is escaped before it reaches the model prompt
