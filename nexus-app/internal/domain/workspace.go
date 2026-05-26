@@ -40,11 +40,13 @@ type FilePreview struct {
 	MediaType string
 	Encoding  string
 	Text      string
+	Bytes     []byte
 }
 
 type PreviewKind string
 
 const (
 	PreviewText   PreviewKind = "text"
+	PreviewImage  PreviewKind = "image"
 	PreviewBinary PreviewKind = "binary"
 )

@@ -55,6 +55,10 @@ func (s *Service) PreviewFile(root string, relPath string) (domain.FilePreview, 
 		Kind:      kind,
 		MediaType: mediaType(cleanRelPath),
 	}
+	if kind == domain.PreviewImage {
+		preview.Bytes = content
+		return preview, nil
+	}
 	if kind != domain.PreviewText {
 		return preview, nil
 	}
@@ -69,6 +73,9 @@ func (s *Service) PreviewFile(root string, relPath string) (domain.FilePreview, 
 
 func previewKind(relPath string, content []byte) domain.PreviewKind {
 	extension := strings.ToLower(filepath.Ext(relPath))
+	if isImageExtension(extension) {
+		return domain.PreviewImage
+	}
 	if _, ok := textExtensions[extension]; ok {
 		if looksBinary(content) && !looksLikeUTF16LE(content) && !looksLikeUTF16BE(content) {
 			return domain.PreviewBinary
@@ -85,6 +92,15 @@ func previewKind(relPath string, content []byte) domain.PreviewKind {
 		return domain.PreviewText
 	}
 	return domain.PreviewBinary
+}
+
+func isImageExtension(extension string) bool {
+	switch extension {
+	case ".bmp", ".gif", ".jpeg", ".jpg", ".png", ".svg", ".webp":
+		return true
+	default:
+		return false
+	}
 }
 
 func mediaType(relPath string) string {
