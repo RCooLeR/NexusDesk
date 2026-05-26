@@ -59,6 +59,16 @@ func (s *Service) PreviewFile(root string, relPath string) (domain.FilePreview, 
 		preview.Bytes = content
 		return preview, nil
 	}
+	if kind == domain.PreviewTable {
+		text, encoding, table, err := decodeTable(content, cleanRelPath)
+		if err != nil {
+			return domain.FilePreview{}, err
+		}
+		preview.Text = text
+		preview.Encoding = encoding
+		preview.Table = table
+		return preview, nil
+	}
 	if kind != domain.PreviewText {
 		return preview, nil
 	}
@@ -76,6 +86,9 @@ func previewKind(relPath string, content []byte) domain.PreviewKind {
 	if isImageExtension(extension) {
 		return domain.PreviewImage
 	}
+	if isTableExtension(extension) {
+		return domain.PreviewTable
+	}
 	if _, ok := textExtensions[extension]; ok {
 		if looksBinary(content) && !looksLikeUTF16LE(content) && !looksLikeUTF16BE(content) {
 			return domain.PreviewBinary
@@ -92,6 +105,15 @@ func previewKind(relPath string, content []byte) domain.PreviewKind {
 		return domain.PreviewText
 	}
 	return domain.PreviewBinary
+}
+
+func isTableExtension(extension string) bool {
+	switch extension {
+	case ".csv", ".tsv":
+		return true
+	default:
+		return false
+	}
 }
 
 func isImageExtension(extension string) bool {

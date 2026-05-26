@@ -41,6 +41,14 @@ type FilePreview struct {
 	Encoding  string
 	Text      string
 	Bytes     []byte
+	Table     *TablePreview
+}
+
+type TablePreview struct {
+	Headers   []string
+	Rows      [][]string
+	Delimiter string
+	Truncated bool
 }
 
 type PreviewKind string
@@ -48,5 +56,6 @@ type PreviewKind string
 const (
 	PreviewText   PreviewKind = "text"
 	PreviewImage  PreviewKind = "image"
+	PreviewTable  PreviewKind = "table"
 	PreviewBinary PreviewKind = "binary"
 )

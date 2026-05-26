@@ -97,3 +97,37 @@ func TestPreviewFileReturnsImageBytes(t *testing.T) {
 		t.Fatalf("unexpected image preview: %#v", preview)
 	}
 }
+
+func TestPreviewFileReturnsCSVTable(t *testing.T) {
+	root := t.TempDir()
+	writeFile(t, filepath.Join(root, "people.csv"), "name,role\nAda,engineer\nGrace,admiral\n")
+
+	preview, err := New().PreviewFile(root, "people.csv")
+	if err != nil {
+		t.Fatalf("PreviewFile returned error: %v", err)
+	}
+	if preview.Kind != "table" || preview.Table == nil {
+		t.Fatalf("expected table preview, got %#v", preview)
+	}
+	if preview.Table.Headers[0] != "name" || preview.Table.Rows[1][0] != "Grace" {
+		t.Fatalf("unexpected table content: %#v", preview.Table)
+	}
+}
+
+func TestPreviewFileMarksLargeCSVTableTruncated(t *testing.T) {
+	root := t.TempDir()
+	var builder strings.Builder
+	builder.WriteString("id,name\n")
+	for index := 0; index < 55; index++ {
+		builder.WriteString("1,Ada\n")
+	}
+	writeFile(t, filepath.Join(root, "people.csv"), builder.String())
+
+	preview, err := New().PreviewFile(root, "people.csv")
+	if err != nil {
+		t.Fatalf("PreviewFile returned error: %v", err)
+	}
+	if len(preview.Table.Rows) != tablePreviewMaxRows || !preview.Table.Truncated {
+		t.Fatalf("expected capped truncated table, got %#v", preview.Table)
+	}
+}

@@ -123,7 +123,7 @@ Current migration note: `app-wails/` keeps the old Wails adapter and services fo
 
 The Fyne shell now owns native desktop affordances directly: approved brand icon/logo assets are embedded under `nexus-app/internal/brand`, the window installs a native menu bar, and common IDE-like shortcuts are registered through a focused shortcut file rather than scattered callbacks.
 
-Preview data remains framework-free: `nexus-app/internal/services/workspace` classifies text, image, and binary previews and returns capped data, while `nexus-app/internal/ui/shell` chooses Fyne widgets for rendering.
+Preview data remains framework-free: `nexus-app/internal/services/workspace` classifies text, image, table, and binary previews and returns capped data, while `nexus-app/internal/ui/shell` chooses Fyne widgets for rendering.
 
 ### 2. Frontend
 
