@@ -194,7 +194,11 @@ const checks = [
     },
     {
         file: 'src/features/shell/ConnectorProfilesCard.tsx',
-        terms: ['ConnectorProfilesCard', 'Connector Profiles', 'protected credential', 'Password/token', 'Result cap', 'Timeout', 'Save profile', 'credential stored', 'onTest', 'onInspect', 'connector-profile-metadata', 'Test', 'Inspect'],
+        terms: ['ConnectorProfilesCard', 'Connector Profiles', 'protected credential', 'Password/token', 'Result cap', 'Timeout', 'Save profile', 'credential stored', 'onTest', 'onInspect', 'connector-profile-metadata', 'ConnectorMetadataBrowser', 'Test', 'Inspect'],
+    },
+    {
+        file: 'src/features/shell/ConnectorMetadataBrowser.tsx',
+        terms: ['ConnectorMetadataBrowser', 'connector-schema-browser', 'metadata.kind', 'Preview rows', 'Use query', 'Explain schema', 'ConnectorRelationshipList', 'Relationships', 'sampleRows', 'quoteConnectorIdentifierForUI'],
     },
     {
         file: 'src/features/shell/llmModelCatalog.ts',
@@ -282,7 +286,7 @@ const checks = [
     },
     {
         file: 'src/features/shell/DataOperationsPanel.tsx',
-        terms: ['DataOperationsPanel', 'Data & Analytics', 'Operations', 'Metadata', 'Profile dataset', 'DataSourceCards', 'DataSourceCardActions', 'onOpenDataSource', 'onProfileDataSource', 'onInspectDataSource', 'Import planned', 'Convert first', 'buildDataSourceCards', 'dataSourceFromNode', 'legacy workbook', 'compressed export', 'database dump', 'Footer metadata inspection', 'Profile levels', 'SQLiteConnectorPanel', 'ConnectorMetadataPanel', 'Inspect schema', 'SQLite schema object', 'Preview rows', 'Use query', 'Explain schema', 'ConnectorRelationshipList', 'Relationships', 'Saved SQLite Queries', 'SQLite Query History', 'Export CSV', 'Export report', 'Rows', 'Timeout', 'Cancel query', 'onCancelSQLiteConnectorQuery', 'onExplainSQLiteSchemaObject', 'onPreviewSQLiteSchemaObject', 'onSQLiteConnectorResultLimitChange', 'onExportSQLiteConnectorCSV', 'onExportSQLiteConnectorMarkdown', 'onSaveSQLiteConnectorQuery', 'onSQLiteConnectorTimeoutSecondsChange', 'OperationsInspector', 'MetadataBrowserPanel', 'WorkspaceFreshnessPanel'],
+        terms: ['DataOperationsPanel', 'Data & Analytics', 'Operations', 'Metadata', 'Profile dataset', 'DataSourceCards', 'DataSourceCardActions', 'onOpenDataSource', 'onProfileDataSource', 'onInspectDataSource', 'Import planned', 'Convert first', 'buildDataSourceCards', 'dataSourceFromNode', 'legacy workbook', 'compressed export', 'database dump', 'Footer metadata inspection', 'Profile levels', 'SQLiteConnectorPanel', 'ConnectorMetadataBrowser', 'Inspect schema', 'Saved SQLite Queries', 'SQLite Query History', 'Export CSV', 'Export report', 'Rows', 'Timeout', 'Cancel query', 'onCancelSQLiteConnectorQuery', 'onExplainSQLiteSchemaObject', 'onPreviewSQLiteSchemaObject', 'onSQLiteConnectorResultLimitChange', 'onExportSQLiteConnectorCSV', 'onExportSQLiteConnectorMarkdown', 'onSaveSQLiteConnectorQuery', 'onSQLiteConnectorTimeoutSecondsChange', 'OperationsInspector', 'MetadataBrowserPanel', 'WorkspaceFreshnessPanel'],
     },
     {
         file: 'src/features/shell/ChatMessageContent.tsx',

@@ -1,6 +1,7 @@
 import type {ChangeEvent} from 'react';
 import {Button, Card, StatusBadge} from '../../components/ui';
 import type {ConnectorMetadata, ConnectorProfile} from '../../types';
+import {ConnectorMetadataBrowser} from './ConnectorMetadataBrowser';
 
 type ConnectorProfilesCardProps = {
     draft: ConnectorProfile;
@@ -126,13 +127,8 @@ export function ConnectorProfilesCard({
             {metadata && (
                 <div className="connector-profile-metadata">
                     <strong>{metadata.name}</strong>
-                    <small>{metadata.engine} / {metadata.readOnly ? 'read-only' : 'write-capable blocked'}</small>
                     <small>{metadata.tables.length} tables / {metadata.views.length} views / {metadata.relationships.length} relationships</small>
-                    {[...metadata.tables, ...metadata.views].slice(0, 8).map((table) => (
-                        <small key={`${table.type}-${table.name}`}>
-                            {table.type}: {table.name} / {table.columns.length} columns / {table.rowCount} rows
-                        </small>
-                    ))}
+                    <ConnectorMetadataBrowser metadata={metadata} />
                 </div>
             )}
         </Card>

@@ -386,9 +386,10 @@ Step 5.3: Schema and relationship explorer
 - [x] Show SQLite columns, types, nullable, defaults, and primary-key markers.
 - [x] Show SQLite indexes.
 - [x] Show SQLite row counts and capped table samples.
-- [ ] Generalize database/schema navigation for external connectors.
-- [ ] Generalize tables and views for external connectors.
+- [x] Generalize database/schema navigation for external connectors.
+- [x] Generalize tables and views for external connectors.
 - [ ] Generalize columns, types, nullable, defaults, indexes, keys, row counts, and samples for external connectors.
+- [x] Extract reusable connector metadata browser and use it for SQLite files plus saved PostgreSQL/MySQL/MariaDB/SQL Server/DuckDB profile inspections.
 - [x] Infer first SQLite relationships where metadata is absent via conservative `*_id` hints.
 - [ ] Generate ERD-like relationship view.
 - [x] Let AI explain selected SQLite schema objects with inspected columns, indexes, samples, and relationship hints as citations.
@@ -1132,7 +1133,9 @@ Completed batch: connector query exports are user-triggered, bounded by the visi
 
 `app/frontend/src/features/shell/codeAiActions.ts` owns pure Code AI prompt builders and single-file unified-diff parsing for assistant patch drafts. `NexusShell.tsx` still orchestrates the model calls and safe write preview/apply boundary, but prompt templates and patch parsing should not drift back into the shell.
 
-`app/frontend/src/features/shell/ConnectorProfilesCard.tsx` owns the first local connector profile form and saved-profile list. It only receives redacted credential markers from the backend and delegates save/delete actions back to the shell.
+`app/frontend/src/features/shell/ConnectorProfilesCard.tsx` owns the first local connector profile form and saved-profile list. It only receives redacted credential markers from the backend and delegates save/delete/test/inspect actions back to the shell. Inspected external connector metadata is shown through the shared connector metadata browser.
+
+`app/frontend/src/features/shell/ConnectorMetadataBrowser.tsx` owns the shared schema object browser for connector metadata. It presents inspected tables/views, columns, indexes, row samples when present, and relationships for both workspace SQLite files and saved external connector profiles.
 
 Workspace scan counters are diagnostic data, not primary navigation content. Keep them in scan reports/diagnostics instead of the always-visible sidebar header.
 
@@ -1148,7 +1151,7 @@ Workspace scan counters are diagnostic data, not primary navigation content. Kee
 
 `app/frontend/src/features/shell/GitDiffPanel.tsx` owns the bottom-drawer Git tab for selected changed-file review, file stage/unstage controls, hunk selection state, approval-backed hunk stage/unstage/discard/revert controls, and read-only staged/unstaged working-tree diffs.
 
-`app/frontend/src/features/shell/DataOperationsPanel.tsx` currently owns Data route workflows, including bounded data source cards, explicit Open/Profile/Inspect actions, and the SQLite connector query panel with visible row cap, timeout, cancel controls, schema object selection, relationship hints, explicit row preview, selected-object schema explanation, saved connector queries, and connector query history. Planned dump/import and compressed-export actions are visible but disabled until the job/sandbox lifecycle exists.
+`app/frontend/src/features/shell/DataOperationsPanel.tsx` currently owns Data route workflows, including bounded data source cards, explicit Open/Profile/Inspect actions, and the SQLite connector query panel with visible row cap, timeout, cancel controls, schema object selection via the shared connector metadata browser, relationship hints, explicit row preview, selected-object schema explanation, saved connector queries, and connector query history. Planned dump/import and compressed-export actions are visible but disabled until the job/sandbox lifecycle exists.
 
 `app/frontend/src/features/shell/ArtifactStudioPanel.tsx` currently owns Artifact Studio route workflows.
 
