@@ -286,7 +286,7 @@ These batches describe the next product direction. They are broader than the cur
 1. Replace the current navigator feel with a JetBrains-style project tree: indentation, disclosure arrows, icons, context menus, reveal current file, collapse all, ignored-file controls, and preview-backed cut/copy/paste file operations.
 2. Add git repository detection, branch display, dirty summary, and file-level status badges.
 3. Add working tree/staged diff views with side-by-side and inline modes, hunk navigation, and stage/unstage/revert affordances.
-4. Add problems/search panels: path search, text/regex search, replace preview, diagnostics, and task/test output. Path/text search, regex search, replace preview, and read-only Compose task detection are now implemented; diagnostics and task execution remain next.
+4. Add problems/search panels: path search, text/symbol/regex search, replace preview, diagnostics, and task/test output. Path/text/symbol search, regex search, replace preview, lightweight TODO/FIXME/conflict/JSON diagnostics, and read-only Compose task detection are now implemented; task execution remains next.
 5. Continue editor improvements toward search/problems/refactoring depth. Split editor groups, pinned tabs, breadcrumbs, outline/symbol navigation, Monaco go-to-definition dispatch, safe draft formatting, encoding-aware save, and the Monaco minimap toggle are now implemented in the editor-quality foundation.
 6. Add AI code actions for review diff, explain change, generate tests, propose patch, create commit message, and summarize branch.
 

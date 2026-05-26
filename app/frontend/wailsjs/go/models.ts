@@ -1361,6 +1361,7 @@ export namespace main {
 	export class WorkspaceSearchRequest {
 	    query: string;
 	    regex: boolean;
+	    symbols: boolean;
 
 	    static createFrom(source: any = {}) {
 	        return new WorkspaceSearchRequest(source);
@@ -1370,6 +1371,7 @@ export namespace main {
 	        if ('string' === typeof source) source = JSON.parse(source);
 	        this.query = source["query"];
 	        this.regex = source["regex"];
+	        this.symbols = source["symbols"];
 	    }
 	}
 	export class WorkspaceTask {
@@ -2044,6 +2046,64 @@ export namespace workspace {
 		    return a;
 		}
 	}
+	export class WorkspaceProblem {
+	    relPath: string;
+	    name: string;
+	    severity: string;
+	    source: string;
+	    message: string;
+	    line: number;
+
+	    static createFrom(source: any = {}) {
+	        return new WorkspaceProblem(source);
+	    }
+
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.relPath = source["relPath"];
+	        this.name = source["name"];
+	        this.severity = source["severity"];
+	        this.source = source["source"];
+	        this.message = source["message"];
+	        this.line = source["line"];
+	    }
+	}
+	export class ProblemSummary {
+	    problems: WorkspaceProblem[];
+	    message: string;
+	    generatedAt: string;
+	    truncated: boolean;
+
+	    static createFrom(source: any = {}) {
+	        return new ProblemSummary(source);
+	    }
+
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.problems = this.convertValues(source["problems"], WorkspaceProblem);
+	        this.message = source["message"];
+	        this.generatedAt = source["generatedAt"];
+	        this.truncated = source["truncated"];
+	    }
+
+		convertValues(a: any, classs: any, asMap: boolean = false): any {
+		    if (!a) {
+		        return a;
+		    }
+		    if (a.slice && a.map) {
+		        return (a as any[]).map(elem => this.convertValues(elem, classs));
+		    } else if ("object" === typeof a) {
+		        if (asMap) {
+		            for (const key of Object.keys(a)) {
+		                a[key] = new classs(a[key]);
+		            }
+		            return a;
+		        }
+		        return new classs(a);
+		    }
+		    return a;
+		}
+	}
 	export class ScanStatus {
 	    included: number;
 	    ignored: number;
@@ -2096,6 +2156,7 @@ export namespace workspace {
 	        this.snippet = source["snippet"];
 	    }
 	}
+
 
 
 	export class WorkspaceSnapshot {

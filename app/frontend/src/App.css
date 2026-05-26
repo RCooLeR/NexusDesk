@@ -2770,7 +2770,8 @@ button:disabled {
     overflow: hidden;
 }
 
-.code-studio-task-panel {
+.code-studio-task-panel,
+.code-studio-problems-panel {
     border-top: 1px solid var(--nd-border-soft);
     display: grid;
     gap: 8px;
@@ -2891,7 +2892,8 @@ button:disabled {
     padding: 8px;
 }
 
-.code-studio-task-row {
+.code-studio-task-row,
+.code-studio-problem-row {
     border: 1px solid var(--nd-border-soft);
     border-radius: var(--nd-radius-sm);
     background: #fbfdff;
@@ -2902,8 +2904,33 @@ button:disabled {
     padding: 8px;
 }
 
+.code-studio-problem-row {
+    color: inherit;
+    cursor: pointer;
+    text-align: left;
+}
+
+.code-studio-problem-row:hover {
+    background: #edf4ff;
+    border-color: #b7d4ff;
+}
+
+.code-studio-problem-row.error {
+    box-shadow: inset 2px 0 0 #dc2626;
+}
+
+.code-studio-problem-row.warning {
+    box-shadow: inset 2px 0 0 #d97706;
+}
+
+.code-studio-problem-row.info {
+    box-shadow: inset 2px 0 0 var(--nd-electric-blue);
+}
+
 .code-studio-task-row span,
 .code-studio-task-row small,
+.code-studio-problem-row span,
+.code-studio-problem-row small,
 .code-studio-task-header small {
     color: var(--nd-muted-text);
     font-size: 11px;
@@ -2911,13 +2938,17 @@ button:disabled {
 
 .code-studio-task-row strong,
 .code-studio-task-row small,
-.code-studio-task-row span {
+.code-studio-task-row span,
+.code-studio-problem-row strong,
+.code-studio-problem-row small,
+.code-studio-problem-row span {
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
 }
 
-.code-studio-task-row small {
+.code-studio-task-row small,
+.code-studio-problem-row small {
     grid-column: 2;
 }
 

@@ -190,6 +190,10 @@ export function ListDatasetSQLRuns(arg1) {
   return window['go']['main']['App']['ListDatasetSQLRuns'](arg1);
 }
 
+export function ListWorkspaceProblems() {
+  return window['go']['main']['App']['ListWorkspaceProblems']();
+}
+
 export function ListWorkspaceTasks() {
   return window['go']['main']['App']['ListWorkspaceTasks']();
 }

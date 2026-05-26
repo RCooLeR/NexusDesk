@@ -1,5 +1,5 @@
 import {Button} from '../../components/ui';
-import type {FilePreview, GitFileChange, GitFileDiff, GitStatus, WorkspaceFreshnessStatus, WorkspaceSearchResult, WorkspaceSnapshot, WorkspaceTaskSummary} from '../../types';
+import type {FilePreview, GitFileChange, GitFileDiff, GitStatus, WorkspaceFreshnessStatus, WorkspaceProblemSummary, WorkspaceSearchResult, WorkspaceSnapshot, WorkspaceTaskSummary} from '../../types';
 
 type CodeStudioPanelProps = {
     activeFile: string;
@@ -9,6 +9,7 @@ type CodeStudioPanelProps = {
     selectedGitChangePath: string;
     selectedGitFileDiff: GitFileDiff | null;
     isLoadingGitFileDiff: boolean;
+    isLoadingWorkspaceProblems: boolean;
     isLoadingWorkspaceTasks: boolean;
     isSearchingWorkspace: boolean;
     openTabs: FilePreview[];
@@ -16,6 +17,7 @@ type CodeStudioPanelProps = {
     onOpenCommandPalette: () => void;
     onReplacePreviewChange: (value: string) => void;
     onRefreshGitStatus: () => void;
+    onRefreshWorkspaceProblems: () => void;
     onRefreshWorkspaceTasks: () => void;
     onSearchWorkspace: () => void;
     onSelectGitChange: (path: string) => void;
@@ -24,6 +26,7 @@ type CodeStudioPanelProps = {
     onWorkspaceSearchRegexChange: (value: boolean) => void;
     workspace: WorkspaceSnapshot | null;
     workspaceFreshness: WorkspaceFreshnessStatus | null;
+    workspaceProblems: WorkspaceProblemSummary | null;
     workspaceSearchQuery: string;
     workspaceSearchRegex: boolean;
     workspaceSearchResults: WorkspaceSearchResult[];
@@ -39,6 +42,7 @@ export function CodeStudioPanel({
     selectedGitChangePath,
     selectedGitFileDiff,
     isLoadingGitFileDiff,
+    isLoadingWorkspaceProblems,
     isLoadingWorkspaceTasks,
     isSearchingWorkspace,
     openTabs,
@@ -46,6 +50,7 @@ export function CodeStudioPanel({
     onOpenCommandPalette,
     onReplacePreviewChange,
     onRefreshGitStatus,
+    onRefreshWorkspaceProblems,
     onRefreshWorkspaceTasks,
     onSearchWorkspace,
     onSelectGitChange,
@@ -54,6 +59,7 @@ export function CodeStudioPanel({
     onWorkspaceSearchRegexChange,
     workspace,
     workspaceFreshness,
+    workspaceProblems,
     workspaceSearchQuery,
     workspaceSearchRegex,
     workspaceSearchResults,
@@ -154,7 +160,7 @@ export function CodeStudioPanel({
             <section className="code-studio-column">
                 <div className="bottom-section-heading">
                     <strong>Search</strong>
-                    <small>{workspaceSearchResults.length > 0 ? `${workspaceSearchResults.length} matches` : 'Path, text, regex, and replace preview'}</small>
+                    <small>{workspaceSearchResults.length > 0 ? `${workspaceSearchResults.length} matches` : 'Path, text, symbols, regex, and replace preview'}</small>
                 </div>
                 <div className="code-studio-search-panel">
                     <div className="code-studio-search-controls">
@@ -167,7 +173,7 @@ export function CodeStudioPanel({
                                     onSearchWorkspace();
                                 }
                             }}
-                            placeholder={workspaceSearchRegex ? 'Regex search files, artifacts, chat' : 'Search files, artifacts, chat'}
+                            placeholder={workspaceSearchRegex ? 'Regex search files, symbols, artifacts, chat' : 'Search files, symbols, artifacts, chat'}
                             value={workspaceSearchQuery}
                         />
                         <Button disabled={!workspace || isSearchingWorkspace || !workspaceSearchQuery.trim()} onClick={onSearchWorkspace} variant="subtle">
@@ -200,8 +206,29 @@ export function CodeStudioPanel({
                             <div className="code-studio-empty">{workspace ? 'Run a search to populate this panel.' : 'Open a workspace to search.'}</div>
                         )}
                     </div>
+                    <div className="code-studio-problems-panel" aria-label="Workspace problems">
+                        <div className="code-studio-task-header">
+                            <div>
+                                <strong>Problems</strong>
+                                <small>{workspaceProblems?.message ?? 'Lightweight TODO, conflict, and JSON checks'}</small>
+                            </div>
+                            <Button disabled={!workspace || isLoadingWorkspaceProblems} onClick={onRefreshWorkspaceProblems} variant="subtle">
+                                {isLoadingWorkspaceProblems ? 'Scanning...' : 'Refresh problems'}
+                            </Button>
+                        </div>
+                        <div className="code-studio-list">
+                            {workspaceProblems && workspaceProblems.problems.length > 0 ? workspaceProblems.problems.slice(0, 8).map((problem, index) => (
+                                <button className={`code-studio-problem-row ${problem.severity}`} key={`${problem.relPath}-${problem.line}-${index}`} onClick={() => onSelectSearchResult(problemToSearchResult(problem))} type="button">
+                                    <span>{problem.severity}</span>
+                                    <strong title={problem.relPath}>{problem.relPath}</strong>
+                                    <small>{problem.line > 0 ? `line ${problem.line} / ` : ''}{problem.message}</small>
+                                </button>
+                            )) : (
+                                <div className="code-studio-empty">{workspace ? 'Refresh problems to scan lightweight diagnostics.' : 'Open a workspace to scan problems.'}</div>
+                            )}
+                        </div>
+                    </div>
                     <div className="code-studio-queue-grid compact" aria-label="Code studio queues">
-                        <QueueCard label="Problems" value="pending" />
                         <QueueCard label="AI Review" value={filePreview?.fileType === 'code' ? 'ready' : 'context'} />
                         <QueueCard label="Data files nearby" value={String(dataFiles.length)} />
                     </div>
@@ -282,6 +309,18 @@ function QueueCard({label, value}: {label: string; value: string}) {
             <strong>{value}</strong>
         </div>
     );
+}
+
+function problemToSearchResult(problem: WorkspaceProblemSummary['problems'][number]): WorkspaceSearchResult {
+    return {
+        relPath: problem.relPath,
+        name: problem.name,
+        kind: 'file',
+        fileType: 'code',
+        matchType: problem.source,
+        line: problem.line,
+        snippet: problem.message,
+    };
 }
 
 function replacePreviewText(value: string, query: string, replacement: string, regex: boolean) {

@@ -461,6 +461,23 @@ export type WorkspaceSearchResult = {
 export type WorkspaceSearchRequest = {
     query: string;
     regex: boolean;
+    symbols: boolean;
+};
+
+export type WorkspaceProblem = {
+    relPath: string;
+    name: string;
+    severity: string;
+    source: string;
+    message: string;
+    line: number;
+};
+
+export type WorkspaceProblemSummary = {
+    problems: WorkspaceProblem[];
+    message: string;
+    generatedAt: string;
+    truncated: boolean;
 };
 
 export type WorkspaceTask = {

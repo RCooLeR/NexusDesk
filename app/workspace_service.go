@@ -79,7 +79,7 @@ func (s *WorkspaceService) Search(query string) ([]workspace.SearchResult, error
 }
 
 func (s *WorkspaceService) SearchAdvanced(request WorkspaceSearchRequest) ([]workspace.SearchResult, error) {
-	return s.search(request.Query, workspace.SearchOptions{MaxResults: 70, Regex: request.Regex})
+	return s.search(request.Query, workspace.SearchOptions{MaxResults: 70, Regex: request.Regex, Symbols: request.Symbols})
 }
 
 func (s *WorkspaceService) search(query string, options workspace.SearchOptions) ([]workspace.SearchResult, error) {
@@ -125,6 +125,14 @@ func (s *WorkspaceService) ReadFile(relPath string) (workspace.FilePreview, erro
 		return workspace.FilePreview{}, err
 	}
 	return workspace.Preview(root, relPath, workspace.PreviewOptions{})
+}
+
+func (s *WorkspaceService) Problems() (workspace.ProblemSummary, error) {
+	root, err := s.requireRoot("scanning workspace problems")
+	if err != nil {
+		return workspace.ProblemSummary{}, err
+	}
+	return workspace.ScanProblems(root, 80)
 }
 
 func (s *WorkspaceService) PreviewFileWrite(request workspace.FileWriteRequest) (workspace.FileWriteProposal, error) {

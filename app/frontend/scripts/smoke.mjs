@@ -47,8 +47,8 @@ const checks = [
             'DeleteArtifact',
             'CreateScanReportArtifact',
             'ListApprovals',
-            'SearchWorkspace',
             'SearchWorkspaceAdvanced',
+            'ListWorkspaceProblems',
             'ListWorkspaceTasks',
             'ApprovalRequestModal',
             'requestApproval',
@@ -148,7 +148,7 @@ const checks = [
     },
     {
         file: 'src/features/shell/CodeStudioPanel.tsx',
-        terms: ['CodeStudioPanel', 'Workbench', 'Project Session', 'Repository', 'Search', 'workspaceSearchQuery', 'workspaceSearchRegex', 'workspaceReplacePreview', 'replacePreviewText', 'workspaceSearchResults', 'workspaceTasks', 'onRefreshWorkspaceTasks', 'Refresh tasks', 'WorkspaceTaskSummary', 'onSearchWorkspace', 'onSelectSearchResult', 'code-studio-search-panel', 'code-studio-search-options', 'code-studio-task-panel', 'selectedGitChangePath', 'onSelectGitChange', 'stagedFiles', 'unstagedFiles', 'Refresh git', 'Commands'],
+        terms: ['CodeStudioPanel', 'Workbench', 'Project Session', 'Repository', 'Search', 'workspaceSearchQuery', 'workspaceSearchRegex', 'workspaceReplacePreview', 'replacePreviewText', 'workspaceSearchResults', 'workspaceProblems', 'onRefreshWorkspaceProblems', 'Refresh problems', 'WorkspaceProblemSummary', 'workspaceTasks', 'onRefreshWorkspaceTasks', 'Refresh tasks', 'WorkspaceTaskSummary', 'onSearchWorkspace', 'onSelectSearchResult', 'code-studio-search-panel', 'code-studio-search-options', 'code-studio-problems-panel', 'code-studio-problem-row', 'code-studio-task-panel', 'selectedGitChangePath', 'onSelectGitChange', 'stagedFiles', 'unstagedFiles', 'Refresh git', 'Commands'],
     },
     {
         file: 'src/features/shell/GitDiffPanel.tsx',
@@ -265,6 +265,8 @@ const checks = [
             '.code-studio-row',
             '.code-studio-toolbar',
             '.code-studio-search-options',
+            '.code-studio-problems-panel',
+            '.code-studio-problem-row',
             '.code-studio-task-panel',
             '.code-studio-task-row',
             '.git-change-tree',
@@ -345,7 +347,7 @@ const checks = [
     },
     {
         file: 'wailsjs/go/main/App.d.ts',
-        terms: ['AskLLMContextPack', 'RunAgent', 'PreviewFileWrite', 'ApplyFileDelete', 'PreviewFileCopy', 'ApplyFileCopy', 'ApplyFileMove', 'ProfileDataset', 'CreateDatasetChartArtifact', 'CreateDatasetQueryArtifact', 'CreateDatasetSQLArtifact', 'CreateDatasetSummaryArtifact', 'CreateChatMarkdownArtifact', 'CreateScanReportArtifact', 'PreviewChatContextPack', 'PreviewDatasetChart', 'SaveDatasetQuery', 'SaveDatasetSQLQuery', 'ListDatasetSQLQueries', 'ListDatasetDependencies', 'ListDatasetSQLRuns', 'ListWorkspaceTasks', 'RefreshStaleContext', 'SearchMetadata', 'SearchWorkspaceAdvanced', 'GetAssistantProfile', 'SaveAssistantProfile', 'QueryWorkspaceSQLite', 'ExportArtifactLineageJSON', 'GetGitStatus', 'GetGitFileDiff', 'PreviewGitFileAction', 'ApplyGitFileAction', 'PreviewGitHunkAction', 'ApplyGitHunkAction', 'ListApprovals', 'ListAgentTools', 'ListAgentToolRuns', 'PreviewAgentTool', 'ExecuteAgentTool', 'QueryDatasetSQL', 'EnsureSQLiteMetadataStore', 'InspectMetadataStore', 'GetArtifactLineage', 'CheckWorkspaceFreshness', 'CompareArtifacts', 'ArchiveArtifact', 'DeleteArtifact'],
+        terms: ['AskLLMContextPack', 'RunAgent', 'PreviewFileWrite', 'ApplyFileDelete', 'PreviewFileCopy', 'ApplyFileCopy', 'ApplyFileMove', 'ProfileDataset', 'CreateDatasetChartArtifact', 'CreateDatasetQueryArtifact', 'CreateDatasetSQLArtifact', 'CreateDatasetSummaryArtifact', 'CreateChatMarkdownArtifact', 'CreateScanReportArtifact', 'PreviewChatContextPack', 'PreviewDatasetChart', 'SaveDatasetQuery', 'SaveDatasetSQLQuery', 'ListDatasetSQLQueries', 'ListDatasetDependencies', 'ListDatasetSQLRuns', 'ListWorkspaceProblems', 'ListWorkspaceTasks', 'RefreshStaleContext', 'SearchMetadata', 'SearchWorkspaceAdvanced', 'GetAssistantProfile', 'SaveAssistantProfile', 'QueryWorkspaceSQLite', 'ExportArtifactLineageJSON', 'GetGitStatus', 'GetGitFileDiff', 'PreviewGitFileAction', 'ApplyGitFileAction', 'PreviewGitHunkAction', 'ApplyGitHunkAction', 'ListApprovals', 'ListAgentTools', 'ListAgentToolRuns', 'PreviewAgentTool', 'ExecuteAgentTool', 'QueryDatasetSQL', 'EnsureSQLiteMetadataStore', 'InspectMetadataStore', 'GetArtifactLineage', 'CheckWorkspaceFreshness', 'CompareArtifacts', 'ArchiveArtifact', 'DeleteArtifact'],
     },
     {
         file: '../app_tasks.go',
@@ -361,7 +363,19 @@ const checks = [
     },
     {
         file: '../app_search.go',
-        terms: ['WorkspaceSearchRequest', 'SearchWorkspaceAdvanced'],
+        terms: ['WorkspaceSearchRequest', 'SearchWorkspaceAdvanced', 'Symbols'],
+    },
+    {
+        file: '../app_problems.go',
+        terms: ['ListWorkspaceProblems', 'ProblemSummary'],
+    },
+    {
+        file: '../internal/workspace/symbols.go',
+        terms: ['BuildSymbols', 'WorkspaceSymbol', 'searchFileSymbols', 'markdownHeadingPattern'],
+    },
+    {
+        file: '../internal/workspace/problems.go',
+        terms: ['ProblemSummary', 'WorkspaceProblem', 'ScanProblems', 'markerProblems', 'jsonProblem'],
     },
     {
         file: '../artifact_service.go',
@@ -389,7 +403,7 @@ const checks = [
     },
     {
         file: 'scripts/visual-fixtures.mjs',
-        terms: ['installNexusMocks', 'ListDatasetDependencies', 'ListDatasetSQLRuns', 'ListWorkspaceTasks', 'SearchMetadata', 'QueryWorkspaceSQLite', 'ExportArtifactLineageJSON', 'ImportArtifactLineageJSON', 'dependencies'],
+        terms: ['installNexusMocks', 'ListDatasetDependencies', 'ListDatasetSQLRuns', 'ListWorkspaceProblems', 'ListWorkspaceTasks', 'SearchMetadata', 'QueryWorkspaceSQLite', 'ExportArtifactLineageJSON', 'ImportArtifactLineageJSON', 'dependencies'],
     },
     {
         file: 'dist/index.html',

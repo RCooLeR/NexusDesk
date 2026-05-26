@@ -95,6 +95,14 @@ export async function installNexusMocks(page) {
                         message: '2 tasks detected from package scripts and Go tests.',
                         generatedAt: '2026-05-14T00:00:00Z',
                     }),
+                    ListWorkspaceProblems: async () => ({
+                        problems: [
+                            {relPath: 'docs/brief.md', name: 'brief.md', severity: 'info', source: 'marker', message: 'Task marker: TODO: tighten this brief', line: 3},
+                        ],
+                        message: '1 workspace problem detected by lightweight scanners.',
+                        generatedAt: '2026-05-14T00:00:00Z',
+                        truncated: false,
+                    }),
                     ListAgentToolRuns: async () => [{id: 'smoke-tool', toolName: 'dataset.query', title: 'Query Dataset', target: 'data/campaigns.csv', risk: 'low', requiresApproval: false, status: 'dry-run', mode: 'dry-run', inputs: {query: 'spend > 10'}, outputSummary: 'Ready to query dataset.', error: '', approvalId: 'approval-smoke', startedAt: '2026-05-14T00:00:00Z', completedAt: '2026-05-14T00:00:01Z', durationMs: 1000}],
                     ListAgentTools: async () => [],
                     ReadWorkspaceFile: async (relPath) => {

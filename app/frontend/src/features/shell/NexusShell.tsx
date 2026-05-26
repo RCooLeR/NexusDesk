@@ -37,6 +37,7 @@ import {
     ListDatasetQueries,
     ListDatasetSQLQueries,
     ListDatasetProfiles,
+    ListWorkspaceProblems,
     ListWorkspaceTasks,
     GetRecentWorkspaces,
     ListArtifacts,
@@ -64,7 +65,6 @@ import {
     SaveDatasetQuery,
     SaveDatasetSQLQuery,
     SearchMetadata,
-    SearchWorkspace,
     SearchWorkspaceAdvanced,
     RunAgent,
     SelectWorkspace,
@@ -111,6 +111,7 @@ import type {
     WorkspaceArtifact,
     WorkspaceFileChange,
     WorkspaceFreshnessStatus,
+    WorkspaceProblemSummary,
     WorkspaceSearchResult,
     WorkspaceTaskSummary,
     WorkspaceOpenResult,
@@ -229,6 +230,8 @@ export function NexusShell({
     const [workspaceReplacePreview, setWorkspaceReplacePreview] = useState('');
     const [workspaceSearchResults, setWorkspaceSearchResults] = useState<WorkspaceSearchResult[]>([]);
     const [isSearchingWorkspace, setIsSearchingWorkspace] = useState(false);
+    const [workspaceProblems, setWorkspaceProblems] = useState<WorkspaceProblemSummary | null>(null);
+    const [isLoadingWorkspaceProblems, setIsLoadingWorkspaceProblems] = useState(false);
     const [workspaceTasks, setWorkspaceTasks] = useState<WorkspaceTaskSummary | null>(null);
     const [isLoadingWorkspaceTasks, setIsLoadingWorkspaceTasks] = useState(false);
     const [isSendingPrompt, setIsSendingPrompt] = useState(false);
@@ -1559,6 +1562,7 @@ export function NexusShell({
         resetGitStatus();
         onWorkspaceChange(safeSnapshot);
         setWorkspaceSearchResults([]);
+        setWorkspaceProblems(null);
         setWorkspaceTasks(null);
         if (rootChanged) {
             setOpenTabs([]);
@@ -1761,9 +1765,7 @@ export function NexusShell({
         setIsSearchingWorkspace(true);
         setWorkspaceStatus(`Searching ${workspace.name}...`);
         try {
-            const results = workspaceSearchRegex
-                ? await SearchWorkspaceAdvanced({query, regex: true})
-                : await SearchWorkspace(query);
+            const results = await SearchWorkspaceAdvanced({query, regex: workspaceSearchRegex, symbols: true});
             setWorkspaceSearchResults(results);
             setWorkspaceStatus(`${results.length} ${workspaceSearchRegex ? 'regex ' : ''}workspace matches for "${query}".`);
             pushToolEvent('Workspace search', `${results.length} ${workspaceSearchRegex ? 'regex ' : ''}matches for ${query}`);
@@ -1772,6 +1774,27 @@ export function NexusShell({
             setWorkspaceStatus(message || 'Workspace search failed.');
         } finally {
             setIsSearchingWorkspace(false);
+        }
+    }
+
+    async function refreshWorkspaceProblems() {
+        if (!workspace) {
+            setWorkspaceStatus('Open a workspace before scanning problems.');
+            return;
+        }
+
+        setIsLoadingWorkspaceProblems(true);
+        setWorkspaceStatus(`Scanning ${workspace.name} problems...`);
+        try {
+            const summary = await ListWorkspaceProblems();
+            setWorkspaceProblems(summary);
+            setWorkspaceStatus(summary.message);
+            pushToolEvent('Workspace problems', summary.message);
+        } catch (error) {
+            const message = error instanceof Error ? error.message : '';
+            setWorkspaceStatus(message || 'Workspace problem scan failed.');
+        } finally {
+            setIsLoadingWorkspaceProblems(false);
         }
     }
 
@@ -3511,6 +3534,7 @@ export function NexusShell({
                 isApplyingGitFileAction={isApplyingGitFileAction}
                 isApplyingGitHunkAction={isApplyingGitHunkAction}
                 isLoadingGitFileDiff={isLoadingGitFileDiff}
+                isLoadingWorkspaceProblems={isLoadingWorkspaceProblems}
                 isLoadingWorkspaceTasks={isLoadingWorkspaceTasks}
                 isPreviewingGitFileAction={isPreviewingGitFileAction}
                 isPreviewingGitHunkAction={isPreviewingGitHunkAction}
@@ -3585,6 +3609,7 @@ export function NexusShell({
                 onRefreshGitStatus={() => void refreshGitStatus()}
                 onRefreshLineage={() => void loadArtifactLineage()}
                 onRefreshStaleContext={() => void refreshStaleContextFromWorkspace()}
+                onRefreshWorkspaceProblems={() => void refreshWorkspaceProblems()}
                 onRefreshWorkspaceTasks={() => void refreshWorkspaceTasks()}
                 onReplayAgentToolRun={(run) => void replayAgentToolRun(run)}
                 onSaveDatasetQuery={() => void saveCurrentDatasetQuery()}
@@ -3614,6 +3639,7 @@ export function NexusShell({
                 toolEvents={localToolEvents}
                 workspace={workspace}
                 workspaceFreshness={workspaceFreshness}
+                workspaceProblems={workspaceProblems}
                 workspaceSearchQuery={workspaceSearchQuery}
                 workspaceSearchRegex={workspaceSearchRegex}
                 workspaceSearchResults={workspaceSearchResults}

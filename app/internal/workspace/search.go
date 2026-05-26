@@ -16,6 +16,7 @@ const (
 type SearchOptions struct {
 	MaxResults int
 	Regex      bool
+	Symbols    bool
 }
 
 type SearchResult struct {
@@ -94,6 +95,9 @@ func Search(root string, query string, options SearchOptions) ([]SearchResult, e
 
 		if !entry.IsDir() && len(results) < maxResults {
 			results = append(results, searchFileContent(absRoot, relPath, matcher)...)
+		}
+		if !entry.IsDir() && options.Symbols && len(results) < maxResults {
+			results = append(results, searchFileSymbols(absRoot, relPath, matcher)...)
 		}
 
 		if len(results) >= maxResults {

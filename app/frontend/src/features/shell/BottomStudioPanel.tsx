@@ -1,4 +1,4 @@
-import type {AgentToolDescriptor, AgentToolPlanItem, AgentToolRunRecord, ApprovalRecord, ArtifactComparison, ArtifactLineage, ArtifactMetadata, Capability, DatasetChartResult, DatasetDependency, DatasetProfile, DatasetQueryResult, DatasetSQLQueryResult, FilePreview, GitFileAction, GitFileActionPreview, GitFileDiff, GitHunkActionPreview, GitHunkActionRequest, GitStatus, LLMProbeResult, LLMSettings, MetadataBrowser, MetadataSearchResult, SavedDatasetQuery, SQLRun, SQLiteMetadataStatus, SQLiteQueryResult, ToolEvent, WorkspaceArtifact, WorkspaceFreshnessStatus, WorkspaceSearchResult, WorkspaceSnapshot, WorkspaceTaskSummary} from '../../types';
+import type {AgentToolDescriptor, AgentToolPlanItem, AgentToolRunRecord, ApprovalRecord, ArtifactComparison, ArtifactLineage, ArtifactMetadata, Capability, DatasetChartResult, DatasetDependency, DatasetProfile, DatasetQueryResult, DatasetSQLQueryResult, FilePreview, GitFileAction, GitFileActionPreview, GitFileDiff, GitHunkActionPreview, GitHunkActionRequest, GitStatus, LLMProbeResult, LLMSettings, MetadataBrowser, MetadataSearchResult, SavedDatasetQuery, SQLRun, SQLiteMetadataStatus, SQLiteQueryResult, ToolEvent, WorkspaceArtifact, WorkspaceFreshnessStatus, WorkspaceProblemSummary, WorkspaceSearchResult, WorkspaceSnapshot, WorkspaceTaskSummary} from '../../types';
 import {AgentToolPlanCard} from './AgentToolPlanCard';
 import {ApprovalLogPanel} from './ApprovalLogPanel';
 import {ArtifactStudioPanel} from './ArtifactStudioPanel';
@@ -54,6 +54,7 @@ type BottomStudioPanelProps = {
     isApplyingGitFileAction: boolean;
     isApplyingGitHunkAction: boolean;
     isLoadingGitFileDiff: boolean;
+    isLoadingWorkspaceProblems: boolean;
     isLoadingWorkspaceTasks: boolean;
     isPreviewingGitFileAction: boolean;
     isPreviewingGitHunkAction: boolean;
@@ -115,6 +116,7 @@ type BottomStudioPanelProps = {
     onRefreshGitStatus: () => void;
     onRefreshLineage: () => void;
     onRefreshStaleContext: () => void;
+    onRefreshWorkspaceProblems: () => void;
     onRefreshWorkspaceTasks: () => void;
     onReplayAgentToolRun: (run: AgentToolRunRecord) => void;
     onSaveDatasetQuery: () => void;
@@ -143,6 +145,7 @@ type BottomStudioPanelProps = {
     toolEvents: ToolEvent[];
     workspace: WorkspaceSnapshot | null;
     workspaceFreshness: WorkspaceFreshnessStatus | null;
+    workspaceProblems: WorkspaceProblemSummary | null;
     workspaceSearchQuery: string;
     workspaceSearchRegex: boolean;
     workspaceSearchResults: WorkspaceSearchResult[];
@@ -204,6 +207,7 @@ export function BottomStudioPanel({
     isApplyingGitFileAction,
     isApplyingGitHunkAction,
     isLoadingGitFileDiff,
+    isLoadingWorkspaceProblems,
     isLoadingWorkspaceTasks,
     isPreviewingGitFileAction,
     isPreviewingGitHunkAction,
@@ -265,6 +269,7 @@ export function BottomStudioPanel({
     onRefreshGitStatus,
     onRefreshLineage,
     onRefreshStaleContext,
+    onRefreshWorkspaceProblems,
     onRefreshWorkspaceTasks,
     onReplayAgentToolRun,
     onSaveDatasetQuery,
@@ -293,6 +298,7 @@ export function BottomStudioPanel({
     toolEvents,
     workspace,
     workspaceFreshness,
+    workspaceProblems,
     workspaceSearchQuery,
     workspaceSearchRegex,
     workspaceSearchResults,
@@ -330,12 +336,14 @@ export function BottomStudioPanel({
                         selectedGitChangePath={selectedGitChangePath}
                         selectedGitFileDiff={selectedGitFileDiff}
                         isLoadingGitFileDiff={isLoadingGitFileDiff}
+                        isLoadingWorkspaceProblems={isLoadingWorkspaceProblems}
                         isLoadingWorkspaceTasks={isLoadingWorkspaceTasks}
                         isSearchingWorkspace={isSearchingWorkspace}
                         openTabs={openTabs}
                         onClearWorkspaceSearch={onClearWorkspaceSearch}
                         onOpenCommandPalette={onOpenCommandPalette}
                         onRefreshGitStatus={onRefreshGitStatus}
+                        onRefreshWorkspaceProblems={onRefreshWorkspaceProblems}
                         onRefreshWorkspaceTasks={onRefreshWorkspaceTasks}
                         onSearchWorkspace={onSearchWorkspace}
                         onSelectGitChange={onSelectGitChange}
@@ -345,6 +353,7 @@ export function BottomStudioPanel({
                         onWorkspaceSearchQueryChange={onWorkspaceSearchQueryChange}
                         workspace={workspace}
                         workspaceFreshness={workspaceFreshness}
+                        workspaceProblems={workspaceProblems}
                         workspaceSearchQuery={workspaceSearchQuery}
                         workspaceSearchRegex={workspaceSearchRegex}
                         workspaceSearchResults={workspaceSearchResults}

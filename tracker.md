@@ -78,7 +78,7 @@ Steps:
 - [x] Define safety principle: LLM requests tools; backend validates and runs tools.
 - [x] Define artifact-first output model.
 - [x] Add long-range studio roadmap.
-- [ ] Keep roadmap updated after each major implementation batch.
+- [x] Keep roadmap updated after each major implementation batch.
 
 Exit criteria:
 
@@ -288,8 +288,8 @@ Step 4.4: Search, problems, and tasks
 - [x] Add text search panel.
 - [x] Add regex search.
 - [x] Add replace preview.
-- [ ] Add symbol search where language data exists.
-- [ ] Add diagnostics/problems panel.
+- [x] Add symbol search where language data exists.
+- [x] Add diagnostics/problems panel.
 - [x] Detect package scripts.
 - [x] Detect Go tests.
 - [x] Detect npm scripts.
@@ -1023,7 +1023,7 @@ Steps:
 9. [x] Detect npm scripts and Go tests into a Tasks panel with read-only listing.
 10. Keep visual smoke focused on no blank screen, no whole-window scroll, Git drawer behavior, route switching, and no slow/external work on folder open.
 
-Reasoning: read-only navigation and diff review are now credible, file and hunk stage/unstage go through preview plus approval-backed apply paths, hunk selection exists as UI state, hunk discard/revert now goes through the approval modal before backend patch application, Workbench has path/text/regex search plus non-mutating replace previews backed by the existing safe workspace search flow, task/script detection now lists npm scripts, Go test commands, and Docker Compose config-check tasks without running external processes, and Phase 2 now has split editor groups, outline navigation, Monaco go-to-definition dispatch, safe draft formatting, and encoding-aware save. The next correction path can move to Phase 4 diagnostics/problems and task-runner depth or Phase 15 architecture hardening.
+Reasoning: read-only navigation and diff review are now credible, file and hunk stage/unstage go through preview plus approval-backed apply paths, hunk selection exists as UI state, hunk discard/revert now goes through the approval modal before backend patch application, Workbench has path/text/symbol/regex search plus non-mutating replace previews backed by the existing safe workspace search flow, the Problems panel runs lightweight TODO/FIXME/conflict/JSON checks without external commands, task/script detection now lists npm scripts, Go test commands, and Docker Compose config-check tasks without running external processes, and Phase 2 now has split editor groups, outline navigation, Monaco go-to-definition dispatch, safe draft formatting, and encoding-aware save. The next correction path can move to Phase 4 task-runner depth or Phase 15 architecture hardening.
 
 ## Directory Ownership Notes
 
@@ -1071,9 +1071,11 @@ Workspace scan counters are diagnostic data, not primary navigation content. Kee
 
 `app/frontend/src/features/shell/EditorOutlinePanel.tsx` owns the editor outline side panel presentation and symbol-selection callbacks.
 
-`app/frontend/src/features/shell/editorOutline.ts` owns lightweight outline extraction for Markdown, TypeScript/JavaScript, Go, CSS, JSON, and YAML while richer language-service-backed symbol search remains pending.
+`app/internal/workspace/symbols.go` and `app/frontend/src/features/shell/editorOutline.ts` own lightweight symbol extraction for Markdown, TypeScript/JavaScript, Go, CSS, JSON, and YAML. This is intentionally regex/structure based until language-service-backed symbol indexing lands.
 
-`app/frontend/src/features/shell/CodeStudioPanel.tsx` owns the first reusable Workbench utility surface for editor session metrics, open tabs, workspace status, git branch/dirty summary, changed-file list, Workbench search results/actions, read-only detected task listings, and placeholders that will receive problem/review data.
+`app/internal/workspace/problems.go` owns the first read-only lightweight Problems scan for TODO/FIXME/HACK/BUG markers, merge-conflict markers, and invalid JSON.
+
+`app/frontend/src/features/shell/CodeStudioPanel.tsx` owns the first reusable Workbench utility surface for editor session metrics, open tabs, workspace status, git branch/dirty summary, changed-file list, Workbench search results/actions, lightweight Problems results, read-only detected task listings, and placeholders that will receive review data.
 
 `app/frontend/src/features/shell/GitDiffPanel.tsx` owns the bottom-drawer Git tab for selected changed-file review, file stage/unstage controls, hunk selection state, approval-backed hunk stage/unstage/discard/revert controls, and read-only staged/unstaged working-tree diffs.
 
