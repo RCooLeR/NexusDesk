@@ -364,6 +364,43 @@ export type SQLiteQueryResult = {
     message: string;
 };
 
+export type ConnectorMetadata = {
+    id: string;
+    relPath: string;
+    name: string;
+    kind: string;
+    engine: string;
+    readOnly: boolean;
+    tables: ConnectorTable[];
+    views: ConnectorTable[];
+    indexes: ConnectorIndex[];
+    message: string;
+};
+
+export type ConnectorTable = {
+    name: string;
+    type: string;
+    rowCount: number;
+    columns: ConnectorColumn[];
+    indexes: ConnectorIndex[];
+    sampleRows: string[][];
+};
+
+export type ConnectorColumn = {
+    name: string;
+    type: string;
+    nullable: boolean;
+    primaryKey: boolean;
+    default: string;
+};
+
+export type ConnectorIndex = {
+    name: string;
+    table: string;
+    unique: boolean;
+    columns: string[];
+};
+
 export type ContextPreviewFile = {
     relPath: string;
     required: boolean;

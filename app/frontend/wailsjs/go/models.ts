@@ -856,6 +856,133 @@ export namespace dataset {
 
 export namespace dbconnector {
 
+	export class ConnectorColumn {
+	    name: string;
+	    type: string;
+	    nullable: boolean;
+	    primaryKey: boolean;
+	    default: string;
+
+	    static createFrom(source: any = {}) {
+	        return new ConnectorColumn(source);
+	    }
+
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.name = source["name"];
+	        this.type = source["type"];
+	        this.nullable = source["nullable"];
+	        this.primaryKey = source["primaryKey"];
+	        this.default = source["default"];
+	    }
+	}
+	export class ConnectorIndex {
+	    name: string;
+	    table: string;
+	    unique: boolean;
+	    columns: string[];
+
+	    static createFrom(source: any = {}) {
+	        return new ConnectorIndex(source);
+	    }
+
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.name = source["name"];
+	        this.table = source["table"];
+	        this.unique = source["unique"];
+	        this.columns = source["columns"];
+	    }
+	}
+	export class ConnectorTable {
+	    name: string;
+	    type: string;
+	    rowCount: number;
+	    columns: ConnectorColumn[];
+	    indexes: ConnectorIndex[];
+	    sampleRows: string[][];
+
+	    static createFrom(source: any = {}) {
+	        return new ConnectorTable(source);
+	    }
+
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.name = source["name"];
+	        this.type = source["type"];
+	        this.rowCount = source["rowCount"];
+	        this.columns = this.convertValues(source["columns"], ConnectorColumn);
+	        this.indexes = this.convertValues(source["indexes"], ConnectorIndex);
+	        this.sampleRows = source["sampleRows"];
+	    }
+
+		convertValues(a: any, classs: any, asMap: boolean = false): any {
+		    if (!a) {
+		        return a;
+		    }
+		    if (a.slice && a.map) {
+		        return (a as any[]).map(elem => this.convertValues(elem, classs));
+		    } else if ("object" === typeof a) {
+		        if (asMap) {
+		            for (const key of Object.keys(a)) {
+		                a[key] = new classs(a[key]);
+		            }
+		            return a;
+		        }
+		        return new classs(a);
+		    }
+		    return a;
+		}
+	}
+	export class ConnectorMetadata {
+	    id: string;
+	    relPath: string;
+	    name: string;
+	    kind: string;
+	    engine: string;
+	    readOnly: boolean;
+	    tables: ConnectorTable[];
+	    views: ConnectorTable[];
+	    indexes: ConnectorIndex[];
+	    message: string;
+
+	    static createFrom(source: any = {}) {
+	        return new ConnectorMetadata(source);
+	    }
+
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.id = source["id"];
+	        this.relPath = source["relPath"];
+	        this.name = source["name"];
+	        this.kind = source["kind"];
+	        this.engine = source["engine"];
+	        this.readOnly = source["readOnly"];
+	        this.tables = this.convertValues(source["tables"], ConnectorTable);
+	        this.views = this.convertValues(source["views"], ConnectorTable);
+	        this.indexes = this.convertValues(source["indexes"], ConnectorIndex);
+	        this.message = source["message"];
+	    }
+
+		convertValues(a: any, classs: any, asMap: boolean = false): any {
+		    if (!a) {
+		        return a;
+		    }
+		    if (a.slice && a.map) {
+		        return (a as any[]).map(elem => this.convertValues(elem, classs));
+		    } else if ("object" === typeof a) {
+		        if (asMap) {
+		            for (const key of Object.keys(a)) {
+		                a[key] = new classs(a[key]);
+		            }
+		            return a;
+		        }
+		        return new classs(a);
+		    }
+		    return a;
+		}
+	}
+
 	export class SQLiteQueryRequest {
 	    relPath: string;
 	    sql: string;

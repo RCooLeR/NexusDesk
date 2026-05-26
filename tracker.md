@@ -339,6 +339,7 @@ Implemented:
 - [x] DuckDB-compatible SQL surface with bounded fallback.
 - [x] CGO-gated DuckDB driver path behind `duckdb` build tag.
 - [x] Read-only SQLite workspace connector.
+- [x] SQLite connector metadata inspection.
 - [x] SQLite mutation keyword blocking and single-statement validation.
 - [x] Dataset dependencies and rebuild actions.
 
@@ -358,9 +359,9 @@ Step 5.1: File dataset coverage
 
 Step 5.2: Database connector framework
 
-- [ ] Define connector interface and metadata model.
+- [x] Define connector interface and metadata model.
 - [ ] Add connection profiles with secure credential references.
-- [ ] Expand SQLite schema browser.
+- [x] Expand SQLite schema browser.
 - [ ] Add PostgreSQL read-only connector.
 - [ ] Add MySQL/MariaDB read-only connector.
 - [ ] Add SQL Server read-only connector.
@@ -1027,12 +1028,12 @@ Steps:
 
 1. [x] Add Parquet metadata inspection.
 2. [x] Add log dataset profiling.
-3. [ ] Start the connector metadata interface needed by future database and analytics sources.
+3. [x] Start the connector metadata interface needed by future database and analytics sources.
 4. [ ] Define connection profiles with secure credential references.
-5. [ ] Expand SQLite schema browsing beyond the first connector query surface.
+5. [x] Expand SQLite schema browsing beyond the first connector query surface.
 6. [ ] Add data source card actions for open, profile, inspect connector, and planned import workflows.
 
-Reasoning: Data & Analytics now has first-pass source discovery, bounded Parquet metadata, and bounded log profiles. The next gap is a connector metadata model that can represent SQLite and future database/analytics sources without baking every source type into ad hoc UI cards.
+Reasoning: Data & Analytics now has first-pass source discovery, bounded Parquet metadata, bounded log profiles, and a first connector metadata shape for SQLite schema inspection. The next gap is connection profile modeling with secure credential references plus explicit source-card actions that can route users to profile, inspect, connector, or planned import workflows.
 
 ## Directory Ownership Notes
 
@@ -1056,7 +1057,7 @@ Reasoning: Data & Analytics now has first-pass source discovery, bounded Parquet
 
 `app/internal/analytics/` owns read-only SQL-style dataset querying and DuckDB-compatible execution paths.
 
-`app/internal/dbconnector/` owns workspace database connector surfaces. Today that means read-only SQLite files; future phases add server databases and dump sandboxes.
+`app/internal/dbconnector/` owns workspace database connector surfaces. Today that means read-only SQLite files, read-only SQL execution, and user-triggered SQLite connector metadata inspection for tables, views, columns, indexes, row counts, and capped samples; future phases add credential-backed server databases and dump sandboxes.
 
 `app/internal/approval/` owns append-only approval/action records.
 

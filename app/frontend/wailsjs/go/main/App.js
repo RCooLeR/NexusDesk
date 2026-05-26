@@ -154,6 +154,10 @@ export function InspectMetadataStore() {
   return window['go']['main']['App']['InspectMetadataStore']();
 }
 
+export function InspectWorkspaceSQLite(arg1) {
+  return window['go']['main']['App']['InspectWorkspaceSQLite'](arg1);
+}
+
 export function ListAgentToolRuns() {
   return window['go']['main']['App']['ListAgentToolRuns']();
 }

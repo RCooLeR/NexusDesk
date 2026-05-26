@@ -8,9 +8,9 @@ import {storage} from '../models';
 import {analytics} from '../models';
 import {appmeta} from '../models';
 import {agenttools} from '../models';
+import {dbconnector} from '../models';
 import {approval} from '../models';
 import {dataset} from '../models';
-import {dbconnector} from '../models';
 import {agent} from '../models';
 
 export function AgentSystemPrompt():Promise<string>;
@@ -88,6 +88,8 @@ export function GetStartupState():Promise<main.StartupState>;
 export function ImportArtifactLineageJSON(arg1:string):Promise<main.ArtifactLineageImport>;
 
 export function InspectMetadataStore():Promise<appmeta.MetadataBrowser>;
+
+export function InspectWorkspaceSQLite(arg1:string):Promise<dbconnector.ConnectorMetadata>;
 
 export function ListAgentToolRuns():Promise<Array<agenttools.RunRecord>>;
 

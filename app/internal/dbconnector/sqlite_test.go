@@ -123,3 +123,50 @@ func TestQuerySQLiteCapsReturnedRows(t *testing.T) {
 		t.Fatalf("expected message to include showing count, got %q", result.Message)
 	}
 }
+
+func TestInspectSQLiteReturnsConnectorMetadata(t *testing.T) {
+	root := t.TempDir()
+	dbPath := filepath.Join(root, "sample.sqlite")
+	db, err := sql.Open("sqlite", dbPath)
+	if err != nil {
+		t.Fatalf("sql.Open failed: %v", err)
+	}
+	_, err = db.Exec(`
+		CREATE TABLE leads (id INTEGER PRIMARY KEY, channel TEXT NOT NULL, revenue INTEGER DEFAULT 0);
+		CREATE INDEX leads_channel_idx ON leads(channel);
+		INSERT INTO leads (channel, revenue) VALUES ('search', 10), ('email', 7);
+		CREATE VIEW lead_channels AS SELECT channel FROM leads;
+	`)
+	if err != nil {
+		_ = db.Close()
+		t.Fatalf("seed sqlite failed: %v", err)
+	}
+	_ = db.Close()
+
+	metadata, err := InspectSQLite(root, "sample.sqlite")
+	if err != nil {
+		t.Fatalf("InspectSQLite returned error: %v", err)
+	}
+	if metadata.Kind != "sqlite" || !metadata.ReadOnly || metadata.Engine != "sqlite-readonly" {
+		t.Fatalf("unexpected metadata header: %#v", metadata)
+	}
+	if len(metadata.Tables) != 1 || metadata.Tables[0].Name != "leads" {
+		t.Fatalf("unexpected tables: %#v", metadata.Tables)
+	}
+	table := metadata.Tables[0]
+	if table.RowCount != 2 || len(table.Columns) != 3 || len(table.SampleRows) != 2 {
+		t.Fatalf("unexpected table metadata: %#v", table)
+	}
+	if table.Columns[0].Name != "id" || !table.Columns[0].PrimaryKey {
+		t.Fatalf("expected primary key column metadata, got %#v", table.Columns[0])
+	}
+	if table.Columns[1].Name != "channel" || table.Columns[1].Nullable {
+		t.Fatalf("expected non-null channel column metadata, got %#v", table.Columns[1])
+	}
+	if len(table.Indexes) != 1 || table.Indexes[0].Columns[0] != "channel" {
+		t.Fatalf("unexpected index metadata: %#v", table.Indexes)
+	}
+	if len(metadata.Views) != 1 || metadata.Views[0].Name != "lead_channels" {
+		t.Fatalf("unexpected views: %#v", metadata.Views)
+	}
+}

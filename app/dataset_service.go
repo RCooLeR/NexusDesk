@@ -169,6 +169,19 @@ func (s *DatasetService) QueryWorkspaceSQLite(request dbconnector.SQLiteQueryReq
 	return result, nil
 }
 
+func (s *DatasetService) InspectWorkspaceSQLite(relPath string) (dbconnector.ConnectorMetadata, error) {
+	root, err := s.requireRoot("inspecting SQLite metadata")
+	if err != nil {
+		return dbconnector.ConnectorMetadata{}, err
+	}
+	metadata, err := dbconnector.InspectSQLite(root, relPath)
+	if err != nil {
+		return dbconnector.ConnectorMetadata{}, err
+	}
+	s.recordDependency(root, metadata.RelPath, "sqlite-metadata", "inspect schema", metadata.Engine, "")
+	return metadata, nil
+}
+
 func (s *DatasetService) PreviewChart(request workspace.DatasetChartRequest) (workspace.DatasetChartResult, error) {
 	root, err := s.requireRoot("previewing dataset charts")
 	if err != nil {

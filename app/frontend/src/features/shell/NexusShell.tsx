@@ -29,6 +29,7 @@ import {
     GetArtifactMetadata,
     GetArtifactLineage,
     GetAssistantProfile,
+    InspectWorkspaceSQLite,
     InspectMetadataStore,
     GetChatHistory,
     ListAgentTools,
@@ -85,6 +86,7 @@ import type {
     AssistantProfile,
     ChatStreamEvent,
     ChatMessage,
+    ConnectorMetadata,
     ContextPreview,
     DatasetChartResult,
     DatasetDependency,
@@ -274,7 +276,9 @@ export function NexusShell({
     const [datasetSQLRuns, setDatasetSQLRuns] = useState<SQLRun[]>([]);
     const [sqliteConnectorQuery, setSQLiteConnectorQuery] = useState('select name, type from sqlite_master where type in (\'table\', \'view\') order by name');
     const [sqliteConnectorResult, setSQLiteConnectorResult] = useState<SQLiteQueryResult | null>(null);
+    const [sqliteConnectorMetadata, setSQLiteConnectorMetadata] = useState<ConnectorMetadata | null>(null);
     const [isQueryingSQLiteConnector, setIsQueryingSQLiteConnector] = useState(false);
+    const [isInspectingSQLiteConnector, setIsInspectingSQLiteConnector] = useState(false);
     const [isPreparingMetadataStore, setIsPreparingMetadataStore] = useState(false);
     const [editingFilePaths, setEditingFilePaths] = useState<string[]>([]);
     const [fileDrafts, setFileDrafts] = useState<Record<string, string>>({});
@@ -492,6 +496,7 @@ export function NexusShell({
 
     useEffect(() => {
         setSQLiteConnectorResult(null);
+        setSQLiteConnectorMetadata(null);
     }, [filePreview?.relPath]);
 
     useEffect(() => {
@@ -3611,6 +3616,26 @@ export function NexusShell({
         }
     }
 
+    async function inspectActiveSQLiteFile() {
+        if (!workspace || !filePreview || filePreview.fileType !== 'database') {
+            setWorkspaceStatus('Select a SQLite database file before inspecting schema.');
+            return;
+        }
+        setIsInspectingSQLiteConnector(true);
+        try {
+            const metadata = await InspectWorkspaceSQLite(filePreview.relPath);
+            setSQLiteConnectorMetadata(metadata);
+            setWorkspaceStatus(metadata.message);
+            pushToolEvent('SQLite schema inspected', metadata.relPath);
+            await refreshDatasetLineage(filePreview.relPath);
+        } catch (error) {
+            const message = error instanceof Error ? error.message : '';
+            setWorkspaceStatus(message || 'Could not inspect SQLite schema.');
+        } finally {
+            setIsInspectingSQLiteConnector(false);
+        }
+    }
+
     async function dryRunAgentTool(item: AgentToolPlanItem) {
         await runAgentTool(item, false);
     }
@@ -3871,6 +3896,7 @@ export function NexusShell({
                 isPreviewingGitFileAction={isPreviewingGitFileAction}
                 isPreviewingGitHunkAction={isPreviewingGitHunkAction}
                 isPreparingMetadataStore={isPreparingMetadataStore}
+                isInspectingSQLiteConnector={isInspectingSQLiteConnector}
                 isProfilingDataset={isProfilingDataset}
                 isPreviewingDatasetChart={isPreviewingDatasetChart}
                 isQueryingDataset={isQueryingDataset}
@@ -3921,6 +3947,7 @@ export function NexusShell({
                 onExplainDependencyGraph={() => void explainDependencyGraph()}
                 onGenerateTests={() => void generateTestsForSelectedCode()}
                 onInspectMetadata={() => void inspectMetadataStore()}
+                onInspectSQLiteConnector={() => void inspectActiveSQLiteFile()}
                 onClearWorkspaceSearch={() => setWorkspaceSearchResults([])}
                 onMetadataSearchQueryChange={setMetadataSearchQuery}
                 onOpenArtifactSource={() => void openArtifactSource()}
@@ -3976,6 +4003,7 @@ export function NexusShell({
                 showTabs={options.showTabs}
                 sqliteConnectorQuery={sqliteConnectorQuery}
                 sqliteConnectorResult={sqliteConnectorResult}
+                sqliteConnectorMetadata={sqliteConnectorMetadata}
                 sqliteStatus={sqliteStatus}
                 toolEvents={localToolEvents}
                 workspace={workspace}

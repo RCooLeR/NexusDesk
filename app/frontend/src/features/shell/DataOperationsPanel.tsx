@@ -2,7 +2,7 @@ import {useEffect, useState} from 'react';
 import {FontAwesomeIcon} from '@fortawesome/react-fontawesome';
 import {brandAssets, capabilityIconByTitle} from '../../brand/assets';
 import {Button, EmptyState, StatusBadge} from '../../components/ui';
-import type {Capability, DatasetChartResult, DatasetDependency, DatasetProfile, DatasetQueryResult, DatasetSQLQueryResult, FileNode, FilePreview, MetadataBrowser, MetadataSearchResult, SavedDatasetQuery, SQLRun, SQLiteMetadataStatus, SQLiteQueryResult, WorkspaceFreshnessStatus, WorkspaceSnapshot} from '../../types';
+import type {Capability, ConnectorMetadata, DatasetChartResult, DatasetDependency, DatasetProfile, DatasetQueryResult, DatasetSQLQueryResult, FileNode, FilePreview, MetadataBrowser, MetadataSearchResult, SavedDatasetQuery, SQLRun, SQLiteMetadataStatus, SQLiteQueryResult, WorkspaceFreshnessStatus, WorkspaceSnapshot} from '../../types';
 import {DataStudioPanel, SortableDataTable} from './DataStudioPanel';
 import {OperationsInspector} from './OperationsInspector';
 
@@ -28,6 +28,7 @@ type DataOperationsPanelProps = {
     isExportingDatasetQuery: boolean;
     isExportingDatasetSQL: boolean;
     isPreparingMetadataStore: boolean;
+    isInspectingSQLiteConnector: boolean;
     isProfilingDataset: boolean;
     isPreviewingDatasetChart: boolean;
     isQueryingDataset: boolean;
@@ -52,6 +53,7 @@ type DataOperationsPanelProps = {
     onExportDatasetQuery: () => void;
     onExportDatasetSQL: () => void;
     onInspectMetadata: () => void;
+    onInspectSQLiteConnector: () => void;
     onMetadataSearchQueryChange: (content: string) => void;
     onPrepareMetadataStore: () => void;
     onProfileDataset: () => void;
@@ -70,6 +72,7 @@ type DataOperationsPanelProps = {
     savedDatasetSQLQueries: SavedDatasetQuery[];
     sqliteConnectorQuery: string;
     sqliteConnectorResult: SQLiteQueryResult | null;
+    sqliteConnectorMetadata: ConnectorMetadata | null;
     sqliteStatus: SQLiteMetadataStatus | null;
     workspace: WorkspaceSnapshot | null;
     workspaceFreshness: WorkspaceFreshnessStatus | null;
@@ -97,6 +100,7 @@ export function DataOperationsPanel({
     isExportingDatasetQuery,
     isExportingDatasetSQL,
     isPreparingMetadataStore,
+    isInspectingSQLiteConnector,
     isProfilingDataset,
     isPreviewingDatasetChart,
     isQueryingDataset,
@@ -121,6 +125,7 @@ export function DataOperationsPanel({
     onExportDatasetQuery,
     onExportDatasetSQL,
     onInspectMetadata,
+    onInspectSQLiteConnector,
     onMetadataSearchQueryChange,
     onPrepareMetadataStore,
     onProfileDataset,
@@ -139,6 +144,7 @@ export function DataOperationsPanel({
     savedDatasetSQLQueries,
     sqliteConnectorQuery,
     sqliteConnectorResult,
+    sqliteConnectorMetadata,
     sqliteStatus,
     workspace,
     workspaceFreshness,
@@ -241,7 +247,10 @@ export function DataOperationsPanel({
                 {filePreview?.fileType === 'database' && (
                     <SQLiteConnectorPanel
                         isQuerying={isQueryingSQLiteConnector}
+                        isInspecting={isInspectingSQLiteConnector}
+                        metadata={sqliteConnectorMetadata}
                         onChange={onSQLiteConnectorQueryChange}
+                        onInspect={onInspectSQLiteConnector}
                         onQuery={onQuerySQLiteConnector}
                         query={sqliteConnectorQuery}
                         result={sqliteConnectorResult}
@@ -545,14 +554,20 @@ function MetadataBrowserPanel({
 }
 
 function SQLiteConnectorPanel({
+    isInspecting,
     isQuerying,
+    metadata,
     onChange,
+    onInspect,
     onQuery,
     query,
     result,
 }: {
+    isInspecting: boolean;
     isQuerying: boolean;
+    metadata: ConnectorMetadata | null;
     onChange: (value: string) => void;
+    onInspect: () => void;
     onQuery: () => void;
     query: string;
     result: SQLiteQueryResult | null;
@@ -561,6 +576,12 @@ function SQLiteConnectorPanel({
         <div className="metadata-store-panel sqlite-connector-panel">
             <strong>SQLite Connector</strong>
             <small>Read-only workspace database query surface.</small>
+            <div className="metadata-action-row">
+                <Button disabled={isInspecting} onClick={onInspect} variant="subtle">
+                    {isInspecting ? 'Inspecting...' : 'Inspect schema'}
+                </Button>
+            </div>
+            {metadata && <ConnectorMetadataPanel metadata={metadata} />}
             <textarea aria-label="Workspace SQLite query" onChange={(event) => onChange(event.target.value)} value={query} />
             <Button disabled={isQuerying || !query.trim()} onClick={onQuery} variant="subtle">
                 {isQuerying ? 'Querying...' : 'Run read-only query'}
@@ -572,6 +593,27 @@ function SQLiteConnectorPanel({
                     title={result.engine}
                 />
             )}
+        </div>
+    );
+}
+
+function ConnectorMetadataPanel({metadata}: {metadata: ConnectorMetadata}) {
+    const objects = [...metadata.tables, ...metadata.views];
+    return (
+        <div className="connector-metadata-panel">
+            <small>{metadata.message}</small>
+            <div className="metadata-dataset-views">
+                <strong>{metadata.engine}{metadata.readOnly ? ' / read-only' : ''}</strong>
+                {objects.slice(0, 8).map((table) => (
+                    <p key={`${table.type}-${table.name}`}>
+                        {table.type}: {table.name} / {table.rowCount} rows
+                        <small>{table.columns.map((column) => `${column.name}:${column.type || 'ANY'}${column.primaryKey ? ' pk' : ''}`).slice(0, 6).join(', ')}</small>
+                    </p>
+                ))}
+                {metadata.indexes.length > 0 && (
+                    <small>{metadata.indexes.length} indexes: {metadata.indexes.slice(0, 4).map((index) => `${index.name}(${index.columns.join(', ')})`).join(', ')}</small>
+                )}
+            </div>
         </div>
     );
 }

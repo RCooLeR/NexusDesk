@@ -541,6 +541,10 @@ func (a *App) QueryWorkspaceSQLite(request dbconnector.SQLiteQueryRequest) (dbco
 	return a.datasetSvc.QueryWorkspaceSQLite(request)
 }
 
+func (a *App) InspectWorkspaceSQLite(relPath string) (dbconnector.ConnectorMetadata, error) {
+	return a.datasetSvc.InspectWorkspaceSQLite(relPath)
+}
+
 func (a *App) ListDatasetSQLQueries(relPath string) ([]dataset.SavedQuery, error) {
 	return a.datasetSvc.ListSQLQueries(relPath)
 }

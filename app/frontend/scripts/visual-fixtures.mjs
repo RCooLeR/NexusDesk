@@ -134,6 +134,18 @@ export async function installNexusMocks(page) {
                     QueryDatasetSQL: async () => ({relPath: 'data/campaigns.csv', sql: 'select * from dataset', engine: 'duckdb-compatible-csv', columns: table.columns, rows: table.rows, totalRows: 2, matchedRows: 2, message: 'SQL smoke ready'}),
                     SaveDatasetSQLQuery: async () => ({relPath: 'data/campaigns.csv', query: 'select * from dataset', label: 'All campaigns', kind: 'sql', updatedAt: '2026-05-14T00:00:00Z'}),
                     QueryWorkspaceSQLite: async () => ({relPath: 'data/local.sqlite', sql: 'select name, type from sqlite_master', columns: ['name', 'type'], rows: [['campaigns', 'table']], totalRows: 1, truncated: false, message: 'Read-only SQLite query returned 1 row.'}),
+                    InspectWorkspaceSQLite: async () => ({
+                        id: 'sqlite:data/local.sqlite',
+                        relPath: 'data/local.sqlite',
+                        name: 'local.sqlite',
+                        kind: 'sqlite',
+                        engine: 'sqlite-readonly',
+                        readOnly: true,
+                        tables: [{name: 'campaigns', type: 'table', rowCount: 2, columns: [{name: 'channel', type: 'TEXT', nullable: false, primaryKey: false, default: ''}, {name: 'spend', type: 'INTEGER', nullable: true, primaryKey: false, default: ''}], indexes: [{name: 'campaigns_channel_idx', table: 'campaigns', unique: false, columns: ['channel']}], sampleRows: [['Search', '120'], ['Email', '40']]}],
+                        views: [],
+                        indexes: [{name: 'campaigns_channel_idx', table: 'campaigns', unique: false, columns: ['channel']}],
+                        message: 'SQLite connector metadata inspected: 1 tables, 0 views.',
+                    }),
                 },
             },
         };

@@ -1,4 +1,4 @@
-import type {AgentToolDescriptor, AgentToolPlanItem, AgentToolRunRecord, ApprovalRecord, ArtifactComparison, ArtifactLineage, ArtifactMetadata, Capability, DatasetChartResult, DatasetDependency, DatasetProfile, DatasetQueryResult, DatasetSQLQueryResult, FilePreview, GitFileAction, GitFileActionPreview, GitFileDiff, GitHunkActionPreview, GitHunkActionRequest, GitStatus, LLMProbeResult, LLMSettings, MetadataBrowser, MetadataSearchResult, SavedDatasetQuery, SQLRun, SQLiteMetadataStatus, SQLiteQueryResult, ToolEvent, WorkspaceArtifact, WorkspaceFreshnessStatus, WorkspaceProblemSummary, WorkspaceSearchResult, WorkspaceSnapshot, WorkspaceTask, WorkspaceTaskRunResult, WorkspaceTaskSummary} from '../../types';
+import type {AgentToolDescriptor, AgentToolPlanItem, AgentToolRunRecord, ApprovalRecord, ArtifactComparison, ArtifactLineage, ArtifactMetadata, Capability, ConnectorMetadata, DatasetChartResult, DatasetDependency, DatasetProfile, DatasetQueryResult, DatasetSQLQueryResult, FilePreview, GitFileAction, GitFileActionPreview, GitFileDiff, GitHunkActionPreview, GitHunkActionRequest, GitStatus, LLMProbeResult, LLMSettings, MetadataBrowser, MetadataSearchResult, SavedDatasetQuery, SQLRun, SQLiteMetadataStatus, SQLiteQueryResult, ToolEvent, WorkspaceArtifact, WorkspaceFreshnessStatus, WorkspaceProblemSummary, WorkspaceSearchResult, WorkspaceSnapshot, WorkspaceTask, WorkspaceTaskRunResult, WorkspaceTaskSummary} from '../../types';
 import {AgentToolPlanCard} from './AgentToolPlanCard';
 import {ApprovalLogPanel} from './ApprovalLogPanel';
 import {ArtifactStudioPanel} from './ArtifactStudioPanel';
@@ -61,6 +61,7 @@ type BottomStudioPanelProps = {
     isPreviewingGitFileAction: boolean;
     isPreviewingGitHunkAction: boolean;
     isPreparingMetadataStore: boolean;
+    isInspectingSQLiteConnector: boolean;
     isProfilingDataset: boolean;
     isPreviewingDatasetChart: boolean;
     isQueryingDataset: boolean;
@@ -102,6 +103,7 @@ type BottomStudioPanelProps = {
     onExplainDependencyGraph: () => void;
     onGenerateTests: () => void;
     onInspectMetadata: () => void;
+    onInspectSQLiteConnector: () => void;
     onClearWorkspaceSearch: () => void;
     onMetadataSearchQueryChange: (content: string) => void;
     onOpenArtifactSource: () => void;
@@ -152,6 +154,7 @@ type BottomStudioPanelProps = {
     settingsStatus: string;
     sqliteConnectorQuery: string;
     sqliteConnectorResult: SQLiteQueryResult | null;
+    sqliteConnectorMetadata: ConnectorMetadata | null;
     sqliteStatus: SQLiteMetadataStatus | null;
     toolEvents: ToolEvent[];
     workspace: WorkspaceSnapshot | null;
@@ -226,6 +229,7 @@ export function BottomStudioPanel({
     isPreviewingGitFileAction,
     isPreviewingGitHunkAction,
     isPreparingMetadataStore,
+    isInspectingSQLiteConnector,
     isProfilingDataset,
     isPreviewingDatasetChart,
     isQueryingDataset,
@@ -267,6 +271,7 @@ export function BottomStudioPanel({
     onExplainDependencyGraph,
     onGenerateTests,
     onInspectMetadata,
+    onInspectSQLiteConnector,
     onClearWorkspaceSearch,
     onMetadataSearchQueryChange,
     onOpenArtifactSource,
@@ -317,6 +322,7 @@ export function BottomStudioPanel({
     settingsStatus,
     sqliteConnectorQuery,
     sqliteConnectorResult,
+    sqliteConnectorMetadata,
     sqliteStatus,
     toolEvents,
     workspace,
@@ -451,6 +457,7 @@ export function BottomStudioPanel({
                         isExportingDatasetQuery={isExportingDatasetQuery}
                         isExportingDatasetSQL={isExportingDatasetSQL}
                         isPreparingMetadataStore={isPreparingMetadataStore}
+                        isInspectingSQLiteConnector={isInspectingSQLiteConnector}
                         isProfilingDataset={isProfilingDataset}
                         isPreviewingDatasetChart={isPreviewingDatasetChart}
                         isQueryingDataset={isQueryingDataset}
@@ -475,6 +482,7 @@ export function BottomStudioPanel({
                         onExportDatasetQuery={onExportDatasetQuery}
                         onExportDatasetSQL={onExportDatasetSQL}
                         onInspectMetadata={onInspectMetadata}
+                        onInspectSQLiteConnector={onInspectSQLiteConnector}
                         onMetadataSearchQueryChange={onMetadataSearchQueryChange}
                         onPrepareMetadataStore={onPrepareMetadataStore}
                         onProfileDataset={onProfileDataset}
@@ -493,6 +501,7 @@ export function BottomStudioPanel({
                         savedDatasetSQLQueries={savedDatasetSQLQueries}
                         sqliteConnectorQuery={sqliteConnectorQuery}
                         sqliteConnectorResult={sqliteConnectorResult}
+                        sqliteConnectorMetadata={sqliteConnectorMetadata}
                         sqliteStatus={sqliteStatus}
                         workspace={workspace}
                         workspaceFreshness={workspaceFreshness}

@@ -172,6 +172,7 @@ Current status:
 - SQLite metadata now mirrors current JSON chat, approval, artifact, and tool-run records when the metadata store is prepared or inspected.
 - Chat history, approval log, artifact list, and tool-run list now prefer SQLite metadata reads after the store exists while retaining JSON compatibility writes.
 - The workbench can inspect SQLite metadata tables, search/filter columns, copy sample rows, and view dataset SQL views.
+- The Data & Analytics SQLite connector can inspect workspace SQLite tables, views, columns, indexes, row counts, and capped samples without executing user SQL.
 - Chat messages and context-pack previews warn when cited files changed after the answer/context was created.
 - Stale-context refresh can rebuild a context preview from changed files and records the refresh in the approval/metadata trail.
 - Dataset dependency rebuild now removes the prior generated artifact before re-running so repeated refreshes avoid same-timestamp collisions.
@@ -303,6 +304,13 @@ This batch made more of the studio inspectable and auditable without turning on 
 3. Profiles capture log levels, timestamped line counts, stack trace line counts, and repeated normalized patterns.
 4. Data & Analytics source cards and profile summaries show profiled log sample and level summaries.
 
+## Completed Batch: Connector Metadata Foundation
+
+1. `app/internal/dbconnector/` now exposes a connector metadata model that can represent connector identity, engine, read-only state, tables, views, columns, indexes, row counts, and capped samples.
+2. Workspace SQLite files can be inspected in read-only mode without executing user-provided SQL.
+3. Data & Analytics exposes a manual Inspect schema action next to the existing SQLite read-only query surface.
+4. SQLite metadata inspection records a dataset dependency row so connector schema inspections remain visible in local metadata history.
+
 ## Prepared Batch: Architecture Hardening Before Deeper Studios
 
 1. Extract chat/context/agent orchestration into a `useChatController` frontend hook and a backend `ChatService`.
@@ -316,7 +324,7 @@ This batch made more of the studio inspectable and auditable without turning on 
 ## Prepared Batch: Studio Query And Connector Maturity
 
 1. Add a richer metadata history tab with filters by kind, time, source path, and jump-to-chat/artifact/tool actions.
-2. Expand the SQLite connector with schema browsing, table previews, saved connector queries, and clearer read-only status.
+2. Expand the SQLite connector with schema browsing, table previews, saved connector queries, and clearer read-only status. First manual schema inspection is implemented; saved connector queries remain planned.
 3. Add artifact lineage JSON import comparison in the UI, including validation errors and graph diff previews.
 4. Promote dataset dependency and SQL run records into first-class UI navigation from Data & Analytics, Artifacts, and Metadata Browser.
 5. Start a DuckDB multi-file workspace dataset surface for joins across CSV/XLSX-derived tables.
@@ -347,7 +355,7 @@ These batches describe the next product direction. They are broader than the cur
 ### Batch: Data & Analytics Expansion
 
 1. Expand file dataset support to TSV, JSON, NDJSON, Parquet, logs, compressed exports, and SQL/database dump files. TSV/JSON/NDJSON table profiling, Parquet footer metadata inspection, and bounded log profiling are implemented; imports remain planned.
-2. Build database connector framework for SQLite, PostgreSQL, MySQL/MariaDB, SQL Server, and DuckDB with read-only defaults.
+2. Build database connector framework for SQLite, PostgreSQL, MySQL/MariaDB, SQL Server, and DuckDB with read-only defaults. First SQLite connector metadata shape and read-only schema inspection are implemented.
 3. Add schema browser with tables, views, columns, keys, indexes, row counts, samples, and generated relationship views.
 4. Add query notebook with multiple cells, result tabs, saved queries, cancellation, query history, charts, and export actions.
 5. Add temporary Docker-backed import sandboxes for SQL dumps with explicit lifecycle, storage limits, and read-only analysis mode.
