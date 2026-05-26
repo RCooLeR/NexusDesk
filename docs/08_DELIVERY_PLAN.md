@@ -182,7 +182,7 @@ Current status:
 - Saved SQL Server connector profiles now use the same explicit Test/Inspect/query boundary, guarded read-only SQL validation, timeout/lock-timeout settings, schema metadata, foreign-key metadata, and first inferred relationship hints.
 - Saved DuckDB connector profiles now validate a local database file in default builds and expose the same explicit Test/Inspect/query runner behind the `duckdb` build tag with a read-only `access_mode=read_only` DSN.
 - External connector profile query requests now carry request IDs, share cap/timeout normalization, use context-aware query functions, can be cancelled through the app bridge, and pass errors through the shared connector redaction helper.
-- Connector schema browsing now uses a shared frontend metadata browser for workspace SQLite and saved external database profile inspections, so external profile metadata can be navigated by table/view and inspected for columns, indexes, capped samples, and relationships.
+- Connector schema browsing now uses a shared frontend metadata browser for workspace SQLite and saved external database profile inspections, so external profile metadata can be navigated by table/view and inspected for columns, indexes, capped samples, relationships, and a first ERD-like relationship map.
 - Chat messages and context-pack previews warn when cited files changed after the answer/context was created.
 - Stale-context refresh can rebuild a context preview from changed files and records the refresh in the approval/metadata trail.
 - Dataset dependency rebuild now removes the prior generated artifact before re-running so repeated refreshes avoid same-timestamp collisions.
@@ -335,6 +335,7 @@ This batch made more of the studio inspectable and auditable without turning on 
 9. External profile queries now share request IDs, cancellation callbacks, cap/timeout normalization, and redacted error handling across supported database engines.
 10. External profile inspections now render through the same connector metadata browser used by workspace SQLite schema inspection.
 11. External profile inspections now include capped sample rows for PostgreSQL, MySQL/MariaDB, SQL Server, and DuckDB; DuckDB inspections also return live row counts when the optional `duckdb` build tag is active.
+12. Connector metadata browsing now includes a clickable ERD-like relationship map with table/view nodes, primary-key hints, selected-object highlighting, and FK/inferred link rows.
 
 ## Completed Batch: Data Source Card Actions
 

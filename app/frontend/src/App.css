@@ -2123,6 +2123,136 @@ button:disabled {
     gap: 3px;
 }
 
+.connector-erd-map {
+    background: var(--nd-surface-soft);
+    border: 1px solid var(--nd-border-soft);
+    border-radius: var(--nd-radius);
+    display: grid;
+    gap: 8px;
+    min-width: 0;
+    padding: 8px;
+}
+
+.connector-erd-heading {
+    align-items: center;
+    display: flex;
+    gap: 8px;
+    justify-content: space-between;
+    min-width: 0;
+}
+
+.connector-erd-heading span {
+    align-items: center;
+    display: inline-flex;
+    gap: 6px;
+    min-width: 0;
+}
+
+.connector-erd-heading small {
+    color: var(--nd-muted-text);
+    flex: 0 0 auto;
+}
+
+.connector-erd-nodes {
+    display: grid;
+    gap: 6px;
+    grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+    min-width: 0;
+}
+
+.connector-erd-node {
+    background: var(--nd-surface);
+    border: 1px solid var(--nd-border-soft);
+    border-radius: var(--nd-radius-sm);
+    color: inherit;
+    cursor: pointer;
+    display: grid;
+    gap: 3px;
+    min-width: 0;
+    padding: 7px;
+    text-align: left;
+}
+
+.connector-erd-node.active {
+    border-color: var(--nd-sky-blue);
+    box-shadow: inset 3px 0 0 var(--nd-sky-blue);
+}
+
+.connector-erd-node.related:not(.active) {
+    border-color: var(--nd-border);
+}
+
+.connector-erd-node span,
+.connector-erd-node small,
+.connector-erd-link span,
+.connector-erd-link small {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.connector-erd-node span,
+.connector-erd-keys {
+    align-items: center;
+    display: inline-flex;
+    gap: 5px;
+}
+
+.connector-erd-node small {
+    color: var(--nd-muted-text);
+}
+
+.connector-erd-links {
+    display: grid;
+    gap: 5px;
+    max-height: 220px;
+    min-width: 0;
+    overflow: auto;
+}
+
+.connector-erd-link {
+    align-items: center;
+    background: var(--nd-surface);
+    border: 1px solid var(--nd-border-soft);
+    border-radius: var(--nd-radius-sm);
+    color: inherit;
+    cursor: pointer;
+    display: grid;
+    gap: 8px;
+    grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
+    min-width: 0;
+    padding: 6px 7px;
+    text-align: left;
+}
+
+.connector-erd-link.active {
+    border-color: var(--nd-sky-blue);
+}
+
+.connector-erd-link strong {
+    align-items: center;
+    color: var(--nd-muted-text);
+    display: inline-flex;
+    font-size: 11px;
+    gap: 5px;
+    justify-self: center;
+    white-space: nowrap;
+}
+
+.connector-erd-link span {
+    display: grid;
+    gap: 2px;
+    min-width: 0;
+}
+
+.connector-erd-link span:last-child {
+    text-align: right;
+}
+
+.connector-erd-link small {
+    color: var(--nd-muted-text);
+}
+
 .metadata-browser-panel {
     min-height: 0;
 }

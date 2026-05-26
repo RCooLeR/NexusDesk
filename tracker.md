@@ -392,7 +392,8 @@ Step 5.3: Schema and relationship explorer
 - [x] Add capped sample rows for PostgreSQL, MySQL/MariaDB, SQL Server, and DuckDB profile inspections, with DuckDB row counts when built behind the optional driver tag.
 - [x] Extract reusable connector metadata browser and use it for SQLite files plus saved PostgreSQL/MySQL/MariaDB/SQL Server/DuckDB profile inspections.
 - [x] Infer first SQLite relationships where metadata is absent via conservative `*_id` hints.
-- [ ] Generate ERD-like relationship view.
+- [x] Generate ERD-like relationship view.
+- [x] Add clickable connector relationship map with selected-object highlighting, table/view nodes, primary-key hints, and FK/inferred link rows.
 - [x] Let AI explain selected SQLite schema objects with inspected columns, indexes, samples, and relationship hints as citations.
 - [ ] Generalize relationship inference and AI schema explanation across external connectors.
 
