@@ -37,6 +37,9 @@ const checks = [
             'SearchMetadata',
             'GetAssistantProfile',
             'SaveAssistantProfile',
+            'ListConnectorProfiles',
+            'SaveConnectorProfile',
+            'DeleteConnectorProfile',
             'ExportArtifactLineageJSON',
             'EnsureSQLiteMetadataStore',
             'InspectMetadataStore',
@@ -129,6 +132,9 @@ const checks = [
             'assistantProfileDraft',
             'saveAssistantProfile',
             'defaultAssistantProfile',
+            'connectorProfileDraft',
+            'saveConnectorProfile',
+            'defaultConnectorProfileDraft',
             'refreshWorkspaceTasks',
             'runWorkspaceTask',
             'workspaceTaskRun',
@@ -175,6 +181,10 @@ const checks = [
     {
         file: 'src/features/shell/LLMSettingsCard.tsx',
         terms: ['recommendedModelOptions', '<select', 'maxContextTokens', 'responseReserveTokens', 'num_ctx', 'num_predict', 'max_tokens', 'probe-runtime'],
+    },
+    {
+        file: 'src/features/shell/ConnectorProfilesCard.tsx',
+        terms: ['ConnectorProfilesCard', 'Connector Profiles', 'protected credential', 'Password/token', 'Result cap', 'Timeout', 'Save profile', 'credential stored'],
     },
     {
         file: 'src/features/shell/llmModelCatalog.ts',
@@ -258,7 +268,7 @@ const checks = [
     },
     {
         file: 'src/features/shell/BottomStudioPanel.tsx',
-        terms: ['BottomStudioPanel', 'drawerTabs', 'Git', 'Approvals', 'Activity', 'GitDiffPanel', 'onSummarizeGitDiff', 'onDraftGitCommitMessage', 'onReviewGitDiff', 'onGenerateTests', 'onDraftPrSummary', 'onDraftPrDescription', 'CodeStudioPanel', 'DataOperationsPanel', 'LLMSettingsCard', 'AgentToolPlanCard', 'ArtifactStudioPanel', 'ApprovalLogPanel', 'ToolTimeline', 'bottom-tabbar', 'showTabs'],
+        terms: ['BottomStudioPanel', 'drawerTabs', 'Git', 'Approvals', 'Activity', 'GitDiffPanel', 'onSummarizeGitDiff', 'onDraftGitCommitMessage', 'onReviewGitDiff', 'onGenerateTests', 'onDraftPrSummary', 'onDraftPrDescription', 'CodeStudioPanel', 'DataOperationsPanel', 'LLMSettingsCard', 'ConnectorProfilesCard', 'AgentToolPlanCard', 'ArtifactStudioPanel', 'ApprovalLogPanel', 'ToolTimeline', 'bottom-tabbar', 'showTabs'],
     },
     {
         file: 'src/features/shell/DataOperationsPanel.tsx',
@@ -300,6 +310,7 @@ const checks = [
             '.bottom-tabbar',
             '.settings-page',
             '.settings-number-grid',
+            '.connector-profile-list',
             '.data-operations-panel',
             '.data-source-panel',
             '.data-source-grid',
@@ -369,7 +380,7 @@ const checks = [
     },
     {
         file: 'wailsjs/go/main/App.d.ts',
-        terms: ['AskLLMContextPack', 'RunAgent', 'PreviewFileWrite', 'ApplyFileDelete', 'PreviewFileCopy', 'ApplyFileCopy', 'ApplyFileMove', 'ProfileDataset', 'CreateDatasetChartArtifact', 'CreateDatasetQueryArtifact', 'CreateDatasetSQLArtifact', 'CreateDatasetSummaryArtifact', 'CreateChatMarkdownArtifact', 'CreateScanReportArtifact', 'PreviewChatContextPack', 'PreviewDatasetChart', 'SaveDatasetQuery', 'SaveDatasetSQLQuery', 'ListDatasetSQLQueries', 'ListDatasetDependencies', 'ListDatasetSQLRuns', 'ListWorkspaceProblems', 'ListWorkspaceTasks', 'RunWorkspaceTask', 'RefreshStaleContext', 'SearchMetadata', 'SearchWorkspaceAdvanced', 'GetAssistantProfile', 'SaveAssistantProfile', 'QueryWorkspaceSQLite', 'InspectWorkspaceSQLite', 'ExportArtifactLineageJSON', 'GetGitStatus', 'GetGitFileDiff', 'PreviewGitFileAction', 'ApplyGitFileAction', 'PreviewGitHunkAction', 'ApplyGitHunkAction', 'ListApprovals', 'ListAgentTools', 'ListAgentToolRuns', 'PreviewAgentTool', 'ExecuteAgentTool', 'QueryDatasetSQL', 'EnsureSQLiteMetadataStore', 'InspectMetadataStore', 'GetArtifactLineage', 'CheckWorkspaceFreshness', 'CompareArtifacts', 'ArchiveArtifact', 'DeleteArtifact'],
+        terms: ['AskLLMContextPack', 'RunAgent', 'PreviewFileWrite', 'ApplyFileDelete', 'PreviewFileCopy', 'ApplyFileCopy', 'ApplyFileMove', 'ProfileDataset', 'CreateDatasetChartArtifact', 'CreateDatasetQueryArtifact', 'CreateDatasetSQLArtifact', 'CreateDatasetSummaryArtifact', 'CreateChatMarkdownArtifact', 'CreateScanReportArtifact', 'PreviewChatContextPack', 'PreviewDatasetChart', 'SaveDatasetQuery', 'SaveDatasetSQLQuery', 'ListDatasetSQLQueries', 'ListDatasetDependencies', 'ListDatasetSQLRuns', 'ListWorkspaceProblems', 'ListWorkspaceTasks', 'RunWorkspaceTask', 'RefreshStaleContext', 'SearchMetadata', 'SearchWorkspaceAdvanced', 'GetAssistantProfile', 'SaveAssistantProfile', 'ListConnectorProfiles', 'SaveConnectorProfile', 'DeleteConnectorProfile', 'QueryWorkspaceSQLite', 'InspectWorkspaceSQLite', 'ExportArtifactLineageJSON', 'GetGitStatus', 'GetGitFileDiff', 'PreviewGitFileAction', 'ApplyGitFileAction', 'PreviewGitHunkAction', 'ApplyGitHunkAction', 'ListApprovals', 'ListAgentTools', 'ListAgentToolRuns', 'PreviewAgentTool', 'ExecuteAgentTool', 'QueryDatasetSQL', 'EnsureSQLiteMetadataStore', 'InspectMetadataStore', 'GetArtifactLineage', 'CheckWorkspaceFreshness', 'CompareArtifacts', 'ArchiveArtifact', 'DeleteArtifact'],
     },
     {
         file: '../app_tasks.go',
@@ -425,7 +436,7 @@ const checks = [
     },
     {
         file: 'scripts/visual-fixtures.mjs',
-        terms: ['installNexusMocks', 'ListDatasetDependencies', 'ListDatasetSQLRuns', 'ListWorkspaceProblems', 'ListWorkspaceTasks', 'SearchMetadata', 'QueryWorkspaceSQLite', 'ExportArtifactLineageJSON', 'ImportArtifactLineageJSON', 'dependencies'],
+        terms: ['installNexusMocks', 'ListDatasetDependencies', 'ListDatasetSQLRuns', 'ListWorkspaceProblems', 'ListWorkspaceTasks', 'ListConnectorProfiles', 'SaveConnectorProfile', 'DeleteConnectorProfile', 'SearchMetadata', 'QueryWorkspaceSQLite', 'ExportArtifactLineageJSON', 'ImportArtifactLineageJSON', 'dependencies'],
     },
     {
         file: 'dist/index.html',

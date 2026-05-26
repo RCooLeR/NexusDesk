@@ -32,6 +32,7 @@ import {
     InspectWorkspaceSQLite,
     InspectMetadataStore,
     GetChatHistory,
+    ListConnectorProfiles,
     ListAgentTools,
     ListAgentToolRuns,
     ListApprovals,
@@ -63,6 +64,7 @@ import {
     RebuildDatasetDependency,
     RunWorkspaceTask,
     SaveLLMSettings,
+    SaveConnectorProfile,
     SaveAssistantProfile,
     SaveDatasetQuery,
     SaveDatasetSQLQuery,
@@ -71,6 +73,7 @@ import {
     RunAgent,
     SelectWorkspace,
     TestLLMConnection,
+    DeleteConnectorProfile,
     EventsOn,
 } from '../../api/wailsClient';
 import {storage} from '../../../wailsjs/go/models';
@@ -87,6 +90,7 @@ import type {
     ChatStreamEvent,
     ChatMessage,
     ConnectorMetadata,
+    ConnectorProfile,
     ContextPreview,
     DatasetChartResult,
     DatasetDependency,
@@ -203,6 +207,10 @@ export function NexusShell({
     const [isSavingSettings, setIsSavingSettings] = useState(false);
     const [isTestingConnection, setIsTestingConnection] = useState(false);
     const [probeResult, setProbeResult] = useState<LLMProbeResult | null>(null);
+    const [connectorProfiles, setConnectorProfiles] = useState<ConnectorProfile[]>([]);
+    const [connectorProfileDraft, setConnectorProfileDraft] = useState<ConnectorProfile>(defaultConnectorProfileDraft());
+    const [connectorProfilesStatus, setConnectorProfilesStatus] = useState('Connector profiles are stored locally with protected credential references.');
+    const [isSavingConnectorProfile, setIsSavingConnectorProfile] = useState(false);
     const [chatPrompt, setChatPrompt] = useState('');
     const [chatMessages, setChatMessages] = useState<ChatMessage[]>([]);
     const [chatStatus, setChatStatus] = useState('Select text context and ask the assistant.');
@@ -350,6 +358,7 @@ export function NexusShell({
     useEffect(() => {
         void refreshAgentTools();
         void refreshAssistantProfile();
+        void refreshConnectorProfiles();
     }, []);
 
     useEffect(() => {
@@ -2289,6 +2298,76 @@ export function NexusShell({
         });
     }
 
+    async function refreshConnectorProfiles() {
+        try {
+            const profiles = (await ListConnectorProfiles()).map((profile) => normalizeConnectorProfile(profile as Partial<ConnectorProfile>));
+            setConnectorProfiles(profiles);
+            setConnectorProfilesStatus(profiles.length > 0 ? `${profiles.length} connector profiles loaded.` : 'No connector profiles saved yet.');
+        } catch (error) {
+            const message = error instanceof Error ? error.message : '';
+            if (message.includes('undefined') || message.includes('window')) {
+                setConnectorProfilesStatus('Connector profiles are available in the desktop runtime.');
+                return;
+            }
+            setConnectorProfiles([]);
+            setConnectorProfilesStatus(message || 'Could not load connector profiles.');
+        }
+    }
+
+    function updateConnectorProfileDraft(field: keyof ConnectorProfile, value: string | number | boolean) {
+        setConnectorProfileDraft((current) => {
+            const next = normalizeConnectorProfile({...current, [field]: value});
+            if (field === 'kind') {
+                return normalizeConnectorProfile({
+                    ...next,
+                    driver: String(value),
+                    port: defaultConnectorPort(String(value)),
+                    sslMode: String(value) === 'sqlite' || String(value) === 'duckdb' ? 'disable' : next.sslMode || 'prefer',
+                });
+            }
+            return next;
+        });
+    }
+
+    async function saveConnectorProfile() {
+        setIsSavingConnectorProfile(true);
+        setConnectorProfilesStatus('Saving connector profile...');
+        try {
+            const saved = normalizeConnectorProfile(await SaveConnectorProfile(new storage.ConnectorProfile(connectorProfileDraft)) as Partial<ConnectorProfile>);
+            const profiles = (await ListConnectorProfiles()).map((profile) => normalizeConnectorProfile(profile as Partial<ConnectorProfile>));
+            setConnectorProfiles(profiles);
+            setConnectorProfileDraft({...defaultConnectorProfileDraft(), kind: saved.kind, driver: saved.driver, port: saved.port});
+            setConnectorProfilesStatus(`Saved ${saved.name} with ${saved.credentialRef ? 'a protected credential reference' : 'no credential secret'}.`);
+            pushToolEvent('Connector profile saved', `${saved.name}: ${saved.kind}, read-only, cap ${saved.resultLimit}`);
+        } catch (error) {
+            const message = error instanceof Error ? error.message : '';
+            if (message.includes('undefined') || message.includes('window')) {
+                setConnectorProfilesStatus('Connector profile saving is available in the desktop runtime.');
+                return;
+            }
+            setConnectorProfilesStatus(message || 'Could not save connector profile.');
+        } finally {
+            setIsSavingConnectorProfile(false);
+        }
+    }
+
+    async function deleteConnectorProfile(id: string) {
+        setIsSavingConnectorProfile(true);
+        setConnectorProfilesStatus('Deleting connector profile...');
+        try {
+            await DeleteConnectorProfile(id);
+            const profiles = (await ListConnectorProfiles()).map((profile) => normalizeConnectorProfile(profile as Partial<ConnectorProfile>));
+            setConnectorProfiles(profiles);
+            setConnectorProfilesStatus('Connector profile deleted.');
+            pushToolEvent('Connector profile deleted', id);
+        } catch (error) {
+            const message = error instanceof Error ? error.message : '';
+            setConnectorProfilesStatus(message || 'Could not delete connector profile.');
+        } finally {
+            setIsSavingConnectorProfile(false);
+        }
+    }
+
     async function saveLLMSettings(nextSettings: LLMSettings = settingsDraft) {
         setIsSavingSettings(true);
         setSettingsStatus('Saving LLM settings...');
@@ -3859,6 +3938,9 @@ export function NexusShell({
                 activeDatasetProfile={activeDatasetProfile}
                 capabilities={state.capabilities}
                 className={options.className}
+                connectorProfileDraft={connectorProfileDraft}
+                connectorProfiles={connectorProfiles}
+                connectorProfilesStatus={connectorProfilesStatus}
                 datasetProfiles={datasetProfiles}
                 datasetDependencies={datasetDependencies}
                 datasetSQLRuns={datasetSQLRuns}
@@ -3904,6 +3986,7 @@ export function NexusShell({
                 isQueryingSQLiteConnector={isQueryingSQLiteConnector}
                 isRefreshingStaleContext={isRefreshingStaleContext}
                 isRunningAgentTool={isRunningAgentTool}
+                isSavingConnectorProfile={isSavingConnectorProfile}
                 isSavingDatasetQuery={isSavingDatasetQuery}
                 isSavingDatasetSQLQuery={isSavingDatasetSQLQuery}
                 isSavingSettings={isSavingSettings}
@@ -3980,10 +4063,13 @@ export function NexusShell({
                 onReviewGitDiff={() => void reviewGitDiff()}
                 onRunWorkspaceTask={(task) => void runWorkspaceTask(task)}
                 onReplayAgentToolRun={(run) => void replayAgentToolRun(run)}
+                onSaveConnectorProfile={() => void saveConnectorProfile()}
                 onSaveDatasetQuery={() => void saveCurrentDatasetQuery()}
                 onSaveDatasetSQLQuery={() => void saveCurrentDatasetSQLQuery()}
+                onDeleteConnectorProfile={(id) => void deleteConnectorProfile(id)}
                 onSaveSettings={() => void saveLLMSettings()}
                 onSelectArtifact={(artifact) => void selectArtifact(artifact)}
+                onConnectorProfileDraftChange={updateConnectorProfileDraft}
                 onSettingsDraftChange={updateSettingsDraft}
                 onSearchMetadata={() => void searchMetadataHistory()}
                 onSearchWorkspace={() => void searchWorkspace()}
@@ -4497,6 +4583,74 @@ function normalizeLLMSettings(settings: Partial<LLMSettings>, fallback: LLMSetti
         responseReserveTokens: responseReserveTokens >= maxContextTokens ? Math.floor(maxContextTokens / 4) : responseReserveTokens,
         updatedAt: settings.updatedAt || fallback.updatedAt,
     };
+}
+
+function defaultConnectorProfileDraft(): ConnectorProfile {
+    return {
+        id: '',
+        name: '',
+        kind: 'postgres',
+        driver: 'postgres',
+        host: '',
+        port: 5432,
+        database: '',
+        username: '',
+        password: '',
+        credentialRef: '',
+        sslMode: 'prefer',
+        workspaceScope: '',
+        readOnly: true,
+        resultLimit: 1000,
+        timeoutSeconds: 30,
+        updatedAt: '',
+    };
+}
+
+function normalizeConnectorProfile(profile: Partial<ConnectorProfile>): ConnectorProfile {
+    const fallback = defaultConnectorProfileDraft();
+    const kind = String(profile.kind || fallback.kind);
+    return {
+        ...fallback,
+        ...profile,
+        id: String(profile.id ?? ''),
+        name: String(profile.name ?? ''),
+        kind,
+        driver: String(profile.driver || kind),
+        host: String(profile.host ?? ''),
+        port: numericConnectorSetting(profile.port, defaultConnectorPort(kind), 0, 65535),
+        database: String(profile.database ?? ''),
+        username: String(profile.username ?? ''),
+        password: String(profile.password ?? ''),
+        credentialRef: String(profile.credentialRef ?? ''),
+        sslMode: String(profile.sslMode || (kind === 'sqlite' || kind === 'duckdb' ? 'disable' : 'prefer')),
+        workspaceScope: String(profile.workspaceScope ?? ''),
+        readOnly: true,
+        resultLimit: numericConnectorSetting(profile.resultLimit, fallback.resultLimit, 1, 10000),
+        timeoutSeconds: numericConnectorSetting(profile.timeoutSeconds, fallback.timeoutSeconds, 1, 300),
+        updatedAt: String(profile.updatedAt ?? ''),
+    };
+}
+
+function defaultConnectorPort(kind: string) {
+    switch (kind) {
+        case 'postgres':
+            return 5432;
+        case 'mysql':
+        case 'mariadb':
+            return 3306;
+        case 'sqlserver':
+            return 1433;
+        default:
+            return 0;
+    }
+}
+
+function numericConnectorSetting(value: unknown, fallback: number, min: number, max: number) {
+    const numeric = Number(value);
+    if (!Number.isFinite(numeric)) {
+        return fallback;
+    }
+    return Math.min(max, Math.max(min, Math.trunc(numeric)));
 }
 
 function defaultAssistantProfile(): AssistantProfile {

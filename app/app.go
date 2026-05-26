@@ -117,26 +117,28 @@ var emitChatStreamEventFn = func(ctx context.Context, name string, event any) {
 }
 
 type App struct {
-	ctx          context.Context
-	llmClient    *llm.Client
-	chatStore    *storage.ChatHistoryStore
-	profileStore *storage.AssistantProfileStore
-	llmStore     *storage.LLMSettingsStore
-	recentStore  *storage.RecentWorkspaceStore
-	workspaceSvc *WorkspaceService
-	artifactSvc  *ArtifactService
-	datasetSvc   *DatasetService
+	ctx            context.Context
+	llmClient      *llm.Client
+	chatStore      *storage.ChatHistoryStore
+	connectorStore *storage.ConnectorProfileStore
+	profileStore   *storage.AssistantProfileStore
+	llmStore       *storage.LLMSettingsStore
+	recentStore    *storage.RecentWorkspaceStore
+	workspaceSvc   *WorkspaceService
+	artifactSvc    *ArtifactService
+	datasetSvc     *DatasetService
 }
 
 func NewApp() *App {
 	chatStore := storage.NewDefaultChatHistoryStore()
 	recentStore := storage.NewDefaultRecentWorkspaceStore()
 	app := &App{
-		llmClient:    llm.NewClient(),
-		chatStore:    chatStore,
-		profileStore: storage.NewDefaultAssistantProfileStore(),
-		llmStore:     storage.NewDefaultLLMSettingsStore(),
-		recentStore:  recentStore,
+		llmClient:      llm.NewClient(),
+		chatStore:      chatStore,
+		connectorStore: storage.NewDefaultConnectorProfileStore(),
+		profileStore:   storage.NewDefaultAssistantProfileStore(),
+		llmStore:       storage.NewDefaultLLMSettingsStore(),
+		recentStore:    recentStore,
 	}
 	app.workspaceSvc = NewWorkspaceService(recentStore, chatStore, app.recordApproval)
 	app.artifactSvc = NewArtifactService(app.getWorkspaceRoot, app.mirrorMetadataStore, app.listArtifactsFromMetadata, app.persistArtifactMetadata, app.recordApproval)
@@ -606,6 +608,18 @@ func (a *App) GetLLMSettings() (storage.LLMSettings, error) {
 
 func (a *App) SaveLLMSettings(settings storage.LLMSettings) (storage.LLMSettings, error) {
 	return a.llmStore.Save(settings)
+}
+
+func (a *App) ListConnectorProfiles() ([]storage.ConnectorProfile, error) {
+	return a.connectorStore.List()
+}
+
+func (a *App) SaveConnectorProfile(profile storage.ConnectorProfile) (storage.ConnectorProfile, error) {
+	return a.connectorStore.Save(profile)
+}
+
+func (a *App) DeleteConnectorProfile(id string) error {
+	return a.connectorStore.Delete(id)
 }
 
 func (a *App) GetAssistantProfile() (storage.AssistantProfile, error) {

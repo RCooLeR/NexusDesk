@@ -61,6 +61,8 @@ export function CreateScanReportArtifact():Promise<artifact.MarkdownReport>;
 
 export function DeleteArtifact(arg1:string):Promise<artifact.MarkdownReport>;
 
+export function DeleteConnectorProfile(arg1:string):Promise<void>;
+
 export function EnsureSQLiteMetadataStore():Promise<appmeta.SQLiteStatus>;
 
 export function ExecuteAgentTool(arg1:agenttools.RunRequest):Promise<agenttools.RunRecord>;
@@ -98,6 +100,8 @@ export function ListAgentTools():Promise<Array<agenttools.Descriptor>>;
 export function ListApprovals():Promise<Array<approval.Record>>;
 
 export function ListArtifacts():Promise<Array<artifact.WorkspaceArtifact>>;
+
+export function ListConnectorProfiles():Promise<Array<storage.ConnectorProfile>>;
 
 export function ListDatasetDependencies(arg1:string):Promise<Array<appmeta.DatasetDependency>>;
 
@@ -156,6 +160,8 @@ export function RunAgent(arg1:agent.RunRequest):Promise<agent.RunResult>;
 export function RunWorkspaceTask(arg1:main.WorkspaceTaskRunRequest):Promise<main.WorkspaceTaskRunResult>;
 
 export function SaveAssistantProfile(arg1:storage.AssistantProfile):Promise<storage.AssistantProfile>;
+
+export function SaveConnectorProfile(arg1:storage.ConnectorProfile):Promise<storage.ConnectorProfile>;
 
 export function SaveDatasetQuery(arg1:string,arg2:string,arg3:string):Promise<dataset.SavedQuery>;
 

@@ -98,6 +98,10 @@ export function DeleteArtifact(arg1) {
   return window['go']['main']['App']['DeleteArtifact'](arg1);
 }
 
+export function DeleteConnectorProfile(arg1) {
+  return window['go']['main']['App']['DeleteConnectorProfile'](arg1);
+}
+
 export function EnsureSQLiteMetadataStore() {
   return window['go']['main']['App']['EnsureSQLiteMetadataStore']();
 }
@@ -172,6 +176,10 @@ export function ListApprovals() {
 
 export function ListArtifacts() {
   return window['go']['main']['App']['ListArtifacts']();
+}
+
+export function ListConnectorProfiles() {
+  return window['go']['main']['App']['ListConnectorProfiles']();
 }
 
 export function ListDatasetDependencies(arg1) {
@@ -288,6 +296,10 @@ export function RunWorkspaceTask(arg1) {
 
 export function SaveAssistantProfile(arg1) {
   return window['go']['main']['App']['SaveAssistantProfile'](arg1);
+}
+
+export function SaveConnectorProfile(arg1) {
+  return window['go']['main']['App']['SaveConnectorProfile'](arg1);
 }
 
 export function SaveDatasetQuery(arg1, arg2, arg3) {

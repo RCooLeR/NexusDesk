@@ -341,6 +341,7 @@ Implemented:
 - [x] Read-only SQLite workspace connector.
 - [x] SQLite connector metadata inspection.
 - [x] SQLite mutation keyword blocking and single-statement validation.
+- [x] Connector profile storage with protected credential references.
 - [x] Dataset dependencies and rebuild actions.
 
 Step 5.1: File dataset coverage
@@ -360,7 +361,7 @@ Step 5.1: File dataset coverage
 Step 5.2: Database connector framework
 
 - [x] Define connector interface and metadata model.
-- [ ] Add connection profiles with secure credential references.
+- [x] Add connection profiles with secure credential references.
 - [x] Expand SQLite schema browser.
 - [ ] Add PostgreSQL read-only connector.
 - [ ] Add MySQL/MariaDB read-only connector.
@@ -863,7 +864,7 @@ Next steps:
 - [x] Move Settings to a first-class route entry with primary fallback surface.
 - [ ] Replace Settings fallback surface with native route layout.
 - [ ] Add provider profiles.
-- [ ] Add connector credential vault UI.
+- [x] Add first connector credential/profile UI.
 - [ ] Add per-workspace policy settings.
 - [ ] Add tool allow/deny list.
 - [ ] Add approval policy levels.
@@ -1022,18 +1023,28 @@ Steps:
 11. [x] Add bounded log profiles with sampled line counts, level counts, timestamp counts, stack trace counts, and repeated patterns.
 12. [x] Show profiled log summaries in Data & Analytics source cards and profile summaries.
 
-Recommended next batch: Connector Metadata Foundation.
+Completed batch: Connector Profile Foundation.
 
 Steps:
 
 1. [x] Add Parquet metadata inspection.
 2. [x] Add log dataset profiling.
 3. [x] Start the connector metadata interface needed by future database and analytics sources.
-4. [ ] Define connection profiles with secure credential references.
+4. [x] Define connection profiles with secure credential references.
 5. [x] Expand SQLite schema browsing beyond the first connector query surface.
 6. [ ] Add data source card actions for open, profile, inspect connector, and planned import workflows.
 
-Reasoning: Data & Analytics now has first-pass source discovery, bounded Parquet metadata, bounded log profiles, and a first connector metadata shape for SQLite schema inspection. The next gap is connection profile modeling with secure credential references plus explicit source-card actions that can route users to profile, inspect, connector, or planned import workflows.
+Recommended next batch: Data Source Card Actions.
+
+Steps:
+
+1. [ ] Add data source card actions for open, profile, inspect connector, and planned import workflows.
+2. [ ] Route SQLite source-card Inspect to the read-only schema inspector without opening arbitrary connectors on folder open.
+3. [ ] Route profile-capable table/workbook/log/Parquet cards to existing explicit profile actions.
+4. [ ] Add disabled planned actions for dump/import and compressed-export workflows with clear lifecycle copy.
+5. [ ] Keep all card actions user-triggered and bounded to the already-scanned workspace tree.
+
+Reasoning: Data & Analytics now has first-pass source discovery, bounded Parquet metadata, bounded log profiles, SQLite schema inspection, and local connector profiles with protected credential references. The next gap is making source cards actionable while preserving the rule that folder open does not start Git, Docker, OCR, connector pulls, dump imports, long indexing, or shell execution.
 
 ## Directory Ownership Notes
 
@@ -1063,7 +1074,7 @@ Reasoning: Data & Analytics now has first-pass source discovery, bounded Parquet
 
 `app/process_windows.go` and `app/process_other.go` own platform-specific child process configuration. Windows desktop builds hide app-launched child processes so user-triggered Git refreshes and approved shell tools do not flash console windows.
 
-`app/internal/storage/` owns local app config such as recent workspaces, non-secret LLM settings, chat history, and assistant prompt profile/memory preferences. Secret values must stay in credential storage or protected sidecars.
+`app/internal/storage/` owns local app config such as recent workspaces, non-secret LLM settings, connector profile metadata, chat history, and assistant prompt profile/memory preferences. Secret values must stay in credential storage or protected sidecars. Connector profile passwords/tokens are represented by redacted credential references when returned to the frontend.
 
 `app/frontend/src/api/wailsClient.ts` is the frontend boundary for generated Wails bindings.
 
@@ -1076,6 +1087,8 @@ Reasoning: Data & Analytics now has first-pass source discovery, bounded Parquet
 `app/frontend/src/features/shell/useGitController.ts` owns Git status refresh, selected changed-file state, selected-file diff loading, file stage/unstage preview/apply state, hunk action preview/apply state, null-response normalization, and the manual-only Git refresh boundary.
 
 `app/frontend/src/features/shell/codeAiActions.ts` owns pure Code AI prompt builders and single-file unified-diff parsing for assistant patch drafts. `NexusShell.tsx` still orchestrates the model calls and safe write preview/apply boundary, but prompt templates and patch parsing should not drift back into the shell.
+
+`app/frontend/src/features/shell/ConnectorProfilesCard.tsx` owns the first local connector profile form and saved-profile list. It only receives redacted credential markers from the backend and delegates save/delete actions back to the shell.
 
 Workspace scan counters are diagnostic data, not primary navigation content. Keep them in scan reports/diagnostics instead of the always-visible sidebar header.
 

@@ -1865,6 +1865,48 @@ export namespace storage {
 	        this.createdAt = source["createdAt"];
 	    }
 	}
+	export class ConnectorProfile {
+	    id: string;
+	    name: string;
+	    kind: string;
+	    driver: string;
+	    host: string;
+	    port: number;
+	    database: string;
+	    username: string;
+	    password?: string;
+	    credentialRef: string;
+	    sslMode: string;
+	    workspaceScope: string;
+	    readOnly: boolean;
+	    resultLimit: number;
+	    timeoutSeconds: number;
+	    updatedAt: string;
+
+	    static createFrom(source: any = {}) {
+	        return new ConnectorProfile(source);
+	    }
+
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.id = source["id"];
+	        this.name = source["name"];
+	        this.kind = source["kind"];
+	        this.driver = source["driver"];
+	        this.host = source["host"];
+	        this.port = source["port"];
+	        this.database = source["database"];
+	        this.username = source["username"];
+	        this.password = source["password"];
+	        this.credentialRef = source["credentialRef"];
+	        this.sslMode = source["sslMode"];
+	        this.workspaceScope = source["workspaceScope"];
+	        this.readOnly = source["readOnly"];
+	        this.resultLimit = source["resultLimit"];
+	        this.timeoutSeconds = source["timeoutSeconds"];
+	        this.updatedAt = source["updatedAt"];
+	    }
+	}
 	export class LLMSettings {
 	    providerName: string;
 	    baseUrl: string;

@@ -63,6 +63,9 @@ export async function installNexusMocks(page) {
                     }),
                     GetRecentWorkspaces: async () => [],
                     GetLLMSettings: async () => ({providerName: 'Local', baseUrl: 'http://localhost:11434/v1', model: 'qwen3:8b', apiKey: '', maxContextTokens: 32768, responseReserveTokens: 4096, updatedAt: ''}),
+                    ListConnectorProfiles: async () => [{id: 'postgres-smoke', name: 'Smoke warehouse', kind: 'postgres', driver: 'postgres', host: 'db.smoke.local', port: 5432, database: 'analytics', username: 'analyst', password: '********', credentialRef: 'nexus:connector-profile:postgres-smoke:password', sslMode: 'prefer', workspaceScope: '', readOnly: true, resultLimit: 1000, timeoutSeconds: 30, updatedAt: '2026-05-14T00:00:00Z'}],
+                    SaveConnectorProfile: async (profile) => ({...profile, id: profile.id || 'postgres-smoke', password: profile.password ? '********' : '', credentialRef: profile.password ? 'nexus:connector-profile:postgres-smoke:password' : '', readOnly: true, updatedAt: '2026-05-14T00:00:00Z'}),
+                    DeleteConnectorProfile: async () => undefined,
                     SelectWorkspace: async () => ({selected: true, snapshot}),
                     RefreshWorkspace: async () => ({selected: true, snapshot}),
                     GetGitStatus: async () => {

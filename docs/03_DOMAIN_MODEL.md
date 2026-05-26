@@ -250,6 +250,13 @@ Fields:
 - enabled flag
 - last health check
 
+Current foundation:
+
+- Connector profile metadata is stored in local app config through `app/internal/storage/connector_profiles.go`.
+- Password/token material is stored in a protected sidecar and the public profile JSON keeps only a credential reference.
+- Profiles are returned to the frontend with redacted credential values.
+- Profiles are read-only by default and include result caps plus timeout settings before external database connectors are implemented.
+
 ### Database Connection
 
 A database connection is a connector specialized for SQL systems.

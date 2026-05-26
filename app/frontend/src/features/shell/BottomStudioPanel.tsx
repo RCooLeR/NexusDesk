@@ -1,8 +1,9 @@
-import type {AgentToolDescriptor, AgentToolPlanItem, AgentToolRunRecord, ApprovalRecord, ArtifactComparison, ArtifactLineage, ArtifactMetadata, Capability, ConnectorMetadata, DatasetChartResult, DatasetDependency, DatasetProfile, DatasetQueryResult, DatasetSQLQueryResult, FilePreview, GitFileAction, GitFileActionPreview, GitFileDiff, GitHunkActionPreview, GitHunkActionRequest, GitStatus, LLMProbeResult, LLMSettings, MetadataBrowser, MetadataSearchResult, SavedDatasetQuery, SQLRun, SQLiteMetadataStatus, SQLiteQueryResult, ToolEvent, WorkspaceArtifact, WorkspaceFreshnessStatus, WorkspaceProblemSummary, WorkspaceSearchResult, WorkspaceSnapshot, WorkspaceTask, WorkspaceTaskRunResult, WorkspaceTaskSummary} from '../../types';
+import type {AgentToolDescriptor, AgentToolPlanItem, AgentToolRunRecord, ApprovalRecord, ArtifactComparison, ArtifactLineage, ArtifactMetadata, Capability, ConnectorMetadata, ConnectorProfile, DatasetChartResult, DatasetDependency, DatasetProfile, DatasetQueryResult, DatasetSQLQueryResult, FilePreview, GitFileAction, GitFileActionPreview, GitFileDiff, GitHunkActionPreview, GitHunkActionRequest, GitStatus, LLMProbeResult, LLMSettings, MetadataBrowser, MetadataSearchResult, SavedDatasetQuery, SQLRun, SQLiteMetadataStatus, SQLiteQueryResult, ToolEvent, WorkspaceArtifact, WorkspaceFreshnessStatus, WorkspaceProblemSummary, WorkspaceSearchResult, WorkspaceSnapshot, WorkspaceTask, WorkspaceTaskRunResult, WorkspaceTaskSummary} from '../../types';
 import {AgentToolPlanCard} from './AgentToolPlanCard';
 import {ApprovalLogPanel} from './ApprovalLogPanel';
 import {ArtifactStudioPanel} from './ArtifactStudioPanel';
 import {CodeStudioPanel} from './CodeStudioPanel';
+import {ConnectorProfilesCard} from './ConnectorProfilesCard';
 import {DataOperationsPanel} from './DataOperationsPanel';
 import {GitDiffPanel} from './GitDiffPanel';
 import {LLMSettingsCard} from './LLMSettingsCard';
@@ -24,6 +25,9 @@ type BottomStudioPanelProps = {
     artifactMetadata: ArtifactMetadata | null;
     activeDatasetProfile: DatasetProfile | null;
     capabilities: Capability[];
+    connectorProfileDraft: ConnectorProfile;
+    connectorProfiles: ConnectorProfile[];
+    connectorProfilesStatus: string;
     datasetProfiles: DatasetProfile[];
     datasetDependencies: DatasetDependency[];
     datasetSQLRuns: SQLRun[];
@@ -71,6 +75,7 @@ type BottomStudioPanelProps = {
     isRunningAgentTool: boolean;
     isSavingDatasetQuery: boolean;
     isSavingDatasetSQLQuery: boolean;
+    isSavingConnectorProfile: boolean;
     isSavingSettings: boolean;
     isSearchingMetadata: boolean;
     isSearchingWorkspace: boolean;
@@ -134,9 +139,12 @@ type BottomStudioPanelProps = {
     onReplayAgentToolRun: (run: AgentToolRunRecord) => void;
     onSaveDatasetQuery: () => void;
     onSaveDatasetSQLQuery: () => void;
+    onSaveConnectorProfile: () => void;
+    onDeleteConnectorProfile: (id: string) => void;
     onSaveSettings: () => void;
     onSelectArtifact: (artifact: WorkspaceArtifact) => void;
     onSettingsDraftChange: (field: keyof LLMSettings, value: string) => void;
+    onConnectorProfileDraftChange: (field: keyof ConnectorProfile, value: string | number | boolean) => void;
     onSearchMetadata: () => void;
     onSearchWorkspace: () => void;
     onSelectSearchResult: (result: WorkspaceSearchResult) => void;
@@ -192,6 +200,9 @@ export function BottomStudioPanel({
     artifactMetadata,
     activeDatasetProfile,
     capabilities,
+    connectorProfileDraft,
+    connectorProfiles,
+    connectorProfilesStatus,
     datasetProfiles,
     datasetDependencies,
     datasetSQLRuns,
@@ -239,6 +250,7 @@ export function BottomStudioPanel({
     isRunningAgentTool,
     isSavingDatasetQuery,
     isSavingDatasetSQLQuery,
+    isSavingConnectorProfile,
     isSavingSettings,
     isSearchingMetadata,
     isSearchingWorkspace,
@@ -302,9 +314,12 @@ export function BottomStudioPanel({
     onReplayAgentToolRun,
     onSaveDatasetQuery,
     onSaveDatasetSQLQuery,
+    onSaveConnectorProfile,
+    onDeleteConnectorProfile,
     onSaveSettings,
     onSelectArtifact,
     onSettingsDraftChange,
+    onConnectorProfileDraftChange,
     onSearchMetadata,
     onSearchWorkspace,
     onSelectSearchResult,
@@ -418,6 +433,15 @@ export function BottomStudioPanel({
                             probeResult={probeResult}
                             settingsDraft={settingsDraft}
                             settingsStatus={settingsStatus}
+                        />
+                        <ConnectorProfilesCard
+                            draft={connectorProfileDraft}
+                            isSaving={isSavingConnectorProfile}
+                            onDelete={onDeleteConnectorProfile}
+                            onDraftChange={onConnectorProfileDraftChange}
+                            onSave={onSaveConnectorProfile}
+                            profiles={connectorProfiles}
+                            status={connectorProfilesStatus}
                         />
                     </div>
                 )}

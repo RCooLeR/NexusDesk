@@ -173,6 +173,7 @@ Current status:
 - Chat history, approval log, artifact list, and tool-run list now prefer SQLite metadata reads after the store exists while retaining JSON compatibility writes.
 - The workbench can inspect SQLite metadata tables, search/filter columns, copy sample rows, and view dataset SQL views.
 - The Data & Analytics SQLite connector can inspect workspace SQLite tables, views, columns, indexes, row counts, and capped samples without executing user SQL.
+- Settings can save local connector profiles with read-only defaults, result caps, timeouts, and protected credential references; returned profiles redact passwords/tokens.
 - Chat messages and context-pack previews warn when cited files changed after the answer/context was created.
 - Stale-context refresh can rebuild a context preview from changed files and records the refresh in the approval/metadata trail.
 - Dataset dependency rebuild now removes the prior generated artifact before re-running so repeated refreshes avoid same-timestamp collisions.
@@ -310,6 +311,13 @@ This batch made more of the studio inspectable and auditable without turning on 
 2. Workspace SQLite files can be inspected in read-only mode without executing user-provided SQL.
 3. Data & Analytics exposes a manual Inspect schema action next to the existing SQLite read-only query surface.
 4. SQLite metadata inspection records a dataset dependency row so connector schema inspections remain visible in local metadata history.
+
+## Completed Batch: Connector Profile Foundation
+
+1. `app/internal/storage/` now has a connector profile store for PostgreSQL, MySQL/MariaDB, SQL Server, DuckDB, and SQLite profile metadata.
+2. Connector profile passwords/tokens are stored in a protected sidecar and represented in public JSON by credential references.
+3. Wails exposes list/save/delete connector profile methods that return only redacted credentials.
+4. Settings now includes a first connector profile card for saving read-only profile metadata, result caps, timeouts, and credential references.
 
 ## Prepared Batch: Architecture Hardening Before Deeper Studios
 

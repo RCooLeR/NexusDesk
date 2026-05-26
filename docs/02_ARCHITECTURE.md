@@ -368,6 +368,8 @@ audit export
 connector credential vault
 ```
 
+The current connector profile foundation stores only non-secret connection metadata in local app config. Passwords and tokens are written to protected sidecar storage and exposed to the UI as redacted credential references. Future connector runners must resolve those references only at execution time, after policy checks and explicit user-triggered connector actions.
+
 ### Docker Desktop Extension Future
 
 ```text

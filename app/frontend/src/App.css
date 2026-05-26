@@ -4092,6 +4092,45 @@ button.code-studio-row.selected {
     color: var(--nd-charcoal);
 }
 
+.connector-profile-form {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.connector-profile-list {
+    display: grid;
+    gap: 8px;
+    padding: 0 12px 12px;
+}
+
+.connector-profile-row {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    gap: 10px;
+    align-items: center;
+    border: 1px solid var(--nd-border);
+    border-radius: var(--nd-radius-sm);
+    background: var(--nd-pure-white);
+    padding: 10px;
+}
+
+.connector-profile-row div {
+    display: grid;
+    gap: 3px;
+    min-width: 0;
+}
+
+.connector-profile-row strong,
+.connector-profile-row small {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.connector-profile-row small {
+    color: var(--nd-muted-text);
+    font-size: 12px;
+}
+
 .probe-result {
     border: 1px solid var(--nd-border-soft);
     border-radius: var(--nd-radius-sm);

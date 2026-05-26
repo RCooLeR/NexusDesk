@@ -401,6 +401,25 @@ export type ConnectorIndex = {
     columns: string[];
 };
 
+export type ConnectorProfile = {
+    id: string;
+    name: string;
+    kind: string;
+    driver: string;
+    host: string;
+    port: number;
+    database: string;
+    username: string;
+    password: string;
+    credentialRef: string;
+    sslMode: string;
+    workspaceScope: string;
+    readOnly: boolean;
+    resultLimit: number;
+    timeoutSeconds: number;
+    updatedAt: string;
+};
+
 export type ContextPreviewFile = {
     relPath: string;
     required: boolean;
