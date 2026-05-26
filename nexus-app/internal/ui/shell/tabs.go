@@ -3,43 +3,61 @@ package shell
 import (
 	"path/filepath"
 
+	"fyne.io/fyne/v2"
 	"fyne.io/fyne/v2/container"
 	"fyne.io/fyne/v2/widget"
 
 	"nexusdesk/internal/domain"
 )
 
-func newEditorTabs() *container.DocTabs {
-	tabs := container.NewDocTabs(container.NewTabItem("Welcome", welcomePanel()))
+func newEditorTabs(welcomeTitle string) *container.DocTabs {
+	tabs := container.NewDocTabs(container.NewTabItem(welcomeTitle, welcomePanel()))
 	tabs.SetTabLocation(container.TabLocationTop)
 	return tabs
 }
 
+func welcomePanel() fyne.CanvasObject {
+	return container.NewCenter(widget.NewRichTextFromMarkdown("# Nexus Augentic Studio\n\nFyne-native migration shell. Open a workspace to begin."))
+}
+
 func (v *View) configureEditorTabs() {
-	v.editorTabs.OnClosed = func(item *container.TabItem) {
-		for relPath, tab := range v.openTabs {
-			if tab == item {
-				delete(v.openTabs, relPath)
-				return
-			}
+	v.editorTabs.CloseIntercept = func(item *container.TabItem) {
+		id := v.tabIDs[item]
+		if id == "" {
+			v.editorTabs.Remove(item)
+			return
 		}
+		if _, ok := v.editorSession.Close(id, false); !ok {
+			v.addActivity("Close blocked because the tab has unsaved changes.")
+			v.editorTabs.Select(item)
+			return
+		}
+		delete(v.openTabs, id)
+		delete(v.tabIDs, item)
+		v.editorTabs.Remove(item)
 	}
 }
 
 func (v *View) openPreviewTab(preview domain.FilePreview) {
-	if existing := v.openTabs[preview.RelPath]; existing != nil {
+	tabState := v.editorSession.OpenFile(preview.RelPath, filepath.Base(preview.RelPath))
+	if existing := v.openTabs[tabState.ID]; existing != nil {
 		existing.Content = newFilePreview(preview)
+		existing.Text = tabState.Title
 		v.editorTabs.Select(existing)
 		return
 	}
-	tab := container.NewTabItem(filepath.Base(preview.RelPath), newFilePreview(preview))
-	v.openTabs[preview.RelPath] = tab
+	tab := container.NewTabItem(tabState.Title, newFilePreview(preview))
+	v.openTabs[tabState.ID] = tab
+	v.tabIDs[tab] = tabState.ID
 	v.editorTabs.Append(tab)
 	v.editorTabs.Select(tab)
 }
 
 func (v *View) addPlaceholderTab(title string, body string) {
-	tab := container.NewTabItem(title, widget.NewRichTextFromMarkdown(body))
+	tabState := v.editorSession.OpenPlaceholder(title)
+	tab := container.NewTabItem(tabState.Title, widget.NewRichTextFromMarkdown(body))
+	v.openTabs[tabState.ID] = tab
+	v.tabIDs[tab] = tabState.ID
 	v.editorTabs.Append(tab)
 	v.editorTabs.Select(tab)
 }

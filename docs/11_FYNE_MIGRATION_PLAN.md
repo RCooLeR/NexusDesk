@@ -75,10 +75,12 @@ The first `nexus-app` slice includes:
 - native app lifecycle;
 - branded dark theme foundation;
 - Workbench-style shell with rail, toolbar, navigator, editor tabs, assistant panel, and bottom tabs;
+- shell UI split into focused files for panels, tabs, workspace actions, activity, tree, and preview;
 - native folder-open dialog;
 - lazy bounded workspace listing service with traversal protection, ignored folder handling, symlink skip, and entry caps;
 - first rooted read-only file preview for capped UTF-8, UTF-16, and Windows-1251 text plus binary metadata;
 - first editor tab lifecycle with same-file tab reuse and close cleanup;
+- UI-independent editor tab session model with active tab, dirty state, pinned state, reuse, and close guards;
 - framework-free workspace domain model.
 
 Full execution is blocked in the current shell until CGO is enabled with a Windows C compiler. Non-driver internal packages can already be tested.

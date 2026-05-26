@@ -8,7 +8,7 @@ Fyne framework-independent checks:
 
 ```powershell
 cd nexus-app
-go test ./internal/domain ./internal/services/workspace ./internal/ui/shell ./internal/ui/theme
+go test ./internal/domain ./internal/services/... ./internal/ui/shell ./internal/ui/theme
 ```
 
 Full native app run/build requires CGO and a Windows C compiler:

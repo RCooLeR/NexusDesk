@@ -119,7 +119,7 @@ Responsibilities:
 
 The shell should be thin. Most behavior should live in backend services and focused native UI components.
 
-Current migration note: `app-wails/` keeps the old Wails adapter and services for reference. `nexus-app/internal/app/` owns only native app lifecycle and window setup. New code should place domain models in `nexus-app/internal/domain/`, UI-independent use cases in `nexus-app/internal/services/`, and Fyne widgets/layouts in `nexus-app/internal/ui/`.
+Current migration note: `app-wails/` keeps the old Wails adapter and services for reference. `nexus-app/internal/app/` owns only native app lifecycle and window setup. New code should place domain models in `nexus-app/internal/domain/`, UI-independent use cases in `nexus-app/internal/services/`, and Fyne widgets/layouts in `nexus-app/internal/ui/`. The native shell is split by responsibility (`view`, `panels`, `tabs`, `workspace_actions`, activity, tree, and preview files) so UI growth does not recreate a monolithic shell.
 
 ### 2. Frontend
 
@@ -159,7 +159,8 @@ Review status as of the latest full project pass:
 Near-term architecture corrections:
 
 - Configure Windows CGO/Fyne toolchain and verify the native app runs.
-- Port safe workspace preview/write services from `app-wails` into `nexus-app/internal/services/workspace`.
+- Continue porting safe workspace preview/write services from `app-wails` into `nexus-app/internal/services/workspace`.
+- Keep editor tab/session rules in `nexus-app/internal/services/editor` rather than in Fyne widget callbacks.
 - Port Git, LLM/agent, data, artifact, and metadata services without recreating a bridge-shaped root package.
 - Add a durable job model before wiring slow indexing, OCR, dump imports, connector pulls, or long agent runs.
 - Promote SQLite metadata repositories to primary persistence once migration/recovery tests exist.
