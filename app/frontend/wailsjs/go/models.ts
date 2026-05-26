@@ -215,6 +215,7 @@ export namespace analytics {
 	    totalRows: number;
 	    matchedRows: number;
 	    message: string;
+	    plan: string[];
 
 	    static createFrom(source: any = {}) {
 	        return new SQLQueryResult(source);
@@ -230,6 +231,7 @@ export namespace analytics {
 	        this.totalRows = source["totalRows"];
 	        this.matchedRows = source["matchedRows"];
 	        this.message = source["message"];
+	        this.plan = source["plan"];
 	    }
 	}
 

@@ -406,7 +406,8 @@ Step 5.4: Query notebook
 - [x] Add SQL notebook result tabs for rows, run summary, and SQL history/lineage.
 - [x] Add chart cells.
 - [x] Add first local chart cell type that embeds bounded dataset chart preview/create controls inside the SQL notebook.
-- [ ] Add explain-plan display where connector supports it.
+- [x] Add explain-plan display where connector supports it.
+- [x] Add SQL notebook Plan tab backed by dataset SQL plan lines: native DuckDB `EXPLAIN` when available, deterministic fallback plan lines otherwise.
 - [ ] Add saved notebooks.
 - [ ] Add query history browser.
 - [ ] Add visible result caps and timeout controls.

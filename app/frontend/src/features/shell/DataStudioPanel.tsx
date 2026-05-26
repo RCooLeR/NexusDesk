@@ -9,7 +9,7 @@ type SQLNotebookCell = {
     sql: string;
 };
 
-type SQLResultTab = 'rows' | 'summary' | 'history';
+type SQLResultTab = 'rows' | 'summary' | 'plan' | 'history';
 
 type DataStudioPanelProps = {
     activeDatasetProfile: DatasetProfile | null;
@@ -553,6 +553,7 @@ function SQLResultTabs({
     const tabs: Array<{id: SQLResultTab; label: string; disabled?: boolean}> = [
         {id: 'rows', label: 'Rows', disabled: !result},
         {id: 'summary', label: 'Summary', disabled: !result},
+        {id: 'plan', label: 'Plan', disabled: !result},
         {id: 'history', label: 'History', disabled: runs.length === 0 && dependencies.length === 0},
     ];
     const currentTab = tabs.some((tab) => tab.id === activeTab && !tab.disabled)
@@ -599,6 +600,23 @@ function SQLResultTabs({
                     <p><strong>{result.rows.length}</strong><small>preview rows</small></p>
                     <pre>{result.sql}</pre>
                     <small>{result.message}</small>
+                </div>
+            )}
+            {currentTab === 'plan' && result && (
+                <div className="sql-plan-panel" role="tabpanel">
+                    <div className="sql-plan-meta">
+                        <span>{result.engine}</span>
+                        <span>{result.relPath}</span>
+                        <span>{result.rows.length} preview rows</span>
+                    </div>
+                    <ol className="sql-plan-list">
+                        {(result.plan?.length ? result.plan : ['Explain plan is not available for this engine yet.']).map((line, index) => (
+                            <li key={`${index}-${line}`}>
+                                <span>{index + 1}</span>
+                                <code>{line}</code>
+                            </li>
+                        ))}
+                    </ol>
                 </div>
             )}
             {currentTab === 'history' && (

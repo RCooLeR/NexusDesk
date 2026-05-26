@@ -30,6 +30,7 @@ type SQLQueryResult struct {
 	TotalRows   int        `json:"totalRows"`
 	MatchedRows int        `json:"matchedRows"`
 	Message     string     `json:"message"`
+	Plan        []string   `json:"plan"`
 }
 
 type parsedSelect struct {
@@ -96,6 +97,7 @@ func QueryCSVSQL(root string, request SQLQueryRequest) (SQLQueryResult, error) {
 		TotalRows:   result.TotalRows,
 		MatchedRows: result.MatchedRows,
 		Message:     fmt.Sprintf("DuckDB-compatible read-only query returned %d rows from %s (showing %d).", result.TotalRows, result.RelPath, returned),
+		Plan:        datasetSQLPlan(result.RelPath, parsed, result.TotalRows, result.MatchedRows, returned),
 	}, nil
 }
 
@@ -134,6 +136,7 @@ func queryDuckDB(root string, request SQLQueryRequest, query string) (SQLQueryRe
 		}
 	}
 
+	plan := duckDBPlan(db, query, request.RelPath, alias)
 	rows, err := db.Query(trimTrailingSQLSemicolons(query))
 	if err != nil {
 		return SQLQueryResult{}, err
@@ -184,6 +187,7 @@ func queryDuckDB(root string, request SQLQueryRequest, query string) (SQLQueryRe
 		TotalRows:   totalRows,
 		MatchedRows: totalRows,
 		Message:     fmt.Sprintf("DuckDB returned %d rows from %s using the dataset view (showing %d).", totalRows, request.RelPath, len(resultRows)),
+		Plan:        plan,
 	}, nil
 }
 
@@ -194,6 +198,96 @@ func rowScanners(columnCount int) []any {
 		scanners[index] = &value
 	}
 	return scanners
+}
+
+func duckDBPlan(db *sql.DB, query string, relPath string, alias string) []string {
+	lines, err := explainDuckDBQuery(db, query)
+	plan := []string{
+		"engine: duckdb",
+		"source: " + relPath + " registered as dataset view",
+	}
+	if alias != "" && alias != "dataset" {
+		plan = append(plan, "alias: "+alias)
+	}
+	if err != nil {
+		return append(plan, "native explain: unavailable for this query")
+	}
+	if len(lines) == 0 {
+		return append(plan, "native explain: returned no plan lines")
+	}
+	return append(plan, lines...)
+}
+
+func explainDuckDBQuery(db *sql.DB, query string) ([]string, error) {
+	rows, err := db.Query("EXPLAIN " + trimTrailingSQLSemicolons(query))
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	columns, err := rows.Columns()
+	if err != nil {
+		return nil, err
+	}
+	scanners := rowScanners(len(columns))
+	lines := []string{}
+	for rows.Next() {
+		if err := rows.Scan(scanners...); err != nil {
+			return nil, err
+		}
+		parts := []string{}
+		for _, scanner := range scanners {
+			if scanner == nil {
+				continue
+			}
+			value := scanner.(*any)
+			if value == nil || *value == nil {
+				continue
+			}
+			text := strings.TrimSpace(stringifyValue(*value))
+			if text != "" {
+				parts = append(parts, text)
+			}
+		}
+		if len(parts) > 0 {
+			lines = append(lines, strings.Join(parts, " | "))
+		}
+	}
+	return lines, rows.Err()
+}
+
+func datasetSQLPlan(relPath string, parsed parsedSelect, totalRows int, matchedRows int, returnedRows int) []string {
+	selectedColumns := strings.Join(parsed.columns, ", ")
+	if selectedColumns == "" {
+		selectedColumns = "*"
+	}
+	plan := []string{
+		"engine: bounded dataset SQL fallback",
+		"source: " + relPath,
+		"validate: single read-only SELECT statement",
+		"scan: workspace dataset preview/query rows",
+		"project: " + selectedColumns,
+	}
+	if parsed.where != "" {
+		plan = append(plan, "filter: "+parsed.where)
+	} else {
+		plan = append(plan, "filter: none")
+	}
+	if parsed.orderBy != "" {
+		direction := "asc"
+		if parsed.orderDesc {
+			direction = "desc"
+		}
+		plan = append(plan, "order: "+parsed.orderBy+" "+direction)
+	}
+	if parsed.limit > 0 {
+		plan = append(plan, "limit: "+strconv.Itoa(parsed.limit))
+	}
+	plan = append(plan,
+		fmt.Sprintf("result: %d matched of %d rows, %d shown", matchedRows, totalRows, returnedRows),
+		"native explain: unavailable for fallback engine",
+	)
+	return plan
 }
 
 func parseSelectSQL(sql string) (parsedSelect, error) {

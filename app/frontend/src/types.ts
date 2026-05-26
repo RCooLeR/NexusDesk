@@ -539,6 +539,7 @@ export type DatasetSQLQueryResult = {
     totalRows: number;
     matchedRows: number;
     message: string;
+    plan: string[];
 };
 
 export type DatasetSQLQueryRequest = {

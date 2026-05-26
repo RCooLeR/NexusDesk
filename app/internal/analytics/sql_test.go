@@ -26,6 +26,9 @@ func TestQueryCSVSQLRunsReadOnlyProjection(t *testing.T) {
 	if len(result.Rows) != 1 || result.Rows[0][0] != "B" || result.Columns[1] != "spend" {
 		t.Fatalf("unexpected SQL rows: %#v", result)
 	}
+	if !planContains(result.Plan, "filter: spend > 10") || !planContains(result.Plan, "native explain: unavailable for fallback engine") {
+		t.Fatalf("expected fallback query plan to describe filter and explain support, got %#v", result.Plan)
+	}
 }
 
 func TestQueryCSVSQLRejectsMutation(t *testing.T) {
@@ -101,4 +104,13 @@ func writeFile(t *testing.T, root string, relPath string, content string) {
 	if err := os.WriteFile(path, []byte(content), 0o644); err != nil {
 		t.Fatalf("WriteFile failed: %v", err)
 	}
+}
+
+func planContains(plan []string, expected string) bool {
+	for _, line := range plan {
+		if strings.Contains(line, expected) {
+			return true
+		}
+	}
+	return false
 }
