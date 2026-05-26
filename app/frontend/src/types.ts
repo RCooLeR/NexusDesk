@@ -384,9 +384,34 @@ export type DatasetProfile = {
     rows: number;
     columns: number;
     sheets: string[];
+    workbook: WorkbookInfo;
     profiles: ColumnProfile[];
     updatedAt: string;
     message: string;
+};
+
+export type WorkbookInfo = {
+    sheets: WorkbookSheetInfo[];
+    namedRanges: string[];
+    tableRanges: WorkbookTableInfo[];
+    pivotTables: string[];
+    formulaCount: number;
+};
+
+export type WorkbookSheetInfo = {
+    name: string;
+    path: string;
+    dimension: string;
+    rows: number;
+    columns: number;
+    formulaCount: number;
+    tableCount: number;
+};
+
+export type WorkbookTableInfo = {
+    name: string;
+    sheet: string;
+    ref: string;
 };
 
 export type DatasetQueryResult = {

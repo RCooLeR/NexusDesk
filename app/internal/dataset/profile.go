@@ -23,9 +23,34 @@ type Profile struct {
 	Rows      int                       `json:"rows"`
 	Columns   int                       `json:"columns"`
 	Sheets    []string                  `json:"sheets"`
+	Workbook  WorkbookInfo              `json:"workbook"`
 	Profiles  []workspace.ColumnProfile `json:"profiles"`
 	UpdatedAt string                    `json:"updatedAt"`
 	Message   string                    `json:"message"`
+}
+
+type WorkbookInfo struct {
+	Sheets       []WorkbookSheetInfo `json:"sheets"`
+	NamedRanges  []string            `json:"namedRanges"`
+	TableRanges  []WorkbookTableInfo `json:"tableRanges"`
+	PivotTables  []string            `json:"pivotTables"`
+	FormulaCount int                 `json:"formulaCount"`
+}
+
+type WorkbookSheetInfo struct {
+	Name         string `json:"name"`
+	Path         string `json:"path"`
+	Dimension    string `json:"dimension"`
+	Rows         int    `json:"rows"`
+	Columns      int    `json:"columns"`
+	FormulaCount int    `json:"formulaCount"`
+	TableCount   int    `json:"tableCount"`
+}
+
+type WorkbookTableInfo struct {
+	Name  string `json:"name"`
+	Sheet string `json:"sheet"`
+	Ref   string `json:"ref"`
 }
 
 func Build(root string, relPath string) (Profile, error) {
@@ -56,13 +81,16 @@ func Build(root string, relPath string) (Profile, error) {
 		profile.Profiles = preview.Table.Profiles
 		profile.Message = strings.ToUpper(profile.Kind) + " dataset profile persisted."
 	case ".xlsx":
-		sheets, err := inspectXLSXSheets(absTarget)
+		workbook, err := inspectXLSXWorkbook(absTarget)
 		if err != nil {
 			return Profile{}, err
 		}
 		profile.Kind = "xlsx"
-		profile.Sheets = sheets
-		profile.Message = "Excel workbook profile persisted."
+		profile.Sheets = workbookSheetNames(workbook.Sheets)
+		profile.Workbook = workbook
+		profile.Rows = workbookRows(workbook.Sheets)
+		profile.Columns = workbookColumns(workbook.Sheets)
+		profile.Message = "Excel workbook profile persisted with sheet, formula, named range, table, and pivot metadata."
 	default:
 		return Profile{}, errors.New("dataset profiles currently support CSV, TSV, JSON, NDJSON, and XLSX files")
 	}
@@ -156,41 +184,76 @@ func resolveDatasetPath(root string, relPath string) (string, string, string, er
 	return absRoot, absTarget, cleanRel, nil
 }
 
-func inspectXLSXSheets(path string) ([]string, error) {
+func inspectXLSXWorkbook(path string) (WorkbookInfo, error) {
 	reader, err := zip.OpenReader(path)
 	if err != nil {
-		return nil, err
+		return WorkbookInfo{}, err
 	}
 	defer reader.Close()
 
+	files := map[string]*zip.File{}
 	for _, file := range reader.File {
-		if file.Name != "xl/workbook.xml" {
-			continue
-		}
-		handle, err := file.Open()
-		if err != nil {
-			return nil, err
-		}
-		defer handle.Close()
-
-		var workbook xlsxWorkbook
-		if err := xml.NewDecoder(handle).Decode(&workbook); err != nil {
-			return nil, err
-		}
-		sheets := make([]string, 0, len(workbook.Sheets.Items))
-		for _, sheet := range workbook.Sheets.Items {
-			if sheet.Name != "" {
-				sheets = append(sheets, sheet.Name)
-			}
-		}
-		return sheets, nil
+		files[file.Name] = file
 	}
 
-	return nil, errors.New("XLSX workbook metadata not found")
+	workbookFile := files["xl/workbook.xml"]
+	if workbookFile == nil {
+		return WorkbookInfo{}, errors.New("XLSX workbook metadata not found")
+	}
+	workbook, err := decodeZipXML[xlsxWorkbook](workbookFile)
+	if err != nil {
+		return WorkbookInfo{}, err
+	}
+
+	rels := mapRelationshipTargets(files["xl/_rels/workbook.xml.rels"], "xl")
+	tablesByPath := inspectXLSXTables(files)
+	pivotTables := inspectXLSXPivotTables(files)
+
+	info := WorkbookInfo{
+		Sheets:      make([]WorkbookSheetInfo, 0, len(workbook.Sheets.Items)),
+		NamedRanges: workbookDefinedNames(workbook.DefinedNames.Items),
+		TableRanges: make([]WorkbookTableInfo, 0),
+		PivotTables: pivotTables,
+	}
+	for _, sheet := range workbook.Sheets.Items {
+		if sheet.Name == "" {
+			continue
+		}
+		sheetPath := rels[sheet.RelID]
+		sheetInfo := WorkbookSheetInfo{Name: sheet.Name, Path: sheetPath}
+		if sheetPath != "" {
+			worksheet, err := decodeZipXML[xlsxWorksheet](files[sheetPath])
+			if err == nil {
+				sheetInfo.Dimension = worksheet.Dimension.Ref
+				sheetInfo.Rows = len(worksheet.SheetData.Rows)
+				sheetInfo.FormulaCount = worksheetFormulaCount(worksheet)
+				sheetInfo.TableCount = len(worksheet.TableParts.Items)
+				if rows, columns, ok := dimensionSize(worksheet.Dimension.Ref); ok {
+					sheetInfo.Rows = maxInt(sheetInfo.Rows, rows)
+					sheetInfo.Columns = columns
+				} else {
+					sheetInfo.Columns = worksheetColumnCount(worksheet)
+				}
+				for _, tableRel := range worksheet.TableParts.Items {
+					tablePath := mapRelationshipTargets(files[relationshipPath(sheetPath)], filepath.Dir(sheetPath))[tableRel.RelID]
+					table := tablesByPath[tablePath]
+					if table.Name != "" || table.Ref != "" {
+						table.Sheet = sheet.Name
+						info.TableRanges = append(info.TableRanges, table)
+					}
+				}
+			}
+		}
+		info.FormulaCount += sheetInfo.FormulaCount
+		info.Sheets = append(info.Sheets, sheetInfo)
+	}
+
+	return info, nil
 }
 
 type xlsxWorkbook struct {
-	Sheets xlsxSheets `xml:"sheets"`
+	Sheets       xlsxSheets       `xml:"sheets"`
+	DefinedNames xlsxDefinedNames `xml:"definedNames"`
 }
 
 type xlsxSheets struct {
@@ -198,5 +261,246 @@ type xlsxSheets struct {
 }
 
 type xlsxSheet struct {
+	Name  string `xml:"name,attr"`
+	RelID string `xml:"id,attr"`
+}
+
+type xlsxDefinedNames struct {
+	Items []xlsxDefinedName `xml:"definedName"`
+}
+
+type xlsxDefinedName struct {
 	Name string `xml:"name,attr"`
+	Text string `xml:",chardata"`
+}
+
+type xlsxRelationships struct {
+	Items []xlsxRelationship `xml:"Relationship"`
+}
+
+type xlsxRelationship struct {
+	ID     string `xml:"Id,attr"`
+	Target string `xml:"Target,attr"`
+	Type   string `xml:"Type,attr"`
+}
+
+type xlsxWorksheet struct {
+	Dimension  xlsxDimension  `xml:"dimension"`
+	SheetData  xlsxSheetData  `xml:"sheetData"`
+	TableParts xlsxTableParts `xml:"tableParts"`
+}
+
+type xlsxDimension struct {
+	Ref string `xml:"ref,attr"`
+}
+
+type xlsxSheetData struct {
+	Rows []xlsxRow `xml:"row"`
+}
+
+type xlsxRow struct {
+	Cells []xlsxCell `xml:"c"`
+}
+
+type xlsxCell struct {
+	Ref     string `xml:"r,attr"`
+	Formula string `xml:"f"`
+}
+
+type xlsxTableParts struct {
+	Items []xlsxTablePart `xml:"tablePart"`
+}
+
+type xlsxTablePart struct {
+	RelID string `xml:"id,attr"`
+}
+
+type xlsxTable struct {
+	Name        string `xml:"name,attr"`
+	DisplayName string `xml:"displayName,attr"`
+	Ref         string `xml:"ref,attr"`
+}
+
+type xlsxPivotTableDefinition struct {
+	Name string `xml:"name,attr"`
+}
+
+func decodeZipXML[T any](file *zip.File) (T, error) {
+	var value T
+	if file == nil {
+		return value, errors.New("XLSX metadata part not found")
+	}
+	handle, err := file.Open()
+	if err != nil {
+		return value, err
+	}
+	defer handle.Close()
+	if err := xml.NewDecoder(handle).Decode(&value); err != nil {
+		return value, err
+	}
+	return value, nil
+}
+
+func mapRelationshipTargets(file *zip.File, baseDir string) map[string]string {
+	targets := map[string]string{}
+	rels, err := decodeZipXML[xlsxRelationships](file)
+	if err != nil {
+		return targets
+	}
+	for _, rel := range rels.Items {
+		if rel.ID == "" || rel.Target == "" {
+			continue
+		}
+		target := filepath.ToSlash(filepath.Clean(filepath.Join(baseDir, filepath.FromSlash(rel.Target))))
+		targets[rel.ID] = target
+	}
+	return targets
+}
+
+func relationshipPath(partPath string) string {
+	dir, name := filepath.Split(filepath.ToSlash(partPath))
+	return filepath.ToSlash(filepath.Join(dir, "_rels", name+".rels"))
+}
+
+func inspectXLSXTables(files map[string]*zip.File) map[string]WorkbookTableInfo {
+	tables := map[string]WorkbookTableInfo{}
+	for path, file := range files {
+		if !strings.HasPrefix(path, "xl/tables/") || !strings.HasSuffix(path, ".xml") {
+			continue
+		}
+		table, err := decodeZipXML[xlsxTable](file)
+		if err != nil {
+			continue
+		}
+		name := table.DisplayName
+		if name == "" {
+			name = table.Name
+		}
+		tables[path] = WorkbookTableInfo{Name: name, Ref: table.Ref}
+	}
+	return tables
+}
+
+func inspectXLSXPivotTables(files map[string]*zip.File) []string {
+	pivots := []string{}
+	for path, file := range files {
+		if !strings.HasPrefix(path, "xl/pivotTables/") || !strings.HasSuffix(path, ".xml") {
+			continue
+		}
+		pivot, err := decodeZipXML[xlsxPivotTableDefinition](file)
+		if err != nil || pivot.Name == "" {
+			pivots = append(pivots, filepath.Base(path))
+			continue
+		}
+		pivots = append(pivots, pivot.Name)
+	}
+	return pivots
+}
+
+func workbookDefinedNames(items []xlsxDefinedName) []string {
+	names := []string{}
+	for _, item := range items {
+		name := strings.TrimSpace(item.Name)
+		target := strings.TrimSpace(item.Text)
+		if name == "" {
+			continue
+		}
+		if target != "" {
+			name += "=" + target
+		}
+		names = append(names, name)
+	}
+	return names
+}
+
+func workbookSheetNames(sheets []WorkbookSheetInfo) []string {
+	names := make([]string, 0, len(sheets))
+	for _, sheet := range sheets {
+		names = append(names, sheet.Name)
+	}
+	return names
+}
+
+func workbookRows(sheets []WorkbookSheetInfo) int {
+	rows := 0
+	for _, sheet := range sheets {
+		rows += sheet.Rows
+	}
+	return rows
+}
+
+func workbookColumns(sheets []WorkbookSheetInfo) int {
+	columns := 0
+	for _, sheet := range sheets {
+		columns = maxInt(columns, sheet.Columns)
+	}
+	return columns
+}
+
+func worksheetFormulaCount(worksheet xlsxWorksheet) int {
+	count := 0
+	for _, row := range worksheet.SheetData.Rows {
+		for _, cell := range row.Cells {
+			if strings.TrimSpace(cell.Formula) != "" {
+				count++
+			}
+		}
+	}
+	return count
+}
+
+func worksheetColumnCount(worksheet xlsxWorksheet) int {
+	maxColumn := 0
+	for _, row := range worksheet.SheetData.Rows {
+		for _, cell := range row.Cells {
+			if column := columnIndexFromCellRef(cell.Ref); column > maxColumn {
+				maxColumn = column
+			}
+		}
+	}
+	return maxColumn
+}
+
+func dimensionSize(ref string) (int, int, bool) {
+	ref = strings.TrimSpace(ref)
+	if ref == "" {
+		return 0, 0, false
+	}
+	parts := strings.Split(ref, ":")
+	last := parts[len(parts)-1]
+	row := rowIndexFromCellRef(last)
+	column := columnIndexFromCellRef(last)
+	return row, column, row > 0 || column > 0
+}
+
+func rowIndexFromCellRef(ref string) int {
+	digits := ""
+	for _, value := range ref {
+		if value >= '0' && value <= '9' {
+			digits += string(value)
+		}
+	}
+	var row int
+	for _, value := range digits {
+		row = row*10 + int(value-'0')
+	}
+	return row
+}
+
+func columnIndexFromCellRef(ref string) int {
+	column := 0
+	for _, value := range strings.ToUpper(ref) {
+		if value < 'A' || value > 'Z' {
+			continue
+		}
+		column = column*26 + int(value-'A') + 1
+	}
+	return column
+}
+
+func maxInt(left int, right int) int {
+	if left > right {
+		return left
+	}
+	return right
 }

@@ -616,6 +616,84 @@ export namespace artifact {
 
 export namespace dataset {
 
+	export class WorkbookTableInfo {
+	    name: string;
+	    sheet: string;
+	    ref: string;
+
+	    static createFrom(source: any = {}) {
+	        return new WorkbookTableInfo(source);
+	    }
+
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.name = source["name"];
+	        this.sheet = source["sheet"];
+	        this.ref = source["ref"];
+	    }
+	}
+	export class WorkbookSheetInfo {
+	    name: string;
+	    path: string;
+	    dimension: string;
+	    rows: number;
+	    columns: number;
+	    formulaCount: number;
+	    tableCount: number;
+
+	    static createFrom(source: any = {}) {
+	        return new WorkbookSheetInfo(source);
+	    }
+
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.name = source["name"];
+	        this.path = source["path"];
+	        this.dimension = source["dimension"];
+	        this.rows = source["rows"];
+	        this.columns = source["columns"];
+	        this.formulaCount = source["formulaCount"];
+	        this.tableCount = source["tableCount"];
+	    }
+	}
+	export class WorkbookInfo {
+	    sheets: WorkbookSheetInfo[];
+	    namedRanges: string[];
+	    tableRanges: WorkbookTableInfo[];
+	    pivotTables: string[];
+	    formulaCount: number;
+
+	    static createFrom(source: any = {}) {
+	        return new WorkbookInfo(source);
+	    }
+
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.sheets = this.convertValues(source["sheets"], WorkbookSheetInfo);
+	        this.namedRanges = source["namedRanges"];
+	        this.tableRanges = this.convertValues(source["tableRanges"], WorkbookTableInfo);
+	        this.pivotTables = source["pivotTables"];
+	        this.formulaCount = source["formulaCount"];
+	    }
+
+		convertValues(a: any, classs: any, asMap: boolean = false): any {
+		    if (!a) {
+		        return a;
+		    }
+		    if (a.slice && a.map) {
+		        return (a as any[]).map(elem => this.convertValues(elem, classs));
+		    } else if ("object" === typeof a) {
+		        if (asMap) {
+		            for (const key of Object.keys(a)) {
+		                a[key] = new classs(a[key]);
+		            }
+		            return a;
+		        }
+		        return new classs(a);
+		    }
+		    return a;
+		}
+	}
 	export class Profile {
 	    relPath: string;
 	    name: string;
@@ -623,6 +701,7 @@ export namespace dataset {
 	    rows: number;
 	    columns: number;
 	    sheets: string[];
+	    workbook: WorkbookInfo;
 	    profiles: workspace.ColumnProfile[];
 	    updatedAt: string;
 	    message: string;
@@ -639,6 +718,7 @@ export namespace dataset {
 	        this.rows = source["rows"];
 	        this.columns = source["columns"];
 	        this.sheets = source["sheets"];
+	        this.workbook = this.convertValues(source["workbook"], WorkbookInfo);
 	        this.profiles = this.convertValues(source["profiles"], workspace.ColumnProfile);
 	        this.updatedAt = source["updatedAt"];
 	        this.message = source["message"];
@@ -682,6 +762,8 @@ export namespace dataset {
 	        this.updatedAt = source["updatedAt"];
 	    }
 	}
+
+
 
 }
 

@@ -110,6 +110,40 @@ func TestBuildInspectsXLSXSheets(t *testing.T) {
 	}
 }
 
+func TestBuildInspectsXLSXWorkbookMetadata(t *testing.T) {
+	root := t.TempDir()
+	path := filepath.Join(root, "data", "workbook.xlsx")
+	if err := os.MkdirAll(filepath.Dir(path), 0o755); err != nil {
+		t.Fatalf("MkdirAll failed: %v", err)
+	}
+	createRichXLSX(t, path)
+
+	profile, err := Build(root, "data/workbook.xlsx")
+	if err != nil {
+		t.Fatalf("Build returned error: %v", err)
+	}
+
+	if profile.Rows != 13 || profile.Columns != 3 {
+		t.Fatalf("expected workbook row/column summary 13/3, got %d/%d", profile.Rows, profile.Columns)
+	}
+	if profile.Workbook.FormulaCount != 2 {
+		t.Fatalf("expected 2 formulas, got %d", profile.Workbook.FormulaCount)
+	}
+	if len(profile.Workbook.NamedRanges) != 1 || profile.Workbook.NamedRanges[0] != "RevenueRange=Data!$B$2:$B$10" {
+		t.Fatalf("unexpected named ranges: %#v", profile.Workbook.NamedRanges)
+	}
+	if len(profile.Workbook.TableRanges) != 1 || profile.Workbook.TableRanges[0].Name != "Campaigns" || profile.Workbook.TableRanges[0].Sheet != "Data" || profile.Workbook.TableRanges[0].Ref != "A1:C10" {
+		t.Fatalf("unexpected table ranges: %#v", profile.Workbook.TableRanges)
+	}
+	if len(profile.Workbook.PivotTables) != 1 || profile.Workbook.PivotTables[0] != "PivotTable1" {
+		t.Fatalf("unexpected pivot tables: %#v", profile.Workbook.PivotTables)
+	}
+	dataSheet := profile.Workbook.Sheets[1]
+	if dataSheet.Name != "Data" || dataSheet.Dimension != "A1:C10" || dataSheet.Rows != 10 || dataSheet.Columns != 3 || dataSheet.FormulaCount != 2 || dataSheet.TableCount != 1 {
+		t.Fatalf("unexpected data sheet info: %#v", dataSheet)
+	}
+}
+
 func TestBuildRejectsTraversal(t *testing.T) {
 	if _, err := Build(t.TempDir(), "../outside.csv"); err == nil {
 		t.Fatal("expected traversal to be rejected")
@@ -145,5 +179,36 @@ func createXLSX(t *testing.T, path string) {
 	_, err = entry.Write([]byte(`<workbook><sheets><sheet name="Summary"/><sheet name="Data"/></sheets></workbook>`))
 	if err != nil {
 		t.Fatalf("Write workbook entry failed: %v", err)
+	}
+}
+
+func createRichXLSX(t *testing.T, path string) {
+	t.Helper()
+	file, err := os.Create(path)
+	if err != nil {
+		t.Fatalf("Create failed: %v", err)
+	}
+	defer file.Close()
+
+	writer := zip.NewWriter(file)
+	defer writer.Close()
+
+	writeZipEntry(t, writer, "xl/workbook.xml", `<workbook xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships"><sheets><sheet name="Summary" r:id="rId1"/><sheet name="Data" r:id="rId2"/></sheets><definedNames><definedName name="RevenueRange">Data!$B$2:$B$10</definedName></definedNames></workbook>`)
+	writeZipEntry(t, writer, "xl/_rels/workbook.xml.rels", `<Relationships><Relationship Id="rId1" Target="worksheets/sheet1.xml"/><Relationship Id="rId2" Target="worksheets/sheet2.xml"/></Relationships>`)
+	writeZipEntry(t, writer, "xl/worksheets/sheet1.xml", `<worksheet><dimension ref="A1:B3"/><sheetData><row><c r="A1"/><c r="B1"/></row><row><c r="A2"/></row><row><c r="B3"/></row></sheetData></worksheet>`)
+	writeZipEntry(t, writer, "xl/worksheets/sheet2.xml", `<worksheet><dimension ref="A1:C10"/><sheetData><row><c r="A1"/><c r="B1"/><c r="C1"><f>SUM(B2:B9)</f></c></row><row><c r="A2"/><c r="B2"/><c r="C2"><f>B2*2</f></c></row></sheetData><tableParts count="1"><tablePart r:id="rTable1"/></tableParts></worksheet>`)
+	writeZipEntry(t, writer, "xl/worksheets/_rels/sheet2.xml.rels", `<Relationships><Relationship Id="rTable1" Target="../tables/table1.xml"/></Relationships>`)
+	writeZipEntry(t, writer, "xl/tables/table1.xml", `<table name="Table1" displayName="Campaigns" ref="A1:C10"/>`)
+	writeZipEntry(t, writer, "xl/pivotTables/pivotTable1.xml", `<pivotTableDefinition name="PivotTable1"/>`)
+}
+
+func writeZipEntry(t *testing.T, writer *zip.Writer, name string, content string) {
+	t.Helper()
+	entry, err := writer.Create(name)
+	if err != nil {
+		t.Fatalf("Create %s entry failed: %v", name, err)
+	}
+	if _, err := entry.Write([]byte(content)); err != nil {
+		t.Fatalf("Write %s entry failed: %v", name, err)
 	}
 }

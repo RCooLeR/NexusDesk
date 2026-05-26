@@ -55,7 +55,7 @@ Deliverables:
 - bounded CSV/TSV/JSON/NDJSON table preview: implemented
 - bounded CSV/TSV/JSON/NDJSON column profiles: implemented
 - larger capped table profile sample: implemented
-- persistent CSV/TSV/JSON/NDJSON/XLSX dataset profiles: first implementation
+- persistent CSV/TSV/JSON/NDJSON/XLSX dataset profiles: first implementation, with XLSX workbook metadata
 - bounded CSV/TSV/JSON/NDJSON query/filter flow: first implementation
 - dataset query result export artifact flow: first implementation
 - dataset-to-SVG bar chart artifact flow: first implementation
@@ -270,6 +270,13 @@ This batch made more of the studio inspectable and auditable without turning on 
 3. JSONL/NDJSON files are decoded record by record for preview, profile, context, and bounded row queries.
 4. Workspace scanning and frontend draft file typing classify CSV, TSV, JSON, JSONL, and NDJSON as data files.
 
+## Completed Batch: XLSX Workbook Metadata
+
+1. XLSX profiles now include sheet dimensions, row/column summaries, formula counts, table ranges, named ranges, and pivot table names.
+2. Data & Analytics profile summaries expose workbook formula/table/named-range/pivot counts.
+3. Agent dataset-profile observations include workbook metadata counts when profiling Excel files.
+4. Legacy binary XLS parsing is split into its own pending data-import task because it needs a different parser or conversion path.
+
 ## Prepared Batch: Architecture Hardening Before Deeper Studios
 
 1. Extract chat/context/agent orchestration into a `useChatController` frontend hook and a backend `ChatService`.
@@ -388,7 +395,7 @@ Goal: support business and marketing analysis from structured data.
 
 Deliverables:
 
-- Excel workbook inspector
+- Excel workbook inspector: richer XLSX metadata implemented; legacy XLS pending
 - CSV loader
 - CSV table preview: implemented
 - bounded CSV column profiles: implemented

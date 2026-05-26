@@ -491,7 +491,18 @@ function DatasetProfileSummary({profile}: {profile: DatasetProfile}) {
             <strong>{profile.name}</strong>
             <small>{profile.kind}</small>
             {profile.kind === 'xlsx' ? (
-                <p>{profile.sheets.length} sheets: {profile.sheets.join(', ')}</p>
+                <>
+                    <p>{profile.workbook?.sheets?.length ?? profile.sheets.length} sheets, {profile.workbook?.formulaCount ?? 0} formulas</p>
+                    {profile.workbook?.tableRanges?.length > 0 && (
+                        <small>{profile.workbook.tableRanges.length} tables: {profile.workbook.tableRanges.map((table) => `${table.sheet}:${table.ref}`).join(', ')}</small>
+                    )}
+                    {profile.workbook?.namedRanges?.length > 0 && (
+                        <small>{profile.workbook.namedRanges.length} named ranges</small>
+                    )}
+                    {profile.workbook?.pivotTables?.length > 0 && (
+                        <small>{profile.workbook.pivotTables.length} pivots</small>
+                    )}
+                </>
             ) : (
                 <p>{profile.rows} rows, {profile.columns} columns</p>
             )}

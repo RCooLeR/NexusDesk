@@ -343,7 +343,8 @@ Implemented:
 Step 5.1: File dataset coverage
 
 - [x] Add TSV loader.
-- [ ] Add richer XLSX/XLS workbook inspector for sheets, formulas, named ranges, pivots, and table ranges.
+- [x] Add richer XLSX workbook inspector for sheets, formulas, named ranges, pivots, and table ranges.
+- [ ] Add legacy binary XLS workbook inspector or explicit conversion/import guidance.
 - [x] Add JSON loader.
 - [x] Add NDJSON loader.
 - [ ] Add Parquet inspection.
@@ -1001,30 +1002,29 @@ Exit criteria:
 
 ## Next Logical Batch
 
-Completed batch: Table Dataset Coverage.
+Completed batch: XLSX Workbook Metadata.
 
 Steps:
 
-1. [x] Add TSV preview, profile, context, and bounded row-query support.
-2. [x] Add JSON array/object preview, profile, context, and bounded row-query support.
-3. [x] Add JSONL/NDJSON record preview, profile, context, and bounded row-query support.
-4. [x] Classify CSV, TSV, JSON, JSONL, and NDJSON as data files in backend scans and frontend draft typing.
-5. [x] Keep Data & Analytics profile summaries generic for table datasets instead of treating every non-CSV profile as a workbook.
-6. [x] Add backend regression coverage for preview, query, profile persistence, and scanner classification.
-7. [x] Keep docs and tracker aligned with the broader table-dataset foundation.
+1. [x] Extend persistent XLSX profiles with workbook metadata, not just sheet names.
+2. [x] Extract sheet dimensions, approximate row/column counts, formulas, table ranges, named ranges, and pivot table names from XLSX package XML.
+3. [x] Surface workbook formula/table/named-range/pivot counts in Data & Analytics profile summaries.
+4. [x] Include workbook metadata in agent dataset-profile observations.
+5. [x] Add regression coverage for workbook relationships, sheet dimensions, formulas, named ranges, tables, and pivot metadata.
+6. [x] Split legacy binary XLS parsing into a separate pending item because it needs a different parser/import path.
 
-Recommended next batch: XLSX Inspection And Data Source Cards.
+Recommended next batch: Data Source Cards And File Classification.
 
 Steps:
 
-1. [ ] Add richer XLSX/XLS workbook inspection for sheets, formulas, named ranges, pivots, and table ranges.
-2. [ ] Add data source cards for detected CSV, TSV, JSON, NDJSON, XLSX, SQLite, dump, compressed, and log-like files.
-3. [ ] Add SQLite file dataset cards separate from live connector sessions.
-4. [ ] Add compressed export and SQL dump classification.
-5. [ ] Add log dataset profiling.
+1. [ ] Add data source cards for detected CSV, TSV, JSON, NDJSON, XLSX, SQLite, dump, compressed, and log-like files.
+2. [ ] Add SQLite file dataset cards separate from live connector sessions.
+3. [ ] Add compressed export and SQL dump classification.
+4. [ ] Add log dataset profiling.
+5. [ ] Add legacy binary XLS workbook inspector or explicit conversion/import guidance.
 6. [ ] Start the connector metadata interface needed by future database and analytics sources.
 
-Reasoning: the table-file path is no longer CSV-only, so the next gap is discoverability and richer source metadata. Data & Analytics needs source cards and workbook/database/dump classification before notebooks or connector-heavy workflows will feel coherent.
+Reasoning: table files and modern Excel workbooks now have useful profile metadata. The next gap is discoverability: Data & Analytics should show source cards and classify databases, dumps, compressed exports, and logs before notebooks or connector-heavy workflows will feel coherent.
 
 ## Directory Ownership Notes
 

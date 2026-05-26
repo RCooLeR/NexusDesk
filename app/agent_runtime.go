@@ -274,7 +274,16 @@ func (a *App) agentAnalyzeDataset(root string, call agent.ToolCall) (agent.ToolC
 		call.Error = err.Error()
 		return call, err
 	}
-	call.Observation = fmt.Sprintf("%s\nRows: %d\nColumns: %d\nSheets: %s", profile.Message, profile.Rows, profile.Columns, strings.Join(profile.Sheets, ", "))
+	call.Observation = fmt.Sprintf("%s\nRows: %d\nColumns: %d\nSheets: %s\nFormulas: %d\nTables: %d\nNamed ranges: %d\nPivots: %d",
+		profile.Message,
+		profile.Rows,
+		profile.Columns,
+		strings.Join(profile.Sheets, ", "),
+		profile.Workbook.FormulaCount,
+		len(profile.Workbook.TableRanges),
+		len(profile.Workbook.NamedRanges),
+		len(profile.Workbook.PivotTables),
+	)
 	return call, nil
 }
 
