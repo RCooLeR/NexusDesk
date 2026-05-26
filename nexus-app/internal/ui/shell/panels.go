@@ -63,6 +63,7 @@ func (v *View) newBottomPanel() fyne.CanvasObject {
 		container.NewTabItemWithIcon("Search", theme.SearchIcon(), v.newSearchPanel()),
 		container.NewTabItemWithIcon("Problems", theme.WarningIcon(), v.newProblemsPanel()),
 		container.NewTabItemWithIcon("Git", theme.ContentCopyIcon(), v.newGitPanel()),
+		container.NewTabItemWithIcon("Tasks", theme.MediaPlayIcon(), v.newTasksPanel()),
 		container.NewTabItemWithIcon("Rollbacks", theme.ContentUndoIcon(), v.newRollbackPanel()),
 		container.NewTabItemWithIcon("Approvals", theme.ConfirmIcon(), widget.NewLabel("Approval queue and access policy UI will live here.")),
 	)

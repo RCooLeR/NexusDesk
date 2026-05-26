@@ -8,6 +8,7 @@ import (
 	editorSvc "nexusdesk/internal/services/editor"
 	gitSvc "nexusdesk/internal/services/git"
 	settingsSvc "nexusdesk/internal/services/settings"
+	tasksSvc "nexusdesk/internal/services/tasks"
 	workspaceSvc "nexusdesk/internal/services/workspace"
 )
 
@@ -17,6 +18,7 @@ type View struct {
 	workspaceService *workspaceSvc.Service
 	gitService       *gitSvc.Service
 	settingsStore    *settingsSvc.Store
+	taskService      *tasksSvc.Service
 	editorSession    *editorSvc.Session
 	status           *widget.Label
 	navigator        *fyne.Container
@@ -37,6 +39,9 @@ type View struct {
 	gitLastDiff      gitSvc.FileDiff
 	gitHunkStatus    *widget.Label
 	gitActiveHunk    int
+	taskResults      *fyne.Container
+	taskStatus       *widget.Label
+	taskOutput       *widget.Entry
 	rollbackResults  *fyne.Container
 	rollbackStatus   *widget.Label
 }
@@ -53,12 +58,17 @@ func New(window fyne.Window) *View {
 	gitDiffText.TextStyle = fyne.TextStyle{Monospace: true}
 	gitDiffText.Wrapping = fyne.TextWrapOff
 	gitDiffText.Disable()
+	taskOutput := widget.NewMultiLineEntry()
+	taskOutput.TextStyle = fyne.TextStyle{Monospace: true}
+	taskOutput.Wrapping = fyne.TextWrapOff
+	taskOutput.Disable()
 	view := &View{
 		window:           window,
 		state:            NewState(),
 		workspaceService: workspaceSvc.New(),
 		gitService:       gitSvc.New(),
 		settingsStore:    settingsStore,
+		taskService:      tasksSvc.New(),
 		editorSession:    editorSession,
 		status:           widget.NewLabel("No workspace open"),
 		navigator:        container.NewStack(widget.NewLabel("Open a workspace to browse files.")),
@@ -77,6 +87,9 @@ func New(window fyne.Window) *View {
 		gitDiffStatus:    widget.NewLabel("Select a changed file to load a read-only diff."),
 		gitDiffMode:      gitDiffModeUnified,
 		gitHunkStatus:    widget.NewLabel("No hunk selected."),
+		taskResults:      container.NewVBox(widget.NewLabel("Discover workspace tasks to run tests, scripts, or Compose checks.")),
+		taskStatus:       widget.NewLabel("No tasks discovered."),
+		taskOutput:       taskOutput,
 		rollbackResults:  container.NewVBox(widget.NewLabel("Refresh rollback records to inspect undo points.")),
 		rollbackStatus:   widget.NewLabel("Rollback records have not been loaded."),
 	}

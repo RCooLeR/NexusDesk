@@ -1,0 +1,136 @@
+package shell
+
+import (
+	"fmt"
+	"strings"
+
+	"fyne.io/fyne/v2"
+	"fyne.io/fyne/v2/container"
+	"fyne.io/fyne/v2/dialog"
+	"fyne.io/fyne/v2/theme"
+	"fyne.io/fyne/v2/widget"
+
+	tasksSvc "nexusdesk/internal/services/tasks"
+)
+
+func (v *View) newTasksPanel() fyne.CanvasObject {
+	discover := widget.NewButtonWithIcon("Discover", theme.SearchIcon(), v.discoverTasks)
+	header := container.NewBorder(nil, nil, v.taskStatus, discover)
+	taskScroll := container.NewScroll(v.taskResults)
+	taskScroll.SetMinSize(fyne.NewSize(260, 110))
+	output := container.NewBorder(widget.NewLabel("Last task output"), nil, nil, nil, v.taskOutput)
+	split := container.NewVSplit(taskScroll, output)
+	split.Offset = 0.52
+	return container.NewBorder(header, nil, nil, nil, split)
+}
+
+func (v *View) discoverTasks() {
+	workspace := v.state.Workspace()
+	if workspace.Root == "" {
+		v.taskStatus.SetText("Open a workspace before discovering tasks.")
+		v.addActivity("Open a workspace before discovering tasks.")
+		return
+	}
+	summary, err := v.taskService.Discover(workspace.Root)
+	if err != nil {
+		dialog.ShowError(err, v.window)
+		return
+	}
+	v.taskStatus.SetText(summary.Message)
+	v.taskResults.Objects = taskRows(summary.Tasks, v.confirmRunTask)
+	v.taskResults.Refresh()
+	v.addActivity(summary.Message)
+}
+
+func (v *View) confirmRunTask(task tasksSvc.Task) {
+	message := fmt.Sprintf("Run %s in %s?", task.Label, task.Cwd)
+	dialog.ShowConfirm("Run task", message, func(confirm bool) {
+		if !confirm {
+			return
+		}
+		v.runTask(task.ID)
+	}, v.window)
+}
+
+func (v *View) runTask(taskID string) {
+	workspace := v.state.Workspace()
+	if workspace.Root == "" {
+		v.taskStatus.SetText("Open a workspace before running tasks.")
+		v.addActivity("Open a workspace before running tasks.")
+		return
+	}
+	v.taskStatus.SetText("Running task...")
+	v.taskOutput.SetText("Running task...\n")
+	result, err := v.taskService.Run(workspace.Root, taskID)
+	if err != nil {
+		dialog.ShowError(err, v.window)
+		v.taskStatus.SetText("Task failed before execution.")
+		return
+	}
+	v.taskStatus.SetText(result.Message)
+	v.taskOutput.SetText(formatTaskRun(result))
+	v.addActivity(result.Message)
+	v.refreshTaskRows()
+}
+
+func (v *View) refreshTaskRows() {
+	workspace := v.state.Workspace()
+	if workspace.Root == "" {
+		return
+	}
+	summary, err := v.taskService.Discover(workspace.Root)
+	if err != nil {
+		return
+	}
+	v.taskResults.Objects = taskRows(summary.Tasks, v.confirmRunTask)
+	v.taskResults.Refresh()
+}
+
+func taskRows(tasks []tasksSvc.Task, onRun func(tasksSvc.Task)) []fyne.CanvasObject {
+	if len(tasks) == 0 {
+		return []fyne.CanvasObject{widget.NewLabel("No package scripts, Go tests, or Compose checks detected.")}
+	}
+	rows := make([]fyne.CanvasObject, 0, len(tasks))
+	for _, task := range tasks {
+		task := task
+		run := widget.NewButtonWithIcon("", theme.MediaPlayIcon(), func() {
+			onRun(task)
+		})
+		run.Importance = widget.LowImportance
+		title := widget.NewLabel(task.Label)
+		title.TextStyle = fyne.TextStyle{Bold: true}
+		meta := widget.NewLabel(fmt.Sprintf("%s - cwd: %s - source: %s", task.Kind, task.Cwd, task.Source))
+		meta.Truncation = fyne.TextTruncateEllipsis
+		command := widget.NewLabel(task.Command)
+		command.Truncation = fyne.TextTruncateEllipsis
+		rows = append(rows, container.NewBorder(nil, nil, run, nil, container.NewVBox(title, meta, command)))
+	}
+	return rows
+}
+
+func formatTaskRun(result tasksSvc.RunResult) string {
+	var builder strings.Builder
+	builder.WriteString(result.Message)
+	builder.WriteString("\n")
+	builder.WriteString("Status: ")
+	builder.WriteString(result.Status)
+	builder.WriteString("\nExit code: ")
+	builder.WriteString(fmt.Sprintf("%d", result.ExitCode))
+	builder.WriteString("\nCommand: ")
+	builder.WriteString(result.Task.Command)
+	builder.WriteString("\nCwd: ")
+	builder.WriteString(result.Task.Cwd)
+	builder.WriteString("\nDuration: ")
+	builder.WriteString(result.Duration.String())
+	builder.WriteString("\n\nStdout\n")
+	builder.WriteString(result.Stdout)
+	if !strings.HasSuffix(result.Stdout, "\n") {
+		builder.WriteString("\n")
+	}
+	builder.WriteString("\nStderr\n")
+	builder.WriteString(result.Stderr)
+	if !strings.HasSuffix(result.Stderr, "\n") {
+		builder.WriteString("\n")
+	}
+	return builder.String()
+}
