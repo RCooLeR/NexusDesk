@@ -87,6 +87,14 @@ export async function installNexusMocks(page) {
                     ListDatasetSQLQueries: async () => [{relPath: 'data/campaigns.csv', query: 'select * from dataset', label: 'All campaigns', kind: 'sql', updatedAt: '2026-05-14T00:00:00Z'}],
                     ListDatasetDependencies: async () => dependencies,
                     ListDatasetSQLRuns: async () => sqlRuns,
+                    ListWorkspaceTasks: async () => ({
+                        tasks: [
+                            {id: 'npm-app-frontend-build', kind: 'npm-script', label: 'npm run build', command: 'npm run build', cwd: 'app/frontend', source: 'app/frontend/package.json'},
+                            {id: 'go-app-test-all', kind: 'go-test', label: 'go test ./...', command: 'go test ./...', cwd: 'app', source: 'app/go.mod'},
+                        ],
+                        message: '2 tasks detected from package scripts and Go tests.',
+                        generatedAt: '2026-05-14T00:00:00Z',
+                    }),
                     ListAgentToolRuns: async () => [{id: 'smoke-tool', toolName: 'dataset.query', title: 'Query Dataset', target: 'data/campaigns.csv', risk: 'low', requiresApproval: false, status: 'dry-run', mode: 'dry-run', inputs: {query: 'spend > 10'}, outputSummary: 'Ready to query dataset.', error: '', approvalId: 'approval-smoke', startedAt: '2026-05-14T00:00:00Z', completedAt: '2026-05-14T00:00:01Z', durationMs: 1000}],
                     ListAgentTools: async () => [],
                     ReadWorkspaceFile: async (relPath) => {

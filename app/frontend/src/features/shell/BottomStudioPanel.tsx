@@ -1,4 +1,4 @@
-import type {AgentToolDescriptor, AgentToolPlanItem, AgentToolRunRecord, ApprovalRecord, ArtifactComparison, ArtifactLineage, ArtifactMetadata, Capability, DatasetChartResult, DatasetDependency, DatasetProfile, DatasetQueryResult, DatasetSQLQueryResult, FilePreview, GitFileAction, GitFileActionPreview, GitFileDiff, GitHunkActionPreview, GitHunkActionRequest, GitStatus, LLMProbeResult, LLMSettings, MetadataBrowser, MetadataSearchResult, SavedDatasetQuery, SQLRun, SQLiteMetadataStatus, SQLiteQueryResult, ToolEvent, WorkspaceArtifact, WorkspaceFreshnessStatus, WorkspaceSearchResult, WorkspaceSnapshot} from '../../types';
+import type {AgentToolDescriptor, AgentToolPlanItem, AgentToolRunRecord, ApprovalRecord, ArtifactComparison, ArtifactLineage, ArtifactMetadata, Capability, DatasetChartResult, DatasetDependency, DatasetProfile, DatasetQueryResult, DatasetSQLQueryResult, FilePreview, GitFileAction, GitFileActionPreview, GitFileDiff, GitHunkActionPreview, GitHunkActionRequest, GitStatus, LLMProbeResult, LLMSettings, MetadataBrowser, MetadataSearchResult, SavedDatasetQuery, SQLRun, SQLiteMetadataStatus, SQLiteQueryResult, ToolEvent, WorkspaceArtifact, WorkspaceFreshnessStatus, WorkspaceSearchResult, WorkspaceSnapshot, WorkspaceTaskSummary} from '../../types';
 import {AgentToolPlanCard} from './AgentToolPlanCard';
 import {ApprovalLogPanel} from './ApprovalLogPanel';
 import {ArtifactStudioPanel} from './ArtifactStudioPanel';
@@ -53,6 +53,7 @@ type BottomStudioPanelProps = {
     isGeneratingGitInsight: boolean;
     isApplyingGitHunkAction: boolean;
     isLoadingGitFileDiff: boolean;
+    isLoadingWorkspaceTasks: boolean;
     isPreviewingGitFileAction: boolean;
     isPreviewingGitHunkAction: boolean;
     isPreparingMetadataStore: boolean;
@@ -112,6 +113,7 @@ type BottomStudioPanelProps = {
     onRefreshGitStatus: () => void;
     onRefreshLineage: () => void;
     onRefreshStaleContext: () => void;
+    onRefreshWorkspaceTasks: () => void;
     onReplayAgentToolRun: (run: AgentToolRunRecord) => void;
     onSaveDatasetQuery: () => void;
     onSaveDatasetSQLQuery: () => void;
@@ -140,6 +142,7 @@ type BottomStudioPanelProps = {
     workspaceFreshness: WorkspaceFreshnessStatus | null;
     workspaceSearchQuery: string;
     workspaceSearchResults: WorkspaceSearchResult[];
+    workspaceTasks: WorkspaceTaskSummary | null;
     onWorkspaceSearchQueryChange: (value: string) => void;
     className?: string;
     showTabs?: boolean;
@@ -194,6 +197,7 @@ export function BottomStudioPanel({
     isGeneratingGitInsight,
     isApplyingGitHunkAction,
     isLoadingGitFileDiff,
+    isLoadingWorkspaceTasks,
     isPreviewingGitFileAction,
     isPreviewingGitHunkAction,
     isPreparingMetadataStore,
@@ -253,6 +257,7 @@ export function BottomStudioPanel({
     onRefreshGitStatus,
     onRefreshLineage,
     onRefreshStaleContext,
+    onRefreshWorkspaceTasks,
     onReplayAgentToolRun,
     onSaveDatasetQuery,
     onSaveDatasetSQLQuery,
@@ -281,6 +286,7 @@ export function BottomStudioPanel({
     workspaceFreshness,
     workspaceSearchQuery,
     workspaceSearchResults,
+    workspaceTasks,
     onWorkspaceSearchQueryChange,
     className = '',
     showTabs = true,
@@ -312,11 +318,13 @@ export function BottomStudioPanel({
                         selectedGitChangePath={selectedGitChangePath}
                         selectedGitFileDiff={selectedGitFileDiff}
                         isLoadingGitFileDiff={isLoadingGitFileDiff}
+                        isLoadingWorkspaceTasks={isLoadingWorkspaceTasks}
                         isSearchingWorkspace={isSearchingWorkspace}
                         openTabs={openTabs}
                         onClearWorkspaceSearch={onClearWorkspaceSearch}
                         onOpenCommandPalette={onOpenCommandPalette}
                         onRefreshGitStatus={onRefreshGitStatus}
+                        onRefreshWorkspaceTasks={onRefreshWorkspaceTasks}
                         onSearchWorkspace={onSearchWorkspace}
                         onSelectGitChange={onSelectGitChange}
                         onSelectSearchResult={onSelectSearchResult}
@@ -325,6 +333,7 @@ export function BottomStudioPanel({
                         workspaceFreshness={workspaceFreshness}
                         workspaceSearchQuery={workspaceSearchQuery}
                         workspaceSearchResults={workspaceSearchResults}
+                        workspaceTasks={workspaceTasks}
                     />
                 )}
                 {activeTab === 'settings' && (

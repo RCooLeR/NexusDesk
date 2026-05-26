@@ -456,6 +456,21 @@ export type WorkspaceSearchResult = {
     snippet: string;
 };
 
+export type WorkspaceTask = {
+    id: string;
+    kind: string;
+    label: string;
+    command: string;
+    cwd: string;
+    source: string;
+};
+
+export type WorkspaceTaskSummary = {
+    tasks: WorkspaceTask[];
+    message: string;
+    generatedAt: string;
+};
+
 export type RecentWorkspace = {
     name: string;
     path: string;

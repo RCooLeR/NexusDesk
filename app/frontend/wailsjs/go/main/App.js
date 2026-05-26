@@ -178,6 +178,10 @@ export function ListDatasetSQLRuns(arg1) {
   return window['go']['main']['App']['ListDatasetSQLRuns'](arg1);
 }
 
+export function ListWorkspaceTasks() {
+  return window['go']['main']['App']['ListWorkspaceTasks']();
+}
+
 export function OpenWorkspace(arg1) {
   return window['go']['main']['App']['OpenWorkspace'](arg1);
 }

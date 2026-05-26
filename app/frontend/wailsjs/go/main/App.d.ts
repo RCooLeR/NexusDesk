@@ -101,6 +101,8 @@ export function ListDatasetSQLQueries(arg1:string):Promise<Array<dataset.SavedQu
 
 export function ListDatasetSQLRuns(arg1:string):Promise<Array<appmeta.SQLRun>>;
 
+export function ListWorkspaceTasks():Promise<main.WorkspaceTaskSummary>;
+
 export function OpenWorkspace(arg1:string):Promise<main.WorkspaceOpenResult>;
 
 export function PreviewAgentTool(arg1:agenttools.RunRequest):Promise<agenttools.RunRecord>;

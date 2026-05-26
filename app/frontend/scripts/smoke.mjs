@@ -44,6 +44,7 @@ const checks = [
             'CreateScanReportArtifact',
             'ListApprovals',
             'SearchWorkspace',
+            'ListWorkspaceTasks',
             'ApprovalRequestModal',
             'requestApproval',
             'QuickOpenPalette',
@@ -97,6 +98,7 @@ const checks = [
             'First token received',
             'summarizeGitDiff',
             'draftGitCommitMessage',
+            'refreshWorkspaceTasks',
             'selectedGitDiffPromptContext',
             'handleTreeContextAction',
             'main-studio-panel',
@@ -126,7 +128,7 @@ const checks = [
     },
     {
         file: 'src/features/shell/CodeStudioPanel.tsx',
-        terms: ['CodeStudioPanel', 'Workbench', 'Project Session', 'Repository', 'Search', 'workspaceSearchQuery', 'workspaceSearchResults', 'onSearchWorkspace', 'onSelectSearchResult', 'code-studio-search-panel', 'selectedGitChangePath', 'onSelectGitChange', 'stagedFiles', 'unstagedFiles', 'Refresh git', 'Commands'],
+        terms: ['CodeStudioPanel', 'Workbench', 'Project Session', 'Repository', 'Search', 'workspaceSearchQuery', 'workspaceSearchResults', 'workspaceTasks', 'onRefreshWorkspaceTasks', 'Refresh tasks', 'WorkspaceTaskSummary', 'onSearchWorkspace', 'onSelectSearchResult', 'code-studio-search-panel', 'code-studio-task-panel', 'selectedGitChangePath', 'onSelectGitChange', 'stagedFiles', 'unstagedFiles', 'Refresh git', 'Commands'],
     },
     {
         file: 'src/features/shell/GitDiffPanel.tsx',
@@ -234,6 +236,8 @@ const checks = [
             '.code-studio-metrics',
             '.code-studio-row',
             '.code-studio-toolbar',
+            '.code-studio-task-panel',
+            '.code-studio-task-row',
             '.git-change-tree',
             '.git-change-file',
             '.git-diff-panel',
@@ -305,7 +309,11 @@ const checks = [
     },
     {
         file: 'wailsjs/go/main/App.d.ts',
-        terms: ['AskLLMContextPack', 'RunAgent', 'PreviewFileWrite', 'ApplyFileDelete', 'ApplyFileMove', 'ProfileDataset', 'CreateDatasetChartArtifact', 'CreateDatasetQueryArtifact', 'CreateDatasetSQLArtifact', 'CreateDatasetSummaryArtifact', 'CreateChatMarkdownArtifact', 'CreateScanReportArtifact', 'PreviewChatContextPack', 'PreviewDatasetChart', 'SaveDatasetQuery', 'SaveDatasetSQLQuery', 'ListDatasetSQLQueries', 'ListDatasetDependencies', 'ListDatasetSQLRuns', 'RefreshStaleContext', 'SearchMetadata', 'QueryWorkspaceSQLite', 'ExportArtifactLineageJSON', 'GetGitStatus', 'GetGitFileDiff', 'PreviewGitFileAction', 'PreviewGitHunkAction', 'ApplyGitHunkAction', 'ListApprovals', 'ListAgentTools', 'ListAgentToolRuns', 'PreviewAgentTool', 'ExecuteAgentTool', 'QueryDatasetSQL', 'EnsureSQLiteMetadataStore', 'InspectMetadataStore', 'GetArtifactLineage', 'CheckWorkspaceFreshness', 'CompareArtifacts', 'ArchiveArtifact', 'DeleteArtifact'],
+        terms: ['AskLLMContextPack', 'RunAgent', 'PreviewFileWrite', 'ApplyFileDelete', 'ApplyFileMove', 'ProfileDataset', 'CreateDatasetChartArtifact', 'CreateDatasetQueryArtifact', 'CreateDatasetSQLArtifact', 'CreateDatasetSummaryArtifact', 'CreateChatMarkdownArtifact', 'CreateScanReportArtifact', 'PreviewChatContextPack', 'PreviewDatasetChart', 'SaveDatasetQuery', 'SaveDatasetSQLQuery', 'ListDatasetSQLQueries', 'ListDatasetDependencies', 'ListDatasetSQLRuns', 'ListWorkspaceTasks', 'RefreshStaleContext', 'SearchMetadata', 'QueryWorkspaceSQLite', 'ExportArtifactLineageJSON', 'GetGitStatus', 'GetGitFileDiff', 'PreviewGitFileAction', 'PreviewGitHunkAction', 'ApplyGitHunkAction', 'ListApprovals', 'ListAgentTools', 'ListAgentToolRuns', 'PreviewAgentTool', 'ExecuteAgentTool', 'QueryDatasetSQL', 'EnsureSQLiteMetadataStore', 'InspectMetadataStore', 'GetArtifactLineage', 'CheckWorkspaceFreshness', 'CompareArtifacts', 'ArchiveArtifact', 'DeleteArtifact'],
+    },
+    {
+        file: '../app_tasks.go',
+        terms: ['WorkspaceTask', 'WorkspaceTaskSummary', 'ListWorkspaceTasks', 'discoverWorkspaceTasks', 'package.json', 'go test ./...', 'npm run'],
     },
     {
         file: '../app_metadata.go',
@@ -329,7 +337,7 @@ const checks = [
     },
     {
         file: 'scripts/visual-fixtures.mjs',
-        terms: ['installNexusMocks', 'ListDatasetDependencies', 'ListDatasetSQLRuns', 'SearchMetadata', 'QueryWorkspaceSQLite', 'ExportArtifactLineageJSON', 'ImportArtifactLineageJSON', 'dependencies'],
+        terms: ['installNexusMocks', 'ListDatasetDependencies', 'ListDatasetSQLRuns', 'ListWorkspaceTasks', 'SearchMetadata', 'QueryWorkspaceSQLite', 'ExportArtifactLineageJSON', 'ImportArtifactLineageJSON', 'dependencies'],
     },
     {
         file: 'dist/index.html',

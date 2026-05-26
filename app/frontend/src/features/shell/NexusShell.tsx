@@ -35,6 +35,7 @@ import {
     ListDatasetQueries,
     ListDatasetSQLQueries,
     ListDatasetProfiles,
+    ListWorkspaceTasks,
     GetRecentWorkspaces,
     ListArtifacts,
     ListDatasetDependencies,
@@ -103,6 +104,7 @@ import type {
     WorkspaceFileChange,
     WorkspaceFreshnessStatus,
     WorkspaceSearchResult,
+    WorkspaceTaskSummary,
     WorkspaceOpenResult,
     WorkspaceSnapshot,
 } from '../../types';
@@ -214,6 +216,8 @@ export function NexusShell({
     const [workspaceSearchQuery, setWorkspaceSearchQuery] = useState('');
     const [workspaceSearchResults, setWorkspaceSearchResults] = useState<WorkspaceSearchResult[]>([]);
     const [isSearchingWorkspace, setIsSearchingWorkspace] = useState(false);
+    const [workspaceTasks, setWorkspaceTasks] = useState<WorkspaceTaskSummary | null>(null);
+    const [isLoadingWorkspaceTasks, setIsLoadingWorkspaceTasks] = useState(false);
     const [isSendingPrompt, setIsSendingPrompt] = useState(false);
     const [isCreatingReport, setIsCreatingReport] = useState(false);
     const [isCreatingScanReport, setIsCreatingScanReport] = useState(false);
@@ -1345,6 +1349,7 @@ export function NexusShell({
         resetGitStatus();
         onWorkspaceChange(safeSnapshot);
         setWorkspaceSearchResults([]);
+        setWorkspaceTasks(null);
         if (rootChanged) {
             setOpenTabs([]);
             setEditingFilePaths([]);
@@ -1514,6 +1519,27 @@ export function NexusShell({
             setWorkspaceStatus(message || 'Workspace search failed.');
         } finally {
             setIsSearchingWorkspace(false);
+        }
+    }
+
+    async function refreshWorkspaceTasks() {
+        if (!workspace) {
+            setWorkspaceStatus('Open a workspace before detecting tasks.');
+            return;
+        }
+
+        setIsLoadingWorkspaceTasks(true);
+        setWorkspaceStatus(`Scanning ${workspace.name} tasks...`);
+        try {
+            const summary = await ListWorkspaceTasks();
+            setWorkspaceTasks(summary);
+            setWorkspaceStatus(summary.message);
+            pushToolEvent('Workspace tasks', summary.message);
+        } catch (error) {
+            const message = error instanceof Error ? error.message : '';
+            setWorkspaceStatus(message || 'Workspace task detection failed.');
+        } finally {
+            setIsLoadingWorkspaceTasks(false);
         }
     }
 
@@ -3130,6 +3156,7 @@ export function NexusShell({
                 isGeneratingGitInsight={isSendingPrompt}
                 isApplyingGitHunkAction={isApplyingGitHunkAction}
                 isLoadingGitFileDiff={isLoadingGitFileDiff}
+                isLoadingWorkspaceTasks={isLoadingWorkspaceTasks}
                 isPreviewingGitFileAction={isPreviewingGitFileAction}
                 isPreviewingGitHunkAction={isPreviewingGitHunkAction}
                 isPreparingMetadataStore={isPreparingMetadataStore}
@@ -3202,6 +3229,7 @@ export function NexusShell({
                 onRefreshGitStatus={() => void refreshGitStatus()}
                 onRefreshLineage={() => void loadArtifactLineage()}
                 onRefreshStaleContext={() => void refreshStaleContextFromWorkspace()}
+                onRefreshWorkspaceTasks={() => void refreshWorkspaceTasks()}
                 onReplayAgentToolRun={(run) => void replayAgentToolRun(run)}
                 onSaveDatasetQuery={() => void saveCurrentDatasetQuery()}
                 onSaveDatasetSQLQuery={() => void saveCurrentDatasetSQLQuery()}
@@ -3231,6 +3259,7 @@ export function NexusShell({
                 workspaceFreshness={workspaceFreshness}
                 workspaceSearchQuery={workspaceSearchQuery}
                 workspaceSearchResults={workspaceSearchResults}
+                workspaceTasks={workspaceTasks}
                 onWorkspaceSearchQueryChange={setWorkspaceSearchQuery}
             />
         );

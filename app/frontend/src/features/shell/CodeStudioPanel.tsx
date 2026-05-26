@@ -1,5 +1,5 @@
 import {Button} from '../../components/ui';
-import type {FilePreview, GitFileChange, GitFileDiff, GitStatus, WorkspaceFreshnessStatus, WorkspaceSearchResult, WorkspaceSnapshot} from '../../types';
+import type {FilePreview, GitFileChange, GitFileDiff, GitStatus, WorkspaceFreshnessStatus, WorkspaceSearchResult, WorkspaceSnapshot, WorkspaceTaskSummary} from '../../types';
 
 type CodeStudioPanelProps = {
     activeFile: string;
@@ -9,11 +9,13 @@ type CodeStudioPanelProps = {
     selectedGitChangePath: string;
     selectedGitFileDiff: GitFileDiff | null;
     isLoadingGitFileDiff: boolean;
+    isLoadingWorkspaceTasks: boolean;
     isSearchingWorkspace: boolean;
     openTabs: FilePreview[];
     onClearWorkspaceSearch: () => void;
     onOpenCommandPalette: () => void;
     onRefreshGitStatus: () => void;
+    onRefreshWorkspaceTasks: () => void;
     onSearchWorkspace: () => void;
     onSelectGitChange: (path: string) => void;
     onSelectSearchResult: (result: WorkspaceSearchResult) => void;
@@ -22,6 +24,7 @@ type CodeStudioPanelProps = {
     workspaceFreshness: WorkspaceFreshnessStatus | null;
     workspaceSearchQuery: string;
     workspaceSearchResults: WorkspaceSearchResult[];
+    workspaceTasks: WorkspaceTaskSummary | null;
 };
 
 export function CodeStudioPanel({
@@ -32,11 +35,13 @@ export function CodeStudioPanel({
     selectedGitChangePath,
     selectedGitFileDiff,
     isLoadingGitFileDiff,
+    isLoadingWorkspaceTasks,
     isSearchingWorkspace,
     openTabs,
     onClearWorkspaceSearch,
     onOpenCommandPalette,
     onRefreshGitStatus,
+    onRefreshWorkspaceTasks,
     onSearchWorkspace,
     onSelectGitChange,
     onSelectSearchResult,
@@ -45,6 +50,7 @@ export function CodeStudioPanel({
     workspaceFreshness,
     workspaceSearchQuery,
     workspaceSearchResults,
+    workspaceTasks,
 }: CodeStudioPanelProps) {
     const nodes = workspace?.nodes ?? [];
     const codeFiles = nodes.filter((node) => node.kind === 'file' && node.fileType === 'code');
@@ -174,9 +180,30 @@ export function CodeStudioPanel({
                     </div>
                     <div className="code-studio-queue-grid compact" aria-label="Code studio queues">
                         <QueueCard label="Problems" value="pending" />
-                        <QueueCard label="Tasks" value="pending" />
                         <QueueCard label="AI Review" value={filePreview?.fileType === 'code' ? 'ready' : 'context'} />
                         <QueueCard label="Data files nearby" value={String(dataFiles.length)} />
+                    </div>
+                    <div className="code-studio-task-panel" aria-label="Detected workspace tasks">
+                        <div className="code-studio-task-header">
+                            <div>
+                                <strong>Tasks</strong>
+                                <small>{workspaceTasks?.message ?? 'Package scripts and Go tests'}</small>
+                            </div>
+                            <Button disabled={!workspace || isLoadingWorkspaceTasks} onClick={onRefreshWorkspaceTasks} variant="subtle">
+                                {isLoadingWorkspaceTasks ? 'Scanning...' : 'Refresh tasks'}
+                            </Button>
+                        </div>
+                        <div className="code-studio-list">
+                            {workspaceTasks && workspaceTasks.tasks.length > 0 ? workspaceTasks.tasks.slice(0, 12).map((task) => (
+                                <div className="code-studio-task-row" key={task.id}>
+                                    <span>{task.kind}</span>
+                                    <strong title={task.command}>{task.label}</strong>
+                                    <small title={`${task.cwd} / ${task.source}`}>{task.cwd} / {task.source}</small>
+                                </div>
+                            )) : (
+                                <div className="code-studio-empty">{workspace ? 'Refresh tasks to scan package scripts and Go tests.' : 'Open a workspace to detect tasks.'}</div>
+                            )}
+                        </div>
                     </div>
                 </div>
             </section>

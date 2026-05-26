@@ -290,9 +290,9 @@ Step 4.4: Search, problems, and tasks
 - [ ] Add replace preview.
 - [ ] Add symbol search where language data exists.
 - [ ] Add diagnostics/problems panel.
-- [ ] Detect package scripts.
-- [ ] Detect Go tests.
-- [ ] Detect npm scripts.
+- [x] Detect package scripts.
+- [x] Detect Go tests.
+- [x] Detect npm scripts.
 - [ ] Detect Docker Compose tasks.
 - [ ] Run tasks with captured output.
 - [ ] Save task/test runs as artifacts or metadata.
@@ -1020,10 +1020,10 @@ Steps:
 6. [x] Add hunk-level selection model without mutation first.
 7. [x] Add destructive approval flow for revert/discard hunk.
 8. [x] Add Workbench path/text search panel as a real utility panel, not only command palette search.
-9. Detect npm scripts and Go tests into a Tasks panel with read-only listing.
+9. [x] Detect npm scripts and Go tests into a Tasks panel with read-only listing.
 10. Keep visual smoke focused on no blank screen, no whole-window scroll, Git drawer behavior, route switching, and no slow/external work on folder open.
 
-Reasoning: read-only navigation and diff review are now credible, stage/unstage previews establish the approval boundary without mutating the repository, hunk selection exists as UI state, hunk discard/revert now goes through the approval modal before backend patch application, and Workbench has a real search utility panel backed by the existing safe workspace search flow. The next gap is adding read-only task/script detection while continuing to move work out of `app.go` and `NexusShell.tsx`.
+Reasoning: read-only navigation and diff review are now credible, stage/unstage previews establish the approval boundary without mutating the repository, hunk selection exists as UI state, hunk discard/revert now goes through the approval modal before backend patch application, Workbench has a real search utility panel backed by the existing safe workspace search flow, and task/script detection now lists npm scripts plus Go test commands without running external processes. The next gap is tightening regression coverage around folder-open stability, no whole-window scroll, and no slow/external work on open.
 
 ## Directory Ownership Notes
 
@@ -1036,6 +1036,8 @@ Reasoning: read-only navigation and diff review are now credible, stage/unstage 
 `app/agent_runtime.go` exposes `RunAgent` and maps model-requested tools to workspace-safe handlers.
 
 `app/app_git.go` owns Wails-facing Git API types and bridge methods. `app/git_service.go` owns the first Git service facade for read-only status/diff operations, preview-only stage/unstage command planning, and approval-backed selected-hunk discard/revert patch application while preserving existing Wails contracts.
+
+`app/app_tasks.go` owns Wails-facing read-only workspace task discovery. It scans bounded workspace paths, skips noisy output/dependency folders, parses `package.json` scripts, detects Go module test commands, and returns task metadata only. It does not execute npm, Go, shell, Docker, or other external commands.
 
 `app/internal/agenttools/` owns deterministic tool descriptors and tool-run persistence.
 
@@ -1065,7 +1067,7 @@ Workspace scan counters are diagnostic data, not primary navigation content. Kee
 
 `app/frontend/src/features/shell/WorkbenchPanel.tsx` currently owns the editor/preview surface. Git status, working-tree diff output, and roadmap/studio-route metadata should not render above the editor tabs; those surfaces belong to Workbench utility panels, the bottom Git drawer, or documentation.
 
-`app/frontend/src/features/shell/CodeStudioPanel.tsx` owns the first reusable Workbench utility surface for editor session metrics, open tabs, workspace status, git branch/dirty summary, changed-file list, Workbench search results/actions, and placeholders that will receive problem/task/review data.
+`app/frontend/src/features/shell/CodeStudioPanel.tsx` owns the first reusable Workbench utility surface for editor session metrics, open tabs, workspace status, git branch/dirty summary, changed-file list, Workbench search results/actions, read-only detected task listings, and placeholders that will receive problem/review data.
 
 `app/frontend/src/features/shell/GitDiffPanel.tsx` owns the bottom-drawer Git tab for selected changed-file review, preview-only stage/unstage controls, hunk selection state, approval-backed hunk discard/revert controls, and read-only staged/unstaged working-tree diffs.
 

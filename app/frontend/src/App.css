@@ -2488,6 +2488,35 @@ button:disabled {
     overflow: hidden;
 }
 
+.code-studio-task-panel {
+    border-top: 1px solid var(--nd-border-soft);
+    display: grid;
+    gap: 8px;
+    min-height: 0;
+    padding-top: 10px;
+}
+
+.code-studio-task-header {
+    align-items: center;
+    display: flex;
+    gap: 8px;
+    justify-content: space-between;
+    min-width: 0;
+}
+
+.code-studio-task-header div {
+    display: grid;
+    gap: 2px;
+    min-width: 0;
+}
+
+.code-studio-task-header strong,
+.code-studio-task-header small {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
 .code-studio-search-controls {
     display: grid;
     gap: 6px;
@@ -2549,6 +2578,36 @@ button:disabled {
     grid-template-columns: 62px minmax(0, 1fr);
     gap: 3px 8px;
     padding: 8px;
+}
+
+.code-studio-task-row {
+    border: 1px solid var(--nd-border-soft);
+    border-radius: var(--nd-radius-sm);
+    background: #fbfdff;
+    display: grid;
+    gap: 2px 8px;
+    grid-template-columns: 78px minmax(0, 1fr);
+    min-width: 0;
+    padding: 8px;
+}
+
+.code-studio-task-row span,
+.code-studio-task-row small,
+.code-studio-task-header small {
+    color: var(--nd-muted-text);
+    font-size: 11px;
+}
+
+.code-studio-task-row strong,
+.code-studio-task-row small,
+.code-studio-task-row span {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.code-studio-task-row small {
+    grid-column: 2;
 }
 
 button.code-studio-row {
