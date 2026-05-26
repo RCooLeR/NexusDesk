@@ -250,6 +250,8 @@ export function NexusShell({
     const [writeProposals, setWriteProposals] = useState<Record<string, FileWriteProposal>>({});
     const [pinnedTabPaths, setPinnedTabPaths] = useState<string[]>([]);
     const [showEditorMinimap, setShowEditorMinimap] = useState(false);
+    const [isSplitEditorEnabled, setIsSplitEditorEnabled] = useState(false);
+    const [secondaryEditorPath, setSecondaryEditorPath] = useState('');
     const [isQuickOpenOpen, setIsQuickOpenOpen] = useState(false);
     const [quickOpenQuery, setQuickOpenQuery] = useState('');
     const [isCommandPaletteOpen, setIsCommandPaletteOpen] = useState(false);
@@ -264,6 +266,9 @@ export function NexusShell({
     const writeProposal = activeFile ? writeProposals[activeFile] ?? null : null;
     const isEditingFile = Boolean(activeFile && editingFilePaths.includes(activeFile));
     const dirtyTabPaths = dirtyDraftPaths(fileDrafts, openTabs);
+    const secondaryEditorPreview = isSplitEditorEnabled
+        ? resolveSecondaryEditorPreview(openTabs, secondaryEditorPath, activeFile)
+        : null;
     const {
         agentWidth,
         bottomPanelHeight,
@@ -1358,6 +1363,8 @@ export function NexusShell({
             setFileDrafts({});
             setWriteProposals({});
             setPinnedTabPaths([]);
+            setIsSplitEditorEnabled(false);
+            setSecondaryEditorPath('');
         }
         await refreshChatHistory();
         await refreshArtifacts();
@@ -1433,6 +1440,19 @@ export function NexusShell({
         });
     }
 
+    function toggleSplitEditor() {
+        setIsSplitEditorEnabled((current) => {
+            if (current) {
+                return false;
+            }
+            const nextSecondary = resolveSecondaryEditorPreview(openTabs, secondaryEditorPath, activeFile) ??
+                openTabs.find((tab) => tab.relPath !== activeFile) ??
+                null;
+            setSecondaryEditorPath(nextSecondary?.relPath ?? '');
+            return true;
+        });
+    }
+
     function selectOpenTab(relPath: string) {
         const tab = openTabs.find((current) => current.relPath === relPath);
         if (!tab) {
@@ -1459,6 +1479,7 @@ export function NexusShell({
         setFileDrafts((current) => omitKey(current, relPath));
         setWriteProposals((current) => omitKey(current, relPath));
         setPinnedTabPaths((current) => current.filter((path) => path !== relPath));
+        setSecondaryEditorPath((current) => current === relPath ? '' : current);
     }
 
     function closeOpenTab(relPath: string) {
@@ -3400,6 +3421,7 @@ export function NexusShell({
                     isApplyingWrite={isApplyingWrite}
                     isLoadingPreview={isLoadingPreview}
                     isPreviewingWrite={isPreviewingWrite}
+                    isSplitEditorEnabled={isSplitEditorEnabled}
                     isSendingPrompt={isSendingPrompt}
                     onApplyFileWrite={() => void applyFileWrite()}
                     onCancelFileEdit={clearFileWriteDraft}
@@ -3413,14 +3435,18 @@ export function NexusShell({
                     onPinProjectContext={pinProjectContext}
                     onPreviewFileWrite={() => void previewFileWrite()}
                     onSelectBreadcrumb={(relPath) => void selectBreadcrumbPath(relPath)}
+                    onSecondaryEditorChange={setSecondaryEditorPath}
                     onCloseTab={closeOpenTab}
                     onSelectTab={selectOpenTab}
                     onToggleMinimap={() => setShowEditorMinimap((current) => !current)}
                     onTogglePinTab={togglePinnedTab}
+                    onToggleSplitEditor={toggleSplitEditor}
                     onStartFileEdit={startFileEdit}
                     onRefreshPreview={() => void refreshSelectedPreview()}
                     openTabs={openTabs}
                     pinnedTabPaths={pinnedTabPaths}
+                    secondaryFile={secondaryEditorPath}
+                    secondaryPreview={secondaryEditorPreview}
                     selectedMeta={selectedMeta}
                     showMinimap={showEditorMinimap}
                     writeProposal={writeProposal}
@@ -3519,6 +3545,12 @@ function orderOpenTabs(tabs: FilePreview[], pinnedTabPaths: string[]) {
         }
         return leftPinned ? -1 : 1;
     });
+}
+
+function resolveSecondaryEditorPreview(openTabs: FilePreview[], secondaryEditorPath: string, activeFile: string) {
+    return openTabs.find((tab) => tab.relPath === secondaryEditorPath && tab.relPath !== activeFile) ??
+        openTabs.find((tab) => tab.relPath !== activeFile) ??
+        null;
 }
 
 function currentDatasetColumns(preview: FilePreview | null, profile: DatasetProfile | null) {

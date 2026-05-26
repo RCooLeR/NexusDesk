@@ -1,5 +1,5 @@
 import {useEffect, useRef, useState} from 'react';
-import {faMap, faThumbtack, faXmark} from '@fortawesome/free-solid-svg-icons';
+import {faMap, faTableColumns, faThumbtack, faXmark} from '@fortawesome/free-solid-svg-icons';
 import {FontAwesomeIcon} from '@fortawesome/react-fontawesome';
 import {brandAssets} from '../../brand/assets';
 import {Button, EmptyState, InlineAlert, LoadingState} from '../../components/ui';
@@ -24,6 +24,7 @@ type WorkbenchPanelProps = {
     isSummarizingContext: boolean;
     isLoadingPreview: boolean;
     isPreviewingWrite: boolean;
+    isSplitEditorEnabled: boolean;
     onApplyFileWrite: () => void;
     onCancelFileEdit: () => void;
     onExplainContext: () => void;
@@ -36,14 +37,18 @@ type WorkbenchPanelProps = {
     onPinProjectContext: () => void;
     onPreviewFileWrite: () => void;
     onSelectBreadcrumb: (relPath: string) => void;
+    onSecondaryEditorChange: (relPath: string) => void;
     onCloseTab: (relPath: string) => void;
     onSelectTab: (relPath: string) => void;
     onToggleMinimap: () => void;
     onTogglePinTab: (relPath: string) => void;
+    onToggleSplitEditor: () => void;
     onRefreshPreview: () => void;
     onStartFileEdit: () => void;
     openTabs: FilePreview[];
     pinnedTabPaths: string[];
+    secondaryFile: string;
+    secondaryPreview: FilePreview | null;
     selectedMeta: string;
     showMinimap: boolean;
     writeProposal: FileWriteProposal | null;
@@ -64,6 +69,7 @@ export function WorkbenchPanel({
     isSummarizingContext,
     isLoadingPreview,
     isPreviewingWrite,
+    isSplitEditorEnabled,
     onApplyFileWrite,
     onCancelFileEdit,
     onExplainContext,
@@ -76,14 +82,18 @@ export function WorkbenchPanel({
     onPinProjectContext,
     onPreviewFileWrite,
     onSelectBreadcrumb,
+    onSecondaryEditorChange,
     onCloseTab,
     onSelectTab,
     onToggleMinimap,
     onTogglePinTab,
+    onToggleSplitEditor,
     onRefreshPreview,
     onStartFileEdit,
     openTabs,
     pinnedTabPaths,
+    secondaryFile,
+    secondaryPreview,
     selectedMeta,
     showMinimap,
     writeProposal,
@@ -107,6 +117,7 @@ export function WorkbenchPanel({
     const findMatches = countFindMatches(findSource, findQuery);
     const isDraftDirty = Boolean(filePreview && dirtyTabPaths.includes(filePreview.relPath));
     const breadcrumbs = buildBreadcrumbs(activeFile, workspace?.name ?? 'Workspace');
+    const secondaryOptions = openTabs.filter((tab) => tab.relPath !== activeFile);
 
     useEffect(() => {
         function handleFindShortcut(event: KeyboardEvent) {
@@ -214,6 +225,15 @@ export function WorkbenchPanel({
                         </div>
                         <div className="editor-tab-actions">
                             <button
+                                aria-pressed={isSplitEditorEnabled}
+                                className={isSplitEditorEnabled ? 'editor-icon-toggle active' : 'editor-icon-toggle'}
+                                onClick={onToggleSplitEditor}
+                                title={isSplitEditorEnabled ? 'Close split editor' : 'Open split editor'}
+                                type="button"
+                            >
+                                <FontAwesomeIcon icon={faTableColumns} />
+                            </button>
+                            <button
                                 aria-pressed={showMinimap}
                                 className={showMinimap ? 'editor-icon-toggle active' : 'editor-icon-toggle'}
                                 onClick={onToggleMinimap}
@@ -269,84 +289,57 @@ export function WorkbenchPanel({
                         </nav>
                     )}
                     {workspace ? (
-                        <div className="file-preview" aria-label="Workspace file preview">
-                            {isLoadingPreview ? (
-                                <LoadingState
-                                    detail="Reading the selected file inside the approved workspace root."
-                                    icon={brandAssets.icons.documents}
-                                    title="Loading preview"
-                                />
-                            ) : filePreview?.kind === 'image' && filePreview.content ? (
-                                <>
-                                    {filePreview.message && <InlineAlert>{filePreview.message}</InlineAlert>}
-                                    <div className="image-preview">
-                                        <img src={filePreview.content} alt={filePreview.name} />
+                        <div className={isSplitEditorEnabled ? 'editor-split-layout' : 'editor-single-layout'}>
+                            <section className="editor-group primary">
+                                {isSplitEditorEnabled && (
+                                    <div className="editor-group-header">
+                                        <strong>{filePreview?.name ?? activeFile}</strong>
+                                        <small>Primary</small>
                                     </div>
-                                </>
-                            ) : filePreview?.kind === 'directory' ? (
-                                <DirectoryPreviewSafe
-                                    directory={filePreview.relPath}
-                                    filePreviewMessage={filePreview.message}
-                                    workspace={workspace}
-                                />
-                            ) : filePreview?.kind === 'pdf' && filePreview.content ? (
-                                <>
-                                    {filePreview.message && <InlineAlert>{filePreview.message}</InlineAlert>}
-                                    <div className="document-preview">
-                                        <iframe src={filePreview.content} title={filePreview.name} />
-                                    </div>
-                                    {filePreview.text && (
-                                        <div className="document-text-preview">
-                                            <strong>Extracted text</strong>
-                                            {filePreview.pages && filePreview.pages.length > 0 ? (
-                                                filePreview.pages.map((page) => (
-                                                    <p key={page.page}><strong>Page {page.page}</strong> {page.text}</p>
-                                                ))
-                                            ) : (
-                                                <p>{filePreview.text}</p>
-                                            )}
-                                        </div>
-                                    )}
-                                </>
-                            ) : filePreview?.table ? (
-                                <>
-                                    {filePreview.message && <InlineAlert>{filePreview.message}</InlineAlert>}
-                                    <CsvTablePreview table={filePreview.table} />
-                                </>
-                            ) : isEditingFile ? (
-                                <FileWriteEditor
-                                    draft={fileDraft}
-                                    isApplying={isApplyingWrite}
-                                    isPreviewing={isPreviewingWrite}
-                                    onApply={onApplyFileWrite}
-                                    onCancel={onCancelFileEdit}
-                                    onChange={onFileDraftChange}
-                                    onPreview={onPreviewFileWrite}
-                                    proposal={writeProposal}
-                                    originalContent={filePreview?.content ?? ''}
-                                    fileName={filePreview?.name ?? activeFile}
-                                    isDirty={isDraftDirty}
+                                )}
+                                <PrimaryPreviewPane
+                                    activeFile={activeFile}
+                                    fileDraft={fileDraft}
+                                    filePreview={filePreview}
+                                    findQuery={findQuery}
+                                    isApplyingWrite={isApplyingWrite}
+                                    isDraftDirty={isDraftDirty}
+                                    isEditingFile={isEditingFile}
+                                    isLoadingPreview={isLoadingPreview}
+                                    isPreviewingWrite={isPreviewingWrite}
+                                    markdownViewMode={markdownViewMode}
+                                    onApplyFileWrite={onApplyFileWrite}
+                                    onCancelFileEdit={onCancelFileEdit}
+                                    onFileDraftChange={onFileDraftChange}
+                                    onPreviewFileWrite={onPreviewFileWrite}
                                     showMinimap={showMinimap}
+                                    workspace={workspace}
+                                    writeProposal={writeProposal}
                                 />
-                            ) : filePreview?.content && markdownViewMode === 'rendered' && isMarkdownFile(filePreview.name) ? (
-                                <>
-                                    {filePreview.message && <InlineAlert>{filePreview.message}</InlineAlert>}
-                                    <div className="markdown-document-preview">
-                                        <ChatMessageContent content={filePreview.content} />
+                            </section>
+                            {isSplitEditorEnabled && (
+                                <section className="editor-group secondary">
+                                    <div className="editor-group-header">
+                                        <strong>{secondaryPreview?.name ?? 'No secondary tab'}</strong>
+                                        <select
+                                            aria-label="Secondary editor file"
+                                            disabled={secondaryOptions.length === 0}
+                                            onChange={(event) => onSecondaryEditorChange(event.target.value)}
+                                            value={secondaryPreview?.relPath ?? secondaryFile}
+                                        >
+                                            {secondaryOptions.length === 0 ? (
+                                                <option value="">Open another tab</option>
+                                            ) : secondaryOptions.map((tab) => (
+                                                <option key={tab.relPath} value={tab.relPath}>{tab.relPath}</option>
+                                            ))}
+                                        </select>
                                     </div>
-                                </>
-                            ) : filePreview?.content ? (
-                                <div className={filePreview.message ? 'source-editor-preview' : 'source-editor-preview no-message'}>
-                                    {filePreview.message && <InlineAlert>{filePreview.message}</InlineAlert>}
-                                    <MonacoCodePreview content={filePreview.content} fileName={filePreview.name} searchQuery={findQuery} showMinimap={showMinimap} />
-                                </div>
-                            ) : (
-                                <EmptyState
-                                    detail={filePreview?.message ?? 'Select a file from the workspace tree to preview it here.'}
-                                    icon={brandAssets.icons.documents}
-                                    title={filePreview?.kind === 'unsupported' ? 'Preview unavailable' : 'No file selected'}
-                                    tone={filePreview?.kind === 'unsupported' ? 'warning' : 'neutral'}
-                                />
+                                    <SecondaryPreviewPane
+                                        preview={secondaryPreview}
+                                        showMinimap={showMinimap}
+                                        workspace={workspace}
+                                    />
+                                </section>
                             )}
                         </div>
                     ) : (
@@ -383,6 +376,190 @@ function buildBreadcrumbs(activeFile: string, workspaceName: string) {
         });
     });
     return crumbs;
+}
+
+function PrimaryPreviewPane({
+    activeFile,
+    fileDraft,
+    filePreview,
+    findQuery,
+    isApplyingWrite,
+    isDraftDirty,
+    isEditingFile,
+    isLoadingPreview,
+    isPreviewingWrite,
+    markdownViewMode,
+    onApplyFileWrite,
+    onCancelFileEdit,
+    onFileDraftChange,
+    onPreviewFileWrite,
+    showMinimap,
+    workspace,
+    writeProposal,
+}: {
+    activeFile: string;
+    fileDraft: string;
+    filePreview: FilePreview | null;
+    findQuery: string;
+    isApplyingWrite: boolean;
+    isDraftDirty: boolean;
+    isEditingFile: boolean;
+    isLoadingPreview: boolean;
+    isPreviewingWrite: boolean;
+    markdownViewMode: 'source' | 'rendered';
+    onApplyFileWrite: () => void;
+    onCancelFileEdit: () => void;
+    onFileDraftChange: (content: string) => void;
+    onPreviewFileWrite: () => void;
+    showMinimap: boolean;
+    workspace: WorkspaceSnapshot;
+    writeProposal: FileWriteProposal | null;
+}) {
+    return (
+        <div className="file-preview" aria-label="Workspace file preview">
+            {isLoadingPreview ? (
+                <LoadingState
+                    detail="Reading the selected file inside the approved workspace root."
+                    icon={brandAssets.icons.documents}
+                    title="Loading preview"
+                />
+            ) : filePreview?.kind === 'image' && filePreview.content ? (
+                <ImagePreview preview={filePreview} />
+            ) : filePreview?.kind === 'directory' ? (
+                <DirectoryPreviewSafe
+                    directory={filePreview.relPath}
+                    filePreviewMessage={filePreview.message}
+                    workspace={workspace}
+                />
+            ) : filePreview?.kind === 'pdf' && filePreview.content ? (
+                <PdfPreview preview={filePreview} />
+            ) : filePreview?.table ? (
+                <>
+                    {filePreview.message && <InlineAlert>{filePreview.message}</InlineAlert>}
+                    <CsvTablePreview table={filePreview.table} />
+                </>
+            ) : isEditingFile ? (
+                <FileWriteEditor
+                    draft={fileDraft}
+                    isApplying={isApplyingWrite}
+                    isPreviewing={isPreviewingWrite}
+                    onApply={onApplyFileWrite}
+                    onCancel={onCancelFileEdit}
+                    onChange={onFileDraftChange}
+                    onPreview={onPreviewFileWrite}
+                    proposal={writeProposal}
+                    originalContent={filePreview?.content ?? ''}
+                    fileName={filePreview?.name ?? activeFile}
+                    isDirty={isDraftDirty}
+                    showMinimap={showMinimap}
+                />
+            ) : filePreview?.content && markdownViewMode === 'rendered' && isMarkdownFile(filePreview.name) ? (
+                <MarkdownPreview preview={filePreview} />
+            ) : filePreview?.content ? (
+                <div className={filePreview.message ? 'source-editor-preview' : 'source-editor-preview no-message'}>
+                    {filePreview.message && <InlineAlert>{filePreview.message}</InlineAlert>}
+                    <MonacoCodePreview content={filePreview.content} fileName={filePreview.name} searchQuery={findQuery} showMinimap={showMinimap} />
+                </div>
+            ) : (
+                <EmptyState
+                    detail={filePreview?.message ?? 'Select a file from the workspace tree to preview it here.'}
+                    icon={brandAssets.icons.documents}
+                    title={filePreview?.kind === 'unsupported' ? 'Preview unavailable' : 'No file selected'}
+                    tone={filePreview?.kind === 'unsupported' ? 'warning' : 'neutral'}
+                />
+            )}
+        </div>
+    );
+}
+
+function SecondaryPreviewPane({
+    preview,
+    showMinimap,
+    workspace,
+}: {
+    preview: FilePreview | null;
+    showMinimap: boolean;
+    workspace: WorkspaceSnapshot;
+}) {
+    return (
+        <div className="file-preview secondary-preview" aria-label="Secondary workspace file preview">
+            {preview?.kind === 'image' && preview.content ? (
+                <ImagePreview preview={preview} />
+            ) : preview?.kind === 'directory' ? (
+                <DirectoryPreviewSafe
+                    directory={preview.relPath}
+                    filePreviewMessage={preview.message}
+                    workspace={workspace}
+                />
+            ) : preview?.kind === 'pdf' && preview.content ? (
+                <PdfPreview preview={preview} />
+            ) : preview?.table ? (
+                <>
+                    {preview.message && <InlineAlert>{preview.message}</InlineAlert>}
+                    <CsvTablePreview table={preview.table} />
+                </>
+            ) : preview?.content && isMarkdownFile(preview.name) ? (
+                <MarkdownPreview preview={preview} />
+            ) : preview?.content ? (
+                <div className={preview.message ? 'source-editor-preview' : 'source-editor-preview no-message'}>
+                    {preview.message && <InlineAlert>{preview.message}</InlineAlert>}
+                    <MonacoCodePreview content={preview.content} fileName={preview.name} searchQuery="" showMinimap={showMinimap} />
+                </div>
+            ) : (
+                <EmptyState
+                    detail={preview?.message ?? 'Open another tab to show it in the secondary editor group.'}
+                    icon={brandAssets.icons.documents}
+                    title={preview?.kind === 'unsupported' ? 'Preview unavailable' : 'No secondary file'}
+                    tone={preview?.kind === 'unsupported' ? 'warning' : 'neutral'}
+                />
+            )}
+        </div>
+    );
+}
+
+function ImagePreview({preview}: {preview: FilePreview}) {
+    return (
+        <>
+            {preview.message && <InlineAlert>{preview.message}</InlineAlert>}
+            <div className="image-preview">
+                <img src={preview.content} alt={preview.name} />
+            </div>
+        </>
+    );
+}
+
+function PdfPreview({preview}: {preview: FilePreview}) {
+    return (
+        <>
+            {preview.message && <InlineAlert>{preview.message}</InlineAlert>}
+            <div className="document-preview">
+                <iframe src={preview.content} title={preview.name} />
+            </div>
+            {preview.text && (
+                <div className="document-text-preview">
+                    <strong>Extracted text</strong>
+                    {preview.pages && preview.pages.length > 0 ? (
+                        preview.pages.map((page) => (
+                            <p key={page.page}><strong>Page {page.page}</strong> {page.text}</p>
+                        ))
+                    ) : (
+                        <p>{preview.text}</p>
+                    )}
+                </div>
+            )}
+        </>
+    );
+}
+
+function MarkdownPreview({preview}: {preview: FilePreview}) {
+    return (
+        <>
+            {preview.message && <InlineAlert>{preview.message}</InlineAlert>}
+            <div className="markdown-document-preview">
+                <ChatMessageContent content={preview.content} />
+            </div>
+        </>
+    );
 }
 
 function DirectoryPreviewSafe({
