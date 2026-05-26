@@ -54,6 +54,13 @@ func TestSQLServerProfile(profile storage.ConnectorProfile) (ConnectorProfileSta
 }
 
 func QuerySQLServerProfile(profile storage.ConnectorProfile, request ConnectorQueryRequest) (ConnectorQueryResult, error) {
+	request = NormalizeConnectorQueryRequest(request)
+	ctx, cancel := context.WithTimeout(context.Background(), time.Duration(request.TimeoutSeconds)*time.Second)
+	defer cancel()
+	return QuerySQLServerProfileContext(ctx, profile, request)
+}
+
+func QuerySQLServerProfileContext(ctx context.Context, profile storage.ConnectorProfile, request ConnectorQueryRequest) (ConnectorQueryResult, error) {
 	if err := requireSQLServerProfile(profile); err != nil {
 		return ConnectorQueryResult{}, err
 	}
@@ -62,9 +69,6 @@ func QuerySQLServerProfile(profile storage.ConnectorProfile, request ConnectorQu
 	if err != nil {
 		return ConnectorQueryResult{}, err
 	}
-
-	ctx, cancel := context.WithTimeout(context.Background(), time.Duration(request.TimeoutSeconds)*time.Second)
-	defer cancel()
 
 	db, err := openSQLServerDB(profile, request.TimeoutSeconds)
 	if err != nil {

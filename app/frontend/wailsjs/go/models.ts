@@ -1033,6 +1033,7 @@ export namespace dbconnector {
 	export class ConnectorQueryRequest {
 	    profileId: string;
 	    sql: string;
+	    requestId: string;
 	    resultLimit: number;
 	    timeoutSeconds: number;
 
@@ -1044,6 +1045,7 @@ export namespace dbconnector {
 	        if ('string' === typeof source) source = JSON.parse(source);
 	        this.profileId = source["profileId"];
 	        this.sql = source["sql"];
+	        this.requestId = source["requestId"];
 	        this.resultLimit = source["resultLimit"];
 	        this.timeoutSeconds = source["timeoutSeconds"];
 	    }

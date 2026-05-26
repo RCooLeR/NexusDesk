@@ -52,6 +52,13 @@ func TestMySQLProfile(profile storage.ConnectorProfile) (ConnectorProfileStatus,
 }
 
 func QueryMySQLProfile(profile storage.ConnectorProfile, request ConnectorQueryRequest) (ConnectorQueryResult, error) {
+	request = NormalizeConnectorQueryRequest(request)
+	ctx, cancel := context.WithTimeout(context.Background(), time.Duration(request.TimeoutSeconds)*time.Second)
+	defer cancel()
+	return QueryMySQLProfileContext(ctx, profile, request)
+}
+
+func QueryMySQLProfileContext(ctx context.Context, profile storage.ConnectorProfile, request ConnectorQueryRequest) (ConnectorQueryResult, error) {
 	if err := requireMySQLProfile(profile); err != nil {
 		return ConnectorQueryResult{}, err
 	}
@@ -60,9 +67,6 @@ func QueryMySQLProfile(profile storage.ConnectorProfile, request ConnectorQueryR
 	if err != nil {
 		return ConnectorQueryResult{}, err
 	}
-
-	ctx, cancel := context.WithTimeout(context.Background(), time.Duration(request.TimeoutSeconds)*time.Second)
-	defer cancel()
 
 	db, err := openMySQLDB(profile, request.TimeoutSeconds)
 	if err != nil {

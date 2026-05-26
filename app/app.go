@@ -9,6 +9,7 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+	"sync"
 	"time"
 	"unicode/utf8"
 
@@ -117,28 +118,31 @@ var emitChatStreamEventFn = func(ctx context.Context, name string, event any) {
 }
 
 type App struct {
-	ctx            context.Context
-	llmClient      *llm.Client
-	chatStore      *storage.ChatHistoryStore
-	connectorStore *storage.ConnectorProfileStore
-	profileStore   *storage.AssistantProfileStore
-	llmStore       *storage.LLMSettingsStore
-	recentStore    *storage.RecentWorkspaceStore
-	workspaceSvc   *WorkspaceService
-	artifactSvc    *ArtifactService
-	datasetSvc     *DatasetService
+	ctx                     context.Context
+	llmClient               *llm.Client
+	chatStore               *storage.ChatHistoryStore
+	connectorStore          *storage.ConnectorProfileStore
+	profileStore            *storage.AssistantProfileStore
+	llmStore                *storage.LLMSettingsStore
+	recentStore             *storage.RecentWorkspaceStore
+	workspaceSvc            *WorkspaceService
+	artifactSvc             *ArtifactService
+	datasetSvc              *DatasetService
+	connectorQueryCancels   map[string]context.CancelFunc
+	connectorQueryCancelsMu sync.Mutex
 }
 
 func NewApp() *App {
 	chatStore := storage.NewDefaultChatHistoryStore()
 	recentStore := storage.NewDefaultRecentWorkspaceStore()
 	app := &App{
-		llmClient:      llm.NewClient(),
-		chatStore:      chatStore,
-		connectorStore: storage.NewDefaultConnectorProfileStore(),
-		profileStore:   storage.NewDefaultAssistantProfileStore(),
-		llmStore:       storage.NewDefaultLLMSettingsStore(),
-		recentStore:    recentStore,
+		llmClient:             llm.NewClient(),
+		chatStore:             chatStore,
+		connectorStore:        storage.NewDefaultConnectorProfileStore(),
+		profileStore:          storage.NewDefaultAssistantProfileStore(),
+		llmStore:              storage.NewDefaultLLMSettingsStore(),
+		recentStore:           recentStore,
+		connectorQueryCancels: map[string]context.CancelFunc{},
 	}
 	app.workspaceSvc = NewWorkspaceService(recentStore, chatStore, app.recordApproval)
 	app.artifactSvc = NewArtifactService(app.getWorkspaceRoot, app.mirrorMetadataStore, app.listArtifactsFromMetadata, app.persistArtifactMetadata, app.recordApproval)
@@ -681,22 +685,59 @@ func (a *App) InspectConnectorProfile(id string) (dbconnector.ConnectorMetadata,
 }
 
 func (a *App) QueryConnectorProfile(request dbconnector.ConnectorQueryRequest) (dbconnector.ConnectorQueryResult, error) {
+	request = dbconnector.NormalizeConnectorQueryRequest(request)
 	profile, err := a.connectorStore.ResolveByIDForUse(request.ProfileID)
 	if err != nil {
 		return dbconnector.ConnectorQueryResult{}, err
 	}
+	ctx, cancel := context.WithTimeout(context.Background(), time.Duration(request.TimeoutSeconds)*time.Second)
+	if request.RequestID != "" {
+		a.registerConnectorQueryCancel(request.RequestID, cancel)
+		defer a.unregisterConnectorQueryCancel(request.RequestID)
+	}
+	defer cancel()
 	switch profile.Kind {
 	case "postgres":
-		return dbconnector.QueryPostgresProfile(profile, request)
+		return dbconnector.QueryPostgresProfileContext(ctx, profile, request)
 	case "mysql", "mariadb":
-		return dbconnector.QueryMySQLProfile(profile, request)
+		return dbconnector.QueryMySQLProfileContext(ctx, profile, request)
 	case "sqlserver":
-		return dbconnector.QuerySQLServerProfile(profile, request)
+		return dbconnector.QuerySQLServerProfileContext(ctx, profile, request)
 	case "duckdb":
-		return dbconnector.QueryDuckDBProfile(profile, request)
+		return dbconnector.QueryDuckDBProfileContext(ctx, profile, request)
 	default:
 		return dbconnector.ConnectorQueryResult{}, fmt.Errorf("connector kind %q is not queryable yet", profile.Kind)
 	}
+}
+
+func (a *App) CancelConnectorProfileQuery(requestID string) bool {
+	requestID = strings.TrimSpace(requestID)
+	if requestID == "" {
+		return false
+	}
+	a.connectorQueryCancelsMu.Lock()
+	cancel := a.connectorQueryCancels[requestID]
+	a.connectorQueryCancelsMu.Unlock()
+	if cancel == nil {
+		return false
+	}
+	cancel()
+	return true
+}
+
+func (a *App) registerConnectorQueryCancel(requestID string, cancel context.CancelFunc) {
+	a.connectorQueryCancelsMu.Lock()
+	defer a.connectorQueryCancelsMu.Unlock()
+	if a.connectorQueryCancels == nil {
+		a.connectorQueryCancels = map[string]context.CancelFunc{}
+	}
+	a.connectorQueryCancels[requestID] = cancel
+}
+
+func (a *App) unregisterConnectorQueryCancel(requestID string) {
+	a.connectorQueryCancelsMu.Lock()
+	defer a.connectorQueryCancelsMu.Unlock()
+	delete(a.connectorQueryCancels, requestID)
 }
 
 func (a *App) GetAssistantProfile() (storage.AssistantProfile, error) {

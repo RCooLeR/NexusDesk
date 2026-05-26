@@ -50,6 +50,10 @@ export function AskLLMStreamContextPack(arg1, arg2, arg3) {
   return window['go']['main']['App']['AskLLMStreamContextPack'](arg1, arg2, arg3);
 }
 
+export function CancelConnectorProfileQuery(arg1) {
+  return window['go']['main']['App']['CancelConnectorProfileQuery'](arg1);
+}
+
 export function CancelWorkspaceSQLiteQuery(arg1) {
   return window['go']['main']['App']['CancelWorkspaceSQLiteQuery'](arg1);
 }

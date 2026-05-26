@@ -166,10 +166,10 @@ func connectorError(err error) error {
 	}
 	message := RedactConnectorError(err.Error())
 	if errors.Is(err, context.Canceled) {
-		return errors.New("SQLite query was canceled")
+		return errors.New("connector query was canceled")
 	}
 	if errors.Is(err, context.DeadlineExceeded) {
-		return errors.New("SQLite query timed out")
+		return errors.New("connector query timed out")
 	}
 	return errors.New(message)
 }

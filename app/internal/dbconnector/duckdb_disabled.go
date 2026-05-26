@@ -3,6 +3,7 @@
 package dbconnector
 
 import (
+	"context"
 	"errors"
 
 	"NexusAugenticStudio/internal/storage"
@@ -18,6 +19,12 @@ func TestDuckDBProfile(profile storage.ConnectorProfile) (ConnectorProfileStatus
 }
 
 func QueryDuckDBProfile(profile storage.ConnectorProfile, request ConnectorQueryRequest) (ConnectorQueryResult, error) {
+	request = NormalizeConnectorQueryRequest(request)
+	return QueryDuckDBProfileContext(context.Background(), profile, request)
+}
+
+func QueryDuckDBProfileContext(ctx context.Context, profile storage.ConnectorProfile, request ConnectorQueryRequest) (ConnectorQueryResult, error) {
+	_ = ctx
 	if err := requireDuckDBProfile(profile); err != nil {
 		return ConnectorQueryResult{}, err
 	}

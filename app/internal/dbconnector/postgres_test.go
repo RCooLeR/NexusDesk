@@ -24,6 +24,21 @@ func TestNormalizeReadOnlyConnectorSQL(t *testing.T) {
 	}
 }
 
+func TestNormalizeConnectorQueryRequest(t *testing.T) {
+	request := NormalizeConnectorQueryRequest(ConnectorQueryRequest{
+		ProfileID:      "  warehouse  ",
+		RequestID:      "  connector-123  ",
+		ResultLimit:    999999,
+		TimeoutSeconds: 999999,
+	})
+	if request.ProfileID != "warehouse" || request.RequestID != "connector-123" {
+		t.Fatalf("expected trimmed profile/request ids, got %#v", request)
+	}
+	if request.ResultLimit != maxSQLiteRows || request.TimeoutSeconds != maxSQLiteTimeoutSeconds {
+		t.Fatalf("expected caps to be enforced, got %#v", request)
+	}
+}
+
 func TestPostgresDSNRedactsThroughURL(t *testing.T) {
 	dsn := postgresDSN(storage.ConnectorProfile{
 		Kind:           "postgres",

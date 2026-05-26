@@ -181,6 +181,7 @@ Current status:
 - Saved MySQL and MariaDB connector profiles use the same explicit Test/Inspect/query boundary, guarded read-only SQL validation, engine timeout settings, schema metadata, foreign-key metadata, and first inferred relationship hints.
 - Saved SQL Server connector profiles now use the same explicit Test/Inspect/query boundary, guarded read-only SQL validation, timeout/lock-timeout settings, schema metadata, foreign-key metadata, and first inferred relationship hints.
 - Saved DuckDB connector profiles now validate a local database file in default builds and expose the same explicit Test/Inspect/query runner behind the `duckdb` build tag with a read-only `access_mode=read_only` DSN.
+- External connector profile query requests now carry request IDs, share cap/timeout normalization, use context-aware query functions, can be cancelled through the app bridge, and pass errors through the shared connector redaction helper.
 - Chat messages and context-pack previews warn when cited files changed after the answer/context was created.
 - Stale-context refresh can rebuild a context preview from changed files and records the refresh in the approval/metadata trail.
 - Dataset dependency rebuild now removes the prior generated artifact before re-running so repeated refreshes avoid same-timestamp collisions.
@@ -330,6 +331,7 @@ This batch made more of the studio inspectable and auditable without turning on 
 6. MySQL/MariaDB connector profiles now share that explicit test, inspect, and guarded query path.
 7. SQL Server connector profiles now share that explicit test, inspect, and guarded query path.
 8. DuckDB connector profiles now share that explicit profile boundary through a default build guard and a CGO-tagged read-only execution path.
+9. External profile queries now share request IDs, cancellation callbacks, cap/timeout normalization, and redacted error handling across supported database engines.
 
 ## Completed Batch: Data Source Card Actions
 

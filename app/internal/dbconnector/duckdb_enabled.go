@@ -45,6 +45,13 @@ func TestDuckDBProfile(profile storage.ConnectorProfile) (ConnectorProfileStatus
 }
 
 func QueryDuckDBProfile(profile storage.ConnectorProfile, request ConnectorQueryRequest) (ConnectorQueryResult, error) {
+	request = NormalizeConnectorQueryRequest(request)
+	ctx, cancel := context.WithTimeout(context.Background(), time.Duration(request.TimeoutSeconds)*time.Second)
+	defer cancel()
+	return QueryDuckDBProfileContext(ctx, profile, request)
+}
+
+func QueryDuckDBProfileContext(ctx context.Context, profile storage.ConnectorProfile, request ConnectorQueryRequest) (ConnectorQueryResult, error) {
 	if err := requireDuckDBProfile(profile); err != nil {
 		return ConnectorQueryResult{}, err
 	}
@@ -53,9 +60,6 @@ func QueryDuckDBProfile(profile storage.ConnectorProfile, request ConnectorQuery
 	if err != nil {
 		return ConnectorQueryResult{}, err
 	}
-
-	ctx, cancel := context.WithTimeout(context.Background(), time.Duration(request.TimeoutSeconds)*time.Second)
-	defer cancel()
 
 	db, err := openDuckDB(profile, request.TimeoutSeconds)
 	if err != nil {

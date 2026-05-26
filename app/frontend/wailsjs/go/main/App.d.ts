@@ -37,6 +37,8 @@ export function AskLLMStream(arg1:string,arg2:string,arg3:string):Promise<llm.Ch
 
 export function AskLLMStreamContextPack(arg1:string,arg2:Array<string>,arg3:string):Promise<llm.ChatResult>;
 
+export function CancelConnectorProfileQuery(arg1:string):Promise<boolean>;
+
 export function CancelWorkspaceSQLiteQuery(arg1:string):Promise<boolean>;
 
 export function CheckWorkspaceFreshness():Promise<workspace.FreshnessStatus>;

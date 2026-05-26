@@ -27,6 +27,7 @@ type ConnectorProfileStatus struct {
 type ConnectorQueryRequest struct {
 	ProfileID      string `json:"profileId"`
 	SQL            string `json:"sql"`
+	RequestID      string `json:"requestId"`
 	ResultLimit    int    `json:"resultLimit"`
 	TimeoutSeconds int    `json:"timeoutSeconds"`
 }
@@ -85,6 +86,13 @@ func TestPostgresProfile(profile storage.ConnectorProfile) (ConnectorProfileStat
 }
 
 func QueryPostgresProfile(profile storage.ConnectorProfile, request ConnectorQueryRequest) (ConnectorQueryResult, error) {
+	request = NormalizeConnectorQueryRequest(request)
+	ctx, cancel := context.WithTimeout(context.Background(), time.Duration(request.TimeoutSeconds)*time.Second)
+	defer cancel()
+	return QueryPostgresProfileContext(ctx, profile, request)
+}
+
+func QueryPostgresProfileContext(ctx context.Context, profile storage.ConnectorProfile, request ConnectorQueryRequest) (ConnectorQueryResult, error) {
 	if err := requirePostgresProfile(profile); err != nil {
 		return ConnectorQueryResult{}, err
 	}
@@ -93,9 +101,6 @@ func QueryPostgresProfile(profile storage.ConnectorProfile, request ConnectorQue
 	if err != nil {
 		return ConnectorQueryResult{}, err
 	}
-
-	ctx, cancel := context.WithTimeout(context.Background(), time.Duration(request.TimeoutSeconds)*time.Second)
-	defer cancel()
 
 	db, err := openPostgresDB(profile, request.TimeoutSeconds)
 	if err != nil {
@@ -248,6 +253,7 @@ func NormalizeConnectorQueryRequest(request ConnectorQueryRequest) ConnectorQuer
 		request.TimeoutSeconds = maxSQLiteTimeoutSeconds
 	}
 	request.ProfileID = strings.TrimSpace(request.ProfileID)
+	request.RequestID = strings.TrimSpace(request.RequestID)
 	return request
 }
 
