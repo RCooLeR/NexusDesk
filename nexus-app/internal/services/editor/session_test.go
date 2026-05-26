@@ -60,6 +60,20 @@ func TestDraftTracksDirtyAndRevert(t *testing.T) {
 	}
 }
 
+func TestMarkDraftSavedPromotesDraftToSource(t *testing.T) {
+	session := NewSession()
+	tab := session.OpenFileWithSource("main.go", "main.go", "package main\n")
+	session.UpdateDraft(tab.ID, "package app\n")
+
+	current, ok := session.MarkDraftSaved(tab.ID)
+	if !ok {
+		t.Fatalf("expected saved draft to be promoted")
+	}
+	if current.Dirty || current.SourceText != "package app\n" || current.DraftText != "package app\n" {
+		t.Fatalf("unexpected saved tab: %#v", current)
+	}
+}
+
 func TestPinnedTabsStayBeforeUnpinnedTabs(t *testing.T) {
 	session := NewSession()
 	first := session.OpenFile("a.go", "a.go")

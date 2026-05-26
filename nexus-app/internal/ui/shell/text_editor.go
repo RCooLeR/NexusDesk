@@ -15,7 +15,7 @@ func (v *View) newTextEditor(tab editorSvc.Tab, preview domain.FilePreview, onSt
 	source.SetText(tab.DraftText)
 	source.Wrapping = fyne.TextWrapOff
 	source.TextStyle = fyne.TextStyle{Monospace: true}
-	status := widget.NewLabel("Draft only. Save is disabled until safe write preview/apply lands.")
+	status := widget.NewLabel(draftStatusText(tab))
 	rendered := newPreviewPane(preview, tab.DraftText)
 	source.OnChanged = func(text string) {
 		if !v.editorSession.UpdateDraft(tab.ID, text) {
@@ -49,7 +49,7 @@ func (v *View) newTextEditor(tab editorSvc.Tab, preview domain.FilePreview, onSt
 
 func draftStatusText(tab editorSvc.Tab) string {
 	if tab.Dirty {
-		return "Draft modified. Save is disabled until safe write preview/apply lands."
+		return "Draft modified. Save applies through the safe write service and creates a rollback snapshot."
 	}
-	return "Draft matches source. Save is disabled until safe write preview/apply lands."
+	return "Draft matches source."
 }

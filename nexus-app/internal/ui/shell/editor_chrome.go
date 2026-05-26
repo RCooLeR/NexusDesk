@@ -3,11 +3,13 @@ package shell
 import (
 	"fyne.io/fyne/v2"
 	"fyne.io/fyne/v2/container"
+	"fyne.io/fyne/v2/dialog"
 	"fyne.io/fyne/v2/theme"
 	"fyne.io/fyne/v2/widget"
 
 	"nexusdesk/internal/domain"
 	editorSvc "nexusdesk/internal/services/editor"
+	workspaceSvc "nexusdesk/internal/services/workspace"
 )
 
 func (v *View) newEditorPanel(tab editorSvc.Tab, preview domain.FilePreview) fyne.CanvasObject {
@@ -15,6 +17,11 @@ func (v *View) newEditorPanel(tab editorSvc.Tab, preview domain.FilePreview) fyn
 	path := widget.NewLabel(preview.RelPath)
 	path.TextStyle = fyne.TextStyle{Monospace: true}
 	state := widget.NewLabel(editorStateText(tab))
+	save := widget.NewButtonWithIcon("", theme.DocumentSaveIcon(), func() {
+		v.saveEditorDraft(tab.ID, preview)
+	})
+	save.Importance = widget.MediumImportance
+	setSaveEnabled(save, tab.Dirty)
 	pin := widget.NewButtonWithIcon("", theme.ConfirmIcon(), func() {
 		if next, ok := v.editorSession.TogglePinned(tab.ID); ok {
 			state.SetText(editorStateText(next))
@@ -26,15 +33,59 @@ func (v *View) newEditorPanel(tab editorSvc.Tab, preview domain.FilePreview) fyn
 	if preview.Kind == domain.PreviewText {
 		content = v.newTextEditor(tab, preview, func(next editorSvc.Tab) {
 			state.SetText(editorStateText(next))
+			setSaveEnabled(save, next.Dirty)
 			v.updateEditorTabState(next)
 		})
 	}
-	save := widget.NewButtonWithIcon("", theme.DocumentSaveIcon(), func() {
-		v.addActivity("Save is disabled until the safe write preview/apply service is ported.")
-	})
-	save.Disable()
 	tools := container.NewHBox(pin, save, state)
 	return container.NewBorder(container.NewBorder(nil, nil, path, tools), nil, nil, nil, content)
+}
+
+func (v *View) saveEditorDraft(tabID string, preview domain.FilePreview) {
+	workspace := v.state.Workspace()
+	if workspace.Root == "" {
+		v.addActivity("Open a workspace before saving.")
+		return
+	}
+	tab, ok := v.editorSession.Tab(tabID)
+	if !ok {
+		v.addActivity("Editor tab is no longer available.")
+		return
+	}
+	if !tab.Dirty {
+		v.addActivity("No draft changes to save.")
+		return
+	}
+	proposal, err := v.workspaceService.ApplyFileWrite(workspace.Root, workspaceSvc.FileWriteRequest{
+		RelPath:  tab.RelPath,
+		Content:  tab.DraftText,
+		Encoding: preview.Encoding,
+	})
+	if err != nil {
+		dialog.ShowError(err, v.window)
+		return
+	}
+	next, ok := v.editorSession.MarkDraftSaved(tab.ID)
+	if !ok {
+		v.addActivity("Saved file, but editor state could not be refreshed.")
+		return
+	}
+	preview.Text = next.SourceText
+	preview.Size = int64(proposal.Size)
+	preview.Encoding = proposal.Encoding
+	if item := v.openTabs[next.ID]; item != nil {
+		item.Content = v.newEditorPanel(next, preview)
+	}
+	v.updateEditorTabState(next)
+	v.addActivity(proposal.Message)
+}
+
+func setSaveEnabled(button *widget.Button, enabled bool) {
+	if enabled {
+		button.Enable()
+		return
+	}
+	button.Disable()
 }
 
 func (v *View) updateEditorTabState(tab editorSvc.Tab) {

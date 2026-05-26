@@ -92,6 +92,7 @@ The first `nexus-app` slice includes:
 - first native DOCX text preview path using bounded service-side extraction from `word/document.xml`;
 - first native PDF text preview path using bounded service-side literal text extraction and a read-only Fyne text surface;
 - first native text/code safe write service with rooted diff previews, append/apply flows, encoding-aware writes, and rollback snapshots under `.nexusdesk/rollbacks`;
+- draft editor Save wiring that applies through the native safe write service, marks the editor tab clean, and leaves a rollback record;
 - framework-free workspace domain model.
 
 Full execution is blocked in the current shell until CGO is enabled with a Windows C compiler. Non-driver internal packages can already be tested.
