@@ -6,8 +6,10 @@ import (
 	"encoding/json"
 	"encoding/xml"
 	"errors"
+	"io"
 	"os"
 	"path/filepath"
+	"sort"
 	"strings"
 	"time"
 
@@ -16,6 +18,9 @@ import (
 
 const profileDirRelPath = ".nexusdesk/datasets"
 const profileStoreName = "profiles.json"
+const maxLogProfileBytes = 1024 * 1024
+const maxLogProfileLines = 5000
+const maxLogPatterns = 6
 
 type Profile struct {
 	RelPath   string                    `json:"relPath"`
@@ -26,6 +31,7 @@ type Profile struct {
 	Sheets    []string                  `json:"sheets"`
 	Workbook  WorkbookInfo              `json:"workbook"`
 	Parquet   ParquetInfo               `json:"parquet"`
+	Log       LogInfo                   `json:"log"`
 	Profiles  []workspace.ColumnProfile `json:"profiles"`
 	UpdatedAt string                    `json:"updatedAt"`
 	Message   string                    `json:"message"`
@@ -61,6 +67,24 @@ type ParquetInfo struct {
 	DataBytes           int64  `json:"dataBytes"`
 	Magic               string `json:"magic"`
 	Message             string `json:"message"`
+}
+
+type LogInfo struct {
+	FileSize         int64          `json:"fileSize"`
+	SampledBytes     int64          `json:"sampledBytes"`
+	SampledLines     int            `json:"sampledLines"`
+	TotalLines       int            `json:"totalLines"`
+	Truncated        bool           `json:"truncated"`
+	LevelCounts      map[string]int `json:"levelCounts"`
+	TimestampedLines int            `json:"timestampedLines"`
+	StackTraceLines  int            `json:"stackTraceLines"`
+	TopPatterns      []LogPattern   `json:"topPatterns"`
+	Message          string         `json:"message"`
+}
+
+type LogPattern struct {
+	Pattern string `json:"pattern"`
+	Count   int    `json:"count"`
 }
 
 func Build(root string, relPath string) (Profile, error) {
@@ -109,10 +133,20 @@ func Build(root string, relPath string) (Profile, error) {
 		profile.Kind = "parquet"
 		profile.Parquet = parquet
 		profile.Message = parquet.Message
+	case ".log", ".out", ".trace":
+		logProfile, err := inspectLogFile(absTarget)
+		if err != nil {
+			return Profile{}, err
+		}
+		profile.Kind = "log"
+		profile.Rows = logProfile.SampledLines
+		profile.Columns = len(logProfile.LevelCounts)
+		profile.Log = logProfile
+		profile.Message = logProfile.Message
 	case ".xls":
 		return Profile{}, errors.New("legacy binary XLS profiling is not available yet; convert the workbook to XLSX or CSV before profiling")
 	default:
-		return Profile{}, errors.New("dataset profiles currently support CSV, TSV, JSON, NDJSON, XLSX, and Parquet files")
+		return Profile{}, errors.New("dataset profiles currently support CSV, TSV, JSON, NDJSON, XLSX, Parquet, and log files")
 	}
 
 	if err := saveProfile(absRoot, profile); err != nil {
@@ -120,6 +154,228 @@ func Build(root string, relPath string) (Profile, error) {
 	}
 
 	return profile, nil
+}
+
+func inspectLogFile(path string) (LogInfo, error) {
+	file, err := os.Open(path)
+	if err != nil {
+		return LogInfo{}, err
+	}
+	defer file.Close()
+
+	stat, err := file.Stat()
+	if err != nil {
+		return LogInfo{}, err
+	}
+	data, err := io.ReadAll(io.LimitReader(file, maxLogProfileBytes+1))
+	if err != nil {
+		return LogInfo{}, err
+	}
+	truncated := int64(len(data)) < stat.Size()
+	if len(data) > maxLogProfileBytes {
+		data = data[:maxLogProfileBytes]
+		truncated = true
+	}
+	text := strings.ToValidUTF8(string(data), "")
+	if strings.ContainsRune(text, '\x00') {
+		return LogInfo{}, errors.New("log profile cannot parse binary content")
+	}
+
+	lines := splitProfileLines(text)
+	if len(lines) > maxLogProfileLines {
+		lines = lines[:maxLogProfileLines]
+		truncated = true
+	}
+
+	info := LogInfo{
+		FileSize:     stat.Size(),
+		SampledBytes: int64(len(data)),
+		SampledLines: len(lines),
+		Truncated:    truncated,
+		LevelCounts:  map[string]int{},
+	}
+	if !truncated {
+		info.TotalLines = len(lines)
+	}
+
+	patternCounts := map[string]int{}
+	for _, line := range lines {
+		trimmed := strings.TrimSpace(line)
+		if trimmed == "" {
+			continue
+		}
+		if level := detectLogLevel(trimmed); level != "" {
+			info.LevelCounts[level]++
+		}
+		if hasLogTimestamp(trimmed) {
+			info.TimestampedLines++
+		}
+		if isStackTraceLine(line) {
+			info.StackTraceLines++
+		}
+		pattern := normalizeLogPattern(trimmed)
+		if pattern != "" {
+			patternCounts[pattern]++
+		}
+	}
+
+	info.TopPatterns = topLogPatterns(patternCounts, maxLogPatterns)
+	info.Message = "Log profile persisted with sampled levels, timestamps, stack traces, and repeated patterns."
+	if info.Truncated {
+		info.Message = "Log profile persisted from a bounded sample with levels, timestamps, stack traces, and repeated patterns."
+	}
+	return info, nil
+}
+
+func splitProfileLines(text string) []string {
+	text = strings.ReplaceAll(text, "\r\n", "\n")
+	text = strings.ReplaceAll(text, "\r", "\n")
+	if text == "" {
+		return []string{}
+	}
+	lines := strings.Split(text, "\n")
+	if len(lines) > 0 && lines[len(lines)-1] == "" {
+		lines = lines[:len(lines)-1]
+	}
+	return lines
+}
+
+func detectLogLevel(line string) string {
+	upper := strings.ToUpper(line)
+	levels := []string{"FATAL", "ERROR", "WARN", "WARNING", "INFO", "DEBUG", "TRACE"}
+	for _, level := range levels {
+		if hasLogToken(upper, level) {
+			if level == "WARNING" {
+				return "WARN"
+			}
+			return level
+		}
+	}
+	return ""
+}
+
+func hasLogToken(line string, token string) bool {
+	index := strings.Index(line, token)
+	for index >= 0 {
+		beforeOK := index == 0 || !isLogTokenChar(rune(line[index-1]))
+		afterIndex := index + len(token)
+		afterOK := afterIndex >= len(line) || !isLogTokenChar(rune(line[afterIndex]))
+		if beforeOK && afterOK {
+			return true
+		}
+		next := strings.Index(line[index+len(token):], token)
+		if next < 0 {
+			return false
+		}
+		index += len(token) + next
+	}
+	return false
+}
+
+func isLogTokenChar(value rune) bool {
+	return value >= 'A' && value <= 'Z'
+}
+
+func hasLogTimestamp(line string) bool {
+	if len(line) >= 10 && isDatePrefix(line[:10]) {
+		return true
+	}
+	if len(line) >= 11 && line[0] == '[' && isDatePrefix(line[1:11]) {
+		return true
+	}
+	if len(line) >= 8 && isTimePrefix(line[:8]) {
+		return true
+	}
+	return false
+}
+
+func isDatePrefix(value string) bool {
+	return len(value) == 10 &&
+		isDigit(value[0]) && isDigit(value[1]) && isDigit(value[2]) && isDigit(value[3]) &&
+		value[4] == '-' &&
+		isDigit(value[5]) && isDigit(value[6]) &&
+		value[7] == '-' &&
+		isDigit(value[8]) && isDigit(value[9])
+}
+
+func isTimePrefix(value string) bool {
+	return len(value) == 8 &&
+		isDigit(value[0]) && isDigit(value[1]) &&
+		value[2] == ':' &&
+		isDigit(value[3]) && isDigit(value[4]) &&
+		value[5] == ':' &&
+		isDigit(value[6]) && isDigit(value[7])
+}
+
+func isDigit(value byte) bool {
+	return value >= '0' && value <= '9'
+}
+
+func isStackTraceLine(line string) bool {
+	trimmed := strings.TrimSpace(line)
+	if trimmed == "" {
+		return false
+	}
+	if strings.HasPrefix(line, " ") || strings.HasPrefix(line, "\t") {
+		if strings.HasPrefix(trimmed, "at ") || strings.HasPrefix(trimmed, "...") || strings.Contains(trimmed, ".go:") || strings.Contains(trimmed, ".java:") || strings.Contains(trimmed, ".py:") {
+			return true
+		}
+	}
+	return strings.HasPrefix(trimmed, "Traceback (most recent call last):") ||
+		strings.HasPrefix(trimmed, "goroutine ") ||
+		strings.HasPrefix(trimmed, "panic:") ||
+		strings.Contains(trimmed, "stack trace")
+}
+
+func normalizeLogPattern(line string) string {
+	fields := strings.Fields(line)
+	if len(fields) == 0 {
+		return ""
+	}
+	normalized := make([]string, 0, minInt(len(fields), 16))
+	for _, field := range fields {
+		if looksVariableLogToken(field) {
+			normalized = append(normalized, "?")
+		} else {
+			normalized = append(normalized, strings.ToLower(strings.Trim(field, "[](),;")))
+		}
+		if len(normalized) >= 16 {
+			break
+		}
+	}
+	return strings.Join(normalized, " ")
+}
+
+func looksVariableLogToken(value string) bool {
+	if value == "" {
+		return false
+	}
+	for _, char := range value {
+		if char >= '0' && char <= '9' {
+			return true
+		}
+	}
+	return strings.Contains(value, "=") || strings.Contains(value, ":") || strings.Contains(value, "/")
+}
+
+func topLogPatterns(counts map[string]int, limit int) []LogPattern {
+	patterns := make([]LogPattern, 0, len(counts))
+	for pattern, count := range counts {
+		if count < 2 {
+			continue
+		}
+		patterns = append(patterns, LogPattern{Pattern: pattern, Count: count})
+	}
+	sort.Slice(patterns, func(i, j int) bool {
+		if patterns[i].Count != patterns[j].Count {
+			return patterns[i].Count > patterns[j].Count
+		}
+		return patterns[i].Pattern < patterns[j].Pattern
+	})
+	if len(patterns) > limit {
+		return patterns[:limit]
+	}
+	return patterns
 }
 
 func inspectParquetFile(path string) (ParquetInfo, error) {
@@ -566,6 +822,13 @@ func columnIndexFromCellRef(ref string) int {
 
 func maxInt(left int, right int) int {
 	if left > right {
+		return left
+	}
+	return right
+}
+
+func minInt(left int, right int) int {
+	if left < right {
 		return left
 	}
 	return right

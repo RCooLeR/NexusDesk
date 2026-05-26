@@ -508,6 +508,16 @@ function DatasetProfileSummary({profile}: {profile: DatasetProfile}) {
                     <p>{formatBytes(profile.parquet?.fileSize ?? 0)} file, {formatBytes(profile.parquet?.footerMetadataBytes ?? 0)} footer metadata</p>
                     <small>{profile.parquet?.message || profile.message}</small>
                 </>
+            ) : profile.kind === 'log' ? (
+                <>
+                    <p>{profile.log?.sampledLines ?? 0} sampled lines{profile.log?.truncated ? ', bounded sample' : ''}</p>
+                    <small>{logLevelSummary(profile.log?.levelCounts)}</small>
+                    {(profile.log?.timestampedLines ?? 0) > 0 && <small>{profile.log.timestampedLines} timestamped lines</small>}
+                    {(profile.log?.stackTraceLines ?? 0) > 0 && <small>{profile.log.stackTraceLines} stack trace lines</small>}
+                    {(profile.log?.topPatterns?.length ?? 0) > 0 && (
+                        <small>{profile.log.topPatterns.slice(0, 2).map((pattern) => `${pattern.count}x ${pattern.pattern}`).join(' | ')}</small>
+                    )}
+                </>
             ) : (
                 <p>{profile.rows} rows, {profile.columns} columns</p>
             )}
@@ -634,4 +644,15 @@ function formatBytes(value: number) {
         unitIndex += 1;
     }
     return `${current >= 10 || unitIndex === 0 ? current.toFixed(0) : current.toFixed(1)} ${units[unitIndex]}`;
+}
+
+function logLevelSummary(levelCounts?: Record<string, number>) {
+    if (!levelCounts) {
+        return 'No levels detected';
+    }
+    const parts = ['FATAL', 'ERROR', 'WARN', 'INFO', 'DEBUG', 'TRACE']
+        .map((level) => [level, levelCounts[level] ?? 0] as const)
+        .filter(([, count]) => count > 0)
+        .map(([level, count]) => `${count} ${level.toLowerCase()}`);
+    return parts.length > 0 ? parts.join(', ') : 'No levels detected';
 }

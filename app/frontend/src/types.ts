@@ -386,6 +386,7 @@ export type DatasetProfile = {
     sheets: string[];
     workbook: WorkbookInfo;
     parquet: ParquetInfo;
+    log: LogInfo;
     profiles: ColumnProfile[];
     updatedAt: string;
     message: string;
@@ -421,6 +422,24 @@ export type ParquetInfo = {
     dataBytes: number;
     magic: string;
     message: string;
+};
+
+export type LogInfo = {
+    fileSize: number;
+    sampledBytes: number;
+    sampledLines: number;
+    totalLines: number;
+    truncated: boolean;
+    levelCounts: Record<string, number>;
+    timestampedLines: number;
+    stackTraceLines: number;
+    topPatterns: LogPattern[];
+    message: string;
+};
+
+export type LogPattern = {
+    pattern: string;
+    count: number;
 };
 
 export type DatasetQueryResult = {

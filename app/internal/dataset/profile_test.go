@@ -5,6 +5,7 @@ import (
 	"encoding/binary"
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 )
 
@@ -213,6 +214,60 @@ func TestBuildRejectsInvalidParquet(t *testing.T) {
 		t.Fatal("expected invalid parquet to be rejected")
 	}
 	if got := err.Error(); got != "parquet file magic header not found" {
+		t.Fatalf("unexpected error: %s", got)
+	}
+}
+
+func TestBuildProfilesLogSample(t *testing.T) {
+	root := t.TempDir()
+	writeFile(t, root, "logs/app.log", strings.Join([]string{
+		"2026-05-26T12:00:00Z INFO service started request_id=100",
+		"2026-05-26T12:00:01Z WARN retrying request_id=101",
+		"2026-05-26T12:00:02Z ERROR failed request_id=102",
+		"    at handler.process(app.js:42)",
+		"2026-05-26T12:00:03Z ERROR failed request_id=103",
+	}, "\n")+"\n")
+
+	profile, err := Build(root, "logs/app.log")
+	if err != nil {
+		t.Fatalf("Build returned error: %v", err)
+	}
+
+	if profile.Kind != "log" {
+		t.Fatalf("expected log profile, got %s", profile.Kind)
+	}
+	if profile.Log.SampledLines != 5 || profile.Log.TotalLines != 5 {
+		t.Fatalf("expected 5 sampled/total lines, got %#v", profile.Log)
+	}
+	if profile.Log.LevelCounts["ERROR"] != 2 || profile.Log.LevelCounts["WARN"] != 1 || profile.Log.LevelCounts["INFO"] != 1 {
+		t.Fatalf("unexpected level counts: %#v", profile.Log.LevelCounts)
+	}
+	if profile.Log.TimestampedLines != 4 {
+		t.Fatalf("expected 4 timestamped lines, got %d", profile.Log.TimestampedLines)
+	}
+	if profile.Log.StackTraceLines != 1 {
+		t.Fatalf("expected 1 stack trace line, got %d", profile.Log.StackTraceLines)
+	}
+	if len(profile.Log.TopPatterns) == 0 || profile.Log.TopPatterns[0].Count != 2 {
+		t.Fatalf("expected repeated error pattern, got %#v", profile.Log.TopPatterns)
+	}
+}
+
+func TestBuildRejectsBinaryLog(t *testing.T) {
+	root := t.TempDir()
+	path := filepath.Join(root, "logs", "binary.log")
+	if err := os.MkdirAll(filepath.Dir(path), 0o755); err != nil {
+		t.Fatalf("MkdirAll failed: %v", err)
+	}
+	if err := os.WriteFile(path, []byte{'I', 'N', 'F', 'O', 0, 'x'}, 0o644); err != nil {
+		t.Fatalf("WriteFile failed: %v", err)
+	}
+
+	_, err := Build(root, "logs/binary.log")
+	if err == nil {
+		t.Fatal("expected binary log to be rejected")
+	}
+	if got := err.Error(); got != "log profile cannot parse binary content" {
 		t.Fatalf("unexpected error: %s", got)
 	}
 }

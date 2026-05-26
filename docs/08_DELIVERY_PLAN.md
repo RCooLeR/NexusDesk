@@ -55,7 +55,7 @@ Deliverables:
 - bounded CSV/TSV/JSON/NDJSON table preview: implemented
 - bounded CSV/TSV/JSON/NDJSON column profiles: implemented
 - larger capped table profile sample: implemented
-- persistent CSV/TSV/JSON/NDJSON/XLSX/Parquet dataset profiles: first implementation, with XLSX workbook metadata and Parquet footer metadata
+- persistent CSV/TSV/JSON/NDJSON/XLSX/Parquet/log dataset profiles: first implementation, with XLSX workbook metadata, Parquet footer metadata, and bounded log summaries
 - bounded CSV/TSV/JSON/NDJSON query/filter flow: first implementation
 - dataset query result export artifact flow: first implementation
 - dataset-to-SVG bar chart artifact flow: first implementation
@@ -108,6 +108,7 @@ Current status:
 - Text preview decodes common UTF-8, UTF-16, and Windows-1251 Cyrillic files.
 - CSV, TSV, JSON, and NDJSON files render as bounded table previews with lightweight column profiles from a larger capped sample while retaining raw text for selected chat context.
 - Parquet files can be profiled through a bounded footer/magic inspection that records file, data, and footer metadata byte counts without scanning full columnar data.
+- Log files can be profiled through a bounded sample that records sampled lines, levels, timestamps, stack trace lines, and repeated patterns.
 - Common image previews render inline as capped data URLs from inside the approved workspace root.
 - PDF previews render inline as capped data URLs from inside the approved workspace root and expose extracted text by page when available.
 - DOCX files expose extracted body text when the document XML is readable.
@@ -176,6 +177,7 @@ Current status:
 - Dataset dependency rebuild now removes the prior generated artifact before re-running so repeated refreshes avoid same-timestamp collisions.
 - Data & Analytics clears visible query/chart/profile state when the selected dataset changes on disk.
 - Data & Analytics source cards show profiled Parquet footer/data byte summaries after metadata inspection.
+- Data & Analytics source cards show profiled log level and sample summaries after log profiling.
 - Workspace freshness reports dataset-derived views that need refresh when table/workbook sources change.
 - SQL query results can be exported as Markdown artifacts with SQL text, engine, row counts, preview rows, and dataset citations.
 - Data & Analytics saves read-only SQL snippets separately from lightweight row filters.
@@ -294,6 +296,13 @@ This batch made more of the studio inspectable and auditable without turning on 
 3. Persisted Parquet profiles record file size, data bytes, footer metadata bytes, magic marker, and an explicit schema-decoding-pending message.
 4. Data & Analytics source cards and profile summaries show profiled Parquet footer/data byte summaries.
 
+## Completed Batch: Log Dataset Profiling
+
+1. `.log`, `.out`, and `.trace` files are now classified as Data & Analytics profiling candidates.
+2. Log profiles read only a bounded sample, reject binary-looking content, and persist sampled bytes/lines plus truncation state.
+3. Profiles capture log levels, timestamped line counts, stack trace line counts, and repeated normalized patterns.
+4. Data & Analytics source cards and profile summaries show profiled log sample and level summaries.
+
 ## Prepared Batch: Architecture Hardening Before Deeper Studios
 
 1. Extract chat/context/agent orchestration into a `useChatController` frontend hook and a backend `ChatService`.
@@ -337,7 +346,7 @@ These batches describe the next product direction. They are broader than the cur
 
 ### Batch: Data & Analytics Expansion
 
-1. Expand file dataset support to TSV, JSON, NDJSON, Parquet, logs, compressed exports, and SQL/database dump files. TSV/JSON/NDJSON table profiling and Parquet footer metadata inspection are implemented; logs and imports remain planned.
+1. Expand file dataset support to TSV, JSON, NDJSON, Parquet, logs, compressed exports, and SQL/database dump files. TSV/JSON/NDJSON table profiling, Parquet footer metadata inspection, and bounded log profiling are implemented; imports remain planned.
 2. Build database connector framework for SQLite, PostgreSQL, MySQL/MariaDB, SQL Server, and DuckDB with read-only defaults.
 3. Add schema browser with tables, views, columns, keys, indexes, row counts, samples, and generated relationship views.
 4. Add query notebook with multiple cells, result tabs, saved queries, cancellation, query history, charts, and export actions.

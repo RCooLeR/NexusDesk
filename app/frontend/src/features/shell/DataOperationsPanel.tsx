@@ -362,7 +362,7 @@ function dataSourceFromNode(node: FileNode, profile: DatasetProfile | undefined,
         return plannedSourceCard(node, active, 'compressed export', 'Archive/export detection only; import workflow is planned.');
     }
     if (['log', 'out', 'trace'].includes(extension) || node.name.toLowerCase().includes('log')) {
-        return plannedSourceCard(node, active, 'log file', 'Log profiling is planned.');
+        return sourceCard(node, profile, active, 'log file', profile ? `${profile.log?.sampledLines ?? 0} sampled lines, ${levelSummary(profile.log?.levelCounts)}` : 'Profile levels, timestamps, stack traces, and repeated patterns.');
     }
     return null;
 }
@@ -419,6 +419,17 @@ function formatBytes(value: number) {
         unitIndex += 1;
     }
     return `${current >= 10 || unitIndex === 0 ? current.toFixed(0) : current.toFixed(1)} ${units[unitIndex]}`;
+}
+
+function levelSummary(levelCounts?: Record<string, number>) {
+    if (!levelCounts) {
+        return 'no levels yet';
+    }
+    const parts = ['ERROR', 'WARN', 'INFO', 'DEBUG']
+        .map((level) => [level, levelCounts[level] ?? 0] as const)
+        .filter(([, count]) => count > 0)
+        .map(([level, count]) => `${count} ${level.toLowerCase()}`);
+    return parts.length > 0 ? parts.join(', ') : 'no levels detected';
 }
 
 function MetadataStorePanel({status}: {status: SQLiteMetadataStatus}) {

@@ -4341,7 +4341,7 @@ function fileNameFromRelPath(relPath: string) {
 }
 
 function fileTypeForRelPath(relPath: string) {
-    if (/\.(csv|tsv|xlsx?|parquet|json|jsonl|ndjson)$/i.test(relPath)) {
+    if (/\.(csv|tsv|xlsx?|parquet|json|jsonl|ndjson|log|out|trace)$/i.test(relPath)) {
         return 'data';
     }
     if (/\.(mdx?|txt|pdf|docx?|rtf)$/i.test(relPath)) {

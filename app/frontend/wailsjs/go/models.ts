@@ -616,6 +616,69 @@ export namespace artifact {
 
 export namespace dataset {
 
+	export class LogPattern {
+	    pattern: string;
+	    count: number;
+
+	    static createFrom(source: any = {}) {
+	        return new LogPattern(source);
+	    }
+
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.pattern = source["pattern"];
+	        this.count = source["count"];
+	    }
+	}
+	export class LogInfo {
+	    fileSize: number;
+	    sampledBytes: number;
+	    sampledLines: number;
+	    totalLines: number;
+	    truncated: boolean;
+	    levelCounts: Record<string, number>;
+	    timestampedLines: number;
+	    stackTraceLines: number;
+	    topPatterns: LogPattern[];
+	    message: string;
+
+	    static createFrom(source: any = {}) {
+	        return new LogInfo(source);
+	    }
+
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.fileSize = source["fileSize"];
+	        this.sampledBytes = source["sampledBytes"];
+	        this.sampledLines = source["sampledLines"];
+	        this.totalLines = source["totalLines"];
+	        this.truncated = source["truncated"];
+	        this.levelCounts = source["levelCounts"];
+	        this.timestampedLines = source["timestampedLines"];
+	        this.stackTraceLines = source["stackTraceLines"];
+	        this.topPatterns = this.convertValues(source["topPatterns"], LogPattern);
+	        this.message = source["message"];
+	    }
+
+		convertValues(a: any, classs: any, asMap: boolean = false): any {
+		    if (!a) {
+		        return a;
+		    }
+		    if (a.slice && a.map) {
+		        return (a as any[]).map(elem => this.convertValues(elem, classs));
+		    } else if ("object" === typeof a) {
+		        if (asMap) {
+		            for (const key of Object.keys(a)) {
+		                a[key] = new classs(a[key]);
+		            }
+		            return a;
+		        }
+		        return new classs(a);
+		    }
+		    return a;
+		}
+	}
+
 	export class ParquetInfo {
 	    fileSize: number;
 	    footerMetadataBytes: number;
@@ -723,6 +786,7 @@ export namespace dataset {
 	    sheets: string[];
 	    workbook: WorkbookInfo;
 	    parquet: ParquetInfo;
+	    log: LogInfo;
 	    profiles: workspace.ColumnProfile[];
 	    updatedAt: string;
 	    message: string;
@@ -741,6 +805,7 @@ export namespace dataset {
 	        this.sheets = source["sheets"];
 	        this.workbook = this.convertValues(source["workbook"], WorkbookInfo);
 	        this.parquet = this.convertValues(source["parquet"], ParquetInfo);
+	        this.log = this.convertValues(source["log"], LogInfo);
 	        this.profiles = this.convertValues(source["profiles"], workspace.ColumnProfile);
 	        this.updatedAt = source["updatedAt"];
 	        this.message = source["message"];
