@@ -8,6 +8,8 @@ type SQLNotebookCell = {
     sql: string;
 };
 
+type SQLResultTab = 'rows' | 'summary' | 'history';
+
 type DataStudioPanelProps = {
     activeDatasetProfile: DatasetProfile | null;
     chartCategory: string;
@@ -225,6 +227,7 @@ function DatasetQueryPanel({
     const [filterValue, setFilterValue] = useState('');
     const [sqlCells, setSQLCells] = useState<SQLNotebookCell[]>(() => [newSQLNotebookCell(sqlQuery)]);
     const [activeSQLCellId, setActiveSQLCellId] = useState(sqlCells[0]?.id ?? '');
+    const [activeSQLResultTab, setActiveSQLResultTab] = useState<SQLResultTab>('rows');
     const activeSQLCell = sqlCells.find((cell) => cell.id === activeSQLCellId) ?? sqlCells[0];
 
     useEffect(() => {
@@ -425,43 +428,16 @@ function DatasetQueryPanel({
                         {isExportingSQL ? 'Exporting...' : 'Export SQL'}
                     </Button>
                 </div>
-                {sqlResult && (
-                    <div className="dataset-query-result">
-                        <small>{sqlResult.message}</small>
-                        <SortableDataTable
-                            pageSize={12}
-                            table={{
-                                columns: sqlResult.columns,
-                                rows: sqlResult.rows,
-                                profiles: [],
-                                totalRows: sqlResult.matchedRows,
-                                truncated: sqlResult.rows.length < sqlResult.matchedRows,
-                            }}
-                            title="SQL Result"
-                        />
-                    </div>
-                )}
-                {(sqlRuns.length > 0 || dependencies.length > 0) && (
-                    <div className="dataset-lineage-history">
-                        {sqlRuns.slice(0, 3).map((run) => (
-                            <p key={run.id}><strong>{run.status}</strong> {run.engine} / {run.rows} rows <small>{run.artifact || run.message}</small></p>
-                        ))}
-                        {dependencies.slice(0, 4).map((item) => (
-                            <p className="dataset-lineage-row" key={item.id}>
-                                <span><strong>{item.kind}</strong> {item.target || item.artifact || item.query}</span>
-                                {canRebuildDependency(item.kind) ? (
-                                    <Button
-                                        className="dataset-lineage-rebuild"
-                                        disabled={rebuildingDependencyId === item.id}
-                                        onClick={() => onRebuildDependency(item.id)}
-                                        variant="subtle"
-                                    >
-                                        {rebuildingDependencyId === item.id ? 'Rebuilding...' : 'Rebuild'}
-                                    </Button>
-                                ) : null}
-                            </p>
-                        ))}
-                    </div>
+                {(sqlResult || sqlRuns.length > 0 || dependencies.length > 0) && (
+                    <SQLResultTabs
+                        activeTab={activeSQLResultTab}
+                        dependencies={dependencies}
+                        onRebuildDependency={onRebuildDependency}
+                        onTabChange={setActiveSQLResultTab}
+                        rebuildingDependencyId={rebuildingDependencyId}
+                        result={sqlResult}
+                        runs={sqlRuns}
+                    />
                 )}
             </div>
         </div>
@@ -478,6 +454,101 @@ function newSQLNotebookCell(sql = '', index = 1): SQLNotebookCell {
         label: `Cell ${index}`,
         sql,
     };
+}
+
+function SQLResultTabs({
+    activeTab,
+    dependencies,
+    onRebuildDependency,
+    onTabChange,
+    rebuildingDependencyId,
+    result,
+    runs,
+}: {
+    activeTab: SQLResultTab;
+    dependencies: DatasetDependency[];
+    onRebuildDependency: (id: string) => void;
+    onTabChange: (tab: SQLResultTab) => void;
+    rebuildingDependencyId: string;
+    result: DatasetSQLQueryResult | null;
+    runs: SQLRun[];
+}) {
+    const tabs: Array<{id: SQLResultTab; label: string; disabled?: boolean}> = [
+        {id: 'rows', label: 'Rows', disabled: !result},
+        {id: 'summary', label: 'Summary', disabled: !result},
+        {id: 'history', label: 'History', disabled: runs.length === 0 && dependencies.length === 0},
+    ];
+    const currentTab = tabs.some((tab) => tab.id === activeTab && !tab.disabled)
+        ? activeTab
+        : tabs.find((tab) => !tab.disabled)?.id ?? 'rows';
+
+    return (
+        <div className="sql-result-tabs">
+            <div className="sql-result-tab-list" role="tablist" aria-label="SQL result tabs">
+                {tabs.map((tab) => (
+                    <button
+                        aria-selected={currentTab === tab.id}
+                        className={currentTab === tab.id ? 'active' : ''}
+                        disabled={tab.disabled}
+                        key={tab.id}
+                        onClick={() => onTabChange(tab.id)}
+                        role="tab"
+                        type="button"
+                    >
+                        {tab.label}
+                    </button>
+                ))}
+            </div>
+            {currentTab === 'rows' && result && (
+                <div className="dataset-query-result" role="tabpanel">
+                    <small>{result.message}</small>
+                    <SortableDataTable
+                        pageSize={12}
+                        table={{
+                            columns: result.columns,
+                            rows: result.rows,
+                            profiles: [],
+                            totalRows: result.matchedRows,
+                            truncated: result.rows.length < result.matchedRows,
+                        }}
+                        title="SQL Result"
+                    />
+                </div>
+            )}
+            {currentTab === 'summary' && result && (
+                <div className="sql-result-summary" role="tabpanel">
+                    <p><strong>{result.engine}</strong><small>{result.relPath}</small></p>
+                    <p><strong>{result.matchedRows}</strong><small>matched rows</small></p>
+                    <p><strong>{result.rows.length}</strong><small>preview rows</small></p>
+                    <pre>{result.sql}</pre>
+                    <small>{result.message}</small>
+                </div>
+            )}
+            {currentTab === 'history' && (
+                <div className="dataset-lineage-history" role="tabpanel">
+                    {runs.slice(0, 5).map((run) => (
+                        <p key={run.id}><strong>{run.status}</strong> {run.engine} / {run.rows} rows <small>{run.artifact || run.message}</small></p>
+                    ))}
+                    {dependencies.slice(0, 6).map((item) => (
+                        <p className="dataset-lineage-row" key={item.id}>
+                            <span><strong>{item.kind}</strong> {item.target || item.artifact || item.query}</span>
+                            {canRebuildDependency(item.kind) ? (
+                                <Button
+                                    className="dataset-lineage-rebuild"
+                                    disabled={rebuildingDependencyId === item.id}
+                                    onClick={() => onRebuildDependency(item.id)}
+                                    variant="subtle"
+                                >
+                                    {rebuildingDependencyId === item.id ? 'Rebuilding...' : 'Rebuild'}
+                                </Button>
+                            ) : null}
+                        </p>
+                    ))}
+                    {runs.length === 0 && dependencies.length === 0 && <small>No SQL history or lineage yet.</small>}
+                </div>
+            )}
+        </div>
+    );
 }
 
 function DatasetChartPanel({

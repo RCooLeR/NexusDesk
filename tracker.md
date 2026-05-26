@@ -402,7 +402,8 @@ Step 5.4: Query notebook
 
 - [x] Add multi-cell SQL notebook UI.
 - [x] Add first dataset SQL notebook shell with multiple local cells, active-cell editing, add/delete cell controls, saved snippet loading, and active-cell execution through the existing bounded SQL runner.
-- [ ] Add result tabs.
+- [x] Add result tabs.
+- [x] Add SQL notebook result tabs for rows, run summary, and SQL history/lineage.
 - [ ] Add chart cells.
 - [ ] Add explain-plan display where connector supports it.
 - [ ] Add saved notebooks.

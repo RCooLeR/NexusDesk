@@ -1843,6 +1843,74 @@ button:disabled {
     grid-template-columns: minmax(0, 1fr) auto auto;
 }
 
+.sql-result-tabs {
+    border: 1px solid var(--nd-border-soft);
+    border-radius: var(--nd-radius-sm);
+    display: grid;
+    gap: 8px;
+    min-width: 0;
+    padding: 8px;
+}
+
+.sql-result-tab-list {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+}
+
+.sql-result-tab-list button {
+    background: var(--nd-panel);
+    border: 1px solid var(--nd-border-soft);
+    border-radius: var(--nd-radius-sm);
+    color: #475467;
+    cursor: pointer;
+    font-size: 11px;
+    min-height: 30px;
+    padding: 0 10px;
+}
+
+.sql-result-tab-list button.active {
+    border-color: var(--nd-sky-blue);
+    box-shadow: inset 0 -2px 0 var(--nd-sky-blue);
+    color: var(--nd-charcoal);
+}
+
+.sql-result-tab-list button:disabled {
+    cursor: not-allowed;
+    opacity: 0.55;
+}
+
+.sql-result-summary {
+    display: grid;
+    gap: 6px;
+    min-width: 0;
+}
+
+.sql-result-summary p {
+    border: 1px solid var(--nd-border-soft);
+    border-radius: var(--nd-radius-sm);
+    display: grid;
+    gap: 2px;
+    margin: 0;
+    padding: 6px;
+}
+
+.sql-result-summary small {
+    color: var(--nd-muted-text);
+}
+
+.sql-result-summary pre {
+    background: var(--nd-panel-soft);
+    border: 1px solid var(--nd-border-soft);
+    border-radius: var(--nd-radius-sm);
+    margin: 0;
+    max-height: 140px;
+    min-width: 0;
+    overflow: auto;
+    padding: 8px;
+    white-space: pre-wrap;
+}
+
 .dataset-chart-panel {
     border: 1px solid var(--nd-border-soft);
     border-radius: var(--nd-radius-sm);
