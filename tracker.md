@@ -166,9 +166,9 @@ Goal: preserve the old app, establish the native shell, and make the new archite
 - [x] Add first lazy workspace listing service with entry cap, ignored folders, symlink skip, traversal protection, and unreadable tracking.
 - [x] Document CGO/Fyne toolchain requirement.
 - [ ] Install/configure a Windows CGO compiler and verify `go run .`.
-- [ ] Add app icon and brand assets from `docs/brand/`.
-- [ ] Add native main menu: File, Edit, View, Navigate, Tools, Help.
-- [ ] Add keyboard shortcut registry for common IDE actions.
+- [x] Add app icon and brand assets from `docs/brand/`.
+- [x] Add native main menu: File, Edit, View, Navigate, Tools, Help.
+- [x] Add keyboard shortcut registry for common IDE actions.
 
 Exit criteria:
 
@@ -301,7 +301,7 @@ Exit criteria:
 ## Next Batch
 
 1. Configure Windows CGO compiler and verify `nexus-app` runs.
-2. Add brand icon/logo assets to the Fyne shell.
-3. Port richer preview support from `app-wails/internal/workspace`: images, PDFs, DOCX, CSV/table previews.
-4. Start safe write preview/apply/rollback service port for draft saves.
-5. Add file create/delete/rename/move/copy operation service skeletons with rooted validation.
+2. Port richer preview support from `app-wails/internal/workspace`: images, PDFs, DOCX, CSV/table previews.
+3. Start safe write preview/apply/rollback service port for draft saves.
+4. Add file create/delete/rename/move/copy operation service skeletons with rooted validation.
+5. Start native Git service port with manual-only refresh.

@@ -74,6 +74,9 @@ The first `nexus-app` slice includes:
 
 - native app lifecycle;
 - branded dark theme foundation;
+- embedded approved app icon and horizontal logo from `docs/brand/`;
+- native main menu with File, Edit, View, Navigate, Tools, and Help groups;
+- shortcut registry for open workspace, refresh, close tab, tab navigation, and settings;
 - Workbench-style shell with rail, toolbar, navigator, editor tabs, assistant panel, and bottom tabs;
 - shell UI split into focused files for panels, tabs, workspace actions, activity, tree, and preview;
 - native folder-open dialog;

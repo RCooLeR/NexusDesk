@@ -16,4 +16,4 @@ Built from the approved generated logo files and used as the source of truth for
 
 ## Runtime Usage
 
-The application runtime imports approved logo and app icon assets from `app/frontend/src/assets/brand/`, which mirrors this folder. Interface glyphs such as file types, route icons, chevrons, refresh, and command/search symbols are Font Awesome icons, not product logos.
+The preserved Wails runtime imports approved logo and app icon assets from `app-wails/frontend/src/assets/brand/`, which mirrors this folder. The new Fyne runtime embeds selected approved assets under `nexus-app/internal/brand/assets/` for the native window icon and rail logo. Interface glyphs such as file types, route icons, chevrons, refresh, and command/search symbols are UI icons, not product logos.

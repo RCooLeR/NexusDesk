@@ -22,19 +22,7 @@ func welcomePanel() fyne.CanvasObject {
 
 func (v *View) configureEditorTabs() {
 	v.editorTabs.CloseIntercept = func(item *container.TabItem) {
-		id := v.tabIDs[item]
-		if id == "" {
-			v.editorTabs.Remove(item)
-			return
-		}
-		if _, ok := v.editorSession.Close(id, false); !ok {
-			v.addActivity("Close blocked because the tab has unsaved changes.")
-			v.editorTabs.Select(item)
-			return
-		}
-		delete(v.openTabs, id)
-		delete(v.tabIDs, item)
-		v.editorTabs.Remove(item)
+		v.requestCloseTab(item)
 	}
 }
 

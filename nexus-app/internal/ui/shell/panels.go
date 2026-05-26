@@ -2,14 +2,19 @@ package shell
 
 import (
 	"fyne.io/fyne/v2"
+	"fyne.io/fyne/v2/canvas"
 	"fyne.io/fyne/v2/container"
 	"fyne.io/fyne/v2/layout"
 	"fyne.io/fyne/v2/theme"
 	"fyne.io/fyne/v2/widget"
+
+	"nexusdesk/internal/brand"
 )
 
 func (v *View) newRail() fyne.CanvasObject {
-	logo := widget.NewLabelWithStyle("Nexus", fyne.TextAlignCenter, fyne.TextStyle{Bold: true})
+	logo := canvas.NewImageFromResource(brand.HorizontalLogo())
+	logo.FillMode = canvas.ImageFillContain
+	logo.SetMinSize(fyne.NewSize(112, 34))
 	workspaceButton := widget.NewButtonWithIcon("", theme.HomeIcon(), func() {
 		v.addActivity("Workbench selected.")
 	})

@@ -121,6 +121,8 @@ The shell should be thin. Most behavior should live in backend services and focu
 
 Current migration note: `app-wails/` keeps the old Wails adapter and services for reference. `nexus-app/internal/app/` owns only native app lifecycle and window setup. New code should place domain models in `nexus-app/internal/domain/`, UI-independent use cases in `nexus-app/internal/services/`, and Fyne widgets/layouts in `nexus-app/internal/ui/`. The native shell is split by responsibility (`view`, `panels`, `tabs`, `workspace_actions`, activity, tree, and preview files) so UI growth does not recreate a monolithic shell.
 
+The Fyne shell now owns native desktop affordances directly: approved brand icon/logo assets are embedded under `nexus-app/internal/brand`, the window installs a native menu bar, and common IDE-like shortcuts are registered through a focused shortcut file rather than scattered callbacks.
+
 ### 2. Frontend
 
 Responsibilities:
