@@ -24,6 +24,7 @@ type WorkbenchPanelProps = {
     isCreatingReport: boolean;
     isDeletingFile: boolean;
     isMovingFile: boolean;
+    isReviewingCode: boolean;
     isSummarizingContext: boolean;
     isLoadingPreview: boolean;
     isPreviewingWrite: boolean;
@@ -32,6 +33,7 @@ type WorkbenchPanelProps = {
     onCancelFileEdit: () => void;
     onExplainContext: () => void;
     onCreateReport: () => void;
+    onReviewCurrentFile: () => void;
     onSummarizeContext: () => void;
     onFileDraftChange: (content: string) => void;
     onFileDraftEncodingChange: (encoding: string) => void;
@@ -71,6 +73,7 @@ export function WorkbenchPanel({
     isCreatingReport,
     isDeletingFile,
     isMovingFile,
+    isReviewingCode,
     isSummarizingContext,
     isLoadingPreview,
     isPreviewingWrite,
@@ -79,6 +82,7 @@ export function WorkbenchPanel({
     onCancelFileEdit,
     onExplainContext,
     onCreateReport,
+    onReviewCurrentFile,
     onSummarizeContext,
     onFileDraftChange,
     onFileDraftEncodingChange,
@@ -120,6 +124,7 @@ export function WorkbenchPanel({
             filePreview?.kind === 'directory'
         )
     );
+    const canReviewContext = Boolean(workspace && filePreview?.kind === 'file' && filePreview.content);
     const canEditContext = Boolean(workspace && filePreview?.kind === 'file' && !filePreview.table);
     const canDeleteContext = Boolean(workspace && filePreview?.kind === 'file' && !isEditingFile);
     const canMoveContext = Boolean(workspace && filePreview?.kind === 'file' && !isEditingFile);
@@ -164,6 +169,9 @@ export function WorkbenchPanel({
                     </Button>
                     <Button disabled={!canExplainContext || isSendingPrompt || isSummarizingContext} onClick={onSummarizeContext}>
                         {isSummarizingContext ? 'Summarizing...' : 'Summarize'}
+                    </Button>
+                    <Button disabled={!canReviewContext || isSendingPrompt || isReviewingCode} onClick={onReviewCurrentFile}>
+                        {isReviewingCode ? 'Reviewing...' : 'Review'}
                     </Button>
                     <Button disabled={!canExplainContext} onClick={onPinContext}>
                         Pin

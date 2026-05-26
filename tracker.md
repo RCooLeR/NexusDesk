@@ -299,8 +299,8 @@ Step 4.4: Search, problems, and tasks
 
 Step 4.5: Code AI actions
 
-- [ ] Review current file.
-- [ ] Review git diff.
+- [x] Review current file.
+- [x] Review git diff.
 - [ ] Generate tests for selected file/diff.
 - [ ] Propose patch with diff preview.
 - [ ] Apply accepted patch through safe write boundary.
@@ -1067,7 +1067,7 @@ Reasoning: read-only navigation and diff review are now credible, file and hunk 
 
 Workspace scan counters are diagnostic data, not primary navigation content. Keep them in scan reports/diagnostics instead of the always-visible sidebar header.
 
-`app/frontend/src/features/shell/WorkbenchPanel.tsx` currently owns the editor/preview surface, pinned tabs, breadcrumbs, split editor group presentation, Monaco minimap control, and composition of editor-adjacent panels. Git status, working-tree diff output, and roadmap/studio-route metadata should not render above the editor tabs; those surfaces belong to Workbench utility panels, the bottom Git drawer, or documentation.
+`app/frontend/src/features/shell/WorkbenchPanel.tsx` currently owns the editor/preview surface, pinned tabs, breadcrumbs, split editor group presentation, Monaco minimap control, composition of editor-adjacent panels, and the active-file AI review entrypoint. Git status, working-tree diff output, and roadmap/studio-route metadata should not render above the editor tabs; those surfaces belong to Workbench utility panels, the bottom Git drawer, or documentation.
 
 `app/frontend/src/features/shell/EditorOutlinePanel.tsx` owns the editor outline side panel presentation and symbol-selection callbacks.
 
@@ -1075,7 +1075,7 @@ Workspace scan counters are diagnostic data, not primary navigation content. Kee
 
 `app/internal/workspace/problems.go` owns the first read-only lightweight Problems scan for TODO/FIXME/HACK/BUG markers, merge-conflict markers, and invalid JSON.
 
-`app/frontend/src/features/shell/CodeStudioPanel.tsx` owns the first reusable Workbench utility surface for editor session metrics, open tabs, workspace status, git branch/dirty summary, changed-file list, Workbench search results/actions, lightweight Problems results, detected task listings, latest task-run output, and placeholders that will receive review data.
+`app/frontend/src/features/shell/CodeStudioPanel.tsx` owns the first reusable Workbench utility surface for editor session metrics, open tabs, workspace status, git branch/dirty summary, changed-file list, Workbench search results/actions, active-file and git-diff review triggers, lightweight Problems results, detected task listings, latest task-run output, and placeholders that will receive deeper review/test-generation data.
 
 `app/frontend/src/features/shell/GitDiffPanel.tsx` owns the bottom-drawer Git tab for selected changed-file review, file stage/unstage controls, hunk selection state, approval-backed hunk stage/unstage/discard/revert controls, and read-only staged/unstaged working-tree diffs.
 

@@ -128,6 +128,8 @@ Current status:
 - Pinned context packs show individual files and support removing one file at a time.
 - The Preview button reloads the selected file, and the Explain button sends a grounded prompt for selected text/code previews.
 - The Summarize button sends selected file, extracted document, or directory context through chat and saves the result as a Markdown artifact with provenance.
+- The Review button sends the active text/code file through a code-review prompt, streams the answer in chat, and saves the review as a Markdown artifact with source provenance.
+- The Git drawer and Workbench utility panel can send the selected working-tree diff through a grounded review prompt and save the review artifact with changed-file citations.
 - The workbench keeps recently opened previews in closeable editor tabs so several files can stay loaded while browsing.
 - Markdown editor tabs can switch between raw source and rendered preview.
 - Text/code previews support a local find box with match counts and highlighted matches.

@@ -52,6 +52,7 @@ type GitDiffPanelProps = {
     onPreviewGitHunkAction: (request: GitHunkActionRequest) => void;
     onApplyGitHunkAction: (request: GitHunkActionRequest) => void;
     onRefreshGitStatus: () => void;
+    onReviewGitDiff: () => void;
     onSelectGitChange: (path: string) => void;
     onSummarizeDiff: () => void;
 };
@@ -74,6 +75,7 @@ export function GitDiffPanel({
     onPreviewGitHunkAction,
     onApplyGitHunkAction,
     onRefreshGitStatus,
+    onReviewGitDiff,
     onSelectGitChange,
     onSummarizeDiff,
 }: GitDiffPanelProps) {
@@ -162,6 +164,7 @@ export function GitDiffPanel({
                     <Button disabled={!selectedIsUnstaged || isApplyingGitFileAction} onClick={() => onApplyGitFileAction('stage')} variant="subtle">Stage file</Button>
                     <Button disabled={!selectedIsStaged || isPreviewingGitFileAction} onClick={() => onPreviewGitFileAction('unstage')} variant="subtle">Preview unstage</Button>
                     <Button disabled={!selectedIsStaged || isApplyingGitFileAction} onClick={() => onApplyGitFileAction('unstage')} variant="subtle">Unstage file</Button>
+                    <Button disabled={!hasDiff || isGeneratingGitInsight} onClick={onReviewGitDiff} variant="subtle">Review diff</Button>
                     <Button disabled={!hasDiff || isGeneratingGitInsight} onClick={onSummarizeDiff} variant="subtle">Summarize diff</Button>
                     <Button disabled={!hasDiff || isGeneratingGitInsight} onClick={onDraftCommitMessage} variant="subtle">Draft commit</Button>
                 </div>

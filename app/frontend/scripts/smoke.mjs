@@ -114,6 +114,9 @@ const checks = [
             'settingsForSelectedModel',
             'Model request queued',
             'First token received',
+            'reviewCurrentFile',
+            'reviewGitDiff',
+            'isReviewingCode',
             'summarizeGitDiff',
             'draftGitCommitMessage',
             'assistantProfileDraft',
@@ -152,7 +155,7 @@ const checks = [
     },
     {
         file: 'src/features/shell/CodeStudioPanel.tsx',
-        terms: ['CodeStudioPanel', 'Workbench', 'Project Session', 'Repository', 'Search', 'workspaceSearchQuery', 'workspaceSearchRegex', 'workspaceReplacePreview', 'replacePreviewText', 'workspaceSearchResults', 'workspaceProblems', 'onRefreshWorkspaceProblems', 'Refresh problems', 'WorkspaceProblemSummary', 'workspaceTasks', 'workspaceTaskRun', 'isRunningWorkspaceTask', 'onRunWorkspaceTask', 'taskRunPreview', 'onRefreshWorkspaceTasks', 'Refresh tasks', 'WorkspaceTaskSummary', 'onSearchWorkspace', 'onSelectSearchResult', 'code-studio-search-panel', 'code-studio-search-options', 'code-studio-problems-panel', 'code-studio-problem-row', 'code-studio-task-panel', 'code-studio-task-output', 'selectedGitChangePath', 'onSelectGitChange', 'stagedFiles', 'unstagedFiles', 'Refresh git', 'Commands'],
+        terms: ['CodeStudioPanel', 'Workbench', 'Project Session', 'Repository', 'Search', 'workspaceSearchQuery', 'workspaceSearchRegex', 'workspaceReplacePreview', 'replacePreviewText', 'workspaceSearchResults', 'workspaceProblems', 'onRefreshWorkspaceProblems', 'Refresh problems', 'WorkspaceProblemSummary', 'workspaceTasks', 'workspaceTaskRun', 'isRunningWorkspaceTask', 'onRunWorkspaceTask', 'taskRunPreview', 'onRefreshWorkspaceTasks', 'Refresh tasks', 'WorkspaceTaskSummary', 'onSearchWorkspace', 'onSelectSearchResult', 'code-studio-search-panel', 'code-studio-search-options', 'code-studio-problems-panel', 'code-studio-problem-row', 'code-studio-task-panel', 'code-studio-task-output', 'selectedGitChangePath', 'onSelectGitChange', 'stagedFiles', 'unstagedFiles', 'Refresh git', 'Commands', 'onReviewCurrentFile', 'onReviewGitDiff', 'Review file', 'Review diff'],
     },
     {
         file: 'src/features/shell/GitDiffPanel.tsx',
@@ -168,7 +171,7 @@ const checks = [
     },
     {
         file: 'src/features/shell/WorkbenchPanel.tsx',
-        terms: ['editor-tabs', 'markdownViewMode', 'markdown-view-toggle', 'markdown-document-preview', 'Summarize', 'onSummarizeContext', 'onSelectTab', 'onCloseTab', 'onDeleteFile', 'onMoveFile', 'onPinProjectContext', 'pinnedTabPaths', 'onTogglePinTab', 'editor-breadcrumbs', 'onSelectBreadcrumb', 'showMinimap', 'onToggleMinimap', 'isSplitEditorEnabled', 'onToggleSplitEditor', 'editor-split-layout', 'secondaryPreview', 'SecondaryPreviewPane', 'PrimaryPreviewPane', 'EditorOutlinePanel', 'buildEditorOutline', 'outlineTargetLine', 'definitionNonce', 'formatNonce', 'Go to definition', 'Format document', 'file-write-editor', 'fileDraftEncoding', 'onFileDraftEncodingChange', 'encoding-control', 'Save as', 'write-encoding-summary', 'MonacoFileEditor', 'MonacoCodePreview', 'editor-find', 'findInputRef', 'dirty-indicator', 'dirtyTabPaths', 'countFindMatches'],
+        terms: ['editor-tabs', 'markdownViewMode', 'markdown-view-toggle', 'markdown-document-preview', 'Summarize', 'onSummarizeContext', 'Review', 'onReviewCurrentFile', 'isReviewingCode', 'onSelectTab', 'onCloseTab', 'onDeleteFile', 'onMoveFile', 'onPinProjectContext', 'pinnedTabPaths', 'onTogglePinTab', 'editor-breadcrumbs', 'onSelectBreadcrumb', 'showMinimap', 'onToggleMinimap', 'isSplitEditorEnabled', 'onToggleSplitEditor', 'editor-split-layout', 'secondaryPreview', 'SecondaryPreviewPane', 'PrimaryPreviewPane', 'EditorOutlinePanel', 'buildEditorOutline', 'outlineTargetLine', 'definitionNonce', 'formatNonce', 'Go to definition', 'Format document', 'file-write-editor', 'fileDraftEncoding', 'onFileDraftEncodingChange', 'encoding-control', 'Save as', 'write-encoding-summary', 'MonacoFileEditor', 'MonacoCodePreview', 'editor-find', 'findInputRef', 'dirty-indicator', 'dirtyTabPaths', 'countFindMatches'],
     },
     {
         file: 'src/features/shell/EditorOutlinePanel.tsx',
@@ -244,7 +247,7 @@ const checks = [
     },
     {
         file: 'src/features/shell/BottomStudioPanel.tsx',
-        terms: ['BottomStudioPanel', 'drawerTabs', 'Git', 'Approvals', 'Activity', 'GitDiffPanel', 'onSummarizeGitDiff', 'onDraftGitCommitMessage', 'CodeStudioPanel', 'DataOperationsPanel', 'LLMSettingsCard', 'AgentToolPlanCard', 'ArtifactStudioPanel', 'ApprovalLogPanel', 'ToolTimeline', 'bottom-tabbar', 'showTabs'],
+        terms: ['BottomStudioPanel', 'drawerTabs', 'Git', 'Approvals', 'Activity', 'GitDiffPanel', 'onSummarizeGitDiff', 'onDraftGitCommitMessage', 'onReviewGitDiff', 'CodeStudioPanel', 'DataOperationsPanel', 'LLMSettingsCard', 'AgentToolPlanCard', 'ArtifactStudioPanel', 'ApprovalLogPanel', 'ToolTimeline', 'bottom-tabbar', 'showTabs'],
     },
     {
         file: 'src/features/shell/DataOperationsPanel.tsx',

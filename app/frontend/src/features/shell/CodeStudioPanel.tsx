@@ -11,6 +11,7 @@ type CodeStudioPanelProps = {
     isLoadingGitFileDiff: boolean;
     isLoadingWorkspaceProblems: boolean;
     isLoadingWorkspaceTasks: boolean;
+    isReviewingCode: boolean;
     isRunningWorkspaceTask: boolean;
     isSearchingWorkspace: boolean;
     openTabs: FilePreview[];
@@ -20,6 +21,8 @@ type CodeStudioPanelProps = {
     onRefreshGitStatus: () => void;
     onRefreshWorkspaceProblems: () => void;
     onRefreshWorkspaceTasks: () => void;
+    onReviewCurrentFile: () => void;
+    onReviewGitDiff: () => void;
     onRunWorkspaceTask: (task: WorkspaceTask) => void;
     onSearchWorkspace: () => void;
     onSelectGitChange: (path: string) => void;
@@ -47,6 +50,7 @@ export function CodeStudioPanel({
     isLoadingGitFileDiff,
     isLoadingWorkspaceProblems,
     isLoadingWorkspaceTasks,
+    isReviewingCode,
     isRunningWorkspaceTask,
     isSearchingWorkspace,
     openTabs,
@@ -56,6 +60,8 @@ export function CodeStudioPanel({
     onRefreshGitStatus,
     onRefreshWorkspaceProblems,
     onRefreshWorkspaceTasks,
+    onReviewCurrentFile,
+    onReviewGitDiff,
     onRunWorkspaceTask,
     onSearchWorkspace,
     onSelectGitChange,
@@ -82,6 +88,8 @@ export function CodeStudioPanel({
     const unstagedFiles = gitStatus?.unstagedFiles ?? gitChangedFiles;
     const selectedGitChange = gitChangedFiles.find((change) => change.path === selectedGitChangePath) ?? null;
     const hasSelectedDiff = selectedGitFileDiff?.path === selectedGitChangePath && Boolean(selectedGitFileDiff.stagedDiff || selectedGitFileDiff.unstagedDiff);
+    const canReviewCurrentFile = Boolean(workspace && filePreview?.kind === 'file' && filePreview.content);
+    const canReviewGitDiff = Boolean(hasSelectedDiff || gitStatus?.stagedDiff || gitStatus?.unstagedDiff || gitStatus?.diff);
 
     return (
         <div className="code-studio-panel">
@@ -92,6 +100,12 @@ export function CodeStudioPanel({
                 </div>
                 <div className="code-studio-toolbar" aria-label="Workbench toolbar">
                     <Button onClick={onRefreshGitStatus} disabled={!workspace} variant="subtle">Refresh git</Button>
+                    <Button onClick={onReviewCurrentFile} disabled={!canReviewCurrentFile || isReviewingCode} variant="subtle">
+                        {isReviewingCode ? 'Reviewing...' : 'Review file'}
+                    </Button>
+                    <Button onClick={onReviewGitDiff} disabled={!canReviewGitDiff || isReviewingCode} variant="subtle">
+                        {isReviewingCode ? 'Reviewing...' : 'Review diff'}
+                    </Button>
                     <Button onClick={onOpenCommandPalette} variant="subtle">Commands</Button>
                     <Button disabled variant="subtle">Terminal</Button>
                 </div>

@@ -153,6 +153,7 @@ type SendPromptOptions = {
     contextPaths?: string[];
     saveArtifactSource?: string;
     saveArtifactTitle?: string;
+    sourcePaths?: string[];
 };
 
 type AssistantArtifactWriteRequest = {
@@ -244,6 +245,7 @@ export function NexusShell({
     const [isCreatingScanReport, setIsCreatingScanReport] = useState(false);
     const [isSavingChatArtifact, setIsSavingChatArtifact] = useState(false);
     const [isSummarizingContext, setIsSummarizingContext] = useState(false);
+    const [isReviewingCode, setIsReviewingCode] = useState(false);
     const [isProfilingDataset, setIsProfilingDataset] = useState(false);
     const [isPreviewingWrite, setIsPreviewingWrite] = useState(false);
     const [isApplyingWrite, setIsApplyingWrite] = useState(false);
@@ -2423,6 +2425,69 @@ export function NexusShell({
         }
     }
 
+    async function reviewCurrentFile() {
+        const contextRelPath = selectedTextContextRelPath();
+        if (!contextRelPath || filePreview?.kind !== 'file' || !filePreview.content) {
+            setChatStatus('Select a loaded text or code file before requesting a code review.');
+            return;
+        }
+
+        const prompt = [
+            `Review ${contextRelPath} as a code reviewer.`,
+            'Return concise Markdown with findings first, ordered by severity.',
+            'Include file and line references when available.',
+            'Focus on behavioral risks, security or safety risks, missing tests, and maintainability issues.',
+            'If no major issues are visible, say that clearly and mention residual test gaps.',
+            'Stay grounded in the provided file context. Do not invent code outside the context.',
+        ].join(' ');
+
+        setIsReviewingCode(true);
+        try {
+            pushToolEvent('Code review requested', contextRelPath);
+            await sendPromptText(prompt, {
+                clearComposer: false,
+                contextPaths: [contextRelPath],
+                saveArtifactSource: 'Nexus code review',
+                saveArtifactTitle: `Code Review - ${contextRelPath}`,
+                sourcePaths: [contextRelPath],
+            });
+        } finally {
+            setIsReviewingCode(false);
+        }
+    }
+
+    async function reviewGitDiff() {
+        const diffContext = selectedGitDiffPromptContext();
+        if (!diffContext) {
+            setChatStatus('Select a changed file or refresh git status before reviewing a diff.');
+            return;
+        }
+
+        const prompt = [
+            'Review this git diff as a code reviewer.',
+            'Return concise Markdown with findings first, ordered by severity.',
+            'Focus on bugs, regressions, missing tests, unsafe behavior, and maintainability risks.',
+            'Use file paths from the diff. If no major issues are visible, say that clearly and mention residual test gaps.',
+            'Stay grounded in the diff. Do not invent unstated behavior.',
+            '',
+            diffContext,
+        ].join('\n');
+
+        const target = selectedGitChangePath || gitStatus?.branch || 'working tree';
+        setIsReviewingCode(true);
+        try {
+            pushToolEvent('Git diff review requested', target);
+            await sendPromptText(prompt, {
+                clearComposer: false,
+                saveArtifactSource: 'Nexus git diff review',
+                saveArtifactTitle: selectedGitChangePath ? `Diff Review - ${selectedGitChangePath}` : 'Diff Review - working tree',
+                sourcePaths: selectedGitReviewSourcePaths(),
+            });
+        } finally {
+            setIsReviewingCode(false);
+        }
+    }
+
     async function summarizeGitDiff() {
         const diffContext = selectedGitDiffPromptContext();
         if (!diffContext) {
@@ -2469,9 +2534,9 @@ export function NexusShell({
         const selectedContextRelPath = selectedTextContextRelPath();
         const contextPaths = options.contextPaths ?? (contextPackPaths.length > 0 ? contextPackPaths : selectedContextRelPath ? [selectedContextRelPath] : []);
         const contextRelPath = contextPaths.length > 1 ? `pack: ${contextPaths.join(', ')}` : contextPaths[0] ?? '';
-        const sourcePaths = contextPackPreview && contextPackPaths.length > 0 && !options.contextPaths
+        const sourcePaths = options.sourcePaths ?? (contextPackPreview && contextPackPaths.length > 0 && !options.contextPaths
             ? contextPackPreview.files.map((file) => file.relPath)
-            : sourcePathsFromContext(contextRelPath);
+            : sourcePathsFromContext(contextRelPath));
         const requestId = createRequestId();
         const [userCreatedAt, assistantCreatedAt] = createChatPairTimestamps();
         const userMessage: ChatMessage = {content: prompt, contextRelPath, sourcePaths, createdAt: userCreatedAt, role: 'user'};
@@ -2558,6 +2623,13 @@ export function NexusShell({
             unstagedDiff ? `Unstaged diff:\n\`\`\`diff\n${limitGitPromptDiff(unstagedDiff)}\n\`\`\`` : '',
         ].filter(Boolean);
         return [header, ...sections].join('\n\n');
+    }
+
+    function selectedGitReviewSourcePaths() {
+        if (selectedGitChangePath) {
+            return [selectedGitChangePath];
+        }
+        return (gitStatus?.changedFiles ?? []).map((change) => change.path).slice(0, 20);
     }
 
     function selectedTextContextRelPath() {
@@ -3580,6 +3652,7 @@ export function NexusShell({
                 isLoadingGitFileDiff={isLoadingGitFileDiff}
                 isLoadingWorkspaceProblems={isLoadingWorkspaceProblems}
                 isLoadingWorkspaceTasks={isLoadingWorkspaceTasks}
+                isReviewingCode={isReviewingCode}
                 isRunningWorkspaceTask={isRunningWorkspaceTask}
                 isPreviewingGitFileAction={isPreviewingGitFileAction}
                 isPreviewingGitHunkAction={isPreviewingGitHunkAction}
@@ -3656,6 +3729,8 @@ export function NexusShell({
                 onRefreshStaleContext={() => void refreshStaleContextFromWorkspace()}
                 onRefreshWorkspaceProblems={() => void refreshWorkspaceProblems()}
                 onRefreshWorkspaceTasks={() => void refreshWorkspaceTasks()}
+                onReviewCurrentFile={() => void reviewCurrentFile()}
+                onReviewGitDiff={() => void reviewGitDiff()}
                 onRunWorkspaceTask={(task) => void runWorkspaceTask(task)}
                 onReplayAgentToolRun={(run) => void replayAgentToolRun(run)}
                 onSaveDatasetQuery={() => void saveCurrentDatasetQuery()}
@@ -3785,6 +3860,7 @@ export function NexusShell({
                     isCreatingReport={isCreatingReport}
                     isDeletingFile={isDeletingFile}
                     isMovingFile={isMovingFile}
+                    isReviewingCode={isReviewingCode}
                     isSummarizingContext={isSummarizingContext}
                     isEditingFile={isEditingFile}
                     isApplyingWrite={isApplyingWrite}
@@ -3797,6 +3873,7 @@ export function NexusShell({
                     onCreateReport={() => void createMarkdownReport()}
                     onDeleteFile={() => void deleteActiveFile()}
                     onMoveFile={() => void moveActiveFile()}
+                    onReviewCurrentFile={() => void reviewCurrentFile()}
                     onFileDraftChange={updateFileDraft}
                     onFileDraftEncodingChange={updateFileDraftEncoding}
                     onExplainContext={() => void explainSelectedContext()}

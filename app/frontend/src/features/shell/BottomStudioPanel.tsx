@@ -56,6 +56,7 @@ type BottomStudioPanelProps = {
     isLoadingGitFileDiff: boolean;
     isLoadingWorkspaceProblems: boolean;
     isLoadingWorkspaceTasks: boolean;
+    isReviewingCode: boolean;
     isRunningWorkspaceTask: boolean;
     isPreviewingGitFileAction: boolean;
     isPreviewingGitHunkAction: boolean;
@@ -119,6 +120,8 @@ type BottomStudioPanelProps = {
     onRefreshStaleContext: () => void;
     onRefreshWorkspaceProblems: () => void;
     onRefreshWorkspaceTasks: () => void;
+    onReviewCurrentFile: () => void;
+    onReviewGitDiff: () => void;
     onRunWorkspaceTask: (task: WorkspaceTask) => void;
     onReplayAgentToolRun: (run: AgentToolRunRecord) => void;
     onSaveDatasetQuery: () => void;
@@ -212,6 +215,7 @@ export function BottomStudioPanel({
     isLoadingGitFileDiff,
     isLoadingWorkspaceProblems,
     isLoadingWorkspaceTasks,
+    isReviewingCode,
     isRunningWorkspaceTask,
     isPreviewingGitFileAction,
     isPreviewingGitHunkAction,
@@ -275,6 +279,8 @@ export function BottomStudioPanel({
     onRefreshStaleContext,
     onRefreshWorkspaceProblems,
     onRefreshWorkspaceTasks,
+    onReviewCurrentFile,
+    onReviewGitDiff,
     onRunWorkspaceTask,
     onReplayAgentToolRun,
     onSaveDatasetQuery,
@@ -344,6 +350,7 @@ export function BottomStudioPanel({
                         isLoadingGitFileDiff={isLoadingGitFileDiff}
                         isLoadingWorkspaceProblems={isLoadingWorkspaceProblems}
                         isLoadingWorkspaceTasks={isLoadingWorkspaceTasks}
+                        isReviewingCode={isReviewingCode}
                         isRunningWorkspaceTask={isRunningWorkspaceTask}
                         isSearchingWorkspace={isSearchingWorkspace}
                         openTabs={openTabs}
@@ -352,6 +359,8 @@ export function BottomStudioPanel({
                         onRefreshGitStatus={onRefreshGitStatus}
                         onRefreshWorkspaceProblems={onRefreshWorkspaceProblems}
                         onRefreshWorkspaceTasks={onRefreshWorkspaceTasks}
+                        onReviewCurrentFile={onReviewCurrentFile}
+                        onReviewGitDiff={onReviewGitDiff}
                         onRunWorkspaceTask={onRunWorkspaceTask}
                         onSearchWorkspace={onSearchWorkspace}
                         onSelectGitChange={onSelectGitChange}
@@ -509,6 +518,7 @@ export function BottomStudioPanel({
                         onPreviewGitHunkAction={onPreviewGitHunkAction}
                         onApplyGitHunkAction={onApplyGitHunkAction}
                         onRefreshGitStatus={onRefreshGitStatus}
+                        onReviewGitDiff={onReviewGitDiff}
                         onSelectGitChange={onSelectGitChange}
                         onSummarizeDiff={onSummarizeGitDiff}
                     />
