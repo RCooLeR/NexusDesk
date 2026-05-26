@@ -25,7 +25,7 @@ func newFilePreview(preview domain.FilePreview) fyne.CanvasObject {
 
 func previewHeader(preview domain.FilePreview) string {
 	if preview.Encoding == "" {
-		return fmt.Sprintf("%s • %d bytes • %s", preview.RelPath, preview.Size, preview.MediaType)
+		return fmt.Sprintf("%s - %d bytes - %s", preview.RelPath, preview.Size, preview.MediaType)
 	}
-	return fmt.Sprintf("%s • %d bytes • %s • %s", preview.RelPath, preview.Size, preview.MediaType, preview.Encoding)
+	return fmt.Sprintf("%s - %d bytes - %s - %s", preview.RelPath, preview.Size, preview.MediaType, preview.Encoding)
 }

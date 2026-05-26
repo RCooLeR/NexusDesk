@@ -41,12 +41,12 @@ func (v *View) configureEditorTabs() {
 func (v *View) openPreviewTab(preview domain.FilePreview) {
 	tabState := v.editorSession.OpenFile(preview.RelPath, filepath.Base(preview.RelPath))
 	if existing := v.openTabs[tabState.ID]; existing != nil {
-		existing.Content = newFilePreview(preview)
-		existing.Text = tabState.Title
+		existing.Content = v.newEditorPanel(tabState, preview)
+		v.updateEditorTabState(tabState)
 		v.editorTabs.Select(existing)
 		return
 	}
-	tab := container.NewTabItem(tabState.Title, newFilePreview(preview))
+	tab := container.NewTabItemWithIcon(editorTabTitle(tabState), editorTabIcon(tabState), v.newEditorPanel(tabState, preview))
 	v.openTabs[tabState.ID] = tab
 	v.tabIDs[tab] = tabState.ID
 	v.editorTabs.Append(tab)
@@ -55,7 +55,7 @@ func (v *View) openPreviewTab(preview domain.FilePreview) {
 
 func (v *View) addPlaceholderTab(title string, body string) {
 	tabState := v.editorSession.OpenPlaceholder(title)
-	tab := container.NewTabItem(tabState.Title, widget.NewRichTextFromMarkdown(body))
+	tab := container.NewTabItemWithIcon(editorTabTitle(tabState), editorTabIcon(tabState), widget.NewRichTextFromMarkdown(body))
 	v.openTabs[tabState.ID] = tab
 	v.tabIDs[tab] = tabState.ID
 	v.editorTabs.Append(tab)

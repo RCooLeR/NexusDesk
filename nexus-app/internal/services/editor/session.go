@@ -22,6 +22,14 @@ func (s *Session) ActiveID() string {
 	return s.activeID
 }
 
+func (s *Session) Tab(id string) (Tab, bool) {
+	index := s.find(id)
+	if index < 0 {
+		return Tab{}, false
+	}
+	return s.tabs[index], true
+}
+
 func (s *Session) OpenWelcome(title string) Tab {
 	return s.open(Tab{Title: title, Kind: KindWelcome})
 }

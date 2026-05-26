@@ -81,6 +81,7 @@ The first `nexus-app` slice includes:
 - first rooted read-only file preview for capped UTF-8, UTF-16, and Windows-1251 text plus binary metadata;
 - first editor tab lifecycle with same-file tab reuse and close cleanup;
 - UI-independent editor tab session model with active tab, dirty state, pinned state, reuse, and close guards;
+- native editor chrome for pinned tabs, dirty indicators, and state-driven tab labels/icons;
 - framework-free workspace domain model.
 
 Full execution is blocked in the current shell until CGO is enabled with a Windows C compiler. Non-driver internal packages can already be tested.

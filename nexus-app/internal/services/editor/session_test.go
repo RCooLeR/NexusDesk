@@ -24,6 +24,9 @@ func TestCloseDirtyTabRequiresForce(t *testing.T) {
 	tab := session.OpenFile("main.go", "main.go")
 	session.MarkDirty(tab.ID, true)
 
+	if current, ok := session.Tab(tab.ID); !ok || !current.Dirty {
+		t.Fatalf("expected tab lookup to show dirty state")
+	}
 	if _, ok := session.Close(tab.ID, false); ok {
 		t.Fatalf("expected clean close to reject dirty tab")
 	}
