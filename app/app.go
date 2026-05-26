@@ -579,6 +579,14 @@ func (a *App) CreateDatasetSQLArtifact(request analytics.SQLQueryRequest) (artif
 	return a.datasetSvc.CreateSQLArtifact(request)
 }
 
+func (a *App) CreateSQLiteQueryCSVArtifact(request dbconnector.SQLiteQueryRequest) (artifact.MarkdownReport, error) {
+	return a.datasetSvc.CreateSQLiteQueryCSVArtifact(request)
+}
+
+func (a *App) CreateSQLiteQueryMarkdownArtifact(request dbconnector.SQLiteQueryRequest) (artifact.MarkdownReport, error) {
+	return a.datasetSvc.CreateSQLiteQueryMarkdownArtifact(request)
+}
+
 func (a *App) CreateDatasetSummaryArtifact(relPath string) (artifact.MarkdownReport, error) {
 	return a.datasetSvc.CreateSummaryArtifact(relPath)
 }

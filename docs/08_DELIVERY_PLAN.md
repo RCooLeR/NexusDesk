@@ -175,6 +175,7 @@ Current status:
 - The Data & Analytics SQLite connector can inspect workspace SQLite tables, views, columns, indexes, row counts, and capped samples without executing user SQL.
 - The Data & Analytics SQLite connector query surface has visible row cap, timeout, and cancel controls; backend requests enforce those settings, support request-ID cancellation, and redact connector errors before SQL run metadata is recorded.
 - The Data & Analytics SQLite schema browser can select tables/views, preview rows through the same capped query path, save SQLite connector queries separately from dataset SQL snippets, and filter SQLite query history.
+- SQLite connector query results can now be exported as CSV artifacts or Markdown reports with SQL text, cap, timeout, preview rows, source database citation, SQL run records, and dataset dependency lineage.
 - Settings can save local connector profiles with read-only defaults, result caps, timeouts, and protected credential references; returned profiles redact passwords/tokens.
 - Chat messages and context-pack previews warn when cited files changed after the answer/context was created.
 - Stale-context refresh can rebuild a context preview from changed files and records the refresh in the approval/metadata trail.
@@ -344,6 +345,13 @@ This batch made more of the studio inspectable and auditable without turning on 
 3. SQLite connector queries are saved under a separate `sqlite-sql` kind so they do not mix with dataset SQL snippets.
 4. The connector panel shows saved SQLite queries and a filterable SQLite query history from persisted SQL run records.
 5. Read-only status copy is visible near schema/query controls, and folder open still does not run connector work.
+
+## Partial Batch: SQLite Connector Query Workflow
+
+1. SQLite connector query results can be exported as CSV artifacts through the guarded query path.
+2. SQLite connector query results can be exported as Markdown reports with SQL, result cap, timeout, row preview, and source database citation.
+3. SQLite connector exports record SQL run rows and dataset dependency rows that link source database, query, engine, and generated artifact.
+4. Remaining items are relationship hints and AI explain-schema actions for selected SQLite schema objects.
 
 ## Prepared Batch: Architecture Hardening Before Deeper Studios
 

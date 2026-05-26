@@ -6,9 +6,9 @@ import {artifact} from '../models';
 import {llm} from '../models';
 import {storage} from '../models';
 import {analytics} from '../models';
+import {dbconnector} from '../models';
 import {appmeta} from '../models';
 import {agenttools} from '../models';
-import {dbconnector} from '../models';
 import {approval} from '../models';
 import {dataset} from '../models';
 import {agent} from '../models';
@@ -58,6 +58,10 @@ export function CreateDatasetSQLArtifact(arg1:analytics.SQLQueryRequest):Promise
 export function CreateDatasetSummaryArtifact(arg1:string):Promise<artifact.MarkdownReport>;
 
 export function CreateMarkdownReport(arg1:string):Promise<artifact.MarkdownReport>;
+
+export function CreateSQLiteQueryCSVArtifact(arg1:dbconnector.SQLiteQueryRequest):Promise<artifact.MarkdownReport>;
+
+export function CreateSQLiteQueryMarkdownArtifact(arg1:dbconnector.SQLiteQueryRequest):Promise<artifact.MarkdownReport>;
 
 export function CreateScanReportArtifact():Promise<artifact.MarkdownReport>;
 

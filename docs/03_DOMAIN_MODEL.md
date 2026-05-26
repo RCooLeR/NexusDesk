@@ -532,6 +532,7 @@ Current implementation:
 - SQLite connector failures are passed through a redaction helper before they are recorded in SQL run metadata.
 - The connector metadata model exposes connector identity, engine, read-only state, tables, views, columns, indexes, row counts, and capped samples.
 - The Data & Analytics schema browser can select inspected SQLite tables/views, copy a safe `SELECT *` query into the editor, run an explicit capped row preview, save SQLite connector queries as a separate query kind, and filter SQLite query history.
+- SQLite connector query results can become CSV artifacts or Markdown reports; artifact metadata and SQL/dependency history cite the source database path, SQL text, engine, cap, timeout, and generated artifact.
 - `InspectWorkspaceSQLite` is a user-triggered schema inspection path; folder open does not inspect database files.
 - Data & Analytics can use this for local inspection without introducing stored credentials or external database access.
 

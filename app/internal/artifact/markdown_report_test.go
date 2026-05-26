@@ -9,6 +9,7 @@ import (
 	"testing"
 	"time"
 
+	"NexusAugenticStudio/internal/dbconnector"
 	"NexusAugenticStudio/internal/workspace"
 )
 
@@ -279,6 +280,70 @@ func TestCreateDatasetQueryCSVWritesArtifact(t *testing.T) {
 	}
 	if metadata.Prompt != "Export query \"channel=search\" from data/leads.csv" {
 		t.Fatalf("unexpected metadata prompt: %s", metadata.Prompt)
+	}
+}
+
+func TestCreateSQLiteQueryCSVWritesArtifact(t *testing.T) {
+	root := t.TempDir()
+	now := time.Date(2026, 5, 13, 12, 30, 0, 0, time.UTC)
+
+	report, err := CreateSQLiteQueryCSV(root, dbconnector.SQLiteQueryResult{
+		RelPath:        "data/local.sqlite",
+		SQL:            "select name from campaigns",
+		Engine:         "sqlite-readonly",
+		Columns:        []string{"name"},
+		Rows:           [][]string{{"Search"}, {"Email"}},
+		TotalRows:      2,
+		ResultLimit:    100,
+		TimeoutSeconds: 30,
+	}, now)
+	if err != nil {
+		t.Fatalf("CreateSQLiteQueryCSV returned error: %v", err)
+	}
+	if report.RelPath != ".nexusdesk/artifacts/local-sqlite-query-20260513-123000.csv" {
+		t.Fatalf("unexpected SQLite CSV rel path: %s", report.RelPath)
+	}
+	content, err := os.ReadFile(filepath.Join(root, filepath.FromSlash(report.RelPath)))
+	if err != nil {
+		t.Fatalf("ReadFile failed: %v", err)
+	}
+	if !strings.Contains(string(content), "Search") {
+		t.Fatalf("expected SQLite CSV rows, got %q", string(content))
+	}
+	metadata := readTestMetadata(t, root, report.RelPath)
+	if metadata.Kind != "sqlite-query-csv" || metadata.ContextRelPath != "data/local.sqlite" {
+		t.Fatalf("unexpected metadata: %#v", metadata)
+	}
+}
+
+func TestCreateSQLiteQueryMarkdownWritesArtifact(t *testing.T) {
+	root := t.TempDir()
+	now := time.Date(2026, 5, 13, 12, 30, 0, 0, time.UTC)
+
+	report, err := CreateSQLiteQueryMarkdown(root, dbconnector.SQLiteQueryResult{
+		RelPath:        "data/local.sqlite",
+		SQL:            "select name from campaigns",
+		Engine:         "sqlite-readonly",
+		Columns:        []string{"name"},
+		Rows:           [][]string{{"Search"}},
+		TotalRows:      1,
+		ResultLimit:    50,
+		TimeoutSeconds: 10,
+	}, now)
+	if err != nil {
+		t.Fatalf("CreateSQLiteQueryMarkdown returned error: %v", err)
+	}
+	content, err := os.ReadFile(filepath.Join(root, filepath.FromSlash(report.RelPath)))
+	if err != nil {
+		t.Fatalf("ReadFile failed: %v", err)
+	}
+	text := string(content)
+	if !strings.Contains(text, "Result cap: 50") || !strings.Contains(text, "Source database") {
+		t.Fatalf("expected guardrails and source citation, got %q", text)
+	}
+	metadata := readTestMetadata(t, root, report.RelPath)
+	if metadata.Kind != "sqlite-query-report" || !strings.Contains(metadata.Prompt, "cap 50") {
+		t.Fatalf("unexpected metadata: %#v", metadata)
 	}
 }
 

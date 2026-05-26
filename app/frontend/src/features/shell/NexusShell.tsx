@@ -21,6 +21,8 @@ import {
     CreateDatasetQueryArtifact,
     CreateDatasetSQLArtifact,
     CreateDatasetSummaryArtifact,
+    CreateSQLiteQueryCSVArtifact,
+    CreateSQLiteQueryMarkdownArtifact,
     CreateMarkdownReport,
     CreateScanReportArtifact,
     DeleteArtifact,
@@ -293,6 +295,8 @@ export function NexusShell({
     const [isQueryingSQLiteConnector, setIsQueryingSQLiteConnector] = useState(false);
     const [isInspectingSQLiteConnector, setIsInspectingSQLiteConnector] = useState(false);
     const [isSavingSQLiteConnectorQuery, setIsSavingSQLiteConnectorQuery] = useState(false);
+    const [isExportingSQLiteConnectorCSV, setIsExportingSQLiteConnectorCSV] = useState(false);
+    const [isExportingSQLiteConnectorMarkdown, setIsExportingSQLiteConnectorMarkdown] = useState(false);
     const [sqliteConnectorResultLimit, setSQLiteConnectorResultLimit] = useState(100);
     const [sqliteConnectorTimeoutSeconds, setSQLiteConnectorTimeoutSeconds] = useState(30);
     const [sqliteConnectorRequestID, setSQLiteConnectorRequestID] = useState('');
@@ -3055,6 +3059,21 @@ export function NexusShell({
         }
     }
 
+    async function afterArtifactCreated(report: MarkdownReport) {
+        const result = await RefreshWorkspace();
+        if (result.selected) {
+            onWorkspaceChange(result.snapshot);
+            await refreshArtifacts();
+            await refreshApprovals();
+            const reportNode = findWorkspaceNode(result.snapshot, report.relPath);
+            setExpandedDirectories((current) => reconcileExpandedDirectories(current, result.snapshot, reportNode));
+            await selectWorkspaceFile(result.snapshot, report.relPath);
+        } else {
+            await refreshArtifacts();
+            await refreshApprovals();
+        }
+    }
+
     async function saveLatestAssistantArtifact() {
         if (!workspace) {
             setChatStatus('Open a workspace before saving answers as artifacts.');
@@ -3778,6 +3797,44 @@ export function NexusShell({
         }
     }
 
+    async function exportSQLiteConnectorCSV() {
+        await exportSQLiteConnectorArtifact('csv');
+    }
+
+    async function exportSQLiteConnectorMarkdown() {
+        await exportSQLiteConnectorArtifact('markdown');
+    }
+
+    async function exportSQLiteConnectorArtifact(kind: 'csv' | 'markdown') {
+        if (!workspace || !filePreview || filePreview.fileType !== 'database' || !sqliteConnectorQuery.trim()) {
+            setWorkspaceStatus('Select a SQLite database and enter a read-only query before exporting it.');
+            return;
+        }
+        const setExporting = kind === 'csv' ? setIsExportingSQLiteConnectorCSV : setIsExportingSQLiteConnectorMarkdown;
+        setExporting(true);
+        try {
+            const request = {
+                relPath: filePreview.relPath,
+                sql: sqliteConnectorQuery,
+                requestId: '',
+                resultLimit: sqliteConnectorResultLimit,
+                timeoutSeconds: sqliteConnectorTimeoutSeconds,
+            };
+            const report = kind === 'csv'
+                ? await CreateSQLiteQueryCSVArtifact(request)
+                : await CreateSQLiteQueryMarkdownArtifact(request);
+            await afterArtifactCreated(report);
+            await refreshDatasetLineage(filePreview.relPath);
+            setWorkspaceStatus(report.message);
+            pushToolEvent(kind === 'csv' ? 'SQLite CSV exported' : 'SQLite report exported', report.relPath);
+        } catch (error) {
+            const message = error instanceof Error ? error.message : '';
+            setWorkspaceStatus(message || 'Could not export SQLite connector query.');
+        } finally {
+            setExporting(false);
+        }
+    }
+
     async function previewSQLiteSchemaObject(objectName: string) {
         if (!workspace || !filePreview || filePreview.fileType !== 'database') {
             setWorkspaceStatus('Select a SQLite database file before previewing schema rows.');
@@ -4187,6 +4244,8 @@ export function NexusShell({
                 onSQLiteConnectorQueryLabelChange={setSQLiteConnectorQueryLabel}
                 onPreviewSQLiteSchemaObject={(objectName) => void previewSQLiteSchemaObject(objectName)}
                 onSQLiteConnectorResultLimitChange={(value) => setSQLiteConnectorResultLimit(clampConnectorNumber(value, 1, 10000, 100))}
+                onExportSQLiteConnectorCSV={() => void exportSQLiteConnectorCSV()}
+                onExportSQLiteConnectorMarkdown={() => void exportSQLiteConnectorMarkdown()}
                 onSaveSQLiteConnectorQuery={() => void saveCurrentSQLiteConnectorQuery()}
                 onSQLiteConnectorTimeoutSecondsChange={(value) => setSQLiteConnectorTimeoutSeconds(clampConnectorNumber(value, 1, 300, 30))}
                 onSummarizeGitDiff={() => void summarizeGitDiff()}
@@ -4209,6 +4268,8 @@ export function NexusShell({
                 sqliteConnectorTimeoutSeconds={sqliteConnectorTimeoutSeconds}
                 savedSQLiteConnectorQueries={savedSQLiteConnectorQueries}
                 isSavingSQLiteConnectorQuery={isSavingSQLiteConnectorQuery}
+                isExportingSQLiteConnectorCSV={isExportingSQLiteConnectorCSV}
+                isExportingSQLiteConnectorMarkdown={isExportingSQLiteConnectorMarkdown}
                 sqliteStatus={sqliteStatus}
                 toolEvents={localToolEvents}
                 workspace={workspace}

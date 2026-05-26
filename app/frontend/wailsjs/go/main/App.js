@@ -94,6 +94,14 @@ export function CreateMarkdownReport(arg1) {
   return window['go']['main']['App']['CreateMarkdownReport'](arg1);
 }
 
+export function CreateSQLiteQueryCSVArtifact(arg1) {
+  return window['go']['main']['App']['CreateSQLiteQueryCSVArtifact'](arg1);
+}
+
+export function CreateSQLiteQueryMarkdownArtifact(arg1) {
+  return window['go']['main']['App']['CreateSQLiteQueryMarkdownArtifact'](arg1);
+}
+
 export function CreateScanReportArtifact() {
   return window['go']['main']['App']['CreateScanReportArtifact']();
 }

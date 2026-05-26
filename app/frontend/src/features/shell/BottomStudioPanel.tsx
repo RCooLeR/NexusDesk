@@ -156,6 +156,8 @@ type BottomStudioPanelProps = {
     onSQLiteConnectorQueryLabelChange: (content: string) => void;
     onPreviewSQLiteSchemaObject: (objectName: string) => void;
     onSQLiteConnectorResultLimitChange: (value: number) => void;
+    onExportSQLiteConnectorCSV: () => void;
+    onExportSQLiteConnectorMarkdown: () => void;
     onSaveSQLiteConnectorQuery: () => void;
     onSQLiteConnectorTimeoutSecondsChange: (value: number) => void;
     onSummarizeGitDiff: () => void;
@@ -177,6 +179,8 @@ type BottomStudioPanelProps = {
     sqliteConnectorTimeoutSeconds: number;
     savedSQLiteConnectorQueries: SavedDatasetQuery[];
     isSavingSQLiteConnectorQuery: boolean;
+    isExportingSQLiteConnectorCSV: boolean;
+    isExportingSQLiteConnectorMarkdown: boolean;
     sqliteStatus: SQLiteMetadataStatus | null;
     toolEvents: ToolEvent[];
     workspace: WorkspaceSnapshot | null;
@@ -345,6 +349,8 @@ export function BottomStudioPanel({
     onSQLiteConnectorQueryLabelChange,
     onPreviewSQLiteSchemaObject,
     onSQLiteConnectorResultLimitChange,
+    onExportSQLiteConnectorCSV,
+    onExportSQLiteConnectorMarkdown,
     onSaveSQLiteConnectorQuery,
     onSQLiteConnectorTimeoutSecondsChange,
     onSummarizeGitDiff,
@@ -366,6 +372,8 @@ export function BottomStudioPanel({
     sqliteConnectorTimeoutSeconds,
     savedSQLiteConnectorQueries,
     isSavingSQLiteConnectorQuery,
+    isExportingSQLiteConnectorCSV,
+    isExportingSQLiteConnectorMarkdown,
     sqliteStatus,
     toolEvents,
     workspace,
@@ -555,6 +563,8 @@ export function BottomStudioPanel({
                         onSQLiteConnectorQueryLabelChange={onSQLiteConnectorQueryLabelChange}
                         onPreviewSQLiteSchemaObject={onPreviewSQLiteSchemaObject}
                         onSQLiteConnectorResultLimitChange={onSQLiteConnectorResultLimitChange}
+                        onExportSQLiteConnectorCSV={onExportSQLiteConnectorCSV}
+                        onExportSQLiteConnectorMarkdown={onExportSQLiteConnectorMarkdown}
                         onSaveSQLiteConnectorQuery={onSaveSQLiteConnectorQuery}
                         onSQLiteConnectorTimeoutSecondsChange={onSQLiteConnectorTimeoutSecondsChange}
                         rebuildingDatasetDependencyId={rebuildingDatasetDependencyId}
@@ -568,6 +578,8 @@ export function BottomStudioPanel({
                         sqliteConnectorMetadata={sqliteConnectorMetadata}
                         sqliteConnectorTimeoutSeconds={sqliteConnectorTimeoutSeconds}
                         isSavingSQLiteConnectorQuery={isSavingSQLiteConnectorQuery}
+                        isExportingSQLiteConnectorCSV={isExportingSQLiteConnectorCSV}
+                        isExportingSQLiteConnectorMarkdown={isExportingSQLiteConnectorMarkdown}
                         sqliteStatus={sqliteStatus}
                         workspace={workspace}
                         workspaceFreshness={workspaceFreshness}

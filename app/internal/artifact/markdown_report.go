@@ -17,6 +17,7 @@ import (
 	"unicode/utf8"
 
 	"NexusAugenticStudio/internal/analytics"
+	"NexusAugenticStudio/internal/dbconnector"
 	"NexusAugenticStudio/internal/workspace"
 )
 
@@ -411,6 +412,123 @@ func CreateDatasetSQLMarkdown(root string, result analytics.SQLQueryResult, now 
 		Name:    name,
 		Path:    path,
 		Message: "SQL result artifact created inside the workspace with query, engine, row counts, and source citation.",
+		Size:    info.Size(),
+	}, nil
+}
+
+func CreateSQLiteQueryCSV(root string, result dbconnector.SQLiteQueryResult, now time.Time) (MarkdownReport, error) {
+	if strings.TrimSpace(root) == "" {
+		return MarkdownReport{}, errors.New("open a workspace before exporting SQLite query results")
+	}
+	if strings.TrimSpace(result.RelPath) == "" || strings.TrimSpace(result.SQL) == "" || len(result.Columns) == 0 {
+		return MarkdownReport{}, errors.New("SQLite query export needs a source path, query, and columns")
+	}
+	absRoot, err := filepath.Abs(root)
+	if err != nil {
+		return MarkdownReport{}, err
+	}
+	artifactDir := filepath.Join(absRoot, filepath.FromSlash(artifactDirRelPath))
+	if err := os.MkdirAll(artifactDir, 0o755); err != nil {
+		return MarkdownReport{}, err
+	}
+	name := sqliteQueryFileName(result, now, ".csv")
+	path := filepath.Join(artifactDir, name)
+	if err := ensureInsideRoot(absRoot, path); err != nil {
+		return MarkdownReport{}, err
+	}
+	content, err := buildSQLiteQueryCSV(result)
+	if err != nil {
+		return MarkdownReport{}, err
+	}
+	file, err := os.OpenFile(path, os.O_WRONLY|os.O_CREATE|os.O_EXCL, 0o644)
+	if err != nil {
+		return MarkdownReport{}, err
+	}
+	defer file.Close()
+	if _, err := file.WriteString(content); err != nil {
+		return MarkdownReport{}, err
+	}
+	if err := writeArtifactMetadata(absRoot, path, ArtifactMetadata{
+		Kind:           "sqlite-query-csv",
+		Title:          sqliteQueryTitle(result),
+		Source:         "sqlite connector query",
+		SourcePaths:    cleanMetadataPaths([]string{result.RelPath}),
+		ContextRelPath: result.RelPath,
+		Prompt:         sqliteQueryPrompt(result),
+		CreatedAt:      now.UTC().Format(time.RFC3339),
+	}); err != nil {
+		return MarkdownReport{}, err
+	}
+	info, err := file.Stat()
+	if err != nil {
+		return MarkdownReport{}, err
+	}
+	relPath, err := filepath.Rel(absRoot, path)
+	if err != nil {
+		return MarkdownReport{}, err
+	}
+	return MarkdownReport{
+		RelPath: filepath.ToSlash(relPath),
+		Name:    name,
+		Path:    path,
+		Message: "CSV SQLite query artifact created inside the workspace with source citation.",
+		Size:    info.Size(),
+	}, nil
+}
+
+func CreateSQLiteQueryMarkdown(root string, result dbconnector.SQLiteQueryResult, now time.Time) (MarkdownReport, error) {
+	if strings.TrimSpace(root) == "" {
+		return MarkdownReport{}, errors.New("open a workspace before exporting SQLite query reports")
+	}
+	if strings.TrimSpace(result.RelPath) == "" || strings.TrimSpace(result.SQL) == "" {
+		return MarkdownReport{}, errors.New("SQLite query report needs a source path and query")
+	}
+	absRoot, err := filepath.Abs(root)
+	if err != nil {
+		return MarkdownReport{}, err
+	}
+	artifactDir := filepath.Join(absRoot, filepath.FromSlash(artifactDirRelPath))
+	if err := os.MkdirAll(artifactDir, 0o755); err != nil {
+		return MarkdownReport{}, err
+	}
+	name := sqliteQueryFileName(result, now, ".md")
+	path := filepath.Join(artifactDir, name)
+	if err := ensureInsideRoot(absRoot, path); err != nil {
+		return MarkdownReport{}, err
+	}
+	content := buildSQLiteQueryMarkdown(result, now)
+	file, err := os.OpenFile(path, os.O_WRONLY|os.O_CREATE|os.O_EXCL, 0o644)
+	if err != nil {
+		return MarkdownReport{}, err
+	}
+	defer file.Close()
+	if _, err := file.WriteString(content); err != nil {
+		return MarkdownReport{}, err
+	}
+	if err := writeArtifactMetadata(absRoot, path, ArtifactMetadata{
+		Kind:           "sqlite-query-report",
+		Title:          sqliteQueryTitle(result),
+		Source:         "sqlite connector query",
+		SourcePaths:    cleanMetadataPaths([]string{result.RelPath}),
+		ContextRelPath: result.RelPath,
+		Prompt:         sqliteQueryPrompt(result),
+		CreatedAt:      now.UTC().Format(time.RFC3339),
+	}); err != nil {
+		return MarkdownReport{}, err
+	}
+	info, err := file.Stat()
+	if err != nil {
+		return MarkdownReport{}, err
+	}
+	relPath, err := filepath.Rel(absRoot, path)
+	if err != nil {
+		return MarkdownReport{}, err
+	}
+	return MarkdownReport{
+		RelPath: filepath.ToSlash(relPath),
+		Name:    name,
+		Path:    path,
+		Message: "Markdown SQLite query report created inside the workspace with SQL, guardrails, preview rows, and source citation.",
 		Size:    info.Size(),
 	}, nil
 }
@@ -920,6 +1038,18 @@ func datasetSQLFileName(result analytics.SQLQueryResult, now time.Time) string {
 	return fmt.Sprintf("%s-%s.md", slug, now.UTC().Format("20060102-150405"))
 }
 
+func sqliteQueryFileName(result dbconnector.SQLiteQueryResult, now time.Time, extension string) string {
+	base := strings.TrimSuffix(filepath.Base(result.RelPath), filepath.Ext(result.RelPath))
+	if base == "" {
+		base = "sqlite"
+	}
+	slug := slugify(base + "-sqlite-query")
+	if slug == "" {
+		slug = "sqlite-query"
+	}
+	return fmt.Sprintf("%s-%s%s", slug, now.UTC().Format("20060102-150405"), extension)
+}
+
 func datasetSummaryFileName(source workspace.FilePreview, now time.Time) string {
 	base := strings.TrimSuffix(source.Name, filepath.Ext(source.Name))
 	if base == "" {
@@ -1007,6 +1137,14 @@ func datasetSQLTitle(result analytics.SQLQueryResult) string {
 
 func datasetSQLPrompt(result analytics.SQLQueryResult) string {
 	return fmt.Sprintf("Run SQL on %s via %s: %s", result.RelPath, result.Engine, result.SQL)
+}
+
+func sqliteQueryTitle(result dbconnector.SQLiteQueryResult) string {
+	return fmt.Sprintf("SQLite query from %s", result.RelPath)
+}
+
+func sqliteQueryPrompt(result dbconnector.SQLiteQueryResult) string {
+	return fmt.Sprintf("Run SQLite query on %s via %s with cap %d and timeout %ds: %s", result.RelPath, result.Engine, result.ResultLimit, result.TimeoutSeconds, result.SQL)
 }
 
 func buildMarkdownReport(source workspace.FilePreview, now time.Time) string {
@@ -1164,6 +1302,80 @@ func buildDatasetSQLMarkdown(result analytics.SQLQueryResult, now time.Time) str
 	builder.WriteString(fmt.Sprintf("- Total rows: %d\n", result.TotalRows))
 	builder.WriteString(fmt.Sprintf("- Matched rows: %d\n", result.MatchedRows))
 	builder.WriteString(fmt.Sprintf("- Returned rows: %d\n", len(result.Rows)))
+	builder.WriteString("\n## SQL\n\n```sql\n")
+	builder.WriteString(strings.TrimSpace(result.SQL))
+	builder.WriteString("\n```\n\n")
+	builder.WriteString("## Result Preview\n\n")
+	if len(result.Columns) == 0 {
+		builder.WriteString("_No columns returned._\n")
+		return builder.String()
+	}
+	builder.WriteString("| ")
+	for _, column := range result.Columns {
+		builder.WriteString(escapeMarkdownCell(column))
+		builder.WriteString(" | ")
+	}
+	builder.WriteString("\n|")
+	for range result.Columns {
+		builder.WriteString("---|")
+	}
+	builder.WriteString("\n")
+	for _, row := range result.Rows {
+		builder.WriteString("| ")
+		for index := range result.Columns {
+			value := ""
+			if index < len(row) {
+				value = row[index]
+			}
+			builder.WriteString(escapeMarkdownCell(value))
+			builder.WriteString(" | ")
+		}
+		builder.WriteString("\n")
+	}
+	builder.WriteString("\n## Sources\n\n- `")
+	builder.WriteString(strings.ReplaceAll(result.RelPath, "`", "'"))
+	builder.WriteString("`\n")
+	return builder.String()
+}
+
+func buildSQLiteQueryCSV(result dbconnector.SQLiteQueryResult) (string, error) {
+	var builder strings.Builder
+	writer := csv.NewWriter(&builder)
+	if err := writer.Write(result.Columns); err != nil {
+		return "", err
+	}
+	for _, row := range result.Rows {
+		if err := writer.Write(row); err != nil {
+			return "", err
+		}
+	}
+	writer.Flush()
+	if err := writer.Error(); err != nil {
+		return "", err
+	}
+	return builder.String(), nil
+}
+
+func buildSQLiteQueryMarkdown(result dbconnector.SQLiteQueryResult, now time.Time) string {
+	var builder strings.Builder
+	builder.WriteString("# SQLite Query Result: ")
+	builder.WriteString(escapeMarkdownLine(result.RelPath))
+	builder.WriteString("\n\n")
+	builder.WriteString("- Generated: ")
+	builder.WriteString(now.UTC().Format(time.RFC3339))
+	builder.WriteString("\n")
+	builder.WriteString("- Source database: `")
+	builder.WriteString(strings.ReplaceAll(result.RelPath, "`", "'"))
+	builder.WriteString("`\n")
+	builder.WriteString("- Engine: ")
+	builder.WriteString(escapeMarkdownLine(result.Engine))
+	builder.WriteString("\n")
+	builder.WriteString(fmt.Sprintf("- Result cap: %d\n", result.ResultLimit))
+	builder.WriteString(fmt.Sprintf("- Timeout: %ds\n", result.TimeoutSeconds))
+	builder.WriteString(fmt.Sprintf("- Returned rows: %d\n", len(result.Rows)))
+	if result.Truncated {
+		builder.WriteString("- Note: result was truncated by the configured row cap.\n")
+	}
 	builder.WriteString("\n## SQL\n\n```sql\n")
 	builder.WriteString(strings.TrimSpace(result.SQL))
 	builder.WriteString("\n```\n\n")

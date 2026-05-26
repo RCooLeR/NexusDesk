@@ -35,6 +35,8 @@ type DataOperationsPanelProps = {
     isQueryingDatasetSQL: boolean;
     isQueryingSQLiteConnector: boolean;
     isSavingSQLiteConnectorQuery: boolean;
+    isExportingSQLiteConnectorCSV: boolean;
+    isExportingSQLiteConnectorMarkdown: boolean;
     isRefreshingStaleContext: boolean;
     isSavingDatasetQuery: boolean;
     isSavingDatasetSQLQuery: boolean;
@@ -75,6 +77,8 @@ type DataOperationsPanelProps = {
     onSQLiteConnectorQueryChange: (content: string) => void;
     onSQLiteConnectorQueryLabelChange: (content: string) => void;
     onSQLiteConnectorResultLimitChange: (value: number) => void;
+    onExportSQLiteConnectorCSV: () => void;
+    onExportSQLiteConnectorMarkdown: () => void;
     onSaveSQLiteConnectorQuery: () => void;
     onSQLiteConnectorTimeoutSecondsChange: (value: number) => void;
     rebuildingDatasetDependencyId: string;
@@ -121,6 +125,8 @@ export function DataOperationsPanel({
     isQueryingDatasetSQL,
     isQueryingSQLiteConnector,
     isSavingSQLiteConnectorQuery,
+    isExportingSQLiteConnectorCSV,
+    isExportingSQLiteConnectorMarkdown,
     isRefreshingStaleContext,
     isSavingDatasetQuery,
     isSavingDatasetSQLQuery,
@@ -161,6 +167,8 @@ export function DataOperationsPanel({
     onSQLiteConnectorQueryChange,
     onSQLiteConnectorQueryLabelChange,
     onSQLiteConnectorResultLimitChange,
+    onExportSQLiteConnectorCSV,
+    onExportSQLiteConnectorMarkdown,
     onSaveSQLiteConnectorQuery,
     onSQLiteConnectorTimeoutSecondsChange,
     rebuildingDatasetDependencyId,
@@ -282,6 +290,8 @@ export function DataOperationsPanel({
                         isQuerying={isQueryingSQLiteConnector}
                         isInspecting={isInspectingSQLiteConnector}
                         isSaving={isSavingSQLiteConnectorQuery}
+                        isExportingCSV={isExportingSQLiteConnectorCSV}
+                        isExportingMarkdown={isExportingSQLiteConnectorMarkdown}
                         sqlRuns={datasetSQLRuns}
                         savedQueries={savedSQLiteConnectorQueries}
                         metadata={sqliteConnectorMetadata}
@@ -292,6 +302,8 @@ export function DataOperationsPanel({
                         onPreviewObject={onPreviewSQLiteSchemaObject}
                         onQuery={onQuerySQLiteConnector}
                         onResultLimitChange={onSQLiteConnectorResultLimitChange}
+                        onExportCSV={onExportSQLiteConnectorCSV}
+                        onExportMarkdown={onExportSQLiteConnectorMarkdown}
                         onSave={onSaveSQLiteConnectorQuery}
                         onTimeoutSecondsChange={onSQLiteConnectorTimeoutSecondsChange}
                         query={sqliteConnectorQuery}
@@ -653,6 +665,8 @@ function SQLiteConnectorPanel({
     isInspecting,
     isQuerying,
     isSaving,
+    isExportingCSV,
+    isExportingMarkdown,
     metadata,
     onCancel,
     onChange,
@@ -661,6 +675,8 @@ function SQLiteConnectorPanel({
     onPreviewObject,
     onQuery,
     onResultLimitChange,
+    onExportCSV,
+    onExportMarkdown,
     onSave,
     onTimeoutSecondsChange,
     query,
@@ -674,6 +690,8 @@ function SQLiteConnectorPanel({
     isInspecting: boolean;
     isQuerying: boolean;
     isSaving: boolean;
+    isExportingCSV: boolean;
+    isExportingMarkdown: boolean;
     metadata: ConnectorMetadata | null;
     onCancel: () => void;
     onChange: (value: string) => void;
@@ -682,6 +700,8 @@ function SQLiteConnectorPanel({
     onPreviewObject: (objectName: string) => void;
     onQuery: () => void;
     onResultLimitChange: (value: number) => void;
+    onExportCSV: () => void;
+    onExportMarkdown: () => void;
     onSave: () => void;
     onTimeoutSecondsChange: (value: number) => void;
     query: string;
@@ -755,11 +775,21 @@ function SQLiteConnectorPanel({
                 />
             )}
             {result && (
-                <SortableDataTable
-                    pageSize={8}
-                    table={{columns: result.columns, rows: result.rows, profiles: [], totalRows: result.totalRows, truncated: result.truncated}}
-                    title={`${result.engine} / cap ${result.resultLimit} / ${result.timeoutSeconds}s`}
-                />
+                <>
+                    <div className="metadata-action-row">
+                        <Button disabled={isExportingCSV || result.columns.length === 0} onClick={onExportCSV} variant="subtle">
+                            {isExportingCSV ? 'Exporting...' : 'Export CSV'}
+                        </Button>
+                        <Button disabled={isExportingMarkdown || result.columns.length === 0} onClick={onExportMarkdown} variant="subtle">
+                            {isExportingMarkdown ? 'Exporting...' : 'Export report'}
+                        </Button>
+                    </div>
+                    <SortableDataTable
+                        pageSize={8}
+                        table={{columns: result.columns, rows: result.rows, profiles: [], totalRows: result.totalRows, truncated: result.truncated}}
+                        title={`${result.engine} / cap ${result.resultLimit} / ${result.timeoutSeconds}s`}
+                    />
+                </>
             )}
             <ConnectorQueryHistory runs={sqlRuns} />
         </div>

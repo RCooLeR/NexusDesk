@@ -311,6 +311,50 @@ func (s *DatasetService) CreateSQLArtifact(request analytics.SQLQueryRequest) (a
 	return report, nil
 }
 
+func (s *DatasetService) CreateSQLiteQueryCSVArtifact(request dbconnector.SQLiteQueryRequest) (artifact.MarkdownReport, error) {
+	root, err := s.requireRoot("exporting SQLite query results")
+	if err != nil {
+		return artifact.MarkdownReport{}, err
+	}
+	result, err := dbconnector.QuerySQLite(root, request)
+	if err != nil {
+		s.recordSQL(root, request.RelPath, sanitizeQueryForMetadata(request.SQL), "sqlite-readonly", 0, "", "failed", dbconnector.RedactConnectorError(err.Error()))
+		return artifact.MarkdownReport{}, err
+	}
+	report, err := artifact.CreateSQLiteQueryCSV(root, result, time.Now())
+	if err != nil {
+		s.recordSQL(root, result.RelPath, sanitizeQueryForMetadata(result.SQL), result.Engine, result.TotalRows, "", "failed", dbconnector.RedactConnectorError(err.Error()))
+		return artifact.MarkdownReport{}, err
+	}
+	s.persist(root, report.RelPath)
+	s.recordSQL(root, result.RelPath, sanitizeQueryForMetadata(result.SQL), result.Engine, result.TotalRows, report.RelPath, "completed", dbconnector.RedactConnectorError(result.Message))
+	s.recordDependency(root, result.RelPath, "sqlite-query-csv", sanitizeQueryForMetadata(result.SQL), result.Engine, report.RelPath)
+	s.record("artifact.sqlite_query_csv.create", report.RelPath, "low", fmt.Sprintf("Created SQLite query CSV artifact from %s.", result.RelPath))
+	return report, nil
+}
+
+func (s *DatasetService) CreateSQLiteQueryMarkdownArtifact(request dbconnector.SQLiteQueryRequest) (artifact.MarkdownReport, error) {
+	root, err := s.requireRoot("exporting SQLite query reports")
+	if err != nil {
+		return artifact.MarkdownReport{}, err
+	}
+	result, err := dbconnector.QuerySQLite(root, request)
+	if err != nil {
+		s.recordSQL(root, request.RelPath, sanitizeQueryForMetadata(request.SQL), "sqlite-readonly", 0, "", "failed", dbconnector.RedactConnectorError(err.Error()))
+		return artifact.MarkdownReport{}, err
+	}
+	report, err := artifact.CreateSQLiteQueryMarkdown(root, result, time.Now())
+	if err != nil {
+		s.recordSQL(root, result.RelPath, sanitizeQueryForMetadata(result.SQL), result.Engine, result.TotalRows, "", "failed", dbconnector.RedactConnectorError(err.Error()))
+		return artifact.MarkdownReport{}, err
+	}
+	s.persist(root, report.RelPath)
+	s.recordSQL(root, result.RelPath, sanitizeQueryForMetadata(result.SQL), result.Engine, result.TotalRows, report.RelPath, "completed", dbconnector.RedactConnectorError(result.Message))
+	s.recordDependency(root, result.RelPath, "sqlite-query-report", sanitizeQueryForMetadata(result.SQL), result.Engine, report.RelPath)
+	s.record("artifact.sqlite_query_report.create", report.RelPath, "low", fmt.Sprintf("Created SQLite query report artifact from %s.", result.RelPath))
+	return report, nil
+}
+
 func (s *DatasetService) CreateSummaryArtifact(relPath string) (artifact.MarkdownReport, error) {
 	root, err := s.requireRoot("creating dataset summaries")
 	if err != nil {

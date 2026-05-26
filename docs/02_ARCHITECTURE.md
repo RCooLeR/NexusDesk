@@ -21,7 +21,7 @@ The implemented desktop slice currently contains:
 - persisted tool-run dry-runs/executions with approval references
 - SQLite metadata initialization, JSON-store migration compatibility, direct repository-backed writes for fresh chat/approval/artifact/tool-run rows, metadata history search, dataset dependency records, and SQL run history
 - DuckDB-capable read-only SQL surface over datasets, with CGO-tagged driver execution and bounded CSV fallback
-- first read-only SQLite workspace database connector for `.sqlite`, `.sqlite3`, and `.db` files, with visible per-query row caps, timeouts, cancellation, schema-object browsing, saved connector queries, query history, and redacted connector errors
+- first read-only SQLite workspace database connector for `.sqlite`, `.sqlite3`, and `.db` files, with visible per-query row caps, timeouts, cancellation, schema-object browsing, saved connector queries, query history, CSV/Markdown exports, artifact lineage, and redacted connector errors
 - artifact comparison for generated output versions
 - selectable artifact lineage graph and workspace freshness snapshots for source-aware generated outputs
 - artifact lineage JSON export/import for debugging and future sync workflows

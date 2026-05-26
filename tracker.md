@@ -1075,14 +1075,14 @@ Recommended next batch: SQLite Connector Query Workflow.
 
 Steps:
 
-1. [ ] Add query result export to CSV for SQLite connector results.
-2. [ ] Add query result export to Markdown report with SQL, cap, timeout, and source database citation.
-3. [ ] Add connector query-to-artifact lineage that links saved query, SQL run, source database, and exported artifact.
+1. [x] Add query result export to CSV for SQLite connector results.
+2. [x] Add query result export to Markdown report with SQL, cap, timeout, and source database citation.
+3. [x] Add connector query-to-artifact lineage that links saved query, SQL run, source database, and exported artifact.
 4. [ ] Add AI explain-schema action for the selected SQLite table/view with cited columns/indexes/sample rows.
 5. [ ] Add relationship hints from SQLite foreign keys and obvious `*_id` columns.
 6. [ ] Keep exports and AI actions user-triggered and bounded to selected schema/query context.
 
-Reasoning: The SQLite schema browser is now navigable and reusable. The next gap is turning connector query results into cited artifacts and first relationship/schema explanations.
+Partial progress: connector query exports are now user-triggered, bounded by the visible cap/timeout controls, persisted as CSV or Markdown artifacts, and recorded in SQL run plus dataset dependency metadata using the source SQLite database path. The remaining gap is schema intelligence: relationship hints and source-cited AI explanation for selected schema objects.
 
 ## Directory Ownership Notes
 
