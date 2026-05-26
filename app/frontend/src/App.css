@@ -918,7 +918,7 @@ button:disabled {
 
 .editor-pane {
     display: grid;
-    grid-template-rows: auto minmax(0, 1fr);
+    grid-template-rows: auto auto minmax(0, 1fr);
 }
 
 .pane-title {
@@ -1007,13 +1007,18 @@ button:disabled {
     color: #1f2937;
     cursor: pointer;
     display: grid;
-    grid-template-columns: minmax(80px, 1fr) auto auto auto;
+    grid-template-columns: minmax(80px, 1fr) auto auto auto auto;
     align-items: center;
     gap: 7px;
     max-width: 230px;
     min-height: 34px;
     min-width: 150px;
     padding: 0 5px 0 9px;
+}
+
+.editor-tab.pinned {
+    background: #fffaf0;
+    border-color: #f8d58c;
 }
 
 .editor-tab.active {
@@ -1057,10 +1062,80 @@ button:disabled {
     padding: 0;
 }
 
+.editor-tab button.tab-pin {
+    color: #94a3b8;
+}
+
+.editor-tab button.tab-pin.active {
+    color: #b45309;
+}
+
 .editor-tab button:hover {
     border-color: #cbd5e1;
     background: #ffffff;
     color: #1f2937;
+}
+
+.editor-icon-toggle {
+    align-items: center;
+    border: 1px solid #d8e1ef;
+    border-radius: var(--nd-radius-sm);
+    background: #fbfdff;
+    color: #64748b;
+    cursor: pointer;
+    display: inline-flex;
+    height: 30px;
+    justify-content: center;
+    width: 30px;
+}
+
+.editor-icon-toggle:hover,
+.editor-icon-toggle.active {
+    border-color: var(--nd-sky-blue);
+    background: #eef7ff;
+    color: #1d4ed8;
+}
+
+.editor-breadcrumbs {
+    align-items: center;
+    border-bottom: 1px solid var(--nd-border-soft);
+    display: flex;
+    gap: 2px;
+    min-height: 34px;
+    min-width: 0;
+    overflow-x: auto;
+    padding: 0 12px;
+}
+
+.editor-breadcrumbs button {
+    border: 0;
+    border-radius: 5px;
+    background: transparent;
+    color: #475467;
+    cursor: pointer;
+    flex: 0 0 auto;
+    font-size: 12px;
+    max-width: 220px;
+    overflow: hidden;
+    padding: 5px 7px;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.editor-breadcrumbs button:not(:last-child)::after {
+    color: #94a3b8;
+    content: "/";
+    margin-left: 8px;
+}
+
+.editor-breadcrumbs button:hover:not(:disabled) {
+    background: #eef7ff;
+    color: #1d4ed8;
+}
+
+.editor-breadcrumbs button:disabled {
+    color: var(--nd-muted-text);
+    cursor: default;
 }
 
 .editor-find {

@@ -287,7 +287,7 @@ These batches describe the next product direction. They are broader than the cur
 2. Add git repository detection, branch display, dirty summary, and file-level status badges.
 3. Add working tree/staged diff views with side-by-side and inline modes, hunk navigation, and stage/unstage/revert affordances.
 4. Add problems/search panels: path search, text/regex search, replace preview, diagnostics, and task/test output.
-5. Add editor improvements: split editor groups, pinned tabs, breadcrumbs, outline/symbol navigation, encoding controls, and format action hooks.
+5. Continue editor improvements: split editor groups, outline/symbol navigation, encoding controls, and format action hooks. Pinned tabs, breadcrumbs, and the Monaco minimap toggle are now implemented in the first editor-quality pass.
 6. Add AI code actions for review diff, explain change, generate tests, propose patch, create commit message, and summarize branch.
 
 ### Batch: Data & Analytics Expansion

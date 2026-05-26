@@ -6,10 +6,11 @@ type MonacoFileEditorProps = {
     fileName: string;
     onChange: (content: string) => void;
     onSave: () => void;
+    showMinimap: boolean;
     value: string;
 };
 
-export function MonacoFileEditor({fileName, onChange, onSave, value}: MonacoFileEditorProps) {
+export function MonacoFileEditor({fileName, onChange, onSave, showMinimap, value}: MonacoFileEditorProps) {
     const containerRef = useRef<HTMLDivElement>(null);
     const editorRef = useRef<Monaco.editor.IStandaloneCodeEditor | null>(null);
     const changeHandlerRef = useRef(onChange);
@@ -41,7 +42,7 @@ export function MonacoFileEditor({fileName, onChange, onSave, value}: MonacoFile
                 fontSize: 13,
                 language: languageForFile(fileName),
                 lineHeight: 21,
-                minimap: {enabled: false},
+                minimap: {enabled: showMinimap, maxColumn: 60, renderCharacters: false, scale: 0.7},
                 padding: {bottom: 16, top: 12},
                 renderLineHighlight: 'line',
                 scrollBeyondLastLine: false,
@@ -69,6 +70,12 @@ export function MonacoFileEditor({fileName, onChange, onSave, value}: MonacoFile
             editorRef.current = null;
         };
     }, []);
+
+    useEffect(() => {
+        editorRef.current?.updateOptions({
+            minimap: {enabled: showMinimap, maxColumn: 60, renderCharacters: false, scale: 0.7},
+        });
+    }, [showMinimap]);
 
     useEffect(() => {
         const editor = editorRef.current;

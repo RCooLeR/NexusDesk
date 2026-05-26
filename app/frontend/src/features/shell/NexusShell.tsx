@@ -248,6 +248,8 @@ export function NexusShell({
     const [editingFilePaths, setEditingFilePaths] = useState<string[]>([]);
     const [fileDrafts, setFileDrafts] = useState<Record<string, string>>({});
     const [writeProposals, setWriteProposals] = useState<Record<string, FileWriteProposal>>({});
+    const [pinnedTabPaths, setPinnedTabPaths] = useState<string[]>([]);
+    const [showEditorMinimap, setShowEditorMinimap] = useState(false);
     const [isQuickOpenOpen, setIsQuickOpenOpen] = useState(false);
     const [quickOpenQuery, setQuickOpenQuery] = useState('');
     const [isCommandPaletteOpen, setIsCommandPaletteOpen] = useState(false);
@@ -1355,6 +1357,7 @@ export function NexusShell({
             setEditingFilePaths([]);
             setFileDrafts({});
             setWriteProposals({});
+            setPinnedTabPaths([]);
         }
         await refreshChatHistory();
         await refreshArtifacts();
@@ -1402,10 +1405,31 @@ export function NexusShell({
 
         setOpenTabs((current) => {
             const existing = current.findIndex((tab) => tab.relPath === preview.relPath);
+            let nextTabs: FilePreview[];
             if (existing === -1) {
-                return [...current, preview].slice(-8);
+                const pinned = current.filter((tab) => pinnedTabPaths.includes(tab.relPath));
+                const unpinned = current.filter((tab) => !pinnedTabPaths.includes(tab.relPath));
+                nextTabs = [...pinned, ...unpinned, preview];
+                if (nextTabs.length > 8) {
+                    const pinnedSet = new Set(pinnedTabPaths);
+                    const keep = nextTabs.filter((tab) => pinnedSet.has(tab.relPath));
+                    const candidates = nextTabs.filter((tab) => !pinnedSet.has(tab.relPath));
+                    nextTabs = [...keep, ...candidates.slice(Math.max(0, candidates.length - Math.max(0, 8 - keep.length)))];
+                }
+                return orderOpenTabs(nextTabs, pinnedTabPaths);
             }
-            return current.map((tab, index) => index === existing ? preview : tab);
+            nextTabs = current.map((tab, index) => index === existing ? preview : tab);
+            return orderOpenTabs(nextTabs, pinnedTabPaths);
+        });
+    }
+
+    function togglePinnedTab(relPath: string) {
+        setPinnedTabPaths((current) => {
+            const next = current.includes(relPath)
+                ? current.filter((path) => path !== relPath)
+                : [...current, relPath];
+            setOpenTabs((tabs) => orderOpenTabs(tabs, next));
+            return next;
         });
     }
 
@@ -1434,6 +1458,7 @@ export function NexusShell({
         setEditingFilePaths((current) => current.filter((path) => path !== relPath));
         setFileDrafts((current) => omitKey(current, relPath));
         setWriteProposals((current) => omitKey(current, relPath));
+        setPinnedTabPaths((current) => current.filter((path) => path !== relPath));
     }
 
     function closeOpenTab(relPath: string) {
@@ -1560,6 +1585,26 @@ export function NexusShell({
         setExpandedDirectories((current) => {
             const next = new Set(current);
             getAncestorDirectories(node).forEach((relPath) => next.add(relPath));
+            return next;
+        });
+        await selectWorkspaceNode(node);
+    }
+
+    async function selectBreadcrumbPath(relPath: string) {
+        if (!workspace || !relPath) {
+            return;
+        }
+        const node = findWorkspaceNode(workspace, relPath);
+        if (!node) {
+            setWorkspaceStatus(`${relPath} is not visible in the current workspace tree.`);
+            return;
+        }
+        setExpandedDirectories((current) => {
+            const next = new Set(current);
+            getAncestorDirectories(node).forEach((path) => next.add(path));
+            if (node.kind === 'directory') {
+                next.add(node.relPath);
+            }
             return next;
         });
         await selectWorkspaceNode(node);
@@ -3367,12 +3412,17 @@ export function NexusShell({
                     onPinContext={pinSelectedContext}
                     onPinProjectContext={pinProjectContext}
                     onPreviewFileWrite={() => void previewFileWrite()}
+                    onSelectBreadcrumb={(relPath) => void selectBreadcrumbPath(relPath)}
                     onCloseTab={closeOpenTab}
                     onSelectTab={selectOpenTab}
+                    onToggleMinimap={() => setShowEditorMinimap((current) => !current)}
+                    onTogglePinTab={togglePinnedTab}
                     onStartFileEdit={startFileEdit}
                     onRefreshPreview={() => void refreshSelectedPreview()}
                     openTabs={openTabs}
+                    pinnedTabPaths={pinnedTabPaths}
                     selectedMeta={selectedMeta}
+                    showMinimap={showEditorMinimap}
                     writeProposal={writeProposal}
                     workspace={workspace}
                 />
@@ -3457,6 +3507,18 @@ function dirtyDraftPaths(fileDrafts: Record<string, string>, openTabs: FilePrevi
             return Boolean(tab && draft !== tab.content);
         })
         .map(([relPath]) => relPath);
+}
+
+function orderOpenTabs(tabs: FilePreview[], pinnedTabPaths: string[]) {
+    const pinned = new Set(pinnedTabPaths);
+    return [...tabs].sort((left, right) => {
+        const leftPinned = pinned.has(left.relPath);
+        const rightPinned = pinned.has(right.relPath);
+        if (leftPinned === rightPinned) {
+            return 0;
+        }
+        return leftPinned ? -1 : 1;
+    });
 }
 
 function currentDatasetColumns(preview: FilePreview | null, profile: DatasetProfile | null) {

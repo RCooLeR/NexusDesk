@@ -1,4 +1,6 @@
 import {useEffect, useRef, useState} from 'react';
+import {faMap, faThumbtack, faXmark} from '@fortawesome/free-solid-svg-icons';
+import {FontAwesomeIcon} from '@fortawesome/react-fontawesome';
 import {brandAssets} from '../../brand/assets';
 import {Button, EmptyState, InlineAlert, LoadingState} from '../../components/ui';
 import type {FilePreview, FileWriteProposal, TablePreview, WorkspaceSnapshot} from '../../types';
@@ -33,12 +35,17 @@ type WorkbenchPanelProps = {
     onPinContext: () => void;
     onPinProjectContext: () => void;
     onPreviewFileWrite: () => void;
+    onSelectBreadcrumb: (relPath: string) => void;
     onCloseTab: (relPath: string) => void;
     onSelectTab: (relPath: string) => void;
+    onToggleMinimap: () => void;
+    onTogglePinTab: (relPath: string) => void;
     onRefreshPreview: () => void;
     onStartFileEdit: () => void;
     openTabs: FilePreview[];
+    pinnedTabPaths: string[];
     selectedMeta: string;
+    showMinimap: boolean;
     writeProposal: FileWriteProposal | null;
     workspace: WorkspaceSnapshot | null;
 };
@@ -68,12 +75,17 @@ export function WorkbenchPanel({
     onPinContext,
     onPinProjectContext,
     onPreviewFileWrite,
+    onSelectBreadcrumb,
     onCloseTab,
     onSelectTab,
+    onToggleMinimap,
+    onTogglePinTab,
     onRefreshPreview,
     onStartFileEdit,
     openTabs,
+    pinnedTabPaths,
     selectedMeta,
+    showMinimap,
     writeProposal,
     workspace,
 }: WorkbenchPanelProps) {
@@ -94,6 +106,7 @@ export function WorkbenchPanel({
     const findSource = isEditingFile ? fileDraft : filePreview?.content ?? filePreview?.text ?? '';
     const findMatches = countFindMatches(findSource, findQuery);
     const isDraftDirty = Boolean(filePreview && dirtyTabPaths.includes(filePreview.relPath));
+    const breadcrumbs = buildBreadcrumbs(activeFile, workspace?.name ?? 'Workspace');
 
     useEffect(() => {
         function handleFindShortcut(event: KeyboardEvent) {
@@ -154,31 +167,61 @@ export function WorkbenchPanel({
                         <div className="tab-strip" role="tablist" aria-label="Open files">
                             {openTabs.length === 0 ? (
                                 <span className="empty-tabs">No open files</span>
-                            ) : openTabs.map((tab) => (
-                                <div
-                                    aria-selected={activeFile === tab.relPath}
-                                    className={activeFile === tab.relPath ? 'editor-tab active' : 'editor-tab'}
-                                    key={tab.relPath}
-                                    onClick={() => onSelectTab(tab.relPath)}
-                                    role="tab"
-                                    title={tab.relPath}
-                                >
-                                    <span>{tab.name}</span>
-                                    {dirtyTabPaths.includes(tab.relPath) && <i aria-label="Unsaved changes" />}
-                                    <small>{tab.kind === 'pdf' ? 'pdf' : tab.fileType}</small>
-                                    <button
-                                        aria-label={`Close ${tab.name}`}
-                                        onClick={(event) => {
-                                            event.stopPropagation();
-                                            onCloseTab(tab.relPath);
-                                        }}
+                            ) : openTabs.map((tab) => {
+                                const isPinned = pinnedTabPaths.includes(tab.relPath);
+                                return (
+                                    <div
+                                        aria-selected={activeFile === tab.relPath}
+                                        className={[
+                                            'editor-tab',
+                                            activeFile === tab.relPath ? 'active' : '',
+                                            isPinned ? 'pinned' : '',
+                                        ].filter(Boolean).join(' ')}
+                                        key={tab.relPath}
+                                        onClick={() => onSelectTab(tab.relPath)}
+                                        role="tab"
+                                        title={tab.relPath}
                                     >
-                                        x
-                                    </button>
-                                </div>
-                            ))}
+                                        <span>{tab.name}</span>
+                                        {dirtyTabPaths.includes(tab.relPath) && <i aria-label="Unsaved changes" />}
+                                        <small>{tab.kind === 'pdf' ? 'pdf' : tab.fileType}</small>
+                                        <button
+                                            aria-label={isPinned ? `Unpin ${tab.name}` : `Pin ${tab.name}`}
+                                            className={isPinned ? 'tab-pin active' : 'tab-pin'}
+                                            onClick={(event) => {
+                                                event.stopPropagation();
+                                                onTogglePinTab(tab.relPath);
+                                            }}
+                                            title={isPinned ? 'Unpin tab' : 'Pin tab'}
+                                            type="button"
+                                        >
+                                            <FontAwesomeIcon icon={faThumbtack} />
+                                        </button>
+                                        <button
+                                            aria-label={`Close ${tab.name}`}
+                                            onClick={(event) => {
+                                                event.stopPropagation();
+                                                onCloseTab(tab.relPath);
+                                            }}
+                                            title="Close tab"
+                                            type="button"
+                                        >
+                                            <FontAwesomeIcon icon={faXmark} />
+                                        </button>
+                                    </div>
+                                );
+                            })}
                         </div>
                         <div className="editor-tab-actions">
+                            <button
+                                aria-pressed={showMinimap}
+                                className={showMinimap ? 'editor-icon-toggle active' : 'editor-icon-toggle'}
+                                onClick={onToggleMinimap}
+                                title={showMinimap ? 'Hide minimap' : 'Show minimap'}
+                                type="button"
+                            >
+                                <FontAwesomeIcon icon={faMap} />
+                            </button>
                             {filePreview?.content && (
                                 <div className="editor-find" aria-label="Find in file">
                                     <input
@@ -210,6 +253,21 @@ export function WorkbenchPanel({
                             <small>{selectedMeta}</small>
                         </div>
                     </div>
+                    {breadcrumbs.length > 0 && (
+                        <nav className="editor-breadcrumbs" aria-label="Editor breadcrumbs">
+                            {breadcrumbs.map((crumb, index) => (
+                                <button
+                                    disabled={!crumb.relPath}
+                                    key={`${crumb.relPath}-${index}`}
+                                    onClick={() => onSelectBreadcrumb(crumb.relPath)}
+                                    title={crumb.relPath || workspace?.root || crumb.label}
+                                    type="button"
+                                >
+                                    {crumb.label}
+                                </button>
+                            ))}
+                        </nav>
+                    )}
                     {workspace ? (
                         <div className="file-preview" aria-label="Workspace file preview">
                             {isLoadingPreview ? (
@@ -268,6 +326,7 @@ export function WorkbenchPanel({
                                     originalContent={filePreview?.content ?? ''}
                                     fileName={filePreview?.name ?? activeFile}
                                     isDirty={isDraftDirty}
+                                    showMinimap={showMinimap}
                                 />
                             ) : filePreview?.content && markdownViewMode === 'rendered' && isMarkdownFile(filePreview.name) ? (
                                 <>
@@ -279,7 +338,7 @@ export function WorkbenchPanel({
                             ) : filePreview?.content ? (
                                 <div className={filePreview.message ? 'source-editor-preview' : 'source-editor-preview no-message'}>
                                     {filePreview.message && <InlineAlert>{filePreview.message}</InlineAlert>}
-                                    <MonacoCodePreview content={filePreview.content} fileName={filePreview.name} searchQuery={findQuery} />
+                                    <MonacoCodePreview content={filePreview.content} fileName={filePreview.name} searchQuery={findQuery} showMinimap={showMinimap} />
                                 </div>
                             ) : (
                                 <EmptyState
@@ -307,6 +366,23 @@ export function WorkbenchPanel({
 
 function isMarkdownFile(fileName: string) {
     return /\.mdx?$/i.test(fileName);
+}
+
+function buildBreadcrumbs(activeFile: string, workspaceName: string) {
+    const normalized = normalizeRelPath(activeFile);
+    if (!normalized) {
+        return [{label: workspaceName, relPath: ''}];
+    }
+
+    const parts = normalized.split('/').filter(Boolean);
+    const crumbs = [{label: workspaceName, relPath: ''}];
+    parts.forEach((part, index) => {
+        crumbs.push({
+            label: part,
+            relPath: parts.slice(0, index + 1).join('/'),
+        });
+    });
+    return crumbs;
 }
 
 function DirectoryPreviewSafe({
@@ -415,9 +491,11 @@ function FileWriteEditor({
     originalContent,
     fileName,
     isDirty,
+    showMinimap,
 }: {
     draft: string;
     fileName: string;
+    showMinimap: boolean;
     isApplying: boolean;
     isPreviewing: boolean;
     onApply: () => void;
@@ -461,6 +539,7 @@ function FileWriteEditor({
                 fileName={fileName}
                 onChange={onChange}
                 onSave={saveDraftShortcut}
+                showMinimap={showMinimap}
                 value={draft}
             />
             {proposal && (

@@ -160,10 +160,10 @@ Steps:
 - [x] Add safe rename/move.
 - [x] Add Ctrl+S, Ctrl+F, Ctrl+W, Ctrl+Tab, and Ctrl+Shift+Tab editor shortcuts.
 - [ ] Add split editor groups.
-- [ ] Add pinned tabs.
-- [ ] Add breadcrumbs.
+- [x] Add pinned tabs.
+- [x] Add breadcrumbs.
 - [ ] Add outline/symbol navigation.
-- [ ] Add minimap toggle.
+- [x] Add minimap toggle.
 - [ ] Add go-to-definition hook where language services exist.
 - [ ] Add formatting hooks.
 - [ ] Add file encoding selector and save-as-encoding support.
@@ -1023,7 +1023,7 @@ Steps:
 9. [x] Detect npm scripts and Go tests into a Tasks panel with read-only listing.
 10. Keep visual smoke focused on no blank screen, no whole-window scroll, Git drawer behavior, route switching, and no slow/external work on folder open.
 
-Reasoning: read-only navigation and diff review are now credible, stage/unstage previews establish the approval boundary without mutating the repository, hunk selection exists as UI state, hunk discard/revert now goes through the approval modal before backend patch application, Workbench has a real search utility panel backed by the existing safe workspace search flow, and task/script detection now lists npm scripts plus Go test commands without running external processes. The next gap is tightening regression coverage around folder-open stability, no whole-window scroll, and no slow/external work on open.
+Reasoning: read-only navigation and diff review are now credible, stage/unstage previews establish the approval boundary without mutating the repository, hunk selection exists as UI state, hunk discard/revert now goes through the approval modal before backend patch application, Workbench has a real search utility panel backed by the existing safe workspace search flow, and task/script detection now lists npm scripts plus Go test commands without running external processes. Phase 2 still has editor-foundation gaps, so the current correction path is closing those earliest editor items before going deeper into new studio surfaces.
 
 ## Directory Ownership Notes
 

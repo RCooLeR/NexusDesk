@@ -24,7 +24,7 @@ Current Workbench is still primitive. The target is an IDE-grade surface:
 - filesystem tree that behaves like an IDE project tree: folders/files, indentation, disclosure arrows, icons, selection, drag/drop intent, context menu, rename/move/new file/new folder, cut/copy/paste, reveal current file, collapse all, and ignored-file controls
 - git status in the tree: modified/added/deleted/renamed/untracked/ignored, branch indicator, changed-file grouping, and repository dirty summary
 - git diff viewer: working tree diff, staged diff, per-file diff, inline/side-by-side modes, hunk navigation, stage/unstage/revert hunk with approval where destructive
-- editor quality: tab pinning, split editor groups, breadcrumbs, minimap/outline, symbol search, go to definition where language services exist, diagnostics panel, problems panel, formatting, and file encoding controls
+- editor quality: split editor groups, outline, symbol search, go to definition where language services exist, diagnostics panel, problems panel, formatting, and file encoding controls. Tab pinning, breadcrumbs, and a minimap toggle exist in the current foundation.
 - code search: path search, text search, regex, replace preview, symbol search, and saved searches
 - tests/tasks: detect package scripts, Go tests, npm scripts, Docker Compose tasks, run selected tasks with logs, and save run artifacts
 - AI code actions: explain file/project, review changes, generate tests, propose patch, apply patch through diff preview, summarize git diff, create commit message, and create PR description later

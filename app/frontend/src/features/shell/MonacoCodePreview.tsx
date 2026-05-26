@@ -7,9 +7,10 @@ type MonacoCodePreviewProps = {
     content: string;
     fileName: string;
     searchQuery: string;
+    showMinimap: boolean;
 };
 
-export function MonacoCodePreview({content, fileName, searchQuery}: MonacoCodePreviewProps) {
+export function MonacoCodePreview({content, fileName, searchQuery, showMinimap}: MonacoCodePreviewProps) {
     const containerRef = useRef<HTMLDivElement>(null);
     const editorRef = useRef<Monaco.editor.IStandaloneCodeEditor | null>(null);
     const decorationIdsRef = useRef<string[]>([]);
@@ -32,7 +33,7 @@ export function MonacoCodePreview({content, fileName, searchQuery}: MonacoCodePr
                 fontSize: 13,
                 language: languageForFile(fileName),
                 lineHeight: 21,
-                minimap: {enabled: true, maxColumn: 60, renderCharacters: false, scale: 0.7},
+                minimap: {enabled: showMinimap, maxColumn: 60, renderCharacters: false, scale: 0.7},
                 padding: {bottom: 16, top: 12},
                 readOnly: true,
                 renderLineHighlight: 'none',
@@ -54,6 +55,12 @@ export function MonacoCodePreview({content, fileName, searchQuery}: MonacoCodePr
             decorationIdsRef.current = [];
         };
     }, []);
+
+    useEffect(() => {
+        editorRef.current?.updateOptions({
+            minimap: {enabled: showMinimap, maxColumn: 60, renderCharacters: false, scale: 0.7},
+        });
+    }, [showMinimap]);
 
     useEffect(() => {
         const editor = editorRef.current;

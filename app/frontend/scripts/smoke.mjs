@@ -65,6 +65,10 @@ const checks = [
             'moveActiveFile',
             'defaultNewFileContent',
             'dirtyDraftPaths',
+            'pinnedTabPaths',
+            'showEditorMinimap',
+            'togglePinnedTab',
+            'selectBreadcrumbPath',
             'editingFilePaths',
             'writeProposals',
             'contextPackPaths',
@@ -144,7 +148,7 @@ const checks = [
     },
     {
         file: 'src/features/shell/WorkbenchPanel.tsx',
-        terms: ['editor-tabs', 'markdownViewMode', 'markdown-view-toggle', 'markdown-document-preview', 'Summarize', 'onSummarizeContext', 'onSelectTab', 'onCloseTab', 'onDeleteFile', 'onMoveFile', 'onPinProjectContext', 'file-write-editor', 'MonacoFileEditor', 'MonacoCodePreview', 'editor-find', 'findInputRef', 'dirty-indicator', 'dirtyTabPaths', 'countFindMatches'],
+        terms: ['editor-tabs', 'markdownViewMode', 'markdown-view-toggle', 'markdown-document-preview', 'Summarize', 'onSummarizeContext', 'onSelectTab', 'onCloseTab', 'onDeleteFile', 'onMoveFile', 'onPinProjectContext', 'pinnedTabPaths', 'onTogglePinTab', 'editor-breadcrumbs', 'onSelectBreadcrumb', 'showMinimap', 'onToggleMinimap', 'file-write-editor', 'MonacoFileEditor', 'MonacoCodePreview', 'editor-find', 'findInputRef', 'dirty-indicator', 'dirtyTabPaths', 'countFindMatches'],
     },
     {
         file: 'src/features/shell/DataStudioPanel.tsx',
@@ -172,11 +176,11 @@ const checks = [
     },
     {
         file: 'src/features/shell/MonacoFileEditor.tsx',
-        terms: ['MonacoFileEditor', 'loadMonaco', 'languageForFile', 'nexus-light', 'KeyCode.KeyS'],
+        terms: ['MonacoFileEditor', 'loadMonaco', 'languageForFile', 'nexus-light', 'KeyCode.KeyS', 'showMinimap', 'updateOptions'],
     },
     {
         file: 'src/features/shell/MonacoCodePreview.tsx',
-        terms: ['MonacoCodePreview', 'readOnly', 'updateSearchDecorations', 'monaco-find-highlight'],
+        terms: ['MonacoCodePreview', 'readOnly', 'updateSearchDecorations', 'monaco-find-highlight', 'showMinimap', 'updateOptions'],
     },
     {
         file: 'src/features/shell/monacoRuntime.ts',
@@ -303,6 +307,8 @@ const checks = [
             '.command-result',
             '.command-shortcut',
             '.editor-find',
+            '.editor-breadcrumbs',
+            '.editor-icon-toggle',
             '.dirty-indicator',
             '.find-highlight',
         ],
