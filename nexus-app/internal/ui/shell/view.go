@@ -21,6 +21,8 @@ type View struct {
 	tabIDs           map[*container.TabItem]string
 	activityLog      *widget.RichText
 	activityText     string
+	searchResults    *fyne.Container
+	searchStatus     *widget.Label
 }
 
 func New(window fyne.Window) *View {
@@ -39,6 +41,8 @@ func New(window fyne.Window) *View {
 		tabIDs:           map[*container.TabItem]string{editorTabs.Items[0]: welcome.ID},
 		activityLog:      widget.NewRichTextFromMarkdown("Ready."),
 		activityText:     "Ready.",
+		searchResults:    container.NewVBox(widget.NewLabel("Search results will appear here.")),
+		searchStatus:     widget.NewLabel("No search yet."),
 	}
 	view.configureEditorTabs()
 	return view
