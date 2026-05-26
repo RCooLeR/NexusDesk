@@ -196,7 +196,7 @@ Goal: recreate the useful local project workbench without Wails or React.
 - [x] Add first native PDF text extraction preview surface.
 - [x] Add first native safe write preview/apply/append/rollback service port for text and code files.
 - [x] Wire draft editor Save through the native safe write service and rollback log.
-- [ ] Add file create/delete/rename/move/copy operations with approval where needed.
+- [x] Add first native file create/delete/rename/move/copy operation services with rooted validation and rollback records.
 - [ ] Add workspace search service and native result panel.
 - [ ] Add Problems panel from the bounded marker/JSON scanner.
 
@@ -305,7 +305,7 @@ Exit criteria:
 ## Next Batch
 
 1. Configure Windows CGO compiler and verify `nexus-app` runs.
-2. Add file create/delete/rename/move/copy operation service skeletons with rooted validation.
-3. Add workspace search service and native result panel.
-4. Start native Git service port with manual-only refresh.
-5. Add a rollback browser panel for native safe-write records.
+2. Add workspace search service and native result panel.
+3. Start native Git service port with manual-only refresh.
+4. Add a rollback browser panel for native safe-write and file-operation records.
+5. Add native tree context actions that call the file operation services after confirmation.

@@ -125,7 +125,7 @@ The Fyne shell now owns native desktop affordances directly: approved brand icon
 
 Preview data remains framework-free: `nexus-app/internal/services/workspace` classifies text, image, table, document, PDF, and binary previews and returns capped data, while `nexus-app/internal/ui/shell` chooses Fyne widgets for rendering.
 
-File mutation data remains framework-free as well: `nexus-app/internal/services/workspace` now owns rooted text/code write previews, append/apply flows, encoding-aware writes, and rollback snapshots under `.nexusdesk/rollbacks`. The native draft editor Save action calls this service, promotes the saved draft back into the editor session source state, and never writes directly from a widget callback.
+File mutation data remains framework-free as well: `nexus-app/internal/services/workspace` now owns rooted text/code write previews, append/apply flows, encoding-aware writes, file create/delete/copy/move/rename operations, and rollback snapshots under `.nexusdesk/rollbacks`. The native draft editor Save action calls this service, promotes the saved draft back into the editor session source state, and never writes directly from a widget callback.
 
 ### 2. Frontend
 
@@ -165,7 +165,7 @@ Review status as of the latest full project pass:
 Near-term architecture corrections:
 
 - Configure Windows CGO/Fyne toolchain and verify the native app runs.
-- Add native file create/delete/rename/move/copy operation services using the same rooted validation and rollback conventions as safe writes.
+- Add native UI affordances for file operations and rollback browsing while keeping the mutation policy in `nexus-app/internal/services/workspace`.
 - Keep editor tab/session and draft rules in `nexus-app/internal/services/editor` rather than in Fyne widget callbacks; Fyne editor chrome should only render and dispatch those state transitions.
 - Port Git, LLM/agent, data, artifact, and metadata services without recreating a bridge-shaped root package.
 - Add a durable job model before wiring slow indexing, OCR, dump imports, connector pulls, or long agent runs.
