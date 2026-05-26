@@ -78,6 +78,7 @@ type BottomStudioPanelProps = {
     metadataSearchQuery: string;
     metadataSearchResults: MetadataSearchResult[];
     onArchiveArtifact: () => void;
+    onApplyAssistantPatch: () => void;
     onCompareAgentToolRunTarget: (run: AgentToolRunRecord) => void;
     onCompareArtifact: () => void;
     onCreateDatasetChart: () => void;
@@ -92,14 +93,19 @@ type BottomStudioPanelProps = {
     onDeleteArtifact: () => void;
     onDryRunAgentTool: (item: AgentToolPlanItem) => void;
     onDraftGitCommitMessage: () => void;
+    onDraftPrDescription: () => void;
+    onDraftPrSummary: () => void;
     onExecuteAgentTool: (item: AgentToolPlanItem) => void;
     onExportDatasetQuery: () => void;
     onExportDatasetSQL: () => void;
     onExportLineage: () => void;
+    onExplainDependencyGraph: () => void;
+    onGenerateTests: () => void;
     onInspectMetadata: () => void;
     onClearWorkspaceSearch: () => void;
     onMetadataSearchQueryChange: (content: string) => void;
     onOpenArtifactSource: () => void;
+    onProposePatch: () => void;
     onSelectGitChange: (path: string) => void;
     onOpenLineageSource: (relPath: string) => void;
     onPrepareMetadataStore: () => void;
@@ -237,6 +243,7 @@ export function BottomStudioPanel({
     metadataSearchQuery,
     metadataSearchResults,
     onArchiveArtifact,
+    onApplyAssistantPatch,
     onCompareAgentToolRunTarget,
     onCompareArtifact,
     onCreateDatasetChart,
@@ -251,14 +258,19 @@ export function BottomStudioPanel({
     onDeleteArtifact,
     onDryRunAgentTool,
     onDraftGitCommitMessage,
+    onDraftPrDescription,
+    onDraftPrSummary,
     onExecuteAgentTool,
     onExportDatasetQuery,
     onExportDatasetSQL,
     onExportLineage,
+    onExplainDependencyGraph,
+    onGenerateTests,
     onInspectMetadata,
     onClearWorkspaceSearch,
     onMetadataSearchQueryChange,
     onOpenArtifactSource,
+    onProposePatch,
     onSelectGitChange,
     onOpenLineageSource,
     onPrepareMetadataStore,
@@ -355,7 +367,13 @@ export function BottomStudioPanel({
                         isSearchingWorkspace={isSearchingWorkspace}
                         openTabs={openTabs}
                         onClearWorkspaceSearch={onClearWorkspaceSearch}
+                        onApplyAssistantPatch={onApplyAssistantPatch}
+                        onDraftPrDescription={onDraftPrDescription}
+                        onDraftPrSummary={onDraftPrSummary}
+                        onExplainDependencyGraph={onExplainDependencyGraph}
+                        onGenerateTests={onGenerateTests}
                         onOpenCommandPalette={onOpenCommandPalette}
+                        onProposePatch={onProposePatch}
                         onRefreshGitStatus={onRefreshGitStatus}
                         onRefreshWorkspaceProblems={onRefreshWorkspaceProblems}
                         onRefreshWorkspaceTasks={onRefreshWorkspaceTasks}
@@ -517,6 +535,9 @@ export function BottomStudioPanel({
                         onApplyGitFileAction={onApplyGitFileAction}
                         onPreviewGitHunkAction={onPreviewGitHunkAction}
                         onApplyGitHunkAction={onApplyGitHunkAction}
+                        onDraftPrDescription={onDraftPrDescription}
+                        onDraftPrSummary={onDraftPrSummary}
+                        onGenerateTests={onGenerateTests}
                         onRefreshGitStatus={onRefreshGitStatus}
                         onReviewGitDiff={onReviewGitDiff}
                         onSelectGitChange={onSelectGitChange}

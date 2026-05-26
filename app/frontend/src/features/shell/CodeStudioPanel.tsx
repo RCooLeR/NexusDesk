@@ -16,7 +16,13 @@ type CodeStudioPanelProps = {
     isSearchingWorkspace: boolean;
     openTabs: FilePreview[];
     onClearWorkspaceSearch: () => void;
+    onApplyAssistantPatch: () => void;
+    onDraftPrDescription: () => void;
+    onDraftPrSummary: () => void;
+    onExplainDependencyGraph: () => void;
+    onGenerateTests: () => void;
     onOpenCommandPalette: () => void;
+    onProposePatch: () => void;
     onReplacePreviewChange: (value: string) => void;
     onRefreshGitStatus: () => void;
     onRefreshWorkspaceProblems: () => void;
@@ -55,7 +61,13 @@ export function CodeStudioPanel({
     isSearchingWorkspace,
     openTabs,
     onClearWorkspaceSearch,
+    onApplyAssistantPatch,
+    onDraftPrDescription,
+    onDraftPrSummary,
+    onExplainDependencyGraph,
+    onGenerateTests,
     onOpenCommandPalette,
+    onProposePatch,
     onReplacePreviewChange,
     onRefreshGitStatus,
     onRefreshWorkspaceProblems,
@@ -90,6 +102,8 @@ export function CodeStudioPanel({
     const hasSelectedDiff = selectedGitFileDiff?.path === selectedGitChangePath && Boolean(selectedGitFileDiff.stagedDiff || selectedGitFileDiff.unstagedDiff);
     const canReviewCurrentFile = Boolean(workspace && filePreview?.kind === 'file' && filePreview.content);
     const canReviewGitDiff = Boolean(hasSelectedDiff || gitStatus?.stagedDiff || gitStatus?.unstagedDiff || gitStatus?.diff);
+    const canRunCodeFileAction = Boolean(workspace && filePreview?.kind === 'file' && filePreview.content && !filePreview.table);
+    const canRunGitAction = Boolean(gitStatus?.available && gitChangedFiles.length > 0);
 
     return (
         <div className="code-studio-panel">
@@ -106,6 +120,12 @@ export function CodeStudioPanel({
                     <Button onClick={onReviewGitDiff} disabled={!canReviewGitDiff || isReviewingCode} variant="subtle">
                         {isReviewingCode ? 'Reviewing...' : 'Review diff'}
                     </Button>
+                    <Button onClick={onGenerateTests} disabled={(!canRunCodeFileAction && !canReviewGitDiff) || isReviewingCode} variant="subtle">Generate tests</Button>
+                    <Button onClick={onProposePatch} disabled={!canRunCodeFileAction || isReviewingCode} variant="subtle">Propose patch</Button>
+                    <Button onClick={onApplyAssistantPatch} disabled={!canRunCodeFileAction || isReviewingCode} variant="subtle">Apply patch draft</Button>
+                    <Button onClick={onExplainDependencyGraph} disabled={!workspace || isReviewingCode} variant="subtle">Dependencies</Button>
+                    <Button onClick={onDraftPrSummary} disabled={!canRunGitAction || isReviewingCode} variant="subtle">PR summary</Button>
+                    <Button onClick={onDraftPrDescription} disabled={!canRunGitAction || isReviewingCode} variant="subtle">PR description</Button>
                     <Button onClick={onOpenCommandPalette} variant="subtle">Commands</Button>
                     <Button disabled variant="subtle">Terminal</Button>
                 </div>

@@ -614,6 +614,10 @@ export function NexusShell({
         const canUseSelectedDataset = Boolean(workspace && filePreview?.fileType === 'data');
         const canChartSelectedDataset = Boolean(workspace && filePreview?.table && datasetChartCategory);
         const canExportDatasetQuery = Boolean(workspace && filePreview?.table && datasetQueryResult);
+        const canUseSelectedCodeFile = Boolean(workspace && filePreview?.kind === 'file' && filePreview.content && !filePreview.table);
+        const hasGitDiffContext = Boolean(selectedGitDiffPromptContext());
+        const latestAssistant = latestAssistantMessage(chatMessages);
+        const canApplyAssistantPatch = Boolean(canUseSelectedCodeFile && latestAssistant?.content.includes('@@'));
 
         return [
             {
@@ -811,6 +815,54 @@ export function NexusShell({
                 id: 'chat.summarize-context',
                 run: () => void summarizeSelectedContext(),
                 title: 'Summarize Current Context',
+            },
+            {
+                detail: canUseSelectedCodeFile || hasGitDiffContext ? 'Generate focused test suggestions from the selected file or current git diff.' : 'Select a code file or refresh/select a git diff first.',
+                disabled: (!canUseSelectedCodeFile && !hasGitDiffContext) || isReviewingCode,
+                group: 'Code AI',
+                id: 'code.generate-tests',
+                run: () => void generateTestsForSelectedCode(),
+                title: 'Generate Tests For Selection',
+            },
+            {
+                detail: canUseSelectedCodeFile ? `Ask for a unified-diff patch proposal for ${activeFile}.` : 'Select a loaded text/code file before proposing a patch.',
+                disabled: !canUseSelectedCodeFile || isReviewingCode,
+                group: 'Code AI',
+                id: 'code.propose-patch',
+                run: () => void proposePatchForCurrentFile(),
+                title: 'Propose Patch For Current File',
+            },
+            {
+                detail: canApplyAssistantPatch ? `Convert the latest assistant diff into a safe edit preview for ${activeFile}.` : 'The latest assistant answer must contain a unified diff for the active file.',
+                disabled: !canApplyAssistantPatch || isPreviewingWrite || isApplyingWrite,
+                group: 'Code AI',
+                id: 'code.apply-assistant-patch',
+                run: () => void applyLatestAssistantPatchToDraft(),
+                title: 'Apply Latest Assistant Patch Draft',
+            },
+            {
+                detail: workspace ? 'Explain dependency relationships from the active file or bounded workspace context.' : 'Open a workspace before explaining dependencies.',
+                disabled: !workspace || isReviewingCode,
+                group: 'Code AI',
+                id: 'code.explain-dependencies',
+                run: () => void explainDependencyGraph(),
+                title: 'Explain Dependency Graph',
+            },
+            {
+                detail: hasGitDiffContext ? 'Draft a concise pull request summary from the current git diff.' : 'Refresh git status or select a changed file first.',
+                disabled: !hasGitDiffContext || isSendingPrompt,
+                group: 'Code AI',
+                id: 'code.pr-summary',
+                run: () => void draftPullRequestSummary(),
+                title: 'Create PR Summary Draft',
+            },
+            {
+                detail: hasGitDiffContext ? 'Draft a complete pull request description from the current git diff.' : 'Refresh git status or select a changed file first.',
+                disabled: !hasGitDiffContext || isSendingPrompt,
+                group: 'Code AI',
+                id: 'code.pr-description',
+                run: () => void draftPullRequestDescription(),
+                title: 'Create PR Description Draft',
             },
             {
                 detail: canSaveLatestAssistantArtifact ? 'Save the latest assistant answer as a Markdown artifact.' : 'Generate an assistant answer before saving it.',
@@ -2488,6 +2540,183 @@ export function NexusShell({
         }
     }
 
+    async function generateTestsForSelectedCode() {
+        const contextRelPath = selectedCodeFileContextRelPath();
+        const diffContext = selectedGitDiffPromptContext();
+        if (!contextRelPath && !diffContext) {
+            setChatStatus('Select a loaded code file or a git diff before generating tests.');
+            return;
+        }
+
+        const prompt = contextRelPath ? [
+            `Generate a focused test plan and test code suggestions for ${contextRelPath}.`,
+            'Return concise Markdown with: coverage gaps, concrete test cases, suggested test file paths, and code snippets where useful.',
+            'Do not claim tests were created or run. Keep suggestions grounded in the selected file.',
+        ].join(' ') : [
+            'Generate focused test suggestions for this git diff.',
+            'Return concise Markdown with: changed behavior, missing test coverage, concrete test cases, suggested test file paths, and code snippets where useful.',
+            'Do not claim tests were created or run. Stay grounded in the diff.',
+            '',
+            diffContext,
+        ].join('\n');
+
+        const target = contextRelPath || selectedGitChangePath || 'working tree';
+        setIsReviewingCode(true);
+        try {
+            pushToolEvent('Test generation requested', target);
+            await sendPromptText(prompt, {
+                clearComposer: false,
+                contextPaths: contextRelPath ? [contextRelPath] : undefined,
+                saveArtifactSource: 'Nexus test generation',
+                saveArtifactTitle: `Test Suggestions - ${target}`,
+                sourcePaths: contextRelPath ? [contextRelPath] : selectedGitReviewSourcePaths(),
+            });
+        } finally {
+            setIsReviewingCode(false);
+        }
+    }
+
+    async function proposePatchForCurrentFile() {
+        const contextRelPath = selectedCodeFileContextRelPath();
+        if (!contextRelPath) {
+            setChatStatus('Select a loaded text or code file before asking for a patch proposal.');
+            return;
+        }
+
+        const prompt = [
+            `Propose a minimal patch for ${contextRelPath}.`,
+            'Return Markdown with a short rationale and exactly one unified diff for this file.',
+            'Do not say the patch was applied. The user will review it and apply it through the file-write preview boundary.',
+            'Keep the patch small, reversible, and grounded in the selected file context.',
+        ].join(' ');
+
+        setIsReviewingCode(true);
+        try {
+            pushToolEvent('Patch proposal requested', contextRelPath);
+            await sendPromptText(prompt, {
+                clearComposer: false,
+                contextPaths: [contextRelPath],
+                saveArtifactSource: 'Nexus patch proposal',
+                saveArtifactTitle: `Patch Proposal - ${contextRelPath}`,
+                sourcePaths: [contextRelPath],
+            });
+        } finally {
+            setIsReviewingCode(false);
+        }
+    }
+
+    async function explainDependencyGraph() {
+        const contextRelPath = selectedCodeFileContextRelPath() || (workspace ? '.' : '');
+        if (!contextRelPath) {
+            setChatStatus('Open a workspace or select a loaded code file before explaining dependencies.');
+            return;
+        }
+
+        const prompt = [
+            contextRelPath === '.' ? 'Explain the project dependency graph from the bounded workspace context.' : `Explain the dependency graph around ${contextRelPath}.`,
+            'Return concise Markdown with inbound dependencies, outbound dependencies, runtime/build/test dependencies, missing context, risks, and useful next inspection steps.',
+            'Use citations from the provided context and do not invent files outside it.',
+        ].join(' ');
+
+        setIsReviewingCode(true);
+        try {
+            pushToolEvent('Dependency graph explanation requested', contextRelPath);
+            await sendPromptText(prompt, {
+                clearComposer: false,
+                contextPaths: [contextRelPath],
+                saveArtifactSource: 'Nexus dependency explanation',
+                saveArtifactTitle: `Dependency Graph - ${contextRelPath === '.' ? 'workspace' : contextRelPath}`,
+                sourcePaths: contextRelPath === '.' ? [] : [contextRelPath],
+            });
+        } finally {
+            setIsReviewingCode(false);
+        }
+    }
+
+    async function draftPullRequestSummary() {
+        const diffContext = selectedGitDiffPromptContext();
+        if (!diffContext) {
+            setChatStatus('Refresh git status or select a changed file before drafting a PR summary.');
+            return;
+        }
+
+        const prompt = [
+            'Draft a concise pull request summary from this git diff.',
+            'Return Markdown with: summary, notable changes, risk areas, tests to run, and follow-up items.',
+            'Do not claim tests passed unless the diff says so. Stay grounded in the diff.',
+            '',
+            diffContext,
+        ].join('\n');
+        pushToolEvent('PR summary draft requested', selectedGitChangePath || gitStatus?.branch || 'working tree');
+        await sendPromptText(prompt, {
+            clearComposer: false,
+            saveArtifactSource: 'Nexus PR summary',
+            saveArtifactTitle: 'PR Summary Draft',
+            sourcePaths: selectedGitReviewSourcePaths(),
+        });
+    }
+
+    async function draftPullRequestDescription() {
+        const diffContext = selectedGitDiffPromptContext();
+        if (!diffContext) {
+            setChatStatus('Refresh git status or select a changed file before drafting a PR description.');
+            return;
+        }
+
+        const prompt = [
+            'Draft a complete pull request description from this git diff.',
+            'Use Markdown sections: Summary, Changes, Validation, Risks, Rollback, and Notes for reviewers.',
+            'Do not claim validation was run unless the diff or prompt states it. Stay grounded in the diff.',
+            '',
+            diffContext,
+        ].join('\n');
+        pushToolEvent('PR description draft requested', selectedGitChangePath || gitStatus?.branch || 'working tree');
+        await sendPromptText(prompt, {
+            clearComposer: false,
+            saveArtifactSource: 'Nexus PR description',
+            saveArtifactTitle: 'PR Description Draft',
+            sourcePaths: selectedGitReviewSourcePaths(),
+        });
+    }
+
+    async function applyLatestAssistantPatchToDraft() {
+        if (!workspace || !filePreview || filePreview.kind !== 'file' || !filePreview.content) {
+            setWorkspaceStatus('Select a loaded file before applying an assistant patch draft.');
+            return;
+        }
+        const latest = latestAssistantMessage(chatMessages);
+        if (!latest) {
+            setWorkspaceStatus('Ask the assistant for a unified diff before applying a patch draft.');
+            return;
+        }
+
+        const patchedContent = applyUnifiedDiffToContent(filePreview.content, latest.content, filePreview.relPath);
+        if (patchedContent === null) {
+            setWorkspaceStatus('No usable single-file unified diff was found in the latest assistant answer.');
+            return;
+        }
+        if (patchedContent === filePreview.content) {
+            setWorkspaceStatus('The assistant patch did not change the active file.');
+            return;
+        }
+
+        setEditingFilePaths((current) => current.includes(filePreview.relPath) ? current : [...current, filePreview.relPath]);
+        setFileDrafts((current) => ({...current, [filePreview.relPath]: patchedContent}));
+        setFileDraftEncodings((current) => ({...current, [filePreview.relPath]: current[filePreview.relPath] ?? filePreview.encoding ?? 'utf-8'}));
+        setIsPreviewingWrite(true);
+        try {
+            const proposal = await PreviewFileWrite({relPath: filePreview.relPath, content: patchedContent, encoding: filePreview.encoding ?? 'utf-8'});
+            setWriteProposals((current) => ({...current, [proposal.relPath]: proposal}));
+            setWorkspaceStatus(`${proposal.message} Review the diff preview, then approve Apply write if it is correct.`);
+            pushToolEvent('Assistant patch previewed', proposal.relPath);
+        } catch (error) {
+            const message = error instanceof Error ? error.message : '';
+            setWorkspaceStatus(message || 'Could not preview the assistant patch.');
+        } finally {
+            setIsPreviewingWrite(false);
+        }
+    }
+
     async function summarizeGitDiff() {
         const diffContext = selectedGitDiffPromptContext();
         if (!diffContext) {
@@ -2630,6 +2859,13 @@ export function NexusShell({
             return [selectedGitChangePath];
         }
         return (gitStatus?.changedFiles ?? []).map((change) => change.path).slice(0, 20);
+    }
+
+    function selectedCodeFileContextRelPath() {
+        if (filePreview?.kind === 'file' && filePreview.content && !filePreview.table) {
+            return filePreview.relPath;
+        }
+        return '';
     }
 
     function selectedTextContextRelPath() {
@@ -3674,6 +3910,7 @@ export function NexusShell({
                 metadataSearchQuery={metadataSearchQuery}
                 metadataSearchResults={metadataSearchResults}
                 onArchiveArtifact={() => void archiveActiveArtifact()}
+                onApplyAssistantPatch={() => void applyLatestAssistantPatchToDraft()}
                 onCompareAgentToolRunTarget={(run) => void compareAgentToolRunTarget(run)}
                 onCompareArtifact={() => void compareActiveArtifactWithPrevious()}
                 onCreateDatasetChart={() => void createDatasetChart()}
@@ -3697,14 +3934,19 @@ export function NexusShell({
                 onDeleteArtifact={() => void deleteActiveArtifact()}
                 onDryRunAgentTool={(item) => void dryRunAgentTool(item)}
                 onDraftGitCommitMessage={() => void draftGitCommitMessage()}
+                onDraftPrDescription={() => void draftPullRequestDescription()}
+                onDraftPrSummary={() => void draftPullRequestSummary()}
                 onExecuteAgentTool={(item) => void executeAgentTool(item)}
                 onExportDatasetQuery={() => void exportDatasetQuery()}
                 onExportDatasetSQL={() => void exportDatasetSQL()}
                 onExportLineage={() => void exportArtifactLineage()}
+                onExplainDependencyGraph={() => void explainDependencyGraph()}
+                onGenerateTests={() => void generateTestsForSelectedCode()}
                 onInspectMetadata={() => void inspectMetadataStore()}
                 onClearWorkspaceSearch={() => setWorkspaceSearchResults([])}
                 onMetadataSearchQueryChange={setMetadataSearchQuery}
                 onOpenArtifactSource={() => void openArtifactSource()}
+                onProposePatch={() => void proposePatchForCurrentFile()}
                 onSelectGitChange={selectGitChange}
                 onOpenLineageSource={(relPath) => void openLineageSource(relPath)}
                 onPrepareMetadataStore={() => void prepareSQLiteMetadataStore()}
@@ -4132,6 +4374,128 @@ function fileTypeForRelPath(relPath: string) {
 
 function latestAssistantMessage(messages: ChatMessage[]) {
     return [...messages].reverse().find((message) => message.role === 'assistant' && message.content.trim()) ?? null;
+}
+
+function applyUnifiedDiffToContent(original: string, assistantAnswer: string, relPath: string) {
+    const patchLines = unifiedDiffLinesForPath(assistantAnswer, relPath);
+    if (!patchLines || !patchLines.some((line) => line.startsWith('@@ '))) {
+        return null;
+    }
+
+    const normalized = original.replace(/\r\n/g, '\n');
+    const hadFinalNewline = normalized.endsWith('\n');
+    const originalLines = hadFinalNewline ? normalized.slice(0, -1).split('\n') : normalized.split('\n');
+    const result: string[] = [];
+    let originalIndex = 0;
+    let appliedHunks = 0;
+
+    for (let index = 0; index < patchLines.length; index += 1) {
+        const header = /^@@ -(\d+)(?:,\d+)? \+\d+(?:,\d+)? @@/.exec(patchLines[index]);
+        if (!header) {
+            continue;
+        }
+
+        const hunkOldStart = Number(header[1]) - 1;
+        if (!Number.isFinite(hunkOldStart) || hunkOldStart < originalIndex || hunkOldStart > originalLines.length) {
+            return null;
+        }
+        while (originalIndex < hunkOldStart) {
+            result.push(originalLines[originalIndex]);
+            originalIndex += 1;
+        }
+
+        index += 1;
+        for (; index < patchLines.length; index += 1) {
+            const line = patchLines[index];
+            if (line.startsWith('@@ ')) {
+                index -= 1;
+                break;
+            }
+            if (line.startsWith('diff --git ')) {
+                continue;
+            }
+            if (line.startsWith('\\')) {
+                continue;
+            }
+            if (line.startsWith(' ')) {
+                if (originalLines[originalIndex] !== line.slice(1)) {
+                    return null;
+                }
+                result.push(line.slice(1));
+                originalIndex += 1;
+                continue;
+            }
+            if (line.startsWith('-')) {
+                if (originalLines[originalIndex] !== line.slice(1)) {
+                    return null;
+                }
+                originalIndex += 1;
+                continue;
+            }
+            if (line.startsWith('+')) {
+                result.push(line.slice(1));
+            }
+        }
+        appliedHunks += 1;
+    }
+
+    if (appliedHunks === 0) {
+        return null;
+    }
+    while (originalIndex < originalLines.length) {
+        result.push(originalLines[originalIndex]);
+        originalIndex += 1;
+    }
+    return `${result.join('\n')}${hadFinalNewline ? '\n' : ''}`;
+}
+
+function unifiedDiffLinesForPath(answer: string, relPath: string) {
+    const lines = stripMarkdownCodeFenceMarkers(answer.replace(/\r\n/g, '\n').split('\n'));
+    const sections = splitUnifiedDiffSections(lines);
+    const matchingSection = sections.find((section) => section.some((line) => line.startsWith('@@ ')) && sectionMatchesRelPath(section, relPath));
+    if (matchingSection) {
+        return matchingSection;
+    }
+    if (sections.length === 1 && sections[0].some((line) => line.startsWith('@@ '))) {
+        return sections[0];
+    }
+    if (sections.length === 0 && lines.some((line) => line.startsWith('@@ '))) {
+        return lines;
+    }
+    return null;
+}
+
+function stripMarkdownCodeFenceMarkers(lines: string[]) {
+    return lines.filter((line) => !line.trim().startsWith('```'));
+}
+
+function splitUnifiedDiffSections(lines: string[]) {
+    const sections: string[][] = [];
+    let current: string[] = [];
+    for (const line of lines) {
+        const startsSection = line.startsWith('diff --git ') || (line.startsWith('--- ') && current.some((currentLine) => currentLine.startsWith('@@ ')));
+        if (startsSection && current.length > 0) {
+            sections.push(current);
+            current = [];
+        }
+        if (line.startsWith('diff --git ') || line.startsWith('--- ') || line.startsWith('+++ ') || line.startsWith('@@ ') || /^[ +\-\\]/.test(line)) {
+            current.push(line);
+        }
+    }
+    if (current.length > 0) {
+        sections.push(current);
+    }
+    return sections;
+}
+
+function sectionMatchesRelPath(section: string[], relPath: string) {
+    const normalized = relPath.replace(/\\/g, '/');
+    return section.some((line) => {
+        if (!line.startsWith('diff --git ') && !line.startsWith('--- ') && !line.startsWith('+++ ')) {
+            return false;
+        }
+        return line.includes(`a/${normalized}`) || line.includes(`b/${normalized}`) || line.includes(normalized);
+    });
 }
 
 function staleSourcePaths(messages: ChatMessage[], contextPreview: ContextPreview | null, freshness: WorkspaceFreshnessStatus | null) {

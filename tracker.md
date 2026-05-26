@@ -301,17 +301,17 @@ Step 4.5: Code AI actions
 
 - [x] Review current file.
 - [x] Review git diff.
-- [ ] Generate tests for selected file/diff.
-- [ ] Propose patch with diff preview.
-- [ ] Apply accepted patch through safe write boundary.
-- [ ] Explain dependency graph.
-- [ ] Create PR summary draft.
-- [ ] Create PR description draft.
+- [x] Generate tests for selected file/diff.
+- [x] Propose patch with diff preview.
+- [x] Apply accepted patch through safe write boundary.
+- [x] Explain dependency graph.
+- [x] Create PR summary draft.
+- [x] Create PR description draft.
 
 Exit criteria:
 
-- [ ] Workbench can be used for day-to-day project navigation and diff review.
-- [ ] AI code changes remain previewed, reviewable, and auditable.
+- [x] Workbench can be used for day-to-day project navigation and diff review.
+- [x] AI code changes remain previewed, reviewable, and auditable.
 
 ## Phase 5: Data & Analytics Expansion
 
@@ -1075,7 +1075,7 @@ Workspace scan counters are diagnostic data, not primary navigation content. Kee
 
 `app/internal/workspace/problems.go` owns the first read-only lightweight Problems scan for TODO/FIXME/HACK/BUG markers, merge-conflict markers, and invalid JSON.
 
-`app/frontend/src/features/shell/CodeStudioPanel.tsx` owns the first reusable Workbench utility surface for editor session metrics, open tabs, workspace status, git branch/dirty summary, changed-file list, Workbench search results/actions, active-file and git-diff review triggers, lightweight Problems results, detected task listings, latest task-run output, and placeholders that will receive deeper review/test-generation data.
+`app/frontend/src/features/shell/CodeStudioPanel.tsx` owns the first reusable Workbench utility surface for editor session metrics, open tabs, workspace status, git branch/dirty summary, changed-file list, Workbench search results/actions, active-file and git-diff review/test/patch/dependency/PR draft triggers, lightweight Problems results, detected task listings, latest task-run output, and placeholders that will receive deeper review records.
 
 `app/frontend/src/features/shell/GitDiffPanel.tsx` owns the bottom-drawer Git tab for selected changed-file review, file stage/unstage controls, hunk selection state, approval-backed hunk stage/unstage/discard/revert controls, and read-only staged/unstaged working-tree diffs.
 

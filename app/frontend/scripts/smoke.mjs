@@ -116,6 +116,13 @@ const checks = [
             'First token received',
             'reviewCurrentFile',
             'reviewGitDiff',
+            'generateTestsForSelectedCode',
+            'proposePatchForCurrentFile',
+            'applyLatestAssistantPatchToDraft',
+            'applyUnifiedDiffToContent',
+            'explainDependencyGraph',
+            'draftPullRequestSummary',
+            'draftPullRequestDescription',
             'isReviewingCode',
             'summarizeGitDiff',
             'draftGitCommitMessage',
@@ -155,7 +162,7 @@ const checks = [
     },
     {
         file: 'src/features/shell/CodeStudioPanel.tsx',
-        terms: ['CodeStudioPanel', 'Workbench', 'Project Session', 'Repository', 'Search', 'workspaceSearchQuery', 'workspaceSearchRegex', 'workspaceReplacePreview', 'replacePreviewText', 'workspaceSearchResults', 'workspaceProblems', 'onRefreshWorkspaceProblems', 'Refresh problems', 'WorkspaceProblemSummary', 'workspaceTasks', 'workspaceTaskRun', 'isRunningWorkspaceTask', 'onRunWorkspaceTask', 'taskRunPreview', 'onRefreshWorkspaceTasks', 'Refresh tasks', 'WorkspaceTaskSummary', 'onSearchWorkspace', 'onSelectSearchResult', 'code-studio-search-panel', 'code-studio-search-options', 'code-studio-problems-panel', 'code-studio-problem-row', 'code-studio-task-panel', 'code-studio-task-output', 'selectedGitChangePath', 'onSelectGitChange', 'stagedFiles', 'unstagedFiles', 'Refresh git', 'Commands', 'onReviewCurrentFile', 'onReviewGitDiff', 'Review file', 'Review diff'],
+        terms: ['CodeStudioPanel', 'Workbench', 'Project Session', 'Repository', 'Search', 'workspaceSearchQuery', 'workspaceSearchRegex', 'workspaceReplacePreview', 'replacePreviewText', 'workspaceSearchResults', 'workspaceProblems', 'onRefreshWorkspaceProblems', 'Refresh problems', 'WorkspaceProblemSummary', 'workspaceTasks', 'workspaceTaskRun', 'isRunningWorkspaceTask', 'onRunWorkspaceTask', 'taskRunPreview', 'onRefreshWorkspaceTasks', 'Refresh tasks', 'WorkspaceTaskSummary', 'onSearchWorkspace', 'onSelectSearchResult', 'code-studio-search-panel', 'code-studio-search-options', 'code-studio-problems-panel', 'code-studio-problem-row', 'code-studio-task-panel', 'code-studio-task-output', 'selectedGitChangePath', 'onSelectGitChange', 'stagedFiles', 'unstagedFiles', 'Refresh git', 'Commands', 'onReviewCurrentFile', 'onReviewGitDiff', 'Review file', 'Review diff', 'onGenerateTests', 'Generate tests', 'onProposePatch', 'Propose patch', 'onApplyAssistantPatch', 'Apply patch draft', 'onExplainDependencyGraph', 'Dependencies', 'onDraftPrSummary', 'PR summary', 'onDraftPrDescription', 'PR description'],
     },
     {
         file: 'src/features/shell/GitDiffPanel.tsx',
@@ -247,7 +254,7 @@ const checks = [
     },
     {
         file: 'src/features/shell/BottomStudioPanel.tsx',
-        terms: ['BottomStudioPanel', 'drawerTabs', 'Git', 'Approvals', 'Activity', 'GitDiffPanel', 'onSummarizeGitDiff', 'onDraftGitCommitMessage', 'onReviewGitDiff', 'CodeStudioPanel', 'DataOperationsPanel', 'LLMSettingsCard', 'AgentToolPlanCard', 'ArtifactStudioPanel', 'ApprovalLogPanel', 'ToolTimeline', 'bottom-tabbar', 'showTabs'],
+        terms: ['BottomStudioPanel', 'drawerTabs', 'Git', 'Approvals', 'Activity', 'GitDiffPanel', 'onSummarizeGitDiff', 'onDraftGitCommitMessage', 'onReviewGitDiff', 'onGenerateTests', 'onDraftPrSummary', 'onDraftPrDescription', 'CodeStudioPanel', 'DataOperationsPanel', 'LLMSettingsCard', 'AgentToolPlanCard', 'ArtifactStudioPanel', 'ApprovalLogPanel', 'ToolTimeline', 'bottom-tabbar', 'showTabs'],
     },
     {
         file: 'src/features/shell/DataOperationsPanel.tsx',

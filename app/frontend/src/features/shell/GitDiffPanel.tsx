@@ -51,6 +51,9 @@ type GitDiffPanelProps = {
     onApplyGitFileAction: (action: GitFileAction) => void;
     onPreviewGitHunkAction: (request: GitHunkActionRequest) => void;
     onApplyGitHunkAction: (request: GitHunkActionRequest) => void;
+    onDraftPrDescription: () => void;
+    onDraftPrSummary: () => void;
+    onGenerateTests: () => void;
     onRefreshGitStatus: () => void;
     onReviewGitDiff: () => void;
     onSelectGitChange: (path: string) => void;
@@ -74,6 +77,9 @@ export function GitDiffPanel({
     onApplyGitFileAction,
     onPreviewGitHunkAction,
     onApplyGitHunkAction,
+    onDraftPrDescription,
+    onDraftPrSummary,
+    onGenerateTests,
     onRefreshGitStatus,
     onReviewGitDiff,
     onSelectGitChange,
@@ -165,8 +171,11 @@ export function GitDiffPanel({
                     <Button disabled={!selectedIsStaged || isPreviewingGitFileAction} onClick={() => onPreviewGitFileAction('unstage')} variant="subtle">Preview unstage</Button>
                     <Button disabled={!selectedIsStaged || isApplyingGitFileAction} onClick={() => onApplyGitFileAction('unstage')} variant="subtle">Unstage file</Button>
                     <Button disabled={!hasDiff || isGeneratingGitInsight} onClick={onReviewGitDiff} variant="subtle">Review diff</Button>
+                    <Button disabled={!hasDiff || isGeneratingGitInsight} onClick={onGenerateTests} variant="subtle">Generate tests</Button>
                     <Button disabled={!hasDiff || isGeneratingGitInsight} onClick={onSummarizeDiff} variant="subtle">Summarize diff</Button>
                     <Button disabled={!hasDiff || isGeneratingGitInsight} onClick={onDraftCommitMessage} variant="subtle">Draft commit</Button>
+                    <Button disabled={!hasDiff || isGeneratingGitInsight} onClick={onDraftPrSummary} variant="subtle">PR summary</Button>
+                    <Button disabled={!hasDiff || isGeneratingGitInsight} onClick={onDraftPrDescription} variant="subtle">PR description</Button>
                 </div>
                 {gitStatus?.available && (
                     <div className={gitStatus.dirty ? 'git-summary dirty' : 'git-summary'}>

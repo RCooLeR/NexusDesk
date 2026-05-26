@@ -130,6 +130,8 @@ Current status:
 - The Summarize button sends selected file, extracted document, or directory context through chat and saves the result as a Markdown artifact with provenance.
 - The Review button sends the active text/code file through a code-review prompt, streams the answer in chat, and saves the review as a Markdown artifact with source provenance.
 - The Git drawer and Workbench utility panel can send the selected working-tree diff through a grounded review prompt and save the review artifact with changed-file citations.
+- Code AI actions can generate test suggestions from the active file or selected diff, explain dependency relationships, draft PR summaries/descriptions, and request unified-diff patch proposals.
+- Accepted single-file assistant patch diffs can be converted into edit drafts and previewed through the same safe file-write diff/apply boundary before approval.
 - The workbench keeps recently opened previews in closeable editor tabs so several files can stay loaded while browsing.
 - Markdown editor tabs can switch between raw source and rendered preview.
 - Text/code previews support a local find box with match counts and highlighted matches.
