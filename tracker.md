@@ -227,8 +227,8 @@ Exit criteria:
 
 Goal: make Workbench credible as an IDE-like surface.
 
-- [ ] Port `app-wails/internal/gitservice` into `nexus-app/internal/services/git`.
-- [ ] Add manual-only Git refresh.
+- [x] Add first native Git status service under `nexus-app/internal/services/git`.
+- [x] Add manual-only Git refresh panel.
 - [ ] Add changed-file tree grouped by directories.
 - [ ] Add unified/split/diff-only diff views.
 - [ ] Add hunk selection and approval-backed hunk actions.
@@ -305,7 +305,7 @@ Exit criteria:
 ## Next Batch
 
 1. Configure Windows CGO compiler and verify `nexus-app` runs.
-2. Start native Git service port with manual-only refresh.
+2. Add changed-file tree grouping to the native Git panel.
 3. Add a rollback browser panel for native safe-write and file-operation records.
 4. Add native tree context actions that call the file operation services after confirmation.
 5. Add settings store and native provider/model settings page skeleton.

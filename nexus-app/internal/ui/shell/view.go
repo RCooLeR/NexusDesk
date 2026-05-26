@@ -6,6 +6,7 @@ import (
 	"fyne.io/fyne/v2/widget"
 
 	editorSvc "nexusdesk/internal/services/editor"
+	gitSvc "nexusdesk/internal/services/git"
 	workspaceSvc "nexusdesk/internal/services/workspace"
 )
 
@@ -13,6 +14,7 @@ type View struct {
 	window           fyne.Window
 	state            *State
 	workspaceService *workspaceSvc.Service
+	gitService       *gitSvc.Service
 	editorSession    *editorSvc.Session
 	status           *widget.Label
 	navigator        *fyne.Container
@@ -25,6 +27,8 @@ type View struct {
 	searchStatus     *widget.Label
 	problemResults   *fyne.Container
 	problemStatus    *widget.Label
+	gitResults       *fyne.Container
+	gitStatus        *widget.Label
 }
 
 func New(window fyne.Window) *View {
@@ -35,6 +39,7 @@ func New(window fyne.Window) *View {
 		window:           window,
 		state:            NewState(),
 		workspaceService: workspaceSvc.New(),
+		gitService:       gitSvc.New(),
 		editorSession:    editorSession,
 		status:           widget.NewLabel("No workspace open"),
 		navigator:        container.NewStack(widget.NewLabel("Open a workspace to browse files.")),
@@ -47,6 +52,8 @@ func New(window fyne.Window) *View {
 		searchStatus:     widget.NewLabel("No search yet."),
 		problemResults:   container.NewVBox(widget.NewLabel("Run a scan to inspect lightweight workspace problems.")),
 		problemStatus:    widget.NewLabel("No problem scan yet."),
+		gitResults:       container.NewVBox(widget.NewLabel("Press Refresh git to inspect repository status.")),
+		gitStatus:        widget.NewLabel("Git status has not been loaded."),
 	}
 	view.configureEditorTabs()
 	return view
