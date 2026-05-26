@@ -126,6 +126,34 @@ func TestConnectorProfileStorePreservesRedactedCredentialOnSave(t *testing.T) {
 	}
 }
 
+func TestConnectorProfileStoreResolvesProfileByIDForUse(t *testing.T) {
+	path := filepath.Join(t.TempDir(), "connector-profiles.json")
+	store := NewConnectorProfileStore(path)
+
+	saved, err := store.Save(ConnectorProfile{
+		Name:     "Warehouse",
+		Kind:     "postgres",
+		Host:     "db.local",
+		Database: "analytics",
+		Username: "analyst",
+		Password: "secret",
+	})
+	if err != nil {
+		t.Fatalf("Save failed: %v", err)
+	}
+
+	resolved, err := store.ResolveByIDForUse(saved.ID)
+	if err != nil {
+		t.Fatalf("ResolveByIDForUse failed: %v", err)
+	}
+	if resolved.Password != "secret" {
+		t.Fatalf("expected resolved secret, got %q", resolved.Password)
+	}
+	if resolved.Kind != "postgres" || !resolved.ReadOnly {
+		t.Fatalf("expected normalized read-only postgres profile, got %+v", resolved)
+	}
+}
+
 func TestConnectorProfileStoreClearsCredentialWhenBlankReferenceIsSaved(t *testing.T) {
 	path := filepath.Join(t.TempDir(), "connector-profiles.json")
 	store := NewConnectorProfileStore(path)

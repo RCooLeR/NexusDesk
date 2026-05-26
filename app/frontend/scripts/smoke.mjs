@@ -44,6 +44,8 @@ const checks = [
             'ListConnectorProfiles',
             'SaveConnectorProfile',
             'DeleteConnectorProfile',
+            'TestConnectorProfile',
+            'InspectConnectorProfile',
             'ExportArtifactLineageJSON',
             'EnsureSQLiteMetadataStore',
             'InspectMetadataStore',
@@ -192,7 +194,7 @@ const checks = [
     },
     {
         file: 'src/features/shell/ConnectorProfilesCard.tsx',
-        terms: ['ConnectorProfilesCard', 'Connector Profiles', 'protected credential', 'Password/token', 'Result cap', 'Timeout', 'Save profile', 'credential stored'],
+        terms: ['ConnectorProfilesCard', 'Connector Profiles', 'protected credential', 'Password/token', 'Result cap', 'Timeout', 'Save profile', 'credential stored', 'onTest', 'onInspect', 'connector-profile-metadata', 'Test', 'Inspect'],
     },
     {
         file: 'src/features/shell/llmModelCatalog.ts',
@@ -393,7 +395,7 @@ const checks = [
     },
     {
         file: 'wailsjs/go/main/App.d.ts',
-        terms: ['AskLLMContextPack', 'RunAgent', 'PreviewFileWrite', 'ApplyFileDelete', 'PreviewFileCopy', 'ApplyFileCopy', 'ApplyFileMove', 'ProfileDataset', 'CreateDatasetChartArtifact', 'CreateDatasetQueryArtifact', 'CreateDatasetSQLArtifact', 'CreateDatasetSummaryArtifact', 'CreateSQLiteQueryCSVArtifact', 'CreateSQLiteQueryMarkdownArtifact', 'CreateChatMarkdownArtifact', 'CreateScanReportArtifact', 'PreviewChatContextPack', 'PreviewDatasetChart', 'SaveDatasetQuery', 'SaveDatasetSQLQuery', 'SaveSQLiteConnectorQuery', 'ListDatasetSQLQueries', 'ListSQLiteConnectorQueries', 'ListDatasetDependencies', 'ListDatasetSQLRuns', 'ListWorkspaceProblems', 'ListWorkspaceTasks', 'RunWorkspaceTask', 'RefreshStaleContext', 'SearchMetadata', 'SearchWorkspaceAdvanced', 'GetAssistantProfile', 'SaveAssistantProfile', 'ListConnectorProfiles', 'SaveConnectorProfile', 'DeleteConnectorProfile', 'QueryWorkspaceSQLite', 'CancelWorkspaceSQLiteQuery', 'InspectWorkspaceSQLite', 'ExportArtifactLineageJSON', 'GetGitStatus', 'GetGitFileDiff', 'PreviewGitFileAction', 'ApplyGitFileAction', 'PreviewGitHunkAction', 'ApplyGitHunkAction', 'ListApprovals', 'ListAgentTools', 'ListAgentToolRuns', 'PreviewAgentTool', 'ExecuteAgentTool', 'QueryDatasetSQL', 'EnsureSQLiteMetadataStore', 'InspectMetadataStore', 'GetArtifactLineage', 'CheckWorkspaceFreshness', 'CompareArtifacts', 'ArchiveArtifact', 'DeleteArtifact'],
+        terms: ['AskLLMContextPack', 'RunAgent', 'PreviewFileWrite', 'ApplyFileDelete', 'PreviewFileCopy', 'ApplyFileCopy', 'ApplyFileMove', 'ProfileDataset', 'CreateDatasetChartArtifact', 'CreateDatasetQueryArtifact', 'CreateDatasetSQLArtifact', 'CreateDatasetSummaryArtifact', 'CreateSQLiteQueryCSVArtifact', 'CreateSQLiteQueryMarkdownArtifact', 'CreateChatMarkdownArtifact', 'CreateScanReportArtifact', 'PreviewChatContextPack', 'PreviewDatasetChart', 'SaveDatasetQuery', 'SaveDatasetSQLQuery', 'SaveSQLiteConnectorQuery', 'ListDatasetSQLQueries', 'ListSQLiteConnectorQueries', 'ListDatasetDependencies', 'ListDatasetSQLRuns', 'ListWorkspaceProblems', 'ListWorkspaceTasks', 'RunWorkspaceTask', 'RefreshStaleContext', 'SearchMetadata', 'SearchWorkspaceAdvanced', 'GetAssistantProfile', 'SaveAssistantProfile', 'ListConnectorProfiles', 'SaveConnectorProfile', 'DeleteConnectorProfile', 'TestConnectorProfile', 'InspectConnectorProfile', 'QueryConnectorProfile', 'QueryWorkspaceSQLite', 'CancelWorkspaceSQLiteQuery', 'InspectWorkspaceSQLite', 'ExportArtifactLineageJSON', 'GetGitStatus', 'GetGitFileDiff', 'PreviewGitFileAction', 'ApplyGitFileAction', 'PreviewGitHunkAction', 'ApplyGitHunkAction', 'ListApprovals', 'ListAgentTools', 'ListAgentToolRuns', 'PreviewAgentTool', 'ExecuteAgentTool', 'QueryDatasetSQL', 'EnsureSQLiteMetadataStore', 'InspectMetadataStore', 'GetArtifactLineage', 'CheckWorkspaceFreshness', 'CompareArtifacts', 'ArchiveArtifact', 'DeleteArtifact'],
     },
     {
         file: '../app_tasks.go',

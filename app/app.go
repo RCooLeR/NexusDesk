@@ -642,6 +642,45 @@ func (a *App) DeleteConnectorProfile(id string) error {
 	return a.connectorStore.Delete(id)
 }
 
+func (a *App) TestConnectorProfile(id string) (dbconnector.ConnectorProfileStatus, error) {
+	profile, err := a.connectorStore.ResolveByIDForUse(id)
+	if err != nil {
+		return dbconnector.ConnectorProfileStatus{}, err
+	}
+	switch profile.Kind {
+	case "postgres":
+		return dbconnector.TestPostgresProfile(profile)
+	default:
+		return dbconnector.ConnectorProfileStatus{}, fmt.Errorf("connector kind %q is not runnable yet", profile.Kind)
+	}
+}
+
+func (a *App) InspectConnectorProfile(id string) (dbconnector.ConnectorMetadata, error) {
+	profile, err := a.connectorStore.ResolveByIDForUse(id)
+	if err != nil {
+		return dbconnector.ConnectorMetadata{}, err
+	}
+	switch profile.Kind {
+	case "postgres":
+		return dbconnector.InspectPostgresProfile(profile)
+	default:
+		return dbconnector.ConnectorMetadata{}, fmt.Errorf("connector kind %q is not inspectable yet", profile.Kind)
+	}
+}
+
+func (a *App) QueryConnectorProfile(request dbconnector.ConnectorQueryRequest) (dbconnector.ConnectorQueryResult, error) {
+	profile, err := a.connectorStore.ResolveByIDForUse(request.ProfileID)
+	if err != nil {
+		return dbconnector.ConnectorQueryResult{}, err
+	}
+	switch profile.Kind {
+	case "postgres":
+		return dbconnector.QueryPostgresProfile(profile, request)
+	default:
+		return dbconnector.ConnectorQueryResult{}, fmt.Errorf("connector kind %q is not queryable yet", profile.Kind)
+	}
+}
+
 func (a *App) GetAssistantProfile() (storage.AssistantProfile, error) {
 	return a.profileStore.Get()
 }

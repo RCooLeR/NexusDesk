@@ -33,6 +33,7 @@ import {
     GetArtifactLineage,
     GetAssistantProfile,
     InspectWorkspaceSQLite,
+    InspectConnectorProfile,
     InspectMetadataStore,
     GetChatHistory,
     ListConnectorProfiles,
@@ -78,6 +79,7 @@ import {
     RunAgent,
     SelectWorkspace,
     TestLLMConnection,
+    TestConnectorProfile,
     DeleteConnectorProfile,
     EventsOn,
 } from '../../api/wailsClient';
@@ -216,6 +218,7 @@ export function NexusShell({
     const [probeResult, setProbeResult] = useState<LLMProbeResult | null>(null);
     const [connectorProfiles, setConnectorProfiles] = useState<ConnectorProfile[]>([]);
     const [connectorProfileDraft, setConnectorProfileDraft] = useState<ConnectorProfile>(defaultConnectorProfileDraft());
+    const [connectorProfileMetadata, setConnectorProfileMetadata] = useState<ConnectorMetadata | null>(null);
     const [connectorProfilesStatus, setConnectorProfilesStatus] = useState('Connector profiles are stored locally with protected credential references.');
     const [isSavingConnectorProfile, setIsSavingConnectorProfile] = useState(false);
     const [chatPrompt, setChatPrompt] = useState('');
@@ -2386,11 +2389,43 @@ export function NexusShell({
             await DeleteConnectorProfile(id);
             const profiles = (await ListConnectorProfiles()).map((profile) => normalizeConnectorProfile(profile as Partial<ConnectorProfile>));
             setConnectorProfiles(profiles);
+            setConnectorProfileMetadata((current) => current?.relPath === id ? null : current);
             setConnectorProfilesStatus('Connector profile deleted.');
             pushToolEvent('Connector profile deleted', id);
         } catch (error) {
             const message = error instanceof Error ? error.message : '';
             setConnectorProfilesStatus(message || 'Could not delete connector profile.');
+        } finally {
+            setIsSavingConnectorProfile(false);
+        }
+    }
+
+    async function testConnectorProfile(id: string) {
+        setIsSavingConnectorProfile(true);
+        setConnectorProfilesStatus('Testing connector profile...');
+        try {
+            const status = await TestConnectorProfile(id);
+            setConnectorProfilesStatus(status.message);
+            pushToolEvent('Connector profile tested', `${status.kind}: ${status.name}`);
+        } catch (error) {
+            const message = error instanceof Error ? error.message : '';
+            setConnectorProfilesStatus(message || 'Could not test connector profile.');
+        } finally {
+            setIsSavingConnectorProfile(false);
+        }
+    }
+
+    async function inspectConnectorProfile(id: string) {
+        setIsSavingConnectorProfile(true);
+        setConnectorProfilesStatus('Inspecting connector schema...');
+        try {
+            const metadata = await InspectConnectorProfile(id);
+            setConnectorProfileMetadata(metadata);
+            setConnectorProfilesStatus(metadata.message);
+            pushToolEvent('Connector profile inspected', `${metadata.kind}: ${metadata.name}`);
+        } catch (error) {
+            const message = error instanceof Error ? error.message : '';
+            setConnectorProfilesStatus(message || 'Could not inspect connector profile.');
         } finally {
             setIsSavingConnectorProfile(false);
         }
@@ -4122,6 +4157,7 @@ export function NexusShell({
                 capabilities={state.capabilities}
                 className={options.className}
                 connectorProfileDraft={connectorProfileDraft}
+                connectorProfileMetadata={connectorProfileMetadata}
                 connectorProfiles={connectorProfiles}
                 connectorProfilesStatus={connectorProfilesStatus}
                 datasetProfiles={datasetProfiles}
@@ -4259,6 +4295,8 @@ export function NexusShell({
                 onSaveDatasetQuery={() => void saveCurrentDatasetQuery()}
                 onSaveDatasetSQLQuery={() => void saveCurrentDatasetSQLQuery()}
                 onDeleteConnectorProfile={(id) => void deleteConnectorProfile(id)}
+                onInspectConnectorProfile={(id) => void inspectConnectorProfile(id)}
+                onTestConnectorProfile={(id) => void testConnectorProfile(id)}
                 onSaveSettings={() => void saveLLMSettings()}
                 onSelectArtifact={(artifact) => void selectArtifact(artifact)}
                 onConnectorProfileDraftChange={updateConnectorProfileDraft}

@@ -95,6 +95,8 @@ export function GetStartupState():Promise<main.StartupState>;
 
 export function ImportArtifactLineageJSON(arg1:string):Promise<main.ArtifactLineageImport>;
 
+export function InspectConnectorProfile(arg1:string):Promise<dbconnector.ConnectorMetadata>;
+
 export function InspectMetadataStore():Promise<appmeta.MetadataBrowser>;
 
 export function InspectWorkspaceSQLite(arg1:string):Promise<dbconnector.ConnectorMetadata>;
@@ -147,6 +149,8 @@ export function PreviewGitHunkAction(arg1:main.GitHunkActionRequest):Promise<mai
 
 export function ProfileDataset(arg1:string):Promise<dataset.Profile>;
 
+export function QueryConnectorProfile(arg1:dbconnector.ConnectorQueryRequest):Promise<dbconnector.ConnectorQueryResult>;
+
 export function QueryDataset(arg1:string,arg2:string):Promise<workspace.DatasetQueryResult>;
 
 export function QueryDatasetSQL(arg1:analytics.SQLQueryRequest):Promise<analytics.SQLQueryResult>;
@@ -186,5 +190,7 @@ export function SearchWorkspace(arg1:string):Promise<Array<workspace.SearchResul
 export function SearchWorkspaceAdvanced(arg1:main.WorkspaceSearchRequest):Promise<Array<workspace.SearchResult>>;
 
 export function SelectWorkspace():Promise<main.WorkspaceOpenResult>;
+
+export function TestConnectorProfile(arg1:string):Promise<dbconnector.ConnectorProfileStatus>;
 
 export function TestLLMConnection(arg1:storage.LLMSettings):Promise<llm.ProbeResult>;

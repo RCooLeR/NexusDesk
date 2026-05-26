@@ -166,6 +166,10 @@ export function ImportArtifactLineageJSON(arg1) {
   return window['go']['main']['App']['ImportArtifactLineageJSON'](arg1);
 }
 
+export function InspectConnectorProfile(arg1) {
+  return window['go']['main']['App']['InspectConnectorProfile'](arg1);
+}
+
 export function InspectMetadataStore() {
   return window['go']['main']['App']['InspectMetadataStore']();
 }
@@ -270,6 +274,10 @@ export function ProfileDataset(arg1) {
   return window['go']['main']['App']['ProfileDataset'](arg1);
 }
 
+export function QueryConnectorProfile(arg1) {
+  return window['go']['main']['App']['QueryConnectorProfile'](arg1);
+}
+
 export function QueryDataset(arg1, arg2) {
   return window['go']['main']['App']['QueryDataset'](arg1, arg2);
 }
@@ -348,6 +356,10 @@ export function SearchWorkspaceAdvanced(arg1) {
 
 export function SelectWorkspace() {
   return window['go']['main']['App']['SelectWorkspace']();
+}
+
+export function TestConnectorProfile(arg1) {
+  return window['go']['main']['App']['TestConnectorProfile'](arg1);
 }
 
 export function TestLLMConnection(arg1) {

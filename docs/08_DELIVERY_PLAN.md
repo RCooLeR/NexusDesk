@@ -177,6 +177,7 @@ Current status:
 - The Data & Analytics SQLite schema browser can select tables/views, preview rows through the same capped query path, save SQLite connector queries separately from dataset SQL snippets, and filter SQLite query history.
 - SQLite connector query results can now be exported as CSV artifacts or Markdown reports with SQL text, cap, timeout, preview rows, source database citation, SQL run records, and dataset dependency lineage.
 - Settings can save local connector profiles with read-only defaults, result caps, timeouts, and protected credential references; returned profiles redact passwords/tokens.
+- Saved PostgreSQL connector profiles can now be explicitly tested and inspected from Settings. The backend resolves protected credentials only for that action, opens a read-only session, applies statement timeouts, rejects non-`SELECT` SQL for the guarded profile query method, and returns schema metadata with tables, views, columns, indexes, foreign keys, and relationship hints.
 - Chat messages and context-pack previews warn when cited files changed after the answer/context was created.
 - Stale-context refresh can rebuild a context preview from changed files and records the refresh in the approval/metadata trail.
 - Dataset dependency rebuild now removes the prior generated artifact before re-running so repeated refreshes avoid same-timestamp collisions.
@@ -322,6 +323,7 @@ This batch made more of the studio inspectable and auditable without turning on 
 2. Connector profile passwords/tokens are stored in a protected sidecar and represented in public JSON by credential references.
 3. Wails exposes list/save/delete connector profile methods that return only redacted credentials.
 4. Settings now includes a first connector profile card for saving read-only profile metadata, result caps, timeouts, and credential references.
+5. PostgreSQL connector profiles can be tested and schema-inspected explicitly; the backend also exposes a guarded read-only query method for the next notebook surface.
 
 ## Completed Batch: Data Source Card Actions
 

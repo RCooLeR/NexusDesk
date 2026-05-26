@@ -1008,6 +1008,80 @@ export namespace dbconnector {
 		    return a;
 		}
 	}
+	export class ConnectorProfileStatus {
+	    profileId: string;
+	    name: string;
+	    kind: string;
+	    engine: string;
+	    readOnly: boolean;
+	    message: string;
+
+	    static createFrom(source: any = {}) {
+	        return new ConnectorProfileStatus(source);
+	    }
+
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.profileId = source["profileId"];
+	        this.name = source["name"];
+	        this.kind = source["kind"];
+	        this.engine = source["engine"];
+	        this.readOnly = source["readOnly"];
+	        this.message = source["message"];
+	    }
+	}
+	export class ConnectorQueryRequest {
+	    profileId: string;
+	    sql: string;
+	    resultLimit: number;
+	    timeoutSeconds: number;
+
+	    static createFrom(source: any = {}) {
+	        return new ConnectorQueryRequest(source);
+	    }
+
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.profileId = source["profileId"];
+	        this.sql = source["sql"];
+	        this.resultLimit = source["resultLimit"];
+	        this.timeoutSeconds = source["timeoutSeconds"];
+	    }
+	}
+	export class ConnectorQueryResult {
+	    profileId: string;
+	    name: string;
+	    kind: string;
+	    engine: string;
+	    sql: string;
+	    columns: string[];
+	    rows: string[][];
+	    totalRows: number;
+	    truncated: boolean;
+	    resultLimit: number;
+	    timeoutSeconds: number;
+	    message: string;
+
+	    static createFrom(source: any = {}) {
+	        return new ConnectorQueryResult(source);
+	    }
+
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.profileId = source["profileId"];
+	        this.name = source["name"];
+	        this.kind = source["kind"];
+	        this.engine = source["engine"];
+	        this.sql = source["sql"];
+	        this.columns = source["columns"];
+	        this.rows = source["rows"];
+	        this.totalRows = source["totalRows"];
+	        this.truncated = source["truncated"];
+	        this.resultLimit = source["resultLimit"];
+	        this.timeoutSeconds = source["timeoutSeconds"];
+	        this.message = source["message"];
+	    }
+	}
 
 
 	export class SQLiteQueryRequest {

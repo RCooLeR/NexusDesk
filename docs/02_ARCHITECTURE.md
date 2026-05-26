@@ -22,6 +22,7 @@ The implemented desktop slice currently contains:
 - SQLite metadata initialization, JSON-store migration compatibility, direct repository-backed writes for fresh chat/approval/artifact/tool-run rows, metadata history search, dataset dependency records, and SQL run history
 - DuckDB-capable read-only SQL surface over datasets, with CGO-tagged driver execution and bounded CSV fallback
 - first read-only SQLite workspace database connector for `.sqlite`, `.sqlite3`, and `.db` files, with visible per-query row caps, timeouts, cancellation, schema-object browsing, relationship hints, selected-object schema explanation, saved connector queries, query history, CSV/Markdown exports, artifact lineage, and redacted connector errors
+- first read-only PostgreSQL profile runner for explicit user-triggered connection tests, schema inspection, and guarded `SELECT`/`WITH` queries through protected connector credentials
 - artifact comparison for generated output versions
 - selectable artifact lineage graph and workspace freshness snapshots for source-aware generated outputs
 - artifact lineage JSON export/import for debugging and future sync workflows
@@ -138,7 +139,7 @@ Review status as of the latest full project pass:
 
 - The product shape is still sound: a small primary rail for Workbench, Data & Analytics, Artifacts, and Settings, with the AI assistant always visible.
 - The backend has useful service facades for workspace, dataset, artifact, and git workflows, but `app/app.go` is still large and still owns chat/context, metadata orchestration, and several bridge-specific helpers.
-- The frontend has good feature panels and the Wails API adapter boundary is clean, but `NexusShell.tsx` remains the main state owner. SQLite connector caps, timeouts, and cancellation are now wired through that shell; future connector growth should move into a focused data/controller hook before adding external engines.
+- The frontend has good feature panels and the Wails API adapter boundary is clean, but `NexusShell.tsx` remains the main state owner. SQLite connector caps/timeouts/cancellation and PostgreSQL profile test/inspect actions are now wired through that shell; further connector growth should move into a focused data/controller hook before adding notebooks or more engines.
 - Git work is correctly manual on folder open, so opening a workspace should not launch external Git commands or desktop command windows.
 - Code AI actions now reuse the chat/artifact pipeline and route accepted single-file patch drafts through the existing safe write preview/apply boundary.
 - Slow or external future work, especially OCR, dump imports, connector pulls, deeper indexing, and long agent runs, must go through a job runner before it is attached to folder-open or route-load flows.
@@ -368,7 +369,7 @@ audit export
 connector credential vault
 ```
 
-The current connector profile foundation stores only non-secret connection metadata in local app config. Passwords and tokens are written to protected sidecar storage and exposed to the UI as redacted credential references. Current SQLite connector calls use explicit row caps, timeouts, cancellation IDs, and redacted errors even though they do not need stored credentials. Future connector runners must resolve credential references only at execution time, after policy checks and explicit user-triggered connector actions.
+The current connector profile foundation stores only non-secret connection metadata in local app config. Passwords and tokens are written to protected sidecar storage and exposed to the UI as redacted credential references. Current SQLite connector calls use explicit row caps, timeouts, cancellation IDs, and redacted errors even though they do not need stored credentials. PostgreSQL profile actions resolve protected credentials only when the user explicitly tests, inspects, or queries a saved profile; the backend opens a read-only session, enforces statement timeouts, and rejects non-`SELECT` SQL before execution. Future connector runners must follow that same credential-at-execution boundary after policy checks and explicit user-triggered connector actions.
 
 ### Docker Desktop Extension Future
 

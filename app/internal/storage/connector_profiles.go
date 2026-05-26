@@ -176,6 +176,33 @@ func (s *ConnectorProfileStore) ResolveForUse(profile ConnectorProfile) (Connect
 	return profile, nil
 }
 
+func (s *ConnectorProfileStore) ResolveByIDForUse(id string) (ConnectorProfile, error) {
+	id = strings.TrimSpace(id)
+	if id == "" {
+		return ConnectorProfile{}, errors.New("connector profile id is required")
+	}
+
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	profiles, err := s.readProfiles()
+	if err != nil {
+		return ConnectorProfile{}, err
+	}
+	for _, profile := range profiles {
+		if profile.ID != id {
+			continue
+		}
+		secret, err := s.readCredentialSecret(profile.ID)
+		if err != nil {
+			return ConnectorProfile{}, err
+		}
+		profile.Password = secret
+		return normalizeConnectorProfile(profile), nil
+	}
+	return ConnectorProfile{}, fmt.Errorf("connector profile %q was not found", id)
+}
+
 func (s *ConnectorProfileStore) readProfiles() ([]ConnectorProfile, error) {
 	data, err := os.ReadFile(s.path)
 	if os.IsNotExist(err) {

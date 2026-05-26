@@ -1,13 +1,16 @@
 import type {ChangeEvent} from 'react';
 import {Button, Card, StatusBadge} from '../../components/ui';
-import type {ConnectorProfile} from '../../types';
+import type {ConnectorMetadata, ConnectorProfile} from '../../types';
 
 type ConnectorProfilesCardProps = {
     draft: ConnectorProfile;
     isSaving: boolean;
+    metadata: ConnectorMetadata | null;
     onDelete: (id: string) => void;
     onDraftChange: (field: keyof ConnectorProfile, value: string | number | boolean) => void;
+    onInspect: (id: string) => void;
     onSave: () => void;
+    onTest: (id: string) => void;
     profiles: ConnectorProfile[];
     status: string;
 };
@@ -24,9 +27,12 @@ const connectorKinds = [
 export function ConnectorProfilesCard({
     draft,
     isSaving,
+    metadata,
     onDelete,
     onDraftChange,
+    onInspect,
     onSave,
+    onTest,
     profiles,
     status,
 }: ConnectorProfilesCardProps) {
@@ -108,8 +114,24 @@ export function ConnectorProfilesCard({
                                 <small>{profile.kind} / {profile.readOnly ? 'read-only' : 'write-capable blocked'} / cap {profile.resultLimit}</small>
                                 <small>{profile.host || profile.database || 'local profile'}{profile.credentialRef ? ' / credential stored' : ''}</small>
                             </div>
-                            <Button onClick={() => onDelete(profile.id)} variant="subtle">Delete</Button>
+                            <div className="connector-profile-actions">
+                                <Button disabled={isSaving || profile.kind !== 'postgres'} onClick={() => onTest(profile.id)} variant="subtle">Test</Button>
+                                <Button disabled={isSaving || profile.kind !== 'postgres'} onClick={() => onInspect(profile.id)} variant="subtle">Inspect</Button>
+                                <Button onClick={() => onDelete(profile.id)} variant="subtle">Delete</Button>
+                            </div>
                         </div>
+                    ))}
+                </div>
+            )}
+            {metadata && (
+                <div className="connector-profile-metadata">
+                    <strong>{metadata.name}</strong>
+                    <small>{metadata.engine} / {metadata.readOnly ? 'read-only' : 'write-capable blocked'}</small>
+                    <small>{metadata.tables.length} tables / {metadata.views.length} views / {metadata.relationships.length} relationships</small>
+                    {[...metadata.tables, ...metadata.views].slice(0, 8).map((table) => (
+                        <small key={`${table.type}-${table.name}`}>
+                            {table.type}: {table.name} / {table.columns.length} columns / {table.rowCount} rows
+                        </small>
                     ))}
                 </div>
             )}

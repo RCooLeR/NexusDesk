@@ -26,6 +26,7 @@ type BottomStudioPanelProps = {
     activeDatasetProfile: DatasetProfile | null;
     capabilities: Capability[];
     connectorProfileDraft: ConnectorProfile;
+    connectorProfileMetadata: ConnectorMetadata | null;
     connectorProfiles: ConnectorProfile[];
     connectorProfilesStatus: string;
     datasetProfiles: DatasetProfile[];
@@ -146,6 +147,8 @@ type BottomStudioPanelProps = {
     onSaveDatasetSQLQuery: () => void;
     onSaveConnectorProfile: () => void;
     onDeleteConnectorProfile: (id: string) => void;
+    onInspectConnectorProfile: (id: string) => void;
+    onTestConnectorProfile: (id: string) => void;
     onSaveSettings: () => void;
     onSelectArtifact: (artifact: WorkspaceArtifact) => void;
     onSettingsDraftChange: (field: keyof LLMSettings, value: string) => void;
@@ -220,6 +223,7 @@ export function BottomStudioPanel({
     activeDatasetProfile,
     capabilities,
     connectorProfileDraft,
+    connectorProfileMetadata,
     connectorProfiles,
     connectorProfilesStatus,
     datasetProfiles,
@@ -340,6 +344,8 @@ export function BottomStudioPanel({
     onSaveDatasetSQLQuery,
     onSaveConnectorProfile,
     onDeleteConnectorProfile,
+    onInspectConnectorProfile,
+    onTestConnectorProfile,
     onSaveSettings,
     onSelectArtifact,
     onSettingsDraftChange,
@@ -475,9 +481,12 @@ export function BottomStudioPanel({
                         <ConnectorProfilesCard
                             draft={connectorProfileDraft}
                             isSaving={isSavingConnectorProfile}
+                            metadata={connectorProfileMetadata}
                             onDelete={onDeleteConnectorProfile}
                             onDraftChange={onConnectorProfileDraftChange}
+                            onInspect={onInspectConnectorProfile}
                             onSave={onSaveConnectorProfile}
+                            onTest={onTestConnectorProfile}
                             profiles={connectorProfiles}
                             status={connectorProfilesStatus}
                         />

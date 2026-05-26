@@ -4246,6 +4246,28 @@ button.code-studio-row.selected {
     font-size: 12px;
 }
 
+.connector-profile-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    justify-content: flex-end;
+}
+
+.connector-profile-metadata {
+    border-top: 1px solid var(--nd-border-soft);
+    display: grid;
+    gap: 4px;
+    margin: 0 12px 12px;
+    padding-top: 10px;
+}
+
+.connector-profile-metadata small {
+    color: var(--nd-muted-text);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
 .probe-result {
     border: 1px solid var(--nd-border-soft);
     border-radius: var(--nd-radius-sm);
