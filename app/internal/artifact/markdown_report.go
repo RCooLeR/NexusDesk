@@ -35,6 +35,7 @@ type MarkdownReport struct {
 type MarkdownArtifactRequest struct {
 	Title          string   `json:"title"`
 	Content        string   `json:"content"`
+	Kind           string   `json:"kind"`
 	ContextRelPath string   `json:"contextRelPath"`
 	Prompt         string   `json:"prompt"`
 	Model          string   `json:"model"`
@@ -185,7 +186,7 @@ func CreateGeneratedMarkdown(root string, request MarkdownArtifactRequest, now t
 	}
 
 	if err := writeArtifactMetadata(absRoot, path, ArtifactMetadata{
-		Kind:           "chat-answer",
+		Kind:           fallbackString(request.Kind, "chat-answer"),
 		Title:          generatedArtifactTitle(request),
 		Source:         fallbackString(request.Source, "Nexus chat"),
 		SourcePaths:    cleanMetadataPaths(request.SourcePaths),

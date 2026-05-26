@@ -1,5 +1,5 @@
 import {Button} from '../../components/ui';
-import type {FilePreview, GitFileChange, GitFileDiff, GitStatus, WorkspaceFreshnessStatus, WorkspaceProblemSummary, WorkspaceSearchResult, WorkspaceSnapshot, WorkspaceTaskSummary} from '../../types';
+import type {FilePreview, GitFileChange, GitFileDiff, GitStatus, WorkspaceFreshnessStatus, WorkspaceProblemSummary, WorkspaceSearchResult, WorkspaceSnapshot, WorkspaceTask, WorkspaceTaskRunResult, WorkspaceTaskSummary} from '../../types';
 
 type CodeStudioPanelProps = {
     activeFile: string;
@@ -11,6 +11,7 @@ type CodeStudioPanelProps = {
     isLoadingGitFileDiff: boolean;
     isLoadingWorkspaceProblems: boolean;
     isLoadingWorkspaceTasks: boolean;
+    isRunningWorkspaceTask: boolean;
     isSearchingWorkspace: boolean;
     openTabs: FilePreview[];
     onClearWorkspaceSearch: () => void;
@@ -19,6 +20,7 @@ type CodeStudioPanelProps = {
     onRefreshGitStatus: () => void;
     onRefreshWorkspaceProblems: () => void;
     onRefreshWorkspaceTasks: () => void;
+    onRunWorkspaceTask: (task: WorkspaceTask) => void;
     onSearchWorkspace: () => void;
     onSelectGitChange: (path: string) => void;
     onSelectSearchResult: (result: WorkspaceSearchResult) => void;
@@ -31,6 +33,7 @@ type CodeStudioPanelProps = {
     workspaceSearchRegex: boolean;
     workspaceSearchResults: WorkspaceSearchResult[];
     workspaceReplacePreview: string;
+    workspaceTaskRun: WorkspaceTaskRunResult | null;
     workspaceTasks: WorkspaceTaskSummary | null;
 };
 
@@ -44,6 +47,7 @@ export function CodeStudioPanel({
     isLoadingGitFileDiff,
     isLoadingWorkspaceProblems,
     isLoadingWorkspaceTasks,
+    isRunningWorkspaceTask,
     isSearchingWorkspace,
     openTabs,
     onClearWorkspaceSearch,
@@ -52,6 +56,7 @@ export function CodeStudioPanel({
     onRefreshGitStatus,
     onRefreshWorkspaceProblems,
     onRefreshWorkspaceTasks,
+    onRunWorkspaceTask,
     onSearchWorkspace,
     onSelectGitChange,
     onSelectSearchResult,
@@ -64,6 +69,7 @@ export function CodeStudioPanel({
     workspaceSearchRegex,
     workspaceSearchResults,
     workspaceReplacePreview,
+    workspaceTaskRun,
     workspaceTasks,
 }: CodeStudioPanelProps) {
     const nodes = workspace?.nodes ?? [];
@@ -244,15 +250,22 @@ export function CodeStudioPanel({
                         </div>
                         <div className="code-studio-list">
                             {workspaceTasks && workspaceTasks.tasks.length > 0 ? workspaceTasks.tasks.slice(0, 12).map((task) => (
-                                <div className="code-studio-task-row" key={task.id}>
+                                <button className="code-studio-task-row" disabled={isRunningWorkspaceTask} key={task.id} onClick={() => onRunWorkspaceTask(task)} type="button">
                                     <span>{task.kind}</span>
                                     <strong title={task.command}>{task.label}</strong>
-                                    <small title={`${task.cwd} / ${task.source}`}>{task.cwd} / {task.source}</small>
-                                </div>
+                                    <small title={`${task.cwd} / ${task.source}`}>{isRunningWorkspaceTask ? 'running...' : `${task.cwd} / ${task.source}`}</small>
+                                </button>
                             )) : (
                                 <div className="code-studio-empty">{workspace ? 'Refresh tasks to scan package scripts, Go tests, and Compose files.' : 'Open a workspace to detect tasks.'}</div>
                             )}
                         </div>
+                        {workspaceTaskRun && (
+                            <div className={`code-studio-task-output ${workspaceTaskRun.status}`}>
+                                <strong>{workspaceTaskRun.status} / exit {workspaceTaskRun.exitCode}</strong>
+                                <small>{workspaceTaskRun.message}</small>
+                                <pre>{taskRunPreview(workspaceTaskRun)}</pre>
+                            </div>
+                        )}
                     </div>
                 </div>
             </section>
@@ -321,6 +334,14 @@ function problemToSearchResult(problem: WorkspaceProblemSummary['problems'][numb
         line: problem.line,
         snippet: problem.message,
     };
+}
+
+function taskRunPreview(result: WorkspaceTaskRunResult) {
+    const text = [result.stdout, result.stderr].filter(Boolean).join('\n--- stderr ---\n').trim();
+    if (!text) {
+        return 'No output captured.';
+    }
+    return text.length > 900 ? `${text.slice(0, 900)}\n...` : text;
 }
 
 function replacePreviewText(value: string, query: string, replacement: string, regex: boolean) {

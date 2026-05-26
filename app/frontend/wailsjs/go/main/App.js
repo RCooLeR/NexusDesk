@@ -278,6 +278,10 @@ export function RunAgent(arg1) {
   return window['go']['main']['App']['RunAgent'](arg1);
 }
 
+export function RunWorkspaceTask(arg1) {
+  return window['go']['main']['App']['RunWorkspaceTask'](arg1);
+}
+
 export function SaveAssistantProfile(arg1) {
   return window['go']['main']['App']['SaveAssistantProfile'](arg1);
 }

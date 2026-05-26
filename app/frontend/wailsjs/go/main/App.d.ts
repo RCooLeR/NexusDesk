@@ -151,6 +151,8 @@ export function RemoveRecentWorkspace(arg1:string):Promise<Array<storage.RecentW
 
 export function RunAgent(arg1:agent.RunRequest):Promise<agent.RunResult>;
 
+export function RunWorkspaceTask(arg1:main.WorkspaceTaskRunRequest):Promise<main.WorkspaceTaskRunResult>;
+
 export function SaveAssistantProfile(arg1:storage.AssistantProfile):Promise<storage.AssistantProfile>;
 
 export function SaveDatasetQuery(arg1:string,arg2:string,arg3:string):Promise<dataset.SavedQuery>;

@@ -294,8 +294,8 @@ Step 4.4: Search, problems, and tasks
 - [x] Detect Go tests.
 - [x] Detect npm scripts.
 - [x] Detect Docker Compose tasks.
-- [ ] Run tasks with captured output.
-- [ ] Save task/test runs as artifacts or metadata.
+- [x] Run tasks with captured output.
+- [x] Save task/test runs as artifacts or metadata.
 
 Step 4.5: Code AI actions
 
@@ -1023,7 +1023,7 @@ Steps:
 9. [x] Detect npm scripts and Go tests into a Tasks panel with read-only listing.
 10. Keep visual smoke focused on no blank screen, no whole-window scroll, Git drawer behavior, route switching, and no slow/external work on folder open.
 
-Reasoning: read-only navigation and diff review are now credible, file and hunk stage/unstage go through preview plus approval-backed apply paths, hunk selection exists as UI state, hunk discard/revert now goes through the approval modal before backend patch application, Workbench has path/text/symbol/regex search plus non-mutating replace previews backed by the existing safe workspace search flow, the Problems panel runs lightweight TODO/FIXME/conflict/JSON checks without external commands, task/script detection now lists npm scripts, Go test commands, and Docker Compose config-check tasks without running external processes, and Phase 2 now has split editor groups, outline navigation, Monaco go-to-definition dispatch, safe draft formatting, and encoding-aware save. The next correction path can move to Phase 4 task-runner depth or Phase 15 architecture hardening.
+Reasoning: read-only navigation and diff review are now credible, file and hunk stage/unstage go through preview plus approval-backed apply paths, hunk selection exists as UI state, hunk discard/revert now goes through the approval modal before backend patch application, Workbench has path/text/symbol/regex search plus non-mutating replace previews backed by the existing safe workspace search flow, the Problems panel runs lightweight TODO/FIXME/conflict/JSON checks without external commands, task/script detection now lists npm scripts, Go test commands, and Docker Compose config-check tasks without running external processes, and user-triggered discovered task runs capture capped output and save a task-run artifact. Phase 2 now has split editor groups, outline navigation, Monaco go-to-definition dispatch, safe draft formatting, and encoding-aware save. The next correction path can move to Phase 4 code AI actions or Phase 15 architecture hardening.
 
 ## Directory Ownership Notes
 
@@ -1037,7 +1037,7 @@ Reasoning: read-only navigation and diff review are now credible, file and hunk 
 
 `app/app_git.go` owns Wails-facing Git API types and bridge methods. `app/git_service.go` owns the first Git service facade for read-only status/diff operations, preview/apply file stage/unstage actions, and approval-backed selected-hunk stage/unstage/discard/revert patch application while preserving existing Wails contracts.
 
-`app/app_tasks.go` owns Wails-facing read-only workspace task discovery. It scans bounded workspace paths, skips noisy output/dependency folders, parses `package.json` scripts, detects Go module test commands, and returns task metadata only. It does not execute npm, Go, shell, Docker, or other external commands.
+`app/app_tasks.go` owns Wails-facing workspace task discovery and user-triggered task runs. It scans bounded workspace paths, skips noisy output/dependency folders, parses `package.json` scripts, detects Go module test commands, and returns task metadata. `RunWorkspaceTask` re-discovers and validates a task ID before running, captures capped output, records approval metadata, and saves a task-run artifact.
 
 `app/workspace_service.go`, `app/artifact_service.go`, and `app/dataset_service.go` own the first backend service facades for workspace, artifact, and data workflows. `app/app.go` keeps stable Wails method names and delegates these use cases instead of owning the full orchestration directly.
 
@@ -1075,7 +1075,7 @@ Workspace scan counters are diagnostic data, not primary navigation content. Kee
 
 `app/internal/workspace/problems.go` owns the first read-only lightweight Problems scan for TODO/FIXME/HACK/BUG markers, merge-conflict markers, and invalid JSON.
 
-`app/frontend/src/features/shell/CodeStudioPanel.tsx` owns the first reusable Workbench utility surface for editor session metrics, open tabs, workspace status, git branch/dirty summary, changed-file list, Workbench search results/actions, lightweight Problems results, read-only detected task listings, and placeholders that will receive review data.
+`app/frontend/src/features/shell/CodeStudioPanel.tsx` owns the first reusable Workbench utility surface for editor session metrics, open tabs, workspace status, git branch/dirty summary, changed-file list, Workbench search results/actions, lightweight Problems results, detected task listings, latest task-run output, and placeholders that will receive review data.
 
 `app/frontend/src/features/shell/GitDiffPanel.tsx` owns the bottom-drawer Git tab for selected changed-file review, file stage/unstage controls, hunk selection state, approval-backed hunk stage/unstage/discard/revert controls, and read-only staged/unstaged working-tree diffs.
 

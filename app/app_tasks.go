@@ -1,19 +1,26 @@
 package main
 
 import (
+	"bytes"
+	"context"
 	"encoding/json"
 	"errors"
 	"fmt"
 	"os"
+	"os/exec"
 	"path/filepath"
 	"sort"
 	"strings"
 	"time"
+
+	"NexusAugenticStudio/internal/artifact"
 )
 
 const workspaceTaskMaxFiles = 1500
 const workspaceTaskMaxDepth = 8
 const workspaceTaskMaxTasks = 80
+const workspaceTaskTimeout = 2 * time.Minute
+const workspaceTaskOutputLimit = 24 * 1024
 
 type WorkspaceTask struct {
 	ID      string `json:"id"`
@@ -30,12 +37,57 @@ type WorkspaceTaskSummary struct {
 	GeneratedAt string          `json:"generatedAt"`
 }
 
+type WorkspaceTaskRunRequest struct {
+	TaskID string `json:"taskId"`
+}
+
+type WorkspaceTaskRunResult struct {
+	Task            WorkspaceTask `json:"task"`
+	Status          string        `json:"status"`
+	ExitCode        int           `json:"exitCode"`
+	Stdout          string        `json:"stdout"`
+	Stderr          string        `json:"stderr"`
+	StartedAt       string        `json:"startedAt"`
+	CompletedAt     string        `json:"completedAt"`
+	DurationMs      int64         `json:"durationMs"`
+	ArtifactRelPath string        `json:"artifactRelPath"`
+	Message         string        `json:"message"`
+}
+
 func (a *App) ListWorkspaceTasks() (WorkspaceTaskSummary, error) {
 	root := a.getWorkspaceRoot()
 	if root == "" {
 		return WorkspaceTaskSummary{}, errors.New("open a workspace before listing tasks")
 	}
 	return discoverWorkspaceTasks(root)
+}
+
+func (a *App) RunWorkspaceTask(request WorkspaceTaskRunRequest) (WorkspaceTaskRunResult, error) {
+	root := a.getWorkspaceRoot()
+	if root == "" {
+		return WorkspaceTaskRunResult{}, errors.New("open a workspace before running tasks")
+	}
+	result, err := runDiscoveredWorkspaceTask(root, request.TaskID)
+	if err != nil {
+		return WorkspaceTaskRunResult{}, err
+	}
+
+	report, err := a.artifactSvc.CreateGeneratedMarkdown(artifact.MarkdownArtifactRequest{
+		Title:          "Task Run: " + result.Task.Label,
+		Content:        taskRunMarkdown(result),
+		Kind:           "task-run",
+		ContextRelPath: result.Task.Source,
+		Prompt:         result.Task.Command,
+		Source:         "Workspace task runner",
+		SourcePaths:    []string{result.Task.Source},
+	})
+	if err != nil {
+		return WorkspaceTaskRunResult{}, err
+	}
+	result.ArtifactRelPath = report.RelPath
+	result.Message = fmt.Sprintf("%s Artifact saved to %s.", result.Message, report.RelPath)
+	a.recordApproval("workspace.task.run", result.Task.Command, taskRunRisk(result.Task), result.Message)
+	return result, nil
 }
 
 func discoverWorkspaceTasks(root string) (WorkspaceTaskSummary, error) {
@@ -175,6 +227,178 @@ func discoverWorkspaceTasks(root string) (WorkspaceTaskSummary, error) {
 		Message:     message,
 		GeneratedAt: time.Now().Format(time.RFC3339),
 	}, nil
+}
+
+func runDiscoveredWorkspaceTask(root string, taskID string) (WorkspaceTaskRunResult, error) {
+	taskID = strings.TrimSpace(taskID)
+	if taskID == "" {
+		return WorkspaceTaskRunResult{}, errors.New("task id is required")
+	}
+	summary, err := discoverWorkspaceTasks(root)
+	if err != nil {
+		return WorkspaceTaskRunResult{}, err
+	}
+	var selected WorkspaceTask
+	for _, task := range summary.Tasks {
+		if task.ID == taskID {
+			selected = task
+			break
+		}
+	}
+	if selected.ID == "" {
+		return WorkspaceTaskRunResult{}, errors.New("task is no longer available in this workspace")
+	}
+	if err := validateRunnableTask(selected); err != nil {
+		return WorkspaceTaskRunResult{}, err
+	}
+
+	absRoot, err := filepath.Abs(root)
+	if err != nil {
+		return WorkspaceTaskRunResult{}, err
+	}
+	cwd := filepath.Clean(filepath.Join(absRoot, filepath.FromSlash(selected.Cwd)))
+	if selected.Cwd == "." || selected.Cwd == "" {
+		cwd = absRoot
+	}
+	if err := ensureTaskInsideRoot(absRoot, cwd); err != nil {
+		return WorkspaceTaskRunResult{}, err
+	}
+
+	started := time.Now()
+	ctx, cancel := context.WithTimeout(context.Background(), workspaceTaskTimeout)
+	defer cancel()
+
+	cmd := taskExecCommand(ctx, selected.Command)
+	cmd.Dir = cwd
+	configureHiddenCommand(cmd)
+	var stdout bytes.Buffer
+	var stderr bytes.Buffer
+	cmd.Stdout = limitWriter{buffer: &stdout, limit: workspaceTaskOutputLimit}
+	cmd.Stderr = limitWriter{buffer: &stderr, limit: workspaceTaskOutputLimit}
+	err = cmd.Run()
+	completed := time.Now()
+
+	exitCode := 0
+	status := "success"
+	message := fmt.Sprintf("Task %q completed.", selected.Label)
+	if ctx.Err() == context.DeadlineExceeded {
+		exitCode = -1
+		status = "timeout"
+		message = fmt.Sprintf("Task %q timed out after %s.", selected.Label, workspaceTaskTimeout)
+	} else if err != nil {
+		status = "failed"
+		message = fmt.Sprintf("Task %q failed.", selected.Label)
+		if exitErr, ok := err.(*exec.ExitError); ok {
+			exitCode = exitErr.ExitCode()
+		} else {
+			exitCode = -1
+			message = err.Error()
+		}
+	}
+
+	return WorkspaceTaskRunResult{
+		Task:        selected,
+		Status:      status,
+		ExitCode:    exitCode,
+		Stdout:      stdout.String(),
+		Stderr:      stderr.String(),
+		StartedAt:   started.UTC().Format(time.RFC3339),
+		CompletedAt: completed.UTC().Format(time.RFC3339),
+		DurationMs:  completed.Sub(started).Milliseconds(),
+		Message:     message,
+	}, nil
+}
+
+func ensureTaskInsideRoot(root string, target string) error {
+	rel, err := filepath.Rel(root, target)
+	if err != nil {
+		return err
+	}
+	if rel == ".." || strings.HasPrefix(rel, ".."+string(filepath.Separator)) {
+		return errors.New("task working directory must stay inside workspace")
+	}
+	return nil
+}
+
+func validateRunnableTask(task WorkspaceTask) error {
+	switch task.Kind {
+	case "npm-script":
+		if strings.HasPrefix(task.Command, "npm run ") {
+			return nil
+		}
+	case "go-test":
+		if strings.HasPrefix(task.Command, "go test ") {
+			return nil
+		}
+	case "compose":
+		if strings.HasPrefix(task.Command, "docker compose -f ") && strings.HasSuffix(task.Command, " config") {
+			return nil
+		}
+	}
+	return fmt.Errorf("task %q is not runnable by the safe task runner", task.Label)
+}
+
+func taskRunRisk(task WorkspaceTask) string {
+	if task.Kind == "compose" {
+		return "medium"
+	}
+	return "low"
+}
+
+func taskRunMarkdown(result WorkspaceTaskRunResult) string {
+	var builder strings.Builder
+	builder.WriteString("## Summary\n\n")
+	builder.WriteString("- Task: `")
+	builder.WriteString(strings.ReplaceAll(result.Task.Label, "`", "'"))
+	builder.WriteString("`\n")
+	builder.WriteString("- Status: ")
+	builder.WriteString(result.Status)
+	builder.WriteString("\n")
+	builder.WriteString("- Exit code: ")
+	builder.WriteString(fmt.Sprintf("%d", result.ExitCode))
+	builder.WriteString("\n")
+	builder.WriteString("- Working directory: `")
+	builder.WriteString(strings.ReplaceAll(result.Task.Cwd, "`", "'"))
+	builder.WriteString("`\n")
+	builder.WriteString("- Command: `")
+	builder.WriteString(strings.ReplaceAll(result.Task.Command, "`", "'"))
+	builder.WriteString("`\n")
+	builder.WriteString("- Started: ")
+	builder.WriteString(result.StartedAt)
+	builder.WriteString("\n")
+	builder.WriteString("- Completed: ")
+	builder.WriteString(result.CompletedAt)
+	builder.WriteString("\n\n")
+	builder.WriteString("## Stdout\n\n```text\n")
+	builder.WriteString(result.Stdout)
+	if !strings.HasSuffix(result.Stdout, "\n") {
+		builder.WriteString("\n")
+	}
+	builder.WriteString("```\n\n## Stderr\n\n```text\n")
+	builder.WriteString(result.Stderr)
+	if !strings.HasSuffix(result.Stderr, "\n") {
+		builder.WriteString("\n")
+	}
+	builder.WriteString("```\n")
+	return builder.String()
+}
+
+type limitWriter struct {
+	buffer *bytes.Buffer
+	limit  int
+}
+
+func (w limitWriter) Write(p []byte) (int, error) {
+	if w.buffer.Len() < w.limit {
+		remaining := w.limit - w.buffer.Len()
+		if len(p) <= remaining {
+			_, _ = w.buffer.Write(p)
+		} else {
+			_, _ = w.buffer.Write(p[:remaining])
+			_, _ = w.buffer.WriteString("\n[output truncated]\n")
+		}
+	}
+	return len(p), nil
 }
 
 func isComposeTaskFile(name string) bool {

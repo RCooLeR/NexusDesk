@@ -2897,17 +2897,31 @@ button:disabled {
     border: 1px solid var(--nd-border-soft);
     border-radius: var(--nd-radius-sm);
     background: #fbfdff;
+    color: inherit;
     display: grid;
     gap: 2px 8px;
     grid-template-columns: 78px minmax(0, 1fr);
     min-width: 0;
     padding: 8px;
+    text-align: left;
+}
+
+.code-studio-task-row {
+    cursor: pointer;
+}
+
+.code-studio-task-row:hover {
+    background: #edf4ff;
+    border-color: #b7d4ff;
+}
+
+.code-studio-task-row:disabled {
+    cursor: wait;
+    opacity: 0.72;
 }
 
 .code-studio-problem-row {
-    color: inherit;
     cursor: pointer;
-    text-align: left;
 }
 
 .code-studio-problem-row:hover {
@@ -2950,6 +2964,48 @@ button:disabled {
 .code-studio-task-row small,
 .code-studio-problem-row small {
     grid-column: 2;
+}
+
+.code-studio-task-output {
+    border: 1px solid var(--nd-border-soft);
+    border-radius: var(--nd-radius-sm);
+    background: #f8fafc;
+    display: grid;
+    gap: 5px;
+    padding: 8px;
+}
+
+.code-studio-task-output.success {
+    border-color: rgba(22, 163, 74, 0.35);
+}
+
+.code-studio-task-output.failed,
+.code-studio-task-output.timeout {
+    border-color: rgba(220, 38, 38, 0.35);
+}
+
+.code-studio-task-output strong {
+    color: var(--nd-charcoal);
+    font-size: 12px;
+}
+
+.code-studio-task-output small {
+    color: var(--nd-muted-text);
+    font-size: 11px;
+}
+
+.code-studio-task-output pre {
+    background: #0f172a;
+    border-radius: var(--nd-radius-sm);
+    color: #e5edf7;
+    font-family: var(--nd-mono);
+    font-size: 11px;
+    line-height: 1.45;
+    margin: 0;
+    max-height: 150px;
+    overflow: auto;
+    padding: 8px;
+    white-space: pre-wrap;
 }
 
 button.code-studio-row {

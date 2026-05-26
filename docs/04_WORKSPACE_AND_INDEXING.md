@@ -60,6 +60,7 @@ The current app implements the first safe workspace slice:
 - The frontend renders indexed nodes as an expandable tree and preserves expanded directories across refreshes.
 - `SearchWorkspace` searches safe workspace paths and previewable text content within the same ignore/depth limits, while `SearchWorkspaceAdvanced` adds regex and lightweight symbol matching for the Workbench search surface.
 - `ListWorkspaceProblems` runs a read-only lightweight problem scan over bounded previews for TODO/FIXME/HACK/BUG markers, merge-conflict markers, and invalid JSON.
+- `ListWorkspaceTasks` discovers runnable task candidates, and `RunWorkspaceTask` can run only a re-discovered task ID with captured output and a saved task-run artifact.
 - `app/internal/workspace/preview.go` reads selected files only through a rooted relative path.
 - File previews reject traversal, symlinks, binary or unsupported text encoding content, and oversized previews.
 - File creates/updates go through `app/internal/workspace/write.go` with rooted paths, size caps, diff previews, and apply-only-after-preview behavior.

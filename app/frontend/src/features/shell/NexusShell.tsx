@@ -60,6 +60,7 @@ import {
     RefreshWorkspace,
     RefreshStaleContext,
     RebuildDatasetDependency,
+    RunWorkspaceTask,
     SaveLLMSettings,
     SaveAssistantProfile,
     SaveDatasetQuery,
@@ -113,6 +114,8 @@ import type {
     WorkspaceFreshnessStatus,
     WorkspaceProblemSummary,
     WorkspaceSearchResult,
+    WorkspaceTask,
+    WorkspaceTaskRunResult,
     WorkspaceTaskSummary,
     WorkspaceOpenResult,
     WorkspaceSnapshot,
@@ -233,7 +236,9 @@ export function NexusShell({
     const [workspaceProblems, setWorkspaceProblems] = useState<WorkspaceProblemSummary | null>(null);
     const [isLoadingWorkspaceProblems, setIsLoadingWorkspaceProblems] = useState(false);
     const [workspaceTasks, setWorkspaceTasks] = useState<WorkspaceTaskSummary | null>(null);
+    const [workspaceTaskRun, setWorkspaceTaskRun] = useState<WorkspaceTaskRunResult | null>(null);
     const [isLoadingWorkspaceTasks, setIsLoadingWorkspaceTasks] = useState(false);
+    const [isRunningWorkspaceTask, setIsRunningWorkspaceTask] = useState(false);
     const [isSendingPrompt, setIsSendingPrompt] = useState(false);
     const [isCreatingReport, setIsCreatingReport] = useState(false);
     const [isCreatingScanReport, setIsCreatingScanReport] = useState(false);
@@ -1564,6 +1569,7 @@ export function NexusShell({
         setWorkspaceSearchResults([]);
         setWorkspaceProblems(null);
         setWorkspaceTasks(null);
+        setWorkspaceTaskRun(null);
         if (rootChanged) {
             setOpenTabs([]);
             setEditingFilePaths([]);
@@ -1816,6 +1822,43 @@ export function NexusShell({
             setWorkspaceStatus(message || 'Workspace task detection failed.');
         } finally {
             setIsLoadingWorkspaceTasks(false);
+        }
+    }
+
+    async function runWorkspaceTask(task: WorkspaceTask) {
+        if (!workspace) {
+            setWorkspaceStatus('Open a workspace before running tasks.');
+            return;
+        }
+        if (!task.id || isRunningWorkspaceTask) {
+            return;
+        }
+        const approved = await requestApproval({
+            action: 'Run workspace task',
+            confirmLabel: 'Run task',
+            message: `Run ${task.command} in ${task.cwd || 'workspace root'} and save captured output as an artifact.`,
+            risk: task.kind === 'compose' ? 'medium' : 'low',
+            target: task.source || task.cwd || task.label,
+        });
+        if (!approved) {
+            setWorkspaceStatus(`Task run cancelled for ${task.label}.`);
+            return;
+        }
+
+        setIsRunningWorkspaceTask(true);
+        setWorkspaceStatus(`Running ${task.label}...`);
+        try {
+            const result = await RunWorkspaceTask({taskId: task.id});
+            setWorkspaceTaskRun(result);
+            setWorkspaceStatus(result.message);
+            pushToolEvent('Workspace task run', `${result.status}: ${task.label}`);
+            await refreshArtifacts();
+            await refreshApprovals();
+        } catch (error) {
+            const message = error instanceof Error ? error.message : '';
+            setWorkspaceStatus(message || 'Workspace task run failed.');
+        } finally {
+            setIsRunningWorkspaceTask(false);
         }
     }
 
@@ -2663,6 +2706,7 @@ export function NexusShell({
         const report: MarkdownReport = await CreateChatMarkdownArtifact({
             title: request.title,
             content: request.content,
+            kind: '',
             contextRelPath: request.contextRelPath,
             prompt: request.prompt,
             model: request.model,
@@ -3536,6 +3580,7 @@ export function NexusShell({
                 isLoadingGitFileDiff={isLoadingGitFileDiff}
                 isLoadingWorkspaceProblems={isLoadingWorkspaceProblems}
                 isLoadingWorkspaceTasks={isLoadingWorkspaceTasks}
+                isRunningWorkspaceTask={isRunningWorkspaceTask}
                 isPreviewingGitFileAction={isPreviewingGitFileAction}
                 isPreviewingGitHunkAction={isPreviewingGitHunkAction}
                 isPreparingMetadataStore={isPreparingMetadataStore}
@@ -3611,6 +3656,7 @@ export function NexusShell({
                 onRefreshStaleContext={() => void refreshStaleContextFromWorkspace()}
                 onRefreshWorkspaceProblems={() => void refreshWorkspaceProblems()}
                 onRefreshWorkspaceTasks={() => void refreshWorkspaceTasks()}
+                onRunWorkspaceTask={(task) => void runWorkspaceTask(task)}
                 onReplayAgentToolRun={(run) => void replayAgentToolRun(run)}
                 onSaveDatasetQuery={() => void saveCurrentDatasetQuery()}
                 onSaveDatasetSQLQuery={() => void saveCurrentDatasetSQLQuery()}
@@ -3644,6 +3690,7 @@ export function NexusShell({
                 workspaceSearchRegex={workspaceSearchRegex}
                 workspaceSearchResults={workspaceSearchResults}
                 workspaceReplacePreview={workspaceReplacePreview}
+                workspaceTaskRun={workspaceTaskRun}
                 workspaceTasks={workspaceTasks}
                 onWorkspaceSearchRegexChange={setWorkspaceSearchRegex}
                 onWorkspaceSearchQueryChange={setWorkspaceSearchQuery}

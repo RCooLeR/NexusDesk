@@ -95,6 +95,18 @@ export async function installNexusMocks(page) {
                         message: '2 tasks detected from package scripts and Go tests.',
                         generatedAt: '2026-05-14T00:00:00Z',
                     }),
+                    RunWorkspaceTask: async (request) => ({
+                        task: {id: request.taskId, kind: 'go-test', label: 'go test ./...', command: 'go test ./...', cwd: 'app', source: 'app/go.mod'},
+                        status: 'success',
+                        exitCode: 0,
+                        stdout: 'ok task smoke',
+                        stderr: '',
+                        startedAt: '2026-05-14T00:00:00Z',
+                        completedAt: '2026-05-14T00:00:01Z',
+                        durationMs: 1000,
+                        artifactRelPath: '.nexusdesk/artifacts/task-run-smoke.md',
+                        message: 'Task run artifact created.',
+                    }),
                     ListWorkspaceProblems: async () => ({
                         problems: [
                             {relPath: 'docs/brief.md', name: 'brief.md', severity: 'info', source: 'marker', message: 'Task marker: TODO: tighten this brief', line: 3},

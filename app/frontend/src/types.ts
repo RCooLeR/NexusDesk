@@ -495,6 +495,23 @@ export type WorkspaceTaskSummary = {
     generatedAt: string;
 };
 
+export type WorkspaceTaskRunRequest = {
+    taskId: string;
+};
+
+export type WorkspaceTaskRunResult = {
+    task: WorkspaceTask;
+    status: string;
+    exitCode: number;
+    stdout: string;
+    stderr: string;
+    startedAt: string;
+    completedAt: string;
+    durationMs: number;
+    artifactRelPath: string;
+    message: string;
+};
+
 export type RecentWorkspace = {
     name: string;
     path: string;

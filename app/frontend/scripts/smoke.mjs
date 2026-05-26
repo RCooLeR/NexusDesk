@@ -50,6 +50,7 @@ const checks = [
             'SearchWorkspaceAdvanced',
             'ListWorkspaceProblems',
             'ListWorkspaceTasks',
+            'RunWorkspaceTask',
             'ApprovalRequestModal',
             'requestApproval',
             'QuickOpenPalette',
@@ -119,6 +120,9 @@ const checks = [
             'saveAssistantProfile',
             'defaultAssistantProfile',
             'refreshWorkspaceTasks',
+            'runWorkspaceTask',
+            'workspaceTaskRun',
+            'isRunningWorkspaceTask',
             'selectedGitDiffPromptContext',
             'handleTreeContextAction',
             'main-studio-panel',
@@ -148,7 +152,7 @@ const checks = [
     },
     {
         file: 'src/features/shell/CodeStudioPanel.tsx',
-        terms: ['CodeStudioPanel', 'Workbench', 'Project Session', 'Repository', 'Search', 'workspaceSearchQuery', 'workspaceSearchRegex', 'workspaceReplacePreview', 'replacePreviewText', 'workspaceSearchResults', 'workspaceProblems', 'onRefreshWorkspaceProblems', 'Refresh problems', 'WorkspaceProblemSummary', 'workspaceTasks', 'onRefreshWorkspaceTasks', 'Refresh tasks', 'WorkspaceTaskSummary', 'onSearchWorkspace', 'onSelectSearchResult', 'code-studio-search-panel', 'code-studio-search-options', 'code-studio-problems-panel', 'code-studio-problem-row', 'code-studio-task-panel', 'selectedGitChangePath', 'onSelectGitChange', 'stagedFiles', 'unstagedFiles', 'Refresh git', 'Commands'],
+        terms: ['CodeStudioPanel', 'Workbench', 'Project Session', 'Repository', 'Search', 'workspaceSearchQuery', 'workspaceSearchRegex', 'workspaceReplacePreview', 'replacePreviewText', 'workspaceSearchResults', 'workspaceProblems', 'onRefreshWorkspaceProblems', 'Refresh problems', 'WorkspaceProblemSummary', 'workspaceTasks', 'workspaceTaskRun', 'isRunningWorkspaceTask', 'onRunWorkspaceTask', 'taskRunPreview', 'onRefreshWorkspaceTasks', 'Refresh tasks', 'WorkspaceTaskSummary', 'onSearchWorkspace', 'onSelectSearchResult', 'code-studio-search-panel', 'code-studio-search-options', 'code-studio-problems-panel', 'code-studio-problem-row', 'code-studio-task-panel', 'code-studio-task-output', 'selectedGitChangePath', 'onSelectGitChange', 'stagedFiles', 'unstagedFiles', 'Refresh git', 'Commands'],
     },
     {
         file: 'src/features/shell/GitDiffPanel.tsx',
@@ -269,6 +273,7 @@ const checks = [
             '.code-studio-problem-row',
             '.code-studio-task-panel',
             '.code-studio-task-row',
+            '.code-studio-task-output',
             '.git-change-tree',
             '.git-change-file',
             '.git-diff-panel',
@@ -347,11 +352,11 @@ const checks = [
     },
     {
         file: 'wailsjs/go/main/App.d.ts',
-        terms: ['AskLLMContextPack', 'RunAgent', 'PreviewFileWrite', 'ApplyFileDelete', 'PreviewFileCopy', 'ApplyFileCopy', 'ApplyFileMove', 'ProfileDataset', 'CreateDatasetChartArtifact', 'CreateDatasetQueryArtifact', 'CreateDatasetSQLArtifact', 'CreateDatasetSummaryArtifact', 'CreateChatMarkdownArtifact', 'CreateScanReportArtifact', 'PreviewChatContextPack', 'PreviewDatasetChart', 'SaveDatasetQuery', 'SaveDatasetSQLQuery', 'ListDatasetSQLQueries', 'ListDatasetDependencies', 'ListDatasetSQLRuns', 'ListWorkspaceProblems', 'ListWorkspaceTasks', 'RefreshStaleContext', 'SearchMetadata', 'SearchWorkspaceAdvanced', 'GetAssistantProfile', 'SaveAssistantProfile', 'QueryWorkspaceSQLite', 'ExportArtifactLineageJSON', 'GetGitStatus', 'GetGitFileDiff', 'PreviewGitFileAction', 'ApplyGitFileAction', 'PreviewGitHunkAction', 'ApplyGitHunkAction', 'ListApprovals', 'ListAgentTools', 'ListAgentToolRuns', 'PreviewAgentTool', 'ExecuteAgentTool', 'QueryDatasetSQL', 'EnsureSQLiteMetadataStore', 'InspectMetadataStore', 'GetArtifactLineage', 'CheckWorkspaceFreshness', 'CompareArtifacts', 'ArchiveArtifact', 'DeleteArtifact'],
+        terms: ['AskLLMContextPack', 'RunAgent', 'PreviewFileWrite', 'ApplyFileDelete', 'PreviewFileCopy', 'ApplyFileCopy', 'ApplyFileMove', 'ProfileDataset', 'CreateDatasetChartArtifact', 'CreateDatasetQueryArtifact', 'CreateDatasetSQLArtifact', 'CreateDatasetSummaryArtifact', 'CreateChatMarkdownArtifact', 'CreateScanReportArtifact', 'PreviewChatContextPack', 'PreviewDatasetChart', 'SaveDatasetQuery', 'SaveDatasetSQLQuery', 'ListDatasetSQLQueries', 'ListDatasetDependencies', 'ListDatasetSQLRuns', 'ListWorkspaceProblems', 'ListWorkspaceTasks', 'RunWorkspaceTask', 'RefreshStaleContext', 'SearchMetadata', 'SearchWorkspaceAdvanced', 'GetAssistantProfile', 'SaveAssistantProfile', 'QueryWorkspaceSQLite', 'ExportArtifactLineageJSON', 'GetGitStatus', 'GetGitFileDiff', 'PreviewGitFileAction', 'ApplyGitFileAction', 'PreviewGitHunkAction', 'ApplyGitHunkAction', 'ListApprovals', 'ListAgentTools', 'ListAgentToolRuns', 'PreviewAgentTool', 'ExecuteAgentTool', 'QueryDatasetSQL', 'EnsureSQLiteMetadataStore', 'InspectMetadataStore', 'GetArtifactLineage', 'CheckWorkspaceFreshness', 'CompareArtifacts', 'ArchiveArtifact', 'DeleteArtifact'],
     },
     {
         file: '../app_tasks.go',
-        terms: ['WorkspaceTask', 'WorkspaceTaskSummary', 'ListWorkspaceTasks', 'discoverWorkspaceTasks', 'package.json', 'go test ./...', 'npm run'],
+        terms: ['WorkspaceTask', 'WorkspaceTaskSummary', 'WorkspaceTaskRunRequest', 'WorkspaceTaskRunResult', 'ListWorkspaceTasks', 'RunWorkspaceTask', 'runDiscoveredWorkspaceTask', 'taskRunMarkdown', 'package.json', 'go test ./...', 'npm run'],
     },
     {
         file: '../app_metadata.go',

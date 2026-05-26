@@ -47,6 +47,45 @@ func TestDiscoverWorkspaceTasksSkipsNoisyDirectories(t *testing.T) {
 	}
 }
 
+func TestRunDiscoveredWorkspaceTaskCapturesGoTestOutput(t *testing.T) {
+	root := t.TempDir()
+	mustWrite(t, filepath.Join(root, "go.mod"), "module taskfixture\n\ngo 1.24\n")
+	mustWrite(t, filepath.Join(root, "main_test.go"), "package taskfixture\n\nimport \"testing\"\n\nfunc TestOK(t *testing.T) {}\n")
+
+	summary, err := discoverWorkspaceTasks(root)
+	if err != nil {
+		t.Fatalf("discoverWorkspaceTasks() error = %v", err)
+	}
+	var taskID string
+	for _, task := range summary.Tasks {
+		if task.Kind == "go-test" && task.Command == "go test ./..." {
+			taskID = task.ID
+			break
+		}
+	}
+	if taskID == "" {
+		t.Fatalf("expected go test task in %#v", summary.Tasks)
+	}
+
+	result, err := runDiscoveredWorkspaceTask(root, taskID)
+	if err != nil {
+		t.Fatalf("runDiscoveredWorkspaceTask() error = %v", err)
+	}
+	if result.Status != "success" || result.ExitCode != 0 {
+		t.Fatalf("expected successful task result, got %#v", result)
+	}
+	if result.Stdout == "" {
+		t.Fatalf("expected captured stdout, got %#v", result)
+	}
+}
+
+func TestRunDiscoveredWorkspaceTaskRejectsUnknownTask(t *testing.T) {
+	root := t.TempDir()
+	if _, err := runDiscoveredWorkspaceTask(root, "missing-task"); err == nil {
+		t.Fatal("expected missing task to be rejected")
+	}
+}
+
 func assertTask(t *testing.T, tasks []WorkspaceTask, kind string, label string, cwd string, source string) {
 	t.Helper()
 	for _, task := range tasks {
