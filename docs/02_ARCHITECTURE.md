@@ -125,6 +125,8 @@ The Fyne shell now owns native desktop affordances directly: approved brand icon
 
 Preview data remains framework-free: `nexus-app/internal/services/workspace` classifies text, image, table, document, PDF, and binary previews and returns capped data, while `nexus-app/internal/ui/shell` chooses Fyne widgets for rendering.
 
+File mutation data remains framework-free as well: `nexus-app/internal/services/workspace` now owns rooted text/code write previews, append/apply flows, encoding-aware writes, and rollback snapshots under `.nexusdesk/rollbacks`. Fyne editor widgets should call this service rather than writing files directly.
+
 ### 2. Frontend
 
 Responsibilities:
@@ -163,8 +165,8 @@ Review status as of the latest full project pass:
 Near-term architecture corrections:
 
 - Configure Windows CGO/Fyne toolchain and verify the native app runs.
-- Continue porting safe workspace preview/write services from `app-wails` into `nexus-app/internal/services/workspace`.
-- Keep editor tab/session and draft rules in `nexus-app/internal/services/editor` rather than in Fyne widget callbacks; Fyne editor chrome should only render and dispatch those state transitions. Draft editing exists before write-back, including Markdown source/rendered preview, but Save remains disabled until the safe write preview/apply/rollback service is ported.
+- Wire the native editor Save flow through `nexus-app/internal/services/workspace` safe writes and rollback records; no Fyne widget should write directly to disk.
+- Keep editor tab/session and draft rules in `nexus-app/internal/services/editor` rather than in Fyne widget callbacks; Fyne editor chrome should only render and dispatch those state transitions.
 - Port Git, LLM/agent, data, artifact, and metadata services without recreating a bridge-shaped root package.
 - Add a durable job model before wiring slow indexing, OCR, dump imports, connector pulls, or long agent runs.
 - Promote SQLite metadata repositories to primary persistence once migration/recovery tests exist.

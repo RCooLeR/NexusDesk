@@ -1,0 +1,167 @@
+package workspace
+
+import (
+	"os"
+	"path/filepath"
+	"strings"
+	"testing"
+)
+
+func TestPreviewFileWriteBuildsCreateDiff(t *testing.T) {
+	root := t.TempDir()
+
+	proposal, err := New().PreviewFileWrite(root, FileWriteRequest{
+		RelPath: "docs/new.md",
+		Content: "# New\n",
+	})
+	if err != nil {
+		t.Fatalf("PreviewFileWrite returned error: %v", err)
+	}
+	if proposal.Action != "create" {
+		t.Fatalf("expected create action, got %s", proposal.Action)
+	}
+	if !strings.Contains(proposal.Diff, "+++ b/docs/new.md") || !strings.Contains(proposal.Diff, "+# New") {
+		t.Fatalf("unexpected diff: %s", proposal.Diff)
+	}
+}
+
+func TestApplyFileWriteUpdatesTextFileAndCreatesRollback(t *testing.T) {
+	root := t.TempDir()
+	writeFile(t, filepath.Join(root, "docs", "notes.md"), "old\n")
+
+	proposal, err := New().ApplyFileWrite(root, FileWriteRequest{
+		RelPath: "docs/notes.md",
+		Content: "new\n",
+	})
+	if err != nil {
+		t.Fatalf("ApplyFileWrite returned error: %v", err)
+	}
+	if proposal.Action != "update" || proposal.RollbackID == "" {
+		t.Fatalf("unexpected proposal: %#v", proposal)
+	}
+	assertFileContent(t, filepath.Join(root, "docs", "notes.md"), "new\n")
+
+	rollbacks, err := New().ListRollbacks(root)
+	if err != nil {
+		t.Fatalf("ListRollbacks returned error: %v", err)
+	}
+	if len(rollbacks) != 1 || rollbacks[0].ID != proposal.RollbackID {
+		t.Fatalf("expected committed rollback, got %#v", rollbacks)
+	}
+}
+
+func TestApplyRollbackRestoresUpdatedTextFile(t *testing.T) {
+	root := t.TempDir()
+	service := New()
+	writeFile(t, filepath.Join(root, "docs", "notes.md"), "old\n")
+
+	proposal, err := service.ApplyFileWrite(root, FileWriteRequest{RelPath: "docs/notes.md", Content: "new\n"})
+	if err != nil {
+		t.Fatalf("ApplyFileWrite returned error: %v", err)
+	}
+	result, err := service.ApplyRollback(root, proposal.RollbackID)
+	if err != nil {
+		t.Fatalf("ApplyRollback returned error: %v", err)
+	}
+	if len(result.Restored) != 1 || result.Restored[0] != "docs/notes.md" {
+		t.Fatalf("unexpected rollback result: %#v", result)
+	}
+	assertFileContent(t, filepath.Join(root, "docs", "notes.md"), "old\n")
+}
+
+func TestApplyRollbackRemovesCreatedFile(t *testing.T) {
+	root := t.TempDir()
+	service := New()
+
+	proposal, err := service.ApplyFileWrite(root, FileWriteRequest{RelPath: "docs/new.md", Content: "# New\n"})
+	if err != nil {
+		t.Fatalf("ApplyFileWrite returned error: %v", err)
+	}
+	result, err := service.ApplyRollback(root, proposal.RollbackID)
+	if err != nil {
+		t.Fatalf("ApplyRollback returned error: %v", err)
+	}
+	if len(result.Removed) != 1 || result.Removed[0] != "docs/new.md" {
+		t.Fatalf("unexpected rollback result: %#v", result)
+	}
+	if _, err := os.Stat(filepath.Join(root, "docs", "new.md")); !os.IsNotExist(err) {
+		t.Fatalf("expected created file to be removed, got err=%v", err)
+	}
+}
+
+func TestApplyFileAppendDoesNotTruncateLargeFile(t *testing.T) {
+	root := t.TempDir()
+	large := strings.Repeat("a", 600*1024)
+	writeFile(t, filepath.Join(root, "docs", "large.txt"), large)
+
+	proposal, err := New().ApplyFileAppend(root, FileWriteRequest{
+		RelPath: "docs/large.txt",
+		Content: "\nappended\n",
+	})
+	if err != nil {
+		t.Fatalf("ApplyFileAppend returned error: %v", err)
+	}
+	if proposal.Action != "append" || proposal.RollbackID == "" {
+		t.Fatalf("unexpected proposal: %#v", proposal)
+	}
+	assertFileContent(t, filepath.Join(root, "docs", "large.txt"), large+"\nappended\n")
+}
+
+func TestPreviewFileAppendRejectsBinaryTarget(t *testing.T) {
+	root := t.TempDir()
+	writeBytes(t, filepath.Join(root, "blob.bin"), []byte{'a', 0x00, 'b'})
+
+	if _, err := New().PreviewFileAppend(root, FileWriteRequest{RelPath: "blob.bin", Content: "text"}); err == nil {
+		t.Fatal("expected binary append target to be rejected")
+	}
+}
+
+func TestApplyFileWritePreservesRequestedUTF16LEEncoding(t *testing.T) {
+	root := t.TempDir()
+
+	proposal, err := New().ApplyFileWrite(root, FileWriteRequest{
+		RelPath:  "docs/notes.txt",
+		Content:  "hello\n",
+		Encoding: "utf-16le",
+	})
+	if err != nil {
+		t.Fatalf("ApplyFileWrite returned error: %v", err)
+	}
+	if proposal.Encoding != encodingUTF16LE {
+		t.Fatalf("expected utf-16le proposal encoding, got %q", proposal.Encoding)
+	}
+
+	content, err := os.ReadFile(filepath.Join(root, "docs", "notes.txt"))
+	if err != nil {
+		t.Fatalf("ReadFile failed: %v", err)
+	}
+	if len(content) < 4 || content[0] != 0xff || content[1] != 0xfe || content[2] != 'h' || content[3] != 0x00 {
+		t.Fatalf("expected utf-16le content with BOM, got %#v", content)
+	}
+}
+
+func TestPreviewFileWriteRejectsUnsafeTargets(t *testing.T) {
+	root := t.TempDir()
+	service := New()
+
+	if _, err := service.PreviewFileWrite(root, FileWriteRequest{RelPath: "../outside.txt", Content: "x"}); err == nil {
+		t.Fatal("expected traversal write to be rejected")
+	}
+	if _, err := service.PreviewFileWrite(root, FileWriteRequest{RelPath: ".nexusdesk/config.json", Content: "{}"}); err == nil {
+		t.Fatal("expected metadata write to be rejected")
+	}
+	if _, err := service.PreviewFileWrite(root, FileWriteRequest{RelPath: "bad.txt", Content: "x", Encoding: "koi8-r"}); err == nil {
+		t.Fatal("expected unsupported encoding to be rejected")
+	}
+}
+
+func assertFileContent(t *testing.T, path string, want string) {
+	t.Helper()
+	content, err := os.ReadFile(path)
+	if err != nil {
+		t.Fatalf("ReadFile failed: %v", err)
+	}
+	if string(content) != want {
+		t.Fatalf("expected %q, got %q", want, string(content))
+	}
+}

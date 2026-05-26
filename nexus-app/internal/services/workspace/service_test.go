@@ -91,6 +91,9 @@ func writeFile(t *testing.T, path string, content string) {
 
 func writeBytes(t *testing.T, path string, content []byte) {
 	t.Helper()
+	if err := os.MkdirAll(filepath.Dir(path), 0o755); err != nil {
+		t.Fatalf("mkdir parent for %s: %v", path, err)
+	}
 	if err := os.WriteFile(path, content, 0o644); err != nil {
 		t.Fatalf("write %s: %v", path, err)
 	}
