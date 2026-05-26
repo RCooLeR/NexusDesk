@@ -42,19 +42,19 @@ func Build(root string, relPath string) (Profile, error) {
 	}
 
 	switch extension {
-	case ".csv":
+	case ".csv", ".tsv", ".json", ".jsonl", ".ndjson":
 		preview, err := workspace.Preview(absRoot, cleanRel, workspace.PreviewOptions{})
 		if err != nil {
 			return Profile{}, err
 		}
 		if preview.Table == nil {
-			return Profile{}, errors.New("CSV profile could not parse a table")
+			return Profile{}, errors.New("dataset profile could not parse a table")
 		}
-		profile.Kind = "csv"
+		profile.Kind = datasetKindFromExtension(extension)
 		profile.Rows = preview.Table.TotalRows
 		profile.Columns = len(preview.Table.Columns)
 		profile.Profiles = preview.Table.Profiles
-		profile.Message = "CSV dataset profile persisted."
+		profile.Message = strings.ToUpper(profile.Kind) + " dataset profile persisted."
 	case ".xlsx":
 		sheets, err := inspectXLSXSheets(absTarget)
 		if err != nil {
@@ -64,7 +64,7 @@ func Build(root string, relPath string) (Profile, error) {
 		profile.Sheets = sheets
 		profile.Message = "Excel workbook profile persisted."
 	default:
-		return Profile{}, errors.New("dataset profiles currently support CSV and XLSX files")
+		return Profile{}, errors.New("dataset profiles currently support CSV, TSV, JSON, NDJSON, and XLSX files")
 	}
 
 	if err := saveProfile(absRoot, profile); err != nil {
@@ -72,6 +72,15 @@ func Build(root string, relPath string) (Profile, error) {
 	}
 
 	return profile, nil
+}
+
+func datasetKindFromExtension(extension string) string {
+	switch extension {
+	case ".jsonl", ".ndjson":
+		return "ndjson"
+	default:
+		return strings.TrimPrefix(extension, ".")
+	}
 }
 
 func List(root string) ([]Profile, error) {

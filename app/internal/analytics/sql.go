@@ -90,7 +90,7 @@ func QueryCSVSQL(root string, request SQLQueryRequest) (SQLQueryResult, error) {
 	return SQLQueryResult{
 		RelPath:     result.RelPath,
 		SQL:         sql,
-		Engine:      "duckdb-compatible-csv",
+		Engine:      "duckdb-compatible-dataset",
 		Columns:     columns,
 		Rows:        rows,
 		TotalRows:   result.TotalRows,

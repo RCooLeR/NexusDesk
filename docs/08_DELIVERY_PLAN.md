@@ -52,13 +52,13 @@ Deliverables:
 - expandable tree state across refreshes: implemented
 - fixed-height desktop shell with panel-level scrolling: implemented
 - safe text/code file viewer: implemented
-- bounded CSV table preview: implemented
-- bounded CSV column profiles: implemented
-- larger capped CSV profile sample: implemented
-- persistent CSV/XLSX dataset profiles: first implementation
-- bounded CSV query/filter flow: first implementation
-- CSV query result export artifact flow: first implementation
-- CSV-to-SVG bar chart artifact flow: first implementation
+- bounded CSV/TSV/JSON/NDJSON table preview: implemented
+- bounded CSV/TSV/JSON/NDJSON column profiles: implemented
+- larger capped table profile sample: implemented
+- persistent CSV/TSV/JSON/NDJSON/XLSX dataset profiles: first implementation
+- bounded CSV/TSV/JSON/NDJSON query/filter flow: first implementation
+- dataset query result export artifact flow: first implementation
+- dataset-to-SVG bar chart artifact flow: first implementation
 - image preview: implemented
 - basic PDF preview: implemented
 - PDF page text extraction: first implementation
@@ -74,7 +74,7 @@ Deliverables:
 - streaming chat with configured OpenAI-compatible LLM URL: implemented
 - chat history per workspace: implemented with local JSON config
 - read selected text file into chat context: implemented
-- read selected CSV profile and sample into chat context: implemented
+- read selected table profile and sample into chat context: implemented
 - pin multiple selected previews into a bounded chat context pack: implemented
 - remove individual pinned context files: implemented
 - preview backend-selected context pack files before sending chat: implemented
@@ -106,7 +106,7 @@ Current status:
 - The window shell stays fixed-height; long file trees, previews, chat, settings, and timelines scroll inside their own panels.
 - Text preview stays inside the approved workspace root and refuses binary/unsafe paths.
 - Text preview decodes common UTF-8, UTF-16, and Windows-1251 Cyrillic files.
-- CSV files render as bounded table previews with lightweight column profiles from a larger capped sample while retaining raw text for selected chat context.
+- CSV, TSV, JSON, and NDJSON files render as bounded table previews with lightweight column profiles from a larger capped sample while retaining raw text for selected chat context.
 - Common image previews render inline as capped data URLs from inside the approved workspace root.
 - PDF previews render inline as capped data URLs from inside the approved workspace root and expose extracted text by page when available.
 - DOCX files expose extracted body text when the document XML is readable.
@@ -116,14 +116,14 @@ Current status:
 - The local `rcooler-ollama` endpoint on `localhost:11434` is verified with CUDA 12 GPU offload through the sibling `../Llm/` Compose stack.
 - The LLM settings panel reports Ollama runtime details, including selected model, endpoint, and VRAM residency when available.
 - Streaming chat works with the configured model and optional selected file context.
-- CSV context is sent as a structured profile plus bounded row sample instead of only raw preview text.
-- CSV datasets can be queried with bounded text search or `column=value` filters.
-- CSV query results can be exported as timestamped CSV artifacts.
-- CSV queries can be saved per dataset and reused from the Data & Analytics panel.
-- CSV queries support text search, column filters, numeric comparisons, `contains`, `limit`, and simple `order by` clauses.
-- CSV datasets can preview bar or line chart points before generating deterministic SVG chart artifacts from category counts or numeric sums.
-- CSV datasets can generate deterministic Markdown summary artifacts with column profiles and suggested analysis questions.
-- Multiple text, CSV, and extracted-PDF previews can be pinned into a bounded context pack for chat.
+- CSV/TSV/JSON/NDJSON context is sent as a structured profile plus bounded row sample instead of only raw preview text.
+- CSV/TSV/JSON/NDJSON datasets can be queried with bounded text search or `column=value` filters.
+- Dataset query results can be exported as timestamped CSV artifacts.
+- Dataset row queries can be saved per dataset and reused from the Data & Analytics panel.
+- Dataset row queries support text search, column filters, numeric comparisons, `contains`, `limit`, and simple `order by` clauses.
+- Table datasets can preview bar or line chart points before generating deterministic SVG chart artifacts from category counts or numeric sums.
+- Table datasets can generate deterministic Markdown summary artifacts with column profiles and suggested analysis questions.
+- Multiple text, table-data, and extracted-PDF previews can be pinned into a bounded context pack for chat.
 - Selected directories and the workspace root can be expanded into bounded streaming context packs.
 - Pinned context packs show individual files and support removing one file at a time.
 - The Preview button reloads the selected file, and the Explain button sends a grounded prompt for selected text/code previews.
@@ -150,7 +150,7 @@ Current status:
 - Markdown report artifacts can be created under `.nexusdesk/artifacts/` without overwriting existing files.
 - Latest assistant answers can be saved as Markdown artifacts under `.nexusdesk/artifacts/` with their chat context recorded as metadata.
 - Markdown artifacts now write sidecar provenance metadata with source, prompt, model, source paths, and creation timestamp.
-- CSV query export artifacts now write sidecar provenance metadata with dataset source paths and query string.
+- Dataset query export artifacts now write sidecar provenance metadata with dataset source paths and query string.
 - SVG chart artifacts now write sidecar provenance metadata with dataset source paths and chart configuration.
 - The Artifact Studio route lists generated Markdown, CSV, and SVG artifacts, can reselect visible artifact files from that list, and shows artifact metadata when a generated artifact is active.
 - Workspace scan reports can be saved as Markdown artifacts with scan counters and skipped/ignored path samples.
@@ -162,7 +162,7 @@ Current status:
 - The frontend has a smoke check for the built entrypoint, generated Wails bindings, and core shell functionality markers.
 - Playwright is installed as a frontend dev dependency and visual smoke captures desktop/mobile baselines from the production build.
 - SQLite metadata initialization now applies the schema to `.nexusdesk/metadata/nexusdesk.sqlite`, while JSON stores remain the compatibility layer until repositories migrate.
-- Read-only SQL uses the bounded CSV-compatible path by default and has a CGO-gated DuckDB driver path behind the `duckdb` build tag.
+- Read-only SQL uses the bounded dataset-compatible path by default and has a CGO-gated DuckDB driver path behind the `duckdb` build tag.
 - Tool-run rows expose detail drawers with captured inputs, outputs/errors, approval references, replay, and target diff affordances.
 - Assistant answers and saved answer artifacts include source citations from selected files and context packs.
 - Artifact lineage can be built across chats, tools, source files, and generated artifacts.
@@ -174,7 +174,7 @@ Current status:
 - Stale-context refresh can rebuild a context preview from changed files and records the refresh in the approval/metadata trail.
 - Dataset dependency rebuild now removes the prior generated artifact before re-running so repeated refreshes avoid same-timestamp collisions.
 - Data & Analytics clears visible query/chart/profile state when the selected dataset changes on disk.
-- Workspace freshness reports dataset-derived views that need refresh when CSV/XLSX sources change.
+- Workspace freshness reports dataset-derived views that need refresh when table/workbook sources change.
 - SQL query results can be exported as Markdown artifacts with SQL text, engine, row counts, preview rows, and dataset citations.
 - Data & Analytics saves read-only SQL snippets separately from lightweight row filters.
 - Artifact lineage has a selectable graph layout with relationship counts and source navigation.
@@ -189,7 +189,7 @@ This batch kept momentum on real functionality while cleaning up the growing she
 2. Workspace search results are grouped into file, artifact, and chat sections.
 3. Data & Analytics, Artifacts, Approval Log, Operations inspector, and approval modal UI are split into focused components.
 4. Scan reports now capture included, ignored, depth-skipped, entry-capped, and unreadable paths without crowding the default navigator header.
-5. CSV preview/query tables support sortable columns and bounded pagination.
+5. Dataset preview/query tables support sortable columns and bounded pagination.
 6. Chart artifact metadata now has clearer configuration and inline SVG preview.
 7. Operations capabilities have a first read-only inspector for Docker/Compose and local service files.
 
@@ -200,7 +200,7 @@ This batch made more of the studio inspectable and auditable without turning on 
 1. Backend tool descriptors now live in `app/internal/agenttools/` with names, descriptions, risk levels, surfaces, and approval requirements.
 2. The always-visible assistant shows a first proposed tool plan for the active file, dataset, artifact, or operations context.
 3. Workspace scan reports can be saved as Markdown artifacts under `.nexusdesk/artifacts/`.
-4. CSV queries now support numeric comparisons, `contains`, `limit`, and simple `order by` clauses.
+4. Dataset row queries now support numeric comparisons, `contains`, `limit`, and simple `order by` clauses.
 5. Generated artifacts can open their source context, archive to `.nexusdesk/artifacts/archive/`, or be deleted through approval prompts.
 6. Operations capabilities parse selected Compose YAML into services, images, ports, volumes, and dependencies.
 7. Frontend smoke coverage now checks the new tool-planning, artifact-action, scan-report, Compose parsing, and optional visual smoke surfaces.
@@ -211,14 +211,14 @@ This batch made more of the studio inspectable and auditable without turning on 
 2. Medium/high-risk plan executions use modal approval before backend execution.
 3. Tool run records persist input, output summary, risk, approval ID, duration, and errors under `.nexusdesk/tool-runs/`.
 4. SQLite metadata schema preparation now writes a migration-compatible schema and manifest under `.nexusdesk/metadata/`.
-5. Data & Analytics has a read-only DuckDB-compatible SQL surface over CSV datasets, using the bounded CSV query path until the real driver lands.
+5. Data & Analytics has a read-only DuckDB-compatible SQL surface over table datasets, using the bounded dataset query path until the real driver lands.
 6. Artifact comparison shows added/removed line summaries and size delta between generated outputs.
 7. Visual smoke now writes baseline screenshots and a manifest whenever Playwright is installed.
 
 ## Completed Batch: Context, Persistence, And Analytics Depth
 
 1. SQLite metadata preparation now uses `modernc.org/sqlite` to create and migrate `.nexusdesk/metadata/nexusdesk.sqlite`.
-2. DuckDB-backed SQL execution is implemented as a `database/sql` path behind the `duckdb` build tag for CGO-enabled systems, with bounded CSV SQL fallback in the default Windows loop.
+2. DuckDB-backed SQL execution is implemented as a `database/sql` path behind the `duckdb` build tag for CGO-enabled systems, with bounded dataset SQL fallback in the default Windows loop.
 3. Tool-run rows now expand into detail drawers with inputs, outputs/errors, approval IDs, replay, and target diff affordances.
 4. Context-pack source citations now appear in persisted assistant answers and saved Markdown answer artifacts.
 5. Artifact lineage can be built across chats, tool runs, source files, and generated outputs.
@@ -259,9 +259,16 @@ This batch made more of the studio inspectable and auditable without turning on 
 
 ## Completed Batch: Studio Query And Connector Maturity
 
-1. Add explicit single-statement SQL validation (including quote/comment-aware semicolon checks) for SQLite connector and CSV analytics SQL inputs.
+1. Add explicit single-statement SQL validation (including quote/comment-aware semicolon checks) for SQLite connector and dataset analytics SQL inputs.
 2. Add explicit refresh/rebuild buttons for dataset dependencies so saved SQL reports, charts, summaries, and exports can be regenerated from recorded inputs.
 3. Add connector approval policy docs/tests for read-only proofs, blocked SQL statements, result caps, and redacted errors.
+
+## Completed Batch: Table Dataset Coverage
+
+1. TSV files now use the same bounded table preview, column profiling, profile persistence, and row-query path as CSV.
+2. JSON arrays/objects are flattened into deterministic table columns for preview, profile, context, and bounded row queries.
+3. JSONL/NDJSON files are decoded record by record for preview, profile, context, and bounded row queries.
+4. Workspace scanning and frontend draft file typing classify CSV, TSV, JSON, JSONL, and NDJSON as data files.
 
 ## Prepared Batch: Architecture Hardening Before Deeper Studios
 

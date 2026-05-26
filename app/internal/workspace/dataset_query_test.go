@@ -70,3 +70,54 @@ func TestQueryCSVSupportsContainsAndRangeOperators(t *testing.T) {
 		t.Fatalf("expected two range matches, got %#v", result)
 	}
 }
+
+func TestQueryCSVSupportsTSVDatasets(t *testing.T) {
+	root := t.TempDir()
+	writeFile(t, root, "data/campaigns.tsv", "channel\tconversions\nOrganic\t42\nPaid\t7\n")
+
+	result, err := QueryCSV(root, "data/campaigns.tsv", "conversions>10")
+	if err != nil {
+		t.Fatalf("QueryCSV returned error: %v", err)
+	}
+
+	if result.MatchedRows != 1 || len(result.Rows) != 1 {
+		t.Fatalf("expected one matching row, got %#v", result)
+	}
+	if result.Rows[0][0] != "Organic" {
+		t.Fatalf("unexpected row: %#v", result.Rows[0])
+	}
+}
+
+func TestQueryCSVSupportsJSONDatasets(t *testing.T) {
+	root := t.TempDir()
+	writeFile(t, root, "data/campaigns.json", `[{"channel":"Organic","conversions":42},{"channel":"Paid","conversions":7}]`)
+
+	result, err := QueryCSV(root, "data/campaigns.json", "channel=Paid")
+	if err != nil {
+		t.Fatalf("QueryCSV returned error: %v", err)
+	}
+
+	if result.MatchedRows != 1 || len(result.Rows) != 1 {
+		t.Fatalf("expected one matching row, got %#v", result)
+	}
+	if result.Rows[0][0] != "Paid" {
+		t.Fatalf("unexpected row: %#v", result.Rows[0])
+	}
+}
+
+func TestQueryCSVSupportsNDJSONDatasets(t *testing.T) {
+	root := t.TempDir()
+	writeFile(t, root, "data/campaigns.ndjson", "{\"channel\":\"Organic\",\"conversions\":42}\n{\"channel\":\"Paid\",\"conversions\":7}\n")
+
+	result, err := QueryCSV(root, "data/campaigns.ndjson", "conversions<10")
+	if err != nil {
+		t.Fatalf("QueryCSV returned error: %v", err)
+	}
+
+	if result.MatchedRows != 1 || len(result.Rows) != 1 {
+		t.Fatalf("expected one matching row, got %#v", result)
+	}
+	if result.Rows[0][0] != "Paid" {
+		t.Fatalf("unexpected row: %#v", result.Rows[0])
+	}
+}

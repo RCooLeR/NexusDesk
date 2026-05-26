@@ -247,9 +247,9 @@ func detectFileTypeName(name string, isDir bool) string {
 	}
 
 	switch strings.ToLower(filepath.Ext(name)) {
-	case ".go", ".js", ".jsx", ".ts", ".tsx", ".css", ".html", ".json", ".yaml", ".yml", ".md", ".sql":
+	case ".go", ".js", ".jsx", ".ts", ".tsx", ".css", ".html", ".yaml", ".yml", ".md", ".sql":
 		return "code"
-	case ".csv", ".xlsx", ".xls", ".parquet":
+	case ".csv", ".tsv", ".json", ".jsonl", ".ndjson", ".xlsx", ".xls", ".parquet":
 		return "data"
 	case ".sqlite", ".sqlite3", ".db":
 		return "database"

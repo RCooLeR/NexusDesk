@@ -35,6 +35,60 @@ func TestBuildPersistsCSVProfile(t *testing.T) {
 	}
 }
 
+func TestBuildPersistsTSVProfile(t *testing.T) {
+	root := t.TempDir()
+	writeFile(t, root, "data/report.tsv", "name\tvalue\nalpha\t10\nbeta\t20\n")
+
+	profile, err := Build(root, "data/report.tsv")
+	if err != nil {
+		t.Fatalf("Build returned error: %v", err)
+	}
+
+	if profile.Kind != "tsv" {
+		t.Fatalf("expected tsv profile, got %s", profile.Kind)
+	}
+	if profile.Rows != 2 || profile.Columns != 2 {
+		t.Fatalf("expected 2 rows and 2 columns, got %d/%d", profile.Rows, profile.Columns)
+	}
+	if len(profile.Profiles) != 2 || profile.Profiles[1].Type != "integer" {
+		t.Fatalf("expected integer column profile, got %#v", profile.Profiles)
+	}
+}
+
+func TestBuildPersistsJSONProfile(t *testing.T) {
+	root := t.TempDir()
+	writeFile(t, root, "data/report.json", `[{"name":"alpha","value":10},{"name":"beta","value":20}]`)
+
+	profile, err := Build(root, "data/report.json")
+	if err != nil {
+		t.Fatalf("Build returned error: %v", err)
+	}
+
+	if profile.Kind != "json" {
+		t.Fatalf("expected json profile, got %s", profile.Kind)
+	}
+	if profile.Rows != 2 || profile.Columns != 2 {
+		t.Fatalf("expected 2 rows and 2 columns, got %d/%d", profile.Rows, profile.Columns)
+	}
+}
+
+func TestBuildPersistsNDJSONProfile(t *testing.T) {
+	root := t.TempDir()
+	writeFile(t, root, "data/report.ndjson", "{\"name\":\"alpha\",\"value\":10}\n{\"name\":\"beta\",\"value\":20}\n")
+
+	profile, err := Build(root, "data/report.ndjson")
+	if err != nil {
+		t.Fatalf("Build returned error: %v", err)
+	}
+
+	if profile.Kind != "ndjson" {
+		t.Fatalf("expected ndjson profile, got %s", profile.Kind)
+	}
+	if profile.Rows != 2 || profile.Columns != 2 {
+		t.Fatalf("expected 2 rows and 2 columns, got %d/%d", profile.Rows, profile.Columns)
+	}
+}
+
 func TestBuildInspectsXLSXSheets(t *testing.T) {
 	root := t.TempDir()
 	path := filepath.Join(root, "data", "workbook.xlsx")

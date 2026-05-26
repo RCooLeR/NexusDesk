@@ -5,6 +5,7 @@ import (
 	"encoding/base64"
 	"encoding/binary"
 	"encoding/csv"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"io"
@@ -197,17 +198,19 @@ func Preview(root string, relPath string, options PreviewOptions) (FilePreview, 
 	preview.Text = preview.Content
 	preview.Encoding = encoding
 	preview.Truncated = truncated
-	if strings.EqualFold(filepath.Ext(info.Name()), ".csv") {
-		table, err := parseCSVPreview(preview.Content, csvPreviewMaxRows, csvPreviewMaxColumns)
+	datasetKind := datasetPreviewKind(info.Name())
+	switch datasetKind {
+	case "csv", "tsv", "json", "ndjson":
+		table, err := parseDatasetPreview(preview.Content, datasetKind, csvPreviewMaxRows, csvPreviewMaxColumns)
 		if err == nil && len(table.Columns) > 0 {
 			preview.Table = &table
-			profiles, err := profileCSVFile(absTarget, csvProfileMaxBytes, csvProfileMaxRows, csvPreviewMaxColumns)
+			profiles, err := profileDatasetFile(absTarget, datasetKind, csvProfileMaxBytes, csvProfileMaxRows, csvPreviewMaxColumns)
 			if err == nil && len(profiles) > 0 {
 				preview.Table.Profiles = profiles
 			}
-			preview.Message = fmt.Sprintf("CSV table preview loaded with %d rows.", table.TotalRows)
+			preview.Message = fmt.Sprintf("%s table preview loaded with %d rows.", strings.ToUpper(datasetKind), table.TotalRows)
 			if table.Truncated || truncated {
-				preview.Message = "CSV table preview truncated to keep the app responsive."
+				preview.Message = fmt.Sprintf("%s table preview truncated to keep the app responsive.", strings.ToUpper(datasetKind))
 			}
 		}
 	}
@@ -221,7 +224,26 @@ func Preview(root string, relPath string, options PreviewOptions) (FilePreview, 
 }
 
 func parseCSVPreview(content string, maxRows int, maxColumns int) (TablePreview, error) {
-	records, err := readCSVRecords(content, 0)
+	return parseDelimitedPreview(content, ',', maxRows, maxColumns)
+}
+
+func parseDatasetPreview(content string, kind string, maxRows int, maxColumns int) (TablePreview, error) {
+	switch kind {
+	case "csv":
+		return parseDelimitedPreview(content, ',', maxRows, maxColumns)
+	case "tsv":
+		return parseDelimitedPreview(content, '\t', maxRows, maxColumns)
+	case "json":
+		return parseJSONPreview(content, maxRows, maxColumns)
+	case "ndjson":
+		return parseNDJSONPreview(content, maxRows, maxColumns)
+	default:
+		return TablePreview{}, errors.New("unsupported dataset preview kind")
+	}
+}
+
+func parseDelimitedPreview(content string, delimiter rune, maxRows int, maxColumns int) (TablePreview, error) {
+	records, err := readDelimitedRecords(content, delimiter, 0)
 	if err != nil {
 		return TablePreview{}, err
 	}
@@ -250,6 +272,10 @@ func parseCSVPreview(content string, maxRows int, maxColumns int) (TablePreview,
 }
 
 func profileCSVFile(path string, maxBytes int, maxRows int, maxColumns int) ([]ColumnProfile, error) {
+	return profileDatasetFile(path, "csv", maxBytes, maxRows, maxColumns)
+}
+
+func profileDatasetFile(path string, kind string, maxBytes int, maxRows int, maxColumns int) ([]ColumnProfile, error) {
 	content, _, err := readPreviewContent(path, maxBytes)
 	if err != nil {
 		return nil, err
@@ -257,23 +283,23 @@ func profileCSVFile(path string, maxBytes int, maxRows int, maxColumns int) ([]C
 
 	normalized, _, ok := normalizePreviewText(content)
 	if !ok || isLikelyBinary(normalized) {
-		return nil, errors.New("csv profile content is not previewable text")
+		return nil, errors.New("dataset profile content is not previewable text")
 	}
 
-	records, err := readCSVRecords(string(normalized), maxRows+1)
+	table, err := parseDatasetPreview(string(normalized), kind, maxRows, maxColumns)
 	if err != nil {
 		return nil, err
 	}
-	if len(records) == 0 {
-		return nil, nil
-	}
-
-	columns := buildCSVColumns(records, maxColumns)
-	return profileCSVColumns(columns, records[1:]), nil
+	return table.Profiles, nil
 }
 
 func readCSVRecords(content string, maxRecords int) ([][]string, error) {
+	return readDelimitedRecords(content, ',', maxRecords)
+}
+
+func readDelimitedRecords(content string, delimiter rune, maxRecords int) ([][]string, error) {
 	reader := csv.NewReader(strings.NewReader(content))
+	reader.Comma = delimiter
 	reader.FieldsPerRecord = -1
 	records := [][]string{}
 	for maxRecords <= 0 || len(records) < maxRecords {
@@ -291,6 +317,185 @@ func readCSVRecords(content string, maxRecords int) ([][]string, error) {
 	}
 
 	return records, nil
+}
+
+func parseJSONPreview(content string, maxRows int, maxColumns int) (TablePreview, error) {
+	var value any
+	decoder := json.NewDecoder(strings.NewReader(content))
+	decoder.UseNumber()
+	if err := decoder.Decode(&value); err != nil {
+		return TablePreview{}, err
+	}
+	rows := jsonRows(value)
+	return tableFromObjectRows(rows, maxRows, maxColumns), nil
+}
+
+func parseNDJSONPreview(content string, maxRows int, maxColumns int) (TablePreview, error) {
+	rows := []map[string]string{}
+	for _, line := range strings.Split(content, "\n") {
+		line = strings.TrimSpace(line)
+		if line == "" {
+			continue
+		}
+		var value any
+		decoder := json.NewDecoder(strings.NewReader(line))
+		decoder.UseNumber()
+		if err := decoder.Decode(&value); err != nil {
+			return TablePreview{}, err
+		}
+		rows = append(rows, jsonRows(value)...)
+	}
+	return tableFromObjectRows(rows, maxRows, maxColumns), nil
+}
+
+func jsonRows(value any) []map[string]string {
+	switch typed := value.(type) {
+	case []any:
+		rows := make([]map[string]string, 0, len(typed))
+		for _, item := range typed {
+			rows = append(rows, jsonRows(item)...)
+		}
+		return rows
+	case map[string]any:
+		row := map[string]string{}
+		flattenJSONValue("", typed, row)
+		return []map[string]string{row}
+	default:
+		return []map[string]string{{"value": jsonCellValue(typed)}}
+	}
+}
+
+func flattenJSONValue(prefix string, value any, row map[string]string) {
+	switch typed := value.(type) {
+	case map[string]any:
+		for key, child := range typed {
+			nextKey := key
+			if prefix != "" {
+				nextKey = prefix + "." + key
+			}
+			flattenJSONValue(nextKey, child, row)
+		}
+	default:
+		key := prefix
+		if key == "" {
+			key = "value"
+		}
+		row[key] = jsonCellValue(typed)
+	}
+}
+
+func jsonCellValue(value any) string {
+	switch typed := value.(type) {
+	case nil:
+		return ""
+	case string:
+		return typed
+	case json.Number:
+		return typed.String()
+	case bool:
+		if typed {
+			return "true"
+		}
+		return "false"
+	default:
+		data, err := json.Marshal(typed)
+		if err != nil {
+			return fmt.Sprint(typed)
+		}
+		return string(data)
+	}
+}
+
+func tableFromObjectRows(objectRows []map[string]string, maxRows int, maxColumns int) TablePreview {
+	if len(objectRows) == 0 {
+		return TablePreview{}
+	}
+	columns := jsonColumns(objectRows, maxColumns)
+	rows := make([][]string, 0, minInt(len(objectRows), maxRows))
+	for _, objectRow := range objectRows {
+		if maxRows > 0 && len(rows) >= maxRows {
+			continue
+		}
+		row := make([]string, 0, len(columns))
+		for _, column := range columns {
+			row = append(row, objectRow[column])
+		}
+		rows = append(rows, row)
+	}
+	allRows := make([][]string, 0, len(objectRows))
+	for _, objectRow := range objectRows {
+		row := make([]string, 0, len(columns))
+		for _, column := range columns {
+			row = append(row, objectRow[column])
+		}
+		allRows = append(allRows, row)
+	}
+	return TablePreview{
+		Columns:   columns,
+		Rows:      rows,
+		Profiles:  profileCSVColumns(columns, allRows),
+		TotalRows: len(objectRows),
+		Truncated: len(objectRows) > len(rows) || jsonRowsWiderThan(objectRows, maxColumns),
+	}
+}
+
+func jsonColumns(rows []map[string]string, maxColumns int) []string {
+	seen := map[string]struct{}{}
+	columns := []string{}
+	for _, row := range rows {
+		keys := make([]string, 0, len(row))
+		for key := range row {
+			keys = append(keys, key)
+		}
+		sortStrings(keys)
+		for _, key := range keys {
+			if _, ok := seen[key]; ok {
+				continue
+			}
+			seen[key] = struct{}{}
+			columns = append(columns, key)
+			if len(columns) >= maxColumns {
+				return columns
+			}
+		}
+	}
+	return columns
+}
+
+func jsonRowsWiderThan(rows []map[string]string, maxColumns int) bool {
+	keys := map[string]struct{}{}
+	for _, row := range rows {
+		for key := range row {
+			keys[key] = struct{}{}
+			if len(keys) > maxColumns {
+				return true
+			}
+		}
+	}
+	return false
+}
+
+func sortStrings(values []string) {
+	for i := 1; i < len(values); i++ {
+		for j := i; j > 0 && values[j] < values[j-1]; j-- {
+			values[j], values[j-1] = values[j-1], values[j]
+		}
+	}
+}
+
+func datasetPreviewKind(name string) string {
+	switch strings.ToLower(filepath.Ext(name)) {
+	case ".csv":
+		return "csv"
+	case ".tsv":
+		return "tsv"
+	case ".json":
+		return "json"
+	case ".jsonl", ".ndjson":
+		return "ndjson"
+	default:
+		return ""
+	}
 }
 
 func buildCSVColumns(records [][]string, maxColumns int) []string {

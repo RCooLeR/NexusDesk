@@ -54,6 +54,26 @@ func TestBuildCSVChartSumsNumericValues(t *testing.T) {
 	}
 }
 
+func TestBuildCSVChartSupportsJSONDatasets(t *testing.T) {
+	root := t.TempDir()
+	if err := os.WriteFile(filepath.Join(root, "leads.json"), []byte(`[{"channel":"search","revenue":10},{"channel":"social","revenue":4},{"channel":"search","revenue":6}]`), 0o644); err != nil {
+		t.Fatalf("WriteFile failed: %v", err)
+	}
+
+	chart, err := BuildCSVChart(root, DatasetChartRequest{
+		RelPath:        "leads.json",
+		CategoryColumn: "channel",
+		ValueColumn:    "revenue",
+	})
+	if err != nil {
+		t.Fatalf("BuildCSVChart returned error: %v", err)
+	}
+
+	if chart.Points[0].Label != "search" || chart.Points[0].Value != 16 {
+		t.Fatalf("unexpected top point: %#v", chart.Points[0])
+	}
+}
+
 func TestBuildCSVChartSupportsLineType(t *testing.T) {
 	root := t.TempDir()
 	if err := os.WriteFile(filepath.Join(root, "daily.csv"), []byte("day,revenue\nMon,10\nTue,4\nWed,6\n"), 0o644); err != nil {

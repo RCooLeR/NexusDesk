@@ -41,19 +41,14 @@ func BuildCSVChart(root string, request DatasetChartRequest) (DatasetChartResult
 	if err != nil {
 		return DatasetChartResult{}, err
 	}
-	if preview.Table == nil || !strings.EqualFold(fileExt(preview.Name), ".csv") {
-		return DatasetChartResult{}, errors.New("dataset chart currently supports CSV files")
-	}
-
-	records, err := readCSVRecords(preview.Content, 0)
+	columns, records, err := queryableDatasetRows(preview)
 	if err != nil {
 		return DatasetChartResult{}, err
 	}
-	if len(records) < 2 {
-		return DatasetChartResult{}, errors.New("CSV dataset needs at least one data row")
+	if len(records) == 0 {
+		return DatasetChartResult{}, errors.New("dataset needs at least one data row")
 	}
 
-	columns := buildCSVColumns(records, csvPreviewMaxColumns)
 	categoryIndex := columnIndexByName(columns, request.CategoryColumn)
 	if categoryIndex < 0 {
 		return DatasetChartResult{}, errors.New("choose a category column for the chart")
@@ -69,7 +64,7 @@ func BuildCSVChart(root string, request DatasetChartRequest) (DatasetChartResult
 	labels := []string{}
 	totalRows := 0
 	usedRows := 0
-	for _, record := range records[1:] {
+	for _, record := range records {
 		totalRows++
 		if categoryIndex >= len(record) {
 			continue

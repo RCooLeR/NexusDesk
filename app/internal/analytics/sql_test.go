@@ -20,7 +20,7 @@ func TestQueryCSVSQLRunsReadOnlyProjection(t *testing.T) {
 		t.Fatalf("QueryCSVSQL returned error: %v", err)
 	}
 
-	if result.Engine != "duckdb-compatible-csv" {
+	if result.Engine != "duckdb-compatible-dataset" {
 		t.Fatalf("unexpected engine: %s", result.Engine)
 	}
 	if len(result.Rows) != 1 || result.Rows[0][0] != "B" || result.Columns[1] != "spend" {

@@ -490,10 +490,10 @@ function DatasetProfileSummary({profile}: {profile: DatasetProfile}) {
         <div className="dataset-profile-summary">
             <strong>{profile.name}</strong>
             <small>{profile.kind}</small>
-            {profile.kind === 'csv' ? (
-                <p>{profile.rows} rows, {profile.columns} columns</p>
-            ) : (
+            {profile.kind === 'xlsx' ? (
                 <p>{profile.sheets.length} sheets: {profile.sheets.join(', ')}</p>
+            ) : (
+                <p>{profile.rows} rows, {profile.columns} columns</p>
             )}
         </div>
     );
@@ -539,7 +539,7 @@ export function SortableDataTable({pageSize = 20, table, title}: {pageSize?: num
                 <small>{table.totalRows} rows{table.truncated ? ', bounded preview' : ''}</small>
             </div>
             {table.profiles.length > 0 && (
-                <div className="csv-profile-strip" aria-label="CSV column profile">
+                <div className="csv-profile-strip" aria-label="Column profile">
                     {table.profiles.map((profile, index) => (
                         <div className="csv-profile" key={`${profile.name}-${index}`}>
                             <strong>{profile.name || `Column ${index + 1}`}</strong>
@@ -553,7 +553,7 @@ export function SortableDataTable({pageSize = 20, table, title}: {pageSize?: num
                     ))}
                 </div>
             )}
-            <div className="csv-preview" aria-label={`${title ?? 'CSV'} table preview`}>
+            <div className="csv-preview" aria-label={`${title ?? 'Dataset'} table preview`}>
                 <table>
                     <thead>
                         <tr>

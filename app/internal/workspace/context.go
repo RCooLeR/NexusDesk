@@ -239,8 +239,8 @@ func isContextCandidate(relPath string) bool {
 	}
 
 	switch ext {
-	case ".go", ".js", ".jsx", ".ts", ".tsx", ".css", ".html", ".json", ".yaml", ".yml", ".md", ".sql",
-		".txt", ".rtf", ".csv", ".pdf", ".docx", ".toml", ".xml", ".py", ".java", ".cs", ".cpp", ".c",
+	case ".go", ".js", ".jsx", ".ts", ".tsx", ".css", ".html", ".json", ".jsonl", ".ndjson", ".yaml", ".yml", ".md", ".sql",
+		".txt", ".rtf", ".csv", ".tsv", ".pdf", ".docx", ".toml", ".xml", ".py", ".java", ".cs", ".cpp", ".c",
 		".h", ".hpp", ".rs", ".php", ".rb", ".sh", ".ps1", ".env", ".ini", ".conf":
 		return true
 	default:

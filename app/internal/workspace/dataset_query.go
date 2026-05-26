@@ -25,23 +25,18 @@ func QueryCSV(root string, relPath string, query string) (DatasetQueryResult, er
 	if err != nil {
 		return DatasetQueryResult{}, err
 	}
-	if preview.Table == nil || !strings.EqualFold(fileExt(preview.Name), ".csv") {
-		return DatasetQueryResult{}, errors.New("dataset query currently supports CSV files")
-	}
-
-	records, err := readCSVRecords(preview.Content, 0)
+	columns, records, err := queryableDatasetRows(preview)
 	if err != nil {
 		return DatasetQueryResult{}, err
 	}
 	if len(records) == 0 {
-		return DatasetQueryResult{}, errors.New("CSV dataset is empty")
+		return DatasetQueryResult{}, errors.New("dataset is empty")
 	}
 
-	columns := buildCSVColumns(records, csvPreviewMaxColumns)
 	filter := parseDatasetQueryFilter(query, columns)
 	matchedRows := [][]string{}
 	total := 0
-	for _, record := range records[1:] {
+	for _, record := range records {
 		total++
 		if !filter.matches(record) {
 			continue
@@ -90,6 +85,48 @@ func QueryCSV(root string, relPath string, query string) (DatasetQueryResult, er
 		MatchedRows: matched,
 		Message:     message,
 	}, nil
+}
+
+func queryableDatasetRows(preview FilePreview) ([]string, [][]string, error) {
+	kind := datasetPreviewKind(preview.Name)
+	if preview.Table == nil || kind == "" {
+		return nil, nil, errors.New("dataset query supports CSV, TSV, JSON, and NDJSON table previews")
+	}
+
+	switch kind {
+	case "csv", "tsv":
+		delimiter := ','
+		if kind == "tsv" {
+			delimiter = '\t'
+		}
+		records, err := readDelimitedRecords(preview.Content, delimiter, 0)
+		if err != nil {
+			return nil, nil, err
+		}
+		if len(records) == 0 {
+			return nil, nil, nil
+		}
+		return buildCSVColumns(records, csvPreviewMaxColumns), rowsFromDelimitedRecords(records), nil
+	case "json", "ndjson":
+		table, err := parseDatasetPreview(preview.Content, kind, 0, csvPreviewMaxColumns)
+		if err != nil {
+			return nil, nil, err
+		}
+		return table.Columns, table.Rows, nil
+	default:
+		return nil, nil, errors.New("dataset query supports CSV, TSV, JSON, and NDJSON table previews")
+	}
+}
+
+func rowsFromDelimitedRecords(records [][]string) [][]string {
+	if len(records) <= 1 {
+		return nil
+	}
+	rows := make([][]string, 0, len(records)-1)
+	for _, record := range records[1:] {
+		rows = append(rows, trimRecordWidth(record, csvPreviewMaxColumns))
+	}
+	return rows
 }
 
 type datasetQueryFilter struct {
@@ -252,12 +289,4 @@ func valueAt(record []string, index int) string {
 		return ""
 	}
 	return record[index]
-}
-
-func fileExt(name string) string {
-	index := strings.LastIndex(name, ".")
-	if index < 0 {
-		return ""
-	}
-	return name[index:]
 }

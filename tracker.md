@@ -317,14 +317,16 @@ Exit criteria:
 
 Goal: make Data & Analytics a real local data workbench for files, databases, dumps, notebooks, marketing/CRM exports, profiling, charts, and LLM-assisted research.
 
-Status: first CSV/SQLite foundation implemented; deeper work planned.
+Status: first CSV/TSV/JSON/NDJSON/SQLite foundation implemented; deeper work planned.
 
 Implemented:
 
 - [x] CSV table preview.
 - [x] CSV column profiles.
+- [x] TSV, JSON, and NDJSON table previews.
+- [x] TSV, JSON, and NDJSON column profiles.
 - [x] Dataset profile persistence under `.nexusdesk/datasets/`.
-- [x] Bounded CSV query/filter flow.
+- [x] Bounded CSV/TSV/JSON/NDJSON query/filter flow.
 - [x] Numeric comparisons, contains, limit, and order by.
 - [x] Saved lightweight row filters.
 - [x] Saved read-only SQL snippets.
@@ -340,10 +342,10 @@ Implemented:
 
 Step 5.1: File dataset coverage
 
-- [ ] Add TSV loader.
+- [x] Add TSV loader.
 - [ ] Add richer XLSX/XLS workbook inspector for sheets, formulas, named ranges, pivots, and table ranges.
-- [ ] Add JSON loader.
-- [ ] Add NDJSON loader.
+- [x] Add JSON loader.
+- [x] Add NDJSON loader.
 - [ ] Add Parquet inspection.
 - [ ] Add SQLite file dataset cards separate from connector sessions.
 - [ ] Add log dataset profiling.
@@ -999,42 +1001,34 @@ Exit criteria:
 
 ## Next Logical Batch
 
-Completed batch: Navigation Cleanup And Git Diff Review.
+Completed batch: Table Dataset Coverage.
 
 Steps:
 
-1. [x] Reduce the primary rail to Workbench, Data & Analytics, Artifacts, and Settings.
-2. [x] Keep AI Assistant as an always-visible orchestration sidebar instead of a separate route.
-3. [x] Remove roadmap metadata and scan diagnostics from the default visible workbench chrome.
-4. [x] Move Git/working-tree diff review into the bottom Git drawer.
-5. [x] Render changed Git files as a directory tree.
-6. [x] Add staged/unstaged per-file diffs.
-7. [x] Add Unified, Split, and Diff Only review modes.
-8. [x] Replace visible hunk text buttons with compact icon controls.
-9. [x] Avoid automatic Git refresh on folder open to prevent desktop command-window flashes.
-10. [x] Normalize unavailable Git state so opening non-git folders cannot crash the Workbench or Git drawer.
-11. [x] Keep docs, tracker, smoke checks, and visual baselines aligned.
+1. [x] Add TSV preview, profile, context, and bounded row-query support.
+2. [x] Add JSON array/object preview, profile, context, and bounded row-query support.
+3. [x] Add JSONL/NDJSON record preview, profile, context, and bounded row-query support.
+4. [x] Classify CSV, TSV, JSON, JSONL, and NDJSON as data files in backend scans and frontend draft typing.
+5. [x] Keep Data & Analytics profile summaries generic for table datasets instead of treating every non-CSV profile as a workbook.
+6. [x] Add backend regression coverage for preview, query, profile persistence, and scanner classification.
+7. [x] Keep docs and tracker aligned with the broader table-dataset foundation.
 
-Recommended next batch: Safe Git Mutations And Workbench Utility Panels.
+Recommended next batch: XLSX Inspection And Data Source Cards.
 
 Steps:
 
-1. [x] Extract first backend service facade without changing Wails contracts, starting with Git or Workspace.
-2. [x] Extract first frontend controller hook from `NexusShell.tsx`, starting with `useGitController` or `useWorkspaceController`.
-3. [x] Design the first Git mutation approval boundary: preview commands now report `requiresApproval` and `mutatesRepository`, while execution remains blocked until an approval-governed apply path exists.
-4. [x] Add backend Git command planning for stage/unstage file with dry-run/status refresh outputs.
-5. [x] Add preview-only frontend controls for stage/unstage file in the bottom Git drawer.
-6. [x] Add hunk-level selection model without mutation first.
-7. [x] Add destructive approval flow for revert/discard hunk.
-8. [x] Add Workbench path/text search panel as a real utility panel, not only command palette search.
-9. [x] Detect npm scripts and Go tests into a Tasks panel with read-only listing.
-10. Keep visual smoke focused on no blank screen, no whole-window scroll, Git drawer behavior, route switching, and no slow/external work on folder open.
+1. [ ] Add richer XLSX/XLS workbook inspection for sheets, formulas, named ranges, pivots, and table ranges.
+2. [ ] Add data source cards for detected CSV, TSV, JSON, NDJSON, XLSX, SQLite, dump, compressed, and log-like files.
+3. [ ] Add SQLite file dataset cards separate from live connector sessions.
+4. [ ] Add compressed export and SQL dump classification.
+5. [ ] Add log dataset profiling.
+6. [ ] Start the connector metadata interface needed by future database and analytics sources.
 
-Reasoning: read-only navigation and diff review are now credible, file and hunk stage/unstage go through preview plus approval-backed apply paths, hunk selection exists as UI state, hunk discard/revert now goes through the approval modal before backend patch application, Workbench has path/text/symbol/regex search plus non-mutating replace previews backed by the existing safe workspace search flow, the Problems panel runs lightweight TODO/FIXME/conflict/JSON checks without external commands, task/script detection now lists npm scripts, Go test commands, and Docker Compose config-check tasks without running external processes, and user-triggered discovered task runs capture capped output and save a task-run artifact. Phase 2 now has split editor groups, outline navigation, Monaco go-to-definition dispatch, safe draft formatting, and encoding-aware save. The next correction path can move to Phase 4 code AI actions or Phase 15 architecture hardening.
+Reasoning: the table-file path is no longer CSV-only, so the next gap is discoverability and richer source metadata. Data & Analytics needs source cards and workbook/database/dump classification before notebooks or connector-heavy workflows will feel coherent.
 
 ## Directory Ownership Notes
 
-`app/internal/workspace/` owns safe workspace scanning, previews, search, context expansion, dataset queries, freshness, and file operations.
+`app/internal/workspace/` owns safe workspace scanning, previews, search, context expansion, dataset queries, freshness, and file operations. Its bounded table-preview/query path currently supports CSV, TSV, JSON arrays/objects, and NDJSON records.
 
 `app/internal/artifact/` owns deterministic artifact writes, provenance sidecars, listing, search, comparison, archive/delete, and scan-report creation.
 

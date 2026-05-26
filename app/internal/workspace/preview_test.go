@@ -238,6 +238,75 @@ func TestPreviewParsesCSVTable(t *testing.T) {
 	}
 }
 
+func TestPreviewParsesTSVTable(t *testing.T) {
+	root := t.TempDir()
+	writeFile(t, root, "data/report.tsv", "name\tvalue\tnotes\nalpha\t10\tready\nbeta\t20\t\n")
+
+	preview, err := Preview(root, "data/report.tsv", PreviewOptions{})
+	if err != nil {
+		t.Fatalf("Preview returned error: %v", err)
+	}
+
+	if preview.Table == nil {
+		t.Fatal("expected TSV table preview")
+	}
+	if got := strings.Join(preview.Table.Columns, ","); got != "name,value,notes" {
+		t.Fatalf("unexpected columns: %s", got)
+	}
+	if preview.Table.Rows[1][0] != "beta" {
+		t.Fatalf("expected second row beta, got %q", preview.Table.Rows[1][0])
+	}
+	if preview.Table.Profiles[1].Type != "integer" {
+		t.Fatalf("expected value column to be integer, got %q", preview.Table.Profiles[1].Type)
+	}
+}
+
+func TestPreviewParsesJSONArrayTable(t *testing.T) {
+	root := t.TempDir()
+	writeFile(t, root, "data/report.json", `[{"name":"alpha","value":10,"meta":{"stage":"ready"}},{"name":"beta","value":20}]`)
+
+	preview, err := Preview(root, "data/report.json", PreviewOptions{})
+	if err != nil {
+		t.Fatalf("Preview returned error: %v", err)
+	}
+
+	if preview.Table == nil {
+		t.Fatal("expected JSON table preview")
+	}
+	if got := strings.Join(preview.Table.Columns, ","); got != "meta.stage,name,value" {
+		t.Fatalf("unexpected columns: %s", got)
+	}
+	if preview.Table.TotalRows != 2 {
+		t.Fatalf("expected 2 rows, got %d", preview.Table.TotalRows)
+	}
+	if preview.Table.Rows[0][0] != "ready" || preview.Table.Rows[0][2] != "10" {
+		t.Fatalf("unexpected first row: %#v", preview.Table.Rows[0])
+	}
+	if preview.Table.Profiles[2].Type != "integer" {
+		t.Fatalf("expected value column to be integer, got %q", preview.Table.Profiles[2].Type)
+	}
+}
+
+func TestPreviewParsesNDJSONTable(t *testing.T) {
+	root := t.TempDir()
+	writeFile(t, root, "data/report.ndjson", "{\"name\":\"alpha\",\"value\":10}\n{\"name\":\"beta\",\"value\":20}\n")
+
+	preview, err := Preview(root, "data/report.ndjson", PreviewOptions{})
+	if err != nil {
+		t.Fatalf("Preview returned error: %v", err)
+	}
+
+	if preview.Table == nil {
+		t.Fatal("expected NDJSON table preview")
+	}
+	if preview.Table.TotalRows != 2 {
+		t.Fatalf("expected 2 rows, got %d", preview.Table.TotalRows)
+	}
+	if preview.Table.Rows[1][0] != "beta" {
+		t.Fatalf("expected second row beta, got %q", preview.Table.Rows[1][0])
+	}
+}
+
 func TestPreviewProfilesCSVColumnsWithFallbackHeaders(t *testing.T) {
 	root := t.TempDir()
 	writeFile(t, root, "data/report.csv", ",amount\nalpha,1.5\nbeta,\n")

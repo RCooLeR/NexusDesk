@@ -13,6 +13,9 @@ func TestScanReturnsSafeWorkspaceSnapshot(t *testing.T) {
 	writeFile(t, root, "README.md", "hello")
 	writeFile(t, root, "src/main.go", "package main")
 	writeFile(t, root, "data/report.csv", "name,value")
+	writeFile(t, root, "data/report.tsv", "name\tvalue")
+	writeFile(t, root, "data/report.json", `[{"name":"alpha"}]`)
+	writeFile(t, root, "data/report.ndjson", "{\"name\":\"alpha\"}\n")
 	writeFile(t, root, "node_modules/pkg/index.js", "ignored")
 	writeFile(t, root, ".git/config", "ignored")
 
@@ -38,6 +41,9 @@ func TestScanReturnsSafeWorkspaceSnapshot(t *testing.T) {
 	assertContains(t, snapshot.Nodes, "README.md", "code")
 	assertContains(t, snapshot.Nodes, "src/main.go", "code")
 	assertContains(t, snapshot.Nodes, "data/report.csv", "data")
+	assertContains(t, snapshot.Nodes, "data/report.tsv", "data")
+	assertContains(t, snapshot.Nodes, "data/report.json", "data")
+	assertContains(t, snapshot.Nodes, "data/report.ndjson", "data")
 	assertNotContains(t, snapshot.Nodes, "node_modules/pkg/index.js")
 	assertNotContains(t, snapshot.Nodes, ".git/config")
 }
