@@ -236,7 +236,7 @@ Goal: make Workbench credible as an IDE-like surface.
 - [x] Add parsed hunk metadata and read-only hunk navigation.
 - [ ] Add hunk selection and approval-backed hunk actions.
 - [ ] Add AI diff summary and commit draft once assistant service exists.
-- [ ] Add task discovery and safe task-run service.
+- [x] Add task discovery and safe task-run service.
 - [ ] Add native activity/job log for task output.
 
 Exit criteria:
@@ -310,5 +310,5 @@ Exit criteria:
 1. Configure Windows CGO compiler and verify `nexus-app` runs.
 2. Port OpenAI-compatible/Ollama client using the native settings store.
 3. Add approval-backed hunk stage/unstage actions on top of parsed hunk metadata.
-4. Add native task discovery and safe task-run service.
+4. Add native activity/job log for task output and first task-run UI.
 5. Add richer navigator context menus once the first action strip is validated in Fyne.

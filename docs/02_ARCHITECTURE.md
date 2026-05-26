@@ -133,6 +133,8 @@ Workspace problem scanning follows the same split: `nexus-app/internal/services/
 
 Git integration is also service-led: `nexus-app/internal/services/git` owns manual repository status discovery, porcelain parsing, staged/unstaged grouping, read-only selected-file diff loading, diff hunk parsing, file-level stage/unstage actions, path validation, output caps, and Windows hidden-process execution. The Fyne shell owns only the bottom Git refresh button, status rendering, directory grouping for changed files, hunk navigation state, confirmed stage/unstage intents, and read-only unified/split/diff-only diff rendering.
 
+Task execution follows the same boundary: `nexus-app/internal/services/tasks` owns bounded workspace task discovery, noisy-directory skips, task ID generation, rediscovery before execution, command allow-listing for npm scripts, Go tests, and Docker Compose config checks, rooted working-directory validation, timeouts, capped output, and hidden Windows child-process execution. UI and future agent code must request discovered task IDs rather than sending arbitrary shell commands into this service.
+
 Rollback browsing follows the same boundary: `nexus-app/internal/services/workspace` owns rollback records and apply semantics, while the Fyne shell owns only record listing, confirmation, and workspace refresh after apply.
 
 Workspace tree actions call the same service boundary: the Fyne navigator action strip collects user intent and confirmation, then dispatches create, copy, rename/move, and delete through `nexus-app/internal/services/workspace` so rollback and rooted validation stay centralized.
