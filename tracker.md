@@ -32,7 +32,8 @@ Current shell verification that does not require a Windows CGO compiler:
 
 ```powershell
 cd nexus-app
-go test ./internal/domain ./internal/services/... ./internal/ui/shell ./internal/ui/theme
+$env:GOFLAGS='-mod=readonly'
+go test ./internal/domain ./internal/services/... ./internal/ui/shell ./internal/ui/theme ./internal/brand
 ```
 
 Full Fyne app run/build requires CGO and a C compiler on Windows:
@@ -40,10 +41,25 @@ Full Fyne app run/build requires CGO and a C compiler on Windows:
 ```powershell
 cd nexus-app
 $env:CGO_ENABLED='1'
-go run .
+go build -o build\nexusdesk.exe .
 ```
 
-The current Codex shell has `CGO_ENABLED=0`, so `go test ./...` reaches the Fyne OpenGL driver and fails until a compiler-backed CGO environment is enabled.
+Current build reality on this workstation:
+
+- `CGO_ENABLED=0 go build .` fails because Fyne's OpenGL binding excludes all Go files without CGO.
+- `CGO_ENABLED=1 go build .` fails because no C compiler is on `PATH` (`gcc`, `clang`, `cl`, and `zig` are not visible).
+- `winget` is available, so the next environment step is to install/configure a Windows C toolchain such as MSYS2 MinGW-w64, then rerun the full build.
+
+Until that toolchain is installed, use the focused test command above for the native services and shell.
+
+## Ordering Notes
+
+Some tracker items are intentionally out of phase order because they depend on missing foundations:
+
+- Phase 2 LLM/agent items are still pending because the native OpenAI-compatible/Ollama client is not ported yet.
+- Phase 3 AI diff summary and commit drafting are pending until the native assistant service exists.
+- Approval-backed hunk mutations are pending until native approval policy/UI is ready enough to protect destructive Git actions.
+- Durable persisted jobs and task-run artifacts are pending until the SQLite metadata store lands.
 
 ## Migration Principles
 

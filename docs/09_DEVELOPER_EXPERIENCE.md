@@ -8,7 +8,8 @@ Fyne framework-independent checks:
 
 ```powershell
 cd nexus-app
-go test ./internal/domain ./internal/services/... ./internal/ui/shell ./internal/ui/theme
+$env:GOFLAGS='-mod=readonly'
+go test ./internal/domain ./internal/services/... ./internal/ui/shell ./internal/ui/theme ./internal/brand
 ```
 
 Full native app run/build requires CGO and a Windows C compiler:
@@ -16,10 +17,10 @@ Full native app run/build requires CGO and a Windows C compiler:
 ```powershell
 cd nexus-app
 $env:CGO_ENABLED='1'
-go run .
+go build -o build\nexusdesk.exe .
 ```
 
-The current Codex shell has `CGO_ENABLED=0`, so `go test ./...` reaches the Fyne OpenGL driver and fails until that toolchain is enabled.
+Current build status on this workstation: focused native package tests pass, but full app build is blocked until a compiler is installed or added to `PATH`. `CGO_ENABLED=1 go build .` fails with `C compiler "gcc" not found`; `CGO_ENABLED=0 go build .` fails because the Fyne OpenGL binding has no buildable files without CGO.
 
 Legacy Wails reference verification:
 

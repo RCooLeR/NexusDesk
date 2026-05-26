@@ -12,10 +12,13 @@ This is the new Fyne-native desktop application. The previous Wails/React implem
 
 ## Local Toolchain
 
-Fyne desktop builds need CGO and a C compiler on Windows. The current Codex shell has `CGO_ENABLED=0`, so framework-independent packages can be tested now, while full app builds need a local compiler such as MSYS2 MinGW-w64 and `CGO_ENABLED=1`.
+Fyne desktop builds need CGO and a C compiler on Windows. Framework-independent packages can be tested now, but full app builds need a local compiler such as MSYS2 MinGW-w64 and `CGO_ENABLED=1`.
 
 ```powershell
-go test ./internal/domain ./internal/services/workspace ./internal/ui/shell ./internal/ui/theme
+$env:GOFLAGS='-mod=readonly'
+go test ./internal/domain ./internal/services/... ./internal/ui/shell ./internal/ui/theme ./internal/brand
 $env:CGO_ENABLED='1'
-go run .
+go build -o build\nexusdesk.exe .
 ```
+
+Current known blocker: `CGO_ENABLED=1 go build .` fails on machines where no C compiler is on `PATH`; `CGO_ENABLED=0 go build .` fails because the Fyne OpenGL driver requires CGO-backed bindings.

@@ -109,7 +109,23 @@ The first `nexus-app` slice includes:
 - first native in-memory Jobs service and Jobs tab for task-run status, log tail, and cancellation requests;
 - framework-free workspace domain model.
 
-Full execution is blocked in the current shell until CGO is enabled with a Windows C compiler. Non-driver internal packages can already be tested.
+Full execution is blocked in the current shell until CGO is enabled with a Windows C compiler on `PATH`. The current workstation can run focused native package tests, but `CGO_ENABLED=1 go build .` fails because `gcc` is not found, and `CGO_ENABLED=0 go build .` fails because Fyne's OpenGL binding requires CGO-backed files.
+
+Current verification:
+
+```powershell
+cd nexus-app
+$env:GOFLAGS='-mod=readonly'
+go test ./internal/domain ./internal/services/... ./internal/ui/shell ./internal/ui/theme ./internal/brand
+```
+
+Native app build after installing/configuring a compiler:
+
+```powershell
+cd nexus-app
+$env:CGO_ENABLED='1'
+go build -o build\nexusdesk.exe .
+```
 
 ## Contributor-Grade Structure
 
