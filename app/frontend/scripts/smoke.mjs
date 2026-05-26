@@ -224,7 +224,7 @@ const checks = [
     },
     {
         file: 'src/features/shell/AgentChatCard.tsx',
-        terms: ['ChatMessageContent', 'recommendedModelOptions', 'chat-card-header', 'Save answer', 'textarea', 'composer-shell', 'composer-controls', 'Submit mode', 'onModelChange', 'onRunAgent', 'Agent', 'Clear pack', 'staleSourcePaths', 'Context changed since this answer was created.'],
+        terms: ['ChatMessageContent', 'recommendedModelOptions', 'chat-card-header', 'Save answer', 'Retry', 'Compare', 'onRetryLatestAssistant', 'onCompareLatestAssistant', 'weak-evidence-warning', 'missing-context-warning', 'No explicit source context is attached to this answer.', 'Select or pin a file', 'textarea', 'composer-shell', 'composer-controls', 'Submit mode', 'onModelChange', 'onRunAgent', 'Agent', 'Clear pack', 'staleSourcePaths', 'Context changed since this answer was created.'],
     },
     {
         file: 'src/features/shell/BottomStudioPanel.tsx',

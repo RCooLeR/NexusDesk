@@ -2001,6 +2001,47 @@ export function NexusShell({
         await sendPromptText(chatPrompt, {clearComposer: true});
     }
 
+    async function retryLatestAssistantAnswer() {
+        const latest = latestAssistantTurn(chatMessages);
+        if (!latest) {
+            setChatStatus('No assistant answer is available to retry yet.');
+            return;
+        }
+        pushToolEvent('Chat retry requested', latest.contextPaths.length > 0 ? latest.contextPaths.join(', ') : 'no explicit context');
+        await sendPromptText(latest.prompt, {
+            clearComposer: false,
+            contextPaths: latest.contextPaths,
+        });
+    }
+
+    async function compareLatestAssistantAnswer() {
+        const latest = latestAssistantTurn(chatMessages);
+        if (!latest) {
+            setChatStatus('No assistant answer is available to compare yet.');
+            return;
+        }
+
+        const prompt = [
+            'Compare the previous assistant answer with a fresh answer using the currently selected model/settings.',
+            'Return concise Markdown with:',
+            '1. Where the new answer agrees with the previous answer.',
+            '2. Where it differs or improves confidence.',
+            '3. Any weak evidence, missing context, or unsupported claims.',
+            '4. A recommended final answer.',
+            '',
+            'Original user prompt:',
+            latest.prompt,
+            '',
+            'Previous assistant answer:',
+            latest.answer,
+        ].join('\n');
+        pushToolEvent('Model comparison requested', latest.contextPaths.length > 0 ? latest.contextPaths.join(', ') : 'no explicit context');
+        await sendPromptText(prompt, {
+            clearComposer: false,
+            contextPaths: latest.contextPaths,
+        });
+    }
+
     async function runAgentPrompt() {
         if (!workspace) {
             setChatStatus('Open a workspace before running the agent.');
@@ -3497,15 +3538,19 @@ export function NexusShell({
                 contextPackPreview={contextPackPreview}
                 contextPackPaths={contextPackPaths}
                 currentModel={settingsDraft.model}
+                hasSelectableContext={Boolean(selectedTextContextRelPath())}
                 staleSourcePaths={staleSourcePaths(chatMessages, contextPackPreview, workspaceFreshness)}
                 canSaveLatestAssistantArtifact={canSaveLatestAssistantArtifact}
+                canRetryLatestAssistant={Boolean(latestAssistantTurn(chatMessages))}
                 isSavingChatArtifact={isSavingChatArtifact}
                 isSendingPrompt={isSendingPrompt}
                 onChatPromptChange={setChatPrompt}
                 onClearChatHistory={() => void clearChatHistory()}
                 onClearContextPack={() => setContextPackPaths([])}
+                onCompareLatestAssistant={() => void compareLatestAssistantAnswer()}
                 onModelChange={changeChatModel}
                 onRemoveContextPath={removeContextPath}
+                onRetryLatestAssistant={() => void retryLatestAssistantAnswer()}
                 onRunAgent={() => void runAgentPrompt()}
                 onSaveLatestAssistantArtifact={() => void saveLatestAssistantArtifact()}
                 onSendPrompt={() => void sendPrompt()}
@@ -3712,11 +3757,35 @@ function latestUserPromptForAssistant(messages: ChatMessage[]) {
     return latestUserPromptBefore(messages, assistantIndex);
 }
 
+function latestAssistantTurn(messages: ChatMessage[]) {
+    const assistantIndex = findLatestAssistantIndex(messages);
+    if (assistantIndex === -1) {
+        return null;
+    }
+    const assistant = messages[assistantIndex];
+    const prompt = latestUserPromptBefore(messages, assistantIndex);
+    if (!prompt) {
+        return null;
+    }
+    return {
+        answer: assistant.content.trim(),
+        contextPaths: messageContextPaths(assistant),
+        prompt,
+    };
+}
+
 function latestUserPromptBefore(messages: ChatMessage[], index: number) {
     return messages
         .slice(0, index)
         .reverse()
         .find((message) => message.role === 'user' && message.content.trim())?.content.trim() ?? '';
+}
+
+function messageContextPaths(message: ChatMessage) {
+    const paths = message.sourcePaths && message.sourcePaths.length > 0
+        ? message.sourcePaths
+        : sourcePathsFromContext(message.contextRelPath);
+    return Array.from(new Set(paths.filter((path) => path && path !== 'agent')));
 }
 
 function findLatestAssistantIndex(messages: ChatMessage[]) {

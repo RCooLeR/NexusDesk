@@ -235,6 +235,8 @@ Quality bar:
 - separate observed facts from inference
 - mark weak evidence
 - make it easy to retry with another model or compare outputs
+
+Current UI note: the assistant header can retry the latest answered prompt or compare the latest answer against a fresh answer from the currently selected model/settings. Both actions reuse the answer's attached source paths when available, so comparisons remain grounded in the same context boundary instead of silently switching sources.
 - preserve auditability for every tool-mediated action
 
 ## Tool Calling

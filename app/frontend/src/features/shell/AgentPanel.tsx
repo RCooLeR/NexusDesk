@@ -9,15 +9,19 @@ type AgentPanelProps = {
     contextPackPreview: ContextPreview | null;
     contextPackPaths: string[];
     currentModel: string;
+    hasSelectableContext: boolean;
     staleSourcePaths: string[];
     canSaveLatestAssistantArtifact: boolean;
+    canRetryLatestAssistant: boolean;
     isSavingChatArtifact: boolean;
     isSendingPrompt: boolean;
     onChatPromptChange: (value: string) => void;
     onClearChatHistory: () => void;
     onClearContextPack: () => void;
+    onCompareLatestAssistant: () => void;
     onModelChange: (model: string) => void;
     onRemoveContextPath: (relPath: string) => void;
+    onRetryLatestAssistant: () => void;
     onRunAgent: () => void;
     onSaveLatestAssistantArtifact: () => void;
     onSendPrompt: () => void;
@@ -31,15 +35,19 @@ export function AgentPanel({
     contextPackPreview,
     contextPackPaths,
     currentModel,
+    hasSelectableContext,
     staleSourcePaths,
     canSaveLatestAssistantArtifact,
+    canRetryLatestAssistant,
     isSavingChatArtifact,
     isSendingPrompt,
     onChatPromptChange,
     onClearChatHistory,
     onClearContextPack,
+    onCompareLatestAssistant,
     onModelChange,
     onRemoveContextPath,
+    onRetryLatestAssistant,
     onRunAgent,
     onSaveLatestAssistantArtifact,
     onSendPrompt,
@@ -59,15 +67,19 @@ export function AgentPanel({
                 contextPackPreview={contextPackPreview}
                 contextPackPaths={contextPackPaths}
                 currentModel={currentModel}
+                hasSelectableContext={hasSelectableContext}
                 staleSourcePaths={staleSourcePaths}
                 canSaveLatestAssistantArtifact={canSaveLatestAssistantArtifact}
+                canRetryLatestAssistant={canRetryLatestAssistant}
                 isSavingChatArtifact={isSavingChatArtifact}
                 isSendingPrompt={isSendingPrompt}
                 onChatPromptChange={onChatPromptChange}
                 onClearChatHistory={onClearChatHistory}
                 onClearContextPack={onClearContextPack}
+                onCompareLatestAssistant={onCompareLatestAssistant}
                 onModelChange={onModelChange}
                 onRemoveContextPath={onRemoveContextPath}
+                onRetryLatestAssistant={onRetryLatestAssistant}
                 onRunAgent={onRunAgent}
                 onSaveLatestAssistantArtifact={onSaveLatestAssistantArtifact}
                 onSendPrompt={onSendPrompt}

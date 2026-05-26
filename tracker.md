@@ -220,8 +220,8 @@ Steps:
 - [x] Include source citations in assistant answers and saved artifacts.
 - [x] Warn when cited source paths changed.
 - [x] Show the latest agent activity in chat while keeping the detailed run trace in Activity/tool-run records.
-- [ ] Add model comparison/retry.
-- [ ] Add weak-evidence and missing-context UI.
+- [x] Add model comparison/retry.
+- [x] Add weak-evidence and missing-context UI.
 - [ ] Add assistant memory and prompt profiles.
 
 Exit criteria:

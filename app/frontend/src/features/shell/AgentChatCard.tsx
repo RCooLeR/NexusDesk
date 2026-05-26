@@ -12,15 +12,19 @@ type AgentChatCardProps = {
     contextPackPreview: ContextPreview | null;
     contextPackPaths: string[];
     currentModel: string;
+    hasSelectableContext: boolean;
     staleSourcePaths: string[];
     canSaveLatestAssistantArtifact: boolean;
+    canRetryLatestAssistant: boolean;
     isSavingChatArtifact: boolean;
     isSendingPrompt: boolean;
     onChatPromptChange: (value: string) => void;
     onClearChatHistory: () => void;
     onClearContextPack: () => void;
+    onCompareLatestAssistant: () => void;
     onModelChange: (model: string) => void;
     onRemoveContextPath: (relPath: string) => void;
+    onRetryLatestAssistant: () => void;
     onRunAgent: () => void;
     onSaveLatestAssistantArtifact: () => void;
     onSendPrompt: () => void;
@@ -33,15 +37,19 @@ export function AgentChatCard({
     contextPackPreview,
     contextPackPaths,
     currentModel,
+    hasSelectableContext,
     staleSourcePaths,
     canSaveLatestAssistantArtifact,
+    canRetryLatestAssistant,
     isSavingChatArtifact,
     isSendingPrompt,
     onChatPromptChange,
     onClearChatHistory,
     onClearContextPack,
+    onCompareLatestAssistant,
     onModelChange,
     onRemoveContextPath,
+    onRetryLatestAssistant,
     onRunAgent,
     onSaveLatestAssistantArtifact,
     onSendPrompt,
@@ -67,6 +75,22 @@ export function AgentChatCard({
                     <small>{chatStatus}</small>
                 </div>
                 <div className="chat-header-actions">
+                    <Button
+                        disabled={!canRetryLatestAssistant || isSendingPrompt}
+                        onClick={onRetryLatestAssistant}
+                        title="Retry the previous prompt with the same source context"
+                        variant="subtle"
+                    >
+                        Retry
+                    </Button>
+                    <Button
+                        disabled={!canRetryLatestAssistant || isSendingPrompt}
+                        onClick={onCompareLatestAssistant}
+                        title="Compare the previous answer with a fresh model response"
+                        variant="subtle"
+                    >
+                        Compare
+                    </Button>
                     <Button
                         disabled={!canSaveLatestAssistantArtifact || isSavingChatArtifact}
                         onClick={onSaveLatestAssistantArtifact}
@@ -95,10 +119,19 @@ export function AgentChatCard({
                             {messageHasStaleSources(message, staleSourcePaths) && (
                                 <small className="stale-source-warning">Context changed since this answer was created.</small>
                             )}
+                            {messageHasWeakEvidence(message) && (
+                                <small className="weak-evidence-warning">No explicit source context is attached to this answer.</small>
+                            )}
                         </div>
                     ))
                 )}
             </div>
+            {contextPackPaths.length === 0 && !hasSelectableContext && (
+                <div className="missing-context-warning">
+                    <strong>Missing context</strong>
+                    <span>Select or pin a file, folder, diff, dataset, or artifact before asking for grounded analysis.</span>
+                </div>
+            )}
             {contextPackPaths.length > 0 && (
                 <div className="context-pack-list">
                     <div className="context-pack-heading">
@@ -166,6 +199,13 @@ export function AgentChatCard({
             </div>
         </Card>
     );
+}
+
+function messageHasWeakEvidence(message: ChatMessage) {
+    if (message.role !== 'assistant' || message.contextRelPath === 'agent') {
+        return false;
+    }
+    return !message.contextRelPath && (!message.sourcePaths || message.sourcePaths.length === 0);
 }
 
 function contextLabel(relPath: string) {

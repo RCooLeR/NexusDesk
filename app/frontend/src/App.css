@@ -3627,6 +3627,22 @@ button.code-studio-row.selected {
     padding: 12px;
 }
 
+.missing-context-warning {
+    border-top: 1px solid var(--nd-border-soft);
+    background: #fff7ed;
+    color: #9a3412;
+    display: grid;
+    gap: 3px;
+    padding: 9px 12px;
+}
+
+.missing-context-warning strong,
+.missing-context-warning span {
+    display: block;
+    font-size: 12px;
+    line-height: 1.35;
+}
+
 .settings-card {
     min-height: 0;
     overflow: auto;
@@ -3902,6 +3918,10 @@ button.code-studio-row.selected {
     margin-top: 6px;
     color: var(--nd-muted-text);
     font-size: 12px;
+}
+
+.weak-evidence-warning {
+    color: #9a3412 !important;
 }
 
 .chat-markdown {

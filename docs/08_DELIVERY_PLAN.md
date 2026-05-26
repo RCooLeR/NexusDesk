@@ -226,7 +226,7 @@ This batch made more of the studio inspectable and auditable without turning on 
 1. SQLite metadata mirrors JSON chat, approval, artifact, and tool-run records into the active database.
 2. Metadata Browser inspects SQLite metadata tables and dataset SQL views.
 3. Artifact lineage filtering can focus source, chat, tool, or artifact relationships.
-4. Chat messages and context-pack previews warn when cited files change.
+4. Chat messages and context-pack previews warn when cited files change. Assistant messages without explicit source context show weak-evidence warnings, the composer warns when no selectable/pinned context is available, and the chat header can retry or compare the latest answered prompt with the same attached source paths.
 5. Data & Analytics invalidates visible query/chart/profile state when the selected dataset changes on disk.
 6. SQL result artifacts save SQL text, engine, row counts, preview rows, and source dataset citations.
 7. Playwright visual smoke asserts navigator resizing, tool-run details, metadata browser, lineage filtering, panel scrolling, and freshness warnings.
@@ -328,7 +328,7 @@ These batches describe the next product direction. They are broader than the cur
 1. Promote Assistant from chat panel to cross-studio orchestrator with explicit context, model, agent mode, tool plan, memory, and citation controls.
 2. Add context sources for git diffs, database schemas, query results, analytics connector runs, document sets, operations logs, and artifacts.
 3. Add agent modes: Ask, Plan, Review, Edit, Research, Analyze, Debug Ops, Generate Artifact, and Report Builder.
-4. Add model comparison/retry, weak-evidence warnings, missing-context prompts, and source freshness indicators.
+4. Add assistant memory and prompt profiles; model comparison/retry, weak-evidence warnings, missing-context prompts, and source freshness indicators now exist in the first chat foundation.
 5. Add persistent workspace memory for accepted facts, decisions, preferred report style, and reusable prompts.
 
 ## Phase 2: Files, Documents, And Artifacts
