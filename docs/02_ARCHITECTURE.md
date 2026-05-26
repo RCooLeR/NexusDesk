@@ -137,6 +137,8 @@ Rollback browsing follows the same boundary: `nexus-app/internal/services/worksp
 
 Workspace tree actions call the same service boundary: the Fyne navigator action strip collects user intent and confirmation, then dispatches create, copy, rename/move, and delete through `nexus-app/internal/services/workspace` so rollback and rooted validation stay centralized.
 
+Native settings are split into `nexus-app/internal/services/settings` for non-secret provider/model/context persistence and `nexus-app/internal/ui/shell` for the Settings tab. Secret storage and access-policy persistence remain separate future work.
+
 ### 2. Frontend
 
 Responsibilities:

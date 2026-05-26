@@ -15,9 +15,7 @@ func (v *View) mainMenu() *fyne.MainMenu {
 	openWorkspace := menuItem("Open Workspace", shortcutOpenWorkspace(), v.openWorkspaceDialog)
 	refresh := menuItem("Refresh Workspace", shortcutRefreshWorkspace(), v.refreshWorkspace)
 	closeTab := menuItem("Close Tab", shortcutCloseTab(), v.closeSelectedTab)
-	settings := menuItem("Settings", shortcutSettings(), func() {
-		v.addPlaceholderTab("Settings", "Provider, access policy, model, and connector settings will live here.")
-	})
+	settings := menuItem("Settings", shortcutSettings(), v.openSettingsTab)
 	about := fyne.NewMenuItemWithIcon("About Nexus", theme.InfoIcon(), v.showAbout)
 
 	return fyne.NewMainMenu(

@@ -12,9 +12,7 @@ func (v *View) installShortcuts() {
 	bindShortcut(canvas, shortcutCloseTab(), v.closeSelectedTab)
 	bindShortcut(canvas, shortcutNextTab(), v.selectNextTab)
 	bindShortcut(canvas, shortcutPreviousTab(), v.selectPreviousTab)
-	bindShortcut(canvas, shortcutSettings(), func() {
-		v.addPlaceholderTab("Settings", "Provider, access policy, model, and connector settings will live here.")
-	})
+	bindShortcut(canvas, shortcutSettings(), v.openSettingsTab)
 }
 
 func bindShortcut(canvas fyne.Canvas, shortcut fyne.Shortcut, action func()) {

@@ -24,9 +24,7 @@ func (v *View) newRail() fyne.CanvasObject {
 	artifactsButton := widget.NewButtonWithIcon("", theme.DocumentIcon(), func() {
 		v.addPlaceholderTab("Artifacts", "Generated reports, exports, lineage, and comparisons will live here.")
 	})
-	settingsButton := widget.NewButtonWithIcon("", theme.SettingsIcon(), func() {
-		v.addPlaceholderTab("Settings", "Provider, access policy, model, and connector settings will live here.")
-	})
+	settingsButton := widget.NewButtonWithIcon("", theme.SettingsIcon(), v.openSettingsTab)
 	return container.NewVBox(logo, widget.NewSeparator(), workspaceButton, dataButton, artifactsButton, layout.NewSpacer(), settingsButton)
 }
 

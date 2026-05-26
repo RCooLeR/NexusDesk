@@ -7,6 +7,7 @@ import (
 
 	editorSvc "nexusdesk/internal/services/editor"
 	gitSvc "nexusdesk/internal/services/git"
+	settingsSvc "nexusdesk/internal/services/settings"
 	workspaceSvc "nexusdesk/internal/services/workspace"
 )
 
@@ -15,6 +16,7 @@ type View struct {
 	state            *State
 	workspaceService *workspaceSvc.Service
 	gitService       *gitSvc.Service
+	settingsStore    *settingsSvc.Store
 	editorSession    *editorSvc.Session
 	status           *widget.Label
 	navigator        *fyne.Container
@@ -37,11 +39,16 @@ func New(window fyne.Window) *View {
 	editorSession := editorSvc.NewSession()
 	welcome := editorSession.OpenWelcome("Welcome")
 	editorTabs := newEditorTabs(welcome.Title)
+	settingsStore, err := settingsSvc.NewStore()
+	if err != nil {
+		settingsStore = settingsSvc.NewFileStore("nexus-settings.json")
+	}
 	view := &View{
 		window:           window,
 		state:            NewState(),
 		workspaceService: workspaceSvc.New(),
 		gitService:       gitSvc.New(),
+		settingsStore:    settingsStore,
 		editorSession:    editorSession,
 		status:           widget.NewLabel("No workspace open"),
 		navigator:        container.NewStack(widget.NewLabel("Open a workspace to browse files.")),

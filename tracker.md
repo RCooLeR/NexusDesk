@@ -208,9 +208,9 @@ Exit criteria:
 
 Goal: port the LLM and agent runtime without recreating the Wails bridge problems.
 
-- [ ] Port settings store and secret handling.
+- [x] Add first native non-secret settings store for provider/model/context configuration.
 - [ ] Port OpenAI-compatible/Ollama client.
-- [ ] Add native provider/model settings page.
+- [x] Add native provider/model settings page skeleton.
 - [ ] Add streaming assistant panel using Go channels/events instead of Wails events.
 - [ ] Port context-pack builder.
 - [ ] Port agent runtime as an internal service, not a UI callback.
@@ -305,7 +305,7 @@ Exit criteria:
 ## Next Batch
 
 1. Configure Windows CGO compiler and verify `nexus-app` runs.
-2. Add settings store and native provider/model settings page skeleton.
-3. Add read-only Git file diff service and first unified diff panel.
+2. Add read-only Git file diff service and first unified diff panel.
+3. Port OpenAI-compatible/Ollama client using the native settings store.
 4. Add staged/unstaged controls after Git diff preview exists.
 5. Add richer navigator context menus once the first action strip is validated in Fyne.

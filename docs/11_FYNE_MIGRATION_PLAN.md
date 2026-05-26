@@ -100,6 +100,7 @@ The first `nexus-app` slice includes:
 - directory-grouped changed-file rendering in the native Git panel;
 - first native rollback browser panel for safe-write and file-operation records with confirmation before apply;
 - first native workspace-tree action strip for create, copy, rename/move, and delete through the file-operation services;
+- first native non-secret settings store and provider/model settings page skeleton;
 - framework-free workspace domain model.
 
 Full execution is blocked in the current shell until CGO is enabled with a Windows C compiler. Non-driver internal packages can already be tested.
