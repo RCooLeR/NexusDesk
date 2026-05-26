@@ -342,6 +342,7 @@ This batch made more of the studio inspectable and auditable without turning on 
 16. The dataset SQL notebook now supports a first local chart cell type that embeds the existing bounded dataset chart preview/create controls.
 17. Dataset SQL notebook output now includes a Plan tab. DuckDB builds can surface native explain output, while the bounded dataset fallback returns logical plan lines and explicit native-explain availability messaging.
 18. Dataset SQL notebooks can now be saved and loaded per dataset. Saved notebooks persist SQL/chart cells under `.nexusdesk/datasets/notebooks.json` and record notebook dependencies for lineage/history surfaces.
+19. Dataset SQL notebook History is now a browser over persisted SQL runs, with status/text filters, selected-run details, and Use SQL / Run Again actions.
 
 ## Completed Batch: Data Source Card Actions
 

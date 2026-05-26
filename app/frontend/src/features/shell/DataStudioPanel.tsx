@@ -561,6 +561,8 @@ function DatasetQueryPanel({
                         dependencies={dependencies}
                         onRebuildDependency={onRebuildDependency}
                         onTabChange={setActiveSQLResultTab}
+                        onRunSQL={(sql) => onSQLQuery(sql)}
+                        onUseSQL={(sql) => updateActiveSQL(sql)}
                         rebuildingDependencyId={rebuildingDependencyId}
                         result={sqlResult}
                         runs={sqlRuns}
@@ -596,11 +598,44 @@ function normalizeNotebookCells(cells: SQLNotebookCell[]): SQLNotebookCell[] {
     }));
 }
 
+function filterSQLRuns(runs: SQLRun[], statusFilter: string, queryFilter: string) {
+    const needle = queryFilter.trim().toLowerCase();
+    return runs.filter((run) => {
+        if (statusFilter !== 'all' && run.status !== statusFilter) {
+            return false;
+        }
+        if (!needle) {
+            return true;
+        }
+        return [
+            run.sql,
+            run.engine,
+            run.message,
+            run.artifact,
+            run.relPath,
+            run.status,
+        ].some((value) => value.toLowerCase().includes(needle));
+    });
+}
+
+function formatSQLRunTime(value: string) {
+    if (!value) {
+        return 'unknown time';
+    }
+    const timestamp = new Date(value);
+    if (Number.isNaN(timestamp.getTime())) {
+        return value;
+    }
+    return timestamp.toLocaleString();
+}
+
 function SQLResultTabs({
     activeTab,
     dependencies,
     onRebuildDependency,
+    onRunSQL,
     onTabChange,
+    onUseSQL,
     rebuildingDependencyId,
     result,
     runs,
@@ -608,11 +643,18 @@ function SQLResultTabs({
     activeTab: SQLResultTab;
     dependencies: DatasetDependency[];
     onRebuildDependency: (id: string) => void;
+    onRunSQL: (sql: string) => void;
     onTabChange: (tab: SQLResultTab) => void;
+    onUseSQL: (sql: string) => void;
     rebuildingDependencyId: string;
     result: DatasetSQLQueryResult | null;
     runs: SQLRun[];
 }) {
+    const [statusFilter, setStatusFilter] = useState('all');
+    const [historyFilter, setHistoryFilter] = useState('');
+    const [selectedRunId, setSelectedRunId] = useState('');
+    const filteredRuns = useMemo(() => filterSQLRuns(runs, statusFilter, historyFilter), [historyFilter, runs, statusFilter]);
+    const selectedRun = filteredRuns.find((run) => run.id === selectedRunId) ?? filteredRuns[0] ?? null;
     const tabs: Array<{id: SQLResultTab; label: string; disabled?: boolean}> = [
         {id: 'rows', label: 'Rows', disabled: !result},
         {id: 'summary', label: 'Summary', disabled: !result},
@@ -684,9 +726,57 @@ function SQLResultTabs({
             )}
             {currentTab === 'history' && (
                 <div className="dataset-lineage-history" role="tabpanel">
-                    {runs.slice(0, 5).map((run) => (
-                        <p key={run.id}><strong>{run.status}</strong> {run.engine} / {run.rows} rows <small>{run.artifact || run.message}</small></p>
-                    ))}
+                    <div className="sql-history-browser">
+                        <div className="sql-history-toolbar">
+                            <select aria-label="SQL history status" onChange={(event) => setStatusFilter(event.target.value)} value={statusFilter}>
+                                <option value="all">All statuses</option>
+                                <option value="completed">Completed</option>
+                                <option value="failed">Failed</option>
+                            </select>
+                            <input
+                                aria-label="SQL history filter"
+                                onChange={(event) => setHistoryFilter(event.target.value)}
+                                placeholder="Filter SQL, engine, message"
+                                value={historyFilter}
+                            />
+                        </div>
+                        {filteredRuns.length > 0 ? (
+                            <div className="sql-history-grid">
+                                <div className="sql-history-list" aria-label="SQL query history runs">
+                                    {filteredRuns.slice(0, 20).map((run) => (
+                                        <button
+                                            aria-pressed={selectedRun?.id === run.id}
+                                            className={selectedRun?.id === run.id ? 'active' : ''}
+                                            key={run.id}
+                                            onClick={() => setSelectedRunId(run.id)}
+                                            type="button"
+                                        >
+                                            <span><strong>{run.status}</strong> {run.engine}</span>
+                                            <small>{formatSQLRunTime(run.createdAt)} / {run.rows} rows</small>
+                                            <code>{run.sql}</code>
+                                        </button>
+                                    ))}
+                                </div>
+                                {selectedRun && (
+                                    <div className="sql-history-detail">
+                                        <div className="sql-plan-meta">
+                                            <span>{selectedRun.status}</span>
+                                            <span>{selectedRun.engine || 'unknown engine'}</span>
+                                            <span>{selectedRun.rows} rows</span>
+                                        </div>
+                                        <pre>{selectedRun.sql}</pre>
+                                        <small>{selectedRun.artifact || selectedRun.message}</small>
+                                        <div className="sql-history-actions">
+                                            <Button disabled={!selectedRun.sql.trim()} onClick={() => onUseSQL(selectedRun.sql)} variant="subtle">Use SQL</Button>
+                                            <Button disabled={!selectedRun.sql.trim()} onClick={() => onRunSQL(selectedRun.sql)} variant="subtle">Run Again</Button>
+                                        </div>
+                                    </div>
+                                )}
+                            </div>
+                        ) : (
+                            <small>No SQL query history matches the current filters.</small>
+                        )}
+                    </div>
                     {dependencies.slice(0, 6).map((item) => (
                         <p className="dataset-lineage-row" key={item.id}>
                             <span><strong>{item.kind}</strong> {item.target || item.artifact || item.query}</span>

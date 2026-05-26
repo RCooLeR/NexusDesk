@@ -410,7 +410,8 @@ Step 5.4: Query notebook
 - [x] Add SQL notebook Plan tab backed by dataset SQL plan lines: native DuckDB `EXPLAIN` when available, deterministic fallback plan lines otherwise.
 - [x] Add saved notebooks.
 - [x] Add per-dataset SQL notebook save/load flow backed by `.nexusdesk/datasets/notebooks.json`, including SQL/chart cell persistence and lineage dependency records.
-- [ ] Add query history browser.
+- [x] Add query history browser.
+- [x] Add SQL notebook History browser with status/text filters, selected-run detail, and Use SQL / Run Again actions backed by persisted SQL run records.
 - [ ] Add visible result caps and timeout controls.
 - [ ] Add export to CSV.
 - [ ] Add export to Markdown report.

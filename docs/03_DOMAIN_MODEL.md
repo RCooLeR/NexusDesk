@@ -565,7 +565,7 @@ Current implementation:
 - SQL result exports create Markdown artifacts with SQL text, engine, row counts, preview rows, and source dataset citations.
 - SQL snippets are saved per dataset separately from lightweight row filters.
 - SQL notebooks are saved per dataset under `.nexusdesk/datasets/notebooks.json`, capped per dataset, and contain SQL/chart cell labels plus SQL text without result snapshots.
-- The Data & Analytics frontend has a multi-cell SQL notebook shell with SQL cells, chart cells, saved notebook load/save controls, and row/summary/plan/history result tabs. SQL cells still execute through the existing bounded read-only dataset SQL request, and chart cells reuse bounded dataset chart actions.
+- The Data & Analytics frontend has a multi-cell SQL notebook shell with SQL cells, chart cells, saved notebook load/save controls, and row/summary/plan/history result tabs. The History tab is a small browser over persisted SQL run records with status/text filters, selected-run detail, and reuse/rerun actions. SQL cells still execute through the existing bounded read-only dataset SQL request, and chart cells reuse bounded dataset chart actions.
 - SQL query results carry explain-plan lines. DuckDB builds can return native `EXPLAIN` output; the default bounded dataset engine returns a deterministic logical plan and clearly labels native explain as unavailable.
 
 ### Artifact Lineage

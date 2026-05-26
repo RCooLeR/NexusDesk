@@ -2161,6 +2161,112 @@ button:disabled {
     gap: 5px;
 }
 
+.sql-history-browser {
+    border: 1px solid var(--nd-border-soft);
+    border-radius: var(--nd-radius-sm);
+    display: grid;
+    gap: 8px;
+    min-width: 0;
+    padding: 8px;
+}
+
+.sql-history-toolbar {
+    display: grid;
+    gap: 6px;
+    grid-template-columns: minmax(120px, 180px) minmax(0, 1fr);
+}
+
+.sql-history-toolbar input,
+.sql-history-toolbar select {
+    border: 1px solid var(--nd-border-soft);
+    border-radius: var(--nd-radius-sm);
+    min-height: 30px;
+    min-width: 0;
+    padding: 0 8px;
+}
+
+.sql-history-grid {
+    display: grid;
+    gap: 8px;
+    grid-template-columns: minmax(180px, 0.85fr) minmax(0, 1.15fr);
+    min-width: 0;
+}
+
+.sql-history-list {
+    display: grid;
+    gap: 5px;
+    max-height: 260px;
+    min-width: 0;
+    overflow: auto;
+}
+
+.sql-history-list button {
+    background: var(--nd-panel);
+    border: 1px solid var(--nd-border-soft);
+    border-radius: var(--nd-radius-sm);
+    color: inherit;
+    cursor: pointer;
+    display: grid;
+    gap: 3px;
+    min-width: 0;
+    padding: 6px;
+    text-align: left;
+}
+
+.sql-history-list button.active {
+    border-color: var(--nd-sky-blue);
+    box-shadow: inset 3px 0 0 var(--nd-sky-blue);
+}
+
+.sql-history-list span,
+.sql-history-list small,
+.sql-history-list code {
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.sql-history-list small {
+    color: var(--nd-muted-text);
+    font-size: 11px;
+}
+
+.sql-history-list code,
+.sql-history-detail pre {
+    font-family: var(--nd-font-mono);
+    font-size: 11px;
+}
+
+.sql-history-detail {
+    display: grid;
+    gap: 8px;
+    min-width: 0;
+}
+
+.sql-history-detail pre {
+    background: var(--nd-panel-soft);
+    border: 1px solid var(--nd-border-soft);
+    border-radius: var(--nd-radius-sm);
+    margin: 0;
+    max-height: 140px;
+    min-width: 0;
+    overflow: auto;
+    padding: 8px;
+    white-space: pre-wrap;
+}
+
+.sql-history-detail small {
+    color: var(--nd-muted-text);
+    overflow-wrap: anywhere;
+}
+
+.sql-history-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+}
+
 .metadata-history-results p,
 .dataset-lineage-history p {
     border: 1px solid var(--nd-border-soft);
