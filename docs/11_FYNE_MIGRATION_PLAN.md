@@ -98,6 +98,7 @@ The first `nexus-app` slice includes:
 - first native Problems service and bottom panel for bounded TODO/FIXME/HACK/BUG, merge-conflict, and invalid JSON scanning;
 - first native Git status service and manual bottom Git refresh panel with hidden Windows command execution;
 - directory-grouped changed-file rendering in the native Git panel;
+- first native read-only selected-file Git diff service and unified diff panel;
 - first native rollback browser panel for safe-write and file-operation records with confirmation before apply;
 - first native workspace-tree action strip for create, copy, rename/move, and delete through the file-operation services;
 - first native non-secret settings store and provider/model settings page skeleton;

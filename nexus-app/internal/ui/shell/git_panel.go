@@ -25,7 +25,10 @@ func (v *View) newGitPanel() fyne.CanvasObject {
 	header := container.NewBorder(nil, nil, v.gitStatus, refresh)
 	scroll := container.NewScroll(v.gitResults)
 	scroll.SetMinSize(fyne.NewSize(240, 110))
-	return container.NewBorder(header, nil, nil, nil, scroll)
+	diff := container.NewBorder(v.gitDiffStatus, nil, nil, nil, v.gitDiffText)
+	split := container.NewVSplit(scroll, diff)
+	split.Offset = 0.42
+	return container.NewBorder(header, nil, nil, nil, split)
 }
 
 func (v *View) refreshGitStatus() {
@@ -36,9 +39,21 @@ func (v *View) refreshGitStatus() {
 		return
 	}
 	v.gitStatus.SetText(gitStatusLabel(status))
-	v.gitResults.Objects = gitRows(status)
+	v.gitResults.Objects = v.gitRows(status)
 	v.gitResults.Refresh()
 	v.addActivity(status.Message)
+}
+
+func (v *View) openGitDiff(path string) {
+	workspace := v.state.Workspace()
+	diff, err := v.gitService.FileDiff(workspace.Root, path)
+	if err != nil {
+		dialog.ShowError(err, v.window)
+		return
+	}
+	v.gitDiffStatus.SetText(diff.Message)
+	v.gitDiffText.SetText(formatGitDiff(diff))
+	v.addActivity(diff.Message)
 }
 
 func gitStatusLabel(status gitSvc.Status) string {
@@ -52,7 +67,7 @@ func gitStatusLabel(status gitSvc.Status) string {
 	return fmt.Sprintf("%s @ %s - %d changed", status.Branch, head, len(status.ChangedFiles))
 }
 
-func gitRows(status gitSvc.Status) []fyne.CanvasObject {
+func (v *View) gitRows(status gitSvc.Status) []fyne.CanvasObject {
 	if !status.Available {
 		return []fyne.CanvasObject{widget.NewLabel(status.Message)}
 	}
@@ -70,7 +85,7 @@ func gitRows(status gitSvc.Status) []fyne.CanvasObject {
 	for _, group := range groupGitChanges(status.ChangedFiles) {
 		rows = append(rows, gitDirectoryRow(group.Directory))
 		for _, change := range group.Changes {
-			rows = append(rows, gitChangeRow(change))
+			rows = append(rows, gitChangeRow(change, v.openGitDiff))
 		}
 	}
 	return rows
@@ -115,12 +130,48 @@ func gitDirectoryRow(directory string) fyne.CanvasObject {
 	return container.NewBorder(nil, nil, widget.NewIcon(theme.FolderIcon()), nil, label)
 }
 
-func gitChangeRow(change gitSvc.FileChange) fyne.CanvasObject {
+func gitChangeRow(change gitSvc.FileChange, onOpen func(string)) fyne.CanvasObject {
 	label := change.Path
 	if change.OldPath != "" {
 		label = change.OldPath + " -> " + change.Path
 	}
+	open := widget.NewButtonWithIcon("", theme.SearchIcon(), func() {
+		onOpen(change.Path)
+	})
+	open.Importance = widget.LowImportance
 	text := widget.NewLabel(fmt.Sprintf("%s - %s", change.Summary, label))
 	text.Truncation = fyne.TextTruncateEllipsis
-	return container.NewBorder(nil, nil, widget.NewIcon(theme.FileTextIcon()), nil, container.NewPadded(text))
+	return container.NewBorder(nil, nil, open, nil, container.NewPadded(text))
+}
+
+func formatGitDiff(diff gitSvc.FileDiff) string {
+	var builder strings.Builder
+	if diff.StagedDiff != "" {
+		builder.WriteString("Staged diff / ")
+		builder.WriteString(diff.Path)
+		builder.WriteString("\n")
+		builder.WriteString(diff.StagedDiff)
+		if !strings.HasSuffix(diff.StagedDiff, "\n") {
+			builder.WriteString("\n")
+		}
+	}
+	if diff.UnstagedDiff != "" {
+		if builder.Len() > 0 {
+			builder.WriteString("\n")
+		}
+		builder.WriteString("Unstaged diff / ")
+		builder.WriteString(diff.Path)
+		builder.WriteString("\n")
+		builder.WriteString(diff.UnstagedDiff)
+		if !strings.HasSuffix(diff.UnstagedDiff, "\n") {
+			builder.WriteString("\n")
+		}
+	}
+	if builder.Len() == 0 {
+		return "No staged or unstaged diff for " + diff.Path + "."
+	}
+	if diff.StagedDiffTruncated || diff.UnstagedDiffTruncated {
+		builder.WriteString("\nDiff output was truncated.\n")
+	}
+	return builder.String()
 }

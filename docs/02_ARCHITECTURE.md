@@ -131,7 +131,7 @@ Workspace search remains framework-free: `nexus-app/internal/services/workspace`
 
 Workspace problem scanning follows the same split: `nexus-app/internal/services/workspace` owns bounded marker, merge-conflict, and invalid JSON detection, while the Fyne shell owns only the bottom Problems tab and result-to-preview navigation.
 
-Git integration is also service-led: `nexus-app/internal/services/git` owns manual repository status discovery, porcelain parsing, staged/unstaged grouping, and Windows hidden-process execution. The Fyne shell owns only the bottom Git refresh button, status rendering, and directory grouping for changed files.
+Git integration is also service-led: `nexus-app/internal/services/git` owns manual repository status discovery, porcelain parsing, staged/unstaged grouping, read-only selected-file diff loading, path validation, output caps, and Windows hidden-process execution. The Fyne shell owns only the bottom Git refresh button, status rendering, directory grouping for changed files, and the first unified read-only diff surface.
 
 Rollback browsing follows the same boundary: `nexus-app/internal/services/workspace` owns rollback records and apply semantics, while the Fyne shell owns only record listing, confirmation, and workspace refresh after apply.
 

@@ -11,6 +11,8 @@ import (
 )
 
 const commandTimeout = 4 * time.Second
+const diffMaxBytes = 220 * 1024
+const diffContextLines = "3"
 
 type Service struct{}
 
@@ -54,6 +56,40 @@ func (s *Service) Status(root string) (Status, error) {
 	}, nil
 }
 
+func (s *Service) FileDiff(root string, relPath string) (FileDiff, error) {
+	generatedAt := time.Now().UTC()
+	root = strings.TrimSpace(root)
+	if root == "" {
+		return FileDiff{Path: relPath, Message: "Open a workspace before reading Git diff.", GeneratedAt: generatedAt}, nil
+	}
+	absRoot, err := filepath.Abs(root)
+	if err != nil {
+		return FileDiff{}, err
+	}
+	cleanPath, err := cleanRelPath(relPath)
+	if err != nil {
+		return FileDiff{Path: relPath, Message: err.Error(), GeneratedAt: generatedAt}, nil
+	}
+	if _, err := gitOutput(absRoot, "rev-parse", "--show-toplevel"); err != nil {
+		return FileDiff{Path: cleanPath, Message: "Workspace is not inside a Git repository.", GeneratedAt: generatedAt}, nil
+	}
+	unstagedDiff, unstagedTruncated := cappedGitOutput(absRoot, "diff", "--no-ext-diff", "--unified="+diffContextLines, "--", cleanPath)
+	stagedDiff, stagedTruncated := cappedGitOutput(absRoot, "diff", "--cached", "--no-ext-diff", "--unified="+diffContextLines, "--", cleanPath)
+	message := "No diff for " + cleanPath + "."
+	if stagedDiff != "" || unstagedDiff != "" {
+		message = "Loaded read-only diff for " + cleanPath + "."
+	}
+	return FileDiff{
+		Path:                  cleanPath,
+		StagedDiff:            stagedDiff,
+		StagedDiffTruncated:   stagedTruncated,
+		UnstagedDiff:          unstagedDiff,
+		UnstagedDiffTruncated: unstagedTruncated,
+		Message:               message,
+		GeneratedAt:           generatedAt,
+	}, nil
+}
+
 func unavailableStatus(message string) Status {
 	return Status{Available: false, Message: message, GeneratedAt: time.Now().UTC()}
 }
@@ -84,6 +120,17 @@ func mustGitOutput(root string, args ...string) string {
 		return ""
 	}
 	return output
+}
+
+func cappedGitOutput(root string, args ...string) (string, bool) {
+	output, err := gitOutput(root, args...)
+	if err != nil {
+		return "", false
+	}
+	if len(output) <= diffMaxBytes {
+		return output, false
+	}
+	return output[:diffMaxBytes] + "\n[diff truncated]\n", true
 }
 
 func statusMessage(branch string, changes []FileChange) string {

@@ -31,6 +31,8 @@ type View struct {
 	problemStatus    *widget.Label
 	gitResults       *fyne.Container
 	gitStatus        *widget.Label
+	gitDiffText      *widget.Entry
+	gitDiffStatus    *widget.Label
 	rollbackResults  *fyne.Container
 	rollbackStatus   *widget.Label
 }
@@ -43,6 +45,10 @@ func New(window fyne.Window) *View {
 	if err != nil {
 		settingsStore = settingsSvc.NewFileStore("nexus-settings.json")
 	}
+	gitDiffText := widget.NewMultiLineEntry()
+	gitDiffText.TextStyle = fyne.TextStyle{Monospace: true}
+	gitDiffText.Wrapping = fyne.TextWrapOff
+	gitDiffText.Disable()
 	view := &View{
 		window:           window,
 		state:            NewState(),
@@ -63,6 +69,8 @@ func New(window fyne.Window) *View {
 		problemStatus:    widget.NewLabel("No problem scan yet."),
 		gitResults:       container.NewVBox(widget.NewLabel("Press Refresh git to inspect repository status.")),
 		gitStatus:        widget.NewLabel("Git status has not been loaded."),
+		gitDiffText:      gitDiffText,
+		gitDiffStatus:    widget.NewLabel("Select a changed file to load a read-only diff."),
 		rollbackResults:  container.NewVBox(widget.NewLabel("Refresh rollback records to inspect undo points.")),
 		rollbackStatus:   widget.NewLabel("Rollback records have not been loaded."),
 	}

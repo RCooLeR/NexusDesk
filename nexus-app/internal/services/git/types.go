@@ -23,3 +23,13 @@ type FileChange struct {
 	Worktree string
 	Summary  string
 }
+
+type FileDiff struct {
+	Path                  string
+	StagedDiff            string
+	StagedDiffTruncated   bool
+	UnstagedDiff          string
+	UnstagedDiffTruncated bool
+	Message               string
+	GeneratedAt           time.Time
+}

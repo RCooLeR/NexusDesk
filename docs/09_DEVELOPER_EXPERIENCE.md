@@ -97,7 +97,7 @@ Native workspace search lives in `nexus-app/internal/services/workspace/search.g
 
 Native Problems scanning lives in `nexus-app/internal/services/workspace/problems.go`. It uses the same bounded preview-safe read path as search and reports only lightweight local signals: TODO/FIXME/HACK/BUG markers, merge-conflict markers, and invalid JSON. The Fyne Problems tab triggers scans manually and opens matched files as preview/editor tabs.
 
-Native Git status lives in `nexus-app/internal/services/git`. It is manual-refresh only, parses `git status --porcelain=v1 --branch`, splits staged and unstaged rows, and suppresses Windows command windows for spawned Git processes. Diff, hunk, and approval-backed Git mutations remain later native ports.
+Native Git status and selected-file diffs live in `nexus-app/internal/services/git`. The service is manual-refresh/manual-select only, parses `git status --porcelain=v1 --branch`, splits staged and unstaged rows, validates selected repository-relative paths, loads capped staged and unstaged diffs, and suppresses Windows command windows for spawned Git processes. The Fyne Git panel renders changed files grouped by directory and shows the first read-only unified diff surface. Split/diff-only modes, hunk actions, and approval-backed Git mutations remain later native ports.
 
 Native non-secret settings live in `nexus-app/internal/services/settings`. The first store persists provider, base URL, model, context-window size, and response reserve to the user config directory, while the Fyne Settings tab owns form rendering and validation. API keys and other secrets remain out of this JSON settings file.
 

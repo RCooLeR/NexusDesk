@@ -230,6 +230,7 @@ Goal: make Workbench credible as an IDE-like surface.
 - [x] Add first native Git status service under `nexus-app/internal/services/git`.
 - [x] Add manual-only Git refresh panel.
 - [x] Add changed-file tree grouped by directories.
+- [x] Add first read-only Git file diff service and unified diff panel.
 - [ ] Add unified/split/diff-only diff views.
 - [ ] Add hunk selection and approval-backed hunk actions.
 - [ ] Add AI diff summary and commit draft once assistant service exists.
@@ -305,7 +306,7 @@ Exit criteria:
 ## Next Batch
 
 1. Configure Windows CGO compiler and verify `nexus-app` runs.
-2. Add read-only Git file diff service and first unified diff panel.
-3. Port OpenAI-compatible/Ollama client using the native settings store.
+2. Port OpenAI-compatible/Ollama client using the native settings store.
+3. Add split and diff-only Git diff render modes on top of the selected-file diff service.
 4. Add staged/unstaged controls after Git diff preview exists.
 5. Add richer navigator context menus once the first action strip is validated in Fyne.
