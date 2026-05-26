@@ -4,6 +4,7 @@ import type {ColumnProfile, DatasetChartResult, DatasetDependency, DatasetProfil
 
 type SQLNotebookCell = {
     id: string;
+    kind: 'sql' | 'chart';
     label: string;
     sql: string;
 };
@@ -109,13 +110,24 @@ export function DataStudioPanel({
         <>
             {activeDatasetProfile && <DatasetProfileSummary profile={activeDatasetProfile} />}
             <DatasetQueryPanel
+                chartCategory={chartCategory}
+                chartPreview={chartPreview}
+                chartType={chartType}
+                chartValue={chartValue}
                 columns={columns}
+                isCreatingChart={isCreatingChart}
                 isExporting={isExporting}
+                isPreviewingChart={isPreviewingChart}
                 isSaving={isSavingQuery}
                 label={queryLabel}
+                onChartCategoryChange={onChartCategoryChange}
+                onChartTypeChange={onChartTypeChange}
+                onChartValueChange={onChartValueChange}
+                onCreateChart={onCreateChart}
                 onChange={onQueryChange}
                 onExport={onExportQuery}
                 onLabelChange={onQueryLabelChange}
+                onPreviewChart={onPreviewChart}
                 onQuery={onQuery}
                 onSave={onSaveQuery}
                 query={query}
@@ -132,6 +144,7 @@ export function DataStudioPanel({
                 onSQLQuery={onSQLQuery}
                 onSQLExport={onSQLExport}
                 onSQLSave={onSQLSave}
+                profiles={profiles}
                 savedSQLQueries={savedSQLQueries}
                 onRebuildDependency={onRebuildDependency}
                 rebuildingDependencyId={rebuildingDependencyId}
@@ -163,8 +176,14 @@ export function DataStudioPanel({
 }
 
 function DatasetQueryPanel({
+    chartCategory,
+    chartPreview,
+    chartType,
+    chartValue,
     columns,
+    isCreatingChart,
     isExporting,
+    isPreviewingChart,
     isSaving,
     label,
     query,
@@ -177,8 +196,13 @@ function DatasetQueryPanel({
     isExportingSQL,
     isSavingSQL,
     onChange,
+    onChartCategoryChange,
+    onChartTypeChange,
+    onChartValueChange,
+    onCreateChart,
     onExport,
     onLabelChange,
+    onPreviewChart,
     onQuery,
     onSQLChange,
     onSQLLabelChange,
@@ -186,6 +210,7 @@ function DatasetQueryPanel({
     onSQLExport,
     onSQLSave,
     onSave,
+    profiles,
     savedSQLQueries,
     sqlRuns,
     dependencies,
@@ -193,8 +218,14 @@ function DatasetQueryPanel({
     onRebuildDependency,
     rebuildingDependencyId,
 }: {
+    chartCategory: string;
+    chartPreview: DatasetChartResult | null;
+    chartType: string;
+    chartValue: string;
     columns: string[];
+    isCreatingChart: boolean;
     isExporting: boolean;
+    isPreviewingChart: boolean;
     isSaving: boolean;
     label: string;
     query: string;
@@ -207,8 +238,13 @@ function DatasetQueryPanel({
     isExportingSQL: boolean;
     isSavingSQL: boolean;
     onChange: (value: string) => void;
+    onChartCategoryChange: (value: string) => void;
+    onChartTypeChange: (value: string) => void;
+    onChartValueChange: (value: string) => void;
+    onCreateChart: () => void;
     onExport: () => void;
     onLabelChange: (value: string) => void;
+    onPreviewChart: () => void;
     onQuery: () => void;
     onSQLChange: (value: string) => void;
     onSQLLabelChange: (value: string) => void;
@@ -216,6 +252,7 @@ function DatasetQueryPanel({
     onSQLExport: () => void;
     onSQLSave: () => void;
     onSave: () => void;
+    profiles: ColumnProfile[];
     savedSQLQueries: SavedDatasetQuery[];
     sqlRuns: SQLRun[];
     dependencies: DatasetDependency[];
@@ -235,7 +272,7 @@ function DatasetQueryPanel({
     }, [columns]);
 
     useEffect(() => {
-        setSQLCells((current) => current.map((cell) => cell.id === activeSQLCellId ? {...cell, sql: sqlQuery} : cell));
+        setSQLCells((current) => current.map((cell) => cell.id === activeSQLCellId && cell.kind === 'sql' ? {...cell, sql: sqlQuery} : cell));
     }, [activeSQLCellId, sqlQuery]);
 
     function applyFilter() {
@@ -246,10 +283,16 @@ function DatasetQueryPanel({
     }
 
     function addSQLCell() {
-        const nextCell = newSQLNotebookCell('select * from dataset limit 20', sqlCells.length + 1);
+        const nextCell = newSQLNotebookCell('select * from dataset limit 20', sqlCells.length + 1, 'sql');
         setSQLCells((current) => [...current, nextCell]);
         setActiveSQLCellId(nextCell.id);
         onSQLChange(nextCell.sql);
+    }
+
+    function addChartCell() {
+        const nextCell = newSQLNotebookCell('', sqlCells.length + 1, 'chart');
+        setSQLCells((current) => [...current, nextCell]);
+        setActiveSQLCellId(nextCell.id);
     }
 
     function deleteSQLCell(cellId: string) {
@@ -271,7 +314,7 @@ function DatasetQueryPanel({
     }
 
     function updateActiveSQL(value: string) {
-        setSQLCells((current) => current.map((cell) => cell.id === activeSQLCellId ? {...cell, sql: value} : cell));
+        setSQLCells((current) => current.map((cell) => cell.id === activeSQLCellId ? {...cell, kind: 'sql', sql: value} : cell));
         onSQLChange(value);
     }
 
@@ -280,6 +323,10 @@ function DatasetQueryPanel({
     }
 
     function runActiveSQLCell() {
+        if (activeSQLCell?.kind === 'chart') {
+            onPreviewChart();
+            return;
+        }
         onSQLQuery(activeSQLCell?.sql ?? sqlQuery);
     }
 
@@ -382,10 +429,11 @@ function DatasetQueryPanel({
                                 type="button"
                             >
                                 <span>{cell.label || `Cell ${index + 1}`}</span>
-                                <small>{cell.sql.trim() ? 'SQL' : 'empty'}</small>
+                                <small>{cell.kind === 'chart' ? 'chart' : cell.sql.trim() ? 'SQL' : 'empty'}</small>
                             </button>
                         ))}
                         <Button onClick={addSQLCell} variant="subtle">Add cell</Button>
+                        <Button onClick={addChartCell} variant="subtle">Add chart</Button>
                     </div>
                     <div className="sql-notebook-toolbar">
                         <input
@@ -398,36 +446,64 @@ function DatasetQueryPanel({
                             value={activeSQLCell?.label ?? ''}
                         />
                         <Button disabled={sqlCells.length <= 1} onClick={() => deleteSQLCell(activeSQLCellId)} variant="subtle">Delete cell</Button>
-                        <Button disabled={isQueryingSQL || !(activeSQLCell?.sql ?? '').trim()} onClick={runActiveSQLCell} variant="subtle">
-                            {isQueryingSQL ? 'Running...' : 'Run cell'}
+                        <Button
+                            disabled={activeSQLCell?.kind === 'chart' ? isPreviewingChart || columns.length === 0 : isQueryingSQL || !(activeSQLCell?.sql ?? '').trim()}
+                            onClick={runActiveSQLCell}
+                            variant="subtle"
+                        >
+                            {activeSQLCell?.kind === 'chart' ? isPreviewingChart ? 'Previewing...' : 'Preview chart' : isQueryingSQL ? 'Running...' : 'Run cell'}
                         </Button>
                     </div>
                 </div>
-                <textarea
-                    aria-label="DuckDB-compatible SQL query"
-                    onChange={(event) => updateActiveSQL(event.target.value)}
-                    placeholder="select * from dataset where spend > 10 order by spend desc limit 20"
-                    value={sqlQuery}
-                />
-                <div className="query-save-row">
-                    <input
-                        aria-label="Saved SQL label"
-                        onChange={(event) => onSQLLabelChange(event.target.value)}
-                        placeholder="SQL label"
-                        value={sqlLabel}
+                {activeSQLCell?.kind === 'chart' ? (
+                    <div className="sql-chart-cell">
+                        <DatasetChartPanel
+                            categoryColumn={chartCategory}
+                            chartType={chartType}
+                            columns={columns}
+                            isCreating={isCreatingChart}
+                            isPreviewing={isPreviewingChart}
+                            onCategoryChange={onChartCategoryChange}
+                            onChartTypeChange={onChartTypeChange}
+                            onCreate={onCreateChart}
+                            onPreview={onPreviewChart}
+                            onValueChange={onChartValueChange}
+                            preview={chartPreview}
+                            profiles={profiles}
+                            valueColumn={chartValue}
+                        />
+                    </div>
+                ) : (
+                    <textarea
+                        aria-label="DuckDB-compatible SQL query"
+                        onChange={(event) => updateActiveSQL(event.target.value)}
+                        placeholder="select * from dataset where spend > 10 order by spend desc limit 20"
+                        value={sqlQuery}
                     />
-                    <Button disabled={isSavingSQL || !sqlQuery.trim()} onClick={onSQLSave} variant="subtle">
-                        {isSavingSQL ? 'Saving...' : 'Save SQL'}
-                    </Button>
-                </div>
-                <div className="dataset-query-row">
-                    <Button disabled={isQueryingSQL} onClick={() => onSQLQuery()} variant="subtle">
-                        {isQueryingSQL ? 'Running...' : 'Run SQL'}
-                    </Button>
-                    <Button disabled={isExportingSQL || !sqlQuery.trim()} onClick={onSQLExport} variant="subtle">
-                        {isExportingSQL ? 'Exporting...' : 'Export SQL'}
-                    </Button>
-                </div>
+                )}
+                {activeSQLCell?.kind !== 'chart' && (
+                    <>
+                        <div className="query-save-row">
+                            <input
+                                aria-label="Saved SQL label"
+                                onChange={(event) => onSQLLabelChange(event.target.value)}
+                                placeholder="SQL label"
+                                value={sqlLabel}
+                            />
+                            <Button disabled={isSavingSQL || !sqlQuery.trim()} onClick={onSQLSave} variant="subtle">
+                                {isSavingSQL ? 'Saving...' : 'Save SQL'}
+                            </Button>
+                        </div>
+                        <div className="dataset-query-row">
+                            <Button disabled={isQueryingSQL} onClick={() => onSQLQuery()} variant="subtle">
+                                {isQueryingSQL ? 'Running...' : 'Run SQL'}
+                            </Button>
+                            <Button disabled={isExportingSQL || !sqlQuery.trim()} onClick={onSQLExport} variant="subtle">
+                                {isExportingSQL ? 'Exporting...' : 'Export SQL'}
+                            </Button>
+                        </div>
+                    </>
+                )}
                 {(sqlResult || sqlRuns.length > 0 || dependencies.length > 0) && (
                     <SQLResultTabs
                         activeTab={activeSQLResultTab}
@@ -448,10 +524,11 @@ function canRebuildDependency(kind: string) {
     return ['filter-export', 'sql-report', 'chart', 'summary'].includes(kind);
 }
 
-function newSQLNotebookCell(sql = '', index = 1): SQLNotebookCell {
+function newSQLNotebookCell(sql = '', index = 1, kind: SQLNotebookCell['kind'] = 'sql'): SQLNotebookCell {
     return {
         id: `sql-cell-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
-        label: `Cell ${index}`,
+        kind,
+        label: kind === 'chart' ? `Chart ${index}` : `Cell ${index}`,
         sql,
     };
 }

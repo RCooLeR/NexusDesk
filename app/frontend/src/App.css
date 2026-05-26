@@ -1911,6 +1911,14 @@ button:disabled {
     white-space: pre-wrap;
 }
 
+.sql-chart-cell {
+    min-width: 0;
+}
+
+.sql-chart-cell .dataset-chart-panel {
+    background: var(--nd-panel);
+}
+
 .dataset-chart-panel {
     border: 1px solid var(--nd-border-soft);
     border-radius: var(--nd-radius-sm);

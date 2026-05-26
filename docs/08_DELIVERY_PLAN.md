@@ -339,6 +339,7 @@ This batch made more of the studio inspectable and auditable without turning on 
 13. Connector schema explanation prompts now use the shared inspected metadata shape, so saved external profile objects can be explained from Settings with the same grounded columns, indexes, samples, and relationship hints as workspace SQLite.
 14. Data & Analytics now has a first multi-cell dataset SQL notebook shell: local SQL cells can be added, selected, edited, deleted, loaded from saved snippets, and executed through the existing bounded read-only SQL runner.
 15. Dataset SQL notebook output now has result tabs for row previews, run summary, and SQL history/lineage.
+16. The dataset SQL notebook now supports a first local chart cell type that embeds the existing bounded dataset chart preview/create controls.
 
 ## Completed Batch: Data Source Card Actions
 

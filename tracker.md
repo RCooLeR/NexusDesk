@@ -404,7 +404,8 @@ Step 5.4: Query notebook
 - [x] Add first dataset SQL notebook shell with multiple local cells, active-cell editing, add/delete cell controls, saved snippet loading, and active-cell execution through the existing bounded SQL runner.
 - [x] Add result tabs.
 - [x] Add SQL notebook result tabs for rows, run summary, and SQL history/lineage.
-- [ ] Add chart cells.
+- [x] Add chart cells.
+- [x] Add first local chart cell type that embeds bounded dataset chart preview/create controls inside the SQL notebook.
 - [ ] Add explain-plan display where connector supports it.
 - [ ] Add saved notebooks.
 - [ ] Add query history browser.
