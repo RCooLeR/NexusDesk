@@ -189,7 +189,7 @@ Goal: recreate the useful local project workbench without Wails or React.
 - [x] Add native pinned-tab controls and dirty markers in the tab header/editor chrome.
 - [x] Add text/code editor widget decision: Fyne text editor first, Scintilla/LSP-backed editor later if needed.
 - [x] Add first draft-only text editor with Source/Preview tabs, automatic dirty state, disabled Save, and Revert Draft.
-- [ ] Add Markdown source/rendered toggle.
+- [x] Add Markdown source/rendered toggle.
 - [ ] Add image/PDF/document preview surfaces.
 - [ ] Add safe write preview/apply/rollback service port.
 - [ ] Add file create/delete/rename/move/copy operations with approval where needed.
@@ -302,6 +302,6 @@ Exit criteria:
 
 1. Configure Windows CGO compiler and verify `nexus-app` runs.
 2. Add brand icon/logo assets to the Fyne shell.
-3. Add Markdown rendered preview mode for `.md` files inside the native editor.
-4. Port richer preview support from `app-wails/internal/workspace`: images, PDFs, DOCX, CSV/table previews.
-5. Start safe write preview/apply/rollback service port for draft saves.
+3. Port richer preview support from `app-wails/internal/workspace`: images, PDFs, DOCX, CSV/table previews.
+4. Start safe write preview/apply/rollback service port for draft saves.
+5. Add file create/delete/rename/move/copy operation service skeletons with rooted validation.

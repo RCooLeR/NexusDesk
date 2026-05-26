@@ -16,12 +16,14 @@ func (v *View) newTextEditor(tab editorSvc.Tab, preview domain.FilePreview, onSt
 	source.Wrapping = fyne.TextWrapOff
 	source.TextStyle = fyne.TextStyle{Monospace: true}
 	status := widget.NewLabel("Draft only. Save is disabled until safe write preview/apply lands.")
+	rendered := newPreviewPane(preview, tab.DraftText)
 	source.OnChanged = func(text string) {
 		if !v.editorSession.UpdateDraft(tab.ID, text) {
 			return
 		}
 		if next, ok := v.editorSession.Tab(tab.ID); ok {
 			status.SetText(draftStatusText(next))
+			rendered.SetText(next.DraftText)
 			onState(next)
 		}
 	}
@@ -29,27 +31,20 @@ func (v *View) newTextEditor(tab editorSvc.Tab, preview domain.FilePreview, onSt
 		if next, ok := v.editorSession.RevertDraft(tab.ID); ok {
 			source.SetText(next.DraftText)
 			status.SetText(draftStatusText(next))
+			rendered.SetText(next.DraftText)
 			onState(next)
 		}
 	})
 	revert.Importance = widget.LowImportance
 
 	sourcePanel := container.NewBorder(container.NewBorder(nil, nil, status, revert), nil, nil, nil, source)
-	previewPanel := container.NewBorder(widget.NewLabel(previewHeader(preview)), nil, nil, nil, readOnlyText(preview.Text))
+	previewPanel := container.NewBorder(widget.NewLabel(previewHeader(preview)), nil, nil, nil, rendered.Canvas())
 	tabs := container.NewAppTabs(
 		container.NewTabItem("Source", sourcePanel),
 		container.NewTabItem("Preview", previewPanel),
 	)
 	tabs.SetTabLocation(container.TabLocationTop)
 	return tabs
-}
-
-func readOnlyText(text string) fyne.CanvasObject {
-	content := widget.NewMultiLineEntry()
-	content.SetText(text)
-	content.Wrapping = fyne.TextWrapOff
-	content.Disable()
-	return content
 }
 
 func draftStatusText(tab editorSvc.Tab) string {
