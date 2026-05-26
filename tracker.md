@@ -305,7 +305,7 @@ Exit criteria:
 ## Next Batch
 
 1. Configure Windows CGO compiler and verify `nexus-app` runs.
-2. Add a rollback browser panel for native safe-write and file-operation records.
-3. Add native tree context actions that call the file operation services after confirmation.
-4. Add settings store and native provider/model settings page skeleton.
-5. Add read-only Git file diff service and first unified diff panel.
+2. Add native tree context actions that call the file operation services after confirmation.
+3. Add settings store and native provider/model settings page skeleton.
+4. Add read-only Git file diff service and first unified diff panel.
+5. Add staged/unstaged controls after Git diff preview exists.

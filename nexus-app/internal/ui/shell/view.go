@@ -29,6 +29,8 @@ type View struct {
 	problemStatus    *widget.Label
 	gitResults       *fyne.Container
 	gitStatus        *widget.Label
+	rollbackResults  *fyne.Container
+	rollbackStatus   *widget.Label
 }
 
 func New(window fyne.Window) *View {
@@ -54,6 +56,8 @@ func New(window fyne.Window) *View {
 		problemStatus:    widget.NewLabel("No problem scan yet."),
 		gitResults:       container.NewVBox(widget.NewLabel("Press Refresh git to inspect repository status.")),
 		gitStatus:        widget.NewLabel("Git status has not been loaded."),
+		rollbackResults:  container.NewVBox(widget.NewLabel("Refresh rollback records to inspect undo points.")),
+		rollbackStatus:   widget.NewLabel("Rollback records have not been loaded."),
 	}
 	view.configureEditorTabs()
 	return view

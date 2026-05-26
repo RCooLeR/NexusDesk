@@ -133,6 +133,8 @@ Workspace problem scanning follows the same split: `nexus-app/internal/services/
 
 Git integration is also service-led: `nexus-app/internal/services/git` owns manual repository status discovery, porcelain parsing, staged/unstaged grouping, and Windows hidden-process execution. The Fyne shell owns only the bottom Git refresh button, status rendering, and directory grouping for changed files.
 
+Rollback browsing follows the same boundary: `nexus-app/internal/services/workspace` owns rollback records and apply semantics, while the Fyne shell owns only record listing, confirmation, and workspace refresh after apply.
+
 ### 2. Frontend
 
 Responsibilities:
