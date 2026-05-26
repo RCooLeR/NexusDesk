@@ -95,6 +95,7 @@ The first `nexus-app` slice includes:
 - draft editor Save wiring that applies through the native safe write service, marks the editor tab clean, and leaves a rollback record;
 - first native file create, delete, copy, move, and rename services with rooted validation, metadata guards, operation previews, and rollback records;
 - first native workspace search service and bottom result panel for bounded path/content search with preview-tab opening;
+- first native Problems service and bottom panel for bounded TODO/FIXME/HACK/BUG, merge-conflict, and invalid JSON scanning;
 - framework-free workspace domain model.
 
 Full execution is blocked in the current shell until CGO is enabled with a Windows C compiler. Non-driver internal packages can already be tested.

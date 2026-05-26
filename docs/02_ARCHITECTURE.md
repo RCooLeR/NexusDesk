@@ -129,6 +129,8 @@ File mutation data remains framework-free as well: `nexus-app/internal/services/
 
 Workspace search remains framework-free: `nexus-app/internal/services/workspace` owns bounded path/content search, while the Fyne shell owns only the toolbar entry, bottom Search tab, and result-to-preview navigation.
 
+Workspace problem scanning follows the same split: `nexus-app/internal/services/workspace` owns bounded marker, merge-conflict, and invalid JSON detection, while the Fyne shell owns only the bottom Problems tab and result-to-preview navigation.
+
 ### 2. Frontend
 
 Responsibilities:

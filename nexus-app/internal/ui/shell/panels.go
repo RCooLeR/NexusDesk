@@ -63,6 +63,7 @@ func (v *View) newBottomPanel() fyne.CanvasObject {
 	tabs := container.NewAppTabs(
 		container.NewTabItemWithIcon("Activity", theme.HistoryIcon(), activity),
 		container.NewTabItemWithIcon("Search", theme.SearchIcon(), v.newSearchPanel()),
+		container.NewTabItemWithIcon("Problems", theme.WarningIcon(), v.newProblemsPanel()),
 		container.NewTabItemWithIcon("Git", theme.ContentCopyIcon(), widget.NewLabel("Git diff/status service will be ported from app-wails/internal/gitservice.")),
 		container.NewTabItemWithIcon("Approvals", theme.ConfirmIcon(), widget.NewLabel("Approval queue and access policy UI will live here.")),
 	)

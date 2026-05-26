@@ -23,6 +23,8 @@ type View struct {
 	activityText     string
 	searchResults    *fyne.Container
 	searchStatus     *widget.Label
+	problemResults   *fyne.Container
+	problemStatus    *widget.Label
 }
 
 func New(window fyne.Window) *View {
@@ -43,6 +45,8 @@ func New(window fyne.Window) *View {
 		activityText:     "Ready.",
 		searchResults:    container.NewVBox(widget.NewLabel("Search results will appear here.")),
 		searchStatus:     widget.NewLabel("No search yet."),
+		problemResults:   container.NewVBox(widget.NewLabel("Run a scan to inspect lightweight workspace problems.")),
+		problemStatus:    widget.NewLabel("No problem scan yet."),
 	}
 	view.configureEditorTabs()
 	return view
