@@ -1,4 +1,4 @@
-import {useEffect, useState} from 'react';
+import {useEffect, useMemo, useState} from 'react';
 import {FontAwesomeIcon} from '@fortawesome/react-fontawesome';
 import {brandAssets, capabilityIconByTitle} from '../../brand/assets';
 import {Button, EmptyState, StatusBadge} from '../../components/ui';
@@ -34,6 +34,7 @@ type DataOperationsPanelProps = {
     isQueryingDataset: boolean;
     isQueryingDatasetSQL: boolean;
     isQueryingSQLiteConnector: boolean;
+    isSavingSQLiteConnectorQuery: boolean;
     isRefreshingStaleContext: boolean;
     isSavingDatasetQuery: boolean;
     isSavingDatasetSQLQuery: boolean;
@@ -64,6 +65,7 @@ type DataOperationsPanelProps = {
     onQueryDataset: () => void;
     onQueryDatasetSQL: () => void;
     onCancelSQLiteConnectorQuery: () => void;
+    onPreviewSQLiteSchemaObject: (objectName: string) => void;
     onQuerySQLiteConnector: () => void;
     onRebuildDatasetDependency: (dependencyId: string) => void;
     onRefreshStaleContext: () => void;
@@ -71,12 +73,16 @@ type DataOperationsPanelProps = {
     onSaveDatasetSQLQuery: () => void;
     onSearchMetadata: () => void;
     onSQLiteConnectorQueryChange: (content: string) => void;
+    onSQLiteConnectorQueryLabelChange: (content: string) => void;
     onSQLiteConnectorResultLimitChange: (value: number) => void;
+    onSaveSQLiteConnectorQuery: () => void;
     onSQLiteConnectorTimeoutSecondsChange: (value: number) => void;
     rebuildingDatasetDependencyId: string;
     savedDatasetQueries: SavedDatasetQuery[];
     savedDatasetSQLQueries: SavedDatasetQuery[];
+    savedSQLiteConnectorQueries: SavedDatasetQuery[];
     sqliteConnectorQuery: string;
+    sqliteConnectorQueryLabel: string;
     sqliteConnectorResultLimit: number;
     sqliteConnectorResult: SQLiteQueryResult | null;
     sqliteConnectorMetadata: ConnectorMetadata | null;
@@ -114,6 +120,7 @@ export function DataOperationsPanel({
     isQueryingDataset,
     isQueryingDatasetSQL,
     isQueryingSQLiteConnector,
+    isSavingSQLiteConnectorQuery,
     isRefreshingStaleContext,
     isSavingDatasetQuery,
     isSavingDatasetSQLQuery,
@@ -144,6 +151,7 @@ export function DataOperationsPanel({
     onQueryDataset,
     onQueryDatasetSQL,
     onCancelSQLiteConnectorQuery,
+    onPreviewSQLiteSchemaObject,
     onQuerySQLiteConnector,
     onRebuildDatasetDependency,
     onRefreshStaleContext,
@@ -151,12 +159,16 @@ export function DataOperationsPanel({
     onSaveDatasetSQLQuery,
     onSearchMetadata,
     onSQLiteConnectorQueryChange,
+    onSQLiteConnectorQueryLabelChange,
     onSQLiteConnectorResultLimitChange,
+    onSaveSQLiteConnectorQuery,
     onSQLiteConnectorTimeoutSecondsChange,
     rebuildingDatasetDependencyId,
     savedDatasetQueries,
     savedDatasetSQLQueries,
+    savedSQLiteConnectorQueries,
     sqliteConnectorQuery,
+    sqliteConnectorQueryLabel,
     sqliteConnectorResultLimit,
     sqliteConnectorResult,
     sqliteConnectorMetadata,
@@ -269,14 +281,21 @@ export function DataOperationsPanel({
                     <SQLiteConnectorPanel
                         isQuerying={isQueryingSQLiteConnector}
                         isInspecting={isInspectingSQLiteConnector}
+                        isSaving={isSavingSQLiteConnectorQuery}
+                        sqlRuns={datasetSQLRuns}
+                        savedQueries={savedSQLiteConnectorQueries}
                         metadata={sqliteConnectorMetadata}
                         onChange={onSQLiteConnectorQueryChange}
                         onCancel={onCancelSQLiteConnectorQuery}
                         onInspect={onInspectSQLiteConnector}
+                        onLabelChange={onSQLiteConnectorQueryLabelChange}
+                        onPreviewObject={onPreviewSQLiteSchemaObject}
                         onQuery={onQuerySQLiteConnector}
                         onResultLimitChange={onSQLiteConnectorResultLimitChange}
+                        onSave={onSaveSQLiteConnectorQuery}
                         onTimeoutSecondsChange={onSQLiteConnectorTimeoutSecondsChange}
                         query={sqliteConnectorQuery}
+                        queryLabel={sqliteConnectorQueryLabel}
                         resultLimit={sqliteConnectorResultLimit}
                         result={sqliteConnectorResult}
                         timeoutSeconds={sqliteConnectorTimeoutSeconds}
@@ -514,6 +533,10 @@ function levelSummary(levelCounts?: Record<string, number>) {
     return parts.length > 0 ? parts.join(', ') : 'no levels detected';
 }
 
+function quoteSQLiteIdentifierForUI(value: string) {
+    return `"${value.replaceAll('"', '""')}"`;
+}
+
 function MetadataStorePanel({status}: {status: SQLiteMetadataStatus}) {
     return (
         <div className="metadata-store-panel">
@@ -629,42 +652,62 @@ function MetadataBrowserPanel({
 function SQLiteConnectorPanel({
     isInspecting,
     isQuerying,
+    isSaving,
     metadata,
     onCancel,
     onChange,
     onInspect,
+    onLabelChange,
+    onPreviewObject,
     onQuery,
     onResultLimitChange,
+    onSave,
     onTimeoutSecondsChange,
     query,
+    queryLabel,
     resultLimit,
     result,
+    savedQueries,
+    sqlRuns,
     timeoutSeconds,
 }: {
     isInspecting: boolean;
     isQuerying: boolean;
+    isSaving: boolean;
     metadata: ConnectorMetadata | null;
     onCancel: () => void;
     onChange: (value: string) => void;
     onInspect: () => void;
+    onLabelChange: (value: string) => void;
+    onPreviewObject: (objectName: string) => void;
     onQuery: () => void;
     onResultLimitChange: (value: number) => void;
+    onSave: () => void;
     onTimeoutSecondsChange: (value: number) => void;
     query: string;
+    queryLabel: string;
     resultLimit: number;
     result: SQLiteQueryResult | null;
+    savedQueries: SavedDatasetQuery[];
+    sqlRuns: SQLRun[];
     timeoutSeconds: number;
 }) {
     return (
         <div className="metadata-store-panel sqlite-connector-panel">
             <strong>SQLite Connector</strong>
-            <small>Read-only workspace database query surface.</small>
+            <small>Read-only workspace database query surface. Schema inspection and previews run only from explicit user actions.</small>
             <div className="metadata-action-row">
                 <Button disabled={isInspecting} onClick={onInspect} variant="subtle">
                     {isInspecting ? 'Inspecting...' : 'Inspect schema'}
                 </Button>
             </div>
-            {metadata && <ConnectorMetadataPanel metadata={metadata} />}
+            {metadata && (
+                <ConnectorMetadataPanel
+                    metadata={metadata}
+                    onPreviewObject={onPreviewObject}
+                    onUseQuery={onChange}
+                />
+            )}
             <textarea aria-label="Workspace SQLite query" onChange={(event) => onChange(event.target.value)} value={query} />
             <div className="connector-query-controls">
                 <label>
@@ -694,6 +737,23 @@ function SQLiteConnectorPanel({
                 </Button>
                 <Button disabled={!isQuerying} onClick={onCancel} variant="subtle">Cancel query</Button>
             </div>
+            <div className="connector-saved-query-row">
+                <input
+                    aria-label="SQLite connector query label"
+                    onChange={(event) => onLabelChange(event.target.value)}
+                    placeholder="Saved query label"
+                    value={queryLabel}
+                />
+                <Button disabled={isSaving || !query.trim()} onClick={onSave} variant="subtle">
+                    {isSaving ? 'Saving...' : 'Save query'}
+                </Button>
+            </div>
+            {savedQueries.length > 0 && (
+                <ConnectorSavedQueries
+                    onUseQuery={onChange}
+                    queries={savedQueries}
+                />
+            )}
             {result && (
                 <SortableDataTable
                     pageSize={8}
@@ -701,27 +761,135 @@ function SQLiteConnectorPanel({
                     title={`${result.engine} / cap ${result.resultLimit} / ${result.timeoutSeconds}s`}
                 />
             )}
+            <ConnectorQueryHistory runs={sqlRuns} />
         </div>
     );
 }
 
-function ConnectorMetadataPanel({metadata}: {metadata: ConnectorMetadata}) {
-    const objects = [...metadata.tables, ...metadata.views];
+function ConnectorMetadataPanel({
+    metadata,
+    onPreviewObject,
+    onUseQuery,
+}: {
+    metadata: ConnectorMetadata;
+    onPreviewObject: (objectName: string) => void;
+    onUseQuery: (query: string) => void;
+}) {
+    const objects = useMemo(() => [...metadata.tables, ...metadata.views], [metadata.tables, metadata.views]);
+    const [selectedObjectName, setSelectedObjectName] = useState(objects[0]?.name ?? '');
+    const selectedObject = objects.find((object) => object.name === selectedObjectName) ?? objects[0] ?? null;
+
+    useEffect(() => {
+        setSelectedObjectName((current) => objects.some((object) => object.name === current) ? current : objects[0]?.name ?? '');
+    }, [metadata.id, objects]);
+
     return (
         <div className="connector-metadata-panel">
             <small>{metadata.message}</small>
             <div className="metadata-dataset-views">
                 <strong>{metadata.engine}{metadata.readOnly ? ' / read-only' : ''}</strong>
-                {objects.slice(0, 8).map((table) => (
-                    <p key={`${table.type}-${table.name}`}>
-                        {table.type}: {table.name} / {table.rowCount} rows
-                        <small>{table.columns.map((column) => `${column.name}:${column.type || 'ANY'}${column.primaryKey ? ' pk' : ''}`).slice(0, 6).join(', ')}</small>
-                    </p>
-                ))}
-                {metadata.indexes.length > 0 && (
-                    <small>{metadata.indexes.length} indexes: {metadata.indexes.slice(0, 4).map((index) => `${index.name}(${index.columns.join(', ')})`).join(', ')}</small>
+                {objects.length > 0 ? (
+                    <div className="connector-schema-browser">
+                        <select aria-label="SQLite schema object" onChange={(event) => setSelectedObjectName(event.target.value)} value={selectedObject?.name ?? ''}>
+                            {objects.map((object) => (
+                                <option key={`${object.type}-${object.name}`} value={object.name}>
+                                    {object.type}: {object.name} / {object.rowCount} rows
+                                </option>
+                            ))}
+                        </select>
+                        {selectedObject && (
+                            <>
+                                <div className="metadata-action-row">
+                                    <Button onClick={() => onPreviewObject(selectedObject.name)} variant="subtle">Preview rows</Button>
+                                    <Button onClick={() => onUseQuery(`select * from ${quoteSQLiteIdentifierForUI(selectedObject.name)}`)} variant="subtle">Use query</Button>
+                                </div>
+                                <p>
+                                    {selectedObject.type}: {selectedObject.name} / {selectedObject.rowCount} rows
+                                    <small>{selectedObject.columns.map((column) => `${column.name}:${column.type || 'ANY'}${column.primaryKey ? ' pk' : ''}`).slice(0, 8).join(', ')}</small>
+                                </p>
+                                {selectedObject.indexes.length > 0 && (
+                                    <div className="connector-index-list">
+                                        {selectedObject.indexes.slice(0, 8).map((index) => (
+                                            <small key={index.name}>{index.unique ? 'unique ' : ''}{index.name}: {index.columns.join(', ')}</small>
+                                        ))}
+                                    </div>
+                                )}
+                                {selectedObject.sampleRows.length > 0 && (
+                                    <div className="metadata-sample">
+                                        {selectedObject.sampleRows.slice(0, 3).map((row, index) => (
+                                            <p key={`${selectedObject.name}-${index}`}>{row.slice(0, 8).join(' | ')}</p>
+                                        ))}
+                                    </div>
+                                )}
+                            </>
+                        )}
+                    </div>
+                ) : (
+                    <small>No tables or views found.</small>
                 )}
             </div>
+        </div>
+    );
+}
+
+function ConnectorSavedQueries({
+    onUseQuery,
+    queries,
+}: {
+    onUseQuery: (query: string) => void;
+    queries: SavedDatasetQuery[];
+}) {
+    return (
+        <div className="connector-query-history">
+            <strong>Saved SQLite Queries</strong>
+            {queries.slice(0, 6).map((query) => (
+                <button key={`${query.updatedAt}-${query.query}`} onClick={() => onUseQuery(query.query)} type="button">
+                    <span>{query.label || 'SQLite query'}</span>
+                    <small>{query.query}</small>
+                </button>
+            ))}
+        </div>
+    );
+}
+
+function ConnectorQueryHistory({runs}: {runs: SQLRun[]}) {
+    const [statusFilter, setStatusFilter] = useState('all');
+    const [queryFilter, setQueryFilter] = useState('');
+    const filteredRuns = runs.filter((run) => {
+        if (run.engine !== 'sqlite-readonly') {
+            return false;
+        }
+        if (statusFilter !== 'all' && run.status !== statusFilter) {
+            return false;
+        }
+        const needle = queryFilter.trim().toLowerCase();
+        if (!needle) {
+            return true;
+        }
+        return run.sql.toLowerCase().includes(needle) || run.message.toLowerCase().includes(needle) || run.relPath.toLowerCase().includes(needle);
+    });
+    return (
+        <div className="connector-query-history">
+            <strong>SQLite Query History</strong>
+            <div className="connector-query-filters">
+                <select aria-label="SQLite query history status" onChange={(event) => setStatusFilter(event.target.value)} value={statusFilter}>
+                    <option value="all">All statuses</option>
+                    <option value="completed">Completed</option>
+                    <option value="failed">Failed</option>
+                </select>
+                <input aria-label="SQLite query history filter" onChange={(event) => setQueryFilter(event.target.value)} placeholder="Filter history" value={queryFilter} />
+            </div>
+            {filteredRuns.length > 0 ? (
+                filteredRuns.slice(0, 8).map((run) => (
+                    <p key={run.id}>
+                        <strong>{run.status}</strong> {run.rows} rows
+                        <small>{run.sql}</small>
+                        <span>{run.message}</span>
+                    </p>
+                ))
+            ) : (
+                <small>No SQLite connector query history for this source yet.</small>
+            )}
         </div>
     );
 }

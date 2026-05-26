@@ -147,8 +147,8 @@ func savedQueryKey(relPath string, query string, kind string) string {
 
 func cleanQueryKind(kind string) string {
 	kind = strings.ToLower(strings.TrimSpace(kind))
-	if kind == "sql" {
-		return "sql"
+	if kind == "sql" || kind == "sqlite-sql" {
+		return kind
 	}
 	return "filter"
 }

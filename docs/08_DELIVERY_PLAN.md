@@ -174,6 +174,7 @@ Current status:
 - The workbench can inspect SQLite metadata tables, search/filter columns, copy sample rows, and view dataset SQL views.
 - The Data & Analytics SQLite connector can inspect workspace SQLite tables, views, columns, indexes, row counts, and capped samples without executing user SQL.
 - The Data & Analytics SQLite connector query surface has visible row cap, timeout, and cancel controls; backend requests enforce those settings, support request-ID cancellation, and redact connector errors before SQL run metadata is recorded.
+- The Data & Analytics SQLite schema browser can select tables/views, preview rows through the same capped query path, save SQLite connector queries separately from dataset SQL snippets, and filter SQLite query history.
 - Settings can save local connector profiles with read-only defaults, result caps, timeouts, and protected credential references; returned profiles redact passwords/tokens.
 - Chat messages and context-pack previews warn when cited files changed after the answer/context was created.
 - Stale-context refresh can rebuild a context preview from changed files and records the refresh in the approval/metadata trail.
@@ -336,6 +337,14 @@ This batch made more of the studio inspectable and auditable without turning on 
 4. Connector errors are redacted before they are recorded in SQL run metadata, and redaction/cancellation paths have backend tests.
 5. Connector SQL/dependency metadata is still recorded only after explicit user-triggered query completion or failure.
 
+## Completed Batch: SQLite Schema Explorer Foundation
+
+1. SQLite schema inspection now has selectable tables and views instead of a static object summary.
+2. Selected schema nodes can run an explicit capped row preview through the guarded SQLite query path.
+3. SQLite connector queries are saved under a separate `sqlite-sql` kind so they do not mix with dataset SQL snippets.
+4. The connector panel shows saved SQLite queries and a filterable SQLite query history from persisted SQL run records.
+5. Read-only status copy is visible near schema/query controls, and folder open still does not run connector work.
+
 ## Prepared Batch: Architecture Hardening Before Deeper Studios
 
 1. Extract chat/context/agent orchestration into a `useChatController` frontend hook and a backend `ChatService`.
@@ -349,7 +358,7 @@ This batch made more of the studio inspectable and auditable without turning on 
 ## Prepared Batch: Studio Query And Connector Maturity
 
 1. Add a richer metadata history tab with filters by kind, time, source path, and jump-to-chat/artifact/tool actions.
-2. Expand the SQLite connector with schema browsing, table previews, saved connector queries, and clearer read-only status. First manual schema inspection and explicit query guardrails are implemented; saved connector queries remain planned.
+2. Expand the SQLite connector with schema browsing, table previews, saved connector queries, and clearer read-only status. First manual schema inspection, explicit query guardrails, saved connector queries, query history, and schema-node previews are implemented.
 3. Add artifact lineage JSON import comparison in the UI, including validation errors and graph diff previews.
 4. Promote dataset dependency and SQL run records into first-class UI navigation from Data & Analytics, Artifacts, and Metadata Browser.
 5. Start a DuckDB multi-file workspace dataset surface for joins across CSV/XLSX-derived tables.

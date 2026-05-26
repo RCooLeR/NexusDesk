@@ -39,6 +39,7 @@ import {
     ListApprovals,
     ListDatasetQueries,
     ListDatasetSQLQueries,
+    ListSQLiteConnectorQueries,
     ListDatasetProfiles,
     ListWorkspaceProblems,
     ListWorkspaceTasks,
@@ -69,6 +70,7 @@ import {
     SaveAssistantProfile,
     SaveDatasetQuery,
     SaveDatasetSQLQuery,
+    SaveSQLiteConnectorQuery,
     SearchMetadata,
     SearchWorkspaceAdvanced,
     RunAgent,
@@ -284,10 +286,13 @@ export function NexusShell({
     const [rebuildingDatasetDependencyId, setRebuildingDatasetDependencyId] = useState('');
     const [datasetSQLRuns, setDatasetSQLRuns] = useState<SQLRun[]>([]);
     const [sqliteConnectorQuery, setSQLiteConnectorQuery] = useState('select name, type from sqlite_master where type in (\'table\', \'view\') order by name');
+    const [sqliteConnectorQueryLabel, setSQLiteConnectorQueryLabel] = useState('');
+    const [savedSQLiteConnectorQueries, setSavedSQLiteConnectorQueries] = useState<SavedDatasetQuery[]>([]);
     const [sqliteConnectorResult, setSQLiteConnectorResult] = useState<SQLiteQueryResult | null>(null);
     const [sqliteConnectorMetadata, setSQLiteConnectorMetadata] = useState<ConnectorMetadata | null>(null);
     const [isQueryingSQLiteConnector, setIsQueryingSQLiteConnector] = useState(false);
     const [isInspectingSQLiteConnector, setIsInspectingSQLiteConnector] = useState(false);
+    const [isSavingSQLiteConnectorQuery, setIsSavingSQLiteConnectorQuery] = useState(false);
     const [sqliteConnectorResultLimit, setSQLiteConnectorResultLimit] = useState(100);
     const [sqliteConnectorTimeoutSeconds, setSQLiteConnectorTimeoutSeconds] = useState(30);
     const [sqliteConnectorRequestID, setSQLiteConnectorRequestID] = useState('');
@@ -510,6 +515,11 @@ export function NexusShell({
     useEffect(() => {
         setSQLiteConnectorResult(null);
         setSQLiteConnectorMetadata(null);
+        setSavedSQLiteConnectorQueries([]);
+        if (filePreview?.fileType === 'database') {
+            void refreshSavedSQLiteConnectorQueries(filePreview.relPath);
+            void refreshDatasetLineage(filePreview.relPath);
+        }
     }, [filePreview?.relPath]);
 
     useEffect(() => {
@@ -2151,6 +2161,14 @@ export function NexusShell({
         }
     }
 
+    async function refreshSavedSQLiteConnectorQueries(relPath: string) {
+        try {
+            setSavedSQLiteConnectorQueries(await ListSQLiteConnectorQueries(relPath));
+        } catch {
+            setSavedSQLiteConnectorQueries([]);
+        }
+    }
+
     async function refreshDatasetLineage(relPath: string) {
         try {
             setDatasetDependencies(await ListDatasetDependencies(relPath));
@@ -3689,18 +3707,24 @@ export function NexusShell({
         }
     }
 
-    async function queryActiveSQLiteFile() {
+    async function queryActiveSQLiteFile(queryOverride?: string) {
         if (!workspace || !filePreview || filePreview.fileType !== 'database') {
             setWorkspaceStatus('Select a SQLite database file before querying it.');
             return;
         }
+        const sql = queryOverride ?? sqliteConnectorQuery;
+        if (!sql.trim()) {
+            setWorkspaceStatus('Enter a read-only SQLite query before running it.');
+            return;
+        }
         const requestId = `sqlite-${Date.now()}-${Math.random().toString(36).slice(2)}`;
+        setSQLiteConnectorQuery(sql);
         setIsQueryingSQLiteConnector(true);
         setSQLiteConnectorRequestID(requestId);
         try {
             const result = await QueryWorkspaceSQLite({
                 relPath: filePreview.relPath,
-                sql: sqliteConnectorQuery,
+                sql,
                 requestId,
                 resultLimit: sqliteConnectorResultLimit,
                 timeoutSeconds: sqliteConnectorTimeoutSeconds,
@@ -3731,6 +3755,36 @@ export function NexusShell({
             const message = error instanceof Error ? error.message : '';
             setWorkspaceStatus(message || 'Could not cancel SQLite connector query.');
         }
+    }
+
+    async function saveCurrentSQLiteConnectorQuery() {
+        if (!workspace || !filePreview || filePreview.fileType !== 'database' || !sqliteConnectorQuery.trim()) {
+            setWorkspaceStatus('Select a SQLite database and enter a read-only query before saving it.');
+            return;
+        }
+        setIsSavingSQLiteConnectorQuery(true);
+        try {
+            const saved = await SaveSQLiteConnectorQuery(filePreview.relPath, sqliteConnectorQuery, sqliteConnectorQueryLabel);
+            setSQLiteConnectorQueryLabel('');
+            await refreshSavedSQLiteConnectorQueries(filePreview.relPath);
+            await refreshDatasetLineage(filePreview.relPath);
+            setWorkspaceStatus(`Saved SQLite connector query "${saved.label}".`);
+            pushToolEvent('SQLite connector query saved', `${saved.relPath}: ${saved.label}`);
+        } catch (error) {
+            const message = error instanceof Error ? error.message : '';
+            setWorkspaceStatus(message || 'Could not save SQLite connector query.');
+        } finally {
+            setIsSavingSQLiteConnectorQuery(false);
+        }
+    }
+
+    async function previewSQLiteSchemaObject(objectName: string) {
+        if (!workspace || !filePreview || filePreview.fileType !== 'database') {
+            setWorkspaceStatus('Select a SQLite database file before previewing schema rows.');
+            return;
+        }
+        const query = `select * from ${quoteSQLiteIdentifier(objectName)}`;
+        await queryActiveSQLiteFile(query);
     }
 
     async function inspectActiveSQLiteFile() {
@@ -4130,7 +4184,10 @@ export function NexusShell({
                 onSearchWorkspace={() => void searchWorkspace()}
                 onSelectSearchResult={(result) => void selectSearchResult(result)}
                 onSQLiteConnectorQueryChange={setSQLiteConnectorQuery}
+                onSQLiteConnectorQueryLabelChange={setSQLiteConnectorQueryLabel}
+                onPreviewSQLiteSchemaObject={(objectName) => void previewSQLiteSchemaObject(objectName)}
                 onSQLiteConnectorResultLimitChange={(value) => setSQLiteConnectorResultLimit(clampConnectorNumber(value, 1, 10000, 100))}
+                onSaveSQLiteConnectorQuery={() => void saveCurrentSQLiteConnectorQuery()}
                 onSQLiteConnectorTimeoutSecondsChange={(value) => setSQLiteConnectorTimeoutSeconds(clampConnectorNumber(value, 1, 300, 30))}
                 onSummarizeGitDiff={() => void summarizeGitDiff()}
                 onTabChange={changeBottomStudioTab}
@@ -4145,10 +4202,13 @@ export function NexusShell({
                 settingsStatus={settingsStatus}
                 showTabs={options.showTabs}
                 sqliteConnectorQuery={sqliteConnectorQuery}
+                sqliteConnectorQueryLabel={sqliteConnectorQueryLabel}
                 sqliteConnectorResultLimit={sqliteConnectorResultLimit}
                 sqliteConnectorResult={sqliteConnectorResult}
                 sqliteConnectorMetadata={sqliteConnectorMetadata}
                 sqliteConnectorTimeoutSeconds={sqliteConnectorTimeoutSeconds}
+                savedSQLiteConnectorQueries={savedSQLiteConnectorQueries}
+                isSavingSQLiteConnectorQuery={isSavingSQLiteConnectorQuery}
                 sqliteStatus={sqliteStatus}
                 toolEvents={localToolEvents}
                 workspace={workspace}
@@ -4718,6 +4778,10 @@ function clampConnectorNumber(value: unknown, min: number, max: number, fallback
         return fallback;
     }
     return Math.min(max, Math.max(min, Math.trunc(numeric)));
+}
+
+function quoteSQLiteIdentifier(value: string) {
+    return `"${value.replaceAll('"', '""')}"`;
 }
 
 function defaultAssistantProfile(): AssistantProfile {

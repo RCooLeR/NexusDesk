@@ -115,6 +115,8 @@ export function ListDatasetSQLQueries(arg1:string):Promise<Array<dataset.SavedQu
 
 export function ListDatasetSQLRuns(arg1:string):Promise<Array<appmeta.SQLRun>>;
 
+export function ListSQLiteConnectorQueries(arg1:string):Promise<Array<dataset.SavedQuery>>;
+
 export function ListWorkspaceProblems():Promise<workspace.ProblemSummary>;
 
 export function ListWorkspaceTasks():Promise<main.WorkspaceTaskSummary>;
@@ -170,6 +172,8 @@ export function SaveDatasetQuery(arg1:string,arg2:string,arg3:string):Promise<da
 export function SaveDatasetSQLQuery(arg1:string,arg2:string,arg3:string):Promise<dataset.SavedQuery>;
 
 export function SaveLLMSettings(arg1:storage.LLMSettings):Promise<storage.LLMSettings>;
+
+export function SaveSQLiteConnectorQuery(arg1:string,arg2:string,arg3:string):Promise<dataset.SavedQuery>;
 
 export function SearchMetadata(arg1:string):Promise<Array<appmeta.MetadataSearchResult>>;
 

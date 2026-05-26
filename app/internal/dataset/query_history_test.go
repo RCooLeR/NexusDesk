@@ -26,6 +26,13 @@ func TestSaveAndListSavedQueries(t *testing.T) {
 	if sql.Kind != "sql" {
 		t.Fatalf("expected SQL query kind: %#v", sql)
 	}
+	sqliteSQL, err := SaveQueryKind(root, "leads.csv", "select * from leads", "SQLite rows", "sqlite-sql")
+	if err != nil {
+		t.Fatalf("SaveQueryKind returned error: %v", err)
+	}
+	if sqliteSQL.Kind != "sqlite-sql" {
+		t.Fatalf("expected SQLite SQL query kind: %#v", sqliteSQL)
+	}
 
 	queries, err := ListSavedQueries(root, "leads.csv")
 	if err != nil {
@@ -40,6 +47,13 @@ func TestSaveAndListSavedQueries(t *testing.T) {
 	}
 	if len(sqlQueries) != 1 || sqlQueries[0].Query != "select * from dataset" {
 		t.Fatalf("unexpected saved SQL queries: %#v", sqlQueries)
+	}
+	sqliteSQLQueries, err := ListSavedQueriesKind(root, "leads.csv", "sqlite-sql")
+	if err != nil {
+		t.Fatalf("ListSavedQueriesKind returned error: %v", err)
+	}
+	if len(sqliteSQLQueries) != 1 || sqliteSQLQueries[0].Query != "select * from leads" {
+		t.Fatalf("unexpected saved SQLite SQL queries: %#v", sqliteSQLQueries)
 	}
 }
 

@@ -527,6 +527,10 @@ func (a *App) SaveDatasetSQLQuery(relPath string, query string, label string) (d
 	return a.datasetSvc.SaveSQLQuery(relPath, query, label)
 }
 
+func (a *App) SaveSQLiteConnectorQuery(relPath string, query string, label string) (dataset.SavedQuery, error) {
+	return a.datasetSvc.SaveSQLiteConnectorQuery(relPath, query, label)
+}
+
 func (a *App) ListDatasetDependencies(relPath string) ([]appmeta.DatasetDependency, error) {
 	return a.datasetSvc.ListDependencies(relPath)
 }
@@ -553,6 +557,10 @@ func (a *App) InspectWorkspaceSQLite(relPath string) (dbconnector.ConnectorMetad
 
 func (a *App) ListDatasetSQLQueries(relPath string) ([]dataset.SavedQuery, error) {
 	return a.datasetSvc.ListSQLQueries(relPath)
+}
+
+func (a *App) ListSQLiteConnectorQueries(relPath string) ([]dataset.SavedQuery, error) {
+	return a.datasetSvc.ListSQLiteConnectorQueries(relPath)
 }
 
 func (a *App) PreviewDatasetChart(request workspace.DatasetChartRequest) (workspace.DatasetChartResult, error) {

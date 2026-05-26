@@ -153,7 +153,10 @@ type BottomStudioPanelProps = {
     onSearchWorkspace: () => void;
     onSelectSearchResult: (result: WorkspaceSearchResult) => void;
     onSQLiteConnectorQueryChange: (content: string) => void;
+    onSQLiteConnectorQueryLabelChange: (content: string) => void;
+    onPreviewSQLiteSchemaObject: (objectName: string) => void;
     onSQLiteConnectorResultLimitChange: (value: number) => void;
+    onSaveSQLiteConnectorQuery: () => void;
     onSQLiteConnectorTimeoutSecondsChange: (value: number) => void;
     onSummarizeGitDiff: () => void;
     onTabChange: (tab: BottomStudioTab) => void;
@@ -167,10 +170,13 @@ type BottomStudioPanelProps = {
     settingsDraft: LLMSettings;
     settingsStatus: string;
     sqliteConnectorQuery: string;
+    sqliteConnectorQueryLabel: string;
     sqliteConnectorResultLimit: number;
     sqliteConnectorResult: SQLiteQueryResult | null;
     sqliteConnectorMetadata: ConnectorMetadata | null;
     sqliteConnectorTimeoutSeconds: number;
+    savedSQLiteConnectorQueries: SavedDatasetQuery[];
+    isSavingSQLiteConnectorQuery: boolean;
     sqliteStatus: SQLiteMetadataStatus | null;
     toolEvents: ToolEvent[];
     workspace: WorkspaceSnapshot | null;
@@ -336,7 +342,10 @@ export function BottomStudioPanel({
     onSearchWorkspace,
     onSelectSearchResult,
     onSQLiteConnectorQueryChange,
+    onSQLiteConnectorQueryLabelChange,
+    onPreviewSQLiteSchemaObject,
     onSQLiteConnectorResultLimitChange,
+    onSaveSQLiteConnectorQuery,
     onSQLiteConnectorTimeoutSecondsChange,
     onSummarizeGitDiff,
     onTabChange,
@@ -350,10 +359,13 @@ export function BottomStudioPanel({
     settingsDraft,
     settingsStatus,
     sqliteConnectorQuery,
+    sqliteConnectorQueryLabel,
     sqliteConnectorResultLimit,
     sqliteConnectorResult,
     sqliteConnectorMetadata,
     sqliteConnectorTimeoutSeconds,
+    savedSQLiteConnectorQueries,
+    isSavingSQLiteConnectorQuery,
     sqliteStatus,
     toolEvents,
     workspace,
@@ -540,16 +552,22 @@ export function BottomStudioPanel({
                         onSaveDatasetSQLQuery={onSaveDatasetSQLQuery}
                         onSearchMetadata={onSearchMetadata}
                         onSQLiteConnectorQueryChange={onSQLiteConnectorQueryChange}
+                        onSQLiteConnectorQueryLabelChange={onSQLiteConnectorQueryLabelChange}
+                        onPreviewSQLiteSchemaObject={onPreviewSQLiteSchemaObject}
                         onSQLiteConnectorResultLimitChange={onSQLiteConnectorResultLimitChange}
+                        onSaveSQLiteConnectorQuery={onSaveSQLiteConnectorQuery}
                         onSQLiteConnectorTimeoutSecondsChange={onSQLiteConnectorTimeoutSecondsChange}
                         rebuildingDatasetDependencyId={rebuildingDatasetDependencyId}
                         savedDatasetQueries={savedDatasetQueries}
                         savedDatasetSQLQueries={savedDatasetSQLQueries}
+                        savedSQLiteConnectorQueries={savedSQLiteConnectorQueries}
                         sqliteConnectorQuery={sqliteConnectorQuery}
+                        sqliteConnectorQueryLabel={sqliteConnectorQueryLabel}
                         sqliteConnectorResultLimit={sqliteConnectorResultLimit}
                         sqliteConnectorResult={sqliteConnectorResult}
                         sqliteConnectorMetadata={sqliteConnectorMetadata}
                         sqliteConnectorTimeoutSeconds={sqliteConnectorTimeoutSeconds}
+                        isSavingSQLiteConnectorQuery={isSavingSQLiteConnectorQuery}
                         sqliteStatus={sqliteStatus}
                         workspace={workspace}
                         workspaceFreshness={workspaceFreshness}

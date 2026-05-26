@@ -21,7 +21,7 @@ The implemented desktop slice currently contains:
 - persisted tool-run dry-runs/executions with approval references
 - SQLite metadata initialization, JSON-store migration compatibility, direct repository-backed writes for fresh chat/approval/artifact/tool-run rows, metadata history search, dataset dependency records, and SQL run history
 - DuckDB-capable read-only SQL surface over datasets, with CGO-tagged driver execution and bounded CSV fallback
-- first read-only SQLite workspace database connector for `.sqlite`, `.sqlite3`, and `.db` files, with visible per-query row caps, timeouts, cancellation, and redacted connector errors
+- first read-only SQLite workspace database connector for `.sqlite`, `.sqlite3`, and `.db` files, with visible per-query row caps, timeouts, cancellation, schema-object browsing, saved connector queries, query history, and redacted connector errors
 - artifact comparison for generated output versions
 - selectable artifact lineage graph and workspace freshness snapshots for source-aware generated outputs
 - artifact lineage JSON export/import for debugging and future sync workflows
@@ -325,7 +325,7 @@ Target studio ownership:
 
 - Workbench owns IDE navigation, git status/diffs, editor groups, search, problems, symbols, tests/tasks, and code patch workflows.
 - Data & Analytics owns file datasets, spreadsheets, database connectors, dump imports, temporary Docker-backed database sandboxes, schemas, query notebooks, profiling, charts, data research artifacts, and marketing/CRM analytics imports.
-- Connector metadata starts as a read-only, user-triggered inspection model under Data & Analytics; workspace open may classify database files but must not inspect schemas, execute queries, or open connectors automatically.
+- Connector metadata starts as a read-only, user-triggered inspection model under Data & Analytics. The first SQLite schema browser can select tables/views, show columns/indexes/samples, and run capped row previews only after an explicit user action; workspace open may classify database files but must not inspect schemas, execute queries, or open connectors automatically.
 - Analytics-specific connectors are a subdomain of Data & Analytics until they need a dedicated layout.
 - Document Studio owns document extraction, OCR, document sets, comparison, redline/comment workflows, generated reports, and generated presentations.
 - AI Assistant owns context selection, model/provider controls, tool plans, agent modes, citations, memory, and cross-surface orchestration as an always-visible layer.

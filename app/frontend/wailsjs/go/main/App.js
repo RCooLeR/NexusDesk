@@ -206,6 +206,10 @@ export function ListDatasetSQLRuns(arg1) {
   return window['go']['main']['App']['ListDatasetSQLRuns'](arg1);
 }
 
+export function ListSQLiteConnectorQueries(arg1) {
+  return window['go']['main']['App']['ListSQLiteConnectorQueries'](arg1);
+}
+
 export function ListWorkspaceProblems() {
   return window['go']['main']['App']['ListWorkspaceProblems']();
 }
@@ -316,6 +320,10 @@ export function SaveDatasetSQLQuery(arg1, arg2, arg3) {
 
 export function SaveLLMSettings(arg1) {
   return window['go']['main']['App']['SaveLLMSettings'](arg1);
+}
+
+export function SaveSQLiteConnectorQuery(arg1, arg2, arg3) {
+  return window['go']['main']['App']['SaveSQLiteConnectorQuery'](arg1, arg2, arg3);
 }
 
 export function SearchMetadata(arg1) {

@@ -118,12 +118,32 @@ func (s *DatasetService) SaveSQLQuery(relPath string, query string, label string
 	return saved, err
 }
 
+func (s *DatasetService) SaveSQLiteConnectorQuery(relPath string, query string, label string) (dataset.SavedQuery, error) {
+	root, err := s.requireRoot("saving SQLite connector queries")
+	if err != nil {
+		return dataset.SavedQuery{}, err
+	}
+	saved, err := dataset.SaveQueryKind(root, relPath, query, label, "sqlite-sql")
+	if err == nil {
+		s.recordDependency(root, saved.RelPath, "sqlite-query-snippet", saved.Query, saved.Label, "")
+	}
+	return saved, err
+}
+
 func (s *DatasetService) ListSQLQueries(relPath string) ([]dataset.SavedQuery, error) {
 	root := s.workspaceRoot()
 	if root == "" {
 		return []dataset.SavedQuery{}, nil
 	}
 	return dataset.ListSavedQueriesKind(root, relPath, "sql")
+}
+
+func (s *DatasetService) ListSQLiteConnectorQueries(relPath string) ([]dataset.SavedQuery, error) {
+	root := s.workspaceRoot()
+	if root == "" {
+		return []dataset.SavedQuery{}, nil
+	}
+	return dataset.ListSavedQueriesKind(root, relPath, "sqlite-sql")
 }
 
 func (s *DatasetService) ListDependencies(relPath string) ([]appmeta.DatasetDependency, error) {

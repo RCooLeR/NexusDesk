@@ -376,11 +376,14 @@ Step 5.2: Database connector framework
 
 Step 5.3: Schema and relationship explorer
 
-- [ ] Show databases and schemas.
-- [ ] Show tables and views.
-- [ ] Show columns, types, nullable, defaults.
-- [ ] Show indexes and keys.
-- [ ] Show row counts and table samples.
+- [x] Show SQLite database file schema objects in the connector inspector.
+- [x] Show SQLite tables and views.
+- [x] Show SQLite columns, types, nullable, defaults, and primary-key markers.
+- [x] Show SQLite indexes.
+- [x] Show SQLite row counts and capped table samples.
+- [ ] Generalize database/schema navigation for external connectors.
+- [ ] Generalize tables and views for external connectors.
+- [ ] Generalize columns, types, nullable, defaults, indexes, keys, row counts, and samples for external connectors.
 - [ ] Infer relationships where metadata is absent.
 - [ ] Generate ERD-like relationship view.
 - [ ] Let AI explain schema with citations.
@@ -1057,18 +1060,29 @@ Steps:
 4. [x] Add query cancellation plumbing for in-flight connector calls.
 5. [x] Keep connector execution user-triggered and record SQL/dependency metadata after completion/failure.
 
-Recommended next batch: SQLite Schema Explorer Foundation.
+Completed batch: SQLite Schema Explorer Foundation.
 
 Steps:
 
-1. [ ] Add table/view selection inside the SQLite schema inspector.
-2. [ ] Add user-triggered capped table preview from selected schema nodes.
-3. [ ] Add saved SQLite connector queries separate from dataset SQL snippets.
-4. [ ] Add connector query history with status, cap, timeout, row count, and source path filters.
-5. [ ] Add clearer read-only proof/status copy near every connector execution surface.
-6. [ ] Keep every schema/query action user-triggered and avoid connector work on folder open.
+1. [x] Add table/view selection inside the SQLite schema inspector.
+2. [x] Add user-triggered capped table preview from selected schema nodes.
+3. [x] Add saved SQLite connector queries separate from dataset SQL snippets.
+4. [x] Add connector query history with status, cap, timeout, row count, and source path filters.
+5. [x] Add clearer read-only proof/status copy near every connector execution surface.
+6. [x] Keep every schema/query action user-triggered and avoid connector work on folder open.
 
-Reasoning: SQLite connector execution now has visible guardrails. The next gap is making inspected schemas navigable and reusable before adding external database engines.
+Recommended next batch: SQLite Connector Query Workflow.
+
+Steps:
+
+1. [ ] Add query result export to CSV for SQLite connector results.
+2. [ ] Add query result export to Markdown report with SQL, cap, timeout, and source database citation.
+3. [ ] Add connector query-to-artifact lineage that links saved query, SQL run, source database, and exported artifact.
+4. [ ] Add AI explain-schema action for the selected SQLite table/view with cited columns/indexes/sample rows.
+5. [ ] Add relationship hints from SQLite foreign keys and obvious `*_id` columns.
+6. [ ] Keep exports and AI actions user-triggered and bounded to selected schema/query context.
+
+Reasoning: The SQLite schema browser is now navigable and reusable. The next gap is turning connector query results into cited artifacts and first relationship/schema explanations.
 
 ## Directory Ownership Notes
 
@@ -1128,7 +1142,7 @@ Workspace scan counters are diagnostic data, not primary navigation content. Kee
 
 `app/frontend/src/features/shell/GitDiffPanel.tsx` owns the bottom-drawer Git tab for selected changed-file review, file stage/unstage controls, hunk selection state, approval-backed hunk stage/unstage/discard/revert controls, and read-only staged/unstaged working-tree diffs.
 
-`app/frontend/src/features/shell/DataOperationsPanel.tsx` currently owns Data route workflows, including bounded data source cards, explicit Open/Profile/Inspect actions, and the SQLite connector query panel with visible row cap, timeout, and cancel controls. Planned dump/import and compressed-export actions are visible but disabled until the job/sandbox lifecycle exists.
+`app/frontend/src/features/shell/DataOperationsPanel.tsx` currently owns Data route workflows, including bounded data source cards, explicit Open/Profile/Inspect actions, and the SQLite connector query panel with visible row cap, timeout, cancel controls, schema object selection, explicit row preview, saved connector queries, and connector query history. Planned dump/import and compressed-export actions are visible but disabled until the job/sandbox lifecycle exists.
 
 `app/frontend/src/features/shell/ArtifactStudioPanel.tsx` currently owns Artifact Studio route workflows.
 

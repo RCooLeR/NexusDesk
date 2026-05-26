@@ -45,7 +45,8 @@ export async function installNexusMocks(page) {
             datasetViews: [{name: 'campaigns', relPath: 'data/campaigns.csv', engine: 'duckdb view / csv fallback', columns: table.columns, rows: 2, message: 'campaigns view'}],
         };
         const sqlRuns = [
-            {id: 'sql-smoke', relPath: 'data/campaigns.csv', sql: 'select * from dataset', engine: 'duckdb-compatible-csv', status: 'ok', message: 'SQL smoke ready', rowCount: 2, artifactRelPath: '.nexusdesk/artifacts/sql-smoke.md', createdAt: '2026-05-14T00:00:00Z'},
+            {id: 'sql-smoke', relPath: 'data/campaigns.csv', sql: 'select * from dataset', engine: 'duckdb-compatible-csv', status: 'completed', message: 'SQL smoke ready', rows: 2, artifact: '.nexusdesk/artifacts/sql-smoke.md', createdAt: '2026-05-14T00:00:00Z'},
+            {id: 'sqlite-smoke', relPath: 'data/local.sqlite', sql: 'select * from campaigns', engine: 'sqlite-readonly', status: 'completed', message: 'Read-only SQLite query returned 2 rows.', rows: 2, artifact: '', createdAt: '2026-05-14T00:00:01Z'},
         ];
         const dependencies = [
             {id: 'dep-smoke', relPath: 'data/campaigns.csv', kind: 'sql-report', query: 'select * from dataset', target: '.nexusdesk/artifacts/sql-smoke.md', artifactRelPath: '.nexusdesk/artifacts/sql-smoke.md', createdAt: '2026-05-14T00:00:00Z'},
@@ -88,6 +89,7 @@ export async function installNexusMocks(page) {
                     ListDatasetProfiles: async () => [{relPath: 'data/campaigns.csv', name: 'campaigns.csv', kind: 'csv', rows: 2, columns: 3, sheets: [], profiles: table.profiles, updatedAt: '2026-05-14T00:00:00Z', message: 'Profile ready'}],
                     ListDatasetQueries: async () => [],
                     ListDatasetSQLQueries: async () => [{relPath: 'data/campaigns.csv', query: 'select * from dataset', label: 'All campaigns', kind: 'sql', updatedAt: '2026-05-14T00:00:00Z'}],
+                    ListSQLiteConnectorQueries: async () => [{relPath: 'data/local.sqlite', query: 'select * from campaigns', label: 'Preview campaigns', kind: 'sqlite-sql', updatedAt: '2026-05-14T00:00:00Z'}],
                     ListDatasetDependencies: async () => dependencies,
                     ListDatasetSQLRuns: async () => sqlRuns,
                     ListWorkspaceTasks: async () => ({
@@ -136,6 +138,7 @@ export async function installNexusMocks(page) {
                     SearchMetadata: async () => [{kind: 'chat', relPath: 'data/campaigns.csv', title: 'Assistant answer', snippet: 'Smoke answer', createdAt: '2026-05-14T00:00:00Z'}],
                     QueryDatasetSQL: async () => ({relPath: 'data/campaigns.csv', sql: 'select * from dataset', engine: 'duckdb-compatible-csv', columns: table.columns, rows: table.rows, totalRows: 2, matchedRows: 2, message: 'SQL smoke ready'}),
                     SaveDatasetSQLQuery: async () => ({relPath: 'data/campaigns.csv', query: 'select * from dataset', label: 'All campaigns', kind: 'sql', updatedAt: '2026-05-14T00:00:00Z'}),
+                    SaveSQLiteConnectorQuery: async (_relPath, query, label) => ({relPath: 'data/local.sqlite', query, label: label || 'Preview campaigns', kind: 'sqlite-sql', updatedAt: '2026-05-14T00:00:00Z'}),
                     QueryWorkspaceSQLite: async (request) => ({relPath: 'data/local.sqlite', sql: request.sql || 'select name, type from sqlite_master', engine: 'sqlite-readonly', columns: ['name', 'type'], rows: [['campaigns', 'table']], totalRows: 1, truncated: false, resultLimit: request.resultLimit || 100, timeoutSeconds: request.timeoutSeconds || 30, message: 'Read-only SQLite query returned 1 row.'}),
                     CancelWorkspaceSQLiteQuery: async () => true,
                     InspectWorkspaceSQLite: async () => ({
