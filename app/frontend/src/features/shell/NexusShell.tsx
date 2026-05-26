@@ -25,8 +25,6 @@ import {
     EnsureSQLiteMetadataStore,
     ExecuteAgentTool,
     ExportArtifactLineageJSON,
-    GetGitFileDiff,
-    GetGitStatus,
     GetArtifactMetadata,
     GetArtifactLineage,
     InspectMetadataStore,
@@ -87,8 +85,7 @@ import type {
     FileNode,
     FilePreview,
     FileWriteProposal,
-    GitFileDiff,
-    GitStatus,
+    GitHunkActionRequest,
     LLMChatResult,
     LLMProbeResult,
     LLMSettings,
@@ -125,6 +122,7 @@ import {
 } from './llmModelCatalog';
 import {useResizablePanels} from './useResizablePanels';
 import {useStudioNavigation} from './useStudioNavigation';
+import {useGitController} from './useGitController';
 
 type NexusShellProps = {
     state: StartupState;
@@ -236,10 +234,6 @@ export function NexusShell({
     const [metadataSearchResults, setMetadataSearchResults] = useState<MetadataSearchResult[]>([]);
     const [isSearchingMetadata, setIsSearchingMetadata] = useState(false);
     const [workspaceFreshness, setWorkspaceFreshness] = useState<WorkspaceFreshnessStatus | null>(null);
-    const [gitStatus, setGitStatus] = useState<GitStatus | null>(null);
-    const [selectedGitChangePath, setSelectedGitChangePath] = useState('');
-    const [selectedGitFileDiff, setSelectedGitFileDiff] = useState<GitFileDiff | null>(null);
-    const [isLoadingGitFileDiff, setIsLoadingGitFileDiff] = useState(false);
     const [datasetDependencies, setDatasetDependencies] = useState<DatasetDependency[]>([]);
     const [rebuildingDatasetDependencyId, setRebuildingDatasetDependencyId] = useState('');
     const [datasetSQLRuns, setDatasetSQLRuns] = useState<SQLRun[]>([]);
@@ -279,6 +273,23 @@ export function NexusShell({
         changeStudioRoute,
         mainStudioTab,
     } = useStudioNavigation(pushToolEvent);
+    const {
+        applyGitHunkAction,
+        gitFileActionPreview,
+        gitHunkActionPreview,
+        gitStatus,
+        isApplyingGitHunkAction,
+        isLoadingGitFileDiff,
+        isPreviewingGitFileAction,
+        isPreviewingGitHunkAction,
+        previewGitFileAction,
+        previewGitHunkAction,
+        refreshGitStatus,
+        resetGitStatus,
+        selectedGitChangePath,
+        selectedGitFileDiff,
+        selectGitChange,
+    } = useGitController(workspace?.root, pushToolEvent);
 
     useEffect(() => {
         setSettingsDraft(settingsWithRuntimeContext(llmSettings, probeResult?.runtime));
@@ -288,12 +299,6 @@ export function NexusShell({
     useEffect(() => {
         void refreshAgentTools();
     }, []);
-
-    useEffect(() => {
-        setGitStatus(workspace ? emptyGitStatus('Git status not loaded. Press Refresh git when you need repository status.') : null);
-        setSelectedGitChangePath('');
-        setSelectedGitFileDiff(null);
-    }, [workspace?.root]);
 
     useEffect(() => {
         setAgentToolPlan(buildAgentToolPlan(agentTools, filePreview, artifactMetadata, activeFile));
@@ -547,26 +552,6 @@ export function NexusShell({
     }, [chatMessages, isSendingPrompt]);
 
     const commandActions = buildCommandActions();
-
-    useEffect(() => {
-        const changes = gitStatus?.changedFiles ?? [];
-        if (changes.length === 0) {
-            setSelectedGitChangePath('');
-            setSelectedGitFileDiff(null);
-            return;
-        }
-        if (!selectedGitChangePath || !changes.some((change) => change.path === selectedGitChangePath)) {
-            setSelectedGitChangePath(changes[0].path);
-        }
-    }, [gitStatus?.generatedAt, gitStatus?.changedFiles, selectedGitChangePath]);
-
-    useEffect(() => {
-        if (!selectedGitChangePath || !gitStatus?.available) {
-            setSelectedGitFileDiff(null);
-            return;
-        }
-        void refreshSelectedGitFileDiff(selectedGitChangePath);
-    }, [gitStatus?.generatedAt, selectedGitChangePath, gitStatus?.available]);
 
     function pushToolEvent(title: string, detail: string) {
         setLocalToolEvents((current) => [
@@ -1106,6 +1091,36 @@ export function NexusShell({
         }
     }
 
+    async function applyGitHunkActionWithApproval(request: GitHunkActionRequest) {
+        if (!workspace) {
+            setWorkspaceStatus('Open a workspace before applying Git hunk actions.');
+            return;
+        }
+        const isDiscard = request.action === 'discard';
+        const approved = await requestApproval({
+            action: isDiscard ? 'Discard Git hunk' : 'Revert staged Git hunk',
+            confirmLabel: isDiscard ? 'Discard hunk' : 'Revert hunk',
+            message: isDiscard
+                ? `Discard unstaged hunk ${request.hunkIndex} in ${request.path}. This changes the working tree.`
+                : `Revert staged hunk ${request.hunkIndex} in ${request.path}. This changes the Git index.`,
+            risk: 'high',
+            target: `${request.path} hunk ${request.hunkIndex}`,
+        });
+        if (!approved) {
+            setWorkspaceStatus(`Git hunk action cancelled for ${request.path}.`);
+            return;
+        }
+
+        try {
+            const preview = await applyGitHunkAction(request);
+            await refreshApprovals();
+            setWorkspaceStatus(preview.message);
+        } catch (error) {
+            const message = error instanceof Error ? error.message : '';
+            setWorkspaceStatus(message || 'Could not apply Git hunk action.');
+        }
+    }
+
     async function deleteActiveFile() {
         if (!workspace || !filePreview || filePreview.kind !== 'file') {
             setWorkspaceStatus('Select a workspace file before deleting.');
@@ -1318,44 +1333,6 @@ export function NexusShell({
         }
     }
 
-    async function refreshGitStatus() {
-        try {
-            const status = await GetGitStatus();
-            const safeStatus = normalizeGitStatus(status);
-            setGitStatus(safeStatus);
-            if (safeStatus.available) {
-                pushToolEvent('Git status refreshed', safeStatus.message);
-            }
-        } catch (error) {
-            const message = error instanceof Error ? error.message : '';
-            setGitStatus(emptyGitStatus(message || 'Git status is unavailable.'));
-        }
-    }
-
-    async function refreshSelectedGitFileDiff(path: string) {
-        setIsLoadingGitFileDiff(true);
-        try {
-            const diff = await GetGitFileDiff(path);
-            setSelectedGitFileDiff(diff);
-            if (diff.message) {
-                pushToolEvent('Git file diff loaded', diff.message);
-            }
-        } catch (error) {
-            const message = error instanceof Error ? error.message : '';
-            setSelectedGitFileDiff({
-                path,
-                stagedDiff: '',
-                stagedDiffTruncated: false,
-                unstagedDiff: '',
-                unstagedDiffTruncated: false,
-                message: message || 'Git file diff is unavailable.',
-                generatedAt: '',
-            });
-        } finally {
-            setIsLoadingGitFileDiff(false);
-        }
-    }
-
     async function applyWorkspaceResult(result: WorkspaceOpenResult, verb: 'indexed' | 'refreshed') {
         if (!result.selected) {
             return false;
@@ -1365,9 +1342,7 @@ export function NexusShell({
         const rootChanged = workspace?.root !== safeSnapshot.root;
         const selectedNode = selectNodeAfterWorkspaceUpdate(safeSnapshot);
 
-        setGitStatus(emptyGitStatus('Git status not loaded. Press Refresh git when you need repository status.'));
-        setSelectedGitChangePath('');
-        setSelectedGitFileDiff(null);
+        resetGitStatus();
         onWorkspaceChange(safeSnapshot);
         setWorkspaceSearchResults([]);
         if (rootChanged) {
@@ -3140,6 +3115,8 @@ export function NexusShell({
                 datasetSQLQueryLabel={datasetSQLQueryLabel}
                 datasetSQLQueryResult={datasetSQLQueryResult}
                 filePreview={filePreview}
+                gitFileActionPreview={gitFileActionPreview}
+                gitHunkActionPreview={gitHunkActionPreview}
                 gitStatus={gitStatus}
                 selectedGitChangePath={selectedGitChangePath}
                 selectedGitFileDiff={selectedGitFileDiff}
@@ -3151,7 +3128,10 @@ export function NexusShell({
                 isExportingDatasetQuery={isExportingDatasetQuery}
                 isExportingDatasetSQL={isExportingDatasetSQL}
                 isGeneratingGitInsight={isSendingPrompt}
+                isApplyingGitHunkAction={isApplyingGitHunkAction}
                 isLoadingGitFileDiff={isLoadingGitFileDiff}
+                isPreviewingGitFileAction={isPreviewingGitFileAction}
+                isPreviewingGitHunkAction={isPreviewingGitHunkAction}
                 isPreparingMetadataStore={isPreparingMetadataStore}
                 isProfilingDataset={isProfilingDataset}
                 isPreviewingDatasetChart={isPreviewingDatasetChart}
@@ -3164,6 +3144,7 @@ export function NexusShell({
                 isSavingDatasetSQLQuery={isSavingDatasetSQLQuery}
                 isSavingSettings={isSavingSettings}
                 isSearchingMetadata={isSearchingMetadata}
+                isSearchingWorkspace={isSearchingWorkspace}
                 isTestingConnection={isTestingConnection}
                 metadataBrowser={metadataBrowser}
                 metadataSearchQuery={metadataSearchQuery}
@@ -3197,13 +3178,17 @@ export function NexusShell({
                 onExportDatasetSQL={() => void exportDatasetSQL()}
                 onExportLineage={() => void exportArtifactLineage()}
                 onInspectMetadata={() => void inspectMetadataStore()}
+                onClearWorkspaceSearch={() => setWorkspaceSearchResults([])}
                 onMetadataSearchQueryChange={setMetadataSearchQuery}
                 onOpenArtifactSource={() => void openArtifactSource()}
-                onSelectGitChange={setSelectedGitChangePath}
+                onSelectGitChange={selectGitChange}
                 onOpenLineageSource={(relPath) => void openLineageSource(relPath)}
                 onPrepareMetadataStore={() => void prepareSQLiteMetadataStore()}
                 onProfileDataset={() => void profileSelectedDataset()}
                 onPreviewDatasetChart={() => void previewDatasetChart()}
+                onPreviewGitFileAction={(action) => void previewGitFileAction(action)}
+                onPreviewGitHunkAction={(request) => void previewGitHunkAction(request)}
+                onApplyGitHunkAction={(request) => void applyGitHunkActionWithApproval(request)}
                 onOpenCommandPalette={() => {
                     setIsQuickOpenOpen(false);
                     setIsCommandPaletteOpen(true);
@@ -3224,6 +3209,8 @@ export function NexusShell({
                 onSelectArtifact={(artifact) => void selectArtifact(artifact)}
                 onSettingsDraftChange={updateSettingsDraft}
                 onSearchMetadata={() => void searchMetadataHistory()}
+                onSearchWorkspace={() => void searchWorkspace()}
+                onSelectSearchResult={(result) => void selectSearchResult(result)}
                 onSQLiteConnectorQueryChange={setSQLiteConnectorQuery}
                 onSummarizeGitDiff={() => void summarizeGitDiff()}
                 onTabChange={changeBottomStudioTab}
@@ -3242,6 +3229,9 @@ export function NexusShell({
                 toolEvents={localToolEvents}
                 workspace={workspace}
                 workspaceFreshness={workspaceFreshness}
+                workspaceSearchQuery={workspaceSearchQuery}
+                workspaceSearchResults={workspaceSearchResults}
+                onWorkspaceSearchQueryChange={setWorkspaceSearchQuery}
             />
         );
     }
@@ -3428,21 +3418,6 @@ function getSafeWorkspaceSnapshot(snapshot: WorkspaceSnapshot): WorkspaceSnapsho
             depth: typeof node.depth === 'number' && node.depth >= 0 ? node.depth : node.relPath.split('/').filter(Boolean).length,
             meta: node.meta || 'File',
         })),
-    };
-}
-
-function normalizeGitStatus(status: GitStatus | null | undefined): GitStatus {
-    if (!status) {
-        return emptyGitStatus('Git status is unavailable.');
-    }
-    return {
-        ...status,
-        changedFiles: Array.isArray(status.changedFiles) ? status.changedFiles : [],
-        stagedFiles: Array.isArray(status.stagedFiles) ? status.stagedFiles : [],
-        unstagedFiles: Array.isArray(status.unstagedFiles) ? status.unstagedFiles : [],
-        diff: typeof status.diff === 'string' ? status.diff : '',
-        stagedDiff: typeof status.stagedDiff === 'string' ? status.stagedDiff : '',
-        unstagedDiff: typeof status.unstagedDiff === 'string' ? status.unstagedDiff : '',
     };
 }
 
@@ -3647,28 +3622,6 @@ function sourcePathsFromContext(contextRelPath: string) {
         return [dirMatch[1]];
     }
     return [contextRelPath];
-}
-
-function emptyGitStatus(message: string): GitStatus {
-    return {
-        available: false,
-        repoRoot: '',
-        branch: '',
-        head: '',
-        dirty: false,
-        changedFiles: [],
-        stagedFiles: [],
-        unstagedFiles: [],
-        diff: '',
-        diffTruncated: false,
-        stagedDiff: '',
-        stagedDiffTruncated: false,
-        unstagedDiff: '',
-        unstagedDiffTruncated: false,
-        aheadBehind: '',
-        message,
-        generatedAt: '',
-    };
 }
 
 function limitGitPromptDiff(value: string) {

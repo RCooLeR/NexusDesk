@@ -1,6 +1,13 @@
 package main
 
-import "testing"
+import (
+	"os"
+	"os/exec"
+	"path/filepath"
+	"strconv"
+	"strings"
+	"testing"
+)
 
 func TestParseGitStatus(t *testing.T) {
 	changes, aheadBehind := parseGitStatus("## main...origin/main [ahead 1]\n M app.go\nA  new.go\nR  old.go -> next.go\n?? notes.md\n")
@@ -47,9 +54,144 @@ func TestCleanGitRelPath(t *testing.T) {
 		t.Fatalf("unexpected path: %q", path)
 	}
 
-	for _, value := range []string{"", "..", "../outside.go", "app/../outside.go", "-bad"} {
+	for _, value := range []string{"", "..", "../outside.go", "app/../outside.go", "app/..", "-bad"} {
 		if _, err := cleanGitRelPath(value); err == nil {
 			t.Fatalf("expected %q to be rejected", value)
 		}
+	}
+}
+
+func TestGitFileActionCommand(t *testing.T) {
+	stage, err := gitFileActionCommand(gitFileActionStage, "app/main.go")
+	if err != nil {
+		t.Fatalf("unexpected stage error: %v", err)
+	}
+	if got := strings.Join(stage, " "); got != "git add -- app/main.go" {
+		t.Fatalf("unexpected stage command: %q", got)
+	}
+
+	unstage, err := gitFileActionCommand(gitFileActionUnstage, "app/main.go")
+	if err != nil {
+		t.Fatalf("unexpected unstage error: %v", err)
+	}
+	if got := strings.Join(unstage, " "); got != "git restore --staged -- app/main.go" {
+		t.Fatalf("unexpected unstage command: %q", got)
+	}
+
+	if _, err := gitFileActionCommand("discard", "app/main.go"); err == nil {
+		t.Fatal("expected unsupported action to fail")
+	}
+}
+
+func TestGitHunkActionCommand(t *testing.T) {
+	discard, err := gitHunkActionCommand(gitHunkActionDiscard, gitDiffKindUnstaged)
+	if err != nil {
+		t.Fatalf("unexpected discard error: %v", err)
+	}
+	if got := strings.Join(discard, " "); got != "git apply --reverse --whitespace=nowarn" {
+		t.Fatalf("unexpected discard command: %q", got)
+	}
+
+	revert, err := gitHunkActionCommand(gitHunkActionRevert, gitDiffKindStaged)
+	if err != nil {
+		t.Fatalf("unexpected revert error: %v", err)
+	}
+	if got := strings.Join(revert, " "); got != "git apply --cached --reverse --whitespace=nowarn" {
+		t.Fatalf("unexpected revert command: %q", got)
+	}
+
+	if _, err := gitHunkActionCommand(gitHunkActionDiscard, gitDiffKindStaged); err == nil {
+		t.Fatal("expected invalid hunk action/kind pair to fail")
+	}
+}
+
+func TestExtractGitHunkPatch(t *testing.T) {
+	diff := strings.Join([]string{
+		"diff --git a/app.go b/app.go",
+		"index 1111111..2222222 100644",
+		"--- a/app.go",
+		"+++ b/app.go",
+		"@@ -1,3 +1,3 @@",
+		" line 1",
+		"-old 2",
+		"+new 2",
+		" line 3",
+		"@@ -9,3 +9,3 @@",
+		" line 9",
+		"-old 10",
+		"+new 10",
+		" line 11",
+	}, "\n")
+	patch, err := extractGitHunkPatch(diff, 2)
+	if err != nil {
+		t.Fatalf("extractGitHunkPatch returned error: %v", err)
+	}
+	if !strings.Contains(patch, "--- a/app.go\n+++ b/app.go\n@@ -9,3 +9,3 @@") {
+		t.Fatalf("patch did not include header and target hunk: %q", patch)
+	}
+	if strings.Contains(patch, "@@ -1,3 +1,3 @@") {
+		t.Fatalf("patch included the wrong hunk: %q", patch)
+	}
+}
+
+func TestApplyHunkActionDiscardsUnstagedHunk(t *testing.T) {
+	if _, err := exec.LookPath("git"); err != nil {
+		t.Skip("git is not available")
+	}
+	root := t.TempDir()
+	runTestGit(t, root, "init")
+	runTestGit(t, root, "config", "user.email", "test@example.com")
+	runTestGit(t, root, "config", "user.name", "Test User")
+	initial := []string{}
+	for index := 1; index <= 30; index++ {
+		initial = append(initial, "line "+strconv.Itoa(index))
+	}
+	path := filepath.Join(root, "notes.txt")
+	if err := os.WriteFile(path, []byte(strings.Join(initial, "\n")+"\n"), 0o644); err != nil {
+		t.Fatalf("write initial file: %v", err)
+	}
+	runTestGit(t, root, "add", "notes.txt")
+	runTestGit(t, root, "commit", "-m", "initial")
+
+	modified := append([]string{}, initial...)
+	modified[1] = "changed 2"
+	modified[24] = "changed 25"
+	if err := os.WriteFile(path, []byte(strings.Join(modified, "\n")+"\n"), 0o644); err != nil {
+		t.Fatalf("write modified file: %v", err)
+	}
+
+	service := GitService{workspaceRoot: func() string { return root }}
+	preview, err := service.ApplyHunkAction(GitHunkActionRequest{
+		Path:      "notes.txt",
+		Action:    gitHunkActionDiscard,
+		DiffKind:  gitDiffKindUnstaged,
+		HunkIndex: 1,
+	})
+	if err != nil {
+		t.Fatalf("ApplyHunkAction returned error: %v", err)
+	}
+	if preview.Status.Available != true {
+		t.Fatalf("expected status in hunk action result: %#v", preview)
+	}
+	content, err := os.ReadFile(path)
+	if err != nil {
+		t.Fatalf("read modified file: %v", err)
+	}
+	text := string(content)
+	lines := strings.Split(strings.ReplaceAll(text, "\r\n", "\n"), "\n")
+	if lines[1] != "line 2" {
+		t.Fatalf("expected first hunk to be discarded: %q", text)
+	}
+	if lines[24] != "changed 25" {
+		t.Fatalf("expected second hunk to remain: %q", text)
+	}
+}
+
+func runTestGit(t *testing.T, root string, args ...string) {
+	t.Helper()
+	command := exec.Command("git", append([]string{"-C", root}, args...)...)
+	output, err := command.CombinedOutput()
+	if err != nil {
+		t.Fatalf("git %s failed: %v\n%s", strings.Join(args, " "), err, string(output))
 	}
 }

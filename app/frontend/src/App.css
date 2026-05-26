@@ -2419,6 +2419,10 @@ button:disabled {
     gap: 8px;
 }
 
+.code-studio-queue-grid.compact {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
 .code-studio-metric,
 .code-studio-queue-card,
 .code-studio-active-file,
@@ -2475,6 +2479,69 @@ button:disabled {
     gap: 7px;
     min-height: 0;
     overflow: auto;
+}
+
+.code-studio-search-panel {
+    display: grid;
+    gap: 10px;
+    min-height: 0;
+    overflow: hidden;
+}
+
+.code-studio-search-controls {
+    display: grid;
+    gap: 6px;
+    grid-template-columns: minmax(0, 1fr) auto auto;
+}
+
+.code-studio-search-controls input {
+    border: 1px solid var(--nd-border-soft);
+    border-radius: var(--nd-radius-sm);
+    color: var(--nd-charcoal);
+    min-height: 30px;
+    min-width: 0;
+    padding: 0 9px;
+}
+
+.code-studio-search-result {
+    border: 1px solid var(--nd-border-soft);
+    border-radius: var(--nd-radius-sm);
+    background: #fbfdff;
+    color: inherit;
+    cursor: pointer;
+    display: grid;
+    gap: 2px 8px;
+    grid-template-columns: 72px minmax(0, 1fr);
+    min-width: 0;
+    padding: 8px;
+    text-align: left;
+}
+
+.code-studio-search-result:hover {
+    background: #edf4ff;
+    border-color: #b7d4ff;
+}
+
+.code-studio-search-result strong,
+.code-studio-search-result small,
+.code-studio-search-result span {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.code-studio-search-result strong {
+    color: var(--nd-charcoal);
+}
+
+.code-studio-search-result span,
+.code-studio-search-result small {
+    color: var(--nd-muted-text);
+    font-size: 11px;
+}
+
+.code-studio-search-result small {
+    grid-column: 2;
 }
 
 .code-studio-row {
@@ -2539,6 +2606,43 @@ button.code-studio-row.selected {
 .git-summary.dirty {
     background: #fff8eb;
     border-color: #f3d198;
+}
+
+.git-action-preview {
+    background: #f8fbff;
+    border: 1px solid #bdd7ff;
+    border-radius: var(--nd-radius-sm);
+    display: grid;
+    gap: 5px;
+    padding: 9px;
+}
+
+.git-action-preview.destructive {
+    background: #fff7ed;
+    border-color: #fed7aa;
+}
+
+.git-action-preview strong {
+    color: var(--nd-charcoal);
+    font-size: 12px;
+}
+
+.git-action-preview code {
+    background: #0d1117;
+    border-radius: 5px;
+    color: #d1d7e0;
+    font-family: "Cascadia Mono", "SFMono-Regular", Consolas, monospace;
+    font-size: 11px;
+    overflow: hidden;
+    padding: 6px 7px;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.git-action-preview small {
+    color: var(--nd-muted-text);
+    font-size: 12px;
+    line-height: 1.35;
 }
 
 .git-diff-view {
@@ -2613,6 +2717,40 @@ button.code-studio-row.selected {
     text-align: center;
 }
 
+.hunk-selection-summary {
+    align-items: center;
+    background: #f8fafc;
+    border: 1px solid var(--nd-border-soft);
+    border-radius: var(--nd-radius-sm);
+    display: grid;
+    gap: 4px 8px;
+    grid-template-columns: auto minmax(0, 1fr) auto;
+    padding: 7px 9px;
+}
+
+.hunk-selection-summary strong {
+    color: var(--nd-charcoal);
+    font-size: 12px;
+    white-space: nowrap;
+}
+
+.hunk-selection-summary small {
+    color: var(--nd-muted-text);
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.hunk-selection-summary button {
+    background: transparent;
+    border: 0;
+    color: var(--nd-electric-blue);
+    cursor: pointer;
+    font-size: 12px;
+    font-weight: 800;
+}
+
 .git-diff-line {
     display: block;
     min-height: 18px;
@@ -2634,6 +2772,14 @@ button.code-studio-row.selected {
 .active-hunk {
     outline: 1px solid #f8c15d;
     outline-offset: -1px;
+}
+
+.selected-hunk {
+    box-shadow: inset 3px 0 0 #2b7fff;
+}
+
+.git-diff-line.selected-hunk {
+    background: rgba(43, 127, 255, 0.16);
 }
 
 .git-diff-split {

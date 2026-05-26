@@ -1,5 +1,5 @@
 import {Button} from '../../components/ui';
-import type {FilePreview, GitFileChange, GitFileDiff, GitStatus, WorkspaceFreshnessStatus, WorkspaceSnapshot} from '../../types';
+import type {FilePreview, GitFileChange, GitFileDiff, GitStatus, WorkspaceFreshnessStatus, WorkspaceSearchResult, WorkspaceSnapshot} from '../../types';
 
 type CodeStudioPanelProps = {
     activeFile: string;
@@ -9,12 +9,19 @@ type CodeStudioPanelProps = {
     selectedGitChangePath: string;
     selectedGitFileDiff: GitFileDiff | null;
     isLoadingGitFileDiff: boolean;
+    isSearchingWorkspace: boolean;
     openTabs: FilePreview[];
+    onClearWorkspaceSearch: () => void;
     onOpenCommandPalette: () => void;
     onRefreshGitStatus: () => void;
+    onSearchWorkspace: () => void;
     onSelectGitChange: (path: string) => void;
+    onSelectSearchResult: (result: WorkspaceSearchResult) => void;
+    onWorkspaceSearchQueryChange: (value: string) => void;
     workspace: WorkspaceSnapshot | null;
     workspaceFreshness: WorkspaceFreshnessStatus | null;
+    workspaceSearchQuery: string;
+    workspaceSearchResults: WorkspaceSearchResult[];
 };
 
 export function CodeStudioPanel({
@@ -25,12 +32,19 @@ export function CodeStudioPanel({
     selectedGitChangePath,
     selectedGitFileDiff,
     isLoadingGitFileDiff,
+    isSearchingWorkspace,
     openTabs,
+    onClearWorkspaceSearch,
     onOpenCommandPalette,
     onRefreshGitStatus,
+    onSearchWorkspace,
     onSelectGitChange,
+    onSelectSearchResult,
+    onWorkspaceSearchQueryChange,
     workspace,
     workspaceFreshness,
+    workspaceSearchQuery,
+    workspaceSearchResults,
 }: CodeStudioPanelProps) {
     const nodes = workspace?.nodes ?? [];
     const codeFiles = nodes.filter((node) => node.kind === 'file' && node.fileType === 'code');
@@ -125,16 +139,45 @@ export function CodeStudioPanel({
 
             <section className="code-studio-column">
                 <div className="bottom-section-heading">
-                    <strong>Code Queues</strong>
-                    <small>Search, problems, tasks, review, and diff workflows</small>
+                    <strong>Search</strong>
+                    <small>{workspaceSearchResults.length > 0 ? `${workspaceSearchResults.length} matches` : 'Path and previewable text search'}</small>
                 </div>
-                <div className="code-studio-queue-grid" aria-label="Code studio queues">
-                    <QueueCard label="Search" value={workspace ? 'ready' : 'idle'} />
-                    <QueueCard label="Problems" value="pending" />
-                    <QueueCard label="Tasks" value="pending" />
-                    <QueueCard label="AI Review" value={filePreview?.fileType === 'code' ? 'ready' : 'context'} />
-                    <QueueCard label="Data files nearby" value={String(dataFiles.length)} />
-                    <QueueCard label="Diff viewer" value={gitStatus?.dirty ? 'bottom tab' : gitStatus?.available ? 'clean' : 'pending'} />
+                <div className="code-studio-search-panel">
+                    <div className="code-studio-search-controls">
+                        <input
+                            aria-label="Workbench search query"
+                            disabled={!workspace}
+                            onChange={(event) => onWorkspaceSearchQueryChange(event.target.value)}
+                            onKeyDown={(event) => {
+                                if (event.key === 'Enter' && workspaceSearchQuery.trim()) {
+                                    onSearchWorkspace();
+                                }
+                            }}
+                            placeholder="Search files, artifacts, chat"
+                            value={workspaceSearchQuery}
+                        />
+                        <Button disabled={!workspace || isSearchingWorkspace || !workspaceSearchQuery.trim()} onClick={onSearchWorkspace} variant="subtle">
+                            {isSearchingWorkspace ? 'Searching...' : 'Search'}
+                        </Button>
+                        <Button disabled={workspaceSearchResults.length === 0} onClick={onClearWorkspaceSearch} variant="subtle">Clear</Button>
+                    </div>
+                    <div className="code-studio-list" aria-label="Workbench search results">
+                        {workspaceSearchResults.length > 0 ? workspaceSearchResults.slice(0, 12).map((result, index) => (
+                            <button className="code-studio-search-result" key={`${result.relPath}-${result.matchType}-${index}`} onClick={() => onSelectSearchResult(result)} type="button">
+                                <span>{result.matchType || result.fileType || result.kind}</span>
+                                <strong title={result.relPath}>{result.relPath || result.name}</strong>
+                                <small>{result.line > 0 ? `line ${result.line} / ` : ''}{result.snippet || result.name}</small>
+                            </button>
+                        )) : (
+                            <div className="code-studio-empty">{workspace ? 'Run a search to populate this panel.' : 'Open a workspace to search.'}</div>
+                        )}
+                    </div>
+                    <div className="code-studio-queue-grid compact" aria-label="Code studio queues">
+                        <QueueCard label="Problems" value="pending" />
+                        <QueueCard label="Tasks" value="pending" />
+                        <QueueCard label="AI Review" value={filePreview?.fileType === 'code' ? 'ready' : 'context'} />
+                        <QueueCard label="Data files nearby" value={String(dataFiles.length)} />
+                    </div>
                 </div>
             </section>
         </div>

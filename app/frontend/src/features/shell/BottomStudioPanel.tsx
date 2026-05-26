@@ -1,4 +1,4 @@
-import type {AgentToolDescriptor, AgentToolPlanItem, AgentToolRunRecord, ApprovalRecord, ArtifactComparison, ArtifactLineage, ArtifactMetadata, Capability, DatasetChartResult, DatasetDependency, DatasetProfile, DatasetQueryResult, DatasetSQLQueryResult, FilePreview, GitFileDiff, GitStatus, LLMProbeResult, LLMSettings, MetadataBrowser, MetadataSearchResult, SavedDatasetQuery, SQLRun, SQLiteMetadataStatus, SQLiteQueryResult, ToolEvent, WorkspaceArtifact, WorkspaceFreshnessStatus, WorkspaceSnapshot} from '../../types';
+import type {AgentToolDescriptor, AgentToolPlanItem, AgentToolRunRecord, ApprovalRecord, ArtifactComparison, ArtifactLineage, ArtifactMetadata, Capability, DatasetChartResult, DatasetDependency, DatasetProfile, DatasetQueryResult, DatasetSQLQueryResult, FilePreview, GitFileAction, GitFileActionPreview, GitFileDiff, GitHunkActionPreview, GitHunkActionRequest, GitStatus, LLMProbeResult, LLMSettings, MetadataBrowser, MetadataSearchResult, SavedDatasetQuery, SQLRun, SQLiteMetadataStatus, SQLiteQueryResult, ToolEvent, WorkspaceArtifact, WorkspaceFreshnessStatus, WorkspaceSearchResult, WorkspaceSnapshot} from '../../types';
 import {AgentToolPlanCard} from './AgentToolPlanCard';
 import {ApprovalLogPanel} from './ApprovalLogPanel';
 import {ArtifactStudioPanel} from './ArtifactStudioPanel';
@@ -38,6 +38,8 @@ type BottomStudioPanelProps = {
     datasetSQLQueryLabel: string;
     datasetSQLQueryResult: DatasetSQLQueryResult | null;
     filePreview: FilePreview | null;
+    gitFileActionPreview: GitFileActionPreview | null;
+    gitHunkActionPreview: GitHunkActionPreview | null;
     gitStatus: GitStatus | null;
     selectedGitChangePath: string;
     selectedGitFileDiff: GitFileDiff | null;
@@ -49,7 +51,10 @@ type BottomStudioPanelProps = {
     isExportingDatasetQuery: boolean;
     isExportingDatasetSQL: boolean;
     isGeneratingGitInsight: boolean;
+    isApplyingGitHunkAction: boolean;
     isLoadingGitFileDiff: boolean;
+    isPreviewingGitFileAction: boolean;
+    isPreviewingGitHunkAction: boolean;
     isPreparingMetadataStore: boolean;
     isProfilingDataset: boolean;
     isPreviewingDatasetChart: boolean;
@@ -62,6 +67,7 @@ type BottomStudioPanelProps = {
     isSavingDatasetSQLQuery: boolean;
     isSavingSettings: boolean;
     isSearchingMetadata: boolean;
+    isSearchingWorkspace: boolean;
     isTestingConnection: boolean;
     metadataBrowser: MetadataBrowser | null;
     metadataSearchQuery: string;
@@ -86,6 +92,7 @@ type BottomStudioPanelProps = {
     onExportDatasetSQL: () => void;
     onExportLineage: () => void;
     onInspectMetadata: () => void;
+    onClearWorkspaceSearch: () => void;
     onMetadataSearchQueryChange: (content: string) => void;
     onOpenArtifactSource: () => void;
     onSelectGitChange: (path: string) => void;
@@ -93,6 +100,9 @@ type BottomStudioPanelProps = {
     onPrepareMetadataStore: () => void;
     onProfileDataset: () => void;
     onPreviewDatasetChart: () => void;
+    onPreviewGitFileAction: (action: GitFileAction) => void;
+    onPreviewGitHunkAction: (request: GitHunkActionRequest) => void;
+    onApplyGitHunkAction: (request: GitHunkActionRequest) => void;
     onOpenCommandPalette: () => void;
     onQueryDataset: () => void;
     onQueryDatasetSQL: () => void;
@@ -109,6 +119,8 @@ type BottomStudioPanelProps = {
     onSelectArtifact: (artifact: WorkspaceArtifact) => void;
     onSettingsDraftChange: (field: keyof LLMSettings, value: string) => void;
     onSearchMetadata: () => void;
+    onSearchWorkspace: () => void;
+    onSelectSearchResult: (result: WorkspaceSearchResult) => void;
     onSQLiteConnectorQueryChange: (content: string) => void;
     onSummarizeGitDiff: () => void;
     onTabChange: (tab: BottomStudioTab) => void;
@@ -126,6 +138,9 @@ type BottomStudioPanelProps = {
     toolEvents: ToolEvent[];
     workspace: WorkspaceSnapshot | null;
     workspaceFreshness: WorkspaceFreshnessStatus | null;
+    workspaceSearchQuery: string;
+    workspaceSearchResults: WorkspaceSearchResult[];
+    onWorkspaceSearchQueryChange: (value: string) => void;
     className?: string;
     showTabs?: boolean;
 };
@@ -164,6 +179,8 @@ export function BottomStudioPanel({
     datasetSQLQueryLabel,
     datasetSQLQueryResult,
     filePreview,
+    gitFileActionPreview,
+    gitHunkActionPreview,
     gitStatus,
     selectedGitChangePath,
     selectedGitFileDiff,
@@ -175,7 +192,10 @@ export function BottomStudioPanel({
     isExportingDatasetQuery,
     isExportingDatasetSQL,
     isGeneratingGitInsight,
+    isApplyingGitHunkAction,
     isLoadingGitFileDiff,
+    isPreviewingGitFileAction,
+    isPreviewingGitHunkAction,
     isPreparingMetadataStore,
     isProfilingDataset,
     isPreviewingDatasetChart,
@@ -188,6 +208,7 @@ export function BottomStudioPanel({
     isSavingDatasetSQLQuery,
     isSavingSettings,
     isSearchingMetadata,
+    isSearchingWorkspace,
     isTestingConnection,
     metadataBrowser,
     metadataSearchQuery,
@@ -212,6 +233,7 @@ export function BottomStudioPanel({
     onExportDatasetSQL,
     onExportLineage,
     onInspectMetadata,
+    onClearWorkspaceSearch,
     onMetadataSearchQueryChange,
     onOpenArtifactSource,
     onSelectGitChange,
@@ -219,6 +241,9 @@ export function BottomStudioPanel({
     onPrepareMetadataStore,
     onProfileDataset,
     onPreviewDatasetChart,
+    onPreviewGitFileAction,
+    onPreviewGitHunkAction,
+    onApplyGitHunkAction,
     onOpenCommandPalette,
     onQueryDataset,
     onQueryDatasetSQL,
@@ -235,6 +260,8 @@ export function BottomStudioPanel({
     onSelectArtifact,
     onSettingsDraftChange,
     onSearchMetadata,
+    onSearchWorkspace,
+    onSelectSearchResult,
     onSQLiteConnectorQueryChange,
     onSummarizeGitDiff,
     onTabChange,
@@ -252,6 +279,9 @@ export function BottomStudioPanel({
     toolEvents,
     workspace,
     workspaceFreshness,
+    workspaceSearchQuery,
+    workspaceSearchResults,
+    onWorkspaceSearchQueryChange,
     className = '',
     showTabs = true,
 }: BottomStudioPanelProps) {
@@ -282,12 +312,19 @@ export function BottomStudioPanel({
                         selectedGitChangePath={selectedGitChangePath}
                         selectedGitFileDiff={selectedGitFileDiff}
                         isLoadingGitFileDiff={isLoadingGitFileDiff}
+                        isSearchingWorkspace={isSearchingWorkspace}
                         openTabs={openTabs}
+                        onClearWorkspaceSearch={onClearWorkspaceSearch}
                         onOpenCommandPalette={onOpenCommandPalette}
                         onRefreshGitStatus={onRefreshGitStatus}
+                        onSearchWorkspace={onSearchWorkspace}
                         onSelectGitChange={onSelectGitChange}
+                        onSelectSearchResult={onSelectSearchResult}
+                        onWorkspaceSearchQueryChange={onWorkspaceSearchQueryChange}
                         workspace={workspace}
                         workspaceFreshness={workspaceFreshness}
+                        workspaceSearchQuery={workspaceSearchQuery}
+                        workspaceSearchResults={workspaceSearchResults}
                     />
                 )}
                 {activeTab === 'settings' && (
@@ -412,12 +449,20 @@ export function BottomStudioPanel({
                 )}
                 {activeTab === 'git' && (
                     <GitDiffPanel
+                        gitFileActionPreview={gitFileActionPreview}
+                        gitHunkActionPreview={gitHunkActionPreview}
                         gitStatus={gitStatus}
                         selectedGitChangePath={selectedGitChangePath}
                         selectedGitFileDiff={selectedGitFileDiff}
                         isGeneratingGitInsight={isGeneratingGitInsight}
+                        isApplyingGitHunkAction={isApplyingGitHunkAction}
                         isLoadingGitFileDiff={isLoadingGitFileDiff}
+                        isPreviewingGitFileAction={isPreviewingGitFileAction}
+                        isPreviewingGitHunkAction={isPreviewingGitHunkAction}
                         onDraftCommitMessage={onDraftGitCommitMessage}
+                        onPreviewGitFileAction={onPreviewGitFileAction}
+                        onPreviewGitHunkAction={onPreviewGitHunkAction}
+                        onApplyGitHunkAction={onApplyGitHunkAction}
                         onRefreshGitStatus={onRefreshGitStatus}
                         onSelectGitChange={onSelectGitChange}
                         onSummarizeDiff={onSummarizeGitDiff}

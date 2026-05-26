@@ -998,30 +998,6 @@ export namespace main {
 	        this.summary = source["summary"];
 	    }
 	}
-	export class GitFileDiff {
-	    path: string;
-	    stagedDiff: string;
-	    stagedDiffTruncated: boolean;
-	    unstagedDiff: string;
-	    unstagedDiffTruncated: boolean;
-	    message: string;
-	    generatedAt: string;
-
-	    static createFrom(source: any = {}) {
-	        return new GitFileDiff(source);
-	    }
-
-	    constructor(source: any = {}) {
-	        if ('string' === typeof source) source = JSON.parse(source);
-	        this.path = source["path"];
-	        this.stagedDiff = source["stagedDiff"];
-	        this.stagedDiffTruncated = source["stagedDiffTruncated"];
-	        this.unstagedDiff = source["unstagedDiff"];
-	        this.unstagedDiffTruncated = source["unstagedDiffTruncated"];
-	        this.message = source["message"];
-	        this.generatedAt = source["generatedAt"];
-	    }
-	}
 	export class GitStatus {
 	    available: boolean;
 	    repoRoot: string;
@@ -1084,6 +1060,158 @@ export namespace main {
 		    return a;
 		}
 	}
+	export class GitFileActionPreview {
+	    path: string;
+	    action: string;
+	    command: string[];
+	    requiresApproval: boolean;
+	    mutatesRepository: boolean;
+	    message: string;
+	    status: GitStatus;
+	    generatedAt: string;
+
+	    static createFrom(source: any = {}) {
+	        return new GitFileActionPreview(source);
+	    }
+
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.path = source["path"];
+	        this.action = source["action"];
+	        this.command = source["command"];
+	        this.requiresApproval = source["requiresApproval"];
+	        this.mutatesRepository = source["mutatesRepository"];
+	        this.message = source["message"];
+	        this.status = this.convertValues(source["status"], GitStatus);
+	        this.generatedAt = source["generatedAt"];
+	    }
+
+		convertValues(a: any, classs: any, asMap: boolean = false): any {
+		    if (!a) {
+		        return a;
+		    }
+		    if (a.slice && a.map) {
+		        return (a as any[]).map(elem => this.convertValues(elem, classs));
+		    } else if ("object" === typeof a) {
+		        if (asMap) {
+		            for (const key of Object.keys(a)) {
+		                a[key] = new classs(a[key]);
+		            }
+		            return a;
+		        }
+		        return new classs(a);
+		    }
+		    return a;
+		}
+	}
+	export class GitFileActionRequest {
+	    path: string;
+	    action: string;
+
+	    static createFrom(source: any = {}) {
+	        return new GitFileActionRequest(source);
+	    }
+
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.path = source["path"];
+	        this.action = source["action"];
+	    }
+	}
+
+	export class GitFileDiff {
+	    path: string;
+	    stagedDiff: string;
+	    stagedDiffTruncated: boolean;
+	    unstagedDiff: string;
+	    unstagedDiffTruncated: boolean;
+	    message: string;
+	    generatedAt: string;
+
+	    static createFrom(source: any = {}) {
+	        return new GitFileDiff(source);
+	    }
+
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.path = source["path"];
+	        this.stagedDiff = source["stagedDiff"];
+	        this.stagedDiffTruncated = source["stagedDiffTruncated"];
+	        this.unstagedDiff = source["unstagedDiff"];
+	        this.unstagedDiffTruncated = source["unstagedDiffTruncated"];
+	        this.message = source["message"];
+	        this.generatedAt = source["generatedAt"];
+	    }
+	}
+	export class GitHunkActionPreview {
+	    path: string;
+	    action: string;
+	    diffKind: string;
+	    hunkIndex: number;
+	    command: string[];
+	    patch: string;
+	    requiresApproval: boolean;
+	    mutatesRepository: boolean;
+	    message: string;
+	    status: GitStatus;
+	    generatedAt: string;
+
+	    static createFrom(source: any = {}) {
+	        return new GitHunkActionPreview(source);
+	    }
+
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.path = source["path"];
+	        this.action = source["action"];
+	        this.diffKind = source["diffKind"];
+	        this.hunkIndex = source["hunkIndex"];
+	        this.command = source["command"];
+	        this.patch = source["patch"];
+	        this.requiresApproval = source["requiresApproval"];
+	        this.mutatesRepository = source["mutatesRepository"];
+	        this.message = source["message"];
+	        this.status = this.convertValues(source["status"], GitStatus);
+	        this.generatedAt = source["generatedAt"];
+	    }
+
+		convertValues(a: any, classs: any, asMap: boolean = false): any {
+		    if (!a) {
+		        return a;
+		    }
+		    if (a.slice && a.map) {
+		        return (a as any[]).map(elem => this.convertValues(elem, classs));
+		    } else if ("object" === typeof a) {
+		        if (asMap) {
+		            for (const key of Object.keys(a)) {
+		                a[key] = new classs(a[key]);
+		            }
+		            return a;
+		        }
+		        return new classs(a);
+		    }
+		    return a;
+		}
+	}
+	export class GitHunkActionRequest {
+	    path: string;
+	    action: string;
+	    diffKind: string;
+	    hunkIndex: number;
+
+	    static createFrom(source: any = {}) {
+	        return new GitHunkActionRequest(source);
+	    }
+
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.path = source["path"];
+	        this.action = source["action"];
+	        this.diffKind = source["diffKind"];
+	        this.hunkIndex = source["hunkIndex"];
+	    }
+	}
+
 
 
 	export class StaleContextRefresh {

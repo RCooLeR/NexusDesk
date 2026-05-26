@@ -44,8 +44,6 @@ const checks = [
             'CreateScanReportArtifact',
             'ListApprovals',
             'SearchWorkspace',
-            'GetGitStatus',
-            'GetGitFileDiff',
             'ApprovalRequestModal',
             'requestApproval',
             'QuickOpenPalette',
@@ -93,19 +91,22 @@ const checks = [
             'renderStudioPanel',
             'useResizablePanels',
             'useStudioNavigation',
+            'useGitController',
             'settingsForSelectedModel',
             'Model request queued',
             'First token received',
-            'refreshGitStatus',
             'summarizeGitDiff',
             'draftGitCommitMessage',
             'selectedGitDiffPromptContext',
             'handleTreeContextAction',
-            'normalizeGitStatus',
             'main-studio-panel',
             'showTabs: false',
         ],
         absentTerms: ['await refreshGitStatus();'],
+    },
+    {
+        file: 'src/features/shell/useGitController.ts',
+        terms: ['useGitController', 'GetGitStatus', 'GetGitFileDiff', 'PreviewGitFileAction', 'PreviewGitHunkAction', 'ApplyGitHunkAction', 'normalizeGitStatus', 'resetGitStatus', 'refreshGitStatus', 'refreshSelectedGitFileDiff', 'previewGitFileAction', 'previewGitHunkAction', 'applyGitHunkAction', 'gitFileActionPreview', 'gitHunkActionPreview', 'gitNotLoadedMessage'],
     },
     {
         file: 'src/api/wailsClient.ts',
@@ -125,11 +126,11 @@ const checks = [
     },
     {
         file: 'src/features/shell/CodeStudioPanel.tsx',
-        terms: ['CodeStudioPanel', 'Workbench', 'Project Session', 'Repository', 'Code Queues', 'selectedGitChangePath', 'onSelectGitChange', 'stagedFiles', 'unstagedFiles', 'Refresh git', 'Commands'],
+        terms: ['CodeStudioPanel', 'Workbench', 'Project Session', 'Repository', 'Search', 'workspaceSearchQuery', 'workspaceSearchResults', 'onSearchWorkspace', 'onSelectSearchResult', 'code-studio-search-panel', 'selectedGitChangePath', 'onSelectGitChange', 'stagedFiles', 'unstagedFiles', 'Refresh git', 'Commands'],
     },
     {
         file: 'src/features/shell/GitDiffPanel.tsx',
-        terms: ['GitDiffPanel', 'Working Tree Diff', 'Staged Diff', 'Unstaged Diff', 'selectedGitChangePath', 'selectedGitFileDiff', 'diffMode', 'changes', 'Diff Only', 'collectChangedRows', 'hunkTargets', 'Previous hunk', 'Next hunk', 'Summarize diff', 'Draft commit', 'isGeneratingGitInsight', 'git-diff-panel', 'git-diff-split', 'git-diff-changes', 'git-diff-view', 'onSelectGitChange', 'Refresh git', 'buildGitChangeTree', 'git-change-tree'],
+        terms: ['GitDiffPanel', 'Working Tree Diff', 'Staged Diff', 'Unstaged Diff', 'selectedGitChangePath', 'selectedGitFileDiff', 'diffMode', 'changes', 'Diff Only', 'collectChangedRows', 'hunkTargets', 'selectedHunkKeys', 'Select hunk', 'selected-hunk', 'hunk-selection-summary', 'hunkRequestFromKey', 'hunkActionLabel', 'gitHunkActionLabel', 'Previous hunk', 'Next hunk', 'Preview stage', 'Preview unstage', 'gitFileActionPreview', 'gitHunkActionPreview', 'git-action-preview', 'Summarize diff', 'Draft commit', 'isGeneratingGitInsight', 'git-diff-panel', 'git-diff-split', 'git-diff-changes', 'git-diff-view', 'onSelectGitChange', 'Refresh git', 'buildGitChangeTree', 'git-change-tree'],
     },
     {
         file: 'src/features/shell/LLMSettingsCard.tsx',
@@ -304,7 +305,7 @@ const checks = [
     },
     {
         file: 'wailsjs/go/main/App.d.ts',
-        terms: ['AskLLMContextPack', 'RunAgent', 'PreviewFileWrite', 'ApplyFileDelete', 'ApplyFileMove', 'ProfileDataset', 'CreateDatasetChartArtifact', 'CreateDatasetQueryArtifact', 'CreateDatasetSQLArtifact', 'CreateDatasetSummaryArtifact', 'CreateChatMarkdownArtifact', 'CreateScanReportArtifact', 'PreviewChatContextPack', 'PreviewDatasetChart', 'SaveDatasetQuery', 'SaveDatasetSQLQuery', 'ListDatasetSQLQueries', 'ListDatasetDependencies', 'ListDatasetSQLRuns', 'RefreshStaleContext', 'SearchMetadata', 'QueryWorkspaceSQLite', 'ExportArtifactLineageJSON', 'GetGitStatus', 'GetGitFileDiff', 'ListApprovals', 'ListAgentTools', 'ListAgentToolRuns', 'PreviewAgentTool', 'ExecuteAgentTool', 'QueryDatasetSQL', 'EnsureSQLiteMetadataStore', 'InspectMetadataStore', 'GetArtifactLineage', 'CheckWorkspaceFreshness', 'CompareArtifacts', 'ArchiveArtifact', 'DeleteArtifact'],
+        terms: ['AskLLMContextPack', 'RunAgent', 'PreviewFileWrite', 'ApplyFileDelete', 'ApplyFileMove', 'ProfileDataset', 'CreateDatasetChartArtifact', 'CreateDatasetQueryArtifact', 'CreateDatasetSQLArtifact', 'CreateDatasetSummaryArtifact', 'CreateChatMarkdownArtifact', 'CreateScanReportArtifact', 'PreviewChatContextPack', 'PreviewDatasetChart', 'SaveDatasetQuery', 'SaveDatasetSQLQuery', 'ListDatasetSQLQueries', 'ListDatasetDependencies', 'ListDatasetSQLRuns', 'RefreshStaleContext', 'SearchMetadata', 'QueryWorkspaceSQLite', 'ExportArtifactLineageJSON', 'GetGitStatus', 'GetGitFileDiff', 'PreviewGitFileAction', 'PreviewGitHunkAction', 'ApplyGitHunkAction', 'ListApprovals', 'ListAgentTools', 'ListAgentToolRuns', 'PreviewAgentTool', 'ExecuteAgentTool', 'QueryDatasetSQL', 'EnsureSQLiteMetadataStore', 'InspectMetadataStore', 'GetArtifactLineage', 'CheckWorkspaceFreshness', 'CompareArtifacts', 'ArchiveArtifact', 'DeleteArtifact'],
     },
     {
         file: '../app_metadata.go',
@@ -312,7 +313,11 @@ const checks = [
     },
     {
         file: '../app_git.go',
-        terms: ['GetGitStatus', 'GetGitFileDiff', 'gitFileDiff', 'cleanGitRelPath', 'parseGitStatus', 'gitDiffMaxBytes'],
+        terms: ['GitStatus', 'GitFileChange', 'GitFileDiff', 'GitFileActionRequest', 'GitFileActionPreview', 'GitHunkActionRequest', 'GitHunkActionPreview', 'GetGitStatus', 'GetGitFileDiff', 'PreviewGitFileAction', 'PreviewGitHunkAction', 'ApplyGitHunkAction', 'newGitService'],
+    },
+    {
+        file: '../git_service.go',
+        terms: ['GitService', 'Status', 'FileDiff', 'PreviewFileAction', 'PreviewHunkAction', 'ApplyHunkAction', 'gitHunkActionCommand', 'extractGitHunkPatch', 'gitFileActionCommand', 'gitFileDiff', 'cleanGitRelPath', 'parseGitStatus', 'gitDiffMaxBytes', 'configureHiddenCommand'],
     },
     {
         file: '../internal/llm/chat.go',

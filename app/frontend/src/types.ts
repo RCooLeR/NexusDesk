@@ -233,6 +233,44 @@ export type GitFileDiff = {
     generatedAt: string;
 };
 
+export type GitFileAction = 'stage' | 'unstage';
+
+export type GitFileActionPreview = {
+    path: string;
+    action: GitFileAction | string;
+    command: string[];
+    requiresApproval: boolean;
+    mutatesRepository: boolean;
+    message: string;
+    status: GitStatus;
+    generatedAt: string;
+};
+
+export type GitHunkAction = 'discard' | 'revert';
+
+export type GitHunkDiffKind = 'staged' | 'unstaged';
+
+export type GitHunkActionRequest = {
+    path: string;
+    action: GitHunkAction | string;
+    diffKind: GitHunkDiffKind | string;
+    hunkIndex: number;
+};
+
+export type GitHunkActionPreview = {
+    path: string;
+    action: GitHunkAction | string;
+    diffKind: GitHunkDiffKind | string;
+    hunkIndex: number;
+    command: string[];
+    patch: string;
+    requiresApproval: boolean;
+    mutatesRepository: boolean;
+    message: string;
+    status: GitStatus;
+    generatedAt: string;
+};
+
 export type LineageNode = {
     id: string;
     kind: string;

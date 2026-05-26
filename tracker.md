@@ -803,6 +803,8 @@ Implemented:
 Next steps:
 
 - [ ] Move more local JSON stores to SQLite primary repositories.
+- [ ] Make SQLite the primary store for chats, approvals, artifacts, tool runs, SQL runs, and dataset dependencies.
+- [ ] Keep JSON stores only as compatibility, migration, backup, or export fallback after SQLite repositories are primary.
 - [ ] Add migrations with versioned schema changes.
 - [ ] Add full-text search.
 - [ ] Add semantic search/embeddings when provider/model is configured.
@@ -820,6 +822,7 @@ Next steps:
 Step 11.1: Long-running job runner
 
 - [ ] Add job runner for imports, OCR, dump restores, connector pulls, report generation, and large indexing work.
+- [ ] Route slow/external work through jobs instead of blocking the shell: indexing, OCR, imports, connector pulls, dump restore, report generation, and long agent runs.
 - [ ] Add cancelable task progress.
 - [ ] Add task logs.
 - [ ] Add retry failed task.
@@ -889,6 +892,7 @@ Next steps:
 
 - [ ] Add behavior tests for main studio routing.
 - [ ] Add behavior tests for IDE tree and git diffs.
+- [ ] Add regression coverage that opening a workspace never auto-runs Git, long indexing, OCR, connector pulls, or other external/slow work.
 - [ ] Add behavior tests for Data & Analytics notebooks/connectors.
 - [ ] Add behavior tests for document extraction flows.
 - [ ] Add behavior tests for operations safe actions.
@@ -927,6 +931,65 @@ Exit criteria:
 
 - [ ] Nexus Augentic Studio can be extended without giving external tools direct authority over files, shell, Docker, or databases.
 
+## Phase 15: Architecture Hardening
+
+Goal: keep the product architecture simple to reason about as features deepen, with small Wails adapters, focused frontend controllers, primary SQLite persistence, job-based long work, and a restrained product menu.
+
+Status: first hardening slice expanded with Git backend/frontend extraction and preview-only stage/unstage planning.
+
+Step 15.1: Backend service facades
+
+- [ ] Keep Wails method names stable while moving orchestration out of `app/app.go`.
+- [ ] Create a `WorkspaceService` facade for open/refresh/search/preview/context/freshness/file operations.
+- [ ] Create an `ArtifactService` facade for report creation, metadata, lineage, archive/delete, comparison, and regeneration.
+- [ ] Create a `DatasetService` facade for profiling, queries, SQL runs, dependencies, charts, summaries, and connector routing.
+- [ ] Create a `ChatService` facade for settings-aware chat requests, streaming, context packs, history persistence, and saved answer artifacts.
+- [x] Create a `GitService` facade for read-only status/diffs first, then approval-governed stage/unstage/revert actions.
+- [ ] Keep `app/app.go` as a thin Wails adapter that validates runtime availability and dispatches to services.
+- [ ] Move helper functions from `app/app.go` into owned service packages when they stop being bridge-specific.
+
+Step 15.2: Frontend controller hooks
+
+- [ ] Split workspace state and actions from `NexusShell.tsx` into `useWorkspaceController`.
+- [x] Split Git state and actions into `useGitController`.
+- [ ] Split artifact state and actions into `useArtifactController`.
+- [ ] Split dataset/SQL/connector state and actions into `useDatasetController`.
+- [ ] Split chat/context/agent state and actions into `useChatController`.
+- [ ] Keep `NexusShell.tsx` focused on layout composition, cross-panel wiring, modals, global shortcuts, and route/drawer placement.
+- [ ] Add smoke checks that generated Wails bindings remain isolated behind `app/frontend/src/api/wailsClient.ts`.
+
+Step 15.3: Persistence simplification
+
+- [ ] Promote SQLite metadata repositories to primary reads/writes for chats, approvals, artifacts, tool runs, SQL runs, and dataset dependencies.
+- [ ] Add one migration path from existing JSON compatibility stores into SQLite.
+- [ ] Keep JSON compatibility stores as export/backup/fallback only after primary SQLite reads are stable.
+- [ ] Add repository tests proving SQLite and JSON fallback records do not diverge during migration.
+- [ ] Add corruption/export recovery path before removing JSON-first assumptions.
+
+Step 15.4: Job-based slow work
+
+- [ ] Define a job model with ID, kind, workspace root, status, progress, log tail, started/completed timestamps, artifact outputs, and cancel state.
+- [ ] Route long indexing, OCR, dump imports, connector pulls, report generation, and long agent runs through the job runner.
+- [ ] Surface jobs in a Workbench/Activity panel with cancel, retry, inspect logs, and open artifact actions.
+- [ ] Ensure folder open only scans the bounded tree needed for first render; deeper indexing must run as a cancelable job.
+- [ ] Persist job records in SQLite and link outputs to artifacts/lineage.
+
+Step 15.5: Navigation discipline
+
+- [ ] Keep the primary rail limited to Workbench, Data & Analytics, Artifacts, and Settings until a capability has enough native workflow depth.
+- [ ] Keep analytics connectors inside Data & Analytics until they justify a separate surface.
+- [ ] Keep document intelligence contextual through Workbench, Artifacts, and Assistant until it justifies a separate surface.
+- [ ] Keep operations capabilities contextual/read-only first, then promote only if Docker/log/runbook workflows become deep enough.
+- [ ] Keep AI Assistant always visible as orchestration, not a default top-level route.
+
+Exit criteria:
+
+- [ ] `app/app.go` is a thin Wails adapter instead of the main use-case owner.
+- [ ] `NexusShell.tsx` composes focused controllers instead of owning most application workflows.
+- [ ] SQLite is the primary metadata store for durable workspace records.
+- [ ] Slow and external work is cancelable, logged, and never blocks folder open.
+- [ ] Product navigation remains small while capability depth grows inside existing surfaces.
+
 ## Next Logical Batch
 
 Completed batch: Navigation Cleanup And Git Diff Review.
@@ -949,16 +1012,18 @@ Recommended next batch: Safe Git Mutations And Workbench Utility Panels.
 
 Steps:
 
-1. Design a Git mutation approval model for stage, unstage, revert, and discard actions.
-2. Add backend Git commands for stage/unstage file with dry-run/status refresh outputs.
-3. Add preview-only frontend controls for stage/unstage file in the bottom Git drawer.
-4. Add hunk-level selection model without mutation first.
-5. Add destructive approval flow for revert/discard hunk.
-6. Add Workbench path/text search panel as a real utility panel, not only command palette search.
-7. Detect npm scripts and Go tests into a Tasks panel with read-only listing.
-8. Keep visual smoke focused on no blank screen, no whole-window scroll, Git drawer behavior, and route switching.
+1. [x] Extract first backend service facade without changing Wails contracts, starting with Git or Workspace.
+2. [x] Extract first frontend controller hook from `NexusShell.tsx`, starting with `useGitController` or `useWorkspaceController`.
+3. [x] Design the first Git mutation approval boundary: preview commands now report `requiresApproval` and `mutatesRepository`, while execution remains blocked until an approval-governed apply path exists.
+4. [x] Add backend Git command planning for stage/unstage file with dry-run/status refresh outputs.
+5. [x] Add preview-only frontend controls for stage/unstage file in the bottom Git drawer.
+6. [x] Add hunk-level selection model without mutation first.
+7. [x] Add destructive approval flow for revert/discard hunk.
+8. [x] Add Workbench path/text search panel as a real utility panel, not only command palette search.
+9. Detect npm scripts and Go tests into a Tasks panel with read-only listing.
+10. Keep visual smoke focused on no blank screen, no whole-window scroll, Git drawer behavior, route switching, and no slow/external work on folder open.
 
-Reasoning: read-only navigation and diff review are now credible. The next gap is letting users act on Git state and inspect project tasks without weakening the approval/audit safety model.
+Reasoning: read-only navigation and diff review are now credible, stage/unstage previews establish the approval boundary without mutating the repository, hunk selection exists as UI state, hunk discard/revert now goes through the approval modal before backend patch application, and Workbench has a real search utility panel backed by the existing safe workspace search flow. The next gap is adding read-only task/script detection while continuing to move work out of `app.go` and `NexusShell.tsx`.
 
 ## Directory Ownership Notes
 
@@ -969,6 +1034,8 @@ Reasoning: read-only navigation and diff review are now credible. The next gap i
 `app/internal/agent/` owns the backend ReAct runtime, system prompt, action parsing, plan updates, observation handling, and working-memory pruning.
 
 `app/agent_runtime.go` exposes `RunAgent` and maps model-requested tools to workspace-safe handlers.
+
+`app/app_git.go` owns Wails-facing Git API types and bridge methods. `app/git_service.go` owns the first Git service facade for read-only status/diff operations, preview-only stage/unstage command planning, and approval-backed selected-hunk discard/revert patch application while preserving existing Wails contracts.
 
 `app/internal/agenttools/` owns deterministic tool descriptors and tool-run persistence.
 
@@ -992,13 +1059,15 @@ Reasoning: read-only navigation and diff review are now credible. The next gap i
 
 `app/frontend/src/features/shell/useResizablePanels.ts` owns navigator, assistant, and bottom drawer sizing plus resize drag handlers.
 
+`app/frontend/src/features/shell/useGitController.ts` owns Git status refresh, selected changed-file state, selected-file diff loading, preview-only stage/unstage action state, hunk action preview/apply state, null-response normalization, and the manual-only Git refresh boundary.
+
 Workspace scan counters are diagnostic data, not primary navigation content. Keep them in scan reports/diagnostics instead of the always-visible sidebar header.
 
 `app/frontend/src/features/shell/WorkbenchPanel.tsx` currently owns the editor/preview surface. Git status, working-tree diff output, and roadmap/studio-route metadata should not render above the editor tabs; those surfaces belong to Workbench utility panels, the bottom Git drawer, or documentation.
 
-`app/frontend/src/features/shell/CodeStudioPanel.tsx` owns the first reusable Workbench utility surface for editor session metrics, open tabs, workspace status, git branch/dirty summary, changed-file list, and placeholders that will receive search/problem/task/review data.
+`app/frontend/src/features/shell/CodeStudioPanel.tsx` owns the first reusable Workbench utility surface for editor session metrics, open tabs, workspace status, git branch/dirty summary, changed-file list, Workbench search results/actions, and placeholders that will receive problem/task/review data.
 
-`app/frontend/src/features/shell/GitDiffPanel.tsx` owns the bottom-drawer Git tab for selected changed-file review and read-only staged/unstaged working-tree diffs.
+`app/frontend/src/features/shell/GitDiffPanel.tsx` owns the bottom-drawer Git tab for selected changed-file review, preview-only stage/unstage controls, hunk selection state, approval-backed hunk discard/revert controls, and read-only staged/unstaged working-tree diffs.
 
 `app/frontend/src/features/shell/DataOperationsPanel.tsx` currently owns Data route workflows.
 

@@ -2,27 +2,29 @@ import {useEffect, useMemo, useRef, useState} from 'react';
 import {faChevronDown, faChevronUp} from '@fortawesome/free-solid-svg-icons';
 import {FontAwesomeIcon} from '@fortawesome/react-fontawesome';
 import {Button, IconButton} from '../../components/ui';
-import type {GitFileChange, GitFileDiff, GitStatus} from '../../types';
+import type {GitFileAction, GitFileActionPreview, GitFileChange, GitFileDiff, GitHunkActionPreview, GitHunkActionRequest, GitStatus} from '../../types';
 
 type DiffMode = 'unified' | 'split' | 'changes';
 
 type HunkTarget = {
     key: string;
     label: string;
+    content: string;
 };
 
 type DiffRow =
     | {type: 'meta'; content: string; hunkKey?: string}
     | {type: 'hunk'; content: string; hunkKey: string}
-    | {type: 'context'; oldLine: number; newLine: number; oldText: string; newText: string}
-    | {type: 'delete'; oldLine: number; oldText: string}
-    | {type: 'add'; newLine: number; newText: string};
+    | {type: 'context'; oldLine: number; newLine: number; oldText: string; newText: string; hunkKey?: string}
+    | {type: 'delete'; oldLine: number; oldText: string; hunkKey?: string}
+    | {type: 'add'; newLine: number; newText: string; hunkKey?: string};
 
 type ChangedRow = {
     oldLine?: number;
     oldText: string;
     newLine?: number;
     newText: string;
+    hunkKey?: string;
 };
 
 type GitChangeTreeNode = {
@@ -33,35 +35,54 @@ type GitChangeTreeNode = {
 };
 
 type GitDiffPanelProps = {
+    gitFileActionPreview: GitFileActionPreview | null;
+    gitHunkActionPreview: GitHunkActionPreview | null;
     gitStatus: GitStatus | null;
     selectedGitChangePath: string;
     selectedGitFileDiff: GitFileDiff | null;
     isGeneratingGitInsight: boolean;
+    isApplyingGitHunkAction: boolean;
     isLoadingGitFileDiff: boolean;
+    isPreviewingGitFileAction: boolean;
+    isPreviewingGitHunkAction: boolean;
     onDraftCommitMessage: () => void;
+    onPreviewGitFileAction: (action: GitFileAction) => void;
+    onPreviewGitHunkAction: (request: GitHunkActionRequest) => void;
+    onApplyGitHunkAction: (request: GitHunkActionRequest) => void;
     onRefreshGitStatus: () => void;
     onSelectGitChange: (path: string) => void;
     onSummarizeDiff: () => void;
 };
 
 export function GitDiffPanel({
+    gitFileActionPreview,
+    gitHunkActionPreview,
     gitStatus,
     selectedGitChangePath,
     selectedGitFileDiff,
     isGeneratingGitInsight,
+    isApplyingGitHunkAction,
     isLoadingGitFileDiff,
+    isPreviewingGitFileAction,
+    isPreviewingGitHunkAction,
     onDraftCommitMessage,
+    onPreviewGitFileAction,
+    onPreviewGitHunkAction,
+    onApplyGitHunkAction,
     onRefreshGitStatus,
     onSelectGitChange,
     onSummarizeDiff,
 }: GitDiffPanelProps) {
     const [diffMode, setDiffMode] = useState<DiffMode>('unified');
     const [activeHunkIndex, setActiveHunkIndex] = useState(0);
+    const [selectedHunkKeys, setSelectedHunkKeys] = useState<string[]>([]);
     const diffScrollRef = useRef<HTMLDivElement | null>(null);
     const changedFiles = gitStatus?.changedFiles ?? [];
     const stagedFiles = gitStatus?.stagedFiles ?? [];
     const unstagedFiles = gitStatus?.unstagedFiles ?? changedFiles;
     const selectedGitChange = changedFiles.find((change) => change.path === selectedGitChangePath) ?? null;
+    const selectedIsStaged = stagedFiles.some((change) => change.path === selectedGitChangePath);
+    const selectedIsUnstaged = unstagedFiles.some((change) => change.path === selectedGitChangePath);
     const selectedDiff = selectedGitFileDiff?.path === selectedGitChangePath ? selectedGitFileDiff : null;
     const stagedDiff = selectedDiff?.stagedDiff ?? gitStatus?.stagedDiff ?? '';
     const unstagedDiff = selectedDiff?.unstagedDiff ?? gitStatus?.unstagedDiff ?? gitStatus?.diff ?? '';
@@ -76,9 +97,14 @@ export function GitDiffPanel({
         ...collectHunks('unstaged', unstagedDiff),
     ], [stagedDiff, unstagedDiff]);
     const activeHunkKey = hunkTargets[activeHunkIndex]?.key ?? '';
+    const activeHunkIsSelected = selectedHunkKeys.includes(activeHunkKey);
+    const activeHunkRequest = hunkRequestFromKey(activeHunkKey, selectedGitChangePath);
+    const hunkActionLabel = activeHunkRequest?.action === 'discard' ? 'Discard hunk' : 'Revert hunk';
+    const hunkActionDisabled = !activeHunkRequest || !activeHunkIsSelected || isPreviewingGitHunkAction || isApplyingGitHunkAction;
 
     useEffect(() => {
         setActiveHunkIndex(0);
+        setSelectedHunkKeys([]);
     }, [selectedGitChangePath, stagedDiff, unstagedDiff]);
 
     useEffect(() => {
@@ -96,6 +122,27 @@ export function GitDiffPanel({
         setActiveHunkIndex((current) => (current + delta + hunkTargets.length) % hunkTargets.length);
     }
 
+    function toggleActiveHunkSelection() {
+        if (!activeHunkKey) {
+            return;
+        }
+        setSelectedHunkKeys((current) => current.includes(activeHunkKey)
+            ? current.filter((key) => key !== activeHunkKey)
+            : [...current, activeHunkKey]);
+    }
+
+    function previewActiveHunkAction() {
+        if (activeHunkRequest) {
+            onPreviewGitHunkAction(activeHunkRequest);
+        }
+    }
+
+    function applyActiveHunkAction() {
+        if (activeHunkRequest) {
+            onApplyGitHunkAction(activeHunkRequest);
+        }
+    }
+
     return (
         <div className="git-diff-panel">
             <section className="git-diff-sidebar">
@@ -105,6 +152,8 @@ export function GitDiffPanel({
                 </div>
                 <div className="code-studio-toolbar" aria-label="Git diff toolbar">
                     <Button onClick={onRefreshGitStatus} variant="subtle">Refresh git</Button>
+                    <Button disabled={!selectedIsUnstaged || isPreviewingGitFileAction} onClick={() => onPreviewGitFileAction('stage')} variant="subtle">Preview stage</Button>
+                    <Button disabled={!selectedIsStaged || isPreviewingGitFileAction} onClick={() => onPreviewGitFileAction('unstage')} variant="subtle">Preview unstage</Button>
                     <Button disabled={!hasDiff || isGeneratingGitInsight} onClick={onSummarizeDiff} variant="subtle">Summarize diff</Button>
                     <Button disabled={!hasDiff || isGeneratingGitInsight} onClick={onDraftCommitMessage} variant="subtle">Draft commit</Button>
                 </div>
@@ -113,6 +162,20 @@ export function GitDiffPanel({
                         <strong>{gitStatus.dirty ? `${changedFiles.length} changed` : 'Clean'}</strong>
                         <span>{stagedFiles.length} staged / {unstagedFiles.length} unstaged</span>
                         <span>{gitStatus.aheadBehind || gitStatus.message}</span>
+                    </div>
+                )}
+                {gitFileActionPreview && (
+                    <div className="git-action-preview">
+                        <strong>{gitActionLabel(gitFileActionPreview.action)}</strong>
+                        {gitFileActionPreview.command.length > 0 && <code>{formatGitCommand(gitFileActionPreview.command)}</code>}
+                        <small>{gitFileActionPreview.message}</small>
+                    </div>
+                )}
+                {gitHunkActionPreview && (
+                    <div className="git-action-preview destructive">
+                        <strong>{gitHunkActionLabel(gitHunkActionPreview.action)}</strong>
+                        {gitHunkActionPreview.command.length > 0 && <code>{formatGitCommand(gitHunkActionPreview.command)}</code>}
+                        <small>{gitHunkActionPreview.message}</small>
                     </div>
                 )}
                 <div className="code-studio-list" aria-label="Working tree changed files">
@@ -147,14 +210,24 @@ export function GitDiffPanel({
                                 <IconButton className="hunk-nav-button" disabled={hunkTargets.length === 0} label="Next hunk" onClick={() => moveHunk(1)}>
                                     <FontAwesomeIcon icon={faChevronDown} />
                                 </IconButton>
+                                <Button disabled={!activeHunkKey} onClick={toggleActiveHunkSelection} variant="subtle">{activeHunkIsSelected ? 'Unselect hunk' : 'Select hunk'}</Button>
+                                <Button disabled={hunkActionDisabled} onClick={previewActiveHunkAction} variant="subtle">Preview {hunkActionLabel.toLowerCase()}</Button>
+                                <Button disabled={hunkActionDisabled} onClick={applyActiveHunkAction} variant="subtle">{hunkActionLabel}</Button>
                             </div>
                         </div>
+                        {hunkTargets.length > 0 && (
+                            <div className="hunk-selection-summary">
+                                <strong>{selectedHunkKeys.length} / {hunkTargets.length} hunks selected</strong>
+                                <small>{selectedHunkKeys.length > 0 ? selectedHunkLabel(selectedHunkKeys, hunkTargets) : 'Selection is read-only and will feed approved hunk actions later.'}</small>
+                                {selectedHunkKeys.length > 0 && <button onClick={() => setSelectedHunkKeys([])} type="button">Clear</button>}
+                            </div>
+                        )}
                         {selectedDiff?.message && <small className="git-diff-message">{selectedDiff.message}</small>}
                         {stagedDiff && (
-                            <DiffBlock activeHunkKey={activeHunkKey} diff={stagedDiff} kind="staged" mode={diffMode} title="Staged Diff" />
+                            <DiffBlock activeHunkKey={activeHunkKey} diff={stagedDiff} kind="staged" mode={diffMode} selectedHunkKeys={selectedHunkKeys} title="Staged Diff" />
                         )}
                         {unstagedDiff && (
-                            <DiffBlock activeHunkKey={activeHunkKey} diff={unstagedDiff} kind="unstaged" mode={diffMode} title="Unstaged Diff" />
+                            <DiffBlock activeHunkKey={activeHunkKey} diff={unstagedDiff} kind="unstaged" mode={diffMode} selectedHunkKeys={selectedHunkKeys} title="Unstaged Diff" />
                         )}
                     </div>
                 ) : (
@@ -165,7 +238,7 @@ export function GitDiffPanel({
     );
 }
 
-function DiffBlock({activeHunkKey, diff, kind, mode, title}: {activeHunkKey: string; diff: string; kind: string; mode: DiffMode; title: string}) {
+function DiffBlock({activeHunkKey, diff, kind, mode, selectedHunkKeys, title}: {activeHunkKey: string; diff: string; kind: string; mode: DiffMode; selectedHunkKeys: string[]; title: string}) {
     const rows = useMemo(() => parseUnifiedDiff(kind, diff), [kind, diff]);
     return (
         <div className="git-diff-block">
@@ -176,18 +249,18 @@ function DiffBlock({activeHunkKey, diff, kind, mode, title}: {activeHunkKey: str
                         <span>Old</span>
                         <span>New</span>
                     </div>
-                    {rows.map((row, index) => renderSplitRow(row, index, activeHunkKey))}
+                    {rows.map((row, index) => renderSplitRow(row, index, activeHunkKey, selectedHunkKeys))}
                 </div>
             ) : mode === 'changes' ? (
-                <ChangedLinesDiff rows={rows} title={title} />
+                <ChangedLinesDiff rows={rows} selectedHunkKeys={selectedHunkKeys} title={title} />
             ) : (
-                <pre className="git-diff-view">{rows.map((row, index) => renderUnifiedRow(row, index, activeHunkKey))}</pre>
+                <pre className="git-diff-view">{rows.map((row, index) => renderUnifiedRow(row, index, activeHunkKey, selectedHunkKeys))}</pre>
             )}
         </div>
     );
 }
 
-function ChangedLinesDiff({rows, title}: {rows: DiffRow[]; title: string}) {
+function ChangedLinesDiff({rows, selectedHunkKeys, title}: {rows: DiffRow[]; selectedHunkKeys: string[]; title: string}) {
     const changedRows = useMemo(() => collectChangedRows(rows), [rows]);
     return (
         <div className="git-diff-changes" role="table" aria-label={`${title} changed lines only`}>
@@ -196,7 +269,7 @@ function ChangedLinesDiff({rows, title}: {rows: DiffRow[]; title: string}) {
                 <span>New</span>
             </div>
             {changedRows.length > 0 ? changedRows.map((row, index) => (
-                <div className="git-diff-split-row" key={`${index}-${row.oldLine ?? ''}-${row.newLine ?? ''}-${row.oldText}-${row.newText}`} role="row">
+                <div className={selectedHunkKeys.includes(row.hunkKey ?? '') ? 'git-diff-split-row selected-hunk' : 'git-diff-split-row'} key={`${index}-${row.oldLine ?? ''}-${row.newLine ?? ''}-${row.oldText}-${row.newText}`} role="row">
                     {row.oldLine ? <DiffCell line={row.oldLine} text={row.oldText} type="delete" /> : <DiffCell text="" type="blank" />}
                     {row.newLine ? <DiffCell line={row.newLine} text={row.newText} type="add" /> : <DiffCell text="" type="blank" />}
                 </div>
@@ -209,8 +282,8 @@ function ChangedLinesDiff({rows, title}: {rows: DiffRow[]; title: string}) {
 
 function collectChangedRows(rows: DiffRow[]) {
     const changedRows: ChangedRow[] = [];
-    let pendingDeletes: Array<{line: number; text: string}> = [];
-    let pendingAdds: Array<{line: number; text: string}> = [];
+    let pendingDeletes: Array<{line: number; text: string; hunkKey?: string}> = [];
+    let pendingAdds: Array<{line: number; text: string; hunkKey?: string}> = [];
 
     function flush() {
         const count = Math.max(pendingDeletes.length, pendingAdds.length);
@@ -222,6 +295,7 @@ function collectChangedRows(rows: DiffRow[]) {
                 oldText: deletion?.text ?? '',
                 newLine: addition?.line,
                 newText: addition?.text ?? '',
+                hunkKey: deletion?.hunkKey ?? addition?.hunkKey,
             });
         }
         pendingDeletes = [];
@@ -230,11 +304,11 @@ function collectChangedRows(rows: DiffRow[]) {
 
     for (const row of rows) {
         if (row.type === 'delete') {
-            pendingDeletes.push({line: row.oldLine, text: row.oldText});
+            pendingDeletes.push({line: row.oldLine, text: row.oldText, hunkKey: row.hunkKey});
             continue;
         }
         if (row.type === 'add') {
-            pendingAdds.push({line: row.newLine, text: row.newText});
+            pendingAdds.push({line: row.newLine, text: row.newText, hunkKey: row.hunkKey});
             continue;
         }
         flush();
@@ -243,12 +317,13 @@ function collectChangedRows(rows: DiffRow[]) {
     return changedRows;
 }
 
-function renderUnifiedRow(row: DiffRow, index: number, activeHunkKey: string) {
-    const hunkKey = row.type === 'hunk' || row.type === 'meta' ? row.hunkKey : undefined;
+function renderUnifiedRow(row: DiffRow, index: number, activeHunkKey: string, selectedHunkKeys: string[]) {
+    const hunkKey = row.hunkKey;
     const className = [
         'git-diff-line',
         `git-diff-line-${row.type}`,
         hunkKey && hunkKey === activeHunkKey ? 'active-hunk' : '',
+        hunkKey && selectedHunkKeys.includes(hunkKey) ? 'selected-hunk' : '',
     ].filter(Boolean).join(' ');
     const text = rowText(row);
     return (
@@ -259,12 +334,13 @@ function renderUnifiedRow(row: DiffRow, index: number, activeHunkKey: string) {
     );
 }
 
-function renderSplitRow(row: DiffRow, index: number, activeHunkKey: string) {
+function renderSplitRow(row: DiffRow, index: number, activeHunkKey: string, selectedHunkKeys: string[]) {
     if (row.type === 'meta' || row.type === 'hunk') {
         const className = [
             'git-diff-split-row',
             `git-diff-split-${row.type}`,
             row.hunkKey === activeHunkKey ? 'active-hunk' : '',
+            row.hunkKey && selectedHunkKeys.includes(row.hunkKey) ? 'selected-hunk' : '',
         ].filter(Boolean).join(' ');
         return (
             <div className={className} data-hunk-key={row.hunkKey} key={`${index}-${row.content}`} role="row">
@@ -274,7 +350,7 @@ function renderSplitRow(row: DiffRow, index: number, activeHunkKey: string) {
     }
     if (row.type === 'context') {
         return (
-            <div className="git-diff-split-row" key={`${index}-${row.oldLine}-${row.newLine}`} role="row">
+            <div className={selectedHunkKeys.includes(row.hunkKey ?? '') ? 'git-diff-split-row selected-hunk' : 'git-diff-split-row'} key={`${index}-${row.oldLine}-${row.newLine}`} role="row">
                 <DiffCell line={row.oldLine} text={row.oldText} type="context" />
                 <DiffCell line={row.newLine} text={row.newText} type="context" />
             </div>
@@ -282,14 +358,14 @@ function renderSplitRow(row: DiffRow, index: number, activeHunkKey: string) {
     }
     if (row.type === 'delete') {
         return (
-            <div className="git-diff-split-row" key={`${index}-${row.oldLine}`} role="row">
+            <div className={selectedHunkKeys.includes(row.hunkKey ?? '') ? 'git-diff-split-row selected-hunk' : 'git-diff-split-row'} key={`${index}-${row.oldLine}`} role="row">
                 <DiffCell line={row.oldLine} text={row.oldText} type="delete" />
                 <DiffCell text="" type="blank" />
             </div>
         );
     }
     return (
-        <div className="git-diff-split-row" key={`${index}-${row.newLine}`} role="row">
+        <div className={selectedHunkKeys.includes(row.hunkKey ?? '') ? 'git-diff-split-row selected-hunk' : 'git-diff-split-row'} key={`${index}-${row.newLine}`} role="row">
             <DiffCell text="" type="blank" />
             <DiffCell line={row.newLine} text={row.newText} type="add" />
         </div>
@@ -425,6 +501,16 @@ function diffHeading(isLoading: boolean, selectedPath: string | undefined, isTru
     return 'Read-only staged and unstaged diffs';
 }
 
+function selectedHunkLabel(selectedHunkKeys: string[], hunkTargets: HunkTarget[]) {
+    const labels = hunkTargets
+        .filter((target) => selectedHunkKeys.includes(target.key))
+        .map((target) => target.label);
+    if (labels.length <= 3) {
+        return `Selected: ${labels.join(', ')}`;
+    }
+    return `Selected: ${labels.slice(0, 3).join(', ')} and ${labels.length - 3} more`;
+}
+
 function collectHunks(kind: string, diff: string): HunkTarget[] {
     return diff
         .replace(/\r\n/g, '\n')
@@ -432,7 +518,7 @@ function collectHunks(kind: string, diff: string): HunkTarget[] {
         .reduce<HunkTarget[]>((hunks, line) => {
             if (line.startsWith('@@')) {
                 const index = hunks.length + 1;
-                hunks.push({key: `${kind}-${index}`, label: `${kind} ${index}`});
+                hunks.push({key: `${kind}-${index}`, label: `${kind} ${index}`, content: line});
             }
             return hunks;
         }, []);
@@ -443,18 +529,20 @@ function parseUnifiedDiff(kind: string, diff: string): DiffRow[] {
     let oldLine = 0;
     let newLine = 0;
     let hunkIndex = 0;
+    let currentHunkKey = '';
 
     for (const line of diff.replace(/\r\n/g, '\n').split('\n')) {
         if (line === '') {
-            rows.push({type: 'context', oldLine: oldLine > 0 ? oldLine++ : 0, newLine: newLine > 0 ? newLine++ : 0, oldText: '', newText: ''});
+            rows.push({type: 'context', oldLine: oldLine > 0 ? oldLine++ : 0, newLine: newLine > 0 ? newLine++ : 0, oldText: '', newText: '', hunkKey: currentHunkKey});
             continue;
         }
         if (line.startsWith('@@')) {
             hunkIndex += 1;
+            currentHunkKey = `${kind}-${hunkIndex}`;
             const range = line.match(/^@@\s+-(\d+)(?:,\d+)?\s+\+(\d+)(?:,\d+)?\s+@@/);
             oldLine = Number(range?.[1] ?? 0);
             newLine = Number(range?.[2] ?? 0);
-            rows.push({type: 'hunk', content: line, hunkKey: `${kind}-${hunkIndex}`});
+            rows.push({type: 'hunk', content: line, hunkKey: currentHunkKey});
             continue;
         }
         if (line.startsWith('diff --git') || line.startsWith('index ') || line.startsWith('---') || line.startsWith('+++')) {
@@ -462,17 +550,17 @@ function parseUnifiedDiff(kind: string, diff: string): DiffRow[] {
             continue;
         }
         if (line.startsWith('-')) {
-            rows.push({type: 'delete', oldLine: oldLine, oldText: line.slice(1)});
+            rows.push({type: 'delete', oldLine: oldLine, oldText: line.slice(1), hunkKey: currentHunkKey});
             oldLine += 1;
             continue;
         }
         if (line.startsWith('+')) {
-            rows.push({type: 'add', newLine: newLine, newText: line.slice(1)});
+            rows.push({type: 'add', newLine: newLine, newText: line.slice(1), hunkKey: currentHunkKey});
             newLine += 1;
             continue;
         }
         const text = line.startsWith(' ') ? line.slice(1) : line;
-        rows.push({type: 'context', oldLine: oldLine, newLine: newLine, oldText: text, newText: text});
+        rows.push({type: 'context', oldLine: oldLine, newLine: newLine, oldText: text, newText: text, hunkKey: currentHunkKey});
         oldLine += 1;
         newLine += 1;
     }
@@ -505,4 +593,39 @@ function cssEscape(value: string) {
 function gitCode(index: string, worktree: string) {
     const code = `${index || ' '}${worktree || ' '}`.trim();
     return code || 'tracked';
+}
+
+function gitActionLabel(action: string) {
+    if (action === 'unstage') {
+        return 'Unstage preview';
+    }
+    return 'Stage preview';
+}
+
+function gitHunkActionLabel(action: string) {
+    if (action === 'discard') {
+        return 'Discard hunk preview';
+    }
+    return 'Revert hunk preview';
+}
+
+function hunkRequestFromKey(key: string, path: string): GitHunkActionRequest | null {
+    if (!key || !path) {
+        return null;
+    }
+    const match = key.match(/^(staged|unstaged)-(\d+)$/);
+    if (!match) {
+        return null;
+    }
+    const diffKind = match[1];
+    return {
+        path,
+        diffKind,
+        hunkIndex: Number(match[2]),
+        action: diffKind === 'unstaged' ? 'discard' : 'revert',
+    };
+}
+
+function formatGitCommand(command: string[]) {
+    return command.map((part) => /[\s"]/u.test(part) ? `"${part.replace(/"/g, '\\"')}"` : part).join(' ');
 }

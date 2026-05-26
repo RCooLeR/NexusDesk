@@ -18,6 +18,10 @@ export function ApplyFileWrite(arg1) {
   return window['go']['main']['App']['ApplyFileWrite'](arg1);
 }
 
+export function ApplyGitHunkAction(arg1) {
+  return window['go']['main']['App']['ApplyGitHunkAction'](arg1);
+}
+
 export function ArchiveArtifact(arg1) {
   return window['go']['main']['App']['ArchiveArtifact'](arg1);
 }
@@ -200,6 +204,14 @@ export function PreviewFileMove(arg1) {
 
 export function PreviewFileWrite(arg1) {
   return window['go']['main']['App']['PreviewFileWrite'](arg1);
+}
+
+export function PreviewGitFileAction(arg1) {
+  return window['go']['main']['App']['PreviewGitFileAction'](arg1);
+}
+
+export function PreviewGitHunkAction(arg1) {
+  return window['go']['main']['App']['PreviewGitHunkAction'](arg1);
 }
 
 export function ProfileDataset(arg1) {
