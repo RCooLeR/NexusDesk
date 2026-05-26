@@ -1,6 +1,9 @@
 package tasks
 
-import "time"
+import (
+	"context"
+	"time"
+)
 
 const (
 	maxFiles    = 1500
@@ -21,5 +24,9 @@ func (s *Service) Discover(root string) (Summary, error) {
 }
 
 func (s *Service) Run(root string, taskID string) (RunResult, error) {
-	return runDiscovered(root, taskID)
+	return runDiscovered(context.Background(), root, taskID)
+}
+
+func (s *Service) RunContext(ctx context.Context, root string, taskID string) (RunResult, error) {
+	return runDiscovered(ctx, root, taskID)
 }

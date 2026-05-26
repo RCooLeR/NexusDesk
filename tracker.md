@@ -238,7 +238,7 @@ Goal: make Workbench credible as an IDE-like surface.
 - [ ] Add AI diff summary and commit draft once assistant service exists.
 - [x] Add task discovery and safe task-run service.
 - [x] Add first native task discovery/run panel.
-- [ ] Add native activity/job log for task output.
+- [x] Add native activity/job log for task output.
 
 Exit criteria:
 
@@ -280,7 +280,7 @@ Exit criteria:
 
 Goal: make slow and durable workflows reliable.
 
-- [ ] Define job model: id, kind, root, status, progress, log tail, cancel, timestamps, outputs.
+- [x] Define first in-memory job model: id, kind, status, log tail, cancel, timestamps, and task output status.
 - [ ] Add SQLite primary metadata store in `nexus-app`.
 - [ ] Add repositories for chats, approvals, artifacts, tool runs, jobs, SQL runs, and dataset dependencies.
 - [ ] Migrate/import relevant `.nexusdesk` data from Wails-era workspaces.
@@ -311,5 +311,5 @@ Exit criteria:
 1. Configure Windows CGO compiler and verify `nexus-app` runs.
 2. Port OpenAI-compatible/Ollama client using the native settings store.
 3. Add approval-backed hunk stage/unstage actions on top of parsed hunk metadata.
-4. Add native job model/activity log for async task output and cancellation.
+4. Add durable persisted jobs and task-run artifacts.
 5. Add richer navigator context menus once the first action strip is validated in Fyne.

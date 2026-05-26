@@ -1,6 +1,7 @@
 package tasks
 
 import (
+	"context"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -97,6 +98,14 @@ func TestServiceRequiresWorkspaceRoot(t *testing.T) {
 	}
 	if _, err := service.Run("", "task"); err == nil {
 		t.Fatal("expected empty run root to be rejected")
+	}
+}
+
+func TestRunContextAcceptsCanceledContext(t *testing.T) {
+	ctx, cancel := context.WithCancel(context.Background())
+	cancel()
+	if _, err := New().RunContext(ctx, t.TempDir(), "missing-task"); err == nil {
+		t.Fatal("expected missing task to still be rejected after rediscovery")
 	}
 }
 

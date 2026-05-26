@@ -7,6 +7,7 @@ import (
 
 	editorSvc "nexusdesk/internal/services/editor"
 	gitSvc "nexusdesk/internal/services/git"
+	jobsSvc "nexusdesk/internal/services/jobs"
 	settingsSvc "nexusdesk/internal/services/settings"
 	tasksSvc "nexusdesk/internal/services/tasks"
 	workspaceSvc "nexusdesk/internal/services/workspace"
@@ -17,6 +18,7 @@ type View struct {
 	state            *State
 	workspaceService *workspaceSvc.Service
 	gitService       *gitSvc.Service
+	jobService       *jobsSvc.Service
 	settingsStore    *settingsSvc.Store
 	taskService      *tasksSvc.Service
 	editorSession    *editorSvc.Session
@@ -42,6 +44,8 @@ type View struct {
 	taskResults      *fyne.Container
 	taskStatus       *widget.Label
 	taskOutput       *widget.Entry
+	jobResults       *fyne.Container
+	jobStatus        *widget.Label
 	rollbackResults  *fyne.Container
 	rollbackStatus   *widget.Label
 }
@@ -67,6 +71,7 @@ func New(window fyne.Window) *View {
 		state:            NewState(),
 		workspaceService: workspaceSvc.New(),
 		gitService:       gitSvc.New(),
+		jobService:       jobsSvc.New(),
 		settingsStore:    settingsStore,
 		taskService:      tasksSvc.New(),
 		editorSession:    editorSession,
@@ -90,6 +95,8 @@ func New(window fyne.Window) *View {
 		taskResults:      container.NewVBox(widget.NewLabel("Discover workspace tasks to run tests, scripts, or Compose checks.")),
 		taskStatus:       widget.NewLabel("No tasks discovered."),
 		taskOutput:       taskOutput,
+		jobResults:       container.NewVBox(widget.NewLabel("Run a task to create a job record.")),
+		jobStatus:        widget.NewLabel("No jobs yet."),
 		rollbackResults:  container.NewVBox(widget.NewLabel("Refresh rollback records to inspect undo points.")),
 		rollbackStatus:   widget.NewLabel("Rollback records have not been loaded."),
 	}

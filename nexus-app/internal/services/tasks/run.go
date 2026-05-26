@@ -11,10 +11,13 @@ import (
 	"time"
 )
 
-func runDiscovered(root string, taskID string) (RunResult, error) {
+func runDiscovered(parent context.Context, root string, taskID string) (RunResult, error) {
 	root = strings.TrimSpace(root)
 	if root == "" {
 		return RunResult{}, errors.New("open a workspace before running tasks")
+	}
+	if parent == nil {
+		parent = context.Background()
 	}
 	taskID = strings.TrimSpace(taskID)
 	if taskID == "" {
@@ -45,7 +48,7 @@ func runDiscovered(root string, taskID string) (RunResult, error) {
 	}
 
 	started := time.Now().UTC()
-	ctx, cancel := context.WithTimeout(context.Background(), runTimeout)
+	ctx, cancel := context.WithTimeout(parent, runTimeout)
 	defer cancel()
 	command := taskExecCommand(ctx, selected.Command)
 	command.Dir = cwd
@@ -64,6 +67,10 @@ func runDiscovered(root string, taskID string) (RunResult, error) {
 		exitCode = -1
 		status = "timeout"
 		message = fmt.Sprintf("Task %q timed out after %s.", selected.Label, runTimeout)
+	} else if ctx.Err() == context.Canceled {
+		exitCode = -1
+		status = "canceled"
+		message = fmt.Sprintf("Task %q was canceled.", selected.Label)
 	} else if err != nil {
 		status = "failed"
 		message = fmt.Sprintf("Task %q failed.", selected.Label)

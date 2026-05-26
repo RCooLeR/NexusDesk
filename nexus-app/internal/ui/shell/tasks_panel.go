@@ -10,6 +10,7 @@ import (
 	"fyne.io/fyne/v2/theme"
 	"fyne.io/fyne/v2/widget"
 
+	jobsSvc "nexusdesk/internal/services/jobs"
 	tasksSvc "nexusdesk/internal/services/tasks"
 )
 
@@ -48,29 +49,47 @@ func (v *View) confirmRunTask(task tasksSvc.Task) {
 		if !confirm {
 			return
 		}
-		v.runTask(task.ID)
+		v.runTask(task)
 	}, v.window)
 }
 
-func (v *View) runTask(taskID string) {
+func (v *View) runTask(task tasksSvc.Task) {
 	workspace := v.state.Workspace()
 	if workspace.Root == "" {
 		v.taskStatus.SetText("Open a workspace before running tasks.")
 		v.addActivity("Open a workspace before running tasks.")
 		return
 	}
-	v.taskStatus.SetText("Running task...")
-	v.taskOutput.SetText("Running task...\n")
-	result, err := v.taskService.Run(workspace.Root, taskID)
+	job, ctx := v.jobService.Start("task", task.Label)
+	v.jobService.AppendLog(job.ID, "Command: "+task.Command)
+	v.taskStatus.SetText("Running " + task.Label + " as " + job.ID + ".")
+	v.taskOutput.SetText("Running " + task.Label + " as " + job.ID + "...\n")
+	v.addActivity("Started " + job.ID + ": " + task.Label + ".")
+	v.refreshJobs()
+	root := workspace.Root
+	go func() {
+		result, err := v.taskService.RunContext(ctx, root, task.ID)
+		fyne.Do(func() {
+			v.finishTaskJob(job.ID, result, err)
+		})
+	}()
+}
+
+func (v *View) finishTaskJob(jobID string, result tasksSvc.RunResult, err error) {
 	if err != nil {
+		v.jobService.Finish(jobID, jobsSvc.StatusFailed, "Task failed before execution.", err)
 		dialog.ShowError(err, v.window)
 		v.taskStatus.SetText("Task failed before execution.")
+		v.refreshJobs()
 		return
 	}
+	v.jobService.AppendLog(jobID, taskRunLogLine(result))
+	v.jobService.Finish(jobID, jobStatusFromTask(result), result.Message, nil)
 	v.taskStatus.SetText(result.Message)
 	v.taskOutput.SetText(formatTaskRun(result))
 	v.addActivity(result.Message)
 	v.refreshTaskRows()
+	v.refreshJobs()
 }
 
 func (v *View) refreshTaskRows() {
@@ -133,4 +152,21 @@ func formatTaskRun(result tasksSvc.RunResult) string {
 		builder.WriteString("\n")
 	}
 	return builder.String()
+}
+
+func taskRunLogLine(result tasksSvc.RunResult) string {
+	return fmt.Sprintf("%s exit=%d duration=%s", result.Status, result.ExitCode, result.Duration)
+}
+
+func jobStatusFromTask(result tasksSvc.RunResult) jobsSvc.Status {
+	switch result.Status {
+	case "success":
+		return jobsSvc.StatusSuccess
+	case "timeout":
+		return jobsSvc.StatusTimedOut
+	case "canceled":
+		return jobsSvc.StatusCanceled
+	default:
+		return jobsSvc.StatusFailed
+	}
 }

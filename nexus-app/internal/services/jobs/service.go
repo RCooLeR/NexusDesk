@@ -1,0 +1,122 @@
+package jobs
+
+import (
+	"context"
+	"fmt"
+	"sync"
+	"time"
+)
+
+const maxLogLines = 12
+
+type Service struct {
+	mu      sync.Mutex
+	nextID  int
+	jobs    []Job
+	cancels map[string]context.CancelFunc
+}
+
+func New() *Service {
+	return &Service{cancels: map[string]context.CancelFunc{}}
+}
+
+func (s *Service) Start(kind string, label string) (Job, context.Context) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	s.nextID++
+	ctx, cancel := context.WithCancel(context.Background())
+	job := Job{
+		ID:        fmt.Sprintf("job-%04d", s.nextID),
+		Kind:      kind,
+		Label:     label,
+		Status:    StatusRunning,
+		Message:   "Running " + label + ".",
+		StartedAt: time.Now().UTC(),
+	}
+	s.jobs = append([]Job{job}, s.jobs...)
+	s.cancels[job.ID] = cancel
+	return job, ctx
+}
+
+func (s *Service) AppendLog(id string, line string) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	index := s.indexOf(id)
+	if index < 0 || line == "" {
+		return
+	}
+	s.jobs[index].LogTail = append(s.jobs[index].LogTail, line)
+	if len(s.jobs[index].LogTail) > maxLogLines {
+		s.jobs[index].LogTail = s.jobs[index].LogTail[len(s.jobs[index].LogTail)-maxLogLines:]
+	}
+}
+
+func (s *Service) Finish(id string, status Status, message string, err error) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	index := s.indexOf(id)
+	if index < 0 {
+		return
+	}
+	if s.jobs[index].Status == StatusCanceled && status != StatusCanceled {
+		delete(s.cancels, id)
+		return
+	}
+	s.jobs[index].Status = status
+	s.jobs[index].Message = message
+	if err != nil {
+		s.jobs[index].Error = err.Error()
+	}
+	s.jobs[index].CompletedAt = time.Now().UTC()
+	delete(s.cancels, id)
+}
+
+func (s *Service) Cancel(id string) bool {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	index := s.indexOf(id)
+	if index < 0 || s.jobs[index].Status != StatusRunning {
+		return false
+	}
+	cancel := s.cancels[id]
+	if cancel != nil {
+		cancel()
+	}
+	s.jobs[index].Status = StatusCanceled
+	s.jobs[index].Message = "Cancel requested."
+	s.jobs[index].CompletedAt = time.Now().UTC()
+	delete(s.cancels, id)
+	return true
+}
+
+func (s *Service) List() []Job {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	jobs := make([]Job, len(s.jobs))
+	copy(jobs, s.jobs)
+	for index := range jobs {
+		jobs[index].LogTail = append([]string(nil), jobs[index].LogTail...)
+	}
+	return jobs
+}
+
+func (s *Service) Get(id string) (Job, bool) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	index := s.indexOf(id)
+	if index < 0 {
+		return Job{}, false
+	}
+	job := s.jobs[index]
+	job.LogTail = append([]string(nil), job.LogTail...)
+	return job, true
+}
+
+func (s *Service) indexOf(id string) int {
+	for index := range s.jobs {
+		if s.jobs[index].ID == id {
+			return index
+		}
+	}
+	return -1
+}
