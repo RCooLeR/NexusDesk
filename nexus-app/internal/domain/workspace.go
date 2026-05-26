@@ -43,6 +43,7 @@ type FilePreview struct {
 	Bytes     []byte
 	Table     *TablePreview
 	Document  *DocumentPreview
+	PDF       *PDFPreview
 }
 
 type TablePreview struct {
@@ -57,6 +58,17 @@ type DocumentPreview struct {
 	Truncated bool
 }
 
+type PDFPreview struct {
+	Pages     []TextPage
+	Text      string
+	Truncated bool
+}
+
+type TextPage struct {
+	Page int
+	Text string
+}
+
 type PreviewKind string
 
 const (
@@ -64,5 +76,6 @@ const (
 	PreviewImage  PreviewKind = "image"
 	PreviewTable  PreviewKind = "table"
 	PreviewDoc    PreviewKind = "document"
+	PreviewPDF    PreviewKind = "pdf"
 	PreviewBinary PreviewKind = "binary"
 )

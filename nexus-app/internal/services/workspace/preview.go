@@ -59,6 +59,13 @@ func (s *Service) PreviewFile(root string, relPath string) (domain.FilePreview, 
 		preview.Bytes = content
 		return preview, nil
 	}
+	if kind == domain.PreviewPDF {
+		pdf := decodePDF(content)
+		preview.Bytes = content
+		preview.Text = pdf.Text
+		preview.PDF = pdf
+		return preview, nil
+	}
 	if kind == domain.PreviewTable {
 		text, encoding, table, err := decodeTable(content, cleanRelPath)
 		if err != nil {
@@ -95,6 +102,9 @@ func previewKind(relPath string, content []byte) domain.PreviewKind {
 	if isImageExtension(extension) {
 		return domain.PreviewImage
 	}
+	if isPDFExtension(extension) {
+		return domain.PreviewPDF
+	}
 	if isTableExtension(extension) {
 		return domain.PreviewTable
 	}
@@ -117,6 +127,10 @@ func previewKind(relPath string, content []byte) domain.PreviewKind {
 		return domain.PreviewText
 	}
 	return domain.PreviewBinary
+}
+
+func isPDFExtension(extension string) bool {
+	return extension == ".pdf"
 }
 
 func isDocumentExtension(extension string) bool {

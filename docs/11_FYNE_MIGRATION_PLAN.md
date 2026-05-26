@@ -90,6 +90,7 @@ The first `nexus-app` slice includes:
 - first native image preview path for capped workspace image files using service-returned bytes and Fyne image rendering;
 - first native capped CSV/TSV table preview path with service-side parsing and UI-side table rendering;
 - first native DOCX text preview path using bounded service-side extraction from `word/document.xml`;
+- first native PDF text preview path using bounded service-side literal text extraction and a read-only Fyne text surface;
 - framework-free workspace domain model.
 
 Full execution is blocked in the current shell until CGO is enabled with a Windows C compiler. Non-driver internal packages can already be tested.

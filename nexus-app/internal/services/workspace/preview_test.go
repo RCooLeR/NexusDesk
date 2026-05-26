@@ -150,6 +150,37 @@ func TestPreviewFileReturnsDOCXText(t *testing.T) {
 	}
 }
 
+func TestPreviewFileReturnsPDFText(t *testing.T) {
+	root := t.TempDir()
+	writeFile(t, filepath.Join(root, "brief.pdf"), "%PDF-1.7\n/Type /Page\nBT (Hello from PDF) Tj ET\n")
+
+	preview, err := New().PreviewFile(root, "brief.pdf")
+	if err != nil {
+		t.Fatalf("PreviewFile returned error: %v", err)
+	}
+	if preview.Kind != "pdf" || preview.PDF == nil {
+		t.Fatalf("expected PDF preview, got %#v", preview)
+	}
+	if preview.Text != "Hello from PDF" || preview.PDF.Text != "Hello from PDF" {
+		t.Fatalf("unexpected PDF text: %#v", preview.PDF)
+	}
+	if len(preview.Bytes) == 0 {
+		t.Fatal("expected PDF bytes to be retained for preview rendering")
+	}
+}
+
+func TestExtractPDFPagesSkipsPagesContainer(t *testing.T) {
+	content := []byte("%PDF-1.7\n/Type /Pages\nBT (Ignored) Tj ET\n/Type /Page\nBT (First page) Tj ET\n/Type /Page\nBT (Second page) Tj ET\n")
+
+	pages := extractPDFPages(content)
+	if len(pages) != 2 {
+		t.Fatalf("expected 2 extracted pages, got %#v", pages)
+	}
+	if pages[0].Text != "First page" || pages[1].Text != "Second page" {
+		t.Fatalf("unexpected PDF pages: %#v", pages)
+	}
+}
+
 func makeDOCX(t *testing.T, text string) []byte {
 	t.Helper()
 	var output bytes.Buffer

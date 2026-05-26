@@ -17,6 +17,9 @@ func newFilePreview(preview domain.FilePreview) fyne.CanvasObject {
 	if preview.Kind == domain.PreviewImage {
 		return container.NewBorder(header, nil, nil, nil, newImagePreview(preview))
 	}
+	if preview.Kind == domain.PreviewPDF {
+		return container.NewBorder(header, nil, nil, nil, newPDFPreview(preview))
+	}
 	if preview.Kind == domain.PreviewTable {
 		return container.NewBorder(header, nil, nil, nil, newTablePreview(preview))
 	}
@@ -39,6 +42,28 @@ func newImagePreview(preview domain.FilePreview) fyne.CanvasObject {
 	image.FillMode = canvas.ImageFillContain
 	image.SetMinSize(fyne.NewSize(360, 260))
 	return container.NewCenter(image)
+}
+
+func newPDFPreview(preview domain.FilePreview) fyne.CanvasObject {
+	if preview.PDF == nil {
+		return widget.NewLabel("PDF preview is unavailable.")
+	}
+	status := widget.NewLabel(pdfPreviewStatus(preview))
+	content := widget.NewMultiLineEntry()
+	content.SetText(preview.PDF.Text)
+	content.Wrapping = fyne.TextWrapWord
+	content.Disable()
+	return container.NewBorder(status, nil, nil, nil, content)
+}
+
+func pdfPreviewStatus(preview domain.FilePreview) string {
+	if preview.PDF.Text == "" {
+		return "PDF detected. Text extraction did not find readable literal text yet."
+	}
+	if preview.PDF.Truncated {
+		return "Showing extracted PDF text from a capped byte preview."
+	}
+	return fmt.Sprintf("Showing extracted PDF text from %d page(s).", len(preview.PDF.Pages))
 }
 
 func newTablePreview(preview domain.FilePreview) fyne.CanvasObject {
