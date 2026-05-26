@@ -28,10 +28,31 @@ type FileDiff struct {
 	Path                  string
 	StagedDiff            string
 	StagedDiffTruncated   bool
+	StagedHunks           []DiffHunk
 	UnstagedDiff          string
 	UnstagedDiffTruncated bool
+	UnstagedHunks         []DiffHunk
 	Message               string
 	GeneratedAt           time.Time
+}
+
+type DiffKind string
+
+const (
+	DiffKindStaged   DiffKind = "staged"
+	DiffKindUnstaged DiffKind = "unstaged"
+)
+
+type DiffHunk struct {
+	Kind         DiffKind
+	Index        int
+	Header       string
+	OldStart     int
+	OldLines     int
+	NewStart     int
+	NewLines     int
+	AddedLines   int
+	DeletedLines int
 }
 
 type FileAction string

@@ -101,3 +101,24 @@ func TestFormatGitDiffDiffOnlyModeSkipsContext(t *testing.T) {
 		t.Fatalf("expected changed lines side by side, got:\n%s", text)
 	}
 }
+
+func TestGitHunkTargetsPreserveStagedThenUnstagedOrder(t *testing.T) {
+	targets := gitHunkTargets(gitSvc.FileDiff{
+		StagedHunks: []gitSvc.DiffHunk{
+			{Kind: gitSvc.DiffKindStaged, Index: 0, Header: "@@ -1 +1 @@", AddedLines: 1, DeletedLines: 1},
+		},
+		UnstagedHunks: []gitSvc.DiffHunk{
+			{Kind: gitSvc.DiffKindUnstaged, Index: 0, Header: "@@ -5 +5 @@", AddedLines: 2},
+		},
+	})
+
+	if len(targets) != 2 {
+		t.Fatalf("expected two hunk targets, got %#v", targets)
+	}
+	if targets[0].Kind != gitSvc.DiffKindStaged || targets[0].Label != "Staged hunk 1 (+1/-1)" {
+		t.Fatalf("unexpected staged target: %#v", targets[0])
+	}
+	if targets[1].Kind != gitSvc.DiffKindUnstaged || targets[1].Label != "Unstaged hunk 1 (+2/-0)" {
+		t.Fatalf("unexpected unstaged target: %#v", targets[1])
+	}
+}

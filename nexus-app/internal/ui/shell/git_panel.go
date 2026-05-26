@@ -20,6 +20,13 @@ type gitChangeGroup struct {
 	Changes   []gitSvc.FileChange
 }
 
+type gitHunkTarget struct {
+	Kind   gitSvc.DiffKind
+	Index  int
+	Header string
+	Label  string
+}
+
 func (v *View) newGitPanel() fyne.CanvasObject {
 	refresh := widget.NewButtonWithIcon("Refresh git", theme.ViewRefreshIcon(), v.refreshGitStatus)
 	header := container.NewBorder(nil, nil, v.gitStatus, refresh)
@@ -38,8 +45,17 @@ func (v *View) newGitPanel() fyne.CanvasObject {
 	unstage := widget.NewButtonWithIcon("Unstage", theme.ContentRemoveIcon(), func() {
 		v.confirmGitFileAction(gitSvc.FileActionUnstage)
 	})
+	prevHunk := widget.NewButtonWithIcon("", theme.NavigateBackIcon(), func() {
+		v.moveGitHunk(-1)
+	})
+	prevHunk.Importance = widget.LowImportance
+	nextHunk := widget.NewButtonWithIcon("", theme.NavigateNextIcon(), func() {
+		v.moveGitHunk(1)
+	})
+	nextHunk.Importance = widget.LowImportance
+	hunkNav := container.NewHBox(prevHunk, v.gitHunkStatus, nextHunk)
 	actions := container.NewHBox(stage, unstage, diffMode)
-	diffHeader := container.NewBorder(nil, nil, v.gitDiffStatus, actions)
+	diffHeader := container.NewBorder(nil, nil, hunkNav, actions, v.gitDiffStatus)
 	diff := container.NewBorder(diffHeader, nil, nil, nil, v.gitDiffText)
 	split := container.NewVSplit(scroll, diff)
 	split.Offset = 0.42
@@ -67,9 +83,35 @@ func (v *View) openGitDiff(path string) {
 		return
 	}
 	v.gitLastDiff = diff
+	v.gitActiveHunk = 0
 	v.gitDiffStatus.SetText(diff.Message)
 	v.gitDiffText.SetText(formatGitDiff(diff, v.gitDiffMode))
+	v.updateGitHunkStatus()
 	v.addActivity(diff.Message)
+}
+
+func (v *View) moveGitHunk(delta int) {
+	targets := gitHunkTargets(v.gitLastDiff)
+	if len(targets) == 0 {
+		v.addActivity("No diff hunks are available for the selected file.")
+		return
+	}
+	v.gitActiveHunk = (v.gitActiveHunk + delta + len(targets)) % len(targets)
+	target := targets[v.gitActiveHunk]
+	v.updateGitHunkStatus()
+	v.addActivity("Selected " + target.Label + ".")
+}
+
+func (v *View) updateGitHunkStatus() {
+	targets := gitHunkTargets(v.gitLastDiff)
+	if len(targets) == 0 {
+		v.gitHunkStatus.SetText("No hunks")
+		return
+	}
+	if v.gitActiveHunk < 0 || v.gitActiveHunk >= len(targets) {
+		v.gitActiveHunk = 0
+	}
+	v.gitHunkStatus.SetText(fmt.Sprintf("%d / %d %s", v.gitActiveHunk+1, len(targets), targets[v.gitActiveHunk].Label))
 }
 
 func (v *View) confirmGitFileAction(action gitSvc.FileAction) {
@@ -191,4 +233,28 @@ func gitChangeRow(change gitSvc.FileChange, onOpen func(string)) fyne.CanvasObje
 	text := widget.NewLabel(fmt.Sprintf("%s - %s", change.Summary, label))
 	text.Truncation = fyne.TextTruncateEllipsis
 	return container.NewBorder(nil, nil, open, nil, container.NewPadded(text))
+}
+
+func gitHunkTargets(diff gitSvc.FileDiff) []gitHunkTarget {
+	targets := make([]gitHunkTarget, 0, len(diff.StagedHunks)+len(diff.UnstagedHunks))
+	for _, hunk := range diff.StagedHunks {
+		targets = append(targets, gitHunkTargetFromDiff(hunk))
+	}
+	for _, hunk := range diff.UnstagedHunks {
+		targets = append(targets, gitHunkTargetFromDiff(hunk))
+	}
+	return targets
+}
+
+func gitHunkTargetFromDiff(hunk gitSvc.DiffHunk) gitHunkTarget {
+	kind := "Unstaged"
+	if hunk.Kind == gitSvc.DiffKindStaged {
+		kind = "Staged"
+	}
+	return gitHunkTarget{
+		Kind:   hunk.Kind,
+		Index:  hunk.Index,
+		Header: hunk.Header,
+		Label:  fmt.Sprintf("%s hunk %d (+%d/-%d)", kind, hunk.Index+1, hunk.AddedLines, hunk.DeletedLines),
+	}
 }

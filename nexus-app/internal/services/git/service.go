@@ -83,8 +83,10 @@ func (s *Service) FileDiff(root string, relPath string) (FileDiff, error) {
 		Path:                  cleanPath,
 		StagedDiff:            stagedDiff,
 		StagedDiffTruncated:   stagedTruncated,
+		StagedHunks:           parseDiffHunks(DiffKindStaged, stagedDiff),
 		UnstagedDiff:          unstagedDiff,
 		UnstagedDiffTruncated: unstagedTruncated,
+		UnstagedHunks:         parseDiffHunks(DiffKindUnstaged, unstagedDiff),
 		Message:               message,
 		GeneratedAt:           generatedAt,
 	}, nil

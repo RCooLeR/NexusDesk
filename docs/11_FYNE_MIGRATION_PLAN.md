@@ -99,6 +99,7 @@ The first `nexus-app` slice includes:
 - first native Git status service and manual bottom Git refresh panel with hidden Windows command execution;
 - directory-grouped changed-file rendering in the native Git panel;
 - first native read-only selected-file Git diff service with unified, split, and diff-only panel modes;
+- first native parsed diff hunk metadata and previous/next hunk selection in the Git panel;
 - first native confirmed file-level Git stage and unstage controls through the Git service boundary;
 - first native rollback browser panel for safe-write and file-operation records with confirmation before apply;
 - first native workspace-tree action strip for create, copy, rename/move, and delete through the file-operation services;
