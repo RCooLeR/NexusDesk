@@ -128,6 +128,7 @@ type BottomStudioPanelProps = {
     onOpenCommandPalette: () => void;
     onQueryDataset: () => void;
     onQueryDatasetSQL: () => void;
+    onCancelSQLiteConnectorQuery: () => void;
     onQuerySQLiteConnector: () => void;
     onRebuildDatasetDependency: (dependencyId: string) => void;
     onRefreshAgentPlan: () => void;
@@ -152,6 +153,8 @@ type BottomStudioPanelProps = {
     onSearchWorkspace: () => void;
     onSelectSearchResult: (result: WorkspaceSearchResult) => void;
     onSQLiteConnectorQueryChange: (content: string) => void;
+    onSQLiteConnectorResultLimitChange: (value: number) => void;
+    onSQLiteConnectorTimeoutSecondsChange: (value: number) => void;
     onSummarizeGitDiff: () => void;
     onTabChange: (tab: BottomStudioTab) => void;
     onTestConnection: () => void;
@@ -164,8 +167,10 @@ type BottomStudioPanelProps = {
     settingsDraft: LLMSettings;
     settingsStatus: string;
     sqliteConnectorQuery: string;
+    sqliteConnectorResultLimit: number;
     sqliteConnectorResult: SQLiteQueryResult | null;
     sqliteConnectorMetadata: ConnectorMetadata | null;
+    sqliteConnectorTimeoutSeconds: number;
     sqliteStatus: SQLiteMetadataStatus | null;
     toolEvents: ToolEvent[];
     workspace: WorkspaceSnapshot | null;
@@ -306,6 +311,7 @@ export function BottomStudioPanel({
     onOpenCommandPalette,
     onQueryDataset,
     onQueryDatasetSQL,
+    onCancelSQLiteConnectorQuery,
     onQuerySQLiteConnector,
     onRebuildDatasetDependency,
     onRefreshAgentPlan,
@@ -330,6 +336,8 @@ export function BottomStudioPanel({
     onSearchWorkspace,
     onSelectSearchResult,
     onSQLiteConnectorQueryChange,
+    onSQLiteConnectorResultLimitChange,
+    onSQLiteConnectorTimeoutSecondsChange,
     onSummarizeGitDiff,
     onTabChange,
     onTestConnection,
@@ -342,8 +350,10 @@ export function BottomStudioPanel({
     settingsDraft,
     settingsStatus,
     sqliteConnectorQuery,
+    sqliteConnectorResultLimit,
     sqliteConnectorResult,
     sqliteConnectorMetadata,
+    sqliteConnectorTimeoutSeconds,
     sqliteStatus,
     toolEvents,
     workspace,
@@ -522,6 +532,7 @@ export function BottomStudioPanel({
                         onPreviewDatasetChart={onPreviewDatasetChart}
                         onQueryDataset={onQueryDataset}
                         onQueryDatasetSQL={onQueryDatasetSQL}
+                        onCancelSQLiteConnectorQuery={onCancelSQLiteConnectorQuery}
                         onQuerySQLiteConnector={onQuerySQLiteConnector}
                         onRebuildDatasetDependency={onRebuildDatasetDependency}
                         onRefreshStaleContext={onRefreshStaleContext}
@@ -529,12 +540,16 @@ export function BottomStudioPanel({
                         onSaveDatasetSQLQuery={onSaveDatasetSQLQuery}
                         onSearchMetadata={onSearchMetadata}
                         onSQLiteConnectorQueryChange={onSQLiteConnectorQueryChange}
+                        onSQLiteConnectorResultLimitChange={onSQLiteConnectorResultLimitChange}
+                        onSQLiteConnectorTimeoutSecondsChange={onSQLiteConnectorTimeoutSecondsChange}
                         rebuildingDatasetDependencyId={rebuildingDatasetDependencyId}
                         savedDatasetQueries={savedDatasetQueries}
                         savedDatasetSQLQueries={savedDatasetSQLQueries}
                         sqliteConnectorQuery={sqliteConnectorQuery}
+                        sqliteConnectorResultLimit={sqliteConnectorResultLimit}
                         sqliteConnectorResult={sqliteConnectorResult}
                         sqliteConnectorMetadata={sqliteConnectorMetadata}
+                        sqliteConnectorTimeoutSeconds={sqliteConnectorTimeoutSeconds}
                         sqliteStatus={sqliteStatus}
                         workspace={workspace}
                         workspaceFreshness={workspaceFreshness}

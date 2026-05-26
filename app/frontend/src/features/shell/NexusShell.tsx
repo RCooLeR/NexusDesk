@@ -10,6 +10,7 @@ import {
     AskLLMContextPack,
     AskLLMStream,
     AskLLMStreamContextPack,
+    CancelWorkspaceSQLiteQuery,
     ClearRecentWorkspaces,
     ClearChatHistory,
     ArchiveArtifact,
@@ -287,6 +288,9 @@ export function NexusShell({
     const [sqliteConnectorMetadata, setSQLiteConnectorMetadata] = useState<ConnectorMetadata | null>(null);
     const [isQueryingSQLiteConnector, setIsQueryingSQLiteConnector] = useState(false);
     const [isInspectingSQLiteConnector, setIsInspectingSQLiteConnector] = useState(false);
+    const [sqliteConnectorResultLimit, setSQLiteConnectorResultLimit] = useState(100);
+    const [sqliteConnectorTimeoutSeconds, setSQLiteConnectorTimeoutSeconds] = useState(30);
+    const [sqliteConnectorRequestID, setSQLiteConnectorRequestID] = useState('');
     const [isPreparingMetadataStore, setIsPreparingMetadataStore] = useState(false);
     const [editingFilePaths, setEditingFilePaths] = useState<string[]>([]);
     const [fileDrafts, setFileDrafts] = useState<Record<string, string>>({});
@@ -3690,18 +3694,42 @@ export function NexusShell({
             setWorkspaceStatus('Select a SQLite database file before querying it.');
             return;
         }
+        const requestId = `sqlite-${Date.now()}-${Math.random().toString(36).slice(2)}`;
         setIsQueryingSQLiteConnector(true);
+        setSQLiteConnectorRequestID(requestId);
         try {
-            const result = await QueryWorkspaceSQLite({relPath: filePreview.relPath, sql: sqliteConnectorQuery});
+            const result = await QueryWorkspaceSQLite({
+                relPath: filePreview.relPath,
+                sql: sqliteConnectorQuery,
+                requestId,
+                resultLimit: sqliteConnectorResultLimit,
+                timeoutSeconds: sqliteConnectorTimeoutSeconds,
+            });
             setSQLiteConnectorResult(result);
             setWorkspaceStatus(result.message);
-            pushToolEvent('SQLite queried', result.relPath);
+            pushToolEvent('SQLite queried', `${result.relPath}: cap ${result.resultLimit}, timeout ${result.timeoutSeconds}s`);
             await refreshDatasetLineage(filePreview.relPath);
         } catch (error) {
             const message = error instanceof Error ? error.message : '';
             setWorkspaceStatus(message || 'Could not query SQLite database.');
         } finally {
             setIsQueryingSQLiteConnector(false);
+            setSQLiteConnectorRequestID('');
+        }
+    }
+
+    async function cancelActiveSQLiteQuery() {
+        if (!sqliteConnectorRequestID) {
+            setWorkspaceStatus('No SQLite connector query is currently running.');
+            return;
+        }
+        try {
+            const canceled = await CancelWorkspaceSQLiteQuery(sqliteConnectorRequestID);
+            setWorkspaceStatus(canceled ? 'SQLite connector query cancellation requested.' : 'SQLite connector query already finished.');
+            pushToolEvent('SQLite query cancel requested', sqliteConnectorRequestID);
+        } catch (error) {
+            const message = error instanceof Error ? error.message : '';
+            setWorkspaceStatus(message || 'Could not cancel SQLite connector query.');
         }
     }
 
@@ -4077,6 +4105,7 @@ export function NexusShell({
                 }}
                 onQueryDataset={() => void querySelectedDataset()}
                 onQueryDatasetSQL={() => void querySelectedDatasetSQL()}
+                onCancelSQLiteConnectorQuery={() => void cancelActiveSQLiteQuery()}
                 onQuerySQLiteConnector={() => void queryActiveSQLiteFile()}
                 onRebuildDatasetDependency={(dependencyId) => void rebuildDatasetDependency(dependencyId)}
                 onRefreshAgentPlan={() => void refreshAgentTools()}
@@ -4101,6 +4130,8 @@ export function NexusShell({
                 onSearchWorkspace={() => void searchWorkspace()}
                 onSelectSearchResult={(result) => void selectSearchResult(result)}
                 onSQLiteConnectorQueryChange={setSQLiteConnectorQuery}
+                onSQLiteConnectorResultLimitChange={(value) => setSQLiteConnectorResultLimit(clampConnectorNumber(value, 1, 10000, 100))}
+                onSQLiteConnectorTimeoutSecondsChange={(value) => setSQLiteConnectorTimeoutSeconds(clampConnectorNumber(value, 1, 300, 30))}
                 onSummarizeGitDiff={() => void summarizeGitDiff()}
                 onTabChange={changeBottomStudioTab}
                 onTestConnection={() => void testLLMConnection()}
@@ -4114,8 +4145,10 @@ export function NexusShell({
                 settingsStatus={settingsStatus}
                 showTabs={options.showTabs}
                 sqliteConnectorQuery={sqliteConnectorQuery}
+                sqliteConnectorResultLimit={sqliteConnectorResultLimit}
                 sqliteConnectorResult={sqliteConnectorResult}
                 sqliteConnectorMetadata={sqliteConnectorMetadata}
+                sqliteConnectorTimeoutSeconds={sqliteConnectorTimeoutSeconds}
                 sqliteStatus={sqliteStatus}
                 toolEvents={localToolEvents}
                 workspace={workspace}
@@ -4672,6 +4705,14 @@ function defaultConnectorPort(kind: string) {
 }
 
 function numericConnectorSetting(value: unknown, fallback: number, min: number, max: number) {
+    const numeric = Number(value);
+    if (!Number.isFinite(numeric)) {
+        return fallback;
+    }
+    return Math.min(max, Math.max(min, Math.trunc(numeric)));
+}
+
+function clampConnectorNumber(value: unknown, min: number, max: number, fallback: number) {
     const numeric = Number(value);
     if (!Number.isFinite(numeric)) {
         return fallback;

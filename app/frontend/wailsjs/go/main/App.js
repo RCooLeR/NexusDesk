@@ -50,6 +50,10 @@ export function AskLLMStreamContextPack(arg1, arg2, arg3) {
   return window['go']['main']['App']['AskLLMStreamContextPack'](arg1, arg2, arg3);
 }
 
+export function CancelWorkspaceSQLiteQuery(arg1) {
+  return window['go']['main']['App']['CancelWorkspaceSQLiteQuery'](arg1);
+}
+
 export function CheckWorkspaceFreshness() {
   return window['go']['main']['App']['CheckWorkspaceFreshness']();
 }

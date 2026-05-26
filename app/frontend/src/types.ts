@@ -361,7 +361,18 @@ export type SQLiteQueryResult = {
     columns: string[];
     rows: string[][];
     totalRows: number;
+    truncated: boolean;
+    resultLimit: number;
+    timeoutSeconds: number;
     message: string;
+};
+
+export type SQLiteQueryRequest = {
+    relPath: string;
+    sql: string;
+    requestId: string;
+    resultLimit: number;
+    timeoutSeconds: number;
 };
 
 export type ConnectorMetadata = {

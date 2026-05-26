@@ -2026,6 +2026,30 @@ button:disabled {
     width: 100%;
 }
 
+.connector-query-controls {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 8px;
+}
+
+.connector-query-controls label {
+    display: grid;
+    gap: 4px;
+}
+
+.connector-query-controls span {
+    color: var(--nd-muted-text);
+    font-size: 11px;
+    font-weight: 700;
+}
+
+.connector-query-controls input {
+    border: 1px solid var(--nd-border);
+    border-radius: var(--nd-radius-sm);
+    min-height: 30px;
+    padding: 0 8px;
+}
+
 .metadata-browser-panel {
     min-height: 0;
 }

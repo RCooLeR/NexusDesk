@@ -528,6 +528,8 @@ Current implementation:
 - `.sqlite`, `.sqlite3`, and `.db` files are classified as database files in the workspace tree.
 - `app/internal/dbconnector/` opens those files read-only through `modernc.org/sqlite`.
 - Only bounded `SELECT`/`WITH` queries are accepted, mutation-oriented keywords are blocked, and result rows are capped before they reach the frontend.
+- Query requests carry an explicit request ID, result limit, and timeout; the dataset service can cancel an in-flight SQLite query by request ID.
+- SQLite connector failures are passed through a redaction helper before they are recorded in SQL run metadata.
 - The connector metadata model exposes connector identity, engine, read-only state, tables, views, columns, indexes, row counts, and capped samples.
 - `InspectWorkspaceSQLite` is a user-triggered schema inspection path; folder open does not inspect database files.
 - Data & Analytics can use this for local inspection without introducing stored credentials or external database access.

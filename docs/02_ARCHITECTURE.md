@@ -21,7 +21,7 @@ The implemented desktop slice currently contains:
 - persisted tool-run dry-runs/executions with approval references
 - SQLite metadata initialization, JSON-store migration compatibility, direct repository-backed writes for fresh chat/approval/artifact/tool-run rows, metadata history search, dataset dependency records, and SQL run history
 - DuckDB-capable read-only SQL surface over datasets, with CGO-tagged driver execution and bounded CSV fallback
-- first read-only SQLite workspace database connector for `.sqlite`, `.sqlite3`, and `.db` files
+- first read-only SQLite workspace database connector for `.sqlite`, `.sqlite3`, and `.db` files, with visible per-query row caps, timeouts, cancellation, and redacted connector errors
 - artifact comparison for generated output versions
 - selectable artifact lineage graph and workspace freshness snapshots for source-aware generated outputs
 - artifact lineage JSON export/import for debugging and future sync workflows
@@ -138,7 +138,7 @@ Review status as of the latest full project pass:
 
 - The product shape is still sound: a small primary rail for Workbench, Data & Analytics, Artifacts, and Settings, with the AI assistant always visible.
 - The backend has useful service facades for workspace, dataset, artifact, and git workflows, but `app/app.go` is still large and still owns chat/context, metadata orchestration, and several bridge-specific helpers.
-- The frontend has good feature panels and the Wails API adapter boundary is clean, but `NexusShell.tsx` remains the main state owner. It should continue shrinking into focused controllers before deeper connector/document/operations work lands.
+- The frontend has good feature panels and the Wails API adapter boundary is clean, but `NexusShell.tsx` remains the main state owner. SQLite connector caps, timeouts, and cancellation are now wired through that shell; future connector growth should move into a focused data/controller hook before adding external engines.
 - Git work is correctly manual on folder open, so opening a workspace should not launch external Git commands or desktop command windows.
 - Code AI actions now reuse the chat/artifact pipeline and route accepted single-file patch drafts through the existing safe write preview/apply boundary.
 - Slow or external future work, especially OCR, dump imports, connector pulls, deeper indexing, and long agent runs, must go through a job runner before it is attached to folder-open or route-load flows.
@@ -325,7 +325,7 @@ Target studio ownership:
 
 - Workbench owns IDE navigation, git status/diffs, editor groups, search, problems, symbols, tests/tasks, and code patch workflows.
 - Data & Analytics owns file datasets, spreadsheets, database connectors, dump imports, temporary Docker-backed database sandboxes, schemas, query notebooks, profiling, charts, data research artifacts, and marketing/CRM analytics imports.
-- Connector metadata starts as a read-only, user-triggered inspection model under Data & Analytics; workspace open may classify database files but must not inspect schemas or open connectors automatically.
+- Connector metadata starts as a read-only, user-triggered inspection model under Data & Analytics; workspace open may classify database files but must not inspect schemas, execute queries, or open connectors automatically.
 - Analytics-specific connectors are a subdomain of Data & Analytics until they need a dedicated layout.
 - Document Studio owns document extraction, OCR, document sets, comparison, redline/comment workflows, generated reports, and generated presentations.
 - AI Assistant owns context selection, model/provider controls, tool plans, agent modes, citations, memory, and cross-surface orchestration as an always-visible layer.
@@ -368,7 +368,7 @@ audit export
 connector credential vault
 ```
 
-The current connector profile foundation stores only non-secret connection metadata in local app config. Passwords and tokens are written to protected sidecar storage and exposed to the UI as redacted credential references. Future connector runners must resolve those references only at execution time, after policy checks and explicit user-triggered connector actions.
+The current connector profile foundation stores only non-secret connection metadata in local app config. Passwords and tokens are written to protected sidecar storage and exposed to the UI as redacted credential references. Current SQLite connector calls use explicit row caps, timeouts, cancellation IDs, and redacted errors even though they do not need stored credentials. Future connector runners must resolve credential references only at execution time, after policy checks and explicit user-triggered connector actions.
 
 ### Docker Desktop Extension Future
 

@@ -27,6 +27,7 @@ const checks = [
             'ListDatasetQueries',
             'ListDatasetDependencies',
             'ListDatasetSQLRuns',
+            'CancelWorkspaceSQLiteQuery',
             'GetArtifactMetadata',
             'ListAgentTools',
             'ListAgentToolRuns',
@@ -272,7 +273,7 @@ const checks = [
     },
     {
         file: 'src/features/shell/DataOperationsPanel.tsx',
-        terms: ['DataOperationsPanel', 'Data & Analytics', 'Operations', 'Metadata', 'Profile dataset', 'DataSourceCards', 'DataSourceCardActions', 'onOpenDataSource', 'onProfileDataSource', 'onInspectDataSource', 'Import planned', 'Convert first', 'buildDataSourceCards', 'dataSourceFromNode', 'legacy workbook', 'compressed export', 'database dump', 'Footer metadata inspection', 'Profile levels', 'SQLiteConnectorPanel', 'ConnectorMetadataPanel', 'Inspect schema', 'OperationsInspector', 'MetadataBrowserPanel', 'WorkspaceFreshnessPanel'],
+        terms: ['DataOperationsPanel', 'Data & Analytics', 'Operations', 'Metadata', 'Profile dataset', 'DataSourceCards', 'DataSourceCardActions', 'onOpenDataSource', 'onProfileDataSource', 'onInspectDataSource', 'Import planned', 'Convert first', 'buildDataSourceCards', 'dataSourceFromNode', 'legacy workbook', 'compressed export', 'database dump', 'Footer metadata inspection', 'Profile levels', 'SQLiteConnectorPanel', 'ConnectorMetadataPanel', 'Inspect schema', 'Rows', 'Timeout', 'Cancel query', 'onCancelSQLiteConnectorQuery', 'onSQLiteConnectorResultLimitChange', 'onSQLiteConnectorTimeoutSecondsChange', 'OperationsInspector', 'MetadataBrowserPanel', 'WorkspaceFreshnessPanel'],
     },
     {
         file: 'src/features/shell/ChatMessageContent.tsx',
@@ -354,6 +355,7 @@ const checks = [
             '.lineage-graph-layout',
             '.lineage-node',
             '.sqlite-connector-panel',
+            '.connector-query-controls',
             '.dataset-lineage-history',
             '.stale-source-warning',
             '.dataset-sql-panel',
@@ -381,7 +383,7 @@ const checks = [
     },
     {
         file: 'wailsjs/go/main/App.d.ts',
-        terms: ['AskLLMContextPack', 'RunAgent', 'PreviewFileWrite', 'ApplyFileDelete', 'PreviewFileCopy', 'ApplyFileCopy', 'ApplyFileMove', 'ProfileDataset', 'CreateDatasetChartArtifact', 'CreateDatasetQueryArtifact', 'CreateDatasetSQLArtifact', 'CreateDatasetSummaryArtifact', 'CreateChatMarkdownArtifact', 'CreateScanReportArtifact', 'PreviewChatContextPack', 'PreviewDatasetChart', 'SaveDatasetQuery', 'SaveDatasetSQLQuery', 'ListDatasetSQLQueries', 'ListDatasetDependencies', 'ListDatasetSQLRuns', 'ListWorkspaceProblems', 'ListWorkspaceTasks', 'RunWorkspaceTask', 'RefreshStaleContext', 'SearchMetadata', 'SearchWorkspaceAdvanced', 'GetAssistantProfile', 'SaveAssistantProfile', 'ListConnectorProfiles', 'SaveConnectorProfile', 'DeleteConnectorProfile', 'QueryWorkspaceSQLite', 'InspectWorkspaceSQLite', 'ExportArtifactLineageJSON', 'GetGitStatus', 'GetGitFileDiff', 'PreviewGitFileAction', 'ApplyGitFileAction', 'PreviewGitHunkAction', 'ApplyGitHunkAction', 'ListApprovals', 'ListAgentTools', 'ListAgentToolRuns', 'PreviewAgentTool', 'ExecuteAgentTool', 'QueryDatasetSQL', 'EnsureSQLiteMetadataStore', 'InspectMetadataStore', 'GetArtifactLineage', 'CheckWorkspaceFreshness', 'CompareArtifacts', 'ArchiveArtifact', 'DeleteArtifact'],
+        terms: ['AskLLMContextPack', 'RunAgent', 'PreviewFileWrite', 'ApplyFileDelete', 'PreviewFileCopy', 'ApplyFileCopy', 'ApplyFileMove', 'ProfileDataset', 'CreateDatasetChartArtifact', 'CreateDatasetQueryArtifact', 'CreateDatasetSQLArtifact', 'CreateDatasetSummaryArtifact', 'CreateChatMarkdownArtifact', 'CreateScanReportArtifact', 'PreviewChatContextPack', 'PreviewDatasetChart', 'SaveDatasetQuery', 'SaveDatasetSQLQuery', 'ListDatasetSQLQueries', 'ListDatasetDependencies', 'ListDatasetSQLRuns', 'ListWorkspaceProblems', 'ListWorkspaceTasks', 'RunWorkspaceTask', 'RefreshStaleContext', 'SearchMetadata', 'SearchWorkspaceAdvanced', 'GetAssistantProfile', 'SaveAssistantProfile', 'ListConnectorProfiles', 'SaveConnectorProfile', 'DeleteConnectorProfile', 'QueryWorkspaceSQLite', 'CancelWorkspaceSQLiteQuery', 'InspectWorkspaceSQLite', 'ExportArtifactLineageJSON', 'GetGitStatus', 'GetGitFileDiff', 'PreviewGitFileAction', 'ApplyGitFileAction', 'PreviewGitHunkAction', 'ApplyGitHunkAction', 'ListApprovals', 'ListAgentTools', 'ListAgentToolRuns', 'PreviewAgentTool', 'ExecuteAgentTool', 'QueryDatasetSQL', 'EnsureSQLiteMetadataStore', 'InspectMetadataStore', 'GetArtifactLineage', 'CheckWorkspaceFreshness', 'CompareArtifacts', 'ArchiveArtifact', 'DeleteArtifact'],
     },
     {
         file: '../app_tasks.go',
@@ -417,7 +419,11 @@ const checks = [
     },
     {
         file: '../dataset_service.go',
-        terms: ['DatasetService', 'NewDatasetService', 'Profile', 'QuerySQL', 'SaveSQLQuery', 'QueryWorkspaceSQLite', 'InspectWorkspaceSQLite', 'CreateSQLArtifact', 'CreateSummaryArtifact', 'RebuildDependency'],
+        terms: ['DatasetService', 'NewDatasetService', 'Profile', 'QuerySQL', 'SaveSQLQuery', 'QueryWorkspaceSQLite', 'CancelWorkspaceSQLiteQuery', 'InspectWorkspaceSQLite', 'CreateSQLArtifact', 'CreateSummaryArtifact', 'RebuildDependency'],
+    },
+    {
+        file: '../internal/dbconnector/sqlite.go',
+        terms: ['SQLiteQueryRequest', 'SQLiteQueryResult', 'RequestID', 'ResultLimit', 'TimeoutSeconds', 'QuerySQLiteContext', 'NormalizeSQLiteQueryRequest', 'RedactConnectorError', 'connectorError', 'context.DeadlineExceeded', 'context.Canceled'],
     },
     {
         file: '../app_git.go',
@@ -437,7 +443,7 @@ const checks = [
     },
     {
         file: 'scripts/visual-fixtures.mjs',
-        terms: ['installNexusMocks', 'ListDatasetDependencies', 'ListDatasetSQLRuns', 'ListWorkspaceProblems', 'ListWorkspaceTasks', 'ListConnectorProfiles', 'SaveConnectorProfile', 'DeleteConnectorProfile', 'SearchMetadata', 'QueryWorkspaceSQLite', 'ExportArtifactLineageJSON', 'ImportArtifactLineageJSON', 'dependencies'],
+        terms: ['installNexusMocks', 'ListDatasetDependencies', 'ListDatasetSQLRuns', 'ListWorkspaceProblems', 'ListWorkspaceTasks', 'ListConnectorProfiles', 'SaveConnectorProfile', 'DeleteConnectorProfile', 'SearchMetadata', 'QueryWorkspaceSQLite', 'CancelWorkspaceSQLiteQuery', 'ExportArtifactLineageJSON', 'ImportArtifactLineageJSON', 'dependencies'],
     },
     {
         file: 'dist/index.html',

@@ -1,10 +1,12 @@
 package main
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"os"
 	"strings"
+	"sync"
 	"time"
 
 	"NexusAugenticStudio/internal/analytics"
@@ -22,6 +24,8 @@ type DatasetService struct {
 	recordDatasetDependency func(root string, relPath string, kind string, query string, target string, artifactRelPath string)
 	recordSQLRun            func(root string, relPath string, sqlText string, engine string, rows int, artifactRelPath string, status string, message string)
 	recordApproval          func(action string, target string, risk string, message string) string
+	sqliteQueryCancels      map[string]context.CancelFunc
+	sqliteQueryCancelsMu    sync.Mutex
 }
 
 func NewDatasetService(
@@ -39,6 +43,7 @@ func NewDatasetService(
 		recordDatasetDependency: recordDatasetDependency,
 		recordSQLRun:            recordSQLRun,
 		recordApproval:          recordApproval,
+		sqliteQueryCancels:      map[string]context.CancelFunc{},
 	}
 }
 
@@ -159,14 +164,48 @@ func (s *DatasetService) QueryWorkspaceSQLite(request dbconnector.SQLiteQueryReq
 	if err != nil {
 		return dbconnector.SQLiteQueryResult{}, err
 	}
-	result, err := dbconnector.QuerySQLite(root, request)
+	request = dbconnector.NormalizeSQLiteQueryRequest(request)
+	ctx, cancel := context.WithTimeout(context.Background(), time.Duration(request.TimeoutSeconds)*time.Second)
+	if request.RequestID != "" {
+		s.registerSQLiteQueryCancel(request.RequestID, cancel)
+		defer s.unregisterSQLiteQueryCancel(request.RequestID)
+	}
+	defer cancel()
+	result, err := dbconnector.QuerySQLiteContext(ctx, root, request)
 	if err != nil {
-		s.recordSQL(root, request.RelPath, sanitizeQueryForMetadata(request.SQL), "sqlite-readonly", 0, "", "failed", sanitizeProviderMessage(err.Error()))
+		s.recordSQL(root, request.RelPath, sanitizeQueryForMetadata(request.SQL), "sqlite-readonly", 0, "", "failed", dbconnector.RedactConnectorError(err.Error()))
 		return dbconnector.SQLiteQueryResult{}, err
 	}
-	s.recordSQL(root, result.RelPath, sanitizeQueryForMetadata(result.SQL), result.Engine, result.TotalRows, "", "completed", sanitizeProviderMessage(result.Message))
+	s.recordSQL(root, result.RelPath, sanitizeQueryForMetadata(result.SQL), result.Engine, result.TotalRows, "", "completed", dbconnector.RedactConnectorError(result.Message))
 	s.recordDependency(root, result.RelPath, "sqlite-query", sanitizeQueryForMetadata(result.SQL), result.Engine, "")
 	return result, nil
+}
+
+func (s *DatasetService) CancelWorkspaceSQLiteQuery(requestID string) bool {
+	requestID = strings.TrimSpace(requestID)
+	if requestID == "" {
+		return false
+	}
+	s.sqliteQueryCancelsMu.Lock()
+	cancel := s.sqliteQueryCancels[requestID]
+	s.sqliteQueryCancelsMu.Unlock()
+	if cancel == nil {
+		return false
+	}
+	cancel()
+	return true
+}
+
+func (s *DatasetService) registerSQLiteQueryCancel(requestID string, cancel context.CancelFunc) {
+	s.sqliteQueryCancelsMu.Lock()
+	defer s.sqliteQueryCancelsMu.Unlock()
+	s.sqliteQueryCancels[requestID] = cancel
+}
+
+func (s *DatasetService) unregisterSQLiteQueryCancel(requestID string) {
+	s.sqliteQueryCancelsMu.Lock()
+	defer s.sqliteQueryCancelsMu.Unlock()
+	delete(s.sqliteQueryCancels, requestID)
 }
 
 func (s *DatasetService) InspectWorkspaceSQLite(relPath string) (dbconnector.ConnectorMetadata, error) {

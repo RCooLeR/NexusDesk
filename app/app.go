@@ -543,6 +543,10 @@ func (a *App) QueryWorkspaceSQLite(request dbconnector.SQLiteQueryRequest) (dbco
 	return a.datasetSvc.QueryWorkspaceSQLite(request)
 }
 
+func (a *App) CancelWorkspaceSQLiteQuery(requestID string) bool {
+	return a.datasetSvc.CancelWorkspaceSQLiteQuery(requestID)
+}
+
 func (a *App) InspectWorkspaceSQLite(relPath string) (dbconnector.ConnectorMetadata, error) {
 	return a.datasetSvc.InspectWorkspaceSQLite(relPath)
 }

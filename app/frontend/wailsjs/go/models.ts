@@ -986,6 +986,9 @@ export namespace dbconnector {
 	export class SQLiteQueryRequest {
 	    relPath: string;
 	    sql: string;
+	    requestId: string;
+	    resultLimit: number;
+	    timeoutSeconds: number;
 
 	    static createFrom(source: any = {}) {
 	        return new SQLiteQueryRequest(source);
@@ -995,6 +998,9 @@ export namespace dbconnector {
 	        if ('string' === typeof source) source = JSON.parse(source);
 	        this.relPath = source["relPath"];
 	        this.sql = source["sql"];
+	        this.requestId = source["requestId"];
+	        this.resultLimit = source["resultLimit"];
+	        this.timeoutSeconds = source["timeoutSeconds"];
 	    }
 	}
 	export class SQLiteQueryResult {
@@ -1004,6 +1010,9 @@ export namespace dbconnector {
 	    columns: string[];
 	    rows: string[][];
 	    totalRows: number;
+	    truncated: boolean;
+	    resultLimit: number;
+	    timeoutSeconds: number;
 	    message: string;
 
 	    static createFrom(source: any = {}) {
@@ -1018,6 +1027,9 @@ export namespace dbconnector {
 	        this.columns = source["columns"];
 	        this.rows = source["rows"];
 	        this.totalRows = source["totalRows"];
+	        this.truncated = source["truncated"];
+	        this.resultLimit = source["resultLimit"];
+	        this.timeoutSeconds = source["timeoutSeconds"];
 	        this.message = source["message"];
 	    }
 	}

@@ -1,34 +1,55 @@
 package dbconnector
 
 import (
+	"context"
 	"database/sql"
 	"errors"
 	"fmt"
 	"os"
 	"path/filepath"
 	"strings"
+	"time"
 
+	"NexusAugenticStudio/internal/safety"
 	_ "modernc.org/sqlite"
 )
 
-const maxSQLiteRows = 100
+const defaultSQLiteRows = 100
+const maxSQLiteRows = 10000
+const defaultSQLiteTimeoutSeconds = 30
+const maxSQLiteTimeoutSeconds = 300
 
 type SQLiteQueryRequest struct {
-	RelPath string `json:"relPath"`
-	SQL     string `json:"sql"`
+	RelPath        string `json:"relPath"`
+	SQL            string `json:"sql"`
+	RequestID      string `json:"requestId"`
+	ResultLimit    int    `json:"resultLimit"`
+	TimeoutSeconds int    `json:"timeoutSeconds"`
 }
 
 type SQLiteQueryResult struct {
-	RelPath   string     `json:"relPath"`
-	SQL       string     `json:"sql"`
-	Engine    string     `json:"engine"`
-	Columns   []string   `json:"columns"`
-	Rows      [][]string `json:"rows"`
-	TotalRows int        `json:"totalRows"`
-	Message   string     `json:"message"`
+	RelPath        string     `json:"relPath"`
+	SQL            string     `json:"sql"`
+	Engine         string     `json:"engine"`
+	Columns        []string   `json:"columns"`
+	Rows           [][]string `json:"rows"`
+	TotalRows      int        `json:"totalRows"`
+	Truncated      bool       `json:"truncated"`
+	ResultLimit    int        `json:"resultLimit"`
+	TimeoutSeconds int        `json:"timeoutSeconds"`
+	Message        string     `json:"message"`
 }
 
 func QuerySQLite(root string, request SQLiteQueryRequest) (SQLiteQueryResult, error) {
+	request = NormalizeSQLiteQueryRequest(request)
+	timeout := time.Duration(request.TimeoutSeconds) * time.Second
+	ctx, cancel := context.WithTimeout(context.Background(), timeout)
+	defer cancel()
+	return QuerySQLiteContext(ctx, root, request)
+}
+
+func QuerySQLiteContext(ctx context.Context, root string, request SQLiteQueryRequest) (SQLiteQueryResult, error) {
+	request = NormalizeSQLiteQueryRequest(request)
 	absRoot, absPath, cleanRel, err := resolveSQLitePath(root, request.RelPath)
 	if err != nil {
 		return SQLiteQueryResult{}, err
@@ -59,51 +80,98 @@ func QuerySQLite(root string, request SQLiteQueryRequest) (SQLiteQueryResult, er
 
 	db, err := sql.Open("sqlite", "file:"+filepath.ToSlash(absPath)+"?mode=ro")
 	if err != nil {
-		return SQLiteQueryResult{}, err
+		return SQLiteQueryResult{}, connectorError(err)
 	}
 	defer db.Close()
 
-	rows, err := db.Query(query)
+	rows, err := db.QueryContext(ctx, query)
 	if err != nil {
-		return SQLiteQueryResult{}, err
+		return SQLiteQueryResult{}, connectorError(err)
 	}
 	defer rows.Close()
 
 	columns, err := rows.Columns()
 	if err != nil {
-		return SQLiteQueryResult{}, err
+		return SQLiteQueryResult{}, connectorError(err)
 	}
 	scanners := rowScanners(len(columns))
-	skipScanners := rowScanners(len(columns))
 	resultRows := [][]string{}
 	totalRows := 0
+	truncated := false
 	for rows.Next() {
-		if len(resultRows) >= maxSQLiteRows {
-			if err := rows.Scan(skipScanners...); err != nil {
-				return SQLiteQueryResult{}, err
-			}
-		} else {
+		if totalRows >= request.ResultLimit {
+			truncated = true
+			break
+		}
+		select {
+		case <-ctx.Done():
+			return SQLiteQueryResult{}, connectorError(ctx.Err())
+		default:
+		}
+		{
 			row, err := scanRowAsStrings(rows, scanners)
 			if err != nil {
-				return SQLiteQueryResult{}, err
+				return SQLiteQueryResult{}, connectorError(err)
 			}
 			resultRows = append(resultRows, row)
 		}
 		totalRows++
 	}
 	if err := rows.Err(); err != nil {
-		return SQLiteQueryResult{}, err
+		return SQLiteQueryResult{}, connectorError(err)
+	}
+	message := fmt.Sprintf("Read-only SQLite query returned %d rows from %s.", totalRows, cleanRel)
+	if truncated {
+		message = fmt.Sprintf("Read-only SQLite query reached the %d row cap for %s.", request.ResultLimit, cleanRel)
 	}
 
 	return SQLiteQueryResult{
-		RelPath:   cleanRel,
-		SQL:       query,
-		Engine:    "sqlite-readonly",
-		Columns:   columns,
-		Rows:      resultRows,
-		TotalRows: totalRows,
-		Message:   fmt.Sprintf("Read-only SQLite query returned %d rows from %s (showing %d).", totalRows, cleanRel, len(resultRows)),
+		RelPath:        cleanRel,
+		SQL:            query,
+		Engine:         "sqlite-readonly",
+		Columns:        columns,
+		Rows:           resultRows,
+		TotalRows:      totalRows,
+		Truncated:      truncated,
+		ResultLimit:    request.ResultLimit,
+		TimeoutSeconds: request.TimeoutSeconds,
+		Message:        message,
 	}, nil
+}
+
+func NormalizeSQLiteQueryRequest(request SQLiteQueryRequest) SQLiteQueryRequest {
+	if request.ResultLimit <= 0 {
+		request.ResultLimit = defaultSQLiteRows
+	}
+	if request.ResultLimit > maxSQLiteRows {
+		request.ResultLimit = maxSQLiteRows
+	}
+	if request.TimeoutSeconds <= 0 {
+		request.TimeoutSeconds = defaultSQLiteTimeoutSeconds
+	}
+	if request.TimeoutSeconds > maxSQLiteTimeoutSeconds {
+		request.TimeoutSeconds = maxSQLiteTimeoutSeconds
+	}
+	request.RequestID = strings.TrimSpace(request.RequestID)
+	return request
+}
+
+func RedactConnectorError(message string) string {
+	return safety.SanitizeProviderMessage(message)
+}
+
+func connectorError(err error) error {
+	if err == nil {
+		return nil
+	}
+	message := RedactConnectorError(err.Error())
+	if errors.Is(err, context.Canceled) {
+		return errors.New("SQLite query was canceled")
+	}
+	if errors.Is(err, context.DeadlineExceeded) {
+		return errors.New("SQLite query timed out")
+	}
+	return errors.New(message)
 }
 
 func resolveSQLitePath(root string, relPath string) (string, string, string, error) {

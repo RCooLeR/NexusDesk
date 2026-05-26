@@ -63,6 +63,7 @@ type DataOperationsPanelProps = {
     onPreviewDatasetChart: () => void;
     onQueryDataset: () => void;
     onQueryDatasetSQL: () => void;
+    onCancelSQLiteConnectorQuery: () => void;
     onQuerySQLiteConnector: () => void;
     onRebuildDatasetDependency: (dependencyId: string) => void;
     onRefreshStaleContext: () => void;
@@ -70,12 +71,16 @@ type DataOperationsPanelProps = {
     onSaveDatasetSQLQuery: () => void;
     onSearchMetadata: () => void;
     onSQLiteConnectorQueryChange: (content: string) => void;
+    onSQLiteConnectorResultLimitChange: (value: number) => void;
+    onSQLiteConnectorTimeoutSecondsChange: (value: number) => void;
     rebuildingDatasetDependencyId: string;
     savedDatasetQueries: SavedDatasetQuery[];
     savedDatasetSQLQueries: SavedDatasetQuery[];
     sqliteConnectorQuery: string;
+    sqliteConnectorResultLimit: number;
     sqliteConnectorResult: SQLiteQueryResult | null;
     sqliteConnectorMetadata: ConnectorMetadata | null;
+    sqliteConnectorTimeoutSeconds: number;
     sqliteStatus: SQLiteMetadataStatus | null;
     workspace: WorkspaceSnapshot | null;
     workspaceFreshness: WorkspaceFreshnessStatus | null;
@@ -138,6 +143,7 @@ export function DataOperationsPanel({
     onPreviewDatasetChart,
     onQueryDataset,
     onQueryDatasetSQL,
+    onCancelSQLiteConnectorQuery,
     onQuerySQLiteConnector,
     onRebuildDatasetDependency,
     onRefreshStaleContext,
@@ -145,12 +151,16 @@ export function DataOperationsPanel({
     onSaveDatasetSQLQuery,
     onSearchMetadata,
     onSQLiteConnectorQueryChange,
+    onSQLiteConnectorResultLimitChange,
+    onSQLiteConnectorTimeoutSecondsChange,
     rebuildingDatasetDependencyId,
     savedDatasetQueries,
     savedDatasetSQLQueries,
     sqliteConnectorQuery,
+    sqliteConnectorResultLimit,
     sqliteConnectorResult,
     sqliteConnectorMetadata,
+    sqliteConnectorTimeoutSeconds,
     sqliteStatus,
     workspace,
     workspaceFreshness,
@@ -261,10 +271,15 @@ export function DataOperationsPanel({
                         isInspecting={isInspectingSQLiteConnector}
                         metadata={sqliteConnectorMetadata}
                         onChange={onSQLiteConnectorQueryChange}
+                        onCancel={onCancelSQLiteConnectorQuery}
                         onInspect={onInspectSQLiteConnector}
                         onQuery={onQuerySQLiteConnector}
+                        onResultLimitChange={onSQLiteConnectorResultLimitChange}
+                        onTimeoutSecondsChange={onSQLiteConnectorTimeoutSecondsChange}
                         query={sqliteConnectorQuery}
+                        resultLimit={sqliteConnectorResultLimit}
                         result={sqliteConnectorResult}
+                        timeoutSeconds={sqliteConnectorTimeoutSeconds}
                     />
                 )}
                 {workspaceFreshness && (
@@ -615,20 +630,30 @@ function SQLiteConnectorPanel({
     isInspecting,
     isQuerying,
     metadata,
+    onCancel,
     onChange,
     onInspect,
     onQuery,
+    onResultLimitChange,
+    onTimeoutSecondsChange,
     query,
+    resultLimit,
     result,
+    timeoutSeconds,
 }: {
     isInspecting: boolean;
     isQuerying: boolean;
     metadata: ConnectorMetadata | null;
+    onCancel: () => void;
     onChange: (value: string) => void;
     onInspect: () => void;
     onQuery: () => void;
+    onResultLimitChange: (value: number) => void;
+    onTimeoutSecondsChange: (value: number) => void;
     query: string;
+    resultLimit: number;
     result: SQLiteQueryResult | null;
+    timeoutSeconds: number;
 }) {
     return (
         <div className="metadata-store-panel sqlite-connector-panel">
@@ -641,14 +666,39 @@ function SQLiteConnectorPanel({
             </div>
             {metadata && <ConnectorMetadataPanel metadata={metadata} />}
             <textarea aria-label="Workspace SQLite query" onChange={(event) => onChange(event.target.value)} value={query} />
-            <Button disabled={isQuerying || !query.trim()} onClick={onQuery} variant="subtle">
-                {isQuerying ? 'Querying...' : 'Run read-only query'}
-            </Button>
+            <div className="connector-query-controls">
+                <label>
+                    <span>Rows</span>
+                    <input
+                        min="1"
+                        max="10000"
+                        onChange={(event) => onResultLimitChange(Number(event.target.value))}
+                        type="number"
+                        value={resultLimit}
+                    />
+                </label>
+                <label>
+                    <span>Timeout</span>
+                    <input
+                        min="1"
+                        max="300"
+                        onChange={(event) => onTimeoutSecondsChange(Number(event.target.value))}
+                        type="number"
+                        value={timeoutSeconds}
+                    />
+                </label>
+            </div>
+            <div className="metadata-action-row">
+                <Button disabled={isQuerying || !query.trim()} onClick={onQuery} variant="subtle">
+                    {isQuerying ? 'Querying...' : 'Run read-only query'}
+                </Button>
+                <Button disabled={!isQuerying} onClick={onCancel} variant="subtle">Cancel query</Button>
+            </div>
             {result && (
                 <SortableDataTable
                     pageSize={8}
-                    table={{columns: result.columns, rows: result.rows, profiles: [], totalRows: result.totalRows, truncated: result.rows.length < result.totalRows}}
-                    title={result.engine}
+                    table={{columns: result.columns, rows: result.rows, profiles: [], totalRows: result.totalRows, truncated: result.truncated}}
+                    title={`${result.engine} / cap ${result.resultLimit} / ${result.timeoutSeconds}s`}
                 />
             )}
         </div>

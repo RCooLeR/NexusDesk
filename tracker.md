@@ -367,9 +367,12 @@ Step 5.2: Database connector framework
 - [ ] Add MySQL/MariaDB read-only connector.
 - [ ] Add SQL Server read-only connector.
 - [ ] Add DuckDB connector.
-- [ ] Add query cancellation.
-- [ ] Add result caps and timeout controls per connector.
-- [ ] Add connector error redaction.
+- [x] Add SQLite query cancellation plumbing.
+- [x] Add SQLite result cap and timeout controls.
+- [x] Add connector error redaction helper for SQLite connector failures.
+- [ ] Generalize query cancellation across external database connectors.
+- [ ] Generalize result caps and timeout controls across external database connectors.
+- [ ] Generalize connector error redaction across external database connectors.
 
 Step 5.3: Schema and relationship explorer
 
@@ -1044,17 +1047,28 @@ Steps:
 4. [x] Add disabled planned actions for dump/import and compressed-export workflows with clear lifecycle copy.
 5. [x] Keep all card actions user-triggered and bounded to the already-scanned workspace tree.
 
-Recommended next batch: Connector Guardrails And Query Controls.
+Completed batch: Connector Guardrails And Query Controls.
 
 Steps:
 
-1. [ ] Add visible result cap and timeout controls to SQLite connector queries.
-2. [ ] Apply per-query caps/timeouts through connector request types instead of hardcoded defaults.
-3. [ ] Add connector error redaction helpers and tests.
-4. [ ] Add query cancellation plumbing for in-flight connector calls.
-5. [ ] Keep connector execution user-triggered and record SQL/dependency metadata after completion/failure.
+1. [x] Add visible result cap and timeout controls to SQLite connector queries.
+2. [x] Apply per-query caps/timeouts through connector request types instead of hardcoded defaults.
+3. [x] Add connector error redaction helpers and tests.
+4. [x] Add query cancellation plumbing for in-flight connector calls.
+5. [x] Keep connector execution user-triggered and record SQL/dependency metadata after completion/failure.
 
-Reasoning: Data & Analytics source cards now route users into explicit open/profile/inspect actions without starting background work. The next gap is connector maturity: visible caps, timeouts, cancellation, and redacted errors before adding external database engines.
+Recommended next batch: SQLite Schema Explorer Foundation.
+
+Steps:
+
+1. [ ] Add table/view selection inside the SQLite schema inspector.
+2. [ ] Add user-triggered capped table preview from selected schema nodes.
+3. [ ] Add saved SQLite connector queries separate from dataset SQL snippets.
+4. [ ] Add connector query history with status, cap, timeout, row count, and source path filters.
+5. [ ] Add clearer read-only proof/status copy near every connector execution surface.
+6. [ ] Keep every schema/query action user-triggered and avoid connector work on folder open.
+
+Reasoning: SQLite connector execution now has visible guardrails. The next gap is making inspected schemas navigable and reusable before adding external database engines.
 
 ## Directory Ownership Notes
 
@@ -1078,7 +1092,7 @@ Reasoning: Data & Analytics source cards now route users into explicit open/prof
 
 `app/internal/analytics/` owns read-only SQL-style dataset querying and DuckDB-compatible execution paths.
 
-`app/internal/dbconnector/` owns workspace database connector surfaces. Today that means read-only SQLite files, read-only SQL execution, and user-triggered SQLite connector metadata inspection for tables, views, columns, indexes, row counts, and capped samples; future phases add credential-backed server databases and dump sandboxes.
+`app/internal/dbconnector/` owns workspace database connector surfaces. Today that means read-only SQLite files, guarded read-only SQL execution with per-query result caps, timeouts, cancellation, and redacted connector errors, plus user-triggered SQLite connector metadata inspection for tables, views, columns, indexes, row counts, and capped samples; future phases add credential-backed server databases and dump sandboxes.
 
 `app/internal/approval/` owns append-only approval/action records.
 
@@ -1114,7 +1128,7 @@ Workspace scan counters are diagnostic data, not primary navigation content. Kee
 
 `app/frontend/src/features/shell/GitDiffPanel.tsx` owns the bottom-drawer Git tab for selected changed-file review, file stage/unstage controls, hunk selection state, approval-backed hunk stage/unstage/discard/revert controls, and read-only staged/unstaged working-tree diffs.
 
-`app/frontend/src/features/shell/DataOperationsPanel.tsx` currently owns Data route workflows, including bounded data source cards and their explicit Open/Profile/Inspect actions. Planned dump/import and compressed-export actions are visible but disabled until the job/sandbox lifecycle exists.
+`app/frontend/src/features/shell/DataOperationsPanel.tsx` currently owns Data route workflows, including bounded data source cards, explicit Open/Profile/Inspect actions, and the SQLite connector query panel with visible row cap, timeout, and cancel controls. Planned dump/import and compressed-export actions are visible but disabled until the job/sandbox lifecycle exists.
 
 `app/frontend/src/features/shell/ArtifactStudioPanel.tsx` currently owns Artifact Studio route workflows.
 

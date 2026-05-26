@@ -1,6 +1,7 @@
 package dbconnector
 
 import (
+	"context"
 	"database/sql"
 	"fmt"
 	"path/filepath"
@@ -116,11 +117,64 @@ func TestQuerySQLiteCapsReturnedRows(t *testing.T) {
 	if len(result.Rows) != 100 {
 		t.Fatalf("expected row cap to limit output to 100, got %d", len(result.Rows))
 	}
-	if result.TotalRows != 150 {
-		t.Fatalf("expected TotalRows to include all rows, got %d", result.TotalRows)
+	if result.TotalRows != 100 {
+		t.Fatalf("expected TotalRows to count returned rows up to cap, got %d", result.TotalRows)
 	}
-	if !strings.Contains(result.Message, "showing 100") {
-		t.Fatalf("expected message to include showing count, got %q", result.Message)
+	if !result.Truncated || !strings.Contains(result.Message, "row cap") {
+		t.Fatalf("expected capped result message, got truncated=%t message=%q", result.Truncated, result.Message)
+	}
+}
+
+func TestQuerySQLiteHonorsCustomRowCap(t *testing.T) {
+	root := t.TempDir()
+	dbPath := filepath.Join(root, "sample.db")
+	db, err := sql.Open("sqlite", dbPath)
+	if err != nil {
+		t.Fatalf("sql.Open failed: %v", err)
+	}
+	if _, err := db.Exec(`CREATE TABLE hits (value INTEGER); INSERT INTO hits VALUES (1), (2), (3);`); err != nil {
+		_ = db.Close()
+		t.Fatalf("seed sqlite failed: %v", err)
+	}
+	_ = db.Close()
+
+	result, err := QuerySQLite(root, SQLiteQueryRequest{RelPath: "sample.db", SQL: "select value from hits order by value", ResultLimit: 2, TimeoutSeconds: 5})
+	if err != nil {
+		t.Fatalf("QuerySQLite returned error: %v", err)
+	}
+	if len(result.Rows) != 2 || !result.Truncated {
+		t.Fatalf("expected custom row cap to truncate to 2 rows, got %#v", result)
+	}
+	if result.ResultLimit != 2 || result.TimeoutSeconds != 5 {
+		t.Fatalf("expected query controls in result, got %#v", result)
+	}
+}
+
+func TestQuerySQLiteContextCancellation(t *testing.T) {
+	root := t.TempDir()
+	dbPath := filepath.Join(root, "sample.db")
+	db, err := sql.Open("sqlite", dbPath)
+	if err != nil {
+		t.Fatalf("sql.Open failed: %v", err)
+	}
+	if _, err := db.Exec(`CREATE TABLE hits (value INTEGER); INSERT INTO hits VALUES (1);`); err != nil {
+		_ = db.Close()
+		t.Fatalf("seed sqlite failed: %v", err)
+	}
+	_ = db.Close()
+
+	ctx, cancel := context.WithCancel(context.Background())
+	cancel()
+	_, err = QuerySQLiteContext(ctx, root, SQLiteQueryRequest{RelPath: "sample.db", SQL: "select value from hits"})
+	if err == nil || !strings.Contains(err.Error(), "canceled") {
+		t.Fatalf("expected canceled query error, got %v", err)
+	}
+}
+
+func TestRedactConnectorError(t *testing.T) {
+	redacted := RedactConnectorError(`database rejected password=secret-token for user`)
+	if strings.Contains(redacted, "secret-token") || !strings.Contains(redacted, "[redacted]") {
+		t.Fatalf("expected connector error to be redacted, got %q", redacted)
 	}
 }
 

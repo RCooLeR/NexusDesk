@@ -136,7 +136,8 @@ export async function installNexusMocks(page) {
                     SearchMetadata: async () => [{kind: 'chat', relPath: 'data/campaigns.csv', title: 'Assistant answer', snippet: 'Smoke answer', createdAt: '2026-05-14T00:00:00Z'}],
                     QueryDatasetSQL: async () => ({relPath: 'data/campaigns.csv', sql: 'select * from dataset', engine: 'duckdb-compatible-csv', columns: table.columns, rows: table.rows, totalRows: 2, matchedRows: 2, message: 'SQL smoke ready'}),
                     SaveDatasetSQLQuery: async () => ({relPath: 'data/campaigns.csv', query: 'select * from dataset', label: 'All campaigns', kind: 'sql', updatedAt: '2026-05-14T00:00:00Z'}),
-                    QueryWorkspaceSQLite: async () => ({relPath: 'data/local.sqlite', sql: 'select name, type from sqlite_master', columns: ['name', 'type'], rows: [['campaigns', 'table']], totalRows: 1, truncated: false, message: 'Read-only SQLite query returned 1 row.'}),
+                    QueryWorkspaceSQLite: async (request) => ({relPath: 'data/local.sqlite', sql: request.sql || 'select name, type from sqlite_master', engine: 'sqlite-readonly', columns: ['name', 'type'], rows: [['campaigns', 'table']], totalRows: 1, truncated: false, resultLimit: request.resultLimit || 100, timeoutSeconds: request.timeoutSeconds || 30, message: 'Read-only SQLite query returned 1 row.'}),
+                    CancelWorkspaceSQLiteQuery: async () => true,
                     InspectWorkspaceSQLite: async () => ({
                         id: 'sqlite:data/local.sqlite',
                         relPath: 'data/local.sqlite',
