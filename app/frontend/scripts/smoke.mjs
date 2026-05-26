@@ -152,7 +152,15 @@ const checks = [
     },
     {
         file: 'src/features/shell/WorkbenchPanel.tsx',
-        terms: ['editor-tabs', 'markdownViewMode', 'markdown-view-toggle', 'markdown-document-preview', 'Summarize', 'onSummarizeContext', 'onSelectTab', 'onCloseTab', 'onDeleteFile', 'onMoveFile', 'onPinProjectContext', 'pinnedTabPaths', 'onTogglePinTab', 'editor-breadcrumbs', 'onSelectBreadcrumb', 'showMinimap', 'onToggleMinimap', 'isSplitEditorEnabled', 'onToggleSplitEditor', 'editor-split-layout', 'secondaryPreview', 'SecondaryPreviewPane', 'PrimaryPreviewPane', 'OutlinePanel', 'buildOutline', 'outlineTargetLine', 'editor-outline-panel', 'file-write-editor', 'MonacoFileEditor', 'MonacoCodePreview', 'editor-find', 'findInputRef', 'dirty-indicator', 'dirtyTabPaths', 'countFindMatches'],
+        terms: ['editor-tabs', 'markdownViewMode', 'markdown-view-toggle', 'markdown-document-preview', 'Summarize', 'onSummarizeContext', 'onSelectTab', 'onCloseTab', 'onDeleteFile', 'onMoveFile', 'onPinProjectContext', 'pinnedTabPaths', 'onTogglePinTab', 'editor-breadcrumbs', 'onSelectBreadcrumb', 'showMinimap', 'onToggleMinimap', 'isSplitEditorEnabled', 'onToggleSplitEditor', 'editor-split-layout', 'secondaryPreview', 'SecondaryPreviewPane', 'PrimaryPreviewPane', 'EditorOutlinePanel', 'buildEditorOutline', 'outlineTargetLine', 'definitionNonce', 'formatNonce', 'Go to definition', 'Format document', 'file-write-editor', 'MonacoFileEditor', 'MonacoCodePreview', 'editor-find', 'findInputRef', 'dirty-indicator', 'dirtyTabPaths', 'countFindMatches'],
+    },
+    {
+        file: 'src/features/shell/EditorOutlinePanel.tsx',
+        terms: ['EditorOutlinePanel', 'EditorOutlineItem', 'editor-outline-panel', 'editor-outline-heading', 'editor-outline-item', 'outline-level'],
+    },
+    {
+        file: 'src/features/shell/editorOutline.ts',
+        terms: ['buildEditorOutline', 'EditorOutlineItem', 'markdownHeading', 'symbolKind', 'leadingSpaceCount'],
     },
     {
         file: 'src/features/shell/DataStudioPanel.tsx',
@@ -180,11 +188,11 @@ const checks = [
     },
     {
         file: 'src/features/shell/MonacoFileEditor.tsx',
-        terms: ['MonacoFileEditor', 'loadMonaco', 'languageForFile', 'nexus-light', 'KeyCode.KeyS', 'showMinimap', 'updateOptions', 'revealLineInCenter'],
+        terms: ['MonacoFileEditor', 'loadMonaco', 'languageForFile', 'nexus-light', 'KeyCode.KeyS', 'showMinimap', 'updateOptions', 'revealLineInCenter', 'editor.action.revealDefinition', 'editor.action.formatDocument'],
     },
     {
         file: 'src/features/shell/MonacoCodePreview.tsx',
-        terms: ['MonacoCodePreview', 'readOnly', 'updateSearchDecorations', 'monaco-find-highlight', 'showMinimap', 'updateOptions', 'revealLineInCenter'],
+        terms: ['MonacoCodePreview', 'readOnly', 'updateSearchDecorations', 'monaco-find-highlight', 'showMinimap', 'updateOptions', 'revealLineInCenter', 'editor.action.revealDefinition'],
     },
     {
         file: 'src/features/shell/monacoRuntime.ts',

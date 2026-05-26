@@ -164,8 +164,8 @@ Steps:
 - [x] Add breadcrumbs.
 - [x] Add outline/symbol navigation.
 - [x] Add minimap toggle.
-- [ ] Add go-to-definition hook where language services exist.
-- [ ] Add formatting hooks.
+- [x] Add go-to-definition hook where language services exist.
+- [x] Add formatting hooks.
 - [ ] Add file encoding selector and save-as-encoding support.
 
 Exit criteria:
@@ -935,7 +935,7 @@ Exit criteria:
 
 Goal: keep the product architecture simple to reason about as features deepen, with small Wails adapters, focused frontend controllers, primary SQLite persistence, job-based long work, and a restrained product menu.
 
-Status: first hardening slice expanded with Git backend/frontend extraction and preview-only stage/unstage planning.
+Status: first hardening slice expanded with Git backend/frontend extraction, preview-only stage/unstage planning, generated Wails binding isolation, and editor-outline extraction from the Workbench panel.
 
 Step 15.1: Backend service facades
 
@@ -956,7 +956,7 @@ Step 15.2: Frontend controller hooks
 - [ ] Split dataset/SQL/connector state and actions into `useDatasetController`.
 - [ ] Split chat/context/agent state and actions into `useChatController`.
 - [ ] Keep `NexusShell.tsx` focused on layout composition, cross-panel wiring, modals, global shortcuts, and route/drawer placement.
-- [ ] Add smoke checks that generated Wails bindings remain isolated behind `app/frontend/src/api/wailsClient.ts`.
+- [x] Add smoke checks that generated Wails bindings remain isolated behind `app/frontend/src/api/wailsClient.ts`.
 
 Step 15.3: Persistence simplification
 
@@ -1023,7 +1023,7 @@ Steps:
 9. [x] Detect npm scripts and Go tests into a Tasks panel with read-only listing.
 10. Keep visual smoke focused on no blank screen, no whole-window scroll, Git drawer behavior, route switching, and no slow/external work on folder open.
 
-Reasoning: read-only navigation and diff review are now credible, stage/unstage previews establish the approval boundary without mutating the repository, hunk selection exists as UI state, hunk discard/revert now goes through the approval modal before backend patch application, Workbench has a real search utility panel backed by the existing safe workspace search flow, task/script detection now lists npm scripts plus Go test commands without running external processes, and Phase 2 has split editor groups plus first outline/symbol navigation for common source and document files. The current correction path is closing the remaining earliest editor items before going deeper into new studio surfaces.
+Reasoning: read-only navigation and diff review are now credible, stage/unstage previews establish the approval boundary without mutating the repository, hunk selection exists as UI state, hunk discard/revert now goes through the approval modal before backend patch application, Workbench has a real search utility panel backed by the existing safe workspace search flow, task/script detection now lists npm scripts plus Go test commands without running external processes, and Phase 2 has split editor groups, outline navigation, Monaco go-to-definition dispatch, and safe draft formatting. The current correction path is closing the remaining earliest editor item, encoding-aware save, before going deeper into new studio surfaces.
 
 ## Directory Ownership Notes
 
@@ -1065,7 +1065,11 @@ Reasoning: read-only navigation and diff review are now credible, stage/unstage 
 
 Workspace scan counters are diagnostic data, not primary navigation content. Keep them in scan reports/diagnostics instead of the always-visible sidebar header.
 
-`app/frontend/src/features/shell/WorkbenchPanel.tsx` currently owns the editor/preview surface, pinned tabs, breadcrumbs, split editor group presentation, outline/symbol navigation, and Monaco minimap control. Git status, working-tree diff output, and roadmap/studio-route metadata should not render above the editor tabs; those surfaces belong to Workbench utility panels, the bottom Git drawer, or documentation.
+`app/frontend/src/features/shell/WorkbenchPanel.tsx` currently owns the editor/preview surface, pinned tabs, breadcrumbs, split editor group presentation, Monaco minimap control, and composition of editor-adjacent panels. Git status, working-tree diff output, and roadmap/studio-route metadata should not render above the editor tabs; those surfaces belong to Workbench utility panels, the bottom Git drawer, or documentation.
+
+`app/frontend/src/features/shell/EditorOutlinePanel.tsx` owns the editor outline side panel presentation and symbol-selection callbacks.
+
+`app/frontend/src/features/shell/editorOutline.ts` owns lightweight outline extraction for Markdown, TypeScript/JavaScript, Go, CSS, JSON, and YAML while richer language-service-backed symbol search remains pending.
 
 `app/frontend/src/features/shell/CodeStudioPanel.tsx` owns the first reusable Workbench utility surface for editor session metrics, open tabs, workspace status, git branch/dirty summary, changed-file list, Workbench search results/actions, read-only detected task listings, and placeholders that will receive problem/review data.
 

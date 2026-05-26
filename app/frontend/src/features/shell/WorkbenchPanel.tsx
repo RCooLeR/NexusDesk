@@ -1,23 +1,16 @@
 import {useEffect, useRef, useState} from 'react';
-import type {CSSProperties} from 'react';
-import {faListUl, faMap, faTableColumns, faThumbtack, faXmark} from '@fortawesome/free-solid-svg-icons';
+import {faBullseye, faListUl, faMap, faTableColumns, faThumbtack, faWandMagicSparkles, faXmark} from '@fortawesome/free-solid-svg-icons';
 import {FontAwesomeIcon} from '@fortawesome/react-fontawesome';
 import {brandAssets} from '../../brand/assets';
 import {Button, EmptyState, InlineAlert, LoadingState} from '../../components/ui';
 import type {FilePreview, FileWriteProposal, TablePreview, WorkspaceSnapshot} from '../../types';
 import {ChatMessageContent} from './ChatMessageContent';
 import {SortableDataTable} from './DataStudioPanel';
+import {EditorOutlinePanel} from './EditorOutlinePanel';
+import {buildEditorOutline} from './editorOutline';
 import {HighlightedCode} from './HighlightedCode';
 import {MonacoCodePreview} from './MonacoCodePreview';
 import {MonacoFileEditor} from './MonacoFileEditor';
-
-type OutlineItem = {
-    id: string;
-    kind: string;
-    label: string;
-    level: number;
-    line: number;
-};
 
 type WorkbenchPanelProps = {
     activeFile: string;
@@ -113,6 +106,8 @@ export function WorkbenchPanel({
     const [isOutlineVisible, setIsOutlineVisible] = useState(false);
     const [outlineTargetLine, setOutlineTargetLine] = useState(0);
     const [outlineTargetNonce, setOutlineTargetNonce] = useState(0);
+    const [definitionNonce, setDefinitionNonce] = useState(0);
+    const [formatNonce, setFormatNonce] = useState(0);
     const findInputRef = useRef<HTMLInputElement>(null);
     const canExplainContext = Boolean(
         workspace && (
@@ -130,7 +125,9 @@ export function WorkbenchPanel({
     const isDraftDirty = Boolean(filePreview && dirtyTabPaths.includes(filePreview.relPath));
     const breadcrumbs = buildBreadcrumbs(activeFile, workspace?.name ?? 'Workspace');
     const secondaryOptions = openTabs.filter((tab) => tab.relPath !== activeFile);
-    const outlineItems = buildOutline(filePreview?.name ?? activeFile, findSource);
+    const outlineItems = buildEditorOutline(filePreview?.name ?? activeFile, findSource);
+    const canUseDefinitionHook = Boolean(filePreview?.content && filePreview.kind === 'file');
+    const canFormatDraft = Boolean(isEditingFile && filePreview?.content && filePreview.kind === 'file');
 
     useEffect(() => {
         function handleFindShortcut(event: KeyboardEvent) {
@@ -238,6 +235,31 @@ export function WorkbenchPanel({
                         </div>
                         <div className="editor-tab-actions">
                             <button
+                                aria-label="Go to definition"
+                                className="editor-icon-toggle"
+                                disabled={!canUseDefinitionHook}
+                                onClick={() => {
+                                    if (markdownViewMode === 'rendered') {
+                                        setMarkdownViewMode('source');
+                                    }
+                                    setDefinitionNonce((current) => current + 1);
+                                }}
+                                title="Go to definition"
+                                type="button"
+                            >
+                                <FontAwesomeIcon icon={faBullseye} />
+                            </button>
+                            <button
+                                aria-label="Format document"
+                                className="editor-icon-toggle"
+                                disabled={!canFormatDraft}
+                                onClick={() => setFormatNonce((current) => current + 1)}
+                                title={canFormatDraft ? 'Format editable draft' : 'Start editing to format safely'}
+                                type="button"
+                            >
+                                <FontAwesomeIcon icon={faWandMagicSparkles} />
+                            </button>
+                            <button
                                 aria-pressed={isOutlineVisible}
                                 className={isOutlineVisible ? 'editor-icon-toggle active' : 'editor-icon-toggle'}
                                 onClick={() => setIsOutlineVisible((current) => !current)}
@@ -322,8 +344,10 @@ export function WorkbenchPanel({
                                     )}
                                     <PrimaryPreviewPane
                                         activeFile={activeFile}
+                                        definitionNonce={definitionNonce}
                                         fileDraft={fileDraft}
                                         filePreview={filePreview}
+                                        formatNonce={formatNonce}
                                         findQuery={findQuery}
                                         isApplyingWrite={isApplyingWrite}
                                         isDraftDirty={isDraftDirty}
@@ -368,7 +392,7 @@ export function WorkbenchPanel({
                                 )}
                             </div>
                             {isOutlineVisible && (
-                                <OutlinePanel
+                                <EditorOutlinePanel
                                     items={outlineItems}
                                     onSelect={(line) => {
                                         setOutlineTargetLine(line);
@@ -416,135 +440,12 @@ function buildBreadcrumbs(activeFile: string, workspaceName: string) {
     return crumbs;
 }
 
-function OutlinePanel({items, onSelect}: {items: OutlineItem[]; onSelect: (line: number) => void}) {
-    return (
-        <aside className="editor-outline-panel" aria-label="Editor outline">
-            <div className="editor-outline-heading">
-                <strong>Outline</strong>
-                <small>{items.length > 0 ? `${items.length} symbols` : 'No symbols'}</small>
-            </div>
-            <div className="editor-outline-list">
-                {items.length > 0 ? items.map((item) => (
-                    <button
-                        className="editor-outline-item"
-                        key={item.id}
-                        onClick={() => onSelect(item.line)}
-                        style={{'--outline-level': String(item.level)} as CSSProperties}
-                        title={`${item.kind} / line ${item.line}`}
-                        type="button"
-                    >
-                        <span>{item.kind}</span>
-                        <strong>{item.label}</strong>
-                        <small>{item.line}</small>
-                    </button>
-                )) : (
-                    <div className="editor-outline-empty">No outline symbols detected for this preview.</div>
-                )}
-            </div>
-        </aside>
-    );
-}
-
-function buildOutline(fileName: string, content: string): OutlineItem[] {
-    const lines = content.replace(/\r\n/g, '\n').split('\n');
-    const extension = fileName.split('.').pop()?.toLowerCase() ?? '';
-    const items: OutlineItem[] = [];
-    const add = (kind: string, label: string, line: number, level = 0) => {
-        const cleanLabel = label.trim();
-        if (!cleanLabel) {
-            return;
-        }
-        items.push({
-            id: `${line}-${kind}-${cleanLabel}`,
-            kind,
-            label: cleanLabel.slice(0, 120),
-            level,
-            line,
-        });
-    };
-
-    lines.slice(0, 4000).forEach((line, index) => {
-        const lineNumber = index + 1;
-        const trimmed = line.trim();
-        if (!trimmed) {
-            return;
-        }
-
-        const markdownHeading = /^(#{1,6})\s+(.+)$/.exec(trimmed);
-        if (markdownHeading) {
-            add('heading', markdownHeading[2], lineNumber, markdownHeading[1].length - 1);
-            return;
-        }
-
-        if (['ts', 'tsx', 'js', 'jsx', 'mjs', 'cjs'].includes(extension)) {
-            const match = /^(?:export\s+)?(?:async\s+)?(?:function|class|interface|type|enum)\s+([A-Za-z_$][\w$]*)/.exec(trimmed) ??
-                /^(?:export\s+)?(?:const|let|var)\s+([A-Za-z_$][\w$]*)\s*=\s*(?:async\s*)?(?:\([^)]*\)|[A-Za-z_$][\w$]*)\s*=>/.exec(trimmed);
-            if (match) {
-                add(symbolKind(trimmed), match[1], lineNumber, 0);
-            }
-            return;
-        }
-
-        if (extension === 'go') {
-            const match = /^func\s+(?:\([^)]*\)\s*)?([A-Za-z_]\w*)\s*\(/.exec(trimmed) ??
-                /^type\s+([A-Za-z_]\w*)\s+(?:struct|interface|func|map|\[\])/.exec(trimmed);
-            if (match) {
-                add(trimmed.startsWith('func') ? 'func' : 'type', match[1], lineNumber, 0);
-            }
-            return;
-        }
-
-        if (['css', 'scss', 'sass'].includes(extension)) {
-            const match = /^([.#]?[A-Za-z_][^{]+)\s*\{/.exec(trimmed);
-            if (match) {
-                add('selector', match[1], lineNumber, 0);
-            }
-            return;
-        }
-
-        if (['json', 'jsonc'].includes(extension)) {
-            const match = /^"([^"]+)"\s*:/.exec(trimmed);
-            if (match && leadingSpaceCount(line) <= 8) {
-                add('key', match[1], lineNumber, Math.floor(leadingSpaceCount(line) / 2));
-            }
-            return;
-        }
-
-        if (['yaml', 'yml'].includes(extension)) {
-            const match = /^([A-Za-z0-9_.-]+)\s*:/.exec(trimmed);
-            if (match && leadingSpaceCount(line) <= 8) {
-                add('key', match[1], lineNumber, Math.floor(leadingSpaceCount(line) / 2));
-            }
-        }
-    });
-
-    return items.slice(0, 120);
-}
-
-function symbolKind(line: string) {
-    if (line.includes(' class ') || line.startsWith('class ') || line.startsWith('export class ')) {
-        return 'class';
-    }
-    if (line.includes(' interface ') || line.startsWith('interface ') || line.startsWith('export interface ')) {
-        return 'interface';
-    }
-    if (line.includes(' type ') || line.startsWith('type ') || line.startsWith('export type ')) {
-        return 'type';
-    }
-    if (line.includes(' enum ') || line.startsWith('enum ') || line.startsWith('export enum ')) {
-        return 'enum';
-    }
-    return 'func';
-}
-
-function leadingSpaceCount(value: string) {
-    return value.length - value.trimStart().length;
-}
-
 function PrimaryPreviewPane({
     activeFile,
+    definitionNonce,
     fileDraft,
     filePreview,
+    formatNonce,
     findQuery,
     isApplyingWrite,
     isDraftDirty,
@@ -563,8 +464,10 @@ function PrimaryPreviewPane({
     writeProposal,
 }: {
     activeFile: string;
+    definitionNonce: number;
     fileDraft: string;
     filePreview: FilePreview | null;
+    formatNonce: number;
     findQuery: string;
     isApplyingWrite: boolean;
     isDraftDirty: boolean;
@@ -618,6 +521,8 @@ function PrimaryPreviewPane({
                     originalContent={filePreview?.content ?? ''}
                     fileName={filePreview?.name ?? activeFile}
                     isDirty={isDraftDirty}
+                    definitionNonce={definitionNonce}
+                    formatNonce={formatNonce}
                     revealLine={outlineTargetLine}
                     revealNonce={outlineTargetNonce}
                     showMinimap={showMinimap}
@@ -627,7 +532,7 @@ function PrimaryPreviewPane({
             ) : filePreview?.content ? (
                 <div className={filePreview.message ? 'source-editor-preview' : 'source-editor-preview no-message'}>
                     {filePreview.message && <InlineAlert>{filePreview.message}</InlineAlert>}
-                    <MonacoCodePreview content={filePreview.content} fileName={filePreview.name} revealLine={outlineTargetLine} revealNonce={outlineTargetNonce} searchQuery={findQuery} showMinimap={showMinimap} />
+                    <MonacoCodePreview content={filePreview.content} definitionNonce={definitionNonce} fileName={filePreview.name} revealLine={outlineTargetLine} revealNonce={outlineTargetNonce} searchQuery={findQuery} showMinimap={showMinimap} />
                 </div>
             ) : (
                 <EmptyState
@@ -672,7 +577,7 @@ function SecondaryPreviewPane({
             ) : preview?.content ? (
                 <div className={preview.message ? 'source-editor-preview' : 'source-editor-preview no-message'}>
                     {preview.message && <InlineAlert>{preview.message}</InlineAlert>}
-                    <MonacoCodePreview content={preview.content} fileName={preview.name} revealLine={0} revealNonce={0} searchQuery="" showMinimap={showMinimap} />
+                    <MonacoCodePreview content={preview.content} definitionNonce={0} fileName={preview.name} revealLine={0} revealNonce={0} searchQuery="" showMinimap={showMinimap} />
                 </div>
             ) : (
                 <EmptyState
@@ -827,6 +732,8 @@ function countFindMatches(content: string, query: string) {
 
 function FileWriteEditor({
     draft,
+    definitionNonce,
+    formatNonce,
     isApplying,
     isPreviewing,
     onApply,
@@ -842,6 +749,8 @@ function FileWriteEditor({
     showMinimap,
 }: {
     draft: string;
+    definitionNonce: number;
+    formatNonce: number;
     fileName: string;
     revealLine: number;
     revealNonce: number;
@@ -885,9 +794,11 @@ function FileWriteEditor({
                     Cancel
                 </Button>
             </div>
-            <MonacoFileEditor
-                fileName={fileName}
-                onChange={onChange}
+                <MonacoFileEditor
+                    definitionNonce={definitionNonce}
+                    fileName={fileName}
+                    formatNonce={formatNonce}
+                    onChange={onChange}
                 onSave={saveDraftShortcut}
                 revealLine={revealLine}
                 revealNonce={revealNonce}

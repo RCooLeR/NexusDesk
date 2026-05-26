@@ -130,7 +130,7 @@ Responsibilities:
 
 The frontend should render structured data from the backend. It should not contain business rules for file permissions, database safety, or Docker safety.
 
-Current implementation note: generated Wails bindings are imported through `app/frontend/src/api/wailsClient.ts`, not directly from feature components. `NexusShell.tsx` remains the main orchestrator, but panel resize state and studio-route state now live in focused hooks with local persistence so future workspace, chat, artifact, and data controllers can follow the same pattern.
+Current implementation note: generated Wails bindings are imported through `app/frontend/src/api/wailsClient.ts`, not directly from feature components. `NexusShell.tsx` remains the main orchestrator, but panel resize state, studio-route state, Git workflows, and editor-outline extraction/presentation now live in focused modules so future workspace, chat, artifact, and data controllers can follow the same pattern.
 
 ### 3. Workspace Manager
 

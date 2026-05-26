@@ -3,7 +3,9 @@ import type * as Monaco from 'monaco-editor/esm/vs/editor/editor.api';
 import {defineNexusTheme, languageForFile, loadMonaco} from './monacoRuntime';
 
 type MonacoFileEditorProps = {
+    definitionNonce: number;
     fileName: string;
+    formatNonce: number;
     onChange: (content: string) => void;
     onSave: () => void;
     revealLine: number;
@@ -12,7 +14,7 @@ type MonacoFileEditorProps = {
     value: string;
 };
 
-export function MonacoFileEditor({fileName, onChange, onSave, revealLine, revealNonce, showMinimap, value}: MonacoFileEditorProps) {
+export function MonacoFileEditor({definitionNonce, fileName, formatNonce, onChange, onSave, revealLine, revealNonce, showMinimap, value}: MonacoFileEditorProps) {
     const containerRef = useRef<HTMLDivElement>(null);
     const editorRef = useRef<Monaco.editor.IStandaloneCodeEditor | null>(null);
     const changeHandlerRef = useRef(onChange);
@@ -121,6 +123,22 @@ export function MonacoFileEditor({fileName, onChange, onSave, revealLine, reveal
         editor.setPosition({lineNumber: revealLine, column: 1});
         editor.focus();
     }, [revealLine, revealNonce]);
+
+    useEffect(() => {
+        const editor = editorRef.current;
+        if (!editor || definitionNonce <= 0) {
+            return;
+        }
+        void editor.getAction('editor.action.revealDefinition')?.run();
+    }, [definitionNonce]);
+
+    useEffect(() => {
+        const editor = editorRef.current;
+        if (!editor || formatNonce <= 0) {
+            return;
+        }
+        void editor.getAction('editor.action.formatDocument')?.run();
+    }, [formatNonce]);
 
     return <div className="monaco-file-editor" ref={containerRef} />;
 }
