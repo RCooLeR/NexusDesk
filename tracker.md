@@ -408,7 +408,8 @@ Step 5.4: Query notebook
 - [x] Add first local chart cell type that embeds bounded dataset chart preview/create controls inside the SQL notebook.
 - [x] Add explain-plan display where connector supports it.
 - [x] Add SQL notebook Plan tab backed by dataset SQL plan lines: native DuckDB `EXPLAIN` when available, deterministic fallback plan lines otherwise.
-- [ ] Add saved notebooks.
+- [x] Add saved notebooks.
+- [x] Add per-dataset SQL notebook save/load flow backed by `.nexusdesk/datasets/notebooks.json`, including SQL/chart cell persistence and lineage dependency records.
 - [ ] Add query history browser.
 - [ ] Add visible result caps and timeout controls.
 - [ ] Add export to CSV.

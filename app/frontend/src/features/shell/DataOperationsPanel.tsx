@@ -2,7 +2,7 @@ import {useEffect, useMemo, useState} from 'react';
 import {FontAwesomeIcon} from '@fortawesome/react-fontawesome';
 import {brandAssets, capabilityIconByTitle} from '../../brand/assets';
 import {Button, EmptyState, StatusBadge} from '../../components/ui';
-import type {Capability, ConnectorMetadata, DatasetChartResult, DatasetDependency, DatasetProfile, DatasetQueryResult, DatasetSQLQueryResult, FileNode, FilePreview, MetadataBrowser, MetadataSearchResult, SavedDatasetQuery, SQLRun, SQLiteMetadataStatus, SQLiteQueryResult, WorkspaceFreshnessStatus, WorkspaceSnapshot} from '../../types';
+import type {Capability, ConnectorMetadata, DatasetChartResult, DatasetDependency, DatasetProfile, DatasetQueryResult, DatasetSQLNotebook, DatasetSQLQueryResult, FileNode, FilePreview, MetadataBrowser, MetadataSearchResult, SavedDatasetQuery, SQLNotebookCell, SQLRun, SQLiteMetadataStatus, SQLiteQueryResult, WorkspaceFreshnessStatus, WorkspaceSnapshot} from '../../types';
 import {ConnectorMetadataBrowser} from './ConnectorMetadataBrowser';
 import {DataStudioPanel, SortableDataTable} from './DataStudioPanel';
 import {OperationsInspector} from './OperationsInspector';
@@ -41,6 +41,7 @@ type DataOperationsPanelProps = {
     isRefreshingStaleContext: boolean;
     isSavingDatasetQuery: boolean;
     isSavingDatasetSQLQuery: boolean;
+    isSavingDatasetSQLNotebook: boolean;
     isSearchingMetadata: boolean;
     metadataBrowser: MetadataBrowser | null;
     metadataSearchQuery: string;
@@ -75,6 +76,8 @@ type DataOperationsPanelProps = {
     onRefreshStaleContext: () => void;
     onSaveDatasetQuery: () => void;
     onSaveDatasetSQLQuery: () => void;
+    onSaveDatasetSQLNotebook: (notebookId: string, label: string, cells: SQLNotebookCell[]) => Promise<DatasetSQLNotebook | null>;
+    onLoadDatasetSQLNotebook: (notebook: DatasetSQLNotebook) => void;
     onSearchMetadata: () => void;
     onSQLiteConnectorQueryChange: (content: string) => void;
     onSQLiteConnectorQueryLabelChange: (content: string) => void;
@@ -86,6 +89,7 @@ type DataOperationsPanelProps = {
     rebuildingDatasetDependencyId: string;
     savedDatasetQueries: SavedDatasetQuery[];
     savedDatasetSQLQueries: SavedDatasetQuery[];
+    savedDatasetSQLNotebooks: DatasetSQLNotebook[];
     savedSQLiteConnectorQueries: SavedDatasetQuery[];
     sqliteConnectorQuery: string;
     sqliteConnectorQueryLabel: string;
@@ -132,6 +136,7 @@ export function DataOperationsPanel({
     isRefreshingStaleContext,
     isSavingDatasetQuery,
     isSavingDatasetSQLQuery,
+    isSavingDatasetSQLNotebook,
     isSearchingMetadata,
     metadataBrowser,
     metadataSearchQuery,
@@ -166,6 +171,8 @@ export function DataOperationsPanel({
     onRefreshStaleContext,
     onSaveDatasetQuery,
     onSaveDatasetSQLQuery,
+    onSaveDatasetSQLNotebook,
+    onLoadDatasetSQLNotebook,
     onSearchMetadata,
     onSQLiteConnectorQueryChange,
     onSQLiteConnectorQueryLabelChange,
@@ -177,6 +184,7 @@ export function DataOperationsPanel({
     rebuildingDatasetDependencyId,
     savedDatasetQueries,
     savedDatasetSQLQueries,
+    savedDatasetSQLNotebooks,
     savedSQLiteConnectorQueries,
     sqliteConnectorQuery,
     sqliteConnectorQueryLabel,
@@ -267,11 +275,15 @@ export function DataOperationsPanel({
                         isQueryingSQL={isQueryingDatasetSQL}
                         isExportingSQL={isExportingDatasetSQL}
                         isSavingSQL={isSavingDatasetSQLQuery}
+                        isSavingSQLNotebook={isSavingDatasetSQLNotebook}
                         onSQLChange={onDatasetSQLQueryChange}
                         onSQLLabelChange={onDatasetSQLQueryLabelChange}
                         onSQLQuery={onQueryDatasetSQL}
                         onSQLExport={onExportDatasetSQL}
                         onSQLSave={onSaveDatasetSQLQuery}
+                        onSQLNotebookSave={onSaveDatasetSQLNotebook}
+                        onSQLNotebookLoad={onLoadDatasetSQLNotebook}
+                        savedSQLNotebooks={savedDatasetSQLNotebooks}
                     />
                 ) : (
                     <EmptyState

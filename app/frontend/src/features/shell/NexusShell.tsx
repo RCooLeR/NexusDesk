@@ -41,6 +41,7 @@ import {
     ListAgentToolRuns,
     ListApprovals,
     ListDatasetQueries,
+    ListDatasetSQLNotebooks,
     ListDatasetSQLQueries,
     ListSQLiteConnectorQueries,
     ListDatasetProfiles,
@@ -72,6 +73,7 @@ import {
     SaveConnectorProfile,
     SaveAssistantProfile,
     SaveDatasetQuery,
+    SaveDatasetSQLNotebook,
     SaveDatasetSQLQuery,
     SaveSQLiteConnectorQuery,
     SearchMetadata,
@@ -105,6 +107,7 @@ import type {
     DatasetDependency,
     DatasetProfile,
     DatasetQueryResult,
+    DatasetSQLNotebook,
     DatasetSQLQueryResult,
     FileNode,
     FilePreview,
@@ -119,6 +122,7 @@ import type {
     MetadataSearchResult,
     RecentWorkspace,
     SavedDatasetQuery,
+    SQLNotebookCell,
     SQLRun,
     SQLiteQueryResult,
     SQLiteMetadataStatus,
@@ -241,11 +245,13 @@ export function NexusShell({
     const [datasetSQLQueryResult, setDatasetSQLQueryResult] = useState<DatasetSQLQueryResult | null>(null);
     const [savedDatasetQueries, setSavedDatasetQueries] = useState<SavedDatasetQuery[]>([]);
     const [savedDatasetSQLQueries, setSavedDatasetSQLQueries] = useState<SavedDatasetQuery[]>([]);
+    const [savedDatasetSQLNotebooks, setSavedDatasetSQLNotebooks] = useState<DatasetSQLNotebook[]>([]);
     const [isQueryingDataset, setIsQueryingDataset] = useState(false);
     const [isQueryingDatasetSQL, setIsQueryingDatasetSQL] = useState(false);
     const [isExportingDatasetSQL, setIsExportingDatasetSQL] = useState(false);
     const [isSavingDatasetQuery, setIsSavingDatasetQuery] = useState(false);
     const [isSavingDatasetSQLQuery, setIsSavingDatasetSQLQuery] = useState(false);
+    const [isSavingDatasetSQLNotebook, setIsSavingDatasetSQLNotebook] = useState(false);
     const [isRefreshingStaleContext, setIsRefreshingStaleContext] = useState(false);
     const [datasetChartType, setDatasetChartType] = useState('bar');
     const [datasetChartCategory, setDatasetChartCategory] = useState('');
@@ -511,6 +517,7 @@ export function NexusShell({
     useEffect(() => {
         setSavedDatasetQueries([]);
         setSavedDatasetSQLQueries([]);
+        setSavedDatasetSQLNotebooks([]);
         setDatasetDependencies([]);
         setDatasetSQLRuns([]);
         if (!filePreview?.table) {
@@ -518,6 +525,7 @@ export function NexusShell({
         }
         void refreshSavedDatasetQueries(filePreview.relPath);
         void refreshSavedDatasetSQLQueries(filePreview.relPath);
+        void refreshSavedDatasetSQLNotebooks(filePreview.relPath);
         void refreshDatasetLineage(filePreview.relPath);
     }, [filePreview?.relPath, filePreview?.table]);
 
@@ -2170,6 +2178,14 @@ export function NexusShell({
         }
     }
 
+    async function refreshSavedDatasetSQLNotebooks(relPath: string) {
+        try {
+            setSavedDatasetSQLNotebooks(await ListDatasetSQLNotebooks(relPath) as DatasetSQLNotebook[]);
+        } catch {
+            setSavedDatasetSQLNotebooks([]);
+        }
+    }
+
     async function refreshSavedSQLiteConnectorQueries(relPath: string) {
         try {
             setSavedSQLiteConnectorQueries(await ListSQLiteConnectorQueries(relPath));
@@ -3322,6 +3338,42 @@ export function NexusShell({
         }
     }
 
+    async function saveCurrentDatasetSQLNotebook(notebookId: string, label: string, cells: SQLNotebookCell[]): Promise<DatasetSQLNotebook | null> {
+        if (!workspace || !filePreview?.table) {
+            setWorkspaceStatus('Select a dataset before saving a SQL notebook.');
+            return null;
+        }
+
+        setIsSavingDatasetSQLNotebook(true);
+        try {
+            const saved = await SaveDatasetSQLNotebook({
+                id: notebookId,
+                relPath: filePreview.relPath,
+                label,
+                cells,
+            } as unknown as Parameters<typeof SaveDatasetSQLNotebook>[0]) as DatasetSQLNotebook;
+            await refreshSavedDatasetSQLNotebooks(filePreview.relPath);
+            await refreshDatasetLineage(filePreview.relPath);
+            setWorkspaceStatus(`Saved SQL notebook "${saved.label}".`);
+            pushToolEvent('SQL notebook saved', `${saved.relPath}: ${saved.label}`);
+            return saved;
+        } catch (error) {
+            const message = error instanceof Error ? error.message : '';
+            setWorkspaceStatus(message || 'Could not save SQL notebook.');
+            return null;
+        } finally {
+            setIsSavingDatasetSQLNotebook(false);
+        }
+    }
+
+    function loadDatasetSQLNotebook(notebook: DatasetSQLNotebook) {
+        const firstSQLCell = notebook.cells.find((cell) => cell.kind !== 'chart' && cell.sql.trim());
+        setDatasetSQLQuery(firstSQLCell?.sql ?? '');
+        setDatasetSQLQueryLabel(notebook.label);
+        setWorkspaceStatus(`Loaded SQL notebook "${notebook.label}".`);
+        pushToolEvent('SQL notebook loaded', `${notebook.relPath}: ${notebook.label}`);
+    }
+
     async function refreshStaleContextFromWorkspace() {
         const changes = safeWorkspaceChanges(workspaceFreshness?.changed);
         if (!workspaceFreshness || changes.length === 0) {
@@ -4243,6 +4295,7 @@ export function NexusShell({
                 isSavingConnectorProfile={isSavingConnectorProfile}
                 isSavingDatasetQuery={isSavingDatasetQuery}
                 isSavingDatasetSQLQuery={isSavingDatasetSQLQuery}
+                isSavingDatasetSQLNotebook={isSavingDatasetSQLNotebook}
                 isSavingSettings={isSavingSettings}
                 isSearchingMetadata={isSearchingMetadata}
                 isSearchingWorkspace={isSearchingWorkspace}
@@ -4330,6 +4383,8 @@ export function NexusShell({
                 onSaveConnectorProfile={() => void saveConnectorProfile()}
                 onSaveDatasetQuery={() => void saveCurrentDatasetQuery()}
                 onSaveDatasetSQLQuery={() => void saveCurrentDatasetSQLQuery()}
+                onSaveDatasetSQLNotebook={(notebookId, label, cells) => saveCurrentDatasetSQLNotebook(notebookId, label, cells)}
+                onLoadDatasetSQLNotebook={loadDatasetSQLNotebook}
                 onDeleteConnectorProfile={(id) => void deleteConnectorProfile(id)}
                 onInspectConnectorProfile={(id) => void inspectConnectorProfile(id)}
                 onTestConnectorProfile={(id) => void testConnectorProfile(id)}
@@ -4357,6 +4412,7 @@ export function NexusShell({
                 rebuildingDatasetDependencyId={rebuildingDatasetDependencyId}
                 savedDatasetQueries={savedDatasetQueries}
                 savedDatasetSQLQueries={savedDatasetSQLQueries}
+                savedDatasetSQLNotebooks={savedDatasetSQLNotebooks}
                 settingsDraft={settingsDraft}
                 settingsStatus={settingsStatus}
                 showTabs={options.showTabs}

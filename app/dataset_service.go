@@ -138,6 +138,26 @@ func (s *DatasetService) ListSQLQueries(relPath string) ([]dataset.SavedQuery, e
 	return dataset.ListSavedQueriesKind(root, relPath, "sql")
 }
 
+func (s *DatasetService) SaveSQLNotebook(request dataset.NotebookSaveRequest) (dataset.Notebook, error) {
+	root, err := s.requireRoot("saving SQL notebooks")
+	if err != nil {
+		return dataset.Notebook{}, err
+	}
+	saved, err := dataset.SaveNotebook(root, request)
+	if err == nil {
+		s.recordDependency(root, saved.RelPath, "sql-notebook", notebookSummary(saved), saved.Label, "")
+	}
+	return saved, err
+}
+
+func (s *DatasetService) ListSQLNotebooks(relPath string) ([]dataset.Notebook, error) {
+	root := s.workspaceRoot()
+	if root == "" {
+		return []dataset.Notebook{}, nil
+	}
+	return dataset.ListNotebooks(root, relPath)
+}
+
 func (s *DatasetService) ListSQLiteConnectorQueries(relPath string) ([]dataset.SavedQuery, error) {
 	root := s.workspaceRoot()
 	if root == "" {
@@ -535,4 +555,17 @@ func (s *DatasetService) record(action string, target string, risk string, messa
 	if s.recordApproval != nil {
 		s.recordApproval(action, target, risk, message)
 	}
+}
+
+func notebookSummary(notebook dataset.Notebook) string {
+	sqlCells := 0
+	chartCells := 0
+	for _, cell := range notebook.Cells {
+		if cell.Kind == "chart" {
+			chartCells++
+		} else {
+			sqlCells++
+		}
+	}
+	return fmt.Sprintf("%d SQL cells, %d chart cells", sqlCells, chartCells)
 }

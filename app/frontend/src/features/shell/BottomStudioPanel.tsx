@@ -1,4 +1,4 @@
-import type {AgentToolDescriptor, AgentToolPlanItem, AgentToolRunRecord, ApprovalRecord, ArtifactComparison, ArtifactLineage, ArtifactMetadata, Capability, ConnectorMetadata, ConnectorProfile, DatasetChartResult, DatasetDependency, DatasetProfile, DatasetQueryResult, DatasetSQLQueryResult, FilePreview, GitFileAction, GitFileActionPreview, GitFileDiff, GitHunkActionPreview, GitHunkActionRequest, GitStatus, LLMProbeResult, LLMSettings, MetadataBrowser, MetadataSearchResult, SavedDatasetQuery, SQLRun, SQLiteMetadataStatus, SQLiteQueryResult, ToolEvent, WorkspaceArtifact, WorkspaceFreshnessStatus, WorkspaceProblemSummary, WorkspaceSearchResult, WorkspaceSnapshot, WorkspaceTask, WorkspaceTaskRunResult, WorkspaceTaskSummary} from '../../types';
+import type {AgentToolDescriptor, AgentToolPlanItem, AgentToolRunRecord, ApprovalRecord, ArtifactComparison, ArtifactLineage, ArtifactMetadata, Capability, ConnectorMetadata, ConnectorProfile, DatasetChartResult, DatasetDependency, DatasetProfile, DatasetQueryResult, DatasetSQLNotebook, DatasetSQLQueryResult, FilePreview, GitFileAction, GitFileActionPreview, GitFileDiff, GitHunkActionPreview, GitHunkActionRequest, GitStatus, LLMProbeResult, LLMSettings, MetadataBrowser, MetadataSearchResult, SavedDatasetQuery, SQLNotebookCell, SQLRun, SQLiteMetadataStatus, SQLiteQueryResult, ToolEvent, WorkspaceArtifact, WorkspaceFreshnessStatus, WorkspaceProblemSummary, WorkspaceSearchResult, WorkspaceSnapshot, WorkspaceTask, WorkspaceTaskRunResult, WorkspaceTaskSummary} from '../../types';
 import {AgentToolPlanCard} from './AgentToolPlanCard';
 import {ApprovalLogPanel} from './ApprovalLogPanel';
 import {ArtifactStudioPanel} from './ArtifactStudioPanel';
@@ -76,6 +76,7 @@ type BottomStudioPanelProps = {
     isRunningAgentTool: boolean;
     isSavingDatasetQuery: boolean;
     isSavingDatasetSQLQuery: boolean;
+    isSavingDatasetSQLNotebook: boolean;
     isSavingConnectorProfile: boolean;
     isSavingSettings: boolean;
     isSearchingMetadata: boolean;
@@ -146,6 +147,8 @@ type BottomStudioPanelProps = {
     onReplayAgentToolRun: (run: AgentToolRunRecord) => void;
     onSaveDatasetQuery: () => void;
     onSaveDatasetSQLQuery: () => void;
+    onSaveDatasetSQLNotebook: (notebookId: string, label: string, cells: SQLNotebookCell[]) => Promise<DatasetSQLNotebook | null>;
+    onLoadDatasetSQLNotebook: (notebook: DatasetSQLNotebook) => void;
     onSaveConnectorProfile: () => void;
     onDeleteConnectorProfile: (id: string) => void;
     onInspectConnectorProfile: (id: string) => void;
@@ -174,6 +177,7 @@ type BottomStudioPanelProps = {
     rebuildingDatasetDependencyId: string;
     savedDatasetQueries: SavedDatasetQuery[];
     savedDatasetSQLQueries: SavedDatasetQuery[];
+    savedDatasetSQLNotebooks: DatasetSQLNotebook[];
     settingsDraft: LLMSettings;
     settingsStatus: string;
     sqliteConnectorQuery: string;
@@ -274,6 +278,7 @@ export function BottomStudioPanel({
     isRunningAgentTool,
     isSavingDatasetQuery,
     isSavingDatasetSQLQuery,
+    isSavingDatasetSQLNotebook,
     isSavingConnectorProfile,
     isSavingSettings,
     isSearchingMetadata,
@@ -344,6 +349,8 @@ export function BottomStudioPanel({
     onReplayAgentToolRun,
     onSaveDatasetQuery,
     onSaveDatasetSQLQuery,
+    onSaveDatasetSQLNotebook,
+    onLoadDatasetSQLNotebook,
     onSaveConnectorProfile,
     onDeleteConnectorProfile,
     onInspectConnectorProfile,
@@ -372,6 +379,7 @@ export function BottomStudioPanel({
     rebuildingDatasetDependencyId,
     savedDatasetQueries,
     savedDatasetSQLQueries,
+    savedDatasetSQLNotebooks,
     settingsDraft,
     settingsStatus,
     sqliteConnectorQuery,
@@ -540,6 +548,7 @@ export function BottomStudioPanel({
                         isRefreshingStaleContext={isRefreshingStaleContext}
                         isSavingDatasetQuery={isSavingDatasetQuery}
                         isSavingDatasetSQLQuery={isSavingDatasetSQLQuery}
+                        isSavingDatasetSQLNotebook={isSavingDatasetSQLNotebook}
                         isSearchingMetadata={isSearchingMetadata}
                         metadataBrowser={metadataBrowser}
                         metadataSearchQuery={metadataSearchQuery}
@@ -573,6 +582,8 @@ export function BottomStudioPanel({
                         onRefreshStaleContext={onRefreshStaleContext}
                         onSaveDatasetQuery={onSaveDatasetQuery}
                         onSaveDatasetSQLQuery={onSaveDatasetSQLQuery}
+                        onSaveDatasetSQLNotebook={onSaveDatasetSQLNotebook}
+                        onLoadDatasetSQLNotebook={onLoadDatasetSQLNotebook}
                         onSearchMetadata={onSearchMetadata}
                         onSQLiteConnectorQueryChange={onSQLiteConnectorQueryChange}
                         onSQLiteConnectorQueryLabelChange={onSQLiteConnectorQueryLabelChange}
@@ -585,6 +596,7 @@ export function BottomStudioPanel({
                         rebuildingDatasetDependencyId={rebuildingDatasetDependencyId}
                         savedDatasetQueries={savedDatasetQueries}
                         savedDatasetSQLQueries={savedDatasetSQLQueries}
+                        savedDatasetSQLNotebooks={savedDatasetSQLNotebooks}
                         savedSQLiteConnectorQueries={savedSQLiteConnectorQueries}
                         sqliteConnectorQuery={sqliteConnectorQuery}
                         sqliteConnectorQueryLabel={sqliteConnectorQueryLabel}

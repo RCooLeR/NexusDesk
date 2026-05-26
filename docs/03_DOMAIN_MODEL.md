@@ -520,7 +520,7 @@ Current implementation:
 - Fresh chats, approvals, artifacts, and tool runs write directly to SQLite once the store exists, while JSON stores remain active compatibility writers/fallbacks.
 - `InspectMetadataStore` returns table columns, row counts, sample rows, and dataset SQL view summaries for the workbench; the UI can select tables, filter columns, and copy row samples.
 - Metadata search returns chat, artifact, and tool-run snippets for the workbench history surface.
-- Dataset dependency and SQL run tables record saved SQL snippets, SQL artifacts, chart artifacts, summaries, and connector queries.
+- Dataset dependency and SQL run tables record saved SQL snippets, saved SQL notebooks, SQL artifacts, chart artifacts, summaries, and connector queries.
 
 ### Workspace SQLite Connector
 
@@ -564,7 +564,8 @@ Current implementation:
 - A real DuckDB `database/sql` execution path registers the selected dataset as a `dataset` view when built with the `duckdb` tag on a CGO-enabled workstation.
 - SQL result exports create Markdown artifacts with SQL text, engine, row counts, preview rows, and source dataset citations.
 - SQL snippets are saved per dataset separately from lightweight row filters.
-- The Data & Analytics frontend has a first local multi-cell SQL notebook shell with SQL cells, chart cells, and row/summary/plan/history result tabs. Cells are not durable notebooks yet; SQL cells still execute through the existing bounded read-only dataset SQL request, and chart cells reuse bounded dataset chart actions.
+- SQL notebooks are saved per dataset under `.nexusdesk/datasets/notebooks.json`, capped per dataset, and contain SQL/chart cell labels plus SQL text without result snapshots.
+- The Data & Analytics frontend has a multi-cell SQL notebook shell with SQL cells, chart cells, saved notebook load/save controls, and row/summary/plan/history result tabs. SQL cells still execute through the existing bounded read-only dataset SQL request, and chart cells reuse bounded dataset chart actions.
 - SQL query results carry explain-plan lines. DuckDB builds can return native `EXPLAIN` output; the default bounded dataset engine returns a deterministic logical plan and clearly labels native explain as unavailable.
 
 ### Artifact Lineage
@@ -605,7 +606,8 @@ Current implementation:
 - `app/internal/dataset/query_history.go` stores recent saved queries in `.nexusdesk/datasets/queries.json`.
 - Saved queries include label, query text, dataset path, query kind, and update time.
 - Lightweight row filters and read-only SQL snippets are stored as separate query kinds.
-- The store reuses rooted dataset path validation and caps saved queries per dataset.
+- Dataset SQL notebooks are stored separately from snippets so a durable notebook can preserve multiple SQL/chart cells without mixing with one-off query history.
+- The stores reuse rooted dataset path validation and cap saved items per dataset.
 
 ### Dataset Summary
 

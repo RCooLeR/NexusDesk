@@ -121,6 +121,8 @@ export function ListDatasetQueries(arg1:string):Promise<Array<dataset.SavedQuery
 
 export function ListDatasetSQLQueries(arg1:string):Promise<Array<dataset.SavedQuery>>;
 
+export function ListDatasetSQLNotebooks(arg1:string):Promise<Array<dataset.Notebook>>;
+
 export function ListDatasetSQLRuns(arg1:string):Promise<Array<appmeta.SQLRun>>;
 
 export function ListSQLiteConnectorQueries(arg1:string):Promise<Array<dataset.SavedQuery>>;
@@ -180,6 +182,8 @@ export function SaveConnectorProfile(arg1:storage.ConnectorProfile):Promise<stor
 export function SaveDatasetQuery(arg1:string,arg2:string,arg3:string):Promise<dataset.SavedQuery>;
 
 export function SaveDatasetSQLQuery(arg1:string,arg2:string,arg3:string):Promise<dataset.SavedQuery>;
+
+export function SaveDatasetSQLNotebook(arg1:dataset.NotebookSaveRequest):Promise<dataset.Notebook>;
 
 export function SaveLLMSettings(arg1:storage.LLMSettings):Promise<storage.LLMSettings>;
 

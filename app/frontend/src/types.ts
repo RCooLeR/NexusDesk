@@ -547,6 +547,28 @@ export type DatasetSQLQueryRequest = {
     sql: string;
 };
 
+export type SQLNotebookCell = {
+    id: string;
+    kind: 'sql' | 'chart';
+    label: string;
+    sql: string;
+};
+
+export type DatasetSQLNotebook = {
+    id: string;
+    relPath: string;
+    label: string;
+    cells: SQLNotebookCell[];
+    updatedAt: string;
+};
+
+export type DatasetSQLNotebookSaveRequest = {
+    id: string;
+    relPath: string;
+    label: string;
+    cells: SQLNotebookCell[];
+};
+
 export type SavedDatasetQuery = {
     relPath: string;
     query: string;

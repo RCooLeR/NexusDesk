@@ -1,13 +1,6 @@
 import {useEffect, useMemo, useState} from 'react';
 import {Button} from '../../components/ui';
-import type {ColumnProfile, DatasetChartResult, DatasetDependency, DatasetProfile, DatasetQueryResult, DatasetSQLQueryResult, SavedDatasetQuery, SQLRun, TablePreview} from '../../types';
-
-type SQLNotebookCell = {
-    id: string;
-    kind: 'sql' | 'chart';
-    label: string;
-    sql: string;
-};
+import type {ColumnProfile, DatasetChartResult, DatasetDependency, DatasetProfile, DatasetQueryResult, DatasetSQLNotebook, DatasetSQLQueryResult, SavedDatasetQuery, SQLNotebookCell, SQLRun, TablePreview} from '../../types';
 
 type SQLResultTab = 'rows' | 'summary' | 'plan' | 'history';
 
@@ -26,6 +19,7 @@ type DataStudioPanelProps = {
     isQueryingSQL: boolean;
     isExportingSQL: boolean;
     isSavingSQL: boolean;
+    isSavingSQLNotebook: boolean;
     isSavingQuery: boolean;
     onChartCategoryChange: (value: string) => void;
     onChartTypeChange: (value: string) => void;
@@ -41,6 +35,8 @@ type DataStudioPanelProps = {
     onSQLQuery: (sql?: string) => void;
     onSQLExport: () => void;
     onSQLSave: () => void;
+    onSQLNotebookLoad: (notebook: DatasetSQLNotebook) => void;
+    onSQLNotebookSave: (notebookId: string, label: string, cells: SQLNotebookCell[]) => Promise<DatasetSQLNotebook | null>;
     onQueryLabelChange: (value: string) => void;
     onSaveQuery: () => void;
     onRebuildDependency: (id: string) => void;
@@ -54,6 +50,7 @@ type DataStudioPanelProps = {
     sqlResult: DatasetSQLQueryResult | null;
     savedQueries: SavedDatasetQuery[];
     savedSQLQueries: SavedDatasetQuery[];
+    savedSQLNotebooks: DatasetSQLNotebook[];
     sqlRuns: SQLRun[];
     dependencies: DatasetDependency[];
     table: TablePreview | null;
@@ -74,6 +71,7 @@ export function DataStudioPanel({
     isQueryingSQL,
     isExportingSQL,
     isSavingSQL,
+    isSavingSQLNotebook,
     isSavingQuery,
     onChartCategoryChange,
     onChartTypeChange,
@@ -89,6 +87,8 @@ export function DataStudioPanel({
     onSQLQuery,
     onSQLExport,
     onSQLSave,
+    onSQLNotebookLoad,
+    onSQLNotebookSave,
     onQueryLabelChange,
     onSaveQuery,
     onRebuildDependency,
@@ -102,6 +102,7 @@ export function DataStudioPanel({
     sqlResult,
     savedQueries,
     savedSQLQueries,
+    savedSQLNotebooks,
     sqlRuns,
     dependencies,
     table,
@@ -139,13 +140,17 @@ export function DataStudioPanel({
                 isQueryingSQL={isQueryingSQL}
                 isExportingSQL={isExportingSQL}
                 isSavingSQL={isSavingSQL}
+                isSavingSQLNotebook={isSavingSQLNotebook}
                 onSQLChange={onSQLChange}
                 onSQLLabelChange={onSQLLabelChange}
                 onSQLQuery={onSQLQuery}
                 onSQLExport={onSQLExport}
                 onSQLSave={onSQLSave}
+                onSQLNotebookLoad={onSQLNotebookLoad}
+                onSQLNotebookSave={onSQLNotebookSave}
                 profiles={profiles}
                 savedSQLQueries={savedSQLQueries}
+                savedSQLNotebooks={savedSQLNotebooks}
                 onRebuildDependency={onRebuildDependency}
                 rebuildingDependencyId={rebuildingDependencyId}
                 sqlRuns={sqlRuns}
@@ -195,6 +200,7 @@ function DatasetQueryPanel({
     isQueryingSQL,
     isExportingSQL,
     isSavingSQL,
+    isSavingSQLNotebook,
     onChange,
     onChartCategoryChange,
     onChartTypeChange,
@@ -209,9 +215,12 @@ function DatasetQueryPanel({
     onSQLQuery,
     onSQLExport,
     onSQLSave,
+    onSQLNotebookLoad,
+    onSQLNotebookSave,
     onSave,
     profiles,
     savedSQLQueries,
+    savedSQLNotebooks,
     sqlRuns,
     dependencies,
     sqlLabel,
@@ -237,6 +246,7 @@ function DatasetQueryPanel({
     isQueryingSQL: boolean;
     isExportingSQL: boolean;
     isSavingSQL: boolean;
+    isSavingSQLNotebook: boolean;
     onChange: (value: string) => void;
     onChartCategoryChange: (value: string) => void;
     onChartTypeChange: (value: string) => void;
@@ -251,9 +261,12 @@ function DatasetQueryPanel({
     onSQLQuery: (sql?: string) => void;
     onSQLExport: () => void;
     onSQLSave: () => void;
+    onSQLNotebookLoad: (notebook: DatasetSQLNotebook) => void;
+    onSQLNotebookSave: (notebookId: string, label: string, cells: SQLNotebookCell[]) => Promise<DatasetSQLNotebook | null>;
     onSave: () => void;
     profiles: ColumnProfile[];
     savedSQLQueries: SavedDatasetQuery[];
+    savedSQLNotebooks: DatasetSQLNotebook[];
     sqlRuns: SQLRun[];
     dependencies: DatasetDependency[];
     sqlLabel: string;
@@ -265,6 +278,8 @@ function DatasetQueryPanel({
     const [sqlCells, setSQLCells] = useState<SQLNotebookCell[]>(() => [newSQLNotebookCell(sqlQuery)]);
     const [activeSQLCellId, setActiveSQLCellId] = useState(sqlCells[0]?.id ?? '');
     const [activeSQLResultTab, setActiveSQLResultTab] = useState<SQLResultTab>('rows');
+    const [activeNotebookId, setActiveNotebookId] = useState('');
+    const [notebookLabel, setNotebookLabel] = useState('SQL Notebook');
     const activeSQLCell = sqlCells.find((cell) => cell.id === activeSQLCellId) ?? sqlCells[0];
 
     useEffect(() => {
@@ -320,6 +335,24 @@ function DatasetQueryPanel({
 
     function applySavedSQL(value: string) {
         updateActiveSQL(value);
+    }
+
+    async function saveSQLNotebook() {
+        const saved = await onSQLNotebookSave(activeNotebookId, notebookLabel, sqlCells);
+        if (saved) {
+            setActiveNotebookId(saved.id);
+            setNotebookLabel(saved.label);
+        }
+    }
+
+    function loadSQLNotebook(notebook: DatasetSQLNotebook) {
+        const cells = normalizeNotebookCells(notebook.cells);
+        setSQLCells(cells);
+        setActiveSQLCellId(cells[0]?.id ?? '');
+        setActiveNotebookId(notebook.id);
+        setNotebookLabel(notebook.label);
+        onSQLChange(cells.find((cell) => cell.kind === 'sql')?.sql ?? '');
+        onSQLNotebookLoad(notebook);
     }
 
     function runActiveSQLCell() {
@@ -418,6 +451,15 @@ function DatasetQueryPanel({
                         ))}
                     </div>
                 )}
+                {savedSQLNotebooks.length > 0 && (
+                    <div className="saved-query-list" aria-label="Saved SQL notebooks">
+                        {savedSQLNotebooks.map((notebook) => (
+                            <button key={`${notebook.relPath}-${notebook.id}`} onClick={() => loadSQLNotebook(notebook)} title={`${notebook.cells.length} cells`}>
+                                {notebook.label}
+                            </button>
+                        ))}
+                    </div>
+                )}
                 <div className="sql-notebook" aria-label="SQL notebook cells">
                     <div className="sql-notebook-tabs">
                         {sqlCells.map((cell, index) => (
@@ -445,6 +487,15 @@ function DatasetQueryPanel({
                             placeholder="Cell label"
                             value={activeSQLCell?.label ?? ''}
                         />
+                        <input
+                            aria-label="SQL notebook label"
+                            onChange={(event) => setNotebookLabel(event.target.value)}
+                            placeholder="Notebook label"
+                            value={notebookLabel}
+                        />
+                        <Button disabled={isSavingSQLNotebook || sqlCells.length === 0} onClick={saveSQLNotebook} variant="subtle">
+                            {isSavingSQLNotebook ? 'Saving...' : 'Save notebook'}
+                        </Button>
                         <Button disabled={sqlCells.length <= 1} onClick={() => deleteSQLCell(activeSQLCellId)} variant="subtle">Delete cell</Button>
                         <Button
                             disabled={activeSQLCell?.kind === 'chart' ? isPreviewingChart || columns.length === 0 : isQueryingSQL || !(activeSQLCell?.sql ?? '').trim()}
@@ -531,6 +582,18 @@ function newSQLNotebookCell(sql = '', index = 1, kind: SQLNotebookCell['kind'] =
         label: kind === 'chart' ? `Chart ${index}` : `Cell ${index}`,
         sql,
     };
+}
+
+function normalizeNotebookCells(cells: SQLNotebookCell[]): SQLNotebookCell[] {
+    if (cells.length === 0) {
+        return [newSQLNotebookCell('select * from dataset limit 20')];
+    }
+    return cells.map((cell, index) => ({
+        id: cell.id || `sql-cell-loaded-${index + 1}`,
+        kind: cell.kind === 'chart' ? 'chart' : 'sql',
+        label: cell.label || (cell.kind === 'chart' ? `Chart ${index + 1}` : `Cell ${index + 1}`),
+        sql: cell.sql ?? '',
+    }));
 }
 
 function SQLResultTabs({

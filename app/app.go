@@ -563,6 +563,14 @@ func (a *App) ListDatasetSQLQueries(relPath string) ([]dataset.SavedQuery, error
 	return a.datasetSvc.ListSQLQueries(relPath)
 }
 
+func (a *App) SaveDatasetSQLNotebook(request dataset.NotebookSaveRequest) (dataset.Notebook, error) {
+	return a.datasetSvc.SaveSQLNotebook(request)
+}
+
+func (a *App) ListDatasetSQLNotebooks(relPath string) ([]dataset.Notebook, error) {
+	return a.datasetSvc.ListSQLNotebooks(relPath)
+}
+
 func (a *App) ListSQLiteConnectorQueries(relPath string) ([]dataset.SavedQuery, error) {
 	return a.datasetSvc.ListSQLiteConnectorQueries(relPath)
 }

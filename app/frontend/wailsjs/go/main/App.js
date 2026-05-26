@@ -218,6 +218,10 @@ export function ListDatasetSQLQueries(arg1) {
   return window['go']['main']['App']['ListDatasetSQLQueries'](arg1);
 }
 
+export function ListDatasetSQLNotebooks(arg1) {
+  return window['go']['main']['App']['ListDatasetSQLNotebooks'](arg1);
+}
+
 export function ListDatasetSQLRuns(arg1) {
   return window['go']['main']['App']['ListDatasetSQLRuns'](arg1);
 }
@@ -336,6 +340,10 @@ export function SaveDatasetQuery(arg1, arg2, arg3) {
 
 export function SaveDatasetSQLQuery(arg1, arg2, arg3) {
   return window['go']['main']['App']['SaveDatasetSQLQuery'](arg1, arg2, arg3);
+}
+
+export function SaveDatasetSQLNotebook(arg1) {
+  return window['go']['main']['App']['SaveDatasetSQLNotebook'](arg1);
 }
 
 export function SaveLLMSettings(arg1) {

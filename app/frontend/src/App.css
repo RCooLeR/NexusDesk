@@ -1840,7 +1840,7 @@ button:disabled {
 .sql-notebook-toolbar {
     display: grid;
     gap: 6px;
-    grid-template-columns: minmax(0, 1fr) auto auto;
+    grid-template-columns: minmax(120px, 1fr) minmax(120px, 1fr) auto auto auto;
 }
 
 .sql-result-tabs {
