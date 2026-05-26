@@ -3102,9 +3102,19 @@ export function NexusShell({
             return;
         }
 
+        await profileDataSource(filePreview.relPath);
+    }
+
+    async function profileDataSource(relPath: string) {
+        if (!workspace) {
+            setWorkspaceStatus('Open a workspace before profiling a data source.');
+            return;
+        }
+
         setIsProfilingDataset(true);
         try {
-            const profile = await ProfileDataset(filePreview.relPath);
+            await selectWorkspaceFile(workspace, relPath);
+            const profile = await ProfileDataset(relPath);
             await refreshDatasetProfiles();
             setActiveDatasetProfile(profile);
             setWorkspaceStatus(profile.message);
@@ -3700,13 +3710,22 @@ export function NexusShell({
             setWorkspaceStatus('Select a SQLite database file before inspecting schema.');
             return;
         }
+        await inspectSQLiteDataSource(filePreview.relPath);
+    }
+
+    async function inspectSQLiteDataSource(relPath: string) {
+        if (!workspace) {
+            setWorkspaceStatus('Open a workspace before inspecting a SQLite source.');
+            return;
+        }
         setIsInspectingSQLiteConnector(true);
         try {
-            const metadata = await InspectWorkspaceSQLite(filePreview.relPath);
+            await selectWorkspaceFile(workspace, relPath);
+            const metadata = await InspectWorkspaceSQLite(relPath);
             setSQLiteConnectorMetadata(metadata);
             setWorkspaceStatus(metadata.message);
             pushToolEvent('SQLite schema inspected', metadata.relPath);
-            await refreshDatasetLineage(filePreview.relPath);
+            await refreshDatasetLineage(relPath);
         } catch (error) {
             const message = error instanceof Error ? error.message : '';
             setWorkspaceStatus(message || 'Could not inspect SQLite schema.');
@@ -4031,13 +4050,20 @@ export function NexusShell({
                 onGenerateTests={() => void generateTestsForSelectedCode()}
                 onInspectMetadata={() => void inspectMetadataStore()}
                 onInspectSQLiteConnector={() => void inspectActiveSQLiteFile()}
+                onInspectDataSource={(relPath) => void inspectSQLiteDataSource(relPath)}
                 onClearWorkspaceSearch={() => setWorkspaceSearchResults([])}
                 onMetadataSearchQueryChange={setMetadataSearchQuery}
+                onOpenDataSource={(relPath) => {
+                    if (workspace) {
+                        void selectWorkspaceFile(workspace, relPath);
+                    }
+                }}
                 onOpenArtifactSource={() => void openArtifactSource()}
                 onProposePatch={() => void proposePatchForCurrentFile()}
                 onSelectGitChange={selectGitChange}
                 onOpenLineageSource={(relPath) => void openLineageSource(relPath)}
                 onPrepareMetadataStore={() => void prepareSQLiteMetadataStore()}
+                onProfileDataSource={(relPath) => void profileDataSource(relPath)}
                 onProfileDataset={() => void profileSelectedDataset()}
                 onPreviewDatasetChart={() => void previewDatasetChart()}
                 onPreviewGitFileAction={(action) => void previewGitFileAction(action)}

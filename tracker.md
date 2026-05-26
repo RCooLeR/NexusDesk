@@ -1032,19 +1032,29 @@ Steps:
 3. [x] Start the connector metadata interface needed by future database and analytics sources.
 4. [x] Define connection profiles with secure credential references.
 5. [x] Expand SQLite schema browsing beyond the first connector query surface.
-6. [ ] Add data source card actions for open, profile, inspect connector, and planned import workflows.
+6. [x] Add data source card actions for open, profile, inspect connector, and planned import workflows.
 
-Recommended next batch: Data Source Card Actions.
+Completed batch: Data Source Card Actions.
 
 Steps:
 
-1. [ ] Add data source card actions for open, profile, inspect connector, and planned import workflows.
-2. [ ] Route SQLite source-card Inspect to the read-only schema inspector without opening arbitrary connectors on folder open.
-3. [ ] Route profile-capable table/workbook/log/Parquet cards to existing explicit profile actions.
-4. [ ] Add disabled planned actions for dump/import and compressed-export workflows with clear lifecycle copy.
-5. [ ] Keep all card actions user-triggered and bounded to the already-scanned workspace tree.
+1. [x] Add data source card actions for open, profile, inspect connector, and planned import workflows.
+2. [x] Route SQLite source-card Inspect to the read-only schema inspector without opening arbitrary connectors on folder open.
+3. [x] Route profile-capable table/workbook/log/Parquet cards to existing explicit profile actions.
+4. [x] Add disabled planned actions for dump/import and compressed-export workflows with clear lifecycle copy.
+5. [x] Keep all card actions user-triggered and bounded to the already-scanned workspace tree.
 
-Reasoning: Data & Analytics now has first-pass source discovery, bounded Parquet metadata, bounded log profiles, SQLite schema inspection, and local connector profiles with protected credential references. The next gap is making source cards actionable while preserving the rule that folder open does not start Git, Docker, OCR, connector pulls, dump imports, long indexing, or shell execution.
+Recommended next batch: Connector Guardrails And Query Controls.
+
+Steps:
+
+1. [ ] Add visible result cap and timeout controls to SQLite connector queries.
+2. [ ] Apply per-query caps/timeouts through connector request types instead of hardcoded defaults.
+3. [ ] Add connector error redaction helpers and tests.
+4. [ ] Add query cancellation plumbing for in-flight connector calls.
+5. [ ] Keep connector execution user-triggered and record SQL/dependency metadata after completion/failure.
+
+Reasoning: Data & Analytics source cards now route users into explicit open/profile/inspect actions without starting background work. The next gap is connector maturity: visible caps, timeouts, cancellation, and redacted errors before adding external database engines.
 
 ## Directory Ownership Notes
 
@@ -1104,7 +1114,7 @@ Workspace scan counters are diagnostic data, not primary navigation content. Kee
 
 `app/frontend/src/features/shell/GitDiffPanel.tsx` owns the bottom-drawer Git tab for selected changed-file review, file stage/unstage controls, hunk selection state, approval-backed hunk stage/unstage/discard/revert controls, and read-only staged/unstaged working-tree diffs.
 
-`app/frontend/src/features/shell/DataOperationsPanel.tsx` currently owns Data route workflows.
+`app/frontend/src/features/shell/DataOperationsPanel.tsx` currently owns Data route workflows, including bounded data source cards and their explicit Open/Profile/Inspect actions. Planned dump/import and compressed-export actions are visible but disabled until the job/sandbox lifecycle exists.
 
 `app/frontend/src/features/shell/ArtifactStudioPanel.tsx` currently owns Artifact Studio route workflows.
 

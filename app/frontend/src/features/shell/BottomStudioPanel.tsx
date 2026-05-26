@@ -109,13 +109,16 @@ type BottomStudioPanelProps = {
     onGenerateTests: () => void;
     onInspectMetadata: () => void;
     onInspectSQLiteConnector: () => void;
+    onInspectDataSource: (relPath: string) => void;
     onClearWorkspaceSearch: () => void;
     onMetadataSearchQueryChange: (content: string) => void;
+    onOpenDataSource: (relPath: string) => void;
     onOpenArtifactSource: () => void;
     onProposePatch: () => void;
     onSelectGitChange: (path: string) => void;
     onOpenLineageSource: (relPath: string) => void;
     onPrepareMetadataStore: () => void;
+    onProfileDataSource: (relPath: string) => void;
     onProfileDataset: () => void;
     onPreviewDatasetChart: () => void;
     onPreviewGitFileAction: (action: GitFileAction) => void;
@@ -284,13 +287,16 @@ export function BottomStudioPanel({
     onGenerateTests,
     onInspectMetadata,
     onInspectSQLiteConnector,
+    onInspectDataSource,
     onClearWorkspaceSearch,
     onMetadataSearchQueryChange,
+    onOpenDataSource,
     onOpenArtifactSource,
     onProposePatch,
     onSelectGitChange,
     onOpenLineageSource,
     onPrepareMetadataStore,
+    onProfileDataSource,
     onProfileDataset,
     onPreviewDatasetChart,
     onPreviewGitFileAction,
@@ -507,8 +513,11 @@ export function BottomStudioPanel({
                         onExportDatasetSQL={onExportDatasetSQL}
                         onInspectMetadata={onInspectMetadata}
                         onInspectSQLiteConnector={onInspectSQLiteConnector}
+                        onInspectDataSource={onInspectDataSource}
                         onMetadataSearchQueryChange={onMetadataSearchQueryChange}
+                        onOpenDataSource={onOpenDataSource}
                         onPrepareMetadataStore={onPrepareMetadataStore}
+                        onProfileDataSource={onProfileDataSource}
                         onProfileDataset={onProfileDataset}
                         onPreviewDatasetChart={onPreviewDatasetChart}
                         onQueryDataset={onQueryDataset}

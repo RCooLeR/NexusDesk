@@ -180,6 +180,7 @@ Current status:
 - Data & Analytics clears visible query/chart/profile state when the selected dataset changes on disk.
 - Data & Analytics source cards show profiled Parquet footer/data byte summaries after metadata inspection.
 - Data & Analytics source cards show profiled log level and sample summaries after log profiling.
+- Data & Analytics source cards expose explicit Open, Profile, and SQLite Inspect actions while keeping dump/import and compressed-export workflows disabled until job-backed sandboxes exist.
 - Workspace freshness reports dataset-derived views that need refresh when table/workbook sources change.
 - SQL query results can be exported as Markdown artifacts with SQL text, engine, row counts, preview rows, and dataset citations.
 - Data & Analytics saves read-only SQL snippets separately from lightweight row filters.
@@ -318,6 +319,13 @@ This batch made more of the studio inspectable and auditable without turning on 
 2. Connector profile passwords/tokens are stored in a protected sidecar and represented in public JSON by credential references.
 3. Wails exposes list/save/delete connector profile methods that return only redacted credentials.
 4. Settings now includes a first connector profile card for saving read-only profile metadata, result caps, timeouts, and credential references.
+
+## Completed Batch: Data Source Card Actions
+
+1. Data source cards now expose explicit Open actions for all detected source-like files.
+2. Table, workbook, Parquet, and log source cards route Profile to the existing bounded dataset profiling flow.
+3. SQLite source cards route Inspect to the read-only schema inspector without starting connector work on folder open.
+4. Dump/import, compressed-export, and legacy conversion workflows show disabled planned actions with clear lifecycle copy.
 
 ## Prepared Batch: Architecture Hardening Before Deeper Studios
 

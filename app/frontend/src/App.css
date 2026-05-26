@@ -3620,6 +3620,24 @@ button.code-studio-row.selected {
     white-space: nowrap;
 }
 
+.data-source-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 4px;
+    padding-top: 2px;
+}
+
+.data-source-actions .ui-button {
+    font-size: 11px;
+    min-height: 26px;
+    padding: 0 7px;
+}
+
+.data-source-actions .ui-button:disabled {
+    cursor: not-allowed;
+    opacity: 0.58;
+}
+
 .metadata-action-row {
     display: flex;
     flex-wrap: wrap;

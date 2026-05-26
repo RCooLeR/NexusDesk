@@ -272,7 +272,7 @@ const checks = [
     },
     {
         file: 'src/features/shell/DataOperationsPanel.tsx',
-        terms: ['DataOperationsPanel', 'Data & Analytics', 'Operations', 'Metadata', 'Profile dataset', 'DataSourceCards', 'buildDataSourceCards', 'dataSourceFromNode', 'legacy workbook', 'compressed export', 'database dump', 'Footer metadata inspection', 'Profile levels', 'SQLiteConnectorPanel', 'ConnectorMetadataPanel', 'Inspect schema', 'OperationsInspector', 'MetadataBrowserPanel', 'WorkspaceFreshnessPanel'],
+        terms: ['DataOperationsPanel', 'Data & Analytics', 'Operations', 'Metadata', 'Profile dataset', 'DataSourceCards', 'DataSourceCardActions', 'onOpenDataSource', 'onProfileDataSource', 'onInspectDataSource', 'Import planned', 'Convert first', 'buildDataSourceCards', 'dataSourceFromNode', 'legacy workbook', 'compressed export', 'database dump', 'Footer metadata inspection', 'Profile levels', 'SQLiteConnectorPanel', 'ConnectorMetadataPanel', 'Inspect schema', 'OperationsInspector', 'MetadataBrowserPanel', 'WorkspaceFreshnessPanel'],
     },
     {
         file: 'src/features/shell/ChatMessageContent.tsx',
@@ -315,6 +315,7 @@ const checks = [
             '.data-source-panel',
             '.data-source-grid',
             '.data-source-card',
+            '.data-source-actions',
             '.composer-shell',
             '.composer-controls',
             '.composer-submit',

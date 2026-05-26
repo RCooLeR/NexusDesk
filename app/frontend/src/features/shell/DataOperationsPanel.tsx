@@ -54,8 +54,11 @@ type DataOperationsPanelProps = {
     onExportDatasetSQL: () => void;
     onInspectMetadata: () => void;
     onInspectSQLiteConnector: () => void;
+    onInspectDataSource: (relPath: string) => void;
     onMetadataSearchQueryChange: (content: string) => void;
+    onOpenDataSource: (relPath: string) => void;
     onPrepareMetadataStore: () => void;
+    onProfileDataSource: (relPath: string) => void;
     onProfileDataset: () => void;
     onPreviewDatasetChart: () => void;
     onQueryDataset: () => void;
@@ -126,8 +129,11 @@ export function DataOperationsPanel({
     onExportDatasetSQL,
     onInspectMetadata,
     onInspectSQLiteConnector,
+    onInspectDataSource,
     onMetadataSearchQueryChange,
+    onOpenDataSource,
     onPrepareMetadataStore,
+    onProfileDataSource,
     onProfileDataset,
     onPreviewDatasetChart,
     onQueryDataset,
@@ -180,7 +186,12 @@ export function DataOperationsPanel({
                         {isProfilingDataset ? 'Profiling...' : 'Profile dataset'}
                     </Button>
                 </div>
-                <DataSourceCards sources={dataSources} />
+                <DataSourceCards
+                    onInspect={onInspectDataSource}
+                    onOpen={onOpenDataSource}
+                    onProfile={onProfileDataSource}
+                    sources={dataSources}
+                />
                 {hasDataStudio ? (
                     <DataStudioPanel
                         activeDatasetProfile={activeDatasetProfile}
@@ -300,9 +311,22 @@ type DataSourceCard = {
     detail: string;
     meta: string;
     active: boolean;
+    actions: DataSourceAction[];
 };
 
-function DataSourceCards({sources}: {sources: DataSourceCard[]}) {
+type DataSourceAction = 'profile' | 'inspect' | 'planned-import' | 'convert';
+
+function DataSourceCards({
+    onInspect,
+    onOpen,
+    onProfile,
+    sources,
+}: {
+    onInspect: (relPath: string) => void;
+    onOpen: (relPath: string) => void;
+    onProfile: (relPath: string) => void;
+    sources: DataSourceCard[];
+}) {
     if (sources.length === 0) {
         return (
             <div className="data-source-panel">
@@ -327,10 +351,42 @@ function DataSourceCards({sources}: {sources: DataSourceCard[]}) {
                             {source.status}
                         </StatusBadge>
                         <small>{source.meta}</small>
+                        <DataSourceCardActions
+                            onInspect={() => onInspect(source.relPath)}
+                            onOpen={() => onOpen(source.relPath)}
+                            onProfile={() => onProfile(source.relPath)}
+                            source={source}
+                        />
                     </div>
                 ))}
             </div>
             {sources.length > 24 && <small>{sources.length - 24} more sources hidden by the card cap.</small>}
+        </div>
+    );
+}
+
+function DataSourceCardActions({
+    onInspect,
+    onOpen,
+    onProfile,
+    source,
+}: {
+    onInspect: () => void;
+    onOpen: () => void;
+    onProfile: () => void;
+    source: DataSourceCard;
+}) {
+    const canProfile = source.actions.includes('profile');
+    const canInspect = source.actions.includes('inspect');
+    const plannedImport = source.actions.includes('planned-import');
+    const convertGuidance = source.actions.includes('convert');
+    return (
+        <div className="data-source-actions">
+            <Button onClick={onOpen} variant="subtle">Open</Button>
+            {canProfile && <Button onClick={onProfile} variant="subtle">Profile</Button>}
+            {canInspect && <Button onClick={onInspect} variant="subtle">Inspect</Button>}
+            {plannedImport && <Button disabled title="Dump and archive import will run through a future explicit sandbox job." variant="subtle">Import planned</Button>}
+            {convertGuidance && <Button disabled title="Convert legacy XLS to XLSX or CSV before profiling." variant="subtle">Convert first</Button>}
         </div>
     );
 }
@@ -348,35 +404,35 @@ function dataSourceFromNode(node: FileNode, profile: DatasetProfile | undefined,
     const extension = fileExtension(node.name);
     const active = node.relPath === activeRelPath;
     if (['csv', 'tsv', 'json', 'jsonl', 'ndjson'].includes(extension)) {
-        return sourceCard(node, profile, active, 'table file', profile ? `${profile.rows} rows, ${profile.columns} columns` : 'Preview, profile, query, chart, and summarize.');
+        return sourceCard(node, profile, active, 'table file', profile ? `${profile.rows} rows, ${profile.columns} columns` : 'Preview, profile, query, chart, and summarize.', ['profile']);
     }
     if (extension === 'xlsx') {
         const formulaCount = profile?.workbook?.formulaCount ?? 0;
         const tableCount = profile?.workbook?.tableRanges?.length ?? 0;
-        return sourceCard(node, profile, active, 'workbook', profile ? `${profile.sheets.length} sheets, ${formulaCount} formulas, ${tableCount} tables` : 'Profile sheets, formulas, tables, named ranges, and pivots.');
+        return sourceCard(node, profile, active, 'workbook', profile ? `${profile.sheets.length} sheets, ${formulaCount} formulas, ${tableCount} tables` : 'Profile sheets, formulas, tables, named ranges, and pivots.', ['profile']);
     }
     if (extension === 'xls') {
-        return plannedSourceCard(node, active, 'legacy workbook', 'Convert to XLSX or CSV before profiling.');
+        return plannedSourceCard(node, active, 'legacy workbook', 'Convert to XLSX or CSV before profiling.', ['convert']);
     }
     if (extension === 'parquet') {
-        return sourceCard(node, profile, active, 'parquet', profile ? `${formatBytes(profile.parquet?.footerMetadataBytes ?? 0)} footer, ${formatBytes(profile.parquet?.dataBytes ?? 0)} data` : 'Footer metadata inspection available.');
+        return sourceCard(node, profile, active, 'parquet', profile ? `${formatBytes(profile.parquet?.footerMetadataBytes ?? 0)} footer, ${formatBytes(profile.parquet?.dataBytes ?? 0)} data` : 'Footer metadata inspection available.', ['profile']);
     }
     if (['sqlite', 'sqlite3', 'db'].includes(extension)) {
-        return sourceCard(node, profile, active, 'sqlite file', 'Read-only connector available separately from dataset profiles.');
+        return sourceCard(node, profile, active, 'sqlite file', 'Read-only connector available separately from dataset profiles.', ['inspect']);
     }
     if (['sql', 'dump', 'bak'].includes(extension)) {
-        return plannedSourceCard(node, active, 'database dump', 'Dump classification detected; sandbox import is planned.');
+        return plannedSourceCard(node, active, 'database dump', 'Dump classification detected; sandbox import is planned.', ['planned-import']);
     }
     if (['zip', 'gz', 'tgz', 'tar', 'bz2', 'xz', '7z'].includes(extension)) {
-        return plannedSourceCard(node, active, 'compressed export', 'Archive/export detection only; import workflow is planned.');
+        return plannedSourceCard(node, active, 'compressed export', 'Archive/export detection only; import workflow is planned.', ['planned-import']);
     }
     if (['log', 'out', 'trace'].includes(extension) || node.name.toLowerCase().includes('log')) {
-        return sourceCard(node, profile, active, 'log file', profile ? `${profile.log?.sampledLines ?? 0} sampled lines, ${levelSummary(profile.log?.levelCounts)}` : 'Profile levels, timestamps, stack traces, and repeated patterns.');
+        return sourceCard(node, profile, active, 'log file', profile ? `${profile.log?.sampledLines ?? 0} sampled lines, ${levelSummary(profile.log?.levelCounts)}` : 'Profile levels, timestamps, stack traces, and repeated patterns.', ['profile']);
     }
     return null;
 }
 
-function sourceCard(node: FileNode, profile: DatasetProfile | undefined, active: boolean, category: string, detail: string): DataSourceCard {
+function sourceCard(node: FileNode, profile: DatasetProfile | undefined, active: boolean, category: string, detail: string, actions: DataSourceAction[]): DataSourceCard {
     return {
         relPath: node.relPath,
         name: node.name,
@@ -385,10 +441,11 @@ function sourceCard(node: FileNode, profile: DatasetProfile | undefined, active:
         detail,
         meta: node.meta || node.relPath,
         active,
+        actions,
     };
 }
 
-function plannedSourceCard(node: FileNode, active: boolean, category: string, detail: string): DataSourceCard {
+function plannedSourceCard(node: FileNode, active: boolean, category: string, detail: string, actions: DataSourceAction[]): DataSourceCard {
     return {
         relPath: node.relPath,
         name: node.name,
@@ -397,6 +454,7 @@ function plannedSourceCard(node: FileNode, active: boolean, category: string, de
         detail,
         meta: node.meta || node.relPath,
         active,
+        actions,
     };
 }
 
