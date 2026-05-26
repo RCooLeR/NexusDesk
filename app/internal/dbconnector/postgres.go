@@ -219,13 +219,14 @@ func InspectPostgresProfile(profile storage.ConnectorProfile) (ConnectorMetadata
 	}
 	for _, object := range objects {
 		key := postgresObjectKey(object.schema, object.name)
+		sampleRows := postgresSampleRows(ctx, conn, object.schema, object.name)
 		table := ConnectorTable{
 			Name:       key,
 			Type:       object.kind,
 			RowCount:   object.rows,
 			Columns:    columns[key],
 			Indexes:    indexes[key],
-			SampleRows: [][]string{},
+			SampleRows: sampleRows,
 		}
 		if table.Type == "table" {
 			metadata.Tables = append(metadata.Tables, table)
@@ -491,6 +492,26 @@ order by tc.table_schema, tc.table_name, kcu.ordinal_position`)
 		})
 	}
 	return relationships, rows.Err()
+}
+
+func postgresSampleRows(ctx context.Context, conn *sql.Conn, schema string, table string) [][]string {
+	rows, err := conn.QueryContext(ctx, "select * from "+quotePostgresQualifiedName(schema, table)+" limit $1", maxConnectorSampleRows)
+	if err != nil {
+		return [][]string{}
+	}
+	defer rows.Close()
+	samples, err := scanConnectorSampleRows(rows)
+	if err != nil {
+		return [][]string{}
+	}
+	return samples
+}
+
+func quotePostgresQualifiedName(schema string, table string) string {
+	if strings.TrimSpace(schema) == "" {
+		return quoteDoubleIdent(table)
+	}
+	return quoteDoubleIdent(schema) + "." + quoteDoubleIdent(table)
 }
 
 func inferredConnectorRelationships(tables []ConnectorTable) []ConnectorRelationship {

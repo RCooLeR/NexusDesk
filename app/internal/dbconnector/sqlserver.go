@@ -186,13 +186,14 @@ func InspectSQLServerProfile(profile storage.ConnectorProfile) (ConnectorMetadat
 		Relationships: relationships,
 	}
 	for _, object := range objects {
+		sampleRows := sqlServerSampleRows(ctx, conn, object.name)
 		table := ConnectorTable{
 			Name:       object.name,
 			Type:       object.kind,
 			RowCount:   object.rows,
 			Columns:    columns[object.name],
 			Indexes:    indexes[object.name],
-			SampleRows: [][]string{},
+			SampleRows: sampleRows,
 		}
 		if table.Type == "table" {
 			metadata.Tables = append(metadata.Tables, table)
@@ -453,6 +454,31 @@ order by fs.name, ft.name, fkc.constraint_column_id`)
 		})
 	}
 	return relationships, rows.Err()
+}
+
+func sqlServerSampleRows(ctx context.Context, conn *sql.Conn, table string) [][]string {
+	rows, err := conn.QueryContext(ctx, fmt.Sprintf("select top (%d) * from %s", maxConnectorSampleRows, quoteSQLServerQualifiedName(table)))
+	if err != nil {
+		return [][]string{}
+	}
+	defer rows.Close()
+	samples, err := scanConnectorSampleRows(rows)
+	if err != nil {
+		return [][]string{}
+	}
+	return samples
+}
+
+func quoteSQLServerQualifiedName(name string) string {
+	parts := splitQualifiedConnectorName(name)
+	if len(parts) == 0 {
+		return quoteSQLServerIdent(name)
+	}
+	quoted := make([]string, 0, len(parts))
+	for _, part := range parts {
+		quoted = append(quoted, quoteSQLServerIdent(part))
+	}
+	return strings.Join(quoted, ".")
 }
 
 func splitSQLServerCSV(value string) []string {

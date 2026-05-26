@@ -388,7 +388,8 @@ Step 5.3: Schema and relationship explorer
 - [x] Show SQLite row counts and capped table samples.
 - [x] Generalize database/schema navigation for external connectors.
 - [x] Generalize tables and views for external connectors.
-- [ ] Generalize columns, types, nullable, defaults, indexes, keys, row counts, and samples for external connectors.
+- [x] Generalize columns, types, nullable, defaults, indexes, keys, row counts, and samples for external connectors.
+- [x] Add capped sample rows for PostgreSQL, MySQL/MariaDB, SQL Server, and DuckDB profile inspections, with DuckDB row counts when built behind the optional driver tag.
 - [x] Extract reusable connector metadata browser and use it for SQLite files plus saved PostgreSQL/MySQL/MariaDB/SQL Server/DuckDB profile inspections.
 - [x] Infer first SQLite relationships where metadata is absent via conservative `*_id` hints.
 - [ ] Generate ERD-like relationship view.

@@ -350,6 +350,23 @@ func scanRowAsStrings(rows *sql.Rows, scanners []any) ([]string, error) {
 	return row, nil
 }
 
+func scanConnectorSampleRows(rows *sql.Rows) ([][]string, error) {
+	columns, err := rows.Columns()
+	if err != nil {
+		return nil, err
+	}
+	scanners := rowScanners(len(columns))
+	samples := [][]string{}
+	for rows.Next() {
+		row, err := scanRowAsStrings(rows, scanners)
+		if err != nil {
+			return nil, err
+		}
+		samples = append(samples, row)
+	}
+	return samples, rows.Err()
+}
+
 func stringifyValue(value any) string {
 	switch typed := value.(type) {
 	case string:

@@ -376,22 +376,33 @@ func sqliteSampleRows(db *sql.DB, name string) ([][]string, error) {
 		return nil, err
 	}
 	defer rows.Close()
-	columns, err := rows.Columns()
-	if err != nil {
-		return nil, err
-	}
-	scanners := rowScanners(len(columns))
-	samples := [][]string{}
-	for rows.Next() {
-		row, err := scanRowAsStrings(rows, scanners)
-		if err != nil {
-			return nil, err
-		}
-		samples = append(samples, row)
-	}
-	return samples, rows.Err()
+	return scanConnectorSampleRows(rows)
 }
 
 func quoteSQLiteIdent(value string) string {
 	return `"` + strings.ReplaceAll(value, `"`, `""`) + `"`
+}
+
+func quoteDoubleIdent(value string) string {
+	return `"` + strings.ReplaceAll(value, `"`, `""`) + `"`
+}
+
+func quoteBacktickIdent(value string) string {
+	return "`" + strings.ReplaceAll(value, "`", "``") + "`"
+}
+
+func quoteSQLServerIdent(value string) string {
+	return "[" + strings.ReplaceAll(value, "]", "]]") + "]"
+}
+
+func splitQualifiedConnectorName(name string) []string {
+	parts := strings.Split(name, ".")
+	cleaned := []string{}
+	for _, part := range parts {
+		part = strings.TrimSpace(part)
+		if part != "" {
+			cleaned = append(cleaned, part)
+		}
+	}
+	return cleaned
 }

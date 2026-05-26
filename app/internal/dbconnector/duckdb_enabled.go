@@ -6,6 +6,7 @@ import (
 	"context"
 	"database/sql"
 	"fmt"
+	"strings"
 	"time"
 
 	"NexusAugenticStudio/internal/storage"
@@ -163,10 +164,10 @@ func InspectDuckDBProfile(profile storage.ConnectorProfile) (ConnectorMetadata, 
 		table := ConnectorTable{
 			Name:       object.name,
 			Type:       object.kind,
-			RowCount:   0,
+			RowCount:   duckDBRowCount(ctx, db, object.name),
 			Columns:    tableColumns,
 			Indexes:    []ConnectorIndex{},
-			SampleRows: [][]string{},
+			SampleRows: duckDBSampleRows(ctx, db, object.name),
 		}
 		if table.Type == "table" {
 			metadata.Tables = append(metadata.Tables, table)
@@ -330,6 +331,39 @@ where tc.constraint_type = 'FOREIGN KEY'
 		return []ConnectorRelationship{}
 	}
 	return relationships
+}
+
+func duckDBRowCount(ctx context.Context, db *sql.DB, table string) int {
+	var count int
+	if err := db.QueryRowContext(ctx, "select count(*) from "+quoteDuckDBQualifiedName(table)).Scan(&count); err != nil {
+		return 0
+	}
+	return count
+}
+
+func duckDBSampleRows(ctx context.Context, db *sql.DB, table string) [][]string {
+	rows, err := db.QueryContext(ctx, "select * from "+quoteDuckDBQualifiedName(table)+" limit ?", maxConnectorSampleRows)
+	if err != nil {
+		return [][]string{}
+	}
+	defer rows.Close()
+	samples, err := scanConnectorSampleRows(rows)
+	if err != nil {
+		return [][]string{}
+	}
+	return samples
+}
+
+func quoteDuckDBQualifiedName(name string) string {
+	parts := splitQualifiedConnectorName(name)
+	if len(parts) == 0 {
+		return quoteDoubleIdent(name)
+	}
+	quoted := make([]string, 0, len(parts))
+	for _, part := range parts {
+		quoted = append(quoted, quoteDoubleIdent(part))
+	}
+	return strings.Join(quoted, ".")
 }
 
 func applyDuckDBPrimaryKeys(columns []ConnectorColumn, primaryKeys map[string]bool) {

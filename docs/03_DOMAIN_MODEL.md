@@ -549,7 +549,7 @@ Current implementation:
 - Test, inspect, and guarded query methods resolve protected credentials at execution time rather than when profiles are listed.
 - Sessions are set read-only where supported and receive a statement timeout derived from the profile/request timeout.
 - Only single-statement `SELECT`/`WITH` SQL is accepted for the guarded profile query path.
-- Schema inspection returns non-system tables/views, columns, indexes, declared foreign keys, and conservative `*_id` relationship hints.
+- Schema inspection returns non-system tables/views, columns, indexes, declared foreign keys, capped sample rows, provider row estimates/counts where available, and conservative `*_id` relationship hints.
 - The current UI exposes Test and Inspect actions in Settings; full query notebook integration remains planned.
 
 ### Read-only Dataset SQL

@@ -184,13 +184,14 @@ func InspectMySQLProfile(profile storage.ConnectorProfile) (ConnectorMetadata, e
 		Relationships: relationships,
 	}
 	for _, object := range objects {
+		sampleRows := mysqlSampleRows(ctx, conn, object.name)
 		table := ConnectorTable{
 			Name:       object.name,
 			Type:       object.kind,
 			RowCount:   object.rows,
 			Columns:    columns[object.name],
 			Indexes:    indexes[object.name],
-			SampleRows: [][]string{},
+			SampleRows: sampleRows,
 		}
 		if table.Type == "table" {
 			metadata.Tables = append(metadata.Tables, table)
@@ -411,6 +412,31 @@ order by table_name, ordinal_position`)
 		})
 	}
 	return relationships, rows.Err()
+}
+
+func mysqlSampleRows(ctx context.Context, conn *sql.Conn, table string) [][]string {
+	rows, err := conn.QueryContext(ctx, "select * from "+quoteMySQLQualifiedName(table)+" limit ?", maxConnectorSampleRows)
+	if err != nil {
+		return [][]string{}
+	}
+	defer rows.Close()
+	samples, err := scanConnectorSampleRows(rows)
+	if err != nil {
+		return [][]string{}
+	}
+	return samples
+}
+
+func quoteMySQLQualifiedName(name string) string {
+	parts := splitQualifiedConnectorName(name)
+	if len(parts) == 0 {
+		return quoteBacktickIdent(name)
+	}
+	quoted := make([]string, 0, len(parts))
+	for _, part := range parts {
+		quoted = append(quoted, quoteBacktickIdent(part))
+	}
+	return strings.Join(quoted, ".")
 }
 
 func splitMySQLCSV(value string) []string {
