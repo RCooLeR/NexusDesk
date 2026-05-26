@@ -10,16 +10,17 @@ import (
 const maxConnectorSampleRows = 5
 
 type ConnectorMetadata struct {
-	ID       string           `json:"id"`
-	RelPath  string           `json:"relPath"`
-	Name     string           `json:"name"`
-	Kind     string           `json:"kind"`
-	Engine   string           `json:"engine"`
-	ReadOnly bool             `json:"readOnly"`
-	Tables   []ConnectorTable `json:"tables"`
-	Views    []ConnectorTable `json:"views"`
-	Indexes  []ConnectorIndex `json:"indexes"`
-	Message  string           `json:"message"`
+	ID            string                  `json:"id"`
+	RelPath       string                  `json:"relPath"`
+	Name          string                  `json:"name"`
+	Kind          string                  `json:"kind"`
+	Engine        string                  `json:"engine"`
+	ReadOnly      bool                    `json:"readOnly"`
+	Tables        []ConnectorTable        `json:"tables"`
+	Views         []ConnectorTable        `json:"views"`
+	Indexes       []ConnectorIndex        `json:"indexes"`
+	Relationships []ConnectorRelationship `json:"relationships"`
+	Message       string                  `json:"message"`
 }
 
 type ConnectorTable struct {
@@ -44,6 +45,16 @@ type ConnectorIndex struct {
 	Table   string   `json:"table"`
 	Unique  bool     `json:"unique"`
 	Columns []string `json:"columns"`
+}
+
+type ConnectorRelationship struct {
+	Kind       string `json:"kind"`
+	FromTable  string `json:"fromTable"`
+	FromColumn string `json:"fromColumn"`
+	ToTable    string `json:"toTable"`
+	ToColumn   string `json:"toColumn"`
+	Confidence string `json:"confidence"`
+	Reason     string `json:"reason"`
 }
 
 func InspectSQLite(root string, relPath string) (ConnectorMetadata, error) {
@@ -84,7 +95,11 @@ func InspectSQLite(root string, relPath string) (ConnectorMetadata, error) {
 			metadata.Indexes = append(metadata.Indexes, table.Indexes...)
 		}
 	}
-	metadata.Message = fmt.Sprintf("SQLite connector metadata inspected: %d tables, %d views.", len(metadata.Tables), len(metadata.Views))
+	metadata.Relationships, err = sqliteRelationships(db, metadata.Tables)
+	if err != nil {
+		return ConnectorMetadata{}, err
+	}
+	metadata.Message = fmt.Sprintf("SQLite connector metadata inspected: %d tables, %d views, %d relationships.", len(metadata.Tables), len(metadata.Views), len(metadata.Relationships))
 	return metadata, nil
 }
 
@@ -223,6 +238,130 @@ func sqliteIndexColumns(db *sql.DB, indexName string) ([]string, error) {
 		}
 	}
 	return columns, rows.Err()
+}
+
+func sqliteRelationships(db *sql.DB, tables []ConnectorTable) ([]ConnectorRelationship, error) {
+	relationships := []ConnectorRelationship{}
+	seen := map[string]bool{}
+	tableByLowerName := map[string]ConnectorTable{}
+	for _, table := range tables {
+		tableByLowerName[strings.ToLower(table.Name)] = table
+	}
+	for _, table := range tables {
+		explicit, err := sqliteForeignKeys(db, table)
+		if err != nil {
+			return nil, err
+		}
+		for _, relationship := range explicit {
+			if relationship.ToColumn == "" {
+				if target, ok := tableByLowerName[strings.ToLower(relationship.ToTable)]; ok {
+					relationship.ToColumn = primaryKeyColumn(target)
+				}
+			}
+			key := relationshipKey(relationship)
+			if !seen[key] {
+				seen[key] = true
+				relationships = append(relationships, relationship)
+			}
+		}
+	}
+
+	for _, table := range tables {
+		for _, column := range table.Columns {
+			lowerColumn := strings.ToLower(column.Name)
+			if column.PrimaryKey || !strings.HasSuffix(lowerColumn, "_id") {
+				continue
+			}
+			targetStem := strings.TrimSuffix(lowerColumn, "_id")
+			target, ok := findLikelySQLiteTargetTable(targetStem, tableByLowerName)
+			if !ok || strings.EqualFold(target.Name, table.Name) {
+				continue
+			}
+			relationship := ConnectorRelationship{
+				Kind:       "inferred",
+				FromTable:  table.Name,
+				FromColumn: column.Name,
+				ToTable:    target.Name,
+				ToColumn:   primaryKeyColumn(target),
+				Confidence: "medium",
+				Reason:     "Column name follows a *_id pattern that matches another table.",
+			}
+			key := relationshipKey(relationship)
+			if !seen[key] {
+				seen[key] = true
+				relationships = append(relationships, relationship)
+			}
+		}
+	}
+	return relationships, nil
+}
+
+func sqliteForeignKeys(db *sql.DB, table ConnectorTable) ([]ConnectorRelationship, error) {
+	rows, err := db.Query("pragma foreign_key_list(" + quoteSQLiteIdent(table.Name) + ")")
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	relationships := []ConnectorRelationship{}
+	for rows.Next() {
+		var id int
+		var seq int
+		var toTable string
+		var fromColumn string
+		var toColumn string
+		var onUpdate string
+		var onDelete string
+		var match string
+		if err := rows.Scan(&id, &seq, &toTable, &fromColumn, &toColumn, &onUpdate, &onDelete, &match); err != nil {
+			return nil, err
+		}
+		_ = id
+		_ = seq
+		_ = onUpdate
+		_ = onDelete
+		_ = match
+		relationships = append(relationships, ConnectorRelationship{
+			Kind:       "foreign-key",
+			FromTable:  table.Name,
+			FromColumn: fromColumn,
+			ToTable:    toTable,
+			ToColumn:   toColumn,
+			Confidence: "high",
+			Reason:     "Declared by SQLite foreign_key_list metadata.",
+		})
+	}
+	return relationships, rows.Err()
+}
+
+func findLikelySQLiteTargetTable(stem string, tableByLowerName map[string]ConnectorTable) (ConnectorTable, bool) {
+	candidates := []string{stem, stem + "s", stem + "es"}
+	if strings.HasSuffix(stem, "y") {
+		candidates = append(candidates, strings.TrimSuffix(stem, "y")+"ies")
+	}
+	for _, candidate := range candidates {
+		if table, ok := tableByLowerName[candidate]; ok {
+			return table, true
+		}
+	}
+	return ConnectorTable{}, false
+}
+
+func primaryKeyColumn(table ConnectorTable) string {
+	for _, column := range table.Columns {
+		if column.PrimaryKey {
+			return column.Name
+		}
+	}
+	return "id"
+}
+
+func relationshipKey(relationship ConnectorRelationship) string {
+	return strings.ToLower(strings.Join([]string{
+		relationship.FromTable,
+		relationship.FromColumn,
+		relationship.ToTable,
+		relationship.ToColumn,
+	}, "\x00"))
 }
 
 func sqliteRowCount(db *sql.DB, name string) (int, error) {

@@ -346,12 +346,13 @@ This batch made more of the studio inspectable and auditable without turning on 
 4. The connector panel shows saved SQLite queries and a filterable SQLite query history from persisted SQL run records.
 5. Read-only status copy is visible near schema/query controls, and folder open still does not run connector work.
 
-## Partial Batch: SQLite Connector Query Workflow
+## Completed Batch: SQLite Connector Query Workflow
 
 1. SQLite connector query results can be exported as CSV artifacts through the guarded query path.
 2. SQLite connector query results can be exported as Markdown reports with SQL, result cap, timeout, row preview, and source database citation.
 3. SQLite connector exports record SQL run rows and dataset dependency rows that link source database, query, engine, and generated artifact.
-4. Remaining items are relationship hints and AI explain-schema actions for selected SQLite schema objects.
+4. SQLite schema inspection now returns relationship hints from declared foreign keys and conservative `*_id` column matches.
+5. The connector panel exposes a user-triggered Explain schema action for the selected table/view; the prompt is bounded to inspected columns, indexes, sample rows, and relationship hints.
 
 ## Prepared Batch: Architecture Hardening Before Deeper Studios
 

@@ -384,9 +384,10 @@ Step 5.3: Schema and relationship explorer
 - [ ] Generalize database/schema navigation for external connectors.
 - [ ] Generalize tables and views for external connectors.
 - [ ] Generalize columns, types, nullable, defaults, indexes, keys, row counts, and samples for external connectors.
-- [ ] Infer relationships where metadata is absent.
+- [x] Infer first SQLite relationships where metadata is absent via conservative `*_id` hints.
 - [ ] Generate ERD-like relationship view.
-- [ ] Let AI explain schema with citations.
+- [x] Let AI explain selected SQLite schema objects with inspected columns, indexes, samples, and relationship hints as citations.
+- [ ] Generalize relationship inference and AI schema explanation across external connectors.
 
 Step 5.4: Query notebook
 
@@ -1078,11 +1079,11 @@ Steps:
 1. [x] Add query result export to CSV for SQLite connector results.
 2. [x] Add query result export to Markdown report with SQL, cap, timeout, and source database citation.
 3. [x] Add connector query-to-artifact lineage that links saved query, SQL run, source database, and exported artifact.
-4. [ ] Add AI explain-schema action for the selected SQLite table/view with cited columns/indexes/sample rows.
-5. [ ] Add relationship hints from SQLite foreign keys and obvious `*_id` columns.
-6. [ ] Keep exports and AI actions user-triggered and bounded to selected schema/query context.
+4. [x] Add AI explain-schema action for the selected SQLite table/view with cited columns/indexes/sample rows.
+5. [x] Add relationship hints from SQLite foreign keys and obvious `*_id` columns.
+6. [x] Keep exports and AI actions user-triggered and bounded to selected schema/query context.
 
-Partial progress: connector query exports are now user-triggered, bounded by the visible cap/timeout controls, persisted as CSV or Markdown artifacts, and recorded in SQL run plus dataset dependency metadata using the source SQLite database path. The remaining gap is schema intelligence: relationship hints and source-cited AI explanation for selected schema objects.
+Completed batch: connector query exports are user-triggered, bounded by the visible cap/timeout controls, persisted as CSV or Markdown artifacts, and recorded in SQL run plus dataset dependency metadata using the source SQLite database path. Schema intelligence now includes declared SQLite foreign keys, conservative `*_id` relationship hints, and an explicit Explain schema action that sends only the selected table/view schema, indexes, sample rows, and relationship hints to the assistant.
 
 ## Directory Ownership Notes
 
@@ -1106,7 +1107,7 @@ Partial progress: connector query exports are now user-triggered, bounded by the
 
 `app/internal/analytics/` owns read-only SQL-style dataset querying and DuckDB-compatible execution paths.
 
-`app/internal/dbconnector/` owns workspace database connector surfaces. Today that means read-only SQLite files, guarded read-only SQL execution with per-query result caps, timeouts, cancellation, and redacted connector errors, plus user-triggered SQLite connector metadata inspection for tables, views, columns, indexes, row counts, and capped samples; future phases add credential-backed server databases and dump sandboxes.
+`app/internal/dbconnector/` owns workspace database connector surfaces. Today that means read-only SQLite files, guarded read-only SQL execution with per-query result caps, timeouts, cancellation, and redacted connector errors, plus user-triggered SQLite connector metadata inspection for tables, views, columns, indexes, row counts, capped samples, declared foreign keys, and conservative `*_id` relationship hints; future phases add credential-backed server databases and dump sandboxes.
 
 `app/internal/approval/` owns append-only approval/action records.
 
@@ -1142,7 +1143,7 @@ Workspace scan counters are diagnostic data, not primary navigation content. Kee
 
 `app/frontend/src/features/shell/GitDiffPanel.tsx` owns the bottom-drawer Git tab for selected changed-file review, file stage/unstage controls, hunk selection state, approval-backed hunk stage/unstage/discard/revert controls, and read-only staged/unstaged working-tree diffs.
 
-`app/frontend/src/features/shell/DataOperationsPanel.tsx` currently owns Data route workflows, including bounded data source cards, explicit Open/Profile/Inspect actions, and the SQLite connector query panel with visible row cap, timeout, cancel controls, schema object selection, explicit row preview, saved connector queries, and connector query history. Planned dump/import and compressed-export actions are visible but disabled until the job/sandbox lifecycle exists.
+`app/frontend/src/features/shell/DataOperationsPanel.tsx` currently owns Data route workflows, including bounded data source cards, explicit Open/Profile/Inspect actions, and the SQLite connector query panel with visible row cap, timeout, cancel controls, schema object selection, relationship hints, explicit row preview, selected-object schema explanation, saved connector queries, and connector query history. Planned dump/import and compressed-export actions are visible but disabled until the job/sandbox lifecycle exists.
 
 `app/frontend/src/features/shell/ArtifactStudioPanel.tsx` currently owns Artifact Studio route workflows.
 

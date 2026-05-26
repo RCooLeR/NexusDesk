@@ -224,3 +224,56 @@ func TestInspectSQLiteReturnsConnectorMetadata(t *testing.T) {
 		t.Fatalf("unexpected views: %#v", metadata.Views)
 	}
 }
+
+func TestInspectSQLiteReturnsRelationshipHints(t *testing.T) {
+	root := t.TempDir()
+	dbPath := filepath.Join(root, "sample.sqlite")
+	db, err := sql.Open("sqlite", dbPath)
+	if err != nil {
+		t.Fatalf("sql.Open failed: %v", err)
+	}
+	_, err = db.Exec(`
+		PRAGMA foreign_keys = ON;
+		CREATE TABLE customers (id INTEGER PRIMARY KEY, name TEXT);
+		CREATE TABLE orders (
+			id INTEGER PRIMARY KEY,
+			customer_id INTEGER NOT NULL,
+			owner_id INTEGER,
+			FOREIGN KEY(customer_id) REFERENCES customers(id)
+		);
+		CREATE TABLE owners (id INTEGER PRIMARY KEY, name TEXT);
+	`)
+	if err != nil {
+		_ = db.Close()
+		t.Fatalf("seed sqlite failed: %v", err)
+	}
+	_ = db.Close()
+
+	metadata, err := InspectSQLite(root, "sample.sqlite")
+	if err != nil {
+		t.Fatalf("InspectSQLite returned error: %v", err)
+	}
+
+	if len(metadata.Relationships) != 2 {
+		t.Fatalf("expected explicit and inferred relationships, got %#v", metadata.Relationships)
+	}
+	if !hasConnectorRelationship(metadata.Relationships, "foreign-key", "orders", "customer_id", "customers", "id") {
+		t.Fatalf("expected foreign key relationship, got %#v", metadata.Relationships)
+	}
+	if !hasConnectorRelationship(metadata.Relationships, "inferred", "orders", "owner_id", "owners", "id") {
+		t.Fatalf("expected inferred relationship, got %#v", metadata.Relationships)
+	}
+}
+
+func hasConnectorRelationship(relationships []ConnectorRelationship, kind string, fromTable string, fromColumn string, toTable string, toColumn string) bool {
+	for _, relationship := range relationships {
+		if relationship.Kind == kind &&
+			relationship.FromTable == fromTable &&
+			relationship.FromColumn == fromColumn &&
+			relationship.ToTable == toTable &&
+			relationship.ToColumn == toColumn {
+			return true
+		}
+	}
+	return false
+}

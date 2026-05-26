@@ -385,6 +385,7 @@ export type ConnectorMetadata = {
     tables: ConnectorTable[];
     views: ConnectorTable[];
     indexes: ConnectorIndex[];
+    relationships: ConnectorRelationship[];
     message: string;
 };
 
@@ -410,6 +411,16 @@ export type ConnectorIndex = {
     table: string;
     unique: boolean;
     columns: string[];
+};
+
+export type ConnectorRelationship = {
+    kind: string;
+    fromTable: string;
+    fromColumn: string;
+    toTable: string;
+    toColumn: string;
+    confidence: string;
+    reason: string;
 };
 
 export type ConnectorProfile = {

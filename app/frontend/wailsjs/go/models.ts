@@ -894,6 +894,30 @@ export namespace dbconnector {
 	        this.columns = source["columns"];
 	    }
 	}
+	export class ConnectorRelationship {
+	    kind: string;
+	    fromTable: string;
+	    fromColumn: string;
+	    toTable: string;
+	    toColumn: string;
+	    confidence: string;
+	    reason: string;
+
+	    static createFrom(source: any = {}) {
+	        return new ConnectorRelationship(source);
+	    }
+
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.kind = source["kind"];
+	        this.fromTable = source["fromTable"];
+	        this.fromColumn = source["fromColumn"];
+	        this.toTable = source["toTable"];
+	        this.toColumn = source["toColumn"];
+	        this.confidence = source["confidence"];
+	        this.reason = source["reason"];
+	    }
+	}
 	export class ConnectorTable {
 	    name: string;
 	    type: string;
@@ -944,6 +968,7 @@ export namespace dbconnector {
 	    tables: ConnectorTable[];
 	    views: ConnectorTable[];
 	    indexes: ConnectorIndex[];
+	    relationships: ConnectorRelationship[];
 	    message: string;
 
 	    static createFrom(source: any = {}) {
@@ -961,6 +986,7 @@ export namespace dbconnector {
 	        this.tables = this.convertValues(source["tables"], ConnectorTable);
 	        this.views = this.convertValues(source["views"], ConnectorTable);
 	        this.indexes = this.convertValues(source["indexes"], ConnectorIndex);
+	        this.relationships = this.convertValues(source["relationships"], ConnectorRelationship);
 	        this.message = source["message"];
 	    }
 
@@ -982,6 +1008,7 @@ export namespace dbconnector {
 		    return a;
 		}
 	}
+
 
 	export class SQLiteQueryRequest {
 	    relPath: string;

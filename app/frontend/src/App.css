@@ -2095,7 +2095,8 @@ button:disabled {
 
 .connector-query-history p,
 .connector-query-history button small,
-.connector-index-list {
+.connector-index-list,
+.connector-relationship-list {
     min-width: 0;
 }
 
@@ -2116,7 +2117,8 @@ button:disabled {
     white-space: nowrap;
 }
 
-.connector-index-list {
+.connector-index-list,
+.connector-relationship-list {
     display: grid;
     gap: 3px;
 }

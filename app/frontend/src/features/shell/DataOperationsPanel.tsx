@@ -2,7 +2,7 @@ import {useEffect, useMemo, useState} from 'react';
 import {FontAwesomeIcon} from '@fortawesome/react-fontawesome';
 import {brandAssets, capabilityIconByTitle} from '../../brand/assets';
 import {Button, EmptyState, StatusBadge} from '../../components/ui';
-import type {Capability, ConnectorMetadata, DatasetChartResult, DatasetDependency, DatasetProfile, DatasetQueryResult, DatasetSQLQueryResult, FileNode, FilePreview, MetadataBrowser, MetadataSearchResult, SavedDatasetQuery, SQLRun, SQLiteMetadataStatus, SQLiteQueryResult, WorkspaceFreshnessStatus, WorkspaceSnapshot} from '../../types';
+import type {Capability, ConnectorMetadata, ConnectorRelationship, ConnectorTable, DatasetChartResult, DatasetDependency, DatasetProfile, DatasetQueryResult, DatasetSQLQueryResult, FileNode, FilePreview, MetadataBrowser, MetadataSearchResult, SavedDatasetQuery, SQLRun, SQLiteMetadataStatus, SQLiteQueryResult, WorkspaceFreshnessStatus, WorkspaceSnapshot} from '../../types';
 import {DataStudioPanel, SortableDataTable} from './DataStudioPanel';
 import {OperationsInspector} from './OperationsInspector';
 
@@ -67,6 +67,7 @@ type DataOperationsPanelProps = {
     onQueryDataset: () => void;
     onQueryDatasetSQL: () => void;
     onCancelSQLiteConnectorQuery: () => void;
+    onExplainSQLiteSchemaObject: (objectName: string) => void;
     onPreviewSQLiteSchemaObject: (objectName: string) => void;
     onQuerySQLiteConnector: () => void;
     onRebuildDatasetDependency: (dependencyId: string) => void;
@@ -157,6 +158,7 @@ export function DataOperationsPanel({
     onQueryDataset,
     onQueryDatasetSQL,
     onCancelSQLiteConnectorQuery,
+    onExplainSQLiteSchemaObject,
     onPreviewSQLiteSchemaObject,
     onQuerySQLiteConnector,
     onRebuildDatasetDependency,
@@ -297,6 +299,7 @@ export function DataOperationsPanel({
                         metadata={sqliteConnectorMetadata}
                         onChange={onSQLiteConnectorQueryChange}
                         onCancel={onCancelSQLiteConnectorQuery}
+                        onExplainObject={onExplainSQLiteSchemaObject}
                         onInspect={onInspectSQLiteConnector}
                         onLabelChange={onSQLiteConnectorQueryLabelChange}
                         onPreviewObject={onPreviewSQLiteSchemaObject}
@@ -670,6 +673,7 @@ function SQLiteConnectorPanel({
     metadata,
     onCancel,
     onChange,
+    onExplainObject,
     onInspect,
     onLabelChange,
     onPreviewObject,
@@ -695,6 +699,7 @@ function SQLiteConnectorPanel({
     metadata: ConnectorMetadata | null;
     onCancel: () => void;
     onChange: (value: string) => void;
+    onExplainObject: (objectName: string) => void;
     onInspect: () => void;
     onLabelChange: (value: string) => void;
     onPreviewObject: (objectName: string) => void;
@@ -724,6 +729,7 @@ function SQLiteConnectorPanel({
             {metadata && (
                 <ConnectorMetadataPanel
                     metadata={metadata}
+                    onExplainObject={onExplainObject}
                     onPreviewObject={onPreviewObject}
                     onUseQuery={onChange}
                 />
@@ -798,16 +804,22 @@ function SQLiteConnectorPanel({
 
 function ConnectorMetadataPanel({
     metadata,
+    onExplainObject,
     onPreviewObject,
     onUseQuery,
 }: {
     metadata: ConnectorMetadata;
+    onExplainObject: (objectName: string) => void;
     onPreviewObject: (objectName: string) => void;
     onUseQuery: (query: string) => void;
 }) {
     const objects = useMemo(() => [...metadata.tables, ...metadata.views], [metadata.tables, metadata.views]);
     const [selectedObjectName, setSelectedObjectName] = useState(objects[0]?.name ?? '');
     const selectedObject = objects.find((object) => object.name === selectedObjectName) ?? objects[0] ?? null;
+    const selectedRelationships = useMemo(
+        () => selectedObject ? relationshipsForObject(metadata.relationships, selectedObject.name) : [],
+        [metadata.relationships, selectedObject],
+    );
 
     useEffect(() => {
         setSelectedObjectName((current) => objects.some((object) => object.name === current) ? current : objects[0]?.name ?? '');
@@ -832,6 +844,7 @@ function ConnectorMetadataPanel({
                                 <div className="metadata-action-row">
                                     <Button onClick={() => onPreviewObject(selectedObject.name)} variant="subtle">Preview rows</Button>
                                     <Button onClick={() => onUseQuery(`select * from ${quoteSQLiteIdentifierForUI(selectedObject.name)}`)} variant="subtle">Use query</Button>
+                                    <Button onClick={() => onExplainObject(selectedObject.name)} variant="subtle">Explain schema</Button>
                                 </div>
                                 <p>
                                     {selectedObject.type}: {selectedObject.name} / {selectedObject.rowCount} rows
@@ -843,6 +856,9 @@ function ConnectorMetadataPanel({
                                             <small key={index.name}>{index.unique ? 'unique ' : ''}{index.name}: {index.columns.join(', ')}</small>
                                         ))}
                                     </div>
+                                )}
+                                {selectedRelationships.length > 0 && (
+                                    <ConnectorRelationshipList relationships={selectedRelationships} selectedObject={selectedObject} />
                                 )}
                                 {selectedObject.sampleRows.length > 0 && (
                                     <div className="metadata-sample">
@@ -860,6 +876,35 @@ function ConnectorMetadataPanel({
             </div>
         </div>
     );
+}
+
+function ConnectorRelationshipList({
+    relationships,
+    selectedObject,
+}: {
+    relationships: ConnectorRelationship[];
+    selectedObject: ConnectorTable;
+}) {
+    return (
+        <div className="connector-relationship-list">
+            <strong>Relationships</strong>
+            {relationships.slice(0, 8).map((relationship) => {
+                const outbound = relationship.fromTable === selectedObject.name;
+                const label = outbound
+                    ? `${relationship.fromColumn} -> ${relationship.toTable}.${relationship.toColumn || 'id'}`
+                    : `${relationship.fromTable}.${relationship.fromColumn} -> ${selectedObject.name}.${relationship.toColumn || 'id'}`;
+                return (
+                    <small key={`${relationship.kind}-${relationship.fromTable}-${relationship.fromColumn}-${relationship.toTable}-${relationship.toColumn}`}>
+                        {relationship.kind === 'foreign-key' ? 'FK' : 'hint'} / {relationship.confidence}: {label}
+                    </small>
+                );
+            })}
+        </div>
+    );
+}
+
+function relationshipsForObject(relationships: ConnectorRelationship[] | undefined, objectName: string) {
+    return (relationships ?? []).filter((relationship) => relationship.fromTable === objectName || relationship.toTable === objectName);
 }
 
 function ConnectorSavedQueries({

@@ -129,6 +129,7 @@ type BottomStudioPanelProps = {
     onQueryDataset: () => void;
     onQueryDatasetSQL: () => void;
     onCancelSQLiteConnectorQuery: () => void;
+    onExplainSQLiteSchemaObject: (objectName: string) => void;
     onQuerySQLiteConnector: () => void;
     onRebuildDatasetDependency: (dependencyId: string) => void;
     onRefreshAgentPlan: () => void;
@@ -322,6 +323,7 @@ export function BottomStudioPanel({
     onQueryDataset,
     onQueryDatasetSQL,
     onCancelSQLiteConnectorQuery,
+    onExplainSQLiteSchemaObject,
     onQuerySQLiteConnector,
     onRebuildDatasetDependency,
     onRefreshAgentPlan,
@@ -553,6 +555,7 @@ export function BottomStudioPanel({
                         onQueryDataset={onQueryDataset}
                         onQueryDatasetSQL={onQueryDatasetSQL}
                         onCancelSQLiteConnectorQuery={onCancelSQLiteConnectorQuery}
+                        onExplainSQLiteSchemaObject={onExplainSQLiteSchemaObject}
                         onQuerySQLiteConnector={onQuerySQLiteConnector}
                         onRebuildDatasetDependency={onRebuildDatasetDependency}
                         onRefreshStaleContext={onRefreshStaleContext}
