@@ -69,6 +69,15 @@ func (s *Service) PreviewFile(root string, relPath string) (domain.FilePreview, 
 		preview.Table = table
 		return preview, nil
 	}
+	if kind == domain.PreviewDoc {
+		document, err := decodeDocument(content, cleanRelPath)
+		if err != nil {
+			return domain.FilePreview{}, err
+		}
+		preview.Text = document.Text
+		preview.Document = document
+		return preview, nil
+	}
 	if kind != domain.PreviewText {
 		return preview, nil
 	}
@@ -89,6 +98,9 @@ func previewKind(relPath string, content []byte) domain.PreviewKind {
 	if isTableExtension(extension) {
 		return domain.PreviewTable
 	}
+	if isDocumentExtension(extension) {
+		return domain.PreviewDoc
+	}
 	if _, ok := textExtensions[extension]; ok {
 		if looksBinary(content) && !looksLikeUTF16LE(content) && !looksLikeUTF16BE(content) {
 			return domain.PreviewBinary
@@ -105,6 +117,10 @@ func previewKind(relPath string, content []byte) domain.PreviewKind {
 		return domain.PreviewText
 	}
 	return domain.PreviewBinary
+}
+
+func isDocumentExtension(extension string) bool {
+	return extension == ".docx"
 }
 
 func isTableExtension(extension string) bool {

@@ -20,6 +20,9 @@ func newFilePreview(preview domain.FilePreview) fyne.CanvasObject {
 	if preview.Kind == domain.PreviewTable {
 		return container.NewBorder(header, nil, nil, nil, newTablePreview(preview))
 	}
+	if preview.Kind == domain.PreviewDoc {
+		return container.NewBorder(header, nil, nil, nil, newDocumentPreview(preview))
+	}
 	if preview.Kind != domain.PreviewText {
 		return container.NewBorder(header, nil, nil, nil, widget.NewLabel("Binary preview is not available in the first native slice."))
 	}
@@ -60,6 +63,25 @@ func newTablePreview(preview domain.FilePreview) fyne.CanvasObject {
 		},
 	)
 	return container.NewBorder(status, nil, nil, nil, table)
+}
+
+func newDocumentPreview(preview domain.FilePreview) fyne.CanvasObject {
+	if preview.Document == nil {
+		return widget.NewLabel("Document preview is unavailable.")
+	}
+	status := widget.NewLabel(documentPreviewStatus(preview))
+	content := widget.NewMultiLineEntry()
+	content.SetText(preview.Document.Text)
+	content.Wrapping = fyne.TextWrapWord
+	content.Disable()
+	return container.NewBorder(status, nil, nil, nil, content)
+}
+
+func documentPreviewStatus(preview domain.FilePreview) string {
+	if preview.Document.Truncated {
+		return "Showing extracted text preview. Document preview is capped."
+	}
+	return "Showing extracted document text."
 }
 
 func tablePreviewStatus(preview domain.FilePreview) string {

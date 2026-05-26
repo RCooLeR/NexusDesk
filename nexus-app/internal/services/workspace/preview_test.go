@@ -1,6 +1,8 @@
 package workspace
 
 import (
+	"archive/zip"
+	"bytes"
 	"path/filepath"
 	"strings"
 	"testing"
@@ -130,4 +132,40 @@ func TestPreviewFileMarksLargeCSVTableTruncated(t *testing.T) {
 	if len(preview.Table.Rows) != tablePreviewMaxRows || !preview.Table.Truncated {
 		t.Fatalf("expected capped truncated table, got %#v", preview.Table)
 	}
+}
+
+func TestPreviewFileReturnsDOCXText(t *testing.T) {
+	root := t.TempDir()
+	writeBytes(t, filepath.Join(root, "brief.docx"), makeDOCX(t, "Hello from DOCX"))
+
+	preview, err := New().PreviewFile(root, "brief.docx")
+	if err != nil {
+		t.Fatalf("PreviewFile returned error: %v", err)
+	}
+	if preview.Kind != "document" || preview.Document == nil {
+		t.Fatalf("expected document preview, got %#v", preview)
+	}
+	if !strings.Contains(preview.Document.Text, "Hello from DOCX") {
+		t.Fatalf("unexpected document text: %#v", preview.Document)
+	}
+}
+
+func makeDOCX(t *testing.T, text string) []byte {
+	t.Helper()
+	var output bytes.Buffer
+	writer := zip.NewWriter(&output)
+	file, err := writer.Create("word/document.xml")
+	if err != nil {
+		t.Fatalf("create docx document: %v", err)
+	}
+	xml := `<?xml version="1.0" encoding="UTF-8"?>` +
+		`<w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main">` +
+		`<w:body><w:p><w:r><w:t>` + text + `</w:t></w:r></w:p></w:body></w:document>`
+	if _, err := file.Write([]byte(xml)); err != nil {
+		t.Fatalf("write docx document: %v", err)
+	}
+	if err := writer.Close(); err != nil {
+		t.Fatalf("close docx zip: %v", err)
+	}
+	return output.Bytes()
 }

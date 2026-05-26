@@ -89,6 +89,7 @@ The first `nexus-app` slice includes:
 - Markdown editor previews render Markdown in the Preview tab while non-Markdown text files stay in read-only source preview mode;
 - first native image preview path for capped workspace image files using service-returned bytes and Fyne image rendering;
 - first native capped CSV/TSV table preview path with service-side parsing and UI-side table rendering;
+- first native DOCX text preview path using bounded service-side extraction from `word/document.xml`;
 - framework-free workspace domain model.
 
 Full execution is blocked in the current shell until CGO is enabled with a Windows C compiler. Non-driver internal packages can already be tested.

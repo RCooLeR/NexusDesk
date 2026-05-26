@@ -42,6 +42,7 @@ type FilePreview struct {
 	Text      string
 	Bytes     []byte
 	Table     *TablePreview
+	Document  *DocumentPreview
 }
 
 type TablePreview struct {
@@ -51,11 +52,17 @@ type TablePreview struct {
 	Truncated bool
 }
 
+type DocumentPreview struct {
+	Text      string
+	Truncated bool
+}
+
 type PreviewKind string
 
 const (
 	PreviewText   PreviewKind = "text"
 	PreviewImage  PreviewKind = "image"
 	PreviewTable  PreviewKind = "table"
+	PreviewDoc    PreviewKind = "document"
 	PreviewBinary PreviewKind = "binary"
 )
