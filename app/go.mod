@@ -3,6 +3,7 @@ module NexusAugenticStudio
 go 1.25.0
 
 require (
+	github.com/go-sql-driver/mysql v1.10.0
 	github.com/jackc/pgx/v5 v5.9.2
 	github.com/marcboeker/go-duckdb/v2 v2.4.3
 	github.com/wailsapp/wails/v2 v2.12.0
@@ -11,6 +12,7 @@ require (
 )
 
 require (
+	filippo.io/edwards25519 v1.2.0 // indirect
 	git.sr.ht/~jackmordaunt/go-toast/v2 v2.0.3 // indirect
 	github.com/apache/arrow-go/v18 v18.4.1 // indirect
 	github.com/bep/debounce v1.2.1 // indirect

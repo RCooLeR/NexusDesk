@@ -115,8 +115,8 @@ export function ConnectorProfilesCard({
                                 <small>{profile.host || profile.database || 'local profile'}{profile.credentialRef ? ' / credential stored' : ''}</small>
                             </div>
                             <div className="connector-profile-actions">
-                                <Button disabled={isSaving || profile.kind !== 'postgres'} onClick={() => onTest(profile.id)} variant="subtle">Test</Button>
-                                <Button disabled={isSaving || profile.kind !== 'postgres'} onClick={() => onInspect(profile.id)} variant="subtle">Inspect</Button>
+                                <Button disabled={isSaving || !isRunnableConnector(profile)} onClick={() => onTest(profile.id)} variant="subtle">Test</Button>
+                                <Button disabled={isSaving || !isRunnableConnector(profile)} onClick={() => onInspect(profile.id)} variant="subtle">Inspect</Button>
                                 <Button onClick={() => onDelete(profile.id)} variant="subtle">Delete</Button>
                             </div>
                         </div>
@@ -137,4 +137,8 @@ export function ConnectorProfilesCard({
             )}
         </Card>
     );
+}
+
+function isRunnableConnector(profile: ConnectorProfile) {
+    return profile.kind === 'postgres' || profile.kind === 'mysql' || profile.kind === 'mariadb';
 }

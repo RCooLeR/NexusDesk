@@ -256,7 +256,7 @@ Current foundation:
 - Password/token material is stored in a protected sidecar and the public profile JSON keeps only a credential reference.
 - Profiles are returned to the frontend with redacted credential values.
 - Profiles are read-only by default and include result caps plus timeout settings.
-- PostgreSQL profiles can be explicitly tested and schema-inspected from Settings; protected credentials resolve only for that user-triggered action.
+- PostgreSQL and MySQL/MariaDB profiles can be explicitly tested and schema-inspected from Settings; protected credentials resolve only for that user-triggered action.
 
 ### Database Connection
 
@@ -537,15 +537,15 @@ Current implementation:
 - `InspectWorkspaceSQLite` is a user-triggered schema inspection path; folder open does not inspect database files.
 - Data & Analytics can use this for local inspection without introducing stored credentials or external database access.
 
-### PostgreSQL Connector Profile
+### External SQL Connector Profiles
 
-The first external database connector is scoped to saved PostgreSQL profiles.
+The first external database connectors are scoped to saved PostgreSQL and MySQL/MariaDB profiles.
 
 Current implementation:
 
-- `app/internal/dbconnector/` opens PostgreSQL profiles through `pgx` only after an explicit user action.
+- `app/internal/dbconnector/` opens PostgreSQL profiles through `pgx` and MySQL/MariaDB profiles through `go-sql-driver/mysql` only after an explicit user action.
 - Test, inspect, and guarded query methods resolve protected credentials at execution time rather than when profiles are listed.
-- Sessions are set read-only and receive a statement timeout derived from the profile/request timeout.
+- Sessions are set read-only where supported and receive a statement timeout derived from the profile/request timeout.
 - Only single-statement `SELECT`/`WITH` SQL is accepted for the guarded profile query path.
 - Schema inspection returns non-system tables/views, columns, indexes, declared foreign keys, and conservative `*_id` relationship hints.
 - The current UI exposes Test and Inspect actions in Settings; full query notebook integration remains planned.
