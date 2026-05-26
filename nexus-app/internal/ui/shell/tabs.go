@@ -39,7 +39,7 @@ func (v *View) configureEditorTabs() {
 }
 
 func (v *View) openPreviewTab(preview domain.FilePreview) {
-	tabState := v.editorSession.OpenFile(preview.RelPath, filepath.Base(preview.RelPath))
+	tabState := v.editorSession.OpenFileWithSource(preview.RelPath, filepath.Base(preview.RelPath), preview.Text)
 	if existing := v.openTabs[tabState.ID]; existing != nil {
 		existing.Content = v.newEditorPanel(tabState, preview)
 		v.updateEditorTabState(tabState)

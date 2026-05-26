@@ -23,20 +23,17 @@ func (v *View) newEditorPanel(tab editorSvc.Tab, preview domain.FilePreview) fyn
 		}
 	})
 	pin.Importance = widget.LowImportance
-	dirty := widget.NewButtonWithIcon("", theme.DocumentSaveIcon(), func() {
-		nextDirty := true
-		if current, ok := v.editorSession.Tab(tab.ID); ok {
-			nextDirty = !current.Dirty
-		}
-		if v.editorSession.MarkDirty(tab.ID, nextDirty) {
-			if next, ok := v.editorSession.Tab(tab.ID); ok {
-				state.SetText(editorStateText(next))
-				v.updateEditorTabState(next)
-			}
-		}
+	if preview.Kind == domain.PreviewText {
+		content = v.newTextEditor(tab, preview, func(next editorSvc.Tab) {
+			state.SetText(editorStateText(next))
+			v.updateEditorTabState(next)
+		})
+	}
+	save := widget.NewButtonWithIcon("", theme.DocumentSaveIcon(), func() {
+		v.addActivity("Save is disabled until the safe write preview/apply service is ported.")
 	})
-	dirty.Importance = widget.LowImportance
-	tools := container.NewHBox(pin, dirty, state)
+	save.Disable()
+	tools := container.NewHBox(pin, save, state)
 	return container.NewBorder(container.NewBorder(nil, nil, path, tools), nil, nil, nil, content)
 }
 

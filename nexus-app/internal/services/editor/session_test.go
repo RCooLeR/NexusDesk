@@ -5,8 +5,8 @@ import "testing"
 func TestOpenFileReusesExistingTab(t *testing.T) {
 	session := NewSession()
 
-	first := session.OpenFile("docs/readme.md", "readme.md")
-	second := session.OpenFile("docs/readme.md", "README.md")
+	first := session.OpenFileWithSource("docs/readme.md", "readme.md", "hello")
+	second := session.OpenFileWithSource("docs/readme.md", "README.md", "updated")
 
 	if first.ID != second.ID {
 		t.Fatalf("expected same tab id, got %q and %q", first.ID, second.ID)
@@ -16,6 +16,9 @@ func TestOpenFileReusesExistingTab(t *testing.T) {
 	}
 	if session.ActiveID() != first.ID {
 		t.Fatalf("expected reused tab to stay active")
+	}
+	if second.DraftText != "updated" {
+		t.Fatalf("expected clean reused tab to refresh source text")
 	}
 }
 
@@ -38,6 +41,22 @@ func TestCloseDirtyTabRequiresForce(t *testing.T) {
 	}
 	if len(session.Tabs()) != 0 {
 		t.Fatalf("expected no tabs after forced close")
+	}
+}
+
+func TestDraftTracksDirtyAndRevert(t *testing.T) {
+	session := NewSession()
+	tab := session.OpenFileWithSource("main.go", "main.go", "package main\n")
+
+	if !session.UpdateDraft(tab.ID, "package app\n") {
+		t.Fatalf("expected draft update to succeed")
+	}
+	current, ok := session.Tab(tab.ID)
+	if !ok || !current.Dirty {
+		t.Fatalf("expected changed draft to mark tab dirty")
+	}
+	if current, ok = session.RevertDraft(tab.ID); !ok || current.Dirty || current.DraftText != current.SourceText {
+		t.Fatalf("expected revert to restore clean source state")
 	}
 }
 

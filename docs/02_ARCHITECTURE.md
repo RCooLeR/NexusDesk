@@ -160,7 +160,7 @@ Near-term architecture corrections:
 
 - Configure Windows CGO/Fyne toolchain and verify the native app runs.
 - Continue porting safe workspace preview/write services from `app-wails` into `nexus-app/internal/services/workspace`.
-- Keep editor tab/session rules in `nexus-app/internal/services/editor` rather than in Fyne widget callbacks; Fyne editor chrome should only render and dispatch those state transitions.
+- Keep editor tab/session and draft rules in `nexus-app/internal/services/editor` rather than in Fyne widget callbacks; Fyne editor chrome should only render and dispatch those state transitions. Draft editing exists before write-back, but Save remains disabled until the safe write preview/apply/rollback service is ported.
 - Port Git, LLM/agent, data, artifact, and metadata services without recreating a bridge-shaped root package.
 - Add a durable job model before wiring slow indexing, OCR, dump imports, connector pulls, or long agent runs.
 - Promote SQLite metadata repositories to primary persistence once migration/recovery tests exist.

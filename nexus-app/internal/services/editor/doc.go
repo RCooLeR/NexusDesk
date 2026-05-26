@@ -9,10 +9,12 @@ const (
 )
 
 type Tab struct {
-	ID      string
-	Title   string
-	RelPath string
-	Kind    Kind
-	Dirty   bool
-	Pinned  bool
+	ID         string
+	Title      string
+	RelPath    string
+	Kind       Kind
+	Dirty      bool
+	Pinned     bool
+	SourceText string
+	DraftText  string
 }

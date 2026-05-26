@@ -82,6 +82,7 @@ The first `nexus-app` slice includes:
 - first editor tab lifecycle with same-file tab reuse and close cleanup;
 - UI-independent editor tab session model with active tab, dirty state, pinned state, reuse, and close guards;
 - native editor chrome for pinned tabs, dirty indicators, and state-driven tab labels/icons;
+- first native draft-only text editor with Source/Preview tabs, automatic dirty tracking, disabled Save, and local draft revert;
 - framework-free workspace domain model.
 
 Full execution is blocked in the current shell until CGO is enabled with a Windows C compiler. Non-driver internal packages can already be tested.

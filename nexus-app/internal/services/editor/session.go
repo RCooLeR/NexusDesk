@@ -39,14 +39,22 @@ func (s *Session) OpenPlaceholder(title string) Tab {
 }
 
 func (s *Session) OpenFile(relPath, title string) Tab {
+	return s.OpenFileWithSource(relPath, title, "")
+}
+
+func (s *Session) OpenFileWithSource(relPath, title, source string) Tab {
 	for index := range s.tabs {
 		if s.tabs[index].Kind == KindFile && s.tabs[index].RelPath == relPath {
 			s.tabs[index].Title = title
+			if !s.tabs[index].Dirty {
+				s.tabs[index].SourceText = source
+				s.tabs[index].DraftText = source
+			}
 			s.activeID = s.tabs[index].ID
 			return s.tabs[index]
 		}
 	}
-	return s.open(Tab{Title: title, RelPath: relPath, Kind: KindFile})
+	return s.open(Tab{Title: title, RelPath: relPath, Kind: KindFile, SourceText: source, DraftText: source})
 }
 
 func (s *Session) MarkDirty(id string, dirty bool) bool {
@@ -56,6 +64,26 @@ func (s *Session) MarkDirty(id string, dirty bool) bool {
 	}
 	s.tabs[index].Dirty = dirty
 	return true
+}
+
+func (s *Session) UpdateDraft(id, draft string) bool {
+	index := s.find(id)
+	if index < 0 {
+		return false
+	}
+	s.tabs[index].DraftText = draft
+	s.tabs[index].Dirty = draft != s.tabs[index].SourceText
+	return true
+}
+
+func (s *Session) RevertDraft(id string) (Tab, bool) {
+	index := s.find(id)
+	if index < 0 {
+		return Tab{}, false
+	}
+	s.tabs[index].DraftText = s.tabs[index].SourceText
+	s.tabs[index].Dirty = false
+	return s.tabs[index], true
 }
 
 func (s *Session) TogglePinned(id string) (Tab, bool) {
