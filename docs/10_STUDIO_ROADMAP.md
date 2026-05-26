@@ -21,7 +21,7 @@ AI Assistant stays visible as the shared orchestration layer rather than a separ
 
 Current Workbench is still primitive. The target is an IDE-grade surface:
 
-- filesystem tree that behaves like an IDE project tree: folders/files, indentation, disclosure arrows, icons, selection, drag/drop intent, context menu, rename/move/new file/new folder, cut/copy/paste, reveal current file, collapse all, and ignored-file controls
+- filesystem tree that behaves like an IDE project tree: folders/files, indentation, disclosure arrows, icons, selection, drag/drop intent, context menu, rename/move/new file/new folder, preview-backed cut/copy/paste, reveal current file, collapse all, and ignored-file controls
 - git status in the tree: modified/added/deleted/renamed/untracked/ignored, branch indicator, changed-file grouping, and repository dirty summary
 - git diff viewer: working tree diff, staged diff, per-file diff, inline/side-by-side modes, hunk navigation, stage/unstage/revert hunk with approval where destructive
 - editor quality: symbol search, diagnostics panel, and problems panel. Split editor groups, tab pinning, breadcrumbs, outline navigation, Monaco go-to-definition dispatch, safe draft formatting, file encoding controls, and a minimap toggle exist in the current foundation.

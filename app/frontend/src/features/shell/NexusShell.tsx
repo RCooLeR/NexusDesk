@@ -4,6 +4,7 @@ import {studioRouteLabels} from '../../brand/assets';
 import {
     ApplyFileWrite,
     ApplyFileDelete,
+    ApplyFileCopy,
     ApplyFileMove,
     AskLLM,
     AskLLMContextPack,
@@ -43,6 +44,7 @@ import {
     ListDatasetSQLRuns,
     OpenWorkspace,
     PreviewFileDelete,
+    PreviewFileCopy,
     PreviewFileMove,
     PreviewAgentTool,
     PreviewDatasetChart,
@@ -118,7 +120,7 @@ import {BottomStudioPanel, type BottomStudioTab} from './BottomStudioPanel';
 import {CommandPalette, type CommandAction} from './CommandPalette';
 import {QuickOpenPalette} from './QuickOpenPalette';
 import {WorkbenchPanel} from './WorkbenchPanel';
-import {WorkspaceNavigator, type TreeContextAction} from './WorkspaceNavigator';
+import {WorkspaceNavigator, type TreeClipboardState, type TreeContextAction} from './WorkspaceNavigator';
 import {WorkspaceRail} from './WorkspaceRail';
 import {
     modelContextWindow,
@@ -256,6 +258,7 @@ export function NexusShell({
     const [fileDrafts, setFileDrafts] = useState<Record<string, string>>({});
     const [fileDraftEncodings, setFileDraftEncodings] = useState<Record<string, string>>({});
     const [writeProposals, setWriteProposals] = useState<Record<string, FileWriteProposal>>({});
+    const [treeClipboard, setTreeClipboard] = useState<TreeClipboardState | null>(null);
     const [pinnedTabPaths, setPinnedTabPaths] = useState<string[]>([]);
     const [showEditorMinimap, setShowEditorMinimap] = useState(false);
     const [isSplitEditorEnabled, setIsSplitEditorEnabled] = useState(false);
@@ -589,6 +592,8 @@ export function NexusShell({
         const canEditSelectedFile = Boolean(workspace && filePreview?.kind === 'file' && !filePreview.table);
         const canDeleteSelectedFile = Boolean(workspace && filePreview?.kind === 'file' && !isEditingFile);
         const canMoveSelectedFile = Boolean(workspace && filePreview?.kind === 'file' && !isEditingFile);
+        const canClipboardSelectedFile = Boolean(workspace && filePreview?.kind === 'file' && !isEditingFile);
+        const canPasteClipboard = Boolean(workspace && filePreview && treeClipboard);
         const canUseSelectedContext = Boolean(selectedContextRelPath) && !isSendingPrompt;
         const canUseSelectedDataset = Boolean(workspace && filePreview?.fileType === 'data');
         const canChartSelectedDataset = Boolean(workspace && filePreview?.table && datasetChartCategory);
@@ -713,6 +718,30 @@ export function NexusShell({
                 id: 'editor.move-file',
                 run: () => void moveActiveFile(),
                 title: 'Rename Or Move Active File',
+            },
+            {
+                detail: canClipboardSelectedFile ? `Cut ${activeFile} for a later paste/move operation.` : 'Select a saved file and close any active draft before cutting.',
+                disabled: !canClipboardSelectedFile,
+                group: 'Editor',
+                id: 'editor.cut-file',
+                run: () => filePreview && setTreeClipboardFromNode('cut', filePreview),
+                title: 'Cut Active File',
+            },
+            {
+                detail: canClipboardSelectedFile ? `Copy ${activeFile} for a later paste operation.` : 'Select a saved file and close any active draft before copying.',
+                disabled: !canClipboardSelectedFile,
+                group: 'Editor',
+                id: 'editor.copy-file',
+                run: () => filePreview && setTreeClipboardFromNode('copy', filePreview),
+                title: 'Copy Active File',
+            },
+            {
+                detail: canPasteClipboard ? `Paste ${treeClipboard?.sourceRelPath} into the selected tree location after preview.` : 'Cut or copy a file before pasting.',
+                disabled: !canPasteClipboard || isMovingFile,
+                group: 'Editor',
+                id: 'editor.paste-file',
+                run: () => filePreview && void pasteTreeClipboard(filePreview),
+                title: 'Paste File',
             },
             {
                 detail: hasDirtyActiveDraft ? 'Preview or apply the active file draft through the write safety flow.' : 'Change the active edit draft before saving.',
@@ -1299,6 +1328,119 @@ export function NexusShell({
         }
     }
 
+    function setTreeClipboardFromNode(mode: TreeClipboardState['mode'], node: Pick<FileNode, 'kind' | 'relPath'>) {
+        if (node.kind !== 'file') {
+            setWorkspaceStatus('Cut and copy are available for files first.');
+            return;
+        }
+        if (editingFilePaths.includes(node.relPath)) {
+            setWorkspaceStatus('Close or cancel the file edit draft before using tree clipboard actions.');
+            return;
+        }
+        setTreeClipboard({mode, sourceRelPath: node.relPath});
+        setWorkspaceStatus(`${mode === 'cut' ? 'Cut' : 'Copied'} ${node.relPath}. Choose Paste on a target folder or file.`);
+        pushToolEvent(mode === 'cut' ? 'File cut' : 'File copied', node.relPath);
+    }
+
+    async function pasteTreeClipboard(targetNode: Pick<FileNode, 'kind' | 'relPath'>) {
+        if (!workspace || !treeClipboard) {
+            setWorkspaceStatus('Cut or copy a file before pasting.');
+            return;
+        }
+        if (editingFilePaths.includes(treeClipboard.sourceRelPath)) {
+            setWorkspaceStatus('Close or cancel the source edit draft before pasting.');
+            return;
+        }
+
+        const targetDirectory = targetNode.kind === 'directory' ? targetNode.relPath : parentRelPath(targetNode.relPath);
+        const sourceName = fileNameFromRelPath(treeClipboard.sourceRelPath);
+        const suggestedTarget = treeClipboard.mode === 'copy'
+            ? uniqueCopyRelPath(workspace, joinRelPath(targetDirectory, sourceName))
+            : joinRelPath(targetDirectory, sourceName);
+        const rawTarget = window.prompt(treeClipboard.mode === 'copy' ? 'Paste copy as workspace-relative path' : 'Paste move as workspace-relative path', suggestedTarget);
+        if (rawTarget === null) {
+            setWorkspaceStatus(`Paste cancelled for ${treeClipboard.sourceRelPath}.`);
+            return;
+        }
+
+        const targetRelPath = normalizeNewFileRelPath(rawTarget);
+        if (!isValidFileMutationTarget(targetRelPath)) {
+            setWorkspaceStatus('Paste target must be a file path inside the workspace and outside Nexus metadata.');
+            return;
+        }
+        if (targetRelPath === treeClipboard.sourceRelPath) {
+            setWorkspaceStatus('Paste target must be different from the source file.');
+            return;
+        }
+
+        setIsMovingFile(true);
+        setWorkspaceStatus(`Preparing paste preview for ${treeClipboard.sourceRelPath}...`);
+        try {
+            if (treeClipboard.mode === 'copy') {
+                const proposal = await PreviewFileCopy({sourceRelPath: treeClipboard.sourceRelPath, targetRelPath});
+                const approved = await requestApproval({
+                    action: 'Copy file',
+                    confirmLabel: 'Copy file',
+                    message: `Copy ${proposal.sourceRelPath} to ${proposal.targetRelPath}${proposal.size > 0 ? ` (${formatBytes(Number(proposal.size))})` : ''}.`,
+                    risk: 'medium',
+                    target: proposal.targetRelPath,
+                });
+                if (!approved) {
+                    setWorkspaceStatus(`Paste copy cancelled for ${proposal.sourceRelPath}.`);
+                    return;
+                }
+                const copied = await ApplyFileCopy({sourceRelPath: proposal.sourceRelPath, targetRelPath: proposal.targetRelPath});
+                await refreshWorkspaceAfterFileMutation(copied.targetRelPath);
+                setWorkspaceStatus(copied.message);
+                pushToolEvent('File copied', `${copied.sourceRelPath} -> ${copied.targetRelPath}`);
+                return;
+            }
+
+            const proposal = await PreviewFileMove({sourceRelPath: treeClipboard.sourceRelPath, targetRelPath});
+            const approved = await requestApproval({
+                action: 'Move pasted file',
+                confirmLabel: 'Move file',
+                message: `Move ${proposal.sourceRelPath} to ${proposal.targetRelPath}${proposal.size > 0 ? ` (${formatBytes(Number(proposal.size))})` : ''}.`,
+                risk: 'high',
+                target: proposal.targetRelPath,
+            });
+            if (!approved) {
+                setWorkspaceStatus(`Paste move cancelled for ${proposal.sourceRelPath}.`);
+                return;
+            }
+            const moved = await ApplyFileMove({sourceRelPath: proposal.sourceRelPath, targetRelPath: proposal.targetRelPath});
+            setTreeClipboard(null);
+            await refreshWorkspaceAfterFileMutation(moved.targetRelPath, moved.sourceRelPath);
+            setWorkspaceStatus(moved.message);
+            pushToolEvent('File moved by paste', `${moved.sourceRelPath} -> ${moved.targetRelPath}`);
+        } catch (error) {
+            const message = error instanceof Error ? error.message : '';
+            setWorkspaceStatus(message || 'Could not paste this file.');
+        } finally {
+            setIsMovingFile(false);
+        }
+    }
+
+    async function refreshWorkspaceAfterFileMutation(targetRelPath: string, removeRelPath = '') {
+        const result = await RefreshWorkspace();
+        if (!result.selected) {
+            return;
+        }
+        onWorkspaceChange(result.snapshot);
+        if (removeRelPath) {
+            removeOpenTabState(removeRelPath);
+        }
+        await refreshArtifacts();
+        await refreshApprovals();
+        await refreshDatasetProfiles();
+        const selectedNode = findWorkspaceNode(result.snapshot, targetRelPath) ?? selectNodeAfterWorkspaceUpdate(result.snapshot);
+        setExpandedDirectories((current) => reconcileExpandedDirectories(current, result.snapshot, selectedNode));
+        if (selectedNode) {
+            setActiveFile(selectedNode.relPath);
+            await previewWorkspaceNode(selectedNode, false);
+        }
+    }
+
     async function openWorkspace() {
         setIsOpeningWorkspace(true);
         setWorkspaceStatus('Waiting for folder selection...');
@@ -1698,6 +1840,14 @@ export function NexusShell({
         }
         if (action === 'new-file') {
             startNewFileDraft();
+            return;
+        }
+        if (action === 'cut' || action === 'copy') {
+            setTreeClipboardFromNode(action, node);
+            return;
+        }
+        if (action === 'paste') {
+            await pasteTreeClipboard(node);
             return;
         }
         if (action === 'new-folder') {
@@ -3502,6 +3652,7 @@ export function NexusShell({
                 workspaceSearchQuery={workspaceSearchQuery}
                 workspaceSearchResults={workspaceSearchResults}
                 workspaceStatus={workspaceStatus}
+                treeClipboard={treeClipboard}
             />
 
             <div
@@ -3691,6 +3842,52 @@ function omitKey<T>(record: Record<string, T>, key: string) {
 
 function normalizeNewFileRelPath(rawRelPath: string) {
     return rawRelPath.trim().replaceAll('\\', '/').replace(/^\/+/, '').replace(/\/+/g, '/');
+}
+
+function isValidFileMutationTarget(relPath: string) {
+    if (!relPath) {
+        return false;
+    }
+    if (relPath.includes('../') || relPath === '..' || relPath.startsWith('/')) {
+        return false;
+    }
+    if (relPath.endsWith('/')) {
+        return false;
+    }
+    if (relPath.toLowerCase().startsWith('.nexusdesk/')) {
+        return false;
+    }
+    return true;
+}
+
+function parentRelPath(relPath: string) {
+    const parts = relPath.split('/').filter(Boolean);
+    parts.pop();
+    return parts.join('/');
+}
+
+function joinRelPath(directory: string, name: string) {
+    return directory ? `${directory.replace(/\/+$/, '')}/${name}` : name;
+}
+
+function uniqueCopyRelPath(workspace: WorkspaceSnapshot, relPath: string) {
+    const existing = new Set(getSafeWorkspaceNodes(workspace).map((node) => node.relPath.toLowerCase()));
+    if (!existing.has(relPath.toLowerCase())) {
+        return relPath;
+    }
+
+    const directory = parentRelPath(relPath);
+    const name = fileNameFromRelPath(relPath);
+    const dotIndex = name.lastIndexOf('.');
+    const stem = dotIndex > 0 ? name.slice(0, dotIndex) : name;
+    const extension = dotIndex > 0 ? name.slice(dotIndex) : '';
+    for (let index = 1; index <= 99; index += 1) {
+        const candidate = joinRelPath(directory, `${stem} copy${index === 1 ? '' : ` ${index}`}${extension}`);
+        if (!existing.has(candidate.toLowerCase())) {
+            return candidate;
+        }
+    }
+    return joinRelPath(directory, `${stem} copy ${Date.now()}${extension}`);
 }
 
 function suggestedNewFilePath(preview: FilePreview | null, activeFile: string) {

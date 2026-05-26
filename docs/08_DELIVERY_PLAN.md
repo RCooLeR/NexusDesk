@@ -283,7 +283,7 @@ These batches describe the next product direction. They are broader than the cur
 
 ### Batch: IDE-Grade Workbench
 
-1. Replace the current navigator feel with a JetBrains-style project tree: indentation, disclosure arrows, icons, context menus, reveal current file, collapse all, and ignored-file controls.
+1. Replace the current navigator feel with a JetBrains-style project tree: indentation, disclosure arrows, icons, context menus, reveal current file, collapse all, ignored-file controls, and preview-backed cut/copy/paste file operations.
 2. Add git repository detection, branch display, dirty summary, and file-level status badges.
 3. Add working tree/staged diff views with side-by-side and inline modes, hunk navigation, and stage/unstage/revert affordances.
 4. Add problems/search panels: path search, text/regex search, replace preview, diagnostics, and task/test output.

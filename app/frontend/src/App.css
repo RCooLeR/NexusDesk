@@ -504,6 +504,29 @@ button:disabled {
     cursor: not-allowed;
 }
 
+.ignored-path-panel {
+    border: 1px solid #d7dfeb;
+    border-radius: var(--nd-radius-sm);
+    background: #f8fafc;
+    display: grid;
+    gap: 4px;
+    margin-bottom: 8px;
+    padding: 8px 10px;
+}
+
+.ignored-path-panel strong {
+    color: var(--nd-charcoal);
+    font-size: 12px;
+}
+
+.ignored-path-panel small {
+    color: var(--nd-muted-text);
+    font-size: 11px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
 .search-results {
     display: grid;
     gap: 6px;

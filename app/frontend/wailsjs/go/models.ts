@@ -1732,6 +1732,42 @@ export namespace workspace {
 	        this.message = source["message"];
 	    }
 	}
+	export class FileCopyProposal {
+	    sourceRelPath: string;
+	    targetRelPath: string;
+	    name: string;
+	    action: string;
+	    size: number;
+	    message: string;
+
+	    static createFrom(source: any = {}) {
+	        return new FileCopyProposal(source);
+	    }
+
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.sourceRelPath = source["sourceRelPath"];
+	        this.targetRelPath = source["targetRelPath"];
+	        this.name = source["name"];
+	        this.action = source["action"];
+	        this.size = source["size"];
+	        this.message = source["message"];
+	    }
+	}
+	export class FileCopyRequest {
+	    sourceRelPath: string;
+	    targetRelPath: string;
+
+	    static createFrom(source: any = {}) {
+	        return new FileCopyRequest(source);
+	    }
+
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.sourceRelPath = source["sourceRelPath"];
+	        this.targetRelPath = source["targetRelPath"];
+	    }
+	}
 	export class FileDeleteProposal {
 	    relPath: string;
 	    name: string;

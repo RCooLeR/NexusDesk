@@ -12,6 +12,8 @@ const checks = [
             'PreviewFileWrite',
             'PreviewFileDelete',
             'ApplyFileDelete',
+            'PreviewFileCopy',
+            'ApplyFileCopy',
             'PreviewFileMove',
             'ApplyFileMove',
             'ProfileDataset',
@@ -65,6 +67,10 @@ const checks = [
             'deleteActiveFile',
             'Rename Or Move Active File',
             'moveActiveFile',
+            'treeClipboard',
+            'setTreeClipboardFromNode',
+            'pasteTreeClipboard',
+            'uniqueCopyRelPath',
             'defaultNewFileContent',
             'dirtyDraftPaths',
             'pinnedTabPaths',
@@ -225,7 +231,7 @@ const checks = [
     },
     {
         file: 'src/features/shell/WorkspaceNavigator.tsx',
-        terms: ['workspace-search', 'project-tree', 'TreeNodeButton', 'tree-indent-guide', 'tree-node-badge', 'search-results', 'search-result-group', 'workspace.root', 'Expand all', 'Collapse all', 'Save scan', 'TreeContextAction', 'tree-context-menu'],
+        terms: ['workspace-search', 'project-tree', 'TreeNodeButton', 'tree-indent-guide', 'tree-node-badge', 'search-results', 'search-result-group', 'workspace.root', 'Expand all', 'Collapse all', 'Ignored', 'ignored-path-panel', 'Cut', 'Copy', 'Paste', 'treeClipboard', 'Save scan', 'TreeContextAction', 'tree-context-menu'],
     },
     {
         file: 'src/features/shell/AgentChatCard.tsx',
@@ -267,6 +273,7 @@ const checks = [
             '.git-diff-split',
             '.git-diff-view',
             '.tree-context-menu',
+            '.ignored-path-panel',
             '.bottom-tabbar',
             '.settings-page',
             '.settings-number-grid',
@@ -336,7 +343,7 @@ const checks = [
     },
     {
         file: 'wailsjs/go/main/App.d.ts',
-        terms: ['AskLLMContextPack', 'RunAgent', 'PreviewFileWrite', 'ApplyFileDelete', 'ApplyFileMove', 'ProfileDataset', 'CreateDatasetChartArtifact', 'CreateDatasetQueryArtifact', 'CreateDatasetSQLArtifact', 'CreateDatasetSummaryArtifact', 'CreateChatMarkdownArtifact', 'CreateScanReportArtifact', 'PreviewChatContextPack', 'PreviewDatasetChart', 'SaveDatasetQuery', 'SaveDatasetSQLQuery', 'ListDatasetSQLQueries', 'ListDatasetDependencies', 'ListDatasetSQLRuns', 'ListWorkspaceTasks', 'RefreshStaleContext', 'SearchMetadata', 'GetAssistantProfile', 'SaveAssistantProfile', 'QueryWorkspaceSQLite', 'ExportArtifactLineageJSON', 'GetGitStatus', 'GetGitFileDiff', 'PreviewGitFileAction', 'PreviewGitHunkAction', 'ApplyGitHunkAction', 'ListApprovals', 'ListAgentTools', 'ListAgentToolRuns', 'PreviewAgentTool', 'ExecuteAgentTool', 'QueryDatasetSQL', 'EnsureSQLiteMetadataStore', 'InspectMetadataStore', 'GetArtifactLineage', 'CheckWorkspaceFreshness', 'CompareArtifacts', 'ArchiveArtifact', 'DeleteArtifact'],
+        terms: ['AskLLMContextPack', 'RunAgent', 'PreviewFileWrite', 'ApplyFileDelete', 'PreviewFileCopy', 'ApplyFileCopy', 'ApplyFileMove', 'ProfileDataset', 'CreateDatasetChartArtifact', 'CreateDatasetQueryArtifact', 'CreateDatasetSQLArtifact', 'CreateDatasetSummaryArtifact', 'CreateChatMarkdownArtifact', 'CreateScanReportArtifact', 'PreviewChatContextPack', 'PreviewDatasetChart', 'SaveDatasetQuery', 'SaveDatasetSQLQuery', 'ListDatasetSQLQueries', 'ListDatasetDependencies', 'ListDatasetSQLRuns', 'ListWorkspaceTasks', 'RefreshStaleContext', 'SearchMetadata', 'GetAssistantProfile', 'SaveAssistantProfile', 'QueryWorkspaceSQLite', 'ExportArtifactLineageJSON', 'GetGitStatus', 'GetGitFileDiff', 'PreviewGitFileAction', 'PreviewGitHunkAction', 'ApplyGitHunkAction', 'ListApprovals', 'ListAgentTools', 'ListAgentToolRuns', 'PreviewAgentTool', 'ExecuteAgentTool', 'QueryDatasetSQL', 'EnsureSQLiteMetadataStore', 'InspectMetadataStore', 'GetArtifactLineage', 'CheckWorkspaceFreshness', 'CompareArtifacts', 'ArchiveArtifact', 'DeleteArtifact'],
     },
     {
         file: '../app_tasks.go',

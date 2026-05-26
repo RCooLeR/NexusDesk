@@ -6,6 +6,10 @@ export function AgentSystemPrompt() {
   return window['go']['main']['App']['AgentSystemPrompt']();
 }
 
+export function ApplyFileCopy(arg1) {
+  return window['go']['main']['App']['ApplyFileCopy'](arg1);
+}
+
 export function ApplyFileDelete(arg1) {
   return window['go']['main']['App']['ApplyFileDelete'](arg1);
 }
@@ -200,6 +204,10 @@ export function PreviewChatContextPack(arg1) {
 
 export function PreviewDatasetChart(arg1) {
   return window['go']['main']['App']['PreviewDatasetChart'](arg1);
+}
+
+export function PreviewFileCopy(arg1) {
+  return window['go']['main']['App']['PreviewFileCopy'](arg1);
 }
 
 export function PreviewFileDelete(arg1) {

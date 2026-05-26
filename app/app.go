@@ -338,6 +338,29 @@ func (a *App) ApplyFileMove(request workspace.FileMoveRequest) (workspace.FileMo
 	return proposal, nil
 }
 
+func (a *App) PreviewFileCopy(request workspace.FileCopyRequest) (workspace.FileCopyProposal, error) {
+	root := a.getWorkspaceRoot()
+	if root == "" {
+		return workspace.FileCopyProposal{}, errors.New("open a workspace before previewing file copies")
+	}
+
+	return workspace.PreviewFileCopy(root, request)
+}
+
+func (a *App) ApplyFileCopy(request workspace.FileCopyRequest) (workspace.FileCopyProposal, error) {
+	root := a.getWorkspaceRoot()
+	if root == "" {
+		return workspace.FileCopyProposal{}, errors.New("open a workspace before copying files")
+	}
+
+	proposal, err := workspace.ApplyFileCopy(root, request)
+	if err != nil {
+		return workspace.FileCopyProposal{}, err
+	}
+	a.recordApproval("file.copy", proposal.TargetRelPath, "medium", proposal.Message)
+	return proposal, nil
+}
+
 func (a *App) CreateMarkdownReport(relPath string) (artifact.MarkdownReport, error) {
 	root := a.getWorkspaceRoot()
 	if root == "" {

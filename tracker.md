@@ -253,9 +253,9 @@ Step 4.2: Project tree
 - [x] Add selected/current file reveal.
 - [x] Add collapse all and expand selected path.
 - [x] Add context menu shell for new file, new folder, rename, move, delete, copy path, reveal in explorer.
-- [ ] Add cut/copy/paste file operations with preview for mutations.
-- [ ] Add ignored-file controls.
-- [ ] Add drag/drop intent design before implementing mutation.
+- [x] Add cut/copy/paste file operations with preview for mutations.
+- [x] Add ignored-file controls.
+- [x] Add drag/drop intent design before implementing mutation.
 
 Step 4.3: Git integration
 

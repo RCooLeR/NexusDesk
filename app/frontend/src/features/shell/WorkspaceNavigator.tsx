@@ -39,9 +39,14 @@ type WorkspaceNavigatorProps = {
     workspaceSearchResults: WorkspaceSearchResult[];
     workspaceStatus: string;
     gitFileChanges: GitFileChange[];
+    treeClipboard: TreeClipboardState | null;
 };
 
-export type TreeContextAction = 'new-file' | 'new-folder' | 'rename' | 'move' | 'delete' | 'copy-path' | 'reveal';
+export type TreeContextAction = 'new-file' | 'new-folder' | 'rename' | 'move' | 'delete' | 'cut' | 'copy' | 'paste' | 'copy-path' | 'reveal';
+export type TreeClipboardState = {
+    mode: 'copy' | 'cut';
+    sourceRelPath: string;
+};
 
 const fileIconByType: Record<string, IconDefinition> = {
     code: brandAssets.icons.code,
@@ -84,9 +89,11 @@ export function WorkspaceNavigator({
     workspaceSearchResults,
     workspaceStatus,
     gitFileChanges,
+    treeClipboard,
 }: WorkspaceNavigatorProps) {
     const gitStatusByPath = buildGitStatusMap(gitFileChanges);
     const [contextMenu, setContextMenu] = useState<{node: FileNode; x: number; y: number} | null>(null);
+    const [showIgnoredSamples, setShowIgnoredSamples] = useState(false);
     function openContextMenu(event: ReactMouseEvent, node: FileNode) {
         event.preventDefault();
         setContextMenu({node, x: event.clientX, y: event.clientY});
@@ -176,12 +183,23 @@ export function WorkspaceNavigator({
                             <div className="tree-tool-row">
                                 <Button onClick={onExpandAllDirectories} variant="subtle">Expand all</Button>
                                 <Button onClick={onCollapseAllDirectories} variant="subtle">Collapse all</Button>
+                                {workspace.scan.ignoredSamples.length > 0 && (
+                                    <Button onClick={() => setShowIgnoredSamples((current) => !current)} variant="subtle">
+                                        {showIgnoredSamples ? 'Hide ignored' : `Ignored ${workspace.scan.ignored}`}
+                                    </Button>
+                                )}
                                 <Button onClick={onCreateScanReport} disabled={isCreatingScanReport} variant="subtle">
                                     {isCreatingScanReport ? 'Saving scan...' : 'Save scan'}
                                 </Button>
                                 {workspaceSearchResults.length > 0 && <Button onClick={onClearWorkspaceSearch} variant="subtle">Clear results</Button>}
                             </div>
                         </div>
+                        {showIgnoredSamples && workspace.scan.ignoredSamples.length > 0 && (
+                            <div className="ignored-path-panel">
+                                <strong>Ignored paths</strong>
+                                {workspace.scan.ignoredSamples.map((sample) => <small key={sample}>{sample}</small>)}
+                            </div>
+                        )}
                         {workspaceSearchResults.length > 0 && (
                             <div className="search-results">
                                 <div className="section-label">{workspaceSearchResults.length} matches</div>
@@ -225,6 +243,11 @@ export function WorkspaceNavigator({
                                 <button onClick={() => runContextAction('rename')} role="menuitem">Rename</button>
                                 <button onClick={() => runContextAction('move')} role="menuitem">Move</button>
                                 <button disabled={contextMenu.node.kind !== 'file'} onClick={() => runContextAction('delete')} role="menuitem">Delete</button>
+                                <button disabled={contextMenu.node.kind !== 'file'} onClick={() => runContextAction('cut')} role="menuitem">Cut</button>
+                                <button disabled={contextMenu.node.kind !== 'file'} onClick={() => runContextAction('copy')} role="menuitem">Copy</button>
+                                <button disabled={!treeClipboard} onClick={() => runContextAction('paste')} role="menuitem">
+                                    Paste{treeClipboard ? ` ${treeClipboard.mode === 'cut' ? 'move' : 'copy'}` : ''}
+                                </button>
                                 <button onClick={() => runContextAction('copy-path')} role="menuitem">Copy path</button>
                                 <button onClick={() => runContextAction('reveal')} role="menuitem">Reveal</button>
                             </div>

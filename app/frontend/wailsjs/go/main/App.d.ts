@@ -15,6 +15,8 @@ import {agent} from '../models';
 
 export function AgentSystemPrompt():Promise<string>;
 
+export function ApplyFileCopy(arg1:workspace.FileCopyRequest):Promise<workspace.FileCopyProposal>;
+
 export function ApplyFileDelete(arg1:string):Promise<workspace.FileDeleteProposal>;
 
 export function ApplyFileMove(arg1:workspace.FileMoveRequest):Promise<workspace.FileMoveProposal>;
@@ -112,6 +114,8 @@ export function PreviewAgentTool(arg1:agenttools.RunRequest):Promise<agenttools.
 export function PreviewChatContextPack(arg1:Array<string>):Promise<workspace.ContextPreview>;
 
 export function PreviewDatasetChart(arg1:workspace.DatasetChartRequest):Promise<workspace.DatasetChartResult>;
+
+export function PreviewFileCopy(arg1:workspace.FileCopyRequest):Promise<workspace.FileCopyProposal>;
 
 export function PreviewFileDelete(arg1:string):Promise<workspace.FileDeleteProposal>;
 
