@@ -256,7 +256,7 @@ Current foundation:
 - Password/token material is stored in a protected sidecar and the public profile JSON keeps only a credential reference.
 - Profiles are returned to the frontend with redacted credential values.
 - Profiles are read-only by default and include result caps plus timeout settings.
-- PostgreSQL and MySQL/MariaDB profiles can be explicitly tested and schema-inspected from Settings; protected credentials resolve only for that user-triggered action.
+- PostgreSQL, MySQL/MariaDB, and SQL Server profiles can be explicitly tested and schema-inspected from Settings; protected credentials resolve only for that user-triggered action.
 
 ### Database Connection
 
@@ -539,11 +539,11 @@ Current implementation:
 
 ### External SQL Connector Profiles
 
-The first external database connectors are scoped to saved PostgreSQL and MySQL/MariaDB profiles.
+The first external database connectors are scoped to saved PostgreSQL, MySQL/MariaDB, and SQL Server profiles.
 
 Current implementation:
 
-- `app/internal/dbconnector/` opens PostgreSQL profiles through `pgx` and MySQL/MariaDB profiles through `go-sql-driver/mysql` only after an explicit user action.
+- `app/internal/dbconnector/` opens PostgreSQL profiles through `pgx`, MySQL/MariaDB profiles through `go-sql-driver/mysql`, and SQL Server profiles through `go-mssqldb` only after an explicit user action.
 - Test, inspect, and guarded query methods resolve protected credentials at execution time rather than when profiles are listed.
 - Sessions are set read-only where supported and receive a statement timeout derived from the profile/request timeout.
 - Only single-statement `SELECT`/`WITH` SQL is accepted for the guarded profile query path.

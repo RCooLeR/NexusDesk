@@ -365,13 +365,14 @@ Step 5.2: Database connector framework
 - [x] Expand SQLite schema browser.
 - [x] Add PostgreSQL read-only connector.
 - [x] Add MySQL/MariaDB read-only connector.
-- [ ] Add SQL Server read-only connector.
+- [x] Add SQL Server read-only connector.
 - [ ] Add DuckDB connector.
 - [x] Add SQLite query cancellation plumbing.
 - [x] Add SQLite result cap and timeout controls.
 - [x] Add connector error redaction helper for SQLite connector failures.
 - [x] Add first external connector profile test, inspect, and guarded query methods for PostgreSQL.
 - [x] Add external connector profile test, inspect, and guarded query methods for MySQL/MariaDB.
+- [x] Add external connector profile test, inspect, and guarded query methods for SQL Server.
 - [ ] Generalize query cancellation across external database connectors.
 - [ ] Generalize result caps and timeout controls across external database connectors.
 - [ ] Generalize connector error redaction across external database connectors.
