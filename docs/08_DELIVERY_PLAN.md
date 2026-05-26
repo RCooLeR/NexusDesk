@@ -180,6 +180,7 @@ Current status:
 - Saved PostgreSQL connector profiles can now be explicitly tested and inspected from Settings. The backend resolves protected credentials only for that action, opens a read-only session, applies statement timeouts, rejects non-`SELECT` SQL for the guarded profile query method, and returns schema metadata with tables, views, columns, indexes, foreign keys, and relationship hints.
 - Saved MySQL and MariaDB connector profiles use the same explicit Test/Inspect/query boundary, guarded read-only SQL validation, engine timeout settings, schema metadata, foreign-key metadata, and first inferred relationship hints.
 - Saved SQL Server connector profiles now use the same explicit Test/Inspect/query boundary, guarded read-only SQL validation, timeout/lock-timeout settings, schema metadata, foreign-key metadata, and first inferred relationship hints.
+- Saved DuckDB connector profiles now validate a local database file in default builds and expose the same explicit Test/Inspect/query runner behind the `duckdb` build tag with a read-only `access_mode=read_only` DSN.
 - Chat messages and context-pack previews warn when cited files changed after the answer/context was created.
 - Stale-context refresh can rebuild a context preview from changed files and records the refresh in the approval/metadata trail.
 - Dataset dependency rebuild now removes the prior generated artifact before re-running so repeated refreshes avoid same-timestamp collisions.
@@ -328,6 +329,7 @@ This batch made more of the studio inspectable and auditable without turning on 
 5. PostgreSQL connector profiles can be tested and schema-inspected explicitly; the backend also exposes a guarded read-only query method for the next notebook surface.
 6. MySQL/MariaDB connector profiles now share that explicit test, inspect, and guarded query path.
 7. SQL Server connector profiles now share that explicit test, inspect, and guarded query path.
+8. DuckDB connector profiles now share that explicit profile boundary through a default build guard and a CGO-tagged read-only execution path.
 
 ## Completed Batch: Data Source Card Actions
 
@@ -513,6 +515,8 @@ Deliverables:
 - SQLite connector
 - PostgreSQL connector
 - MySQL connector, optional
+- SQL Server connector
+- DuckDB connector behind the optional CGO build tag
 - read-only SQL policy
 - schema explorer
 - query-to-chart flow

@@ -366,13 +366,14 @@ Step 5.2: Database connector framework
 - [x] Add PostgreSQL read-only connector.
 - [x] Add MySQL/MariaDB read-only connector.
 - [x] Add SQL Server read-only connector.
-- [ ] Add DuckDB connector.
+- [x] Add DuckDB connector.
 - [x] Add SQLite query cancellation plumbing.
 - [x] Add SQLite result cap and timeout controls.
 - [x] Add connector error redaction helper for SQLite connector failures.
 - [x] Add first external connector profile test, inspect, and guarded query methods for PostgreSQL.
 - [x] Add external connector profile test, inspect, and guarded query methods for MySQL/MariaDB.
 - [x] Add external connector profile test, inspect, and guarded query methods for SQL Server.
+- [x] Add DuckDB profile validation, read-only DSN construction, default build guard, and CGO-tagged test/inspect/query runner.
 - [ ] Generalize query cancellation across external database connectors.
 - [ ] Generalize result caps and timeout controls across external database connectors.
 - [ ] Generalize connector error redaction across external database connectors.
@@ -1110,7 +1111,7 @@ Completed batch: connector query exports are user-triggered, bounded by the visi
 
 `app/internal/analytics/` owns read-only SQL-style dataset querying and DuckDB-compatible execution paths.
 
-`app/internal/dbconnector/` owns workspace database connector surfaces. Today that means read-only SQLite files, guarded read-only SQL execution with per-query result caps, timeouts, cancellation, and redacted connector errors, plus user-triggered SQLite connector metadata inspection for tables, views, columns, indexes, row counts, capped samples, declared foreign keys, and conservative `*_id` relationship hints; future phases add credential-backed server databases and dump sandboxes.
+`app/internal/dbconnector/` owns workspace database connector surfaces. Today that means read-only SQLite files, guarded read-only SQL execution with per-query result caps, timeouts, cancellation, and redacted connector errors, plus user-triggered SQLite connector metadata inspection for tables, views, columns, indexes, row counts, capped samples, declared foreign keys, and conservative `*_id` relationship hints. It also owns explicit saved-profile runners for PostgreSQL, MySQL/MariaDB, SQL Server, and DuckDB; DuckDB uses a default build guard plus a real `duckdb` build-tag path because the driver requires CGO. Future phases add deeper credential-backed server database workflows and dump sandboxes.
 
 `app/internal/approval/` owns append-only approval/action records.
 

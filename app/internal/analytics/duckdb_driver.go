@@ -2,4 +2,4 @@
 
 package analytics
 
-import _ "github.com/marcboeker/go-duckdb/v2"
+import _ "github.com/duckdb/duckdb-go/v2"

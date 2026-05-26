@@ -123,11 +123,13 @@ The current read-only SQL surface accepts a constrained `SELECT` subset over CSV
 
 - SQLite connector cap is enforced at 100 rows with `TotalRows` preserving full matches and `Rows` showing preview rows.
 - CSV SQL fallback queries preserve `TotalRows`/`MatchedRows` from the dataset query engine and return up to 50 preview rows by default.
-- A real DuckDB `database/sql` execution path is implemented behind the `duckdb` build tag for CGO-enabled machines; the default Windows loop keeps CGO disabled unless a C compiler is installed.
+- Real DuckDB `database/sql` execution paths are implemented behind the `duckdb` build tag for CGO-enabled machines; the default Windows loop keeps CGO disabled unless a C compiler is installed.
 - SQL artifact metadata now records full `TotalRows` for completed and failed SQL run records.
 - SQLite metadata search now indexes SQL run history with bounded snippets so query and error text are searchable without exposing raw credential material.
 
 The first workspace database connector supports local `.sqlite`, `.sqlite3`, and `.db` files only. It opens files through `modernc.org/sqlite` in read-only mode, requires `SELECT`/`WITH`, blocks mutation-oriented SQL keywords, rejects multi-statement payloads, caps rows, and records query history/dependency metadata without storing connector credentials.
+
+Saved external database profiles are explicit-action only. PostgreSQL, MySQL/MariaDB, SQL Server, and DuckDB profile tests, schema inspections, and guarded queries run only after the user presses the matching Settings action or query command. DuckDB file profiles validate the target file in default builds and require a CGO-enabled `duckdb` tagged build for live execution.
 
 SQL result exports are artifact writes, not database mutations. They include the SQL text, engine, row counts, preview rows, and source dataset citation in a Markdown artifact plus sidecar metadata.
 

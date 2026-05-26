@@ -654,6 +654,8 @@ func (a *App) TestConnectorProfile(id string) (dbconnector.ConnectorProfileStatu
 		return dbconnector.TestMySQLProfile(profile)
 	case "sqlserver":
 		return dbconnector.TestSQLServerProfile(profile)
+	case "duckdb":
+		return dbconnector.TestDuckDBProfile(profile)
 	default:
 		return dbconnector.ConnectorProfileStatus{}, fmt.Errorf("connector kind %q is not runnable yet", profile.Kind)
 	}
@@ -671,6 +673,8 @@ func (a *App) InspectConnectorProfile(id string) (dbconnector.ConnectorMetadata,
 		return dbconnector.InspectMySQLProfile(profile)
 	case "sqlserver":
 		return dbconnector.InspectSQLServerProfile(profile)
+	case "duckdb":
+		return dbconnector.InspectDuckDBProfile(profile)
 	default:
 		return dbconnector.ConnectorMetadata{}, fmt.Errorf("connector kind %q is not inspectable yet", profile.Kind)
 	}
@@ -688,6 +692,8 @@ func (a *App) QueryConnectorProfile(request dbconnector.ConnectorQueryRequest) (
 		return dbconnector.QueryMySQLProfile(profile, request)
 	case "sqlserver":
 		return dbconnector.QuerySQLServerProfile(profile, request)
+	case "duckdb":
+		return dbconnector.QueryDuckDBProfile(profile, request)
 	default:
 		return dbconnector.ConnectorQueryResult{}, fmt.Errorf("connector kind %q is not queryable yet", profile.Kind)
 	}

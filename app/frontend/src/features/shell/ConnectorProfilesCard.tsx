@@ -140,5 +140,5 @@ export function ConnectorProfilesCard({
 }
 
 function isRunnableConnector(profile: ConnectorProfile) {
-    return profile.kind === 'postgres' || profile.kind === 'mysql' || profile.kind === 'mariadb' || profile.kind === 'sqlserver';
+    return profile.kind === 'postgres' || profile.kind === 'mysql' || profile.kind === 'mariadb' || profile.kind === 'sqlserver' || profile.kind === 'duckdb';
 }

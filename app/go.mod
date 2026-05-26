@@ -4,9 +4,9 @@ go 1.25.0
 
 require (
 	github.com/denisenkom/go-mssqldb v0.12.3
+	github.com/duckdb/duckdb-go/v2 v2.4.3
 	github.com/go-sql-driver/mysql v1.10.0
 	github.com/jackc/pgx/v5 v5.9.2
-	github.com/marcboeker/go-duckdb/v2 v2.4.3
 	github.com/wailsapp/wails/v2 v2.12.0
 	golang.org/x/text v0.29.0
 	modernc.org/sqlite v1.36.3
@@ -23,6 +23,8 @@ require (
 	github.com/duckdb/duckdb-go-bindings/linux-amd64 v0.1.21 // indirect
 	github.com/duckdb/duckdb-go-bindings/linux-arm64 v0.1.21 // indirect
 	github.com/duckdb/duckdb-go-bindings/windows-amd64 v0.1.21 // indirect
+	github.com/duckdb/duckdb-go/arrowmapping v0.0.22 // indirect
+	github.com/duckdb/duckdb-go/mapping v0.0.22 // indirect
 	github.com/dustin/go-humanize v1.0.1 // indirect
 	github.com/go-ole/go-ole v1.3.0 // indirect
 	github.com/go-viper/mapstructure/v2 v2.4.0 // indirect
@@ -45,8 +47,6 @@ require (
 	github.com/leaanthony/gosod v1.0.4 // indirect
 	github.com/leaanthony/slicer v1.6.0 // indirect
 	github.com/leaanthony/u v1.1.1 // indirect
-	github.com/marcboeker/go-duckdb/arrowmapping v0.0.21 // indirect
-	github.com/marcboeker/go-duckdb/mapping v0.0.21 // indirect
 	github.com/mattn/go-colorable v0.1.13 // indirect
 	github.com/mattn/go-isatty v0.0.20 // indirect
 	github.com/ncruces/go-strftime v0.1.9 // indirect
