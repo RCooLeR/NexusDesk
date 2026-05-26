@@ -6,11 +6,13 @@ type MonacoFileEditorProps = {
     fileName: string;
     onChange: (content: string) => void;
     onSave: () => void;
+    revealLine: number;
+    revealNonce: number;
     showMinimap: boolean;
     value: string;
 };
 
-export function MonacoFileEditor({fileName, onChange, onSave, showMinimap, value}: MonacoFileEditorProps) {
+export function MonacoFileEditor({fileName, onChange, onSave, revealLine, revealNonce, showMinimap, value}: MonacoFileEditorProps) {
     const containerRef = useRef<HTMLDivElement>(null);
     const editorRef = useRef<Monaco.editor.IStandaloneCodeEditor | null>(null);
     const changeHandlerRef = useRef(onChange);
@@ -109,6 +111,16 @@ export function MonacoFileEditor({fileName, onChange, onSave, showMinimap, value
             editor.setSelection(selection);
         }
     }, [value]);
+
+    useEffect(() => {
+        const editor = editorRef.current;
+        if (!editor || revealLine <= 0) {
+            return;
+        }
+        editor.revealLineInCenter(revealLine);
+        editor.setPosition({lineNumber: revealLine, column: 1});
+        editor.focus();
+    }, [revealLine, revealNonce]);
 
     return <div className="monaco-file-editor" ref={containerRef} />;
 }

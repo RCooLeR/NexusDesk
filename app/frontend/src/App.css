@@ -1138,10 +1138,20 @@ button:disabled {
     cursor: default;
 }
 
+.editor-workspace-layout,
 .editor-single-layout,
 .editor-split-layout {
     min-height: 0;
     overflow: hidden;
+}
+
+.editor-workspace-layout {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+}
+
+.editor-workspace-layout.with-outline {
+    grid-template-columns: minmax(0, 1fr) minmax(220px, 260px);
 }
 
 .editor-single-layout {
@@ -1207,6 +1217,83 @@ button:disabled {
 
 .secondary-preview .file-write-editor {
     display: none;
+}
+
+.editor-outline-panel {
+    border-left: 1px solid var(--nd-border-soft);
+    background: #fbfdff;
+    display: grid;
+    grid-template-rows: auto minmax(0, 1fr);
+    min-height: 0;
+    min-width: 0;
+    overflow: hidden;
+}
+
+.editor-outline-heading {
+    border-bottom: 1px solid var(--nd-border-soft);
+    display: grid;
+    gap: 2px;
+    min-height: 38px;
+    padding: 7px 10px;
+}
+
+.editor-outline-heading strong {
+    color: var(--nd-charcoal);
+}
+
+.editor-outline-heading small,
+.editor-outline-empty {
+    color: var(--nd-muted-text);
+    font-size: 11px;
+}
+
+.editor-outline-list {
+    display: grid;
+    gap: 4px;
+    align-content: start;
+    min-height: 0;
+    overflow: auto;
+    padding: 8px;
+}
+
+.editor-outline-item {
+    border: 1px solid transparent;
+    border-radius: var(--nd-radius-sm);
+    background: transparent;
+    color: inherit;
+    cursor: pointer;
+    display: grid;
+    gap: 2px 7px;
+    grid-template-columns: 56px minmax(0, 1fr) auto;
+    min-height: 28px;
+    padding: 5px 6px 5px calc(6px + (var(--outline-level, 0) * 10px));
+    text-align: left;
+}
+
+.editor-outline-item:hover {
+    border-color: #b7d4ff;
+    background: #eef7ff;
+}
+
+.editor-outline-item span,
+.editor-outline-item small {
+    color: var(--nd-muted-text);
+    font-size: 10px;
+    text-transform: lowercase;
+}
+
+.editor-outline-item strong {
+    color: var(--nd-charcoal);
+    font-size: 12px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.editor-outline-empty {
+    border: 1px dashed #cad5e6;
+    border-radius: var(--nd-radius-sm);
+    padding: 10px;
 }
 
 .editor-find {

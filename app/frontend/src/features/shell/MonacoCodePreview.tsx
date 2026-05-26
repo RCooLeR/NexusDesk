@@ -6,11 +6,13 @@ import {defineNexusTheme, languageForFile, loadMonaco} from './monacoRuntime';
 type MonacoCodePreviewProps = {
     content: string;
     fileName: string;
+    revealLine: number;
+    revealNonce: number;
     searchQuery: string;
     showMinimap: boolean;
 };
 
-export function MonacoCodePreview({content, fileName, searchQuery, showMinimap}: MonacoCodePreviewProps) {
+export function MonacoCodePreview({content, fileName, revealLine, revealNonce, searchQuery, showMinimap}: MonacoCodePreviewProps) {
     const containerRef = useRef<HTMLDivElement>(null);
     const editorRef = useRef<Monaco.editor.IStandaloneCodeEditor | null>(null);
     const decorationIdsRef = useRef<string[]>([]);
@@ -101,6 +103,16 @@ export function MonacoCodePreview({content, fileName, searchQuery, showMinimap}:
             updateSearchDecorations(monaco, editor, searchQuery, decorationIdsRef);
         });
     }, [content, searchQuery]);
+
+    useEffect(() => {
+        const editor = editorRef.current;
+        if (!editor || revealLine <= 0) {
+            return;
+        }
+        editor.revealLineInCenter(revealLine);
+        editor.setPosition({lineNumber: revealLine, column: 1});
+        editor.focus();
+    }, [revealLine, revealNonce]);
 
     return <div aria-label="Code preview editor" className="monaco-code-preview" ref={containerRef} />;
 }

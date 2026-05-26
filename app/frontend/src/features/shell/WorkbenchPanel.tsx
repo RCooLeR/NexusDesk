@@ -1,5 +1,6 @@
 import {useEffect, useRef, useState} from 'react';
-import {faMap, faTableColumns, faThumbtack, faXmark} from '@fortawesome/free-solid-svg-icons';
+import type {CSSProperties} from 'react';
+import {faListUl, faMap, faTableColumns, faThumbtack, faXmark} from '@fortawesome/free-solid-svg-icons';
 import {FontAwesomeIcon} from '@fortawesome/react-fontawesome';
 import {brandAssets} from '../../brand/assets';
 import {Button, EmptyState, InlineAlert, LoadingState} from '../../components/ui';
@@ -9,6 +10,14 @@ import {SortableDataTable} from './DataStudioPanel';
 import {HighlightedCode} from './HighlightedCode';
 import {MonacoCodePreview} from './MonacoCodePreview';
 import {MonacoFileEditor} from './MonacoFileEditor';
+
+type OutlineItem = {
+    id: string;
+    kind: string;
+    label: string;
+    level: number;
+    line: number;
+};
 
 type WorkbenchPanelProps = {
     activeFile: string;
@@ -101,6 +110,9 @@ export function WorkbenchPanel({
 }: WorkbenchPanelProps) {
     const [markdownViewMode, setMarkdownViewMode] = useState<'source' | 'rendered'>('source');
     const [findQuery, setFindQuery] = useState('');
+    const [isOutlineVisible, setIsOutlineVisible] = useState(false);
+    const [outlineTargetLine, setOutlineTargetLine] = useState(0);
+    const [outlineTargetNonce, setOutlineTargetNonce] = useState(0);
     const findInputRef = useRef<HTMLInputElement>(null);
     const canExplainContext = Boolean(
         workspace && (
@@ -118,6 +130,7 @@ export function WorkbenchPanel({
     const isDraftDirty = Boolean(filePreview && dirtyTabPaths.includes(filePreview.relPath));
     const breadcrumbs = buildBreadcrumbs(activeFile, workspace?.name ?? 'Workspace');
     const secondaryOptions = openTabs.filter((tab) => tab.relPath !== activeFile);
+    const outlineItems = buildOutline(filePreview?.name ?? activeFile, findSource);
 
     useEffect(() => {
         function handleFindShortcut(event: KeyboardEvent) {
@@ -225,6 +238,15 @@ export function WorkbenchPanel({
                         </div>
                         <div className="editor-tab-actions">
                             <button
+                                aria-pressed={isOutlineVisible}
+                                className={isOutlineVisible ? 'editor-icon-toggle active' : 'editor-icon-toggle'}
+                                onClick={() => setIsOutlineVisible((current) => !current)}
+                                title={isOutlineVisible ? 'Hide outline' : 'Show outline'}
+                                type="button"
+                            >
+                                <FontAwesomeIcon icon={faListUl} />
+                            </button>
+                            <button
                                 aria-pressed={isSplitEditorEnabled}
                                 className={isSplitEditorEnabled ? 'editor-icon-toggle active' : 'editor-icon-toggle'}
                                 onClick={onToggleSplitEditor}
@@ -289,57 +311,73 @@ export function WorkbenchPanel({
                         </nav>
                     )}
                     {workspace ? (
-                        <div className={isSplitEditorEnabled ? 'editor-split-layout' : 'editor-single-layout'}>
-                            <section className="editor-group primary">
-                                {isSplitEditorEnabled && (
-                                    <div className="editor-group-header">
-                                        <strong>{filePreview?.name ?? activeFile}</strong>
-                                        <small>Primary</small>
-                                    </div>
-                                )}
-                                <PrimaryPreviewPane
-                                    activeFile={activeFile}
-                                    fileDraft={fileDraft}
-                                    filePreview={filePreview}
-                                    findQuery={findQuery}
-                                    isApplyingWrite={isApplyingWrite}
-                                    isDraftDirty={isDraftDirty}
-                                    isEditingFile={isEditingFile}
-                                    isLoadingPreview={isLoadingPreview}
-                                    isPreviewingWrite={isPreviewingWrite}
-                                    markdownViewMode={markdownViewMode}
-                                    onApplyFileWrite={onApplyFileWrite}
-                                    onCancelFileEdit={onCancelFileEdit}
-                                    onFileDraftChange={onFileDraftChange}
-                                    onPreviewFileWrite={onPreviewFileWrite}
-                                    showMinimap={showMinimap}
-                                    workspace={workspace}
-                                    writeProposal={writeProposal}
-                                />
-                            </section>
-                            {isSplitEditorEnabled && (
-                                <section className="editor-group secondary">
-                                    <div className="editor-group-header">
-                                        <strong>{secondaryPreview?.name ?? 'No secondary tab'}</strong>
-                                        <select
-                                            aria-label="Secondary editor file"
-                                            disabled={secondaryOptions.length === 0}
-                                            onChange={(event) => onSecondaryEditorChange(event.target.value)}
-                                            value={secondaryPreview?.relPath ?? secondaryFile}
-                                        >
-                                            {secondaryOptions.length === 0 ? (
-                                                <option value="">Open another tab</option>
-                                            ) : secondaryOptions.map((tab) => (
-                                                <option key={tab.relPath} value={tab.relPath}>{tab.relPath}</option>
-                                            ))}
-                                        </select>
-                                    </div>
-                                    <SecondaryPreviewPane
-                                        preview={secondaryPreview}
+                        <div className={isOutlineVisible ? 'editor-workspace-layout with-outline' : 'editor-workspace-layout'}>
+                            <div className={isSplitEditorEnabled ? 'editor-split-layout' : 'editor-single-layout'}>
+                                <section className="editor-group primary">
+                                    {isSplitEditorEnabled && (
+                                        <div className="editor-group-header">
+                                            <strong>{filePreview?.name ?? activeFile}</strong>
+                                            <small>Primary</small>
+                                        </div>
+                                    )}
+                                    <PrimaryPreviewPane
+                                        activeFile={activeFile}
+                                        fileDraft={fileDraft}
+                                        filePreview={filePreview}
+                                        findQuery={findQuery}
+                                        isApplyingWrite={isApplyingWrite}
+                                        isDraftDirty={isDraftDirty}
+                                        isEditingFile={isEditingFile}
+                                        isLoadingPreview={isLoadingPreview}
+                                        isPreviewingWrite={isPreviewingWrite}
+                                        markdownViewMode={markdownViewMode}
+                                        onApplyFileWrite={onApplyFileWrite}
+                                        onCancelFileEdit={onCancelFileEdit}
+                                        onFileDraftChange={onFileDraftChange}
+                                        onPreviewFileWrite={onPreviewFileWrite}
+                                        outlineTargetLine={outlineTargetLine}
+                                        outlineTargetNonce={outlineTargetNonce}
                                         showMinimap={showMinimap}
                                         workspace={workspace}
+                                        writeProposal={writeProposal}
                                     />
                                 </section>
+                                {isSplitEditorEnabled && (
+                                    <section className="editor-group secondary">
+                                        <div className="editor-group-header">
+                                            <strong>{secondaryPreview?.name ?? 'No secondary tab'}</strong>
+                                            <select
+                                                aria-label="Secondary editor file"
+                                                disabled={secondaryOptions.length === 0}
+                                                onChange={(event) => onSecondaryEditorChange(event.target.value)}
+                                                value={secondaryPreview?.relPath ?? secondaryFile}
+                                            >
+                                                {secondaryOptions.length === 0 ? (
+                                                    <option value="">Open another tab</option>
+                                                ) : secondaryOptions.map((tab) => (
+                                                    <option key={tab.relPath} value={tab.relPath}>{tab.relPath}</option>
+                                                ))}
+                                            </select>
+                                        </div>
+                                        <SecondaryPreviewPane
+                                            preview={secondaryPreview}
+                                            showMinimap={showMinimap}
+                                            workspace={workspace}
+                                        />
+                                    </section>
+                                )}
+                            </div>
+                            {isOutlineVisible && (
+                                <OutlinePanel
+                                    items={outlineItems}
+                                    onSelect={(line) => {
+                                        setOutlineTargetLine(line);
+                                        setOutlineTargetNonce((current) => current + 1);
+                                        if (markdownViewMode === 'rendered') {
+                                            setMarkdownViewMode('source');
+                                        }
+                                    }}
+                                />
                             )}
                         </div>
                     ) : (
@@ -378,6 +416,131 @@ function buildBreadcrumbs(activeFile: string, workspaceName: string) {
     return crumbs;
 }
 
+function OutlinePanel({items, onSelect}: {items: OutlineItem[]; onSelect: (line: number) => void}) {
+    return (
+        <aside className="editor-outline-panel" aria-label="Editor outline">
+            <div className="editor-outline-heading">
+                <strong>Outline</strong>
+                <small>{items.length > 0 ? `${items.length} symbols` : 'No symbols'}</small>
+            </div>
+            <div className="editor-outline-list">
+                {items.length > 0 ? items.map((item) => (
+                    <button
+                        className="editor-outline-item"
+                        key={item.id}
+                        onClick={() => onSelect(item.line)}
+                        style={{'--outline-level': String(item.level)} as CSSProperties}
+                        title={`${item.kind} / line ${item.line}`}
+                        type="button"
+                    >
+                        <span>{item.kind}</span>
+                        <strong>{item.label}</strong>
+                        <small>{item.line}</small>
+                    </button>
+                )) : (
+                    <div className="editor-outline-empty">No outline symbols detected for this preview.</div>
+                )}
+            </div>
+        </aside>
+    );
+}
+
+function buildOutline(fileName: string, content: string): OutlineItem[] {
+    const lines = content.replace(/\r\n/g, '\n').split('\n');
+    const extension = fileName.split('.').pop()?.toLowerCase() ?? '';
+    const items: OutlineItem[] = [];
+    const add = (kind: string, label: string, line: number, level = 0) => {
+        const cleanLabel = label.trim();
+        if (!cleanLabel) {
+            return;
+        }
+        items.push({
+            id: `${line}-${kind}-${cleanLabel}`,
+            kind,
+            label: cleanLabel.slice(0, 120),
+            level,
+            line,
+        });
+    };
+
+    lines.slice(0, 4000).forEach((line, index) => {
+        const lineNumber = index + 1;
+        const trimmed = line.trim();
+        if (!trimmed) {
+            return;
+        }
+
+        const markdownHeading = /^(#{1,6})\s+(.+)$/.exec(trimmed);
+        if (markdownHeading) {
+            add('heading', markdownHeading[2], lineNumber, markdownHeading[1].length - 1);
+            return;
+        }
+
+        if (['ts', 'tsx', 'js', 'jsx', 'mjs', 'cjs'].includes(extension)) {
+            const match = /^(?:export\s+)?(?:async\s+)?(?:function|class|interface|type|enum)\s+([A-Za-z_$][\w$]*)/.exec(trimmed) ??
+                /^(?:export\s+)?(?:const|let|var)\s+([A-Za-z_$][\w$]*)\s*=\s*(?:async\s*)?(?:\([^)]*\)|[A-Za-z_$][\w$]*)\s*=>/.exec(trimmed);
+            if (match) {
+                add(symbolKind(trimmed), match[1], lineNumber, 0);
+            }
+            return;
+        }
+
+        if (extension === 'go') {
+            const match = /^func\s+(?:\([^)]*\)\s*)?([A-Za-z_]\w*)\s*\(/.exec(trimmed) ??
+                /^type\s+([A-Za-z_]\w*)\s+(?:struct|interface|func|map|\[\])/.exec(trimmed);
+            if (match) {
+                add(trimmed.startsWith('func') ? 'func' : 'type', match[1], lineNumber, 0);
+            }
+            return;
+        }
+
+        if (['css', 'scss', 'sass'].includes(extension)) {
+            const match = /^([.#]?[A-Za-z_][^{]+)\s*\{/.exec(trimmed);
+            if (match) {
+                add('selector', match[1], lineNumber, 0);
+            }
+            return;
+        }
+
+        if (['json', 'jsonc'].includes(extension)) {
+            const match = /^"([^"]+)"\s*:/.exec(trimmed);
+            if (match && leadingSpaceCount(line) <= 8) {
+                add('key', match[1], lineNumber, Math.floor(leadingSpaceCount(line) / 2));
+            }
+            return;
+        }
+
+        if (['yaml', 'yml'].includes(extension)) {
+            const match = /^([A-Za-z0-9_.-]+)\s*:/.exec(trimmed);
+            if (match && leadingSpaceCount(line) <= 8) {
+                add('key', match[1], lineNumber, Math.floor(leadingSpaceCount(line) / 2));
+            }
+        }
+    });
+
+    return items.slice(0, 120);
+}
+
+function symbolKind(line: string) {
+    if (line.includes(' class ') || line.startsWith('class ') || line.startsWith('export class ')) {
+        return 'class';
+    }
+    if (line.includes(' interface ') || line.startsWith('interface ') || line.startsWith('export interface ')) {
+        return 'interface';
+    }
+    if (line.includes(' type ') || line.startsWith('type ') || line.startsWith('export type ')) {
+        return 'type';
+    }
+    if (line.includes(' enum ') || line.startsWith('enum ') || line.startsWith('export enum ')) {
+        return 'enum';
+    }
+    return 'func';
+}
+
+function leadingSpaceCount(value: string) {
+    return value.length - value.trimStart().length;
+}
+
 function PrimaryPreviewPane({
     activeFile,
     fileDraft,
@@ -393,6 +556,8 @@ function PrimaryPreviewPane({
     onCancelFileEdit,
     onFileDraftChange,
     onPreviewFileWrite,
+    outlineTargetLine,
+    outlineTargetNonce,
     showMinimap,
     workspace,
     writeProposal,
@@ -411,6 +576,8 @@ function PrimaryPreviewPane({
     onCancelFileEdit: () => void;
     onFileDraftChange: (content: string) => void;
     onPreviewFileWrite: () => void;
+    outlineTargetLine: number;
+    outlineTargetNonce: number;
     showMinimap: boolean;
     workspace: WorkspaceSnapshot;
     writeProposal: FileWriteProposal | null;
@@ -451,6 +618,8 @@ function PrimaryPreviewPane({
                     originalContent={filePreview?.content ?? ''}
                     fileName={filePreview?.name ?? activeFile}
                     isDirty={isDraftDirty}
+                    revealLine={outlineTargetLine}
+                    revealNonce={outlineTargetNonce}
                     showMinimap={showMinimap}
                 />
             ) : filePreview?.content && markdownViewMode === 'rendered' && isMarkdownFile(filePreview.name) ? (
@@ -458,7 +627,7 @@ function PrimaryPreviewPane({
             ) : filePreview?.content ? (
                 <div className={filePreview.message ? 'source-editor-preview' : 'source-editor-preview no-message'}>
                     {filePreview.message && <InlineAlert>{filePreview.message}</InlineAlert>}
-                    <MonacoCodePreview content={filePreview.content} fileName={filePreview.name} searchQuery={findQuery} showMinimap={showMinimap} />
+                    <MonacoCodePreview content={filePreview.content} fileName={filePreview.name} revealLine={outlineTargetLine} revealNonce={outlineTargetNonce} searchQuery={findQuery} showMinimap={showMinimap} />
                 </div>
             ) : (
                 <EmptyState
@@ -503,7 +672,7 @@ function SecondaryPreviewPane({
             ) : preview?.content ? (
                 <div className={preview.message ? 'source-editor-preview' : 'source-editor-preview no-message'}>
                     {preview.message && <InlineAlert>{preview.message}</InlineAlert>}
-                    <MonacoCodePreview content={preview.content} fileName={preview.name} searchQuery="" showMinimap={showMinimap} />
+                    <MonacoCodePreview content={preview.content} fileName={preview.name} revealLine={0} revealNonce={0} searchQuery="" showMinimap={showMinimap} />
                 </div>
             ) : (
                 <EmptyState
@@ -668,10 +837,14 @@ function FileWriteEditor({
     originalContent,
     fileName,
     isDirty,
+    revealLine,
+    revealNonce,
     showMinimap,
 }: {
     draft: string;
     fileName: string;
+    revealLine: number;
+    revealNonce: number;
     showMinimap: boolean;
     isApplying: boolean;
     isPreviewing: boolean;
@@ -716,6 +889,8 @@ function FileWriteEditor({
                 fileName={fileName}
                 onChange={onChange}
                 onSave={saveDraftShortcut}
+                revealLine={revealLine}
+                revealNonce={revealNonce}
                 showMinimap={showMinimap}
                 value={draft}
             />

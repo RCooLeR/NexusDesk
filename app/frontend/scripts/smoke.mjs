@@ -152,7 +152,7 @@ const checks = [
     },
     {
         file: 'src/features/shell/WorkbenchPanel.tsx',
-        terms: ['editor-tabs', 'markdownViewMode', 'markdown-view-toggle', 'markdown-document-preview', 'Summarize', 'onSummarizeContext', 'onSelectTab', 'onCloseTab', 'onDeleteFile', 'onMoveFile', 'onPinProjectContext', 'pinnedTabPaths', 'onTogglePinTab', 'editor-breadcrumbs', 'onSelectBreadcrumb', 'showMinimap', 'onToggleMinimap', 'isSplitEditorEnabled', 'onToggleSplitEditor', 'editor-split-layout', 'secondaryPreview', 'SecondaryPreviewPane', 'PrimaryPreviewPane', 'file-write-editor', 'MonacoFileEditor', 'MonacoCodePreview', 'editor-find', 'findInputRef', 'dirty-indicator', 'dirtyTabPaths', 'countFindMatches'],
+        terms: ['editor-tabs', 'markdownViewMode', 'markdown-view-toggle', 'markdown-document-preview', 'Summarize', 'onSummarizeContext', 'onSelectTab', 'onCloseTab', 'onDeleteFile', 'onMoveFile', 'onPinProjectContext', 'pinnedTabPaths', 'onTogglePinTab', 'editor-breadcrumbs', 'onSelectBreadcrumb', 'showMinimap', 'onToggleMinimap', 'isSplitEditorEnabled', 'onToggleSplitEditor', 'editor-split-layout', 'secondaryPreview', 'SecondaryPreviewPane', 'PrimaryPreviewPane', 'OutlinePanel', 'buildOutline', 'outlineTargetLine', 'editor-outline-panel', 'file-write-editor', 'MonacoFileEditor', 'MonacoCodePreview', 'editor-find', 'findInputRef', 'dirty-indicator', 'dirtyTabPaths', 'countFindMatches'],
     },
     {
         file: 'src/features/shell/DataStudioPanel.tsx',
@@ -180,11 +180,11 @@ const checks = [
     },
     {
         file: 'src/features/shell/MonacoFileEditor.tsx',
-        terms: ['MonacoFileEditor', 'loadMonaco', 'languageForFile', 'nexus-light', 'KeyCode.KeyS', 'showMinimap', 'updateOptions'],
+        terms: ['MonacoFileEditor', 'loadMonaco', 'languageForFile', 'nexus-light', 'KeyCode.KeyS', 'showMinimap', 'updateOptions', 'revealLineInCenter'],
     },
     {
         file: 'src/features/shell/MonacoCodePreview.tsx',
-        terms: ['MonacoCodePreview', 'readOnly', 'updateSearchDecorations', 'monaco-find-highlight', 'showMinimap', 'updateOptions'],
+        terms: ['MonacoCodePreview', 'readOnly', 'updateSearchDecorations', 'monaco-find-highlight', 'showMinimap', 'updateOptions', 'revealLineInCenter'],
     },
     {
         file: 'src/features/shell/monacoRuntime.ts',
@@ -315,6 +315,7 @@ const checks = [
             '.editor-icon-toggle',
             '.editor-split-layout',
             '.editor-group',
+            '.editor-outline-panel',
             '.dirty-indicator',
             '.find-highlight',
         ],

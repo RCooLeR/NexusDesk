@@ -162,7 +162,7 @@ Steps:
 - [x] Add split editor groups.
 - [x] Add pinned tabs.
 - [x] Add breadcrumbs.
-- [ ] Add outline/symbol navigation.
+- [x] Add outline/symbol navigation.
 - [x] Add minimap toggle.
 - [ ] Add go-to-definition hook where language services exist.
 - [ ] Add formatting hooks.
@@ -1023,7 +1023,7 @@ Steps:
 9. [x] Detect npm scripts and Go tests into a Tasks panel with read-only listing.
 10. Keep visual smoke focused on no blank screen, no whole-window scroll, Git drawer behavior, route switching, and no slow/external work on folder open.
 
-Reasoning: read-only navigation and diff review are now credible, stage/unstage previews establish the approval boundary without mutating the repository, hunk selection exists as UI state, hunk discard/revert now goes through the approval modal before backend patch application, Workbench has a real search utility panel backed by the existing safe workspace search flow, task/script detection now lists npm scripts plus Go test commands without running external processes, and Phase 2 has first split editor groups with a read-only secondary tab. The current correction path is closing the remaining earliest editor items before going deeper into new studio surfaces.
+Reasoning: read-only navigation and diff review are now credible, stage/unstage previews establish the approval boundary without mutating the repository, hunk selection exists as UI state, hunk discard/revert now goes through the approval modal before backend patch application, Workbench has a real search utility panel backed by the existing safe workspace search flow, task/script detection now lists npm scripts plus Go test commands without running external processes, and Phase 2 has split editor groups plus first outline/symbol navigation for common source and document files. The current correction path is closing the remaining earliest editor items before going deeper into new studio surfaces.
 
 ## Directory Ownership Notes
 
@@ -1065,7 +1065,7 @@ Reasoning: read-only navigation and diff review are now credible, stage/unstage 
 
 Workspace scan counters are diagnostic data, not primary navigation content. Keep them in scan reports/diagnostics instead of the always-visible sidebar header.
 
-`app/frontend/src/features/shell/WorkbenchPanel.tsx` currently owns the editor/preview surface, pinned tabs, breadcrumbs, split editor group presentation, and Monaco minimap control. Git status, working-tree diff output, and roadmap/studio-route metadata should not render above the editor tabs; those surfaces belong to Workbench utility panels, the bottom Git drawer, or documentation.
+`app/frontend/src/features/shell/WorkbenchPanel.tsx` currently owns the editor/preview surface, pinned tabs, breadcrumbs, split editor group presentation, outline/symbol navigation, and Monaco minimap control. Git status, working-tree diff output, and roadmap/studio-route metadata should not render above the editor tabs; those surfaces belong to Workbench utility panels, the bottom Git drawer, or documentation.
 
 `app/frontend/src/features/shell/CodeStudioPanel.tsx` owns the first reusable Workbench utility surface for editor session metrics, open tabs, workspace status, git branch/dirty summary, changed-file list, Workbench search results/actions, read-only detected task listings, and placeholders that will receive problem/review data.
 
