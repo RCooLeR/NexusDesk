@@ -344,15 +344,15 @@ Step 5.1: File dataset coverage
 
 - [x] Add TSV loader.
 - [x] Add richer XLSX workbook inspector for sheets, formulas, named ranges, pivots, and table ranges.
-- [ ] Add legacy binary XLS workbook inspector or explicit conversion/import guidance.
+- [x] Add legacy binary XLS workbook inspector or explicit conversion/import guidance.
 - [x] Add JSON loader.
 - [x] Add NDJSON loader.
 - [ ] Add Parquet inspection.
-- [ ] Add SQLite file dataset cards separate from connector sessions.
+- [x] Add SQLite file dataset cards separate from connector sessions.
 - [ ] Add log dataset profiling.
-- [ ] Add compressed export detection.
-- [ ] Add SQL dump file classification.
-- [ ] Add data source cards for each detected dataset.
+- [x] Add compressed export detection.
+- [x] Add SQL dump file classification.
+- [x] Add data source cards for each detected dataset.
 
 Step 5.2: Database connector framework
 
@@ -1002,29 +1002,29 @@ Exit criteria:
 
 ## Next Logical Batch
 
-Completed batch: XLSX Workbook Metadata.
+Completed batch: Data Source Cards And File Classification.
 
 Steps:
 
-1. [x] Extend persistent XLSX profiles with workbook metadata, not just sheet names.
-2. [x] Extract sheet dimensions, approximate row/column counts, formulas, table ranges, named ranges, and pivot table names from XLSX package XML.
-3. [x] Surface workbook formula/table/named-range/pivot counts in Data & Analytics profile summaries.
-4. [x] Include workbook metadata in agent dataset-profile observations.
-5. [x] Add regression coverage for workbook relationships, sheet dimensions, formulas, named ranges, tables, and pivot metadata.
-6. [x] Split legacy binary XLS parsing into a separate pending item because it needs a different parser/import path.
+1. [x] Add read-only Data Source cards for detected table files, workbooks, SQLite files, dumps, compressed exports, logs, and Parquet files.
+2. [x] Show profile status on cards when a CSV/TSV/JSON/NDJSON/XLSX source already has persisted metadata.
+3. [x] Show SQLite database files as data sources separate from the live read-only connector panel.
+4. [x] Detect compressed exports and SQL/dump/bak database dump files without starting imports.
+5. [x] Add explicit legacy binary XLS guidance: convert to XLSX or CSV before profiling.
+6. [x] Keep source cards bounded to the already-scanned workspace tree so folder open remains cheap and side-effect free.
 
-Recommended next batch: Data Source Cards And File Classification.
+Recommended next batch: Parquet, Logs, And Connector Metadata.
 
 Steps:
 
-1. [ ] Add data source cards for detected CSV, TSV, JSON, NDJSON, XLSX, SQLite, dump, compressed, and log-like files.
-2. [ ] Add SQLite file dataset cards separate from live connector sessions.
-3. [ ] Add compressed export and SQL dump classification.
-4. [ ] Add log dataset profiling.
-5. [ ] Add legacy binary XLS workbook inspector or explicit conversion/import guidance.
-6. [ ] Start the connector metadata interface needed by future database and analytics sources.
+1. [ ] Add Parquet metadata inspection.
+2. [ ] Add log dataset profiling.
+3. [ ] Start the connector metadata interface needed by future database and analytics sources.
+4. [ ] Define connection profiles with secure credential references.
+5. [ ] Expand SQLite schema browsing beyond the first connector query surface.
+6. [ ] Add data source card actions for open, profile, inspect connector, and planned import workflows.
 
-Reasoning: table files and modern Excel workbooks now have useful profile metadata. The next gap is discoverability: Data & Analytics should show source cards and classify databases, dumps, compressed exports, and logs before notebooks or connector-heavy workflows will feel coherent.
+Reasoning: Data & Analytics now has first-pass source discovery without new background work. The next gap is deeper metadata for source types that cannot be represented by the existing table/profile path, especially Parquet, logs, and connector-backed databases.
 
 ## Directory Ownership Notes
 

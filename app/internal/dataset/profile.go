@@ -91,6 +91,8 @@ func Build(root string, relPath string) (Profile, error) {
 		profile.Rows = workbookRows(workbook.Sheets)
 		profile.Columns = workbookColumns(workbook.Sheets)
 		profile.Message = "Excel workbook profile persisted with sheet, formula, named range, table, and pivot metadata."
+	case ".xls":
+		return Profile{}, errors.New("legacy binary XLS profiling is not available yet; convert the workbook to XLSX or CSV before profiling")
 	default:
 		return Profile{}, errors.New("dataset profiles currently support CSV, TSV, JSON, NDJSON, and XLSX files")
 	}

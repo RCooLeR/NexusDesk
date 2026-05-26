@@ -2,7 +2,7 @@ import {useEffect, useState} from 'react';
 import {FontAwesomeIcon} from '@fortawesome/react-fontawesome';
 import {brandAssets, capabilityIconByTitle} from '../../brand/assets';
 import {Button, EmptyState, StatusBadge} from '../../components/ui';
-import type {Capability, DatasetChartResult, DatasetDependency, DatasetProfile, DatasetQueryResult, DatasetSQLQueryResult, FilePreview, MetadataBrowser, MetadataSearchResult, SavedDatasetQuery, SQLRun, SQLiteMetadataStatus, SQLiteQueryResult, WorkspaceFreshnessStatus, WorkspaceSnapshot} from '../../types';
+import type {Capability, DatasetChartResult, DatasetDependency, DatasetProfile, DatasetQueryResult, DatasetSQLQueryResult, FileNode, FilePreview, MetadataBrowser, MetadataSearchResult, SavedDatasetQuery, SQLRun, SQLiteMetadataStatus, SQLiteQueryResult, WorkspaceFreshnessStatus, WorkspaceSnapshot} from '../../types';
 import {DataStudioPanel, SortableDataTable} from './DataStudioPanel';
 import {OperationsInspector} from './OperationsInspector';
 
@@ -162,6 +162,7 @@ export function DataOperationsPanel({
 
     const hasDataStudio = Boolean(activeDatasetProfile || filePreview?.table);
     const canProfileDataset = Boolean(workspace && filePreview?.fileType === 'data');
+    const dataSources = buildDataSourceCards(workspace.nodes, datasetProfiles, filePreview?.relPath ?? '');
 
     return (
         <div className="data-operations-panel">
@@ -173,6 +174,7 @@ export function DataOperationsPanel({
                         {isProfilingDataset ? 'Profiling...' : 'Profile dataset'}
                     </Button>
                 </div>
+                <DataSourceCards sources={dataSources} />
                 {hasDataStudio ? (
                     <DataStudioPanel
                         activeDatasetProfile={activeDatasetProfile}
@@ -279,6 +281,130 @@ export function DataOperationsPanel({
             </div>
         </div>
     );
+}
+
+type DataSourceCard = {
+    relPath: string;
+    name: string;
+    category: string;
+    status: 'profiled' | 'detected' | 'planned' | 'guidance';
+    detail: string;
+    meta: string;
+    active: boolean;
+};
+
+function DataSourceCards({sources}: {sources: DataSourceCard[]}) {
+    if (sources.length === 0) {
+        return (
+            <div className="data-source-panel">
+                <strong>Data Sources</strong>
+                <small>No dataset-like files detected in the bounded workspace tree.</small>
+            </div>
+        );
+    }
+    return (
+        <div className="data-source-panel">
+            <div className="data-source-heading">
+                <strong>Data Sources</strong>
+                <small>{sources.length} detected in the bounded workspace tree.</small>
+            </div>
+            <div className="data-source-grid">
+                {sources.slice(0, 24).map((source) => (
+                    <div className={source.active ? 'data-source-card active' : 'data-source-card'} key={source.relPath}>
+                        <span>{source.category}</span>
+                        <strong title={source.relPath}>{source.name}</strong>
+                        <small>{source.detail}</small>
+                        <StatusBadge tone={source.status === 'profiled' ? 'success' : source.status === 'guidance' ? 'warning' : 'neutral'}>
+                            {source.status}
+                        </StatusBadge>
+                        <small>{source.meta}</small>
+                    </div>
+                ))}
+            </div>
+            {sources.length > 24 && <small>{sources.length - 24} more sources hidden by the card cap.</small>}
+        </div>
+    );
+}
+
+function buildDataSourceCards(nodes: FileNode[], profiles: DatasetProfile[], activeRelPath: string): DataSourceCard[] {
+    const profiled = new Map(profiles.map((profile) => [profile.relPath, profile]));
+    return nodes
+        .filter((node) => node.kind === 'file')
+        .map((node) => dataSourceFromNode(node, profiled.get(node.relPath), activeRelPath))
+        .filter((source): source is DataSourceCard => Boolean(source))
+        .sort(compareDataSources);
+}
+
+function dataSourceFromNode(node: FileNode, profile: DatasetProfile | undefined, activeRelPath: string): DataSourceCard | null {
+    const extension = fileExtension(node.name);
+    const active = node.relPath === activeRelPath;
+    if (['csv', 'tsv', 'json', 'jsonl', 'ndjson'].includes(extension)) {
+        return sourceCard(node, profile, active, 'table file', profile ? `${profile.rows} rows, ${profile.columns} columns` : 'Preview, profile, query, chart, and summarize.');
+    }
+    if (extension === 'xlsx') {
+        const formulaCount = profile?.workbook?.formulaCount ?? 0;
+        const tableCount = profile?.workbook?.tableRanges?.length ?? 0;
+        return sourceCard(node, profile, active, 'workbook', profile ? `${profile.sheets.length} sheets, ${formulaCount} formulas, ${tableCount} tables` : 'Profile sheets, formulas, tables, named ranges, and pivots.');
+    }
+    if (extension === 'xls') {
+        return plannedSourceCard(node, active, 'legacy workbook', 'Convert to XLSX or CSV before profiling.');
+    }
+    if (extension === 'parquet') {
+        return plannedSourceCard(node, active, 'parquet', 'Columnar inspection is planned.');
+    }
+    if (['sqlite', 'sqlite3', 'db'].includes(extension)) {
+        return sourceCard(node, profile, active, 'sqlite file', 'Read-only connector available separately from dataset profiles.');
+    }
+    if (['sql', 'dump', 'bak'].includes(extension)) {
+        return plannedSourceCard(node, active, 'database dump', 'Dump classification detected; sandbox import is planned.');
+    }
+    if (['zip', 'gz', 'tgz', 'tar', 'bz2', 'xz', '7z'].includes(extension)) {
+        return plannedSourceCard(node, active, 'compressed export', 'Archive/export detection only; import workflow is planned.');
+    }
+    if (['log', 'out', 'trace'].includes(extension) || node.name.toLowerCase().includes('log')) {
+        return plannedSourceCard(node, active, 'log file', 'Log profiling is planned.');
+    }
+    return null;
+}
+
+function sourceCard(node: FileNode, profile: DatasetProfile | undefined, active: boolean, category: string, detail: string): DataSourceCard {
+    return {
+        relPath: node.relPath,
+        name: node.name,
+        category,
+        status: profile ? 'profiled' : 'detected',
+        detail,
+        meta: node.meta || node.relPath,
+        active,
+    };
+}
+
+function plannedSourceCard(node: FileNode, active: boolean, category: string, detail: string): DataSourceCard {
+    return {
+        relPath: node.relPath,
+        name: node.name,
+        category,
+        status: category === 'legacy workbook' ? 'guidance' : 'planned',
+        detail,
+        meta: node.meta || node.relPath,
+        active,
+    };
+}
+
+function compareDataSources(left: DataSourceCard, right: DataSourceCard) {
+    if (left.active !== right.active) {
+        return left.active ? -1 : 1;
+    }
+    const statusOrder = {profiled: 0, detected: 1, guidance: 2, planned: 3};
+    if (statusOrder[left.status] !== statusOrder[right.status]) {
+        return statusOrder[left.status] - statusOrder[right.status];
+    }
+    return left.relPath.localeCompare(right.relPath, undefined, {sensitivity: 'base'});
+}
+
+function fileExtension(name: string) {
+    const index = name.lastIndexOf('.');
+    return index >= 0 ? name.slice(index + 1).toLowerCase() : '';
 }
 
 function MetadataStorePanel({status}: {status: SQLiteMetadataStatus}) {

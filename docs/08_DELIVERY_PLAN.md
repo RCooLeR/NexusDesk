@@ -277,6 +277,14 @@ This batch made more of the studio inspectable and auditable without turning on 
 3. Agent dataset-profile observations include workbook metadata counts when profiling Excel files.
 4. Legacy binary XLS parsing is split into its own pending data-import task because it needs a different parser or conversion path.
 
+## Completed Batch: Data Source Cards And Classification
+
+1. Data & Analytics now shows read-only source cards for table files, modern workbooks, SQLite files, dump-like files, compressed exports, log-like files, and Parquet files found in the bounded workspace tree.
+2. Source cards show persisted profile status for already-profiled CSV, TSV, JSON, NDJSON, and XLSX datasets.
+3. SQLite database files appear as source cards separate from the read-only connector query panel.
+4. SQL dumps and compressed exports are classified without starting imports, containers, or extraction jobs.
+5. Legacy `.xls` files now show explicit conversion guidance instead of attempting unsupported binary parsing.
+
 ## Prepared Batch: Architecture Hardening Before Deeper Studios
 
 1. Extract chat/context/agent orchestration into a `useChatController` frontend hook and a backend `ChatService`.

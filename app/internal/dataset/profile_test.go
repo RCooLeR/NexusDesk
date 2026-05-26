@@ -150,6 +150,19 @@ func TestBuildRejectsTraversal(t *testing.T) {
 	}
 }
 
+func TestBuildReturnsLegacyXLSGuidance(t *testing.T) {
+	root := t.TempDir()
+	writeFile(t, root, "data/legacy.xls", "not really xls")
+
+	_, err := Build(root, "data/legacy.xls")
+	if err == nil {
+		t.Fatal("expected legacy xls guidance error")
+	}
+	if got := err.Error(); got != "legacy binary XLS profiling is not available yet; convert the workbook to XLSX or CSV before profiling" {
+		t.Fatalf("unexpected error: %s", got)
+	}
+}
+
 func writeFile(t *testing.T, root string, relPath string, content string) {
 	t.Helper()
 	path := filepath.Join(root, filepath.FromSlash(relPath))
