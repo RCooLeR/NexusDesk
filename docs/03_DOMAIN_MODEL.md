@@ -564,6 +564,7 @@ Current implementation:
 - A real DuckDB `database/sql` execution path registers the selected dataset as a `dataset` view when built with the `duckdb` tag on a CGO-enabled workstation.
 - SQL result exports create Markdown artifacts with SQL text, engine, row counts, preview rows, and source dataset citations.
 - SQL snippets are saved per dataset separately from lightweight row filters.
+- The Data & Analytics frontend has a first local multi-cell SQL notebook shell. Cells are not durable notebooks yet; the active cell still executes through the existing bounded read-only dataset SQL request.
 
 ### Artifact Lineage
 

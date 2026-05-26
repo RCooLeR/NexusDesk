@@ -430,6 +430,7 @@ button:disabled {
 .dataset-query-row input,
 .dataset-filter-row input,
 .dataset-filter-row select,
+.sql-notebook-toolbar input,
 .query-save-row input,
 .dataset-sql-panel textarea {
     min-width: 0;
@@ -460,6 +461,8 @@ button:disabled {
 .workspace-search button,
 .dataset-query-row button,
 .dataset-filter-row button,
+.sql-notebook-tabs button,
+.sql-notebook-toolbar button,
 .query-save-row button {
     border: 1px solid #ccd5e1;
     border-radius: var(--nd-radius-sm);
@@ -1791,6 +1794,53 @@ button:disabled {
 .dataset-query-panel > strong,
 .dataset-sql-panel > strong {
     font-size: 12px;
+}
+
+.sql-notebook {
+    border: 1px solid var(--nd-border-soft);
+    border-radius: var(--nd-radius-sm);
+    display: grid;
+    gap: 8px;
+    min-width: 0;
+    padding: 8px;
+}
+
+.sql-notebook-tabs {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    min-width: 0;
+}
+
+.sql-notebook-tabs button {
+    display: grid;
+    gap: 2px;
+    max-width: 180px;
+    min-width: 96px;
+    padding: 5px 7px;
+    text-align: left;
+}
+
+.sql-notebook-tabs button.active {
+    border-color: var(--nd-sky-blue);
+    box-shadow: inset 3px 0 0 var(--nd-sky-blue);
+}
+
+.sql-notebook-tabs span,
+.sql-notebook-tabs small {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.sql-notebook-tabs small {
+    color: var(--nd-muted-text);
+}
+
+.sql-notebook-toolbar {
+    display: grid;
+    gap: 6px;
+    grid-template-columns: minmax(0, 1fr) auto auto;
 }
 
 .dataset-chart-panel {

@@ -400,7 +400,8 @@ Step 5.3: Schema and relationship explorer
 
 Step 5.4: Query notebook
 
-- [ ] Add multi-cell SQL notebook UI.
+- [x] Add multi-cell SQL notebook UI.
+- [x] Add first dataset SQL notebook shell with multiple local cells, active-cell editing, add/delete cell controls, saved snippet loading, and active-cell execution through the existing bounded SQL runner.
 - [ ] Add result tabs.
 - [ ] Add chart cells.
 - [ ] Add explain-plan display where connector supports it.

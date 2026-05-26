@@ -3225,15 +3225,23 @@ export function NexusShell({
         }
     }
 
-    async function querySelectedDatasetSQL() {
+    async function querySelectedDatasetSQL(sqlOverride?: string) {
         if (!workspace || !filePreview?.table) {
             setWorkspaceStatus('Open a workspace and select a CSV dataset before running SQL.');
             return;
         }
+        const sql = sqlOverride ?? datasetSQLQuery;
+        if (!sql.trim()) {
+            setWorkspaceStatus('Enter a read-only SQL query before running the notebook cell.');
+            return;
+        }
+        if (sql !== datasetSQLQuery) {
+            setDatasetSQLQuery(sql);
+        }
 
         setIsQueryingDatasetSQL(true);
         try {
-            const result = await QueryDatasetSQL({relPath: filePreview.relPath, sql: datasetSQLQuery});
+            const result = await QueryDatasetSQL({relPath: filePreview.relPath, sql});
             setDatasetSQLQueryResult(result);
             setWorkspaceStatus(result.message);
             pushToolEvent('Dataset SQL queried', `${result.engine}: ${result.relPath}`);
@@ -4303,7 +4311,7 @@ export function NexusShell({
                     setCommandPaletteQuery('');
                 }}
                 onQueryDataset={() => void querySelectedDataset()}
-                onQueryDatasetSQL={() => void querySelectedDatasetSQL()}
+                onQueryDatasetSQL={(sql) => void querySelectedDatasetSQL(sql)}
                 onCancelSQLiteConnectorQuery={() => void cancelActiveSQLiteQuery()}
                 onExplainConnectorProfileSchemaObject={(objectName) => void explainConnectorProfileSchemaObject(objectName)}
                 onExplainSQLiteSchemaObject={(objectName) => void explainSQLiteSchemaObject(objectName)}

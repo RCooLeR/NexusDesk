@@ -337,6 +337,7 @@ This batch made more of the studio inspectable and auditable without turning on 
 11. External profile inspections now include capped sample rows for PostgreSQL, MySQL/MariaDB, SQL Server, and DuckDB; DuckDB inspections also return live row counts when the optional `duckdb` build tag is active.
 12. Connector metadata browsing now includes a clickable ERD-like relationship map with table/view nodes, primary-key hints, selected-object highlighting, and FK/inferred link rows.
 13. Connector schema explanation prompts now use the shared inspected metadata shape, so saved external profile objects can be explained from Settings with the same grounded columns, indexes, samples, and relationship hints as workspace SQLite.
+14. Data & Analytics now has a first multi-cell dataset SQL notebook shell: local SQL cells can be added, selected, edited, deleted, loaded from saved snippets, and executed through the existing bounded read-only SQL runner.
 
 ## Completed Batch: Data Source Card Actions
 

@@ -2,6 +2,12 @@ import {useEffect, useMemo, useState} from 'react';
 import {Button} from '../../components/ui';
 import type {ColumnProfile, DatasetChartResult, DatasetDependency, DatasetProfile, DatasetQueryResult, DatasetSQLQueryResult, SavedDatasetQuery, SQLRun, TablePreview} from '../../types';
 
+type SQLNotebookCell = {
+    id: string;
+    label: string;
+    sql: string;
+};
+
 type DataStudioPanelProps = {
     activeDatasetProfile: DatasetProfile | null;
     chartCategory: string;
@@ -29,7 +35,7 @@ type DataStudioPanelProps = {
     onQueryChange: (value: string) => void;
     onSQLChange: (value: string) => void;
     onSQLLabelChange: (value: string) => void;
-    onSQLQuery: () => void;
+    onSQLQuery: (sql?: string) => void;
     onSQLExport: () => void;
     onSQLSave: () => void;
     onQueryLabelChange: (value: string) => void;
@@ -204,7 +210,7 @@ function DatasetQueryPanel({
     onQuery: () => void;
     onSQLChange: (value: string) => void;
     onSQLLabelChange: (value: string) => void;
-    onSQLQuery: () => void;
+    onSQLQuery: (sql?: string) => void;
     onSQLExport: () => void;
     onSQLSave: () => void;
     onSave: () => void;
@@ -217,16 +223,61 @@ function DatasetQueryPanel({
 }) {
     const [filterColumn, setFilterColumn] = useState(columns[0] ?? '');
     const [filterValue, setFilterValue] = useState('');
+    const [sqlCells, setSQLCells] = useState<SQLNotebookCell[]>(() => [newSQLNotebookCell(sqlQuery)]);
+    const [activeSQLCellId, setActiveSQLCellId] = useState(sqlCells[0]?.id ?? '');
+    const activeSQLCell = sqlCells.find((cell) => cell.id === activeSQLCellId) ?? sqlCells[0];
 
     useEffect(() => {
         setFilterColumn((current) => columns.includes(current) ? current : columns[0] ?? '');
     }, [columns]);
+
+    useEffect(() => {
+        setSQLCells((current) => current.map((cell) => cell.id === activeSQLCellId ? {...cell, sql: sqlQuery} : cell));
+    }, [activeSQLCellId, sqlQuery]);
 
     function applyFilter() {
         if (!filterColumn) {
             return;
         }
         onChange(filterValue.trim() ? `${filterColumn}=${filterValue.trim()}` : filterColumn);
+    }
+
+    function addSQLCell() {
+        const nextCell = newSQLNotebookCell('select * from dataset limit 20', sqlCells.length + 1);
+        setSQLCells((current) => [...current, nextCell]);
+        setActiveSQLCellId(nextCell.id);
+        onSQLChange(nextCell.sql);
+    }
+
+    function deleteSQLCell(cellId: string) {
+        if (sqlCells.length <= 1) {
+            return;
+        }
+        const nextCells = sqlCells.filter((cell) => cell.id !== cellId);
+        setSQLCells(nextCells);
+        if (cellId === activeSQLCellId) {
+            const nextCell = nextCells[0];
+            setActiveSQLCellId(nextCell.id);
+            onSQLChange(nextCell.sql);
+        }
+    }
+
+    function selectSQLCell(cell: SQLNotebookCell) {
+        setActiveSQLCellId(cell.id);
+        onSQLChange(cell.sql);
+    }
+
+    function updateActiveSQL(value: string) {
+        setSQLCells((current) => current.map((cell) => cell.id === activeSQLCellId ? {...cell, sql: value} : cell));
+        onSQLChange(value);
+    }
+
+    function applySavedSQL(value: string) {
+        updateActiveSQL(value);
+    }
+
+    function runActiveSQLCell() {
+        onSQLQuery(activeSQLCell?.sql ?? sqlQuery);
     }
 
     return (
@@ -311,15 +362,47 @@ function DatasetQueryPanel({
                 {savedSQLQueries.length > 0 && (
                     <div className="saved-query-list" aria-label="Saved SQL snippets">
                         {savedSQLQueries.map((saved) => (
-                            <button key={`${saved.relPath}-${saved.query}`} onClick={() => onSQLChange(saved.query)} title={saved.query}>
+                            <button key={`${saved.relPath}-${saved.query}`} onClick={() => applySavedSQL(saved.query)} title={saved.query}>
                                 {saved.label}
                             </button>
                         ))}
                     </div>
                 )}
+                <div className="sql-notebook" aria-label="SQL notebook cells">
+                    <div className="sql-notebook-tabs">
+                        {sqlCells.map((cell, index) => (
+                            <button
+                                aria-pressed={cell.id === activeSQLCellId}
+                                className={cell.id === activeSQLCellId ? 'active' : ''}
+                                key={cell.id}
+                                onClick={() => selectSQLCell(cell)}
+                                type="button"
+                            >
+                                <span>{cell.label || `Cell ${index + 1}`}</span>
+                                <small>{cell.sql.trim() ? 'SQL' : 'empty'}</small>
+                            </button>
+                        ))}
+                        <Button onClick={addSQLCell} variant="subtle">Add cell</Button>
+                    </div>
+                    <div className="sql-notebook-toolbar">
+                        <input
+                            aria-label="SQL cell label"
+                            onChange={(event) => {
+                                const value = event.target.value;
+                                setSQLCells((current) => current.map((cell) => cell.id === activeSQLCellId ? {...cell, label: value} : cell));
+                            }}
+                            placeholder="Cell label"
+                            value={activeSQLCell?.label ?? ''}
+                        />
+                        <Button disabled={sqlCells.length <= 1} onClick={() => deleteSQLCell(activeSQLCellId)} variant="subtle">Delete cell</Button>
+                        <Button disabled={isQueryingSQL || !(activeSQLCell?.sql ?? '').trim()} onClick={runActiveSQLCell} variant="subtle">
+                            {isQueryingSQL ? 'Running...' : 'Run cell'}
+                        </Button>
+                    </div>
+                </div>
                 <textarea
                     aria-label="DuckDB-compatible SQL query"
-                    onChange={(event) => onSQLChange(event.target.value)}
+                    onChange={(event) => updateActiveSQL(event.target.value)}
                     placeholder="select * from dataset where spend > 10 order by spend desc limit 20"
                     value={sqlQuery}
                 />
@@ -335,7 +418,7 @@ function DatasetQueryPanel({
                     </Button>
                 </div>
                 <div className="dataset-query-row">
-                    <Button disabled={isQueryingSQL} onClick={onSQLQuery} variant="subtle">
+                    <Button disabled={isQueryingSQL} onClick={() => onSQLQuery()} variant="subtle">
                         {isQueryingSQL ? 'Running...' : 'Run SQL'}
                     </Button>
                     <Button disabled={isExportingSQL || !sqlQuery.trim()} onClick={onSQLExport} variant="subtle">
@@ -387,6 +470,14 @@ function DatasetQueryPanel({
 
 function canRebuildDependency(kind: string) {
     return ['filter-export', 'sql-report', 'chart', 'summary'].includes(kind);
+}
+
+function newSQLNotebookCell(sql = '', index = 1): SQLNotebookCell {
+    return {
+        id: `sql-cell-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+        label: `Cell ${index}`,
+        sql,
+    };
 }
 
 function DatasetChartPanel({
