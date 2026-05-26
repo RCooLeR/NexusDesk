@@ -65,6 +65,7 @@ import {
     SaveDatasetSQLQuery,
     SearchMetadata,
     SearchWorkspace,
+    SearchWorkspaceAdvanced,
     RunAgent,
     SelectWorkspace,
     TestLLMConnection,
@@ -224,6 +225,8 @@ export function NexusShell({
     const [artifactMetadata, setArtifactMetadata] = useState<ArtifactMetadata | null>(null);
     const [approvalRecords, setApprovalRecords] = useState<ApprovalRecord[]>([]);
     const [workspaceSearchQuery, setWorkspaceSearchQuery] = useState('');
+    const [workspaceSearchRegex, setWorkspaceSearchRegex] = useState(false);
+    const [workspaceReplacePreview, setWorkspaceReplacePreview] = useState('');
     const [workspaceSearchResults, setWorkspaceSearchResults] = useState<WorkspaceSearchResult[]>([]);
     const [isSearchingWorkspace, setIsSearchingWorkspace] = useState(false);
     const [workspaceTasks, setWorkspaceTasks] = useState<WorkspaceTaskSummary | null>(null);
@@ -1758,10 +1761,12 @@ export function NexusShell({
         setIsSearchingWorkspace(true);
         setWorkspaceStatus(`Searching ${workspace.name}...`);
         try {
-            const results = await SearchWorkspace(query);
+            const results = workspaceSearchRegex
+                ? await SearchWorkspaceAdvanced({query, regex: true})
+                : await SearchWorkspace(query);
             setWorkspaceSearchResults(results);
-            setWorkspaceStatus(`${results.length} workspace matches for "${query}".`);
-            pushToolEvent('Workspace search', `${results.length} matches for ${query}`);
+            setWorkspaceStatus(`${results.length} ${workspaceSearchRegex ? 'regex ' : ''}workspace matches for "${query}".`);
+            pushToolEvent('Workspace search', `${results.length} ${workspaceSearchRegex ? 'regex ' : ''}matches for ${query}`);
         } catch (error) {
             const message = error instanceof Error ? error.message : '';
             setWorkspaceStatus(message || 'Workspace search failed.');
@@ -3594,6 +3599,7 @@ export function NexusShell({
                 onSummarizeGitDiff={() => void summarizeGitDiff()}
                 onTabChange={changeBottomStudioTab}
                 onTestConnection={() => void testLLMConnection()}
+                onReplacePreviewChange={setWorkspaceReplacePreview}
                 probeResult={probeResult}
                 openTabs={openTabs}
                 rebuildingDatasetDependencyId={rebuildingDatasetDependencyId}
@@ -3609,8 +3615,11 @@ export function NexusShell({
                 workspace={workspace}
                 workspaceFreshness={workspaceFreshness}
                 workspaceSearchQuery={workspaceSearchQuery}
+                workspaceSearchRegex={workspaceSearchRegex}
                 workspaceSearchResults={workspaceSearchResults}
+                workspaceReplacePreview={workspaceReplacePreview}
                 workspaceTasks={workspaceTasks}
+                onWorkspaceSearchRegexChange={setWorkspaceSearchRegex}
                 onWorkspaceSearchQueryChange={setWorkspaceSearchQuery}
             />
         );

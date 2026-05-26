@@ -29,6 +29,30 @@ func TestSearchSkipsIgnoredFolders(t *testing.T) {
 	}
 }
 
+func TestSearchSupportsRegex(t *testing.T) {
+	root := t.TempDir()
+	writeFile(t, root, "src/search_panel.tsx", "const panel = 'SearchPanel';\n")
+	writeFile(t, root, "docs/search-panel.md", "plain docs")
+
+	results, err := Search(root, "search[-_]?panel", SearchOptions{Regex: true})
+	if err != nil {
+		t.Fatalf("Search returned error: %v", err)
+	}
+
+	assertSearchContains(t, results, "src/search_panel.tsx", "path-regex")
+	assertSearchContains(t, results, "src/search_panel.tsx", "content-regex")
+	assertSearchContains(t, results, "docs/search-panel.md", "path-regex")
+}
+
+func TestSearchRejectsInvalidRegex(t *testing.T) {
+	root := t.TempDir()
+	writeFile(t, root, "src/main.go", "package main\n")
+
+	if _, err := Search(root, "[", SearchOptions{Regex: true}); err == nil {
+		t.Fatal("expected invalid regex to return an error")
+	}
+}
+
 func assertSearchContains(t *testing.T, results []SearchResult, relPath string, matchType string) {
 	t.Helper()
 

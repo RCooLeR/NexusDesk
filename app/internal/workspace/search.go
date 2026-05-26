@@ -3,6 +3,7 @@ package workspace
 import (
 	"io/fs"
 	"path/filepath"
+	"regexp"
 	"sort"
 	"strings"
 )
@@ -14,6 +15,7 @@ const (
 
 type SearchOptions struct {
 	MaxResults int
+	Regex      bool
 }
 
 type SearchResult struct {
@@ -43,7 +45,11 @@ func Search(root string, query string, options SearchOptions) ([]SearchResult, e
 	}
 
 	results := []SearchResult{}
-	lowerQuery := strings.ToLower(query)
+	matcher, err := newSearchMatcher(query, options.Regex)
+	if err != nil {
+		return nil, err
+	}
+
 	err = filepath.WalkDir(absRoot, func(path string, entry fs.DirEntry, walkErr error) error {
 		if walkErr != nil || path == absRoot {
 			return nil
@@ -75,19 +81,19 @@ func Search(root string, query string, options SearchOptions) ([]SearchResult, e
 			node.Kind = "directory"
 		}
 
-		if strings.Contains(strings.ToLower(relPath), lowerQuery) {
+		if matcher.matches(relPath) {
 			results = append(results, SearchResult{
 				RelPath:   relPath,
 				Name:      entry.Name(),
 				Kind:      node.Kind,
 				FileType:  node.FileType,
-				MatchType: "path",
+				MatchType: matcher.matchType("path"),
 				Snippet:   relPath,
 			})
 		}
 
 		if !entry.IsDir() && len(results) < maxResults {
-			results = append(results, searchFileContent(absRoot, relPath, lowerQuery)...)
+			results = append(results, searchFileContent(absRoot, relPath, matcher)...)
 		}
 
 		if len(results) >= maxResults {
@@ -114,7 +120,38 @@ func Search(root string, query string, options SearchOptions) ([]SearchResult, e
 	return results, nil
 }
 
-func searchFileContent(root string, relPath string, lowerQuery string) []SearchResult {
+type searchMatcher struct {
+	lowerQuery string
+	pattern    *regexp.Regexp
+	regex      bool
+}
+
+func newSearchMatcher(query string, regexMode bool) (searchMatcher, error) {
+	if !regexMode {
+		return searchMatcher{lowerQuery: strings.ToLower(query)}, nil
+	}
+	pattern, err := regexp.Compile("(?i)" + query)
+	if err != nil {
+		return searchMatcher{}, err
+	}
+	return searchMatcher{pattern: pattern, regex: true}, nil
+}
+
+func (m searchMatcher) matches(value string) bool {
+	if m.regex {
+		return m.pattern.MatchString(value)
+	}
+	return strings.Contains(strings.ToLower(value), m.lowerQuery)
+}
+
+func (m searchMatcher) matchType(base string) string {
+	if m.regex {
+		return base + "-regex"
+	}
+	return base
+}
+
+func searchFileContent(root string, relPath string, matcher searchMatcher) []SearchResult {
 	preview, err := Preview(root, relPath, PreviewOptions{MaxBytes: searchPreviewMaxBytes})
 	if err != nil {
 		return nil
@@ -130,7 +167,7 @@ func searchFileContent(root string, relPath string, lowerQuery string) []SearchR
 
 	lines := strings.Split(content, "\n")
 	for index, line := range lines {
-		if !strings.Contains(strings.ToLower(line), lowerQuery) {
+		if !matcher.matches(line) {
 			continue
 		}
 		return []SearchResult{{
@@ -138,7 +175,7 @@ func searchFileContent(root string, relPath string, lowerQuery string) []SearchR
 			Name:      preview.Name,
 			Kind:      preview.Kind,
 			FileType:  preview.FileType,
-			MatchType: "content",
+			MatchType: matcher.matchType("content"),
 			Line:      index + 1,
 			Snippet:   trimSearchSnippet(line),
 		}}

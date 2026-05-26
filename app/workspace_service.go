@@ -75,12 +75,20 @@ func (s *WorkspaceService) Refresh() (WorkspaceOpenResult, error) {
 }
 
 func (s *WorkspaceService) Search(query string) ([]workspace.SearchResult, error) {
+	return s.search(query, workspace.SearchOptions{MaxResults: 70})
+}
+
+func (s *WorkspaceService) SearchAdvanced(request WorkspaceSearchRequest) ([]workspace.SearchResult, error) {
+	return s.search(request.Query, workspace.SearchOptions{MaxResults: 70, Regex: request.Regex})
+}
+
+func (s *WorkspaceService) search(query string, options workspace.SearchOptions) ([]workspace.SearchResult, error) {
 	root := s.Root()
 	if root == "" {
 		return []workspace.SearchResult{}, errors.New("open a workspace before searching")
 	}
 
-	results, err := workspace.Search(root, query, workspace.SearchOptions{MaxResults: 70})
+	results, err := workspace.Search(root, query, options)
 	if err != nil {
 		return nil, err
 	}

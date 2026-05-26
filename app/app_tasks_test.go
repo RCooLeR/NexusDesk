@@ -16,6 +16,7 @@ func TestDiscoverWorkspaceTasksListsNpmScriptsAndGoTests(t *testing.T) {
 	}`)
 	mustWrite(t, filepath.Join(root, "app", "go.mod"), "module fixture\n\ngo 1.24\n")
 	mustWrite(t, filepath.Join(root, "app", "internal", "widget", "widget_test.go"), "package widget\n")
+	mustWrite(t, filepath.Join(root, "services", "docker-compose.yml"), "services:\n  web:\n    image: nginx\n")
 
 	summary, err := discoverWorkspaceTasks(root)
 	if err != nil {
@@ -26,6 +27,7 @@ func TestDiscoverWorkspaceTasksListsNpmScriptsAndGoTests(t *testing.T) {
 	assertTask(t, summary.Tasks, "npm-script", "npm run smoke", "app/frontend", "app/frontend/package.json")
 	assertTask(t, summary.Tasks, "go-test", "go test ./...", "app", "app/go.mod")
 	assertTask(t, summary.Tasks, "go-test", "go test ./internal/widget", "app", "app/go.mod")
+	assertTask(t, summary.Tasks, "compose", "docker compose config", "services", "services/docker-compose.yml")
 	if summary.Message == "" || summary.GeneratedAt == "" {
 		t.Fatalf("expected message and timestamp, got %#v", summary)
 	}

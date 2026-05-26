@@ -298,6 +298,10 @@ export function SearchWorkspace(arg1) {
   return window['go']['main']['App']['SearchWorkspace'](arg1);
 }
 
+export function SearchWorkspaceAdvanced(arg1) {
+  return window['go']['main']['App']['SearchWorkspaceAdvanced'](arg1);
+}
+
 export function SelectWorkspace() {
   return window['go']['main']['App']['SelectWorkspace']();
 }

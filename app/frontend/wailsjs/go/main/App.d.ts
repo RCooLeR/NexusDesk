@@ -161,6 +161,8 @@ export function SearchMetadata(arg1:string):Promise<Array<appmeta.MetadataSearch
 
 export function SearchWorkspace(arg1:string):Promise<Array<workspace.SearchResult>>;
 
+export function SearchWorkspaceAdvanced(arg1:main.WorkspaceSearchRequest):Promise<Array<workspace.SearchResult>>;
+
 export function SelectWorkspace():Promise<main.WorkspaceOpenResult>;
 
 export function TestLLMConnection(arg1:storage.LLMSettings):Promise<llm.ProbeResult>;

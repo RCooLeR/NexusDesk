@@ -14,16 +14,20 @@ type CodeStudioPanelProps = {
     openTabs: FilePreview[];
     onClearWorkspaceSearch: () => void;
     onOpenCommandPalette: () => void;
+    onReplacePreviewChange: (value: string) => void;
     onRefreshGitStatus: () => void;
     onRefreshWorkspaceTasks: () => void;
     onSearchWorkspace: () => void;
     onSelectGitChange: (path: string) => void;
     onSelectSearchResult: (result: WorkspaceSearchResult) => void;
     onWorkspaceSearchQueryChange: (value: string) => void;
+    onWorkspaceSearchRegexChange: (value: boolean) => void;
     workspace: WorkspaceSnapshot | null;
     workspaceFreshness: WorkspaceFreshnessStatus | null;
     workspaceSearchQuery: string;
+    workspaceSearchRegex: boolean;
     workspaceSearchResults: WorkspaceSearchResult[];
+    workspaceReplacePreview: string;
     workspaceTasks: WorkspaceTaskSummary | null;
 };
 
@@ -40,16 +44,20 @@ export function CodeStudioPanel({
     openTabs,
     onClearWorkspaceSearch,
     onOpenCommandPalette,
+    onReplacePreviewChange,
     onRefreshGitStatus,
     onRefreshWorkspaceTasks,
     onSearchWorkspace,
     onSelectGitChange,
     onSelectSearchResult,
     onWorkspaceSearchQueryChange,
+    onWorkspaceSearchRegexChange,
     workspace,
     workspaceFreshness,
     workspaceSearchQuery,
+    workspaceSearchRegex,
     workspaceSearchResults,
+    workspaceReplacePreview,
     workspaceTasks,
 }: CodeStudioPanelProps) {
     const nodes = workspace?.nodes ?? [];
@@ -146,7 +154,7 @@ export function CodeStudioPanel({
             <section className="code-studio-column">
                 <div className="bottom-section-heading">
                     <strong>Search</strong>
-                    <small>{workspaceSearchResults.length > 0 ? `${workspaceSearchResults.length} matches` : 'Path and previewable text search'}</small>
+                    <small>{workspaceSearchResults.length > 0 ? `${workspaceSearchResults.length} matches` : 'Path, text, regex, and replace preview'}</small>
                 </div>
                 <div className="code-studio-search-panel">
                     <div className="code-studio-search-controls">
@@ -159,7 +167,7 @@ export function CodeStudioPanel({
                                     onSearchWorkspace();
                                 }
                             }}
-                            placeholder="Search files, artifacts, chat"
+                            placeholder={workspaceSearchRegex ? 'Regex search files, artifacts, chat' : 'Search files, artifacts, chat'}
                             value={workspaceSearchQuery}
                         />
                         <Button disabled={!workspace || isSearchingWorkspace || !workspaceSearchQuery.trim()} onClick={onSearchWorkspace} variant="subtle">
@@ -167,12 +175,26 @@ export function CodeStudioPanel({
                         </Button>
                         <Button disabled={workspaceSearchResults.length === 0} onClick={onClearWorkspaceSearch} variant="subtle">Clear</Button>
                     </div>
+                    <div className="code-studio-search-options">
+                        <label>
+                            <input checked={workspaceSearchRegex} disabled={!workspace} onChange={(event) => onWorkspaceSearchRegexChange(event.target.checked)} type="checkbox" />
+                            Regex
+                        </label>
+                        <input
+                            aria-label="Replace preview text"
+                            disabled={!workspace || workspaceSearchResults.length === 0}
+                            onChange={(event) => onReplacePreviewChange(event.target.value)}
+                            placeholder="Replace preview"
+                            value={workspaceReplacePreview}
+                        />
+                    </div>
                     <div className="code-studio-list" aria-label="Workbench search results">
                         {workspaceSearchResults.length > 0 ? workspaceSearchResults.slice(0, 12).map((result, index) => (
                             <button className="code-studio-search-result" key={`${result.relPath}-${result.matchType}-${index}`} onClick={() => onSelectSearchResult(result)} type="button">
                                 <span>{result.matchType || result.fileType || result.kind}</span>
                                 <strong title={result.relPath}>{result.relPath || result.name}</strong>
                                 <small>{result.line > 0 ? `line ${result.line} / ` : ''}{result.snippet || result.name}</small>
+                                {workspaceReplacePreview && <em>{replacePreviewText(result.snippet || result.relPath || result.name, workspaceSearchQuery, workspaceReplacePreview, workspaceSearchRegex)}</em>}
                             </button>
                         )) : (
                             <div className="code-studio-empty">{workspace ? 'Run a search to populate this panel.' : 'Open a workspace to search.'}</div>
@@ -187,7 +209,7 @@ export function CodeStudioPanel({
                         <div className="code-studio-task-header">
                             <div>
                                 <strong>Tasks</strong>
-                                <small>{workspaceTasks?.message ?? 'Package scripts and Go tests'}</small>
+                                <small>{workspaceTasks?.message ?? 'Package scripts, Go tests, and Compose files'}</small>
                             </div>
                             <Button disabled={!workspace || isLoadingWorkspaceTasks} onClick={onRefreshWorkspaceTasks} variant="subtle">
                                 {isLoadingWorkspaceTasks ? 'Scanning...' : 'Refresh tasks'}
@@ -201,7 +223,7 @@ export function CodeStudioPanel({
                                     <small title={`${task.cwd} / ${task.source}`}>{task.cwd} / {task.source}</small>
                                 </div>
                             )) : (
-                                <div className="code-studio-empty">{workspace ? 'Refresh tasks to scan package scripts and Go tests.' : 'Open a workspace to detect tasks.'}</div>
+                                <div className="code-studio-empty">{workspace ? 'Refresh tasks to scan package scripts, Go tests, and Compose files.' : 'Open a workspace to detect tasks.'}</div>
                             )}
                         </div>
                     </div>
@@ -260,6 +282,24 @@ function QueueCard({label, value}: {label: string; value: string}) {
             <strong>{value}</strong>
         </div>
     );
+}
+
+function replacePreviewText(value: string, query: string, replacement: string, regex: boolean) {
+    if (!query.trim()) {
+        return value;
+    }
+    try {
+        if (regex) {
+            return value.replace(new RegExp(query, 'gi'), replacement);
+        }
+        return value.replace(new RegExp(escapeRegExp(query), 'gi'), replacement);
+    } catch {
+        return 'Invalid replace preview pattern';
+    }
+}
+
+function escapeRegExp(value: string) {
+    return value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 }
 
 function gitCode(index: string, worktree: string) {

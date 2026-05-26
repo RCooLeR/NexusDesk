@@ -47,6 +47,7 @@ func discoverWorkspaceTasks(root string) (WorkspaceTaskSummary, error) {
 	packageFiles := []string{}
 	goModules := []string{}
 	goTestFilesByModule := map[string]map[string]bool{}
+	composeFiles := []string{}
 	visited := 0
 
 	err = filepath.WalkDir(root, func(path string, entry os.DirEntry, walkErr error) error {
@@ -78,6 +79,9 @@ func discoverWorkspaceTasks(root string) (WorkspaceTaskSummary, error) {
 		case "go.mod":
 			goModules = append(goModules, path)
 		default:
+			if isComposeTaskFile(entry.Name()) {
+				composeFiles = append(composeFiles, path)
+			}
 			if strings.HasSuffix(entry.Name(), "_test.go") {
 				moduleRoot := nearestGoModuleRoot(root, filepath.Dir(path))
 				if moduleRoot != "" {
@@ -136,6 +140,22 @@ func discoverWorkspaceTasks(root string) (WorkspaceTaskSummary, error) {
 			})
 		}
 	}
+	sort.Strings(composeFiles)
+	for _, composeFile := range composeFiles {
+		if len(tasks) >= workspaceTaskMaxTasks {
+			break
+		}
+		cwd := relDir(root, filepath.Dir(composeFile))
+		source := relFile(root, composeFile)
+		tasks = append(tasks, WorkspaceTask{
+			ID:      taskID("compose", cwd, source),
+			Kind:    "compose",
+			Label:   "docker compose config",
+			Command: "docker compose -f " + quoteTaskPath(filepath.Base(composeFile)) + " config",
+			Cwd:     cwd,
+			Source:  source,
+		})
+	}
 
 	sort.SliceStable(tasks, func(i, j int) bool {
 		if tasks[i].Cwd == tasks[j].Cwd {
@@ -146,15 +166,30 @@ func discoverWorkspaceTasks(root string) (WorkspaceTaskSummary, error) {
 	if len(tasks) > workspaceTaskMaxTasks {
 		tasks = tasks[:workspaceTaskMaxTasks]
 	}
-	message := fmt.Sprintf("%d tasks detected from package scripts and Go tests.", len(tasks))
+	message := fmt.Sprintf("%d tasks detected from package scripts, Go tests, and Compose files.", len(tasks))
 	if len(tasks) == 0 {
-		message = "No package scripts or Go tests detected."
+		message = "No package scripts, Go tests, or Compose files detected."
 	}
 	return WorkspaceTaskSummary{
 		Tasks:       tasks,
 		Message:     message,
 		GeneratedAt: time.Now().Format(time.RFC3339),
 	}, nil
+}
+
+func isComposeTaskFile(name string) bool {
+	lower := strings.ToLower(name)
+	return lower == "compose.yml" ||
+		lower == "compose.yaml" ||
+		lower == "docker-compose.yml" ||
+		lower == "docker-compose.yaml"
+}
+
+func quoteTaskPath(path string) string {
+	if strings.ContainsAny(path, " \t\"") {
+		return `"` + strings.ReplaceAll(path, `"`, `\"`) + `"`
+	}
+	return path
 }
 
 func npmScriptTasks(root string, packageFile string) []WorkspaceTask {

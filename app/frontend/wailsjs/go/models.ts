@@ -1358,6 +1358,20 @@ export namespace main {
 		    return a;
 		}
 	}
+	export class WorkspaceSearchRequest {
+	    query: string;
+	    regex: boolean;
+
+	    static createFrom(source: any = {}) {
+	        return new WorkspaceSearchRequest(source);
+	    }
+
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.query = source["query"];
+	        this.regex = source["regex"];
+	    }
+	}
 	export class WorkspaceTask {
 	    id: string;
 	    kind: string;

@@ -284,16 +284,16 @@ Step 4.3: Git integration
 
 Step 4.4: Search, problems, and tasks
 
-- [ ] Add path search panel.
-- [ ] Add text search panel.
-- [ ] Add regex search.
-- [ ] Add replace preview.
+- [x] Add path search panel.
+- [x] Add text search panel.
+- [x] Add regex search.
+- [x] Add replace preview.
 - [ ] Add symbol search where language data exists.
 - [ ] Add diagnostics/problems panel.
 - [x] Detect package scripts.
 - [x] Detect Go tests.
 - [x] Detect npm scripts.
-- [ ] Detect Docker Compose tasks.
+- [x] Detect Docker Compose tasks.
 - [ ] Run tasks with captured output.
 - [ ] Save task/test runs as artifacts or metadata.
 
@@ -1023,7 +1023,7 @@ Steps:
 9. [x] Detect npm scripts and Go tests into a Tasks panel with read-only listing.
 10. Keep visual smoke focused on no blank screen, no whole-window scroll, Git drawer behavior, route switching, and no slow/external work on folder open.
 
-Reasoning: read-only navigation and diff review are now credible, file and hunk stage/unstage go through preview plus approval-backed apply paths, hunk selection exists as UI state, hunk discard/revert now goes through the approval modal before backend patch application, Workbench has a real search utility panel backed by the existing safe workspace search flow, task/script detection now lists npm scripts plus Go test commands without running external processes, and Phase 2 now has split editor groups, outline navigation, Monaco go-to-definition dispatch, safe draft formatting, and encoding-aware save. The next correction path can move to Phase 4 search/problems depth or Phase 15 architecture hardening.
+Reasoning: read-only navigation and diff review are now credible, file and hunk stage/unstage go through preview plus approval-backed apply paths, hunk selection exists as UI state, hunk discard/revert now goes through the approval modal before backend patch application, Workbench has path/text/regex search plus non-mutating replace previews backed by the existing safe workspace search flow, task/script detection now lists npm scripts, Go test commands, and Docker Compose config-check tasks without running external processes, and Phase 2 now has split editor groups, outline navigation, Monaco go-to-definition dispatch, safe draft formatting, and encoding-aware save. The next correction path can move to Phase 4 diagnostics/problems and task-runner depth or Phase 15 architecture hardening.
 
 ## Directory Ownership Notes
 

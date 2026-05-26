@@ -129,6 +129,7 @@ type BottomStudioPanelProps = {
     onSummarizeGitDiff: () => void;
     onTabChange: (tab: BottomStudioTab) => void;
     onTestConnection: () => void;
+    onReplacePreviewChange: (value: string) => void;
     probeResult: LLMProbeResult | null;
     openTabs: FilePreview[];
     rebuildingDatasetDependencyId: string;
@@ -143,8 +144,11 @@ type BottomStudioPanelProps = {
     workspace: WorkspaceSnapshot | null;
     workspaceFreshness: WorkspaceFreshnessStatus | null;
     workspaceSearchQuery: string;
+    workspaceSearchRegex: boolean;
     workspaceSearchResults: WorkspaceSearchResult[];
+    workspaceReplacePreview: string;
     workspaceTasks: WorkspaceTaskSummary | null;
+    onWorkspaceSearchRegexChange: (value: boolean) => void;
     onWorkspaceSearchQueryChange: (value: string) => void;
     className?: string;
     showTabs?: boolean;
@@ -275,6 +279,7 @@ export function BottomStudioPanel({
     onSummarizeGitDiff,
     onTabChange,
     onTestConnection,
+    onReplacePreviewChange,
     probeResult,
     openTabs,
     rebuildingDatasetDependencyId,
@@ -289,8 +294,11 @@ export function BottomStudioPanel({
     workspace,
     workspaceFreshness,
     workspaceSearchQuery,
+    workspaceSearchRegex,
     workspaceSearchResults,
+    workspaceReplacePreview,
     workspaceTasks,
+    onWorkspaceSearchRegexChange,
     onWorkspaceSearchQueryChange,
     className = '',
     showTabs = true,
@@ -332,11 +340,15 @@ export function BottomStudioPanel({
                         onSearchWorkspace={onSearchWorkspace}
                         onSelectGitChange={onSelectGitChange}
                         onSelectSearchResult={onSelectSearchResult}
+                        onReplacePreviewChange={onReplacePreviewChange}
+                        onWorkspaceSearchRegexChange={onWorkspaceSearchRegexChange}
                         onWorkspaceSearchQueryChange={onWorkspaceSearchQueryChange}
                         workspace={workspace}
                         workspaceFreshness={workspaceFreshness}
                         workspaceSearchQuery={workspaceSearchQuery}
+                        workspaceSearchRegex={workspaceSearchRegex}
                         workspaceSearchResults={workspaceSearchResults}
+                        workspaceReplacePreview={workspaceReplacePreview}
                         workspaceTasks={workspaceTasks}
                     />
                 )}

@@ -458,6 +458,11 @@ export type WorkspaceSearchResult = {
     snippet: string;
 };
 
+export type WorkspaceSearchRequest = {
+    query: string;
+    regex: boolean;
+};
+
 export type WorkspaceTask = {
     id: string;
     kind: string;
