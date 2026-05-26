@@ -84,6 +84,22 @@ func TestGitFileActionCommand(t *testing.T) {
 }
 
 func TestGitHunkActionCommand(t *testing.T) {
+	stage, err := gitHunkActionCommand(gitHunkActionStage, gitDiffKindUnstaged)
+	if err != nil {
+		t.Fatalf("unexpected stage error: %v", err)
+	}
+	if got := strings.Join(stage, " "); got != "git apply --cached --whitespace=nowarn" {
+		t.Fatalf("unexpected stage command: %q", got)
+	}
+
+	unstage, err := gitHunkActionCommand(gitHunkActionUnstage, gitDiffKindStaged)
+	if err != nil {
+		t.Fatalf("unexpected unstage error: %v", err)
+	}
+	if got := strings.Join(unstage, " "); got != "git apply --cached --reverse --whitespace=nowarn" {
+		t.Fatalf("unexpected unstage command: %q", got)
+	}
+
 	discard, err := gitHunkActionCommand(gitHunkActionDiscard, gitDiffKindUnstaged)
 	if err != nil {
 		t.Fatalf("unexpected discard error: %v", err)
@@ -102,6 +118,43 @@ func TestGitHunkActionCommand(t *testing.T) {
 
 	if _, err := gitHunkActionCommand(gitHunkActionDiscard, gitDiffKindStaged); err == nil {
 		t.Fatal("expected invalid hunk action/kind pair to fail")
+	}
+}
+
+func TestApplyFileActionStagesFile(t *testing.T) {
+	if _, err := exec.LookPath("git"); err != nil {
+		t.Skip("git is not available")
+	}
+	root := t.TempDir()
+	runTestGit(t, root, "init")
+	runTestGit(t, root, "config", "user.email", "test@example.com")
+	runTestGit(t, root, "config", "user.name", "Test User")
+	if err := os.WriteFile(filepath.Join(root, "notes.txt"), []byte("initial\n"), 0o644); err != nil {
+		t.Fatalf("write initial file: %v", err)
+	}
+	runTestGit(t, root, "add", "notes.txt")
+	runTestGit(t, root, "commit", "-m", "initial")
+	if err := os.WriteFile(filepath.Join(root, "notes.txt"), []byte("changed\n"), 0o644); err != nil {
+		t.Fatalf("write changed file: %v", err)
+	}
+
+	service := GitService{workspaceRoot: func() string { return root }}
+	preview, err := service.ApplyFileAction(GitFileActionRequest{
+		Path:   "notes.txt",
+		Action: gitFileActionStage,
+	})
+	if err != nil {
+		t.Fatalf("ApplyFileAction returned error: %v", err)
+	}
+	if preview.Status.Available != true {
+		t.Fatalf("expected status in file action result: %#v", preview)
+	}
+	if preview.Message != "Applied stage for notes.txt." {
+		t.Fatalf("unexpected message: %q", preview.Message)
+	}
+	status := runTestGitOutput(t, root, "status", "--porcelain=v1", "--", "notes.txt")
+	if !strings.HasPrefix(status, "M ") {
+		t.Fatalf("expected file to be staged, got %q", status)
 	}
 }
 
@@ -187,6 +240,54 @@ func TestApplyHunkActionDiscardsUnstagedHunk(t *testing.T) {
 	}
 }
 
+func TestApplyHunkActionStagesUnstagedHunk(t *testing.T) {
+	if _, err := exec.LookPath("git"); err != nil {
+		t.Skip("git is not available")
+	}
+	root := t.TempDir()
+	runTestGit(t, root, "init")
+	runTestGit(t, root, "config", "user.email", "test@example.com")
+	runTestGit(t, root, "config", "user.name", "Test User")
+	initial := []string{}
+	for index := 1; index <= 30; index++ {
+		initial = append(initial, "line "+strconv.Itoa(index))
+	}
+	path := filepath.Join(root, "notes.txt")
+	if err := os.WriteFile(path, []byte(strings.Join(initial, "\n")+"\n"), 0o644); err != nil {
+		t.Fatalf("write initial file: %v", err)
+	}
+	runTestGit(t, root, "add", "notes.txt")
+	runTestGit(t, root, "commit", "-m", "initial")
+
+	modified := append([]string{}, initial...)
+	modified[1] = "changed 2"
+	modified[24] = "changed 25"
+	if err := os.WriteFile(path, []byte(strings.Join(modified, "\n")+"\n"), 0o644); err != nil {
+		t.Fatalf("write modified file: %v", err)
+	}
+
+	service := GitService{workspaceRoot: func() string { return root }}
+	preview, err := service.ApplyHunkAction(GitHunkActionRequest{
+		Path:      "notes.txt",
+		Action:    gitHunkActionStage,
+		DiffKind:  gitDiffKindUnstaged,
+		HunkIndex: 1,
+	})
+	if err != nil {
+		t.Fatalf("ApplyHunkAction returned error: %v", err)
+	}
+	if preview.Status.Available != true {
+		t.Fatalf("expected status in hunk action result: %#v", preview)
+	}
+	staged := runTestGitOutput(t, root, "diff", "--cached", "--", "notes.txt")
+	if !strings.Contains(staged, "changed 2") {
+		t.Fatalf("expected first hunk to be staged: %q", staged)
+	}
+	if strings.Contains(staged, "changed 25") {
+		t.Fatalf("expected second hunk to remain unstaged: %q", staged)
+	}
+}
+
 func runTestGit(t *testing.T, root string, args ...string) {
 	t.Helper()
 	command := exec.Command("git", append([]string{"-C", root}, args...)...)
@@ -194,4 +295,14 @@ func runTestGit(t *testing.T, root string, args ...string) {
 	if err != nil {
 		t.Fatalf("git %s failed: %v\n%s", strings.Join(args, " "), err, string(output))
 	}
+}
+
+func runTestGitOutput(t *testing.T, root string, args ...string) string {
+	t.Helper()
+	command := exec.Command("git", append([]string{"-C", root}, args...)...)
+	output, err := command.CombinedOutput()
+	if err != nil {
+		t.Fatalf("git %s failed: %v\n%s", strings.Join(args, " "), err, string(output))
+	}
+	return string(output)
 }

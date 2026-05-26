@@ -51,6 +51,7 @@ type BottomStudioPanelProps = {
     isExportingDatasetQuery: boolean;
     isExportingDatasetSQL: boolean;
     isGeneratingGitInsight: boolean;
+    isApplyingGitFileAction: boolean;
     isApplyingGitHunkAction: boolean;
     isLoadingGitFileDiff: boolean;
     isLoadingWorkspaceTasks: boolean;
@@ -102,6 +103,7 @@ type BottomStudioPanelProps = {
     onProfileDataset: () => void;
     onPreviewDatasetChart: () => void;
     onPreviewGitFileAction: (action: GitFileAction) => void;
+    onApplyGitFileAction: (action: GitFileAction) => void;
     onPreviewGitHunkAction: (request: GitHunkActionRequest) => void;
     onApplyGitHunkAction: (request: GitHunkActionRequest) => void;
     onOpenCommandPalette: () => void;
@@ -195,6 +197,7 @@ export function BottomStudioPanel({
     isExportingDatasetQuery,
     isExportingDatasetSQL,
     isGeneratingGitInsight,
+    isApplyingGitFileAction,
     isApplyingGitHunkAction,
     isLoadingGitFileDiff,
     isLoadingWorkspaceTasks,
@@ -246,6 +249,7 @@ export function BottomStudioPanel({
     onProfileDataset,
     onPreviewDatasetChart,
     onPreviewGitFileAction,
+    onApplyGitFileAction,
     onPreviewGitHunkAction,
     onApplyGitHunkAction,
     onOpenCommandPalette,
@@ -464,12 +468,14 @@ export function BottomStudioPanel({
                         selectedGitChangePath={selectedGitChangePath}
                         selectedGitFileDiff={selectedGitFileDiff}
                         isGeneratingGitInsight={isGeneratingGitInsight}
+                        isApplyingGitFileAction={isApplyingGitFileAction}
                         isApplyingGitHunkAction={isApplyingGitHunkAction}
                         isLoadingGitFileDiff={isLoadingGitFileDiff}
                         isPreviewingGitFileAction={isPreviewingGitFileAction}
                         isPreviewingGitHunkAction={isPreviewingGitHunkAction}
                         onDraftCommitMessage={onDraftGitCommitMessage}
                         onPreviewGitFileAction={onPreviewGitFileAction}
+                        onApplyGitFileAction={onApplyGitFileAction}
                         onPreviewGitHunkAction={onPreviewGitHunkAction}
                         onApplyGitHunkAction={onApplyGitHunkAction}
                         onRefreshGitStatus={onRefreshGitStatus}

@@ -276,9 +276,9 @@ Step 4.3: Git integration
 - [x] Add diff-only side-by-side viewer for changed lines.
 - [x] Add hunk navigation.
 - [x] Replace text hunk controls with compact IDE-style icon controls.
-- [ ] Add stage/unstage file.
-- [ ] Add stage/unstage hunk.
-- [ ] Add revert hunk with destructive approval.
+- [x] Add stage/unstage file.
+- [x] Add stage/unstage hunk.
+- [x] Add revert hunk with destructive approval.
 - [x] Add AI diff summary.
 - [x] Add AI commit message draft.
 
@@ -935,14 +935,14 @@ Exit criteria:
 
 Goal: keep the product architecture simple to reason about as features deepen, with small Wails adapters, focused frontend controllers, primary SQLite persistence, job-based long work, and a restrained product menu.
 
-Status: first hardening slice expanded with Git backend/frontend extraction, preview-only stage/unstage planning, generated Wails binding isolation, and editor-outline extraction from the Workbench panel.
+Status: first hardening slice expanded with Git backend/frontend extraction, preview-only stage/unstage planning, generated Wails binding isolation, editor-outline extraction from the Workbench panel, and first workspace/artifact/dataset backend service facades.
 
 Step 15.1: Backend service facades
 
-- [ ] Keep Wails method names stable while moving orchestration out of `app/app.go`.
-- [ ] Create a `WorkspaceService` facade for open/refresh/search/preview/context/freshness/file operations.
-- [ ] Create an `ArtifactService` facade for report creation, metadata, lineage, archive/delete, comparison, and regeneration.
-- [ ] Create a `DatasetService` facade for profiling, queries, SQL runs, dependencies, charts, summaries, and connector routing.
+- [x] Keep Wails method names stable while moving orchestration out of `app/app.go`.
+- [x] Create a `WorkspaceService` facade for open/refresh/search/preview/context/freshness/file operations.
+- [ ] Create an `ArtifactService` facade for report creation, metadata, lineage, archive/delete, comparison, and regeneration. Core report/list/metadata/archive/delete/compare operations now dispatch through `ArtifactService`; lineage and regeneration still need a separate extraction.
+- [x] Create a `DatasetService` facade for profiling, queries, SQL runs, dependencies, charts, summaries, and connector routing.
 - [ ] Create a `ChatService` facade for settings-aware chat requests, streaming, context packs, history persistence, and saved answer artifacts.
 - [x] Create a `GitService` facade for read-only status/diffs first, then approval-governed stage/unstage/revert actions.
 - [ ] Keep `app/app.go` as a thin Wails adapter that validates runtime availability and dispatches to services.
@@ -1023,7 +1023,7 @@ Steps:
 9. [x] Detect npm scripts and Go tests into a Tasks panel with read-only listing.
 10. Keep visual smoke focused on no blank screen, no whole-window scroll, Git drawer behavior, route switching, and no slow/external work on folder open.
 
-Reasoning: read-only navigation and diff review are now credible, stage/unstage previews establish the approval boundary without mutating the repository, hunk selection exists as UI state, hunk discard/revert now goes through the approval modal before backend patch application, Workbench has a real search utility panel backed by the existing safe workspace search flow, task/script detection now lists npm scripts plus Go test commands without running external processes, and Phase 2 now has split editor groups, outline navigation, Monaco go-to-definition dispatch, safe draft formatting, and encoding-aware save. The next correction path can move to Phase 4 Workbench depth or Phase 15 architecture hardening.
+Reasoning: read-only navigation and diff review are now credible, file and hunk stage/unstage go through preview plus approval-backed apply paths, hunk selection exists as UI state, hunk discard/revert now goes through the approval modal before backend patch application, Workbench has a real search utility panel backed by the existing safe workspace search flow, task/script detection now lists npm scripts plus Go test commands without running external processes, and Phase 2 now has split editor groups, outline navigation, Monaco go-to-definition dispatch, safe draft formatting, and encoding-aware save. The next correction path can move to Phase 4 search/problems depth or Phase 15 architecture hardening.
 
 ## Directory Ownership Notes
 
@@ -1035,9 +1035,11 @@ Reasoning: read-only navigation and diff review are now credible, stage/unstage 
 
 `app/agent_runtime.go` exposes `RunAgent` and maps model-requested tools to workspace-safe handlers.
 
-`app/app_git.go` owns Wails-facing Git API types and bridge methods. `app/git_service.go` owns the first Git service facade for read-only status/diff operations, preview-only stage/unstage command planning, and approval-backed selected-hunk discard/revert patch application while preserving existing Wails contracts.
+`app/app_git.go` owns Wails-facing Git API types and bridge methods. `app/git_service.go` owns the first Git service facade for read-only status/diff operations, preview/apply file stage/unstage actions, and approval-backed selected-hunk stage/unstage/discard/revert patch application while preserving existing Wails contracts.
 
 `app/app_tasks.go` owns Wails-facing read-only workspace task discovery. It scans bounded workspace paths, skips noisy output/dependency folders, parses `package.json` scripts, detects Go module test commands, and returns task metadata only. It does not execute npm, Go, shell, Docker, or other external commands.
+
+`app/workspace_service.go`, `app/artifact_service.go`, and `app/dataset_service.go` own the first backend service facades for workspace, artifact, and data workflows. `app/app.go` keeps stable Wails method names and delegates these use cases instead of owning the full orchestration directly.
 
 `app/internal/agenttools/` owns deterministic tool descriptors and tool-run persistence.
 
@@ -1061,7 +1063,7 @@ Reasoning: read-only navigation and diff review are now credible, stage/unstage 
 
 `app/frontend/src/features/shell/useResizablePanels.ts` owns navigator, assistant, and bottom drawer sizing plus resize drag handlers.
 
-`app/frontend/src/features/shell/useGitController.ts` owns Git status refresh, selected changed-file state, selected-file diff loading, preview-only stage/unstage action state, hunk action preview/apply state, null-response normalization, and the manual-only Git refresh boundary.
+`app/frontend/src/features/shell/useGitController.ts` owns Git status refresh, selected changed-file state, selected-file diff loading, file stage/unstage preview/apply state, hunk action preview/apply state, null-response normalization, and the manual-only Git refresh boundary.
 
 Workspace scan counters are diagnostic data, not primary navigation content. Keep them in scan reports/diagnostics instead of the always-visible sidebar header.
 
@@ -1073,7 +1075,7 @@ Workspace scan counters are diagnostic data, not primary navigation content. Kee
 
 `app/frontend/src/features/shell/CodeStudioPanel.tsx` owns the first reusable Workbench utility surface for editor session metrics, open tabs, workspace status, git branch/dirty summary, changed-file list, Workbench search results/actions, read-only detected task listings, and placeholders that will receive problem/review data.
 
-`app/frontend/src/features/shell/GitDiffPanel.tsx` owns the bottom-drawer Git tab for selected changed-file review, preview-only stage/unstage controls, hunk selection state, approval-backed hunk discard/revert controls, and read-only staged/unstaged working-tree diffs.
+`app/frontend/src/features/shell/GitDiffPanel.tsx` owns the bottom-drawer Git tab for selected changed-file review, file stage/unstage controls, hunk selection state, approval-backed hunk stage/unstage/discard/revert controls, and read-only staged/unstaged working-tree diffs.
 
 `app/frontend/src/features/shell/DataOperationsPanel.tsx` currently owns Data route workflows.
 

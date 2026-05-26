@@ -9,7 +9,6 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
-	"sync"
 	"time"
 	"unicode/utf8"
 
@@ -118,26 +117,31 @@ var emitChatStreamEventFn = func(ctx context.Context, name string, event any) {
 }
 
 type App struct {
-	ctx           context.Context
-	llmClient     *llm.Client
-	chatStore     *storage.ChatHistoryStore
-	profileStore  *storage.AssistantProfileStore
-	llmStore      *storage.LLMSettingsStore
-	recentStore   *storage.RecentWorkspaceStore
-	workspaceMu   sync.RWMutex
-	workspaceRoot string
-	watchMu       sync.Mutex
-	fingerprints  map[string]workspace.FileFingerprint
+	ctx          context.Context
+	llmClient    *llm.Client
+	chatStore    *storage.ChatHistoryStore
+	profileStore *storage.AssistantProfileStore
+	llmStore     *storage.LLMSettingsStore
+	recentStore  *storage.RecentWorkspaceStore
+	workspaceSvc *WorkspaceService
+	artifactSvc  *ArtifactService
+	datasetSvc   *DatasetService
 }
 
 func NewApp() *App {
-	return &App{
+	chatStore := storage.NewDefaultChatHistoryStore()
+	recentStore := storage.NewDefaultRecentWorkspaceStore()
+	app := &App{
 		llmClient:    llm.NewClient(),
-		chatStore:    storage.NewDefaultChatHistoryStore(),
+		chatStore:    chatStore,
 		profileStore: storage.NewDefaultAssistantProfileStore(),
 		llmStore:     storage.NewDefaultLLMSettingsStore(),
-		recentStore:  storage.NewDefaultRecentWorkspaceStore(),
+		recentStore:  recentStore,
 	}
+	app.workspaceSvc = NewWorkspaceService(recentStore, chatStore, app.recordApproval)
+	app.artifactSvc = NewArtifactService(app.getWorkspaceRoot, app.mirrorMetadataStore, app.listArtifactsFromMetadata, app.persistArtifactMetadata, app.recordApproval)
+	app.datasetSvc = NewDatasetService(app.getWorkspaceRoot, app.mirrorMetadataStore, app.persistArtifactMetadata, app.recordDatasetDependency, app.recordSQLRun, app.recordApproval)
+	return app
 }
 
 func (a *App) startup(ctx context.Context) {
@@ -195,7 +199,7 @@ func (a *App) SelectWorkspace() (WorkspaceOpenResult, error) {
 		return WorkspaceOpenResult{Selected: false}, nil
 	}
 
-	return a.openWorkspace(root)
+	return a.workspaceSvc.Open(root)
 }
 
 func (a *App) OpenWorkspace(root string) (WorkspaceOpenResult, error) {
@@ -203,321 +207,99 @@ func (a *App) OpenWorkspace(root string) (WorkspaceOpenResult, error) {
 		return WorkspaceOpenResult{Selected: false}, nil
 	}
 
-	return a.openWorkspace(root)
+	return a.workspaceSvc.Open(root)
 }
 
 func (a *App) RefreshWorkspace() (WorkspaceOpenResult, error) {
-	root := a.getWorkspaceRoot()
-	if root == "" {
-		return WorkspaceOpenResult{Selected: false}, nil
-	}
-
-	snapshot, err := workspace.Scan(root, workspace.ScanOptions{})
-	if err != nil {
-		return WorkspaceOpenResult{}, err
-	}
-
-	return WorkspaceOpenResult{
-		Selected: true,
-		Snapshot: snapshot,
-	}, nil
+	return a.workspaceSvc.Refresh()
 }
 
 func (a *App) SearchWorkspace(query string) ([]workspace.SearchResult, error) {
-	root := a.getWorkspaceRoot()
-	if root == "" {
-		return []workspace.SearchResult{}, errors.New("open a workspace before searching")
-	}
-
-	results, err := workspace.Search(root, query, workspace.SearchOptions{MaxResults: 70})
-	if err != nil {
-		return nil, err
-	}
-
-	artifactResults, err := artifact.Search(root, query)
-	if err != nil {
-		return nil, err
-	}
-	results = append(results, artifactResults...)
-
-	chatMessages, err := a.chatStore.Search(root, query)
-	if err != nil {
-		return nil, err
-	}
-	for _, message := range chatMessages {
-		results = append(results, workspace.SearchResult{
-			RelPath:   "Chat history",
-			Name:      "Chat history",
-			Kind:      "chat",
-			FileType:  "chat",
-			MatchType: message.Role,
-			Snippet:   trimAppSnippet(message.Content),
-		})
-	}
-	if len(results) > 100 {
-		results = results[:100]
-	}
-	return results, nil
+	return a.workspaceSvc.Search(query)
 }
 
 func (a *App) ReadWorkspaceFile(relPath string) (workspace.FilePreview, error) {
-	root := a.getWorkspaceRoot()
-	if root == "" {
-		return workspace.FilePreview{}, errors.New("open a workspace before reading files")
-	}
-
-	return workspace.Preview(root, relPath, workspace.PreviewOptions{})
+	return a.workspaceSvc.ReadFile(relPath)
 }
 
 func (a *App) PreviewFileWrite(request workspace.FileWriteRequest) (workspace.FileWriteProposal, error) {
-	root := a.getWorkspaceRoot()
-	if root == "" {
-		return workspace.FileWriteProposal{}, errors.New("open a workspace before previewing file writes")
-	}
-
-	return workspace.PreviewFileWrite(root, request)
+	return a.workspaceSvc.PreviewFileWrite(request)
 }
 
 func (a *App) ApplyFileWrite(request workspace.FileWriteRequest) (workspace.FileWriteProposal, error) {
-	root := a.getWorkspaceRoot()
-	if root == "" {
-		return workspace.FileWriteProposal{}, errors.New("open a workspace before applying file writes")
-	}
-
-	proposal, err := workspace.ApplyFileWrite(root, request)
-	if err != nil {
-		return workspace.FileWriteProposal{}, err
-	}
-	a.recordApproval("file.write", proposal.RelPath, "medium", proposal.Message)
-	return proposal, nil
+	return a.workspaceSvc.ApplyFileWrite(request)
 }
 
 func (a *App) PreviewFileDelete(relPath string) (workspace.FileDeleteProposal, error) {
-	root := a.getWorkspaceRoot()
-	if root == "" {
-		return workspace.FileDeleteProposal{}, errors.New("open a workspace before previewing file deletes")
-	}
-
-	return workspace.PreviewFileDelete(root, relPath)
+	return a.workspaceSvc.PreviewFileDelete(relPath)
 }
 
 func (a *App) ApplyFileDelete(relPath string) (workspace.FileDeleteProposal, error) {
-	root := a.getWorkspaceRoot()
-	if root == "" {
-		return workspace.FileDeleteProposal{}, errors.New("open a workspace before deleting files")
-	}
-
-	proposal, err := workspace.ApplyFileDelete(root, relPath)
-	if err != nil {
-		return workspace.FileDeleteProposal{}, err
-	}
-	a.recordApproval("file.delete", proposal.RelPath, "high", proposal.Message)
-	return proposal, nil
+	return a.workspaceSvc.ApplyFileDelete(relPath)
 }
 
 func (a *App) PreviewFileMove(request workspace.FileMoveRequest) (workspace.FileMoveProposal, error) {
-	root := a.getWorkspaceRoot()
-	if root == "" {
-		return workspace.FileMoveProposal{}, errors.New("open a workspace before previewing file moves")
-	}
-
-	return workspace.PreviewFileMove(root, request)
+	return a.workspaceSvc.PreviewFileMove(request)
 }
 
 func (a *App) ApplyFileMove(request workspace.FileMoveRequest) (workspace.FileMoveProposal, error) {
-	root := a.getWorkspaceRoot()
-	if root == "" {
-		return workspace.FileMoveProposal{}, errors.New("open a workspace before moving files")
-	}
-
-	proposal, err := workspace.ApplyFileMove(root, request)
-	if err != nil {
-		return workspace.FileMoveProposal{}, err
-	}
-	a.recordApproval("file.move", proposal.TargetRelPath, "high", proposal.Message)
-	return proposal, nil
+	return a.workspaceSvc.ApplyFileMove(request)
 }
 
 func (a *App) PreviewFileCopy(request workspace.FileCopyRequest) (workspace.FileCopyProposal, error) {
-	root := a.getWorkspaceRoot()
-	if root == "" {
-		return workspace.FileCopyProposal{}, errors.New("open a workspace before previewing file copies")
-	}
-
-	return workspace.PreviewFileCopy(root, request)
+	return a.workspaceSvc.PreviewFileCopy(request)
 }
 
 func (a *App) ApplyFileCopy(request workspace.FileCopyRequest) (workspace.FileCopyProposal, error) {
-	root := a.getWorkspaceRoot()
-	if root == "" {
-		return workspace.FileCopyProposal{}, errors.New("open a workspace before copying files")
-	}
-
-	proposal, err := workspace.ApplyFileCopy(root, request)
-	if err != nil {
-		return workspace.FileCopyProposal{}, err
-	}
-	a.recordApproval("file.copy", proposal.TargetRelPath, "medium", proposal.Message)
-	return proposal, nil
+	return a.workspaceSvc.ApplyFileCopy(request)
 }
 
 func (a *App) CreateMarkdownReport(relPath string) (artifact.MarkdownReport, error) {
-	root := a.getWorkspaceRoot()
-	if root == "" {
-		return artifact.MarkdownReport{}, errors.New("open a workspace before creating reports")
-	}
-
-	source := workspace.FilePreview{
-		RelPath: relPath,
-		Name:    "workspace-report",
-	}
-	if relPath != "" {
-		preview, err := workspace.Preview(root, relPath, workspace.PreviewOptions{MaxBytes: chatContextFallbackMaxBytes})
-		if err != nil {
-			return artifact.MarkdownReport{}, err
-		}
-		source = preview
-	}
-
-	report, err := artifact.CreateMarkdownReport(root, source, time.Now())
-	if err != nil {
-		return artifact.MarkdownReport{}, err
-	}
-	a.persistArtifactMetadata(root, report.RelPath)
-	a.recordApproval("artifact.report", report.RelPath, "low", report.Message)
-	return report, nil
+	return a.artifactSvc.CreateMarkdownReport(relPath)
 }
 
 func (a *App) CreateScanReportArtifact() (artifact.MarkdownReport, error) {
-	root := a.getWorkspaceRoot()
-	if root == "" {
-		return artifact.MarkdownReport{}, errors.New("open a workspace before creating scan reports")
-	}
-
-	snapshot, err := workspace.Scan(root, workspace.ScanOptions{})
-	if err != nil {
-		return artifact.MarkdownReport{}, err
-	}
-	report, err := artifact.CreateScanReportMarkdown(root, snapshot, time.Now())
-	if err != nil {
-		return artifact.MarkdownReport{}, err
-	}
-	a.persistArtifactMetadata(root, report.RelPath)
-	a.recordApproval("artifact.scan-report", report.RelPath, "low", report.Message)
-	return report, nil
+	return a.artifactSvc.CreateScanReport()
 }
 
 func (a *App) CreateChatMarkdownArtifact(request artifact.MarkdownArtifactRequest) (artifact.MarkdownReport, error) {
-	root := a.getWorkspaceRoot()
-	if root == "" {
-		return artifact.MarkdownReport{}, errors.New("open a workspace before creating artifacts")
-	}
-
-	report, err := artifact.CreateGeneratedMarkdown(root, request, time.Now())
-	if err != nil {
-		return artifact.MarkdownReport{}, err
-	}
-	a.persistArtifactMetadata(root, report.RelPath)
-	a.recordApproval("artifact.markdown", report.RelPath, "low", report.Message)
-	return report, nil
+	return a.artifactSvc.CreateGeneratedMarkdown(request)
 }
 
 func (a *App) ListArtifacts() ([]artifact.WorkspaceArtifact, error) {
-	root := a.getWorkspaceRoot()
-	if root == "" {
-		return []artifact.WorkspaceArtifact{}, nil
-	}
-	if appmeta.Exists(root) {
-		if _, err := a.mirrorMetadataStore(root, false); err == nil {
-			if items, readErr := a.listArtifactsFromMetadata(root); readErr == nil {
-				return items, nil
-			}
-		}
-	}
-	return artifact.List(root)
+	return a.artifactSvc.List()
 }
 
 func (a *App) GetArtifactMetadata(relPath string) (artifact.ArtifactMetadata, error) {
-	root := a.getWorkspaceRoot()
-	if root == "" {
-		return artifact.ArtifactMetadata{}, errors.New("open a workspace before reading artifact metadata")
-	}
-	return artifact.Metadata(root, relPath)
+	return a.artifactSvc.Metadata(relPath)
 }
 
 func (a *App) ArchiveArtifact(relPath string) (artifact.MarkdownReport, error) {
-	root := a.getWorkspaceRoot()
-	if root == "" {
-		return artifact.MarkdownReport{}, errors.New("open a workspace before archiving artifacts")
-	}
-
-	report, err := artifact.Archive(root, relPath)
-	if err != nil {
-		return artifact.MarkdownReport{}, err
-	}
-	a.recordApproval("artifact.archive", relPath, "medium", report.Message)
-	return report, nil
+	return a.artifactSvc.Archive(relPath)
 }
 
 func (a *App) DeleteArtifact(relPath string) (artifact.MarkdownReport, error) {
-	root := a.getWorkspaceRoot()
-	if root == "" {
-		return artifact.MarkdownReport{}, errors.New("open a workspace before deleting artifacts")
-	}
-
-	report, err := artifact.Delete(root, relPath)
-	if err != nil {
-		return artifact.MarkdownReport{}, err
-	}
-	a.recordApproval("artifact.delete", relPath, "high", report.Message)
-	return report, nil
+	return a.artifactSvc.Delete(relPath)
 }
 
 func (a *App) CompareArtifacts(leftRelPath string, rightRelPath string) (artifact.ArtifactComparison, error) {
-	root := a.getWorkspaceRoot()
-	if root == "" {
-		return artifact.ArtifactComparison{}, errors.New("open a workspace before comparing artifacts")
-	}
-	return artifact.Compare(root, leftRelPath, rightRelPath)
+	return a.artifactSvc.Compare(leftRelPath, rightRelPath)
 }
 
 func (a *App) ProfileDataset(relPath string) (dataset.Profile, error) {
-	root := a.getWorkspaceRoot()
-	if root == "" {
-		return dataset.Profile{}, errors.New("open a workspace before profiling datasets")
-	}
-	return dataset.Build(root, relPath)
+	return a.datasetSvc.Profile(relPath)
 }
 
 func (a *App) ListDatasetProfiles() ([]dataset.Profile, error) {
-	root := a.getWorkspaceRoot()
-	if root == "" {
-		return []dataset.Profile{}, nil
-	}
-	return dataset.List(root)
+	return a.datasetSvc.ListProfiles()
 }
 
 func (a *App) QueryDataset(relPath string, query string) (workspace.DatasetQueryResult, error) {
-	root := a.getWorkspaceRoot()
-	if root == "" {
-		return workspace.DatasetQueryResult{}, errors.New("open a workspace before querying datasets")
-	}
-	return workspace.QueryCSV(root, relPath, query)
+	return a.datasetSvc.Query(relPath, query)
 }
 
 func (a *App) QueryDatasetSQL(request analytics.SQLQueryRequest) (analytics.SQLQueryResult, error) {
-	root := a.getWorkspaceRoot()
-	if root == "" {
-		return analytics.SQLQueryResult{}, errors.New("open a workspace before querying datasets")
-	}
-	result, err := analytics.QueryCSVSQL(root, request)
-	if err != nil {
-		a.recordSQLRun(root, request.RelPath, sanitizeQueryForMetadata(request.SQL), "", 0, "", "failed", sanitizeProviderMessage(err.Error()))
-		return analytics.SQLQueryResult{}, err
-	}
-	a.recordSQLRun(root, result.RelPath, sanitizeQueryForMetadata(result.SQL), result.Engine, result.TotalRows, "", "completed", sanitizeProviderMessage(result.Message))
-	a.recordDatasetDependency(root, result.RelPath, "sql-run", sanitizeQueryForMetadata(result.SQL), result.Engine, "")
-	return result, nil
+	return a.datasetSvc.QuerySQL(request)
 }
 
 func (a *App) ListAgentTools() []agenttools.Descriptor {
@@ -564,46 +346,7 @@ func (a *App) ListAgentToolRuns() ([]agenttools.RunRecord, error) {
 }
 
 func (a *App) CheckWorkspaceFreshness() (workspace.FreshnessStatus, error) {
-	root := a.getWorkspaceRoot()
-	if root == "" {
-		return workspace.FreshnessStatus{}, errors.New("open a workspace before checking file changes")
-	}
-	current, err := workspace.SnapshotFingerprints(root)
-	if err != nil {
-		return workspace.FreshnessStatus{}, err
-	}
-	a.watchMu.Lock()
-	previous := a.fingerprints
-	a.fingerprints = current
-	a.watchMu.Unlock()
-	if previous == nil {
-		return workspace.FreshnessStatus{
-			Changed:        []workspace.FileChange{},
-			StaleArtifacts: []string{},
-			StaleDatasets:  []string{},
-			Message:        "Workspace watcher baseline captured.",
-		}, nil
-	}
-
-	changes := workspace.CompareFingerprints(previous, current)
-	staleArtifacts := a.staleArtifactsForChanges(root, changes)
-	staleDatasets := staleDatasetsForChanges(changes)
-	message := "Workspace files are current."
-	if len(changes) > 0 {
-		message = fmt.Sprintf("%d workspace file changes detected.", len(changes))
-	}
-	if len(staleArtifacts) > 0 {
-		message = fmt.Sprintf("%s %d artifacts may be stale.", message, len(staleArtifacts))
-	}
-	if len(staleDatasets) > 0 {
-		message = fmt.Sprintf("%s %d dataset-derived views need refresh.", message, len(staleDatasets))
-	}
-	return workspace.FreshnessStatus{
-		Changed:        changes,
-		StaleArtifacts: staleArtifacts,
-		StaleDatasets:  staleDatasets,
-		Message:        message,
-	}, nil
+	return a.workspaceSvc.CheckFreshness()
 }
 
 func (a *App) EnsureSQLiteMetadataStore() (appmeta.SQLiteStatus, error) {
@@ -771,315 +514,59 @@ func (a *App) ImportArtifactLineageJSON(relPath string) (ArtifactLineageImport, 
 }
 
 func (a *App) SaveDatasetQuery(relPath string, query string, label string) (dataset.SavedQuery, error) {
-	root := a.getWorkspaceRoot()
-	if root == "" {
-		return dataset.SavedQuery{}, errors.New("open a workspace before saving dataset queries")
-	}
-	saved, err := dataset.SaveQuery(root, relPath, query, label)
-	if err == nil {
-		a.recordDatasetDependency(root, saved.RelPath, "filter-snippet", saved.Query, saved.Label, "")
-	}
-	return saved, err
+	return a.datasetSvc.SaveQuery(relPath, query, label)
 }
 
 func (a *App) ListDatasetQueries(relPath string) ([]dataset.SavedQuery, error) {
-	root := a.getWorkspaceRoot()
-	if root == "" {
-		return []dataset.SavedQuery{}, nil
-	}
-	return dataset.ListSavedQueries(root, relPath)
+	return a.datasetSvc.ListQueries(relPath)
 }
 
 func (a *App) SaveDatasetSQLQuery(relPath string, query string, label string) (dataset.SavedQuery, error) {
-	root := a.getWorkspaceRoot()
-	if root == "" {
-		return dataset.SavedQuery{}, errors.New("open a workspace before saving SQL snippets")
-	}
-	saved, err := dataset.SaveQueryKind(root, relPath, query, label, "sql")
-	if err == nil {
-		a.recordDatasetDependency(root, saved.RelPath, "sql-snippet", saved.Query, saved.Label, "")
-	}
-	return saved, err
+	return a.datasetSvc.SaveSQLQuery(relPath, query, label)
 }
 
 func (a *App) ListDatasetDependencies(relPath string) ([]appmeta.DatasetDependency, error) {
-	root := a.getWorkspaceRoot()
-	if root == "" {
-		return []appmeta.DatasetDependency{}, nil
-	}
-	if !appmeta.Exists(root) {
-		return []appmeta.DatasetDependency{}, nil
-	}
-	return appmeta.ListDatasetDependencies(root, relPath)
+	return a.datasetSvc.ListDependencies(relPath)
 }
 
 func (a *App) ListDatasetSQLRuns(relPath string) ([]appmeta.SQLRun, error) {
-	root := a.getWorkspaceRoot()
-	if root == "" {
-		return []appmeta.SQLRun{}, nil
-	}
-	if !appmeta.Exists(root) {
-		return []appmeta.SQLRun{}, nil
-	}
-	return appmeta.ListSQLRuns(root, relPath)
+	return a.datasetSvc.ListSQLRuns(relPath)
 }
 
 func (a *App) SearchMetadata(query string) ([]appmeta.MetadataSearchResult, error) {
-	query = strings.TrimSpace(query)
-	if query == "" {
-		return []appmeta.MetadataSearchResult{}, nil
-	}
-	root := a.getWorkspaceRoot()
-	if root == "" {
-		return []appmeta.MetadataSearchResult{}, nil
-	}
-	if _, err := a.mirrorMetadataStore(root, true); err != nil {
-		return []appmeta.MetadataSearchResult{}, err
-	}
-	return appmeta.Search(root, query, 40)
+	return a.datasetSvc.SearchMetadata(query)
 }
 
 func (a *App) QueryWorkspaceSQLite(request dbconnector.SQLiteQueryRequest) (dbconnector.SQLiteQueryResult, error) {
-	root := a.getWorkspaceRoot()
-	if root == "" {
-		return dbconnector.SQLiteQueryResult{}, errors.New("open a workspace before querying SQLite files")
-	}
-	result, err := dbconnector.QuerySQLite(root, request)
-	if err != nil {
-		a.recordSQLRun(root, request.RelPath, sanitizeQueryForMetadata(request.SQL), "sqlite-readonly", 0, "", "failed", sanitizeProviderMessage(err.Error()))
-		return dbconnector.SQLiteQueryResult{}, err
-	}
-	a.recordSQLRun(root, result.RelPath, sanitizeQueryForMetadata(result.SQL), result.Engine, result.TotalRows, "", "completed", sanitizeProviderMessage(result.Message))
-	a.recordDatasetDependency(root, result.RelPath, "sqlite-query", sanitizeQueryForMetadata(result.SQL), result.Engine, "")
-	return result, nil
+	return a.datasetSvc.QueryWorkspaceSQLite(request)
 }
 
 func (a *App) ListDatasetSQLQueries(relPath string) ([]dataset.SavedQuery, error) {
-	root := a.getWorkspaceRoot()
-	if root == "" {
-		return []dataset.SavedQuery{}, nil
-	}
-	return dataset.ListSavedQueriesKind(root, relPath, "sql")
+	return a.datasetSvc.ListSQLQueries(relPath)
 }
 
 func (a *App) PreviewDatasetChart(request workspace.DatasetChartRequest) (workspace.DatasetChartResult, error) {
-	root := a.getWorkspaceRoot()
-	if root == "" {
-		return workspace.DatasetChartResult{}, errors.New("open a workspace before previewing dataset charts")
-	}
-	return workspace.BuildCSVChart(root, request)
+	return a.datasetSvc.PreviewChart(request)
 }
 
 func (a *App) CreateDatasetChartArtifact(request workspace.DatasetChartRequest) (artifact.MarkdownReport, error) {
-	root := a.getWorkspaceRoot()
-	if root == "" {
-		return artifact.MarkdownReport{}, errors.New("open a workspace before creating dataset charts")
-	}
-
-	chart, err := workspace.BuildCSVChart(root, request)
-	if err != nil {
-		return artifact.MarkdownReport{}, err
-	}
-	report, err := artifact.CreateDatasetChartSVG(root, chart, time.Now())
-	if err != nil {
-		return artifact.MarkdownReport{}, err
-	}
-	a.persistArtifactMetadata(root, report.RelPath)
-	a.recordDatasetDependency(root, chart.RelPath, "chart", chart.CategoryColumn, chart.ValueColumn, report.RelPath)
-	a.recordApproval("artifact.chart", report.RelPath, "low", report.Message)
-	return report, nil
+	return a.datasetSvc.CreateChartArtifact(request)
 }
 
 func (a *App) CreateDatasetQueryArtifact(relPath string, query string) (artifact.MarkdownReport, error) {
-	root := a.getWorkspaceRoot()
-	if root == "" {
-		return artifact.MarkdownReport{}, errors.New("open a workspace before exporting dataset queries")
-	}
-
-	result, err := workspace.QueryCSV(root, relPath, query)
-	if err != nil {
-		return artifact.MarkdownReport{}, err
-	}
-	report, err := artifact.CreateDatasetQueryCSV(root, result, time.Now())
-	if err != nil {
-		return artifact.MarkdownReport{}, err
-	}
-	a.persistArtifactMetadata(root, report.RelPath)
-	a.recordDatasetDependency(root, result.RelPath, "filter-export", result.Query, "", report.RelPath)
-	a.recordApproval("artifact.query", report.RelPath, "low", report.Message)
-	return report, nil
+	return a.datasetSvc.CreateQueryArtifact(relPath, query)
 }
 
 func (a *App) CreateDatasetSQLArtifact(request analytics.SQLQueryRequest) (artifact.MarkdownReport, error) {
-	root := a.getWorkspaceRoot()
-	if root == "" {
-		return artifact.MarkdownReport{}, errors.New("open a workspace before exporting SQL results")
-	}
-	result, err := analytics.QueryCSVSQL(root, request)
-	if err != nil {
-		a.recordSQLRun(root, request.RelPath, sanitizeQueryForMetadata(request.SQL), "", 0, "", "failed", sanitizeProviderMessage(err.Error()))
-		return artifact.MarkdownReport{}, err
-	}
-	report, err := artifact.CreateDatasetSQLMarkdown(root, result, time.Now())
-	if err != nil {
-		a.recordSQLRun(root, result.RelPath, sanitizeQueryForMetadata(result.SQL), result.Engine, result.TotalRows, "", "failed", sanitizeProviderMessage(err.Error()))
-		return artifact.MarkdownReport{}, err
-	}
-	a.persistArtifactMetadata(root, report.RelPath)
-	a.recordSQLRun(root, result.RelPath, sanitizeQueryForMetadata(result.SQL), result.Engine, result.TotalRows, report.RelPath, "completed", sanitizeProviderMessage(result.Message))
-	a.recordDatasetDependency(root, result.RelPath, "sql-report", sanitizeQueryForMetadata(result.SQL), result.Engine, report.RelPath)
-	a.recordApproval("artifact.dataset_sql.create", report.RelPath, "medium", fmt.Sprintf("Created SQL result artifact from %s using %s.", result.RelPath, result.Engine))
-	return report, nil
+	return a.datasetSvc.CreateSQLArtifact(request)
 }
 
 func (a *App) CreateDatasetSummaryArtifact(relPath string) (artifact.MarkdownReport, error) {
-	root := a.getWorkspaceRoot()
-	if root == "" {
-		return artifact.MarkdownReport{}, errors.New("open a workspace before creating dataset summaries")
-	}
-
-	preview, err := workspace.Preview(root, relPath, workspace.PreviewOptions{MaxBytes: 1024 * 1024})
-	if err != nil {
-		return artifact.MarkdownReport{}, err
-	}
-	report, err := artifact.CreateDatasetSummaryMarkdown(root, preview, time.Now())
-	if err != nil {
-		return artifact.MarkdownReport{}, err
-	}
-	a.persistArtifactMetadata(root, report.RelPath)
-	a.recordDatasetDependency(root, relPath, "summary", "dataset summary", "", report.RelPath)
-	a.recordApproval("artifact.dataset-summary", report.RelPath, "low", report.Message)
-	return report, nil
+	return a.datasetSvc.CreateSummaryArtifact(relPath)
 }
 
 func (a *App) RebuildDatasetDependency(id string) (artifact.MarkdownReport, error) {
-	root := a.getWorkspaceRoot()
-	if root == "" {
-		return artifact.MarkdownReport{}, errors.New("open a workspace before rebuilding dataset artifacts")
-	}
-
-	dependency, err := appmeta.GetDatasetDependency(root, id)
-	if err != nil {
-		return artifact.MarkdownReport{}, err
-	}
-
-	rebuildDependency := func() error {
-		if strings.TrimSpace(dependency.Artifact) == "" {
-			return nil
-		}
-		if _, err := artifact.Delete(root, dependency.Artifact); err != nil {
-			var pathErr *os.PathError
-			if errors.As(err, &pathErr) && errors.Is(pathErr.Err, os.ErrNotExist) {
-				return nil
-			}
-			return err
-		}
-		return nil
-	}
-
-	now := time.Now()
-	switch dependency.Kind {
-	case "filter-export":
-		if err := rebuildDependency(); err != nil {
-			return artifact.MarkdownReport{}, err
-		}
-		query := strings.TrimSpace(dependency.Query)
-		if query == "" {
-			return artifact.MarkdownReport{}, errors.New("cannot rebuild filter export without query text")
-		}
-		result, err := workspace.QueryCSV(root, dependency.RelPath, query)
-		if err != nil {
-			return artifact.MarkdownReport{}, err
-		}
-		report, err := artifact.CreateDatasetQueryCSV(root, result, now)
-		if err != nil {
-			return artifact.MarkdownReport{}, err
-		}
-		a.persistArtifactMetadata(root, report.RelPath)
-		if _, err := appmeta.UpdateDatasetDependencyRefresh(root, dependency.ID, report.RelPath); err != nil {
-			return artifact.MarkdownReport{}, err
-		}
-		a.recordApproval("artifact.dataset_query.rebuild", report.RelPath, "low", fmt.Sprintf("Rebuilt dataset export for %s.", dependency.RelPath))
-		return report, nil
-
-	case "sql-report":
-		if err := rebuildDependency(); err != nil {
-			return artifact.MarkdownReport{}, err
-		}
-		query := strings.TrimSpace(dependency.Query)
-		if query == "" {
-			return artifact.MarkdownReport{}, errors.New("cannot rebuild SQL report without SQL text")
-		}
-		result, err := analytics.QueryCSVSQL(root, analytics.SQLQueryRequest{
-			RelPath: dependency.RelPath,
-			SQL:     query,
-		})
-		if err != nil {
-			a.recordSQLRun(root, dependency.RelPath, sanitizeQueryForMetadata(query), "unknown", 0, "", "failed", sanitizeProviderMessage(err.Error()))
-			return artifact.MarkdownReport{}, err
-		}
-		report, err := artifact.CreateDatasetSQLMarkdown(root, result, now)
-		if err != nil {
-			a.recordSQLRun(root, result.RelPath, sanitizeQueryForMetadata(result.SQL), result.Engine, result.TotalRows, "", "failed", sanitizeProviderMessage(err.Error()))
-			return artifact.MarkdownReport{}, err
-		}
-		a.persistArtifactMetadata(root, report.RelPath)
-		a.recordSQLRun(root, result.RelPath, sanitizeQueryForMetadata(result.SQL), result.Engine, result.TotalRows, report.RelPath, "completed", sanitizeProviderMessage(result.Message))
-		if _, err := appmeta.UpdateDatasetDependencyRefresh(root, dependency.ID, report.RelPath); err != nil {
-			return artifact.MarkdownReport{}, err
-		}
-		a.recordApproval("artifact.dataset_sql.rebuild", report.RelPath, "medium", fmt.Sprintf("Rebuilt SQL result artifact for %s using %s.", result.RelPath, result.Engine))
-		return report, nil
-
-	case "chart":
-		if err := rebuildDependency(); err != nil {
-			return artifact.MarkdownReport{}, err
-		}
-		category := strings.TrimSpace(dependency.Target)
-		if category == "" {
-			return artifact.MarkdownReport{}, errors.New("cannot rebuild chart without a category column")
-		}
-		chart, err := workspace.BuildCSVChart(root, workspace.DatasetChartRequest{
-			RelPath:        dependency.RelPath,
-			ChartType:      "bar",
-			CategoryColumn: category,
-			ValueColumn:    strings.TrimSpace(dependency.Query),
-		})
-		if err != nil {
-			return artifact.MarkdownReport{}, err
-		}
-		report, err := artifact.CreateDatasetChartSVG(root, chart, now)
-		if err != nil {
-			return artifact.MarkdownReport{}, err
-		}
-		a.persistArtifactMetadata(root, report.RelPath)
-		if _, err := appmeta.UpdateDatasetDependencyRefresh(root, dependency.ID, report.RelPath); err != nil {
-			return artifact.MarkdownReport{}, err
-		}
-		a.recordApproval("artifact.chart.rebuild", report.RelPath, "low", fmt.Sprintf("Rebuilt chart for %s from category %s.", dependency.RelPath, dependency.Target))
-		return report, nil
-
-	case "summary":
-		if err := rebuildDependency(); err != nil {
-			return artifact.MarkdownReport{}, err
-		}
-		preview, err := workspace.Preview(root, dependency.RelPath, workspace.PreviewOptions{MaxBytes: 1024 * 1024})
-		if err != nil {
-			return artifact.MarkdownReport{}, err
-		}
-		report, err := artifact.CreateDatasetSummaryMarkdown(root, preview, now)
-		if err != nil {
-			return artifact.MarkdownReport{}, err
-		}
-		a.persistArtifactMetadata(root, report.RelPath)
-		if _, err := appmeta.UpdateDatasetDependencyRefresh(root, dependency.ID, report.RelPath); err != nil {
-			return artifact.MarkdownReport{}, err
-		}
-		a.recordApproval("artifact.dataset-summary.rebuild", report.RelPath, "low", fmt.Sprintf("Rebuilt dataset summary for %s.", dependency.RelPath))
-		return report, nil
-	}
-
-	return artifact.MarkdownReport{}, fmt.Errorf("cannot rebuild dependency kind %q", dependency.Kind)
+	return a.datasetSvc.RebuildDependency(id)
 }
 
 func (a *App) ListApprovals() ([]approval.Record, error) {
@@ -1833,83 +1320,23 @@ func (a *App) recordApproval(action string, target string, risk string, message 
 }
 
 func (a *App) openWorkspace(root string) (WorkspaceOpenResult, error) {
-	info, err := os.Stat(root)
-	if err != nil {
-		return WorkspaceOpenResult{}, err
-	}
-	if !info.IsDir() {
-		return WorkspaceOpenResult{}, errors.New("workspace root must be a directory")
-	}
-
-	snapshot, err := workspace.Scan(root, workspace.ScanOptions{})
-	if err != nil {
-		return WorkspaceOpenResult{}, err
-	}
-
-	a.setWorkspaceRoot(snapshot.Root)
-	a.resetWorkspaceFreshness(snapshot.Root)
-	if _, err := a.recentStore.Add(snapshot.Root); err != nil {
-		return WorkspaceOpenResult{}, err
-	}
-
-	return WorkspaceOpenResult{
-		Selected: true,
-		Snapshot: snapshot,
-	}, nil
+	return a.workspaceSvc.Open(root)
 }
 
 func (a *App) setWorkspaceRoot(root string) {
-	a.workspaceMu.Lock()
-	defer a.workspaceMu.Unlock()
-	a.workspaceRoot = root
+	a.workspaceSvc.SetRoot(root)
 }
 
 func (a *App) getWorkspaceRoot() string {
-	a.workspaceMu.RLock()
-	defer a.workspaceMu.RUnlock()
-	return a.workspaceRoot
+	return a.workspaceSvc.Root()
 }
 
 func (a *App) resetWorkspaceFreshness(root string) {
-	fingerprints, err := workspace.SnapshotFingerprints(root)
-	if err != nil {
-		return
-	}
-	a.watchMu.Lock()
-	a.fingerprints = fingerprints
-	a.watchMu.Unlock()
+	a.workspaceSvc.ResetFreshness(root)
 }
 
 func (a *App) staleArtifactsForChanges(root string, changes []workspace.FileChange) []string {
-	if len(changes) == 0 {
-		return nil
-	}
-	changed := map[string]bool{}
-	for _, change := range changes {
-		changed[filepath.ToSlash(change.RelPath)] = true
-	}
-	items, err := artifact.List(root)
-	if err != nil {
-		return nil
-	}
-	stale := []string{}
-	for _, item := range items {
-		metadata, err := artifact.Metadata(root, item.RelPath)
-		if err != nil {
-			continue
-		}
-		sourcePaths := append([]string{}, metadata.SourcePaths...)
-		if metadata.ContextRelPath != "" {
-			sourcePaths = append(sourcePaths, metadata.ContextRelPath)
-		}
-		for _, sourcePath := range sourcePaths {
-			if changed[filepath.ToSlash(sourcePath)] {
-				stale = append(stale, item.RelPath)
-				break
-			}
-		}
-	}
-	return stale
+	return a.workspaceSvc.StaleArtifactsForChanges(root, changes)
 }
 
 func staleDatasetsForChanges(changes []workspace.FileChange) []string {

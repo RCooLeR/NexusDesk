@@ -22,6 +22,10 @@ export function ApplyFileWrite(arg1) {
   return window['go']['main']['App']['ApplyFileWrite'](arg1);
 }
 
+export function ApplyGitFileAction(arg1) {
+  return window['go']['main']['App']['ApplyGitFileAction'](arg1);
+}
+
 export function ApplyGitHunkAction(arg1) {
   return window['go']['main']['App']['ApplyGitHunkAction'](arg1);
 }

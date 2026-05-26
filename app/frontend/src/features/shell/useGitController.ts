@@ -1,5 +1,5 @@
 import {useEffect, useState} from 'react';
-import {ApplyGitHunkAction, GetGitFileDiff, GetGitStatus, PreviewGitFileAction, PreviewGitHunkAction} from '../../api/wailsClient';
+import {ApplyGitFileAction, ApplyGitHunkAction, GetGitFileDiff, GetGitStatus, PreviewGitFileAction, PreviewGitHunkAction} from '../../api/wailsClient';
 import type {GitFileAction, GitFileActionPreview, GitFileDiff, GitHunkActionPreview, GitHunkActionRequest, GitStatus} from '../../types';
 
 const gitNotLoadedMessage = 'Git status not loaded. Press Refresh git when you need repository status.';
@@ -11,6 +11,7 @@ export function useGitController(workspaceRoot: string | undefined, pushToolEven
     const [gitFileActionPreview, setGitFileActionPreview] = useState<GitFileActionPreview | null>(null);
     const [gitHunkActionPreview, setGitHunkActionPreview] = useState<GitHunkActionPreview | null>(null);
     const [isLoadingGitFileDiff, setIsLoadingGitFileDiff] = useState(false);
+    const [isApplyingGitFileAction, setIsApplyingGitFileAction] = useState(false);
     const [isPreviewingGitFileAction, setIsPreviewingGitFileAction] = useState(false);
     const [isPreviewingGitHunkAction, setIsPreviewingGitHunkAction] = useState(false);
     const [isApplyingGitHunkAction, setIsApplyingGitHunkAction] = useState(false);
@@ -50,6 +51,7 @@ export function useGitController(workspaceRoot: string | undefined, pushToolEven
         setGitFileActionPreview(null);
         setGitHunkActionPreview(null);
         setIsLoadingGitFileDiff(false);
+        setIsApplyingGitFileAction(false);
         setIsPreviewingGitFileAction(false);
         setIsPreviewingGitHunkAction(false);
         setIsApplyingGitHunkAction(false);
@@ -114,6 +116,26 @@ export function useGitController(workspaceRoot: string | undefined, pushToolEven
         }
     }
 
+    async function applyGitFileAction(action: GitFileAction) {
+        if (!selectedGitChangePath) {
+            return null;
+        }
+        setIsApplyingGitFileAction(true);
+        try {
+            const preview = await ApplyGitFileAction({path: selectedGitChangePath, action});
+            const safePreview = normalizeGitFileActionPreview(preview, action, selectedGitChangePath);
+            setGitFileActionPreview(safePreview);
+            if (safePreview.status?.generatedAt) {
+                setGitStatus(normalizeGitStatus(safePreview.status));
+            }
+            await refreshSelectedGitFileDiff(selectedGitChangePath);
+            pushToolEvent('Git file action applied', safePreview.message);
+            return safePreview;
+        } finally {
+            setIsApplyingGitFileAction(false);
+        }
+    }
+
     async function previewGitHunkAction(request: GitHunkActionRequest) {
         setIsPreviewingGitHunkAction(true);
         try {
@@ -153,10 +175,12 @@ export function useGitController(workspaceRoot: string | undefined, pushToolEven
         gitFileActionPreview,
         gitHunkActionPreview,
         gitStatus,
+        isApplyingGitFileAction,
         isApplyingGitHunkAction,
         isLoadingGitFileDiff,
         isPreviewingGitFileAction,
         isPreviewingGitHunkAction,
+        applyGitFileAction,
         applyGitHunkAction,
         previewGitFileAction,
         previewGitHunkAction,

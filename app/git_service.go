@@ -16,6 +16,8 @@ const gitDiffMaxBytes = 220 * 1024
 const gitDiffContextLines = "3"
 const gitFileActionStage = "stage"
 const gitFileActionUnstage = "unstage"
+const gitHunkActionStage = "stage"
+const gitHunkActionUnstage = "unstage"
 const gitHunkActionDiscard = "discard"
 const gitHunkActionRevert = "revert"
 const gitDiffKindStaged = "staged"
@@ -104,16 +106,16 @@ func (s GitService) FileDiff(relPath string) (GitFileDiff, error) {
 }
 
 func (s GitService) PreviewFileAction(request GitFileActionRequest) (GitFileActionPreview, error) {
-	generatedAt := time.Now().UTC().Format(time.RFC3339)
+	return s.prepareFileAction(request, false)
+}
+
+func (s GitService) ApplyFileAction(request GitFileActionRequest) (GitFileActionPreview, error) {
+	return s.prepareFileAction(request, true)
+}
+
+func (s GitService) prepareFileAction(request GitFileActionRequest, apply bool) (GitFileActionPreview, error) {
 	action := strings.ToLower(strings.TrimSpace(request.Action))
-	preview := GitFileActionPreview{
-		Path:              strings.TrimSpace(request.Path),
-		Action:            action,
-		Command:           []string{},
-		RequiresApproval:  true,
-		MutatesRepository: true,
-		GeneratedAt:       generatedAt,
-	}
+	preview := newGitFileActionPreview(request.Path, action)
 
 	root := s.workspaceRoot()
 	if root == "" {
@@ -140,6 +142,19 @@ func (s GitService) PreviewFileAction(request GitFileActionRequest) (GitFileActi
 		return preview, nil
 	}
 
+	if apply {
+		if _, err := gitOutput(root, command[1:]...); err != nil {
+			return preview, err
+		}
+		status, err := s.Status()
+		if err != nil {
+			return preview, err
+		}
+		preview.Status = status
+		preview.Message = "Applied " + action + " for " + cleanPath + "."
+		return preview, nil
+	}
+
 	status, err := s.Status()
 	if err != nil {
 		return preview, err
@@ -147,6 +162,17 @@ func (s GitService) PreviewFileAction(request GitFileActionRequest) (GitFileActi
 	preview.Status = status
 	preview.Message = "Preview only. Approval is required before running " + strings.Join(command, " ") + "."
 	return preview, nil
+}
+
+func newGitFileActionPreview(path string, action string) GitFileActionPreview {
+	return GitFileActionPreview{
+		Path:              strings.TrimSpace(path),
+		Action:            action,
+		Command:           []string{},
+		RequiresApproval:  true,
+		MutatesRepository: true,
+		GeneratedAt:       time.Now().UTC().Format(time.RFC3339),
+	}
 }
 
 func (s GitService) PreviewHunkAction(request GitHunkActionRequest) (GitHunkActionPreview, error) {
@@ -282,6 +308,10 @@ func gitFileActionCommand(action string, relPath string) ([]string, error) {
 
 func gitHunkActionCommand(action string, diffKind string) ([]string, error) {
 	switch {
+	case action == gitHunkActionStage && diffKind == gitDiffKindUnstaged:
+		return []string{"git", "apply", "--cached", "--whitespace=nowarn"}, nil
+	case action == gitHunkActionUnstage && diffKind == gitDiffKindStaged:
+		return []string{"git", "apply", "--cached", "--reverse", "--whitespace=nowarn"}, nil
 	case action == gitHunkActionDiscard && diffKind == gitDiffKindUnstaged:
 		return []string{"git", "apply", "--reverse", "--whitespace=nowarn"}, nil
 	case action == gitHunkActionRevert && diffKind == gitDiffKindStaged:

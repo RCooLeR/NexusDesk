@@ -92,6 +92,7 @@ import type {
     FileNode,
     FilePreview,
     FileWriteProposal,
+    GitFileAction,
     GitHunkActionRequest,
     LLMChatResult,
     LLMProbeResult,
@@ -297,10 +298,12 @@ export function NexusShell({
         mainStudioTab,
     } = useStudioNavigation(pushToolEvent);
     const {
+        applyGitFileAction,
         applyGitHunkAction,
         gitFileActionPreview,
         gitHunkActionPreview,
         gitStatus,
+        isApplyingGitFileAction,
         isApplyingGitHunkAction,
         isLoadingGitFileDiff,
         isPreviewingGitFileAction,
@@ -1165,14 +1168,12 @@ export function NexusShell({
             setWorkspaceStatus('Open a workspace before applying Git hunk actions.');
             return;
         }
-        const isDiscard = request.action === 'discard';
+        const actionLabels = gitHunkApprovalLabels(request.action);
         const approved = await requestApproval({
-            action: isDiscard ? 'Discard Git hunk' : 'Revert staged Git hunk',
-            confirmLabel: isDiscard ? 'Discard hunk' : 'Revert hunk',
-            message: isDiscard
-                ? `Discard unstaged hunk ${request.hunkIndex} in ${request.path}. This changes the working tree.`
-                : `Revert staged hunk ${request.hunkIndex} in ${request.path}. This changes the Git index.`,
-            risk: 'high',
+            action: actionLabels.action,
+            confirmLabel: actionLabels.confirmLabel,
+            message: `${actionLabels.description} hunk ${request.hunkIndex} in ${request.path}. ${actionLabels.impact}`,
+            risk: actionLabels.risk,
             target: `${request.path} hunk ${request.hunkIndex}`,
         });
         if (!approved) {
@@ -1187,6 +1188,34 @@ export function NexusShell({
         } catch (error) {
             const message = error instanceof Error ? error.message : '';
             setWorkspaceStatus(message || 'Could not apply Git hunk action.');
+        }
+    }
+
+    async function applyGitFileActionWithApproval(action: GitFileAction) {
+        if (!workspace) {
+            setWorkspaceStatus('Open a workspace before applying Git file actions.');
+            return;
+        }
+        const labels = gitFileApprovalLabels(action);
+        const approved = await requestApproval({
+            action: labels.action,
+            confirmLabel: labels.confirmLabel,
+            message: `${labels.description} ${selectedGitChangePath}. ${labels.impact}`,
+            risk: 'medium',
+            target: selectedGitChangePath,
+        });
+        if (!approved) {
+            setWorkspaceStatus(`Git file action cancelled for ${selectedGitChangePath}.`);
+            return;
+        }
+
+        try {
+            const preview = await applyGitFileAction(action);
+            await refreshApprovals();
+            setWorkspaceStatus(preview?.message || `Applied ${action} for ${selectedGitChangePath}.`);
+        } catch (error) {
+            const message = error instanceof Error ? error.message : '';
+            setWorkspaceStatus(message || 'Could not apply Git file action.');
         }
     }
 
@@ -3474,6 +3503,7 @@ export function NexusShell({
                 isExportingDatasetQuery={isExportingDatasetQuery}
                 isExportingDatasetSQL={isExportingDatasetSQL}
                 isGeneratingGitInsight={isSendingPrompt}
+                isApplyingGitFileAction={isApplyingGitFileAction}
                 isApplyingGitHunkAction={isApplyingGitHunkAction}
                 isLoadingGitFileDiff={isLoadingGitFileDiff}
                 isLoadingWorkspaceTasks={isLoadingWorkspaceTasks}
@@ -3534,6 +3564,7 @@ export function NexusShell({
                 onProfileDataset={() => void profileSelectedDataset()}
                 onPreviewDatasetChart={() => void previewDatasetChart()}
                 onPreviewGitFileAction={(action) => void previewGitFileAction(action)}
+                onApplyGitFileAction={(action) => void applyGitFileActionWithApproval(action)}
                 onPreviewGitHunkAction={(request) => void previewGitHunkAction(request)}
                 onApplyGitHunkAction={(request) => void applyGitHunkActionWithApproval(request)}
                 onOpenCommandPalette={() => {
@@ -4377,10 +4408,64 @@ function agentToolInputs(item: AgentToolPlanItem, datasetQuery: string) {
 }
 
 function approvalRisk(risk: string): 'low' | 'medium' | 'high' {
-    if (risk === 'low' || risk === 'medium' || risk === 'high') {
-        return risk;
+	if (risk === 'low' || risk === 'medium' || risk === 'high') {
+		return risk;
+	}
+	return 'medium';
+}
+
+function gitFileApprovalLabels(action: GitFileAction) {
+    if (action === 'unstage') {
+        return {
+            action: 'Unstage Git file',
+            confirmLabel: 'Unstage file',
+            description: 'Unstage',
+            impact: 'This changes the Git index but leaves the working tree file content intact.',
+        };
     }
-    return 'medium';
+    return {
+        action: 'Stage Git file',
+        confirmLabel: 'Stage file',
+        description: 'Stage',
+        impact: 'This changes the Git index but leaves the working tree file content intact.',
+    };
+}
+
+function gitHunkApprovalLabels(action: string): {action: string; confirmLabel: string; description: string; impact: string; risk: 'medium' | 'high'} {
+    switch (action) {
+    case 'stage':
+        return {
+            action: 'Stage Git hunk',
+            confirmLabel: 'Stage hunk',
+            description: 'Stage',
+            impact: 'This changes the Git index but leaves the working tree file content intact.',
+            risk: 'medium',
+        };
+    case 'unstage':
+        return {
+            action: 'Unstage Git hunk',
+            confirmLabel: 'Unstage hunk',
+            description: 'Unstage',
+            impact: 'This changes the Git index but leaves the working tree file content intact.',
+            risk: 'medium',
+        };
+    case 'discard':
+        return {
+            action: 'Discard Git hunk',
+            confirmLabel: 'Discard hunk',
+            description: 'Discard unstaged',
+            impact: 'This changes the working tree.',
+            risk: 'high',
+        };
+    default:
+        return {
+            action: 'Revert staged Git hunk',
+            confirmLabel: 'Revert hunk',
+            description: 'Revert staged',
+            impact: 'This changes the Git index.',
+            risk: 'high',
+        };
+    }
 }
 
 function createRequestId() {

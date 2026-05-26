@@ -41,12 +41,14 @@ type GitDiffPanelProps = {
     selectedGitChangePath: string;
     selectedGitFileDiff: GitFileDiff | null;
     isGeneratingGitInsight: boolean;
+    isApplyingGitFileAction: boolean;
     isApplyingGitHunkAction: boolean;
     isLoadingGitFileDiff: boolean;
     isPreviewingGitFileAction: boolean;
     isPreviewingGitHunkAction: boolean;
     onDraftCommitMessage: () => void;
     onPreviewGitFileAction: (action: GitFileAction) => void;
+    onApplyGitFileAction: (action: GitFileAction) => void;
     onPreviewGitHunkAction: (request: GitHunkActionRequest) => void;
     onApplyGitHunkAction: (request: GitHunkActionRequest) => void;
     onRefreshGitStatus: () => void;
@@ -61,12 +63,14 @@ export function GitDiffPanel({
     selectedGitChangePath,
     selectedGitFileDiff,
     isGeneratingGitInsight,
+    isApplyingGitFileAction,
     isApplyingGitHunkAction,
     isLoadingGitFileDiff,
     isPreviewingGitFileAction,
     isPreviewingGitHunkAction,
     onDraftCommitMessage,
     onPreviewGitFileAction,
+    onApplyGitFileAction,
     onPreviewGitHunkAction,
     onApplyGitHunkAction,
     onRefreshGitStatus,
@@ -98,9 +102,9 @@ export function GitDiffPanel({
     ], [stagedDiff, unstagedDiff]);
     const activeHunkKey = hunkTargets[activeHunkIndex]?.key ?? '';
     const activeHunkIsSelected = selectedHunkKeys.includes(activeHunkKey);
-    const activeHunkRequest = hunkRequestFromKey(activeHunkKey, selectedGitChangePath);
-    const hunkActionLabel = activeHunkRequest?.action === 'discard' ? 'Discard hunk' : 'Revert hunk';
-    const hunkActionDisabled = !activeHunkRequest || !activeHunkIsSelected || isPreviewingGitHunkAction || isApplyingGitHunkAction;
+    const activeHunkIndexRequest = hunkRequestFromKey(activeHunkKey, selectedGitChangePath, 'index');
+    const activeHunkDestructiveRequest = hunkRequestFromKey(activeHunkKey, selectedGitChangePath, 'destructive');
+    const hunkActionDisabled = !activeHunkIsSelected || isPreviewingGitHunkAction || isApplyingGitHunkAction;
 
     useEffect(() => {
         setActiveHunkIndex(0);
@@ -131,15 +135,17 @@ export function GitDiffPanel({
             : [...current, activeHunkKey]);
     }
 
-    function previewActiveHunkAction() {
-        if (activeHunkRequest) {
-            onPreviewGitHunkAction(activeHunkRequest);
+    function previewActiveHunkAction(kind: 'index' | 'destructive') {
+        const request = kind === 'index' ? activeHunkIndexRequest : activeHunkDestructiveRequest;
+        if (request) {
+            onPreviewGitHunkAction(request);
         }
     }
 
-    function applyActiveHunkAction() {
-        if (activeHunkRequest) {
-            onApplyGitHunkAction(activeHunkRequest);
+    function applyActiveHunkAction(kind: 'index' | 'destructive') {
+        const request = kind === 'index' ? activeHunkIndexRequest : activeHunkDestructiveRequest;
+        if (request) {
+            onApplyGitHunkAction(request);
         }
     }
 
@@ -153,7 +159,9 @@ export function GitDiffPanel({
                 <div className="code-studio-toolbar" aria-label="Git diff toolbar">
                     <Button onClick={onRefreshGitStatus} variant="subtle">Refresh git</Button>
                     <Button disabled={!selectedIsUnstaged || isPreviewingGitFileAction} onClick={() => onPreviewGitFileAction('stage')} variant="subtle">Preview stage</Button>
+                    <Button disabled={!selectedIsUnstaged || isApplyingGitFileAction} onClick={() => onApplyGitFileAction('stage')} variant="subtle">Stage file</Button>
                     <Button disabled={!selectedIsStaged || isPreviewingGitFileAction} onClick={() => onPreviewGitFileAction('unstage')} variant="subtle">Preview unstage</Button>
+                    <Button disabled={!selectedIsStaged || isApplyingGitFileAction} onClick={() => onApplyGitFileAction('unstage')} variant="subtle">Unstage file</Button>
                     <Button disabled={!hasDiff || isGeneratingGitInsight} onClick={onSummarizeDiff} variant="subtle">Summarize diff</Button>
                     <Button disabled={!hasDiff || isGeneratingGitInsight} onClick={onDraftCommitMessage} variant="subtle">Draft commit</Button>
                 </div>
@@ -211,8 +219,10 @@ export function GitDiffPanel({
                                     <FontAwesomeIcon icon={faChevronDown} />
                                 </IconButton>
                                 <Button disabled={!activeHunkKey} onClick={toggleActiveHunkSelection} variant="subtle">{activeHunkIsSelected ? 'Unselect hunk' : 'Select hunk'}</Button>
-                                <Button disabled={hunkActionDisabled} onClick={previewActiveHunkAction} variant="subtle">Preview {hunkActionLabel.toLowerCase()}</Button>
-                                <Button disabled={hunkActionDisabled} onClick={applyActiveHunkAction} variant="subtle">{hunkActionLabel}</Button>
+                                <Button disabled={hunkActionDisabled || !activeHunkIndexRequest} onClick={() => previewActiveHunkAction('index')} variant="subtle">Preview {hunkActionLabel(activeHunkIndexRequest).toLowerCase()}</Button>
+                                <Button disabled={hunkActionDisabled || !activeHunkIndexRequest} onClick={() => applyActiveHunkAction('index')} variant="subtle">{hunkActionLabel(activeHunkIndexRequest)}</Button>
+                                <Button disabled={hunkActionDisabled || !activeHunkDestructiveRequest} onClick={() => previewActiveHunkAction('destructive')} variant="subtle">Preview {hunkActionLabel(activeHunkDestructiveRequest).toLowerCase()}</Button>
+                                <Button disabled={hunkActionDisabled || !activeHunkDestructiveRequest} onClick={() => applyActiveHunkAction('destructive')} variant="subtle">{hunkActionLabel(activeHunkDestructiveRequest)}</Button>
                             </div>
                         </div>
                         {hunkTargets.length > 0 && (
@@ -603,13 +613,34 @@ function gitActionLabel(action: string) {
 }
 
 function gitHunkActionLabel(action: string) {
+    if (action === 'stage') {
+        return 'Stage hunk preview';
+    }
+    if (action === 'unstage') {
+        return 'Unstage hunk preview';
+    }
     if (action === 'discard') {
         return 'Discard hunk preview';
     }
     return 'Revert hunk preview';
 }
 
-function hunkRequestFromKey(key: string, path: string): GitHunkActionRequest | null {
+function hunkActionLabel(request: GitHunkActionRequest | null) {
+    switch (request?.action) {
+    case 'stage':
+        return 'Stage hunk';
+    case 'unstage':
+        return 'Unstage hunk';
+    case 'discard':
+        return 'Discard hunk';
+    case 'revert':
+        return 'Revert hunk';
+    default:
+        return 'Hunk action';
+    }
+}
+
+function hunkRequestFromKey(key: string, path: string, kind: 'index' | 'destructive'): GitHunkActionRequest | null {
     if (!key || !path) {
         return null;
     }
@@ -618,11 +649,14 @@ function hunkRequestFromKey(key: string, path: string): GitHunkActionRequest | n
         return null;
     }
     const diffKind = match[1];
+    const action = kind === 'index'
+        ? (diffKind === 'unstaged' ? 'stage' : 'unstage')
+        : (diffKind === 'unstaged' ? 'discard' : 'revert');
     return {
         path,
         diffKind,
         hunkIndex: Number(match[2]),
-        action: diffKind === 'unstaged' ? 'discard' : 'revert',
+        action,
     };
 }
 

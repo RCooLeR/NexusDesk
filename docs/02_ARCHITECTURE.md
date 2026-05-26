@@ -29,7 +29,7 @@ The implemented desktop slice currently contains:
 - separate saved SQL snippets and lightweight row filters per dataset
 - SQL result Markdown artifacts with query, engine, row count, preview, and source citation metadata
 - read-only Compose parsing for Operations Studio
-- read-only Git status, branch, changed-file list, staged/unstaged grouping, staged diff, working-tree diff, and selected-file diff loading for Workbench
+- read-only Git status, branch, changed-file list, staged/unstaged grouping, staged diff, working-tree diff, selected-file diff loading, and approval-backed stage/unstage/hunk actions for Workbench
 - configurable LLM gateway
 - OpenAI-compatible chat and streaming
 
@@ -106,7 +106,7 @@ Responsibilities:
 
 The shell should be thin. Most behavior should live in backend modules and frontend components.
 
-Current implementation note: `app/app.go` is still the Wails-facing application adapter, while `app/app_metadata.go` now owns app-level metadata mirroring and metadata record orchestration. Future backend refactors should continue moving cohesive use cases out of the bridge file without changing Wails contracts casually.
+Current implementation note: `app/app.go` is still the Wails-facing application adapter. `app/workspace_service.go` now owns workspace open/refresh/search/read/file mutation/freshness orchestration, `app/artifact_service.go` owns core artifact report/list/metadata/archive/delete/compare orchestration, `app/dataset_service.go` owns profiling/query/SQL/connector/chart/summary/dependency rebuild orchestration, and `app/app_metadata.go` owns app-level metadata mirroring and metadata record orchestration. Future backend refactors should continue moving cohesive use cases out of the bridge file without changing Wails contracts casually.
 
 ### 2. Frontend
 

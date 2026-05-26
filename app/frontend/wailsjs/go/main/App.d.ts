@@ -23,6 +23,8 @@ export function ApplyFileMove(arg1:workspace.FileMoveRequest):Promise<workspace.
 
 export function ApplyFileWrite(arg1:workspace.FileWriteRequest):Promise<workspace.FileWriteProposal>;
 
+export function ApplyGitFileAction(arg1:main.GitFileActionRequest):Promise<main.GitFileActionPreview>;
+
 export function ApplyGitHunkAction(arg1:main.GitHunkActionRequest):Promise<main.GitHunkActionPreview>;
 
 export function ArchiveArtifact(arg1:string):Promise<artifact.MarkdownReport>;

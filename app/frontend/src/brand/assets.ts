@@ -112,7 +112,7 @@ export const studioRoutePrimarySurface: Record<StudioRouteId, string> = {
 };
 
 export const studioRouteCommandHint: Record<StudioRouteId, string> = {
-    code: 'Next: add staged diffs, hunk navigation, and AI commit support.',
+    code: 'Next: deepen search, problems, task runs, and code review workflows.',
     data: 'Next: promote datasets, connectors, notebooks, and dump imports into a full studio.',
     analytics: 'Next: add connector runs, dashboards, and marketing report workflows.',
     documents: 'Next: add document library, extraction jobs, comparison, and deck/report generation.',

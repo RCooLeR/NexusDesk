@@ -248,7 +248,7 @@ export type GitFileActionPreview = {
     generatedAt: string;
 };
 
-export type GitHunkAction = 'discard' | 'revert';
+export type GitHunkAction = 'stage' | 'unstage' | 'discard' | 'revert';
 
 export type GitHunkDiffKind = 'staged' | 'unstaged';
 

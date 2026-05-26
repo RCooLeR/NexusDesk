@@ -77,7 +77,7 @@ The current app implements the first safe workspace slice:
 - Data & Analytics clears visible query/chart/profile state for the active dataset when that dataset changes on disk.
 - CSV chart generation goes through `app/internal/workspace/chart.go` and returns bounded category counts or numeric sums.
 - Chat context uses the same rooted preview boundary and sends only selected text content or a bounded pack of pinned previews.
-- Workspace open/recent/refresh flows are bound through Wails methods on `app/app.go`.
+- Workspace open/recent/refresh/search/read/file mutation/freshness flows keep stable Wails method names on `app/app.go`, but dispatch through `app/workspace_service.go`.
 - Recent workspaces are stored in local JSON config through `app/internal/storage/recent_workspaces.go`.
 
 The app does not yet build persistent chunks, embeddings, or an event-driven filesystem watcher. Those remain future indexing work; the current freshness pass is a polling snapshot that keeps stale-source warnings visible without background indexing complexity.

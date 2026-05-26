@@ -87,6 +87,15 @@ func (a *App) PreviewGitFileAction(request GitFileActionRequest) (GitFileActionP
 	return newGitService(a.getWorkspaceRoot).PreviewFileAction(request)
 }
 
+func (a *App) ApplyGitFileAction(request GitFileActionRequest) (GitFileActionPreview, error) {
+	preview, err := newGitService(a.getWorkspaceRoot).ApplyFileAction(request)
+	if err != nil {
+		return GitFileActionPreview{}, err
+	}
+	a.recordApproval("git.file."+preview.Action, preview.Path, "medium", preview.Message)
+	return preview, nil
+}
+
 func (a *App) PreviewGitHunkAction(request GitHunkActionRequest) (GitHunkActionPreview, error) {
 	return newGitService(a.getWorkspaceRoot).PreviewHunkAction(request)
 }

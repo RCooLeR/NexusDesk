@@ -151,7 +151,7 @@ const checks = [
     },
     {
         file: 'src/features/shell/GitDiffPanel.tsx',
-        terms: ['GitDiffPanel', 'Working Tree Diff', 'Staged Diff', 'Unstaged Diff', 'selectedGitChangePath', 'selectedGitFileDiff', 'diffMode', 'changes', 'Diff Only', 'collectChangedRows', 'hunkTargets', 'selectedHunkKeys', 'Select hunk', 'selected-hunk', 'hunk-selection-summary', 'hunkRequestFromKey', 'hunkActionLabel', 'gitHunkActionLabel', 'Previous hunk', 'Next hunk', 'Preview stage', 'Preview unstage', 'gitFileActionPreview', 'gitHunkActionPreview', 'git-action-preview', 'Summarize diff', 'Draft commit', 'isGeneratingGitInsight', 'git-diff-panel', 'git-diff-split', 'git-diff-changes', 'git-diff-view', 'onSelectGitChange', 'Refresh git', 'buildGitChangeTree', 'git-change-tree'],
+        terms: ['GitDiffPanel', 'Working Tree Diff', 'Staged Diff', 'Unstaged Diff', 'selectedGitChangePath', 'selectedGitFileDiff', 'diffMode', 'changes', 'Diff Only', 'collectChangedRows', 'hunkTargets', 'selectedHunkKeys', 'Select hunk', 'selected-hunk', 'hunk-selection-summary', 'hunkRequestFromKey', 'hunkActionLabel', 'gitHunkActionLabel', 'Previous hunk', 'Next hunk', 'Preview stage', 'Stage file', 'Preview unstage', 'Unstage file', 'Stage hunk', 'Unstage hunk', 'Discard hunk', 'Revert hunk', 'gitFileActionPreview', 'gitHunkActionPreview', 'git-action-preview', 'Summarize diff', 'Draft commit', 'isGeneratingGitInsight', 'git-diff-panel', 'git-diff-split', 'git-diff-changes', 'git-diff-view', 'onSelectGitChange', 'Refresh git', 'buildGitChangeTree', 'git-change-tree'],
     },
     {
         file: 'src/features/shell/LLMSettingsCard.tsx',
@@ -343,7 +343,7 @@ const checks = [
     },
     {
         file: 'wailsjs/go/main/App.d.ts',
-        terms: ['AskLLMContextPack', 'RunAgent', 'PreviewFileWrite', 'ApplyFileDelete', 'PreviewFileCopy', 'ApplyFileCopy', 'ApplyFileMove', 'ProfileDataset', 'CreateDatasetChartArtifact', 'CreateDatasetQueryArtifact', 'CreateDatasetSQLArtifact', 'CreateDatasetSummaryArtifact', 'CreateChatMarkdownArtifact', 'CreateScanReportArtifact', 'PreviewChatContextPack', 'PreviewDatasetChart', 'SaveDatasetQuery', 'SaveDatasetSQLQuery', 'ListDatasetSQLQueries', 'ListDatasetDependencies', 'ListDatasetSQLRuns', 'ListWorkspaceTasks', 'RefreshStaleContext', 'SearchMetadata', 'GetAssistantProfile', 'SaveAssistantProfile', 'QueryWorkspaceSQLite', 'ExportArtifactLineageJSON', 'GetGitStatus', 'GetGitFileDiff', 'PreviewGitFileAction', 'PreviewGitHunkAction', 'ApplyGitHunkAction', 'ListApprovals', 'ListAgentTools', 'ListAgentToolRuns', 'PreviewAgentTool', 'ExecuteAgentTool', 'QueryDatasetSQL', 'EnsureSQLiteMetadataStore', 'InspectMetadataStore', 'GetArtifactLineage', 'CheckWorkspaceFreshness', 'CompareArtifacts', 'ArchiveArtifact', 'DeleteArtifact'],
+        terms: ['AskLLMContextPack', 'RunAgent', 'PreviewFileWrite', 'ApplyFileDelete', 'PreviewFileCopy', 'ApplyFileCopy', 'ApplyFileMove', 'ProfileDataset', 'CreateDatasetChartArtifact', 'CreateDatasetQueryArtifact', 'CreateDatasetSQLArtifact', 'CreateDatasetSummaryArtifact', 'CreateChatMarkdownArtifact', 'CreateScanReportArtifact', 'PreviewChatContextPack', 'PreviewDatasetChart', 'SaveDatasetQuery', 'SaveDatasetSQLQuery', 'ListDatasetSQLQueries', 'ListDatasetDependencies', 'ListDatasetSQLRuns', 'ListWorkspaceTasks', 'RefreshStaleContext', 'SearchMetadata', 'GetAssistantProfile', 'SaveAssistantProfile', 'QueryWorkspaceSQLite', 'ExportArtifactLineageJSON', 'GetGitStatus', 'GetGitFileDiff', 'PreviewGitFileAction', 'ApplyGitFileAction', 'PreviewGitHunkAction', 'ApplyGitHunkAction', 'ListApprovals', 'ListAgentTools', 'ListAgentToolRuns', 'PreviewAgentTool', 'ExecuteAgentTool', 'QueryDatasetSQL', 'EnsureSQLiteMetadataStore', 'InspectMetadataStore', 'GetArtifactLineage', 'CheckWorkspaceFreshness', 'CompareArtifacts', 'ArchiveArtifact', 'DeleteArtifact'],
     },
     {
         file: '../app_tasks.go',
@@ -354,12 +354,24 @@ const checks = [
         terms: ['metadataMirrorData', 'mirrorMetadataStore', 'recordDatasetDependency', 'recordSQLRun', 'datasetViews', 'hashForID'],
     },
     {
+        file: '../workspace_service.go',
+        terms: ['WorkspaceService', 'NewWorkspaceService', 'Open', 'Refresh', 'Search', 'PreviewFileWrite', 'ApplyFileCopy', 'CheckFreshness', 'StaleArtifactsForChanges'],
+    },
+    {
+        file: '../artifact_service.go',
+        terms: ['ArtifactService', 'NewArtifactService', 'CreateMarkdownReport', 'CreateScanReport', 'CreateGeneratedMarkdown', 'Archive', 'Delete', 'Compare'],
+    },
+    {
+        file: '../dataset_service.go',
+        terms: ['DatasetService', 'NewDatasetService', 'Profile', 'QuerySQL', 'SaveSQLQuery', 'QueryWorkspaceSQLite', 'CreateSQLArtifact', 'CreateSummaryArtifact', 'RebuildDependency'],
+    },
+    {
         file: '../app_git.go',
-        terms: ['GitStatus', 'GitFileChange', 'GitFileDiff', 'GitFileActionRequest', 'GitFileActionPreview', 'GitHunkActionRequest', 'GitHunkActionPreview', 'GetGitStatus', 'GetGitFileDiff', 'PreviewGitFileAction', 'PreviewGitHunkAction', 'ApplyGitHunkAction', 'newGitService'],
+        terms: ['GitStatus', 'GitFileChange', 'GitFileDiff', 'GitFileActionRequest', 'GitFileActionPreview', 'GitHunkActionRequest', 'GitHunkActionPreview', 'GetGitStatus', 'GetGitFileDiff', 'PreviewGitFileAction', 'ApplyGitFileAction', 'PreviewGitHunkAction', 'ApplyGitHunkAction', 'newGitService'],
     },
     {
         file: '../git_service.go',
-        terms: ['GitService', 'Status', 'FileDiff', 'PreviewFileAction', 'PreviewHunkAction', 'ApplyHunkAction', 'gitHunkActionCommand', 'extractGitHunkPatch', 'gitFileActionCommand', 'gitFileDiff', 'cleanGitRelPath', 'parseGitStatus', 'gitDiffMaxBytes', 'configureHiddenCommand'],
+        terms: ['GitService', 'Status', 'FileDiff', 'PreviewFileAction', 'ApplyFileAction', 'PreviewHunkAction', 'ApplyHunkAction', 'gitHunkActionCommand', 'gitHunkActionStage', 'gitHunkActionUnstage', 'extractGitHunkPatch', 'gitFileActionCommand', 'gitFileDiff', 'cleanGitRelPath', 'parseGitStatus', 'gitDiffMaxBytes', 'configureHiddenCommand'],
     },
     {
         file: '../internal/llm/chat.go',
