@@ -12,7 +12,7 @@ import (
 	"time"
 
 	"NexusAugenticStudio/internal/storage"
-	_ "github.com/denisenkom/go-mssqldb"
+	_ "github.com/microsoft/go-mssqldb"
 )
 
 func TestSQLServerProfile(profile storage.ConnectorProfile) (ConnectorProfileStatus, error) {

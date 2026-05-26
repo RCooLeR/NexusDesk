@@ -545,7 +545,7 @@ The first external database connectors are scoped to saved PostgreSQL, MySQL/Mar
 
 Current implementation:
 
-- `app/internal/dbconnector/` opens PostgreSQL profiles through `pgx`, MySQL/MariaDB profiles through `go-sql-driver/mysql`, SQL Server profiles through `go-mssqldb`, and DuckDB files through `duckdb-go` when the optional `duckdb` build tag and CGO toolchain are available.
+- `app/internal/dbconnector/` opens PostgreSQL profiles through `pgx`, MySQL/MariaDB profiles through `go-sql-driver/mysql`, SQL Server profiles through the maintained Microsoft `go-mssqldb` driver, and DuckDB files through `duckdb-go` when the optional `duckdb` build tag and CGO toolchain are available.
 - Test, inspect, and guarded query methods resolve protected credentials at execution time rather than when profiles are listed.
 - Sessions are set read-only where supported and receive a statement timeout derived from the profile/request timeout.
 - Only single-statement `SELECT`/`WITH` SQL is accepted for the guarded profile query path.

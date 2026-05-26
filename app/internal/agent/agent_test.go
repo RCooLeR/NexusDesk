@@ -19,6 +19,19 @@ Action: read_file({"relPath":"docs/README.md"})`)
 	}
 }
 
+func TestParseJSONActionKeepsNestedArgumentsAsJSON(t *testing.T) {
+	call, ok := parseAction(`Action: dataset.query({"relPath":"data.csv","filter":{"column":"channel","value":"Search"},"columns":["spend","conversions"]})`)
+	if !ok {
+		t.Fatal("expected action")
+	}
+	if call.Arguments["filter"] != `{"column":"channel","value":"Search"}` {
+		t.Fatalf("expected nested object JSON, got %q", call.Arguments["filter"])
+	}
+	if call.Arguments["columns"] != `["spend","conversions"]` {
+		t.Fatalf("expected nested array JSON, got %q", call.Arguments["columns"])
+	}
+}
+
 func TestParseKeyValueAction(t *testing.T) {
 	call, ok := parseAction(`Action: search_files(query="agent plan")`)
 	if !ok {

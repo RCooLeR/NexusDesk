@@ -24,7 +24,7 @@ func PreviewFileDelete(root string, relPath string) (FileDeleteProposal, error) 
 	}
 
 	diff := ""
-	if info.Size() <= writePreviewMaxBytes {
+	if info.Size() <= writeDiffMaxBytes {
 		if content, readErr := os.ReadFile(absTarget); readErr == nil {
 			if normalized, _, ok := normalizePreviewText(content); ok && !isLikelyBinary(normalized) {
 				diff = buildUnifiedDiff(filepath.ToSlash(cleanRel), string(normalized), "")

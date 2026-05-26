@@ -7,10 +7,9 @@ const agentMinWidth = 360;
 const agentDefaultWidth = 480;
 const bottomMinHeight = 150;
 const bottomDefaultHeight = 300;
-const railWidth = 56;
 const panelStorageKey = 'nexus:resizable-panels';
 
-export function useResizablePanels() {
+export function useResizablePanels({railWidth}: {railWidth: number}) {
     const initial = readPanelSettings();
     const [navigatorWidth, setNavigatorWidth] = useState(initial.navigatorWidth);
     const [agentWidth, setAgentWidth] = useState(initial.agentWidth);

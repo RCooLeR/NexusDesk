@@ -27,10 +27,16 @@ mkdirSync(baselineDir, {recursive: true});
 const server = await serveDist(path.join(root, 'dist'));
 const browser = await chromium.launch();
 const page = await browser.newPage({viewport: {width: 1440, height: 960}});
+await page.addInitScript(() => {
+    window.localStorage.clear();
+});
 await installNexusMocks(page);
 
 try {
     await page.goto(server.url);
+    await page.getByRole('button', {name: 'Expand main navigation'}).click();
+    await page.locator('.workspace-rail.expanded .rail-logo img').waitFor({state: 'visible'});
+    await page.getByRole('button', {name: 'Workbench', exact: true}).waitFor({state: 'visible'});
     await page.getByText('Open Folder').click();
     await page.locator('[data-studio-route="code"]').click();
     for (const text of ['Active Context', 'Preview', 'Explain']) {
@@ -42,6 +48,9 @@ try {
         throw new Error('Nexus visual smoke failed: Workbench route rendered the removed inline Git panel above editor tabs.');
     }
     await page.locator('.editor-tabs').waitFor({state: 'visible'});
+    await page.getByRole('button', {name: 'Delete', exact: true}).click();
+    await page.getByText('Approval Required').waitFor({state: 'visible'});
+    await page.getByRole('button', {name: 'Cancel', exact: true}).click();
     await page.getByRole('tab', {name: 'Git', exact: true}).click();
     for (const text of ['Git', 'Working Tree Diff', 'Refresh git']) {
         if (!(await page.getByText(text).first().isVisible())) {
@@ -59,10 +68,14 @@ try {
     await page.locator('[data-studio-route="data"]').click();
     const dataMainSurface = page.getByLabel('Data & Analytics main surface');
     await dataMainSurface.getByText('Data & Analytics', {exact: true}).waitFor({state: 'visible'});
+    await dataMainSurface.getByRole('tab', {name: 'Operations', exact: true}).click();
+    await dataMainSurface.getByText('Workspace Watcher').waitFor({state: 'visible'});
+    await dataMainSurface.getByRole('tab', {name: 'Metadata', exact: true}).click();
     await dataMainSurface.getByRole('button', {name: 'Inspect metadata'}).click();
     await dataMainSurface.getByPlaceholder('Search chats, artifacts, tools').fill('Smoke');
     await dataMainSurface.getByText('Search history').click({force: true});
     await page.locator('[data-studio-route="artifacts"]').click();
+    await page.getByRole('tab', {name: 'Lineage', exact: true}).click();
     await page.locator('.metadata-store-panel').filter({hasText: 'Artifact Lineage'}).getByText('Refresh').click();
     await page.getByText('Export JSON').click();
     await page.getByLabel('Lineage filter').getByText('source').click();
@@ -120,7 +133,10 @@ try {
     }
 
     await page.locator('[data-studio-route="data"]').click();
-    for (const text of ['Metadata Browser', 'Workspace Watcher']) {
+    await dataMainSurface.getByRole('tab', {name: 'Operations', exact: true}).click();
+    await page.getByText('Workspace Watcher').waitFor({state: 'visible'});
+    await dataMainSurface.getByRole('tab', {name: 'Metadata', exact: true}).click();
+    for (const text of ['Metadata Browser']) {
         if (!(await page.getByText(text).first().isVisible())) {
             throw new Error(`Nexus visual smoke failed: missing ${text}.`);
         }
@@ -131,12 +147,15 @@ try {
         }
     }
     await page.locator('[data-studio-route="artifacts"]').click();
+    await page.getByRole('tab', {name: 'Lineage', exact: true}).click();
     await page.getByText('Artifact Lineage').waitFor({state: 'visible'});
     await page.getByRole('tab', {name: 'Approvals', exact: true}).click();
     await page.getByText('Approval Log').waitFor({state: 'visible'});
     await page.locator('.agent-panel').getByText('Nexus Assistant').waitFor({state: 'visible'});
     await page.locator('[data-studio-route="settings"]').click();
     await page.getByText('LLM Provider', {exact: true}).waitFor({state: 'visible'});
+    await page.getByRole('tab', {name: 'Connectors', exact: true}).click();
+    await page.getByText('Connector Profiles', {exact: true}).waitFor({state: 'visible'});
 
     await page.screenshot({path: path.join(screenshotDir, 'desktop.png'), fullPage: false});
     await page.screenshot({path: path.join(baselineDir, 'desktop.png'), fullPage: false});
@@ -148,7 +167,7 @@ try {
         generatedAt: new Date().toISOString(),
         source: 'dist/index.html',
         viewports: ['desktop', 'mobile'],
-        assertions: ['navigator-resize', 'agent-resize', 'bottom-drawer-resize', 'panel-overflow', 'project-tree', 'tree-context-menu', 'tool-run-detail', 'code-route', 'code-git-diff', 'settings-route', 'data-route', 'artifacts-route', 'approvals-tab', 'lineage-export', 'lineage-filter', 'lineage-graph', 'freshness-warning', 'metadata-browser', 'metadata-history', 'sql-snippets', 'dataset-lineage'],
+        assertions: ['navigator-resize', 'agent-resize', 'bottom-drawer-resize', 'panel-overflow', 'project-tree', 'tree-context-menu', 'approval-modal', 'tool-run-detail', 'code-route', 'code-git-diff', 'settings-route', 'settings-tabs', 'data-route', 'data-route-tabs', 'artifacts-route', 'artifact-route-tabs', 'approvals-tab', 'lineage-export', 'lineage-filter', 'lineage-graph', 'freshness-warning', 'metadata-browser', 'metadata-history', 'sql-snippets', 'dataset-lineage'],
     }, null, 2)}\n`);
 } finally {
     await browser.close();

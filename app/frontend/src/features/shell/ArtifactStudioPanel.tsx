@@ -1,7 +1,7 @@
 import {useEffect, useState} from 'react';
 import {FontAwesomeIcon} from '@fortawesome/react-fontawesome';
 import {brandAssets} from '../../brand/assets';
-import {Button, EmptyState, StatusBadge} from '../../components/ui';
+import {Button, EmptyState, StatusBadge, SurfaceTabs} from '../../components/ui';
 import type {ArtifactComparison, ArtifactLineage, ArtifactMetadata, FilePreview, WorkspaceArtifact} from '../../types';
 import {ArtifactMetadataPanel} from './ArtifactMetadataPanel';
 
@@ -23,6 +23,8 @@ type ArtifactStudioPanelProps = {
     onSelectArtifact: (artifact: WorkspaceArtifact) => void;
 };
 
+type ArtifactSurface = 'library' | 'detail' | 'lineage';
+
 export function ArtifactStudioPanel({
     artifacts,
     artifactComparison,
@@ -40,60 +42,84 @@ export function ArtifactStudioPanel({
     onRefreshLineage,
     onSelectArtifact,
 }: ArtifactStudioPanelProps) {
+    const [activeSurface, setActiveSurface] = useState<ArtifactSurface>('library');
+
     return (
         <div className="artifact-studio-panel">
-            <div className="artifact-studio-list">
-                <div className="bottom-section-heading">
-                    <strong>Artifacts</strong>
-                    <small>{artifacts.length} generated reports, charts, diffs, and exports.</small>
-                </div>
-                {artifacts.length === 0 ? (
-                    <EmptyState
-                        detail="Create a report to add the first workspace artifact."
-                        icon={brandAssets.icons.documents}
-                        title="No artifacts yet"
-                    />
-                ) : artifacts.map((artifact) => (
-                    <button className="artifact-item" key={artifact.relPath} onClick={() => onSelectArtifact(artifact)}>
-                        <FontAwesomeIcon icon={artifact.kind === 'chart-svg' || artifact.kind === 'dataset-query-csv' ? brandAssets.icons.data : brandAssets.icons.documents} />
-                        <span>
-                            <strong>{artifact.name}</strong>
-                            <small>{artifact.summary || artifact.source || artifact.relPath}</small>
-                            {artifact.model && <small>{artifact.model}</small>}
-                        </span>
-                        <StatusBadge tone="warning">{artifact.kind}</StatusBadge>
-                    </button>
-                ))}
-            </div>
-
-            <div className="artifact-studio-detail">
-                {artifactMetadata ? (
-                    <ArtifactMetadataPanel
-                        isArchiving={isArchivingArtifact}
-                        isDeleting={isDeletingArtifact}
-                        metadata={artifactMetadata}
-                        onArchive={onArchiveArtifact}
-                        onCompare={onCompareArtifact}
-                        onDelete={onDeleteArtifact}
-                        onOpenSource={onOpenArtifactSource}
-                        preview={filePreview}
-                        relPath={filePreview?.relPath ?? ''}
-                    />
-                ) : (
-                    <div className="artifact-metadata-panel">
-                        <strong>Artifact Metadata</strong>
-                        <small>Select an artifact to inspect source, lineage, and actions.</small>
-                    </div>
-                )}
-                {artifactComparison && <ArtifactComparisonPanel comparison={artifactComparison} />}
-            </div>
-
-            <ArtifactLineagePanel
-                lineage={artifactLineage}
-                onExport={onExportLineage}
-                onOpenSource={onOpenLineageSource}
-                onRefresh={onRefreshLineage}
+            <SurfaceTabs
+                active={activeSurface}
+                items={[
+                    {id: 'library', label: 'Library'},
+                    {id: 'detail', label: 'Metadata'},
+                    {id: 'lineage', label: 'Lineage'},
+                ]}
+                onSelect={setActiveSurface}
             />
+            {activeSurface === 'library' && (
+                <div className="artifact-studio-list">
+                    <div className="bottom-section-heading">
+                        <strong>Artifacts</strong>
+                        <small>{artifacts.length} generated reports, charts, diffs, and exports.</small>
+                    </div>
+                    {artifacts.length === 0 ? (
+                        <EmptyState
+                            detail="Create a report to add the first workspace artifact."
+                            icon={brandAssets.icons.documents}
+                            title="No artifacts yet"
+                        />
+                    ) : artifacts.map((artifact) => (
+                        <button
+                            className="artifact-item"
+                            key={artifact.relPath}
+                            onClick={() => {
+                                onSelectArtifact(artifact);
+                                setActiveSurface('detail');
+                            }}
+                        >
+                            <FontAwesomeIcon icon={artifact.kind === 'chart-svg' || artifact.kind === 'dataset-query-csv' ? brandAssets.icons.data : brandAssets.icons.documents} />
+                            <span>
+                                <strong>{artifact.name}</strong>
+                                <small>{artifact.summary || artifact.source || artifact.relPath}</small>
+                                {artifact.model && <small>{artifact.model}</small>}
+                            </span>
+                            <StatusBadge tone="warning">{artifact.kind}</StatusBadge>
+                        </button>
+                    ))}
+                </div>
+            )}
+
+            {activeSurface === 'detail' && (
+                <div className="artifact-studio-detail">
+                    {artifactMetadata ? (
+                        <ArtifactMetadataPanel
+                            isArchiving={isArchivingArtifact}
+                            isDeleting={isDeletingArtifact}
+                            metadata={artifactMetadata}
+                            onArchive={onArchiveArtifact}
+                            onCompare={onCompareArtifact}
+                            onDelete={onDeleteArtifact}
+                            onOpenSource={onOpenArtifactSource}
+                            preview={filePreview}
+                            relPath={filePreview?.relPath ?? ''}
+                        />
+                    ) : (
+                        <div className="artifact-metadata-panel">
+                            <strong>Artifact Metadata</strong>
+                            <small>Select an artifact to inspect source, lineage, and actions.</small>
+                        </div>
+                    )}
+                    {artifactComparison && <ArtifactComparisonPanel comparison={artifactComparison} />}
+                </div>
+            )}
+
+            {activeSurface === 'lineage' && (
+                <ArtifactLineagePanel
+                    lineage={artifactLineage}
+                    onExport={onExportLineage}
+                    onOpenSource={onOpenLineageSource}
+                    onRefresh={onRefreshLineage}
+                />
+            )}
         </div>
     );
 }

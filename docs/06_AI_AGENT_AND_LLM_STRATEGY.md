@@ -341,12 +341,16 @@ Current implementation:
 - normal chat still maps one user prompt/context pack to provider calls, with optional streaming
 - `RunAgent` executes a bounded ReAct loop with plan updates, tool calls, observations, context pruning, and final-answer extraction
 - registered agent tools can be executed through the loop and persisted as tool-run records
+- JSON action parsing preserves nested object/array arguments as JSON strings so structured tool inputs do not collapse into Go map formatting
 - direct agent tools include directory listing, bounded file reads, workspace search, approved file write/append, approved shell execution, dataset analysis, and Markdown artifact creation
+- agent runtime settings are resolved for use before provider calls, so redacted API-key placeholders returned to the UI are never sent as bearer tokens
+- model-directed append operations use an append-only backend write path instead of reading a bounded preview and overwriting the whole file
 - the chat composer exposes a safe `Agent` button that runs `RunAgent` without write or shell approval by default and summarizes the returned plan/tool observations into the conversation
 - selected file context is read through the same rooted preview boundary as the source preview pane
-- chat history is persisted per workspace in local JSON config
+- selected workspace context is quoted with Nexus sentinel delimiters instead of Markdown fences, and delimiter/fence text from files is escaped before it reaches the model prompt
+- chat history is persisted per workspace in local JSON config and the most recent token-budgeted user/assistant turns are sent before the current user prompt so the chat surface behaves conversationally without consuming the whole model context
 - file create/update/delete/rename/move actions remain deterministic UI-triggered tools in the main workbench; model-directed writes are blocked unless high-impact approval is explicitly supplied to `RunAgent`
-- shell commands are blocked unless both high-impact approval and shell execution are enabled
+- shell commands are blocked unless both high-impact approval and shell execution are enabled; approved model-directed shell commands are parsed into argv and constrained to a small executable/subcommand allow-list instead of being passed through `cmd /c` or `sh -c`
 - tool run records capture inputs, output summary, risk, approval ID, duration, and errors for replay/audit
 - artifact lineage can link source files, assistant answers, persisted tool runs, and generated artifacts for an audit graph
 - lineage can be filtered in the Artifact Studio route by source, chat, tool, or artifact kind, with selectable nodes, relationship counts, and source navigation

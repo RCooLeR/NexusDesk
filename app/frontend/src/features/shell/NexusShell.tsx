@@ -196,6 +196,9 @@ type AssistantArtifactWriteRequest = {
 
 const chatStreamEventName = 'nexus:chat-stream';
 const agentRunEventName = 'nexus:agent-run';
+const railExpansionStorageKey = 'nexus:workspace-rail-expanded';
+const compactRailWidth = 56;
+const expandedRailWidth = 216;
 
 export function NexusShell({
     state,
@@ -325,6 +328,7 @@ export function NexusShell({
     const [quickOpenQuery, setQuickOpenQuery] = useState('');
     const [isCommandPaletteOpen, setIsCommandPaletteOpen] = useState(false);
     const [commandPaletteQuery, setCommandPaletteQuery] = useState('');
+    const [isRailExpanded, setIsRailExpanded] = useState(readRailExpansionPreference);
     const [approvalPrompt, setApprovalPrompt] = useState<ApprovalPrompt | null>(null);
     const [agentTools, setAgentTools] = useState<AgentToolDescriptor[]>([]);
     const [agentToolPlan, setAgentToolPlan] = useState<AgentToolPlanItem[]>([]);
@@ -339,6 +343,7 @@ export function NexusShell({
     const secondaryEditorPreview = isSplitEditorEnabled
         ? resolveSecondaryEditorPreview(openTabs, secondaryEditorPath, activeFile)
         : null;
+    const railWidth = isRailExpanded ? expandedRailWidth : compactRailWidth;
     const {
         agentWidth,
         bottomPanelHeight,
@@ -346,7 +351,7 @@ export function NexusShell({
         startAgentResize,
         startBottomResize,
         startNavigatorResize,
-    } = useResizablePanels();
+    } = useResizablePanels({railWidth});
     const {
         activeBottomTab,
         activeStudioRoute,
@@ -373,6 +378,10 @@ export function NexusShell({
         selectedGitFileDiff,
         selectGitChange,
     } = useGitController(workspace?.root, pushToolEvent);
+
+    useEffect(() => {
+        writeRailExpansionPreference(isRailExpanded);
+    }, [isRailExpanded]);
 
     useEffect(() => {
         setSettingsDraft(settingsWithRuntimeContext(llmSettings, probeResult?.runtime));
@@ -4451,9 +4460,15 @@ export function NexusShell({
                 '--navigator-width': `${navigatorWidth}px`,
                 '--agent-width': `${agentWidth}px`,
                 '--bottom-panel-height': `${bottomPanelHeight}px`,
+                '--rail-width': `${railWidth}px`,
             } as CSSProperties}
         >
-            <WorkspaceRail activeRoute={activeStudioRoute} onRouteChange={changeStudioRoute} />
+            <WorkspaceRail
+                activeRoute={activeStudioRoute}
+                isExpanded={isRailExpanded}
+                onRouteChange={changeStudioRoute}
+                onToggleExpanded={() => setIsRailExpanded((current) => !current)}
+            />
             <QuickOpenPalette
                 activeFile={activeFile}
                 isOpen={isQuickOpenOpen}
@@ -5439,6 +5454,22 @@ function gitHunkApprovalLabels(action: string): {action: string; confirmLabel: s
             impact: 'This changes the Git index.',
             risk: 'high',
         };
+    }
+}
+
+function readRailExpansionPreference() {
+    try {
+        return window.localStorage.getItem(railExpansionStorageKey) === 'true';
+    } catch {
+        return false;
+    }
+}
+
+function writeRailExpansionPreference(isExpanded: boolean) {
+    try {
+        window.localStorage.setItem(railExpansionStorageKey, String(isExpanded));
+    } catch {
+        // Ignore storage failures; rail expansion remains a session preference.
     }
 }
 

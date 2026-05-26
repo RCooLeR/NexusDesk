@@ -71,3 +71,62 @@ func TestAskLLMStreamEmitsRedactedErrorEvent(t *testing.T) {
 		t.Fatalf("expected stream error event for request, got %#v", captured)
 	}
 }
+
+func TestAskLLMStreamDoneEventIncludesSourceCitations(t *testing.T) {
+	server := httptest.NewServer(http.HandlerFunc(func(response http.ResponseWriter, request *http.Request) {
+		response.Header().Set("Content-Type", "text/event-stream")
+		_, _ = response.Write([]byte("data: {\"choices\":[{\"delta\":{\"content\":\"Summary\"}}]}\n\n"))
+		_, _ = response.Write([]byte("data: [DONE]\n\n"))
+	}))
+	defer server.Close()
+
+	root := t.TempDir()
+	writeAppTestFile(t, root, "docs/brief.md", "# Brief\n")
+
+	app := NewApp()
+	app.ctx = context.Background()
+	app.llmClient = llm.NewClientWithHTTPClient(http.DefaultClient)
+	app.llmStore = storage.NewLLMSettingsStore(filepath.Join(t.TempDir(), "llm-settings.json"))
+	app.chatStore = storage.NewChatHistoryStore(filepath.Join(t.TempDir(), "chat-history.json"))
+	app.setWorkspaceRoot(root)
+	if _, err := app.llmStore.Save(storage.LLMSettings{
+		BaseURL: server.URL + "/v1",
+		Model:   "test-model",
+	}); err != nil {
+		t.Fatalf("save settings failed: %v", err)
+	}
+
+	captured := []ChatStreamEvent{}
+	originalEmitter := emitChatStreamEventFn
+	emitChatStreamEventFn = func(_ context.Context, name string, payload any) {
+		if name != chatStreamEventName {
+			return
+		}
+		event, ok := payload.(ChatStreamEvent)
+		if !ok {
+			t.Fatalf("unexpected event type %T", payload)
+		}
+		captured = append(captured, event)
+	}
+	defer func() {
+		emitChatStreamEventFn = originalEmitter
+	}()
+
+	result, err := app.AskLLMStream("summarize", "docs/brief.md", "stream-done-1")
+	if err != nil {
+		t.Fatalf("AskLLMStream failed: %v", err)
+	}
+	if !strings.Contains(result.Message, "\n\nSources:\n- docs/brief.md") {
+		t.Fatalf("expected returned result to include source citations, got %q", result.Message)
+	}
+
+	for _, event := range captured {
+		if event.RequestID == "stream-done-1" && event.Type == "done" {
+			if !strings.Contains(event.Message, "\n\nSources:\n- docs/brief.md") {
+				t.Fatalf("expected done event to include source citations, got %q", event.Message)
+			}
+			return
+		}
+	}
+	t.Fatalf("expected stream done event, got %#v", captured)
+}

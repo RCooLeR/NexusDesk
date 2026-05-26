@@ -24,6 +24,16 @@ func TestNormalizeReadOnlyConnectorSQL(t *testing.T) {
 	}
 }
 
+func TestNormalizeReadOnlyConnectorSQLIgnoresCommentsAndStrings(t *testing.T) {
+	query, err := normalizeReadOnlyConnectorSQL("select * from audit_log where action = 'delete' /* update note */;")
+	if err != nil {
+		t.Fatalf("normalizeReadOnlyConnectorSQL returned error: %v", err)
+	}
+	if query != "select * from audit_log where action = 'delete' /* update note */" {
+		t.Fatalf("unexpected normalized query: %q", query)
+	}
+}
+
 func TestNormalizeConnectorQueryRequest(t *testing.T) {
 	request := NormalizeConnectorQueryRequest(ConnectorQueryRequest{
 		ProfileID:      "  warehouse  ",

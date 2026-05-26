@@ -1,9 +1,27 @@
-import {useState} from 'react';
+import {useEffect, useState} from 'react';
 import type {CSSProperties, MouseEvent as ReactMouseEvent} from 'react';
 import type {IconDefinition} from '@fortawesome/fontawesome-svg-core';
-import {faChevronRight, faRotateRight} from '@fortawesome/free-solid-svg-icons';
+import {
+    faBan,
+    faBroom,
+    faChevronRight,
+    faCompress,
+    faCopy,
+    faExpand,
+    faFileCirclePlus,
+    faFloppyDisk,
+    faFolderOpen,
+    faFolderPlus,
+    faMagnifyingGlass,
+    faPaste,
+    faPen,
+    faRotateRight,
+    faScissors,
+    faTrash,
+    faUpRightFromSquare,
+} from '@fortawesome/free-solid-svg-icons';
 import {FontAwesomeIcon} from '@fortawesome/react-fontawesome';
-import {brandAssets, productBrand, workspaceIconByName} from '../../brand/assets';
+import {brandAssets, workspaceIconByName} from '../../brand/assets';
 import {Button, IconButton} from '../../components/ui';
 import type {FileNode, GitFileChange, RecentWorkspace, WorkspaceItem, WorkspaceSearchResult, WorkspaceSnapshot} from '../../types';
 
@@ -94,6 +112,20 @@ export function WorkspaceNavigator({
     const gitStatusByPath = buildGitStatusMap(gitFileChanges);
     const [contextMenu, setContextMenu] = useState<{node: FileNode; x: number; y: number} | null>(null);
     const [showIgnoredSamples, setShowIgnoredSamples] = useState(false);
+
+    useEffect(() => {
+        if (!contextMenu) {
+            return;
+        }
+        function closeContextMenuOnEscape(event: KeyboardEvent) {
+            if (event.key === 'Escape') {
+                setContextMenu(null);
+            }
+        }
+        window.addEventListener('keydown', closeContextMenuOnEscape);
+        return () => window.removeEventListener('keydown', closeContextMenuOnEscape);
+    }, [contextMenu]);
+
     function openContextMenu(event: ReactMouseEvent, node: FileNode) {
         event.preventDefault();
         setContextMenu({node, x: event.clientX, y: event.clientY});
@@ -107,14 +139,9 @@ export function WorkspaceNavigator({
     }
     return (
         <section className="navigator" onClick={() => setContextMenu(null)}>
-            <header className="navigator-header">
-                <div className="product-lockup" aria-label={productBrand.name}>
-                    <img src={brandAssets.logoHorizontalDark} alt="" />
-                </div>
-            </header>
-
             <div className="action-row">
                 <Button className="primary-action" onClick={onOpenWorkspace} disabled={isOpeningWorkspace} variant="primary">
+                    <FontAwesomeIcon icon={faFolderOpen} />
                     {isOpeningWorkspace ? 'Opening...' : 'Open Folder'}
                 </Button>
                 <IconButton
@@ -177,21 +204,35 @@ export function WorkspaceNavigator({
                                     value={workspaceSearchQuery}
                                 />
                                 <Button disabled={isSearchingWorkspace || workspaceSearchQuery.trim() === ''} onClick={onSearchWorkspace} variant="subtle">
+                                    <FontAwesomeIcon icon={faMagnifyingGlass} />
                                     {isSearchingWorkspace ? 'Searching...' : 'Search'}
                                 </Button>
                             </div>
                             <div className="tree-tool-row">
-                                <Button onClick={onExpandAllDirectories} variant="subtle">Expand all</Button>
-                                <Button onClick={onCollapseAllDirectories} variant="subtle">Collapse all</Button>
+                                <Button onClick={onExpandAllDirectories} variant="subtle">
+                                    <FontAwesomeIcon icon={faExpand} />
+                                    Expand all
+                                </Button>
+                                <Button onClick={onCollapseAllDirectories} variant="subtle">
+                                    <FontAwesomeIcon icon={faCompress} />
+                                    Collapse all
+                                </Button>
                                 {workspace.scan.ignoredSamples.length > 0 && (
                                     <Button onClick={() => setShowIgnoredSamples((current) => !current)} variant="subtle">
+                                        <FontAwesomeIcon icon={faBan} />
                                         {showIgnoredSamples ? 'Hide ignored' : `Ignored ${workspace.scan.ignored}`}
                                     </Button>
                                 )}
                                 <Button onClick={onCreateScanReport} disabled={isCreatingScanReport} variant="subtle">
+                                    <FontAwesomeIcon icon={faFloppyDisk} />
                                     {isCreatingScanReport ? 'Saving scan...' : 'Save scan'}
                                 </Button>
-                                {workspaceSearchResults.length > 0 && <Button onClick={onClearWorkspaceSearch} variant="subtle">Clear results</Button>}
+                                {workspaceSearchResults.length > 0 && (
+                                    <Button onClick={onClearWorkspaceSearch} variant="subtle">
+                                        <FontAwesomeIcon icon={faBroom} />
+                                        Clear results
+                                    </Button>
+                                )}
                             </div>
                         </div>
                         {showIgnoredSamples && workspace.scan.ignoredSamples.length > 0 && (
@@ -238,18 +279,19 @@ export function WorkspaceNavigator({
                                 role="menu"
                                 style={{left: contextMenu.x, top: contextMenu.y}}
                             >
-                                <button onClick={() => runContextAction('new-file')} role="menuitem">New file</button>
-                                <button onClick={() => runContextAction('new-folder')} role="menuitem">New folder</button>
-                                <button onClick={() => runContextAction('rename')} role="menuitem">Rename</button>
-                                <button onClick={() => runContextAction('move')} role="menuitem">Move</button>
-                                <button disabled={contextMenu.node.kind !== 'file'} onClick={() => runContextAction('delete')} role="menuitem">Delete</button>
-                                <button disabled={contextMenu.node.kind !== 'file'} onClick={() => runContextAction('cut')} role="menuitem">Cut</button>
-                                <button disabled={contextMenu.node.kind !== 'file'} onClick={() => runContextAction('copy')} role="menuitem">Copy</button>
+                                <button onClick={() => runContextAction('new-file')} role="menuitem"><FontAwesomeIcon icon={faFileCirclePlus} /> New file</button>
+                                <button onClick={() => runContextAction('new-folder')} role="menuitem"><FontAwesomeIcon icon={faFolderPlus} /> New folder</button>
+                                <button onClick={() => runContextAction('rename')} role="menuitem"><FontAwesomeIcon icon={faPen} /> Rename</button>
+                                <button onClick={() => runContextAction('move')} role="menuitem"><FontAwesomeIcon icon={faUpRightFromSquare} /> Move</button>
+                                <button disabled={contextMenu.node.kind !== 'file'} onClick={() => runContextAction('delete')} role="menuitem"><FontAwesomeIcon icon={faTrash} /> Delete</button>
+                                <button disabled={contextMenu.node.kind !== 'file'} onClick={() => runContextAction('cut')} role="menuitem"><FontAwesomeIcon icon={faScissors} /> Cut</button>
+                                <button disabled={contextMenu.node.kind !== 'file'} onClick={() => runContextAction('copy')} role="menuitem"><FontAwesomeIcon icon={faCopy} /> Copy</button>
                                 <button disabled={!treeClipboard} onClick={() => runContextAction('paste')} role="menuitem">
+                                    <FontAwesomeIcon icon={faPaste} />
                                     Paste{treeClipboard ? ` ${treeClipboard.mode === 'cut' ? 'move' : 'copy'}` : ''}
                                 </button>
-                                <button onClick={() => runContextAction('copy-path')} role="menuitem">Copy path</button>
-                                <button onClick={() => runContextAction('reveal')} role="menuitem">Reveal</button>
+                                <button onClick={() => runContextAction('copy-path')} role="menuitem"><FontAwesomeIcon icon={faCopy} /> Copy path</button>
+                                <button onClick={() => runContextAction('reveal')} role="menuitem"><FontAwesomeIcon icon={faUpRightFromSquare} /> Reveal</button>
                             </div>
                         )}
                     </>

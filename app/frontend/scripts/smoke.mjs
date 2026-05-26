@@ -122,6 +122,9 @@ const checks = [
             'buildAgentToolPlan',
             'renderStudioPanel',
             'useResizablePanels',
+            'isRailExpanded',
+            'railExpansionStorageKey',
+            '--rail-width',
             'useStudioNavigation',
             'useGitController',
             'settingsForSelectedModel',
@@ -166,7 +169,7 @@ const checks = [
     },
     {
         file: 'src/features/shell/useResizablePanels.ts',
-        terms: ['useResizablePanels', 'startNavigatorResize', 'startAgentResize', 'startBottomResize', 'beginResize', 'clamp', 'localStorage', 'nexus:resizable-panels'],
+        terms: ['useResizablePanels', 'railWidth', 'startNavigatorResize', 'startAgentResize', 'startBottomResize', 'beginResize', 'clamp', 'localStorage', 'nexus:resizable-panels'],
     },
     {
         file: 'src/features/shell/useStudioNavigation.ts',
@@ -274,7 +277,11 @@ const checks = [
     },
     {
         file: 'src/features/shell/WorkspaceNavigator.tsx',
-        terms: ['workspace-search', 'project-tree', 'TreeNodeButton', 'tree-indent-guide', 'tree-node-badge', 'search-results', 'search-result-group', 'workspace.root', 'Expand all', 'Collapse all', 'Ignored', 'ignored-path-panel', 'Cut', 'Copy', 'Paste', 'treeClipboard', 'Save scan', 'TreeContextAction', 'tree-context-menu'],
+        terms: ['workspace-search', 'project-tree', 'TreeNodeButton', 'tree-indent-guide', 'tree-node-badge', 'search-results', 'search-result-group', 'workspace.root', 'faFolderOpen', 'faMagnifyingGlass', 'faExpand', 'faCompress', 'Expand all', 'Collapse all', 'Ignored', 'ignored-path-panel', 'Cut', 'Copy', 'Paste', 'treeClipboard', 'Save scan', 'TreeContextAction', 'tree-context-menu'],
+    },
+    {
+        file: 'src/features/shell/WorkspaceRail.tsx',
+        terms: ['WorkspaceRail', 'isExpanded', 'onToggleExpanded', 'logoHorizontalWhite', 'rail-logo', 'rail-label', 'faBars', 'faChevronLeft', 'FontAwesomeIcon'],
     },
     {
         file: 'src/features/shell/AgentChatCard.tsx',
@@ -456,6 +463,10 @@ const checks = [
     {
         file: 'scripts/visual-smoke.mjs',
         terms: ['playwright', 'installNexusMocks', 'desktop.png', 'mobile.png', 'visual-baselines', 'manifest.json', 'navigator-resize', 'project-tree', 'dataMainSurface', 'code-route', 'tool-run-detail', 'metadata-browser', 'metadata-history'],
+    },
+    {
+        file: 'scripts/visual-gallery.mjs',
+        terms: ['Nexus visual gallery', '00-contact-sheet.png', '01-workbench-compact-rail', '04-approval-modal', '16-command-palette', '20-mobile-settings'],
     },
     {
         file: 'scripts/visual-fixtures.mjs',

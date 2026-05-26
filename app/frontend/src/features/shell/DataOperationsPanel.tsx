@@ -1,7 +1,7 @@
 import {useEffect, useMemo, useState} from 'react';
 import {FontAwesomeIcon} from '@fortawesome/react-fontawesome';
 import {brandAssets, capabilityIconByTitle} from '../../brand/assets';
-import {Button, EmptyState, StatusBadge} from '../../components/ui';
+import {Button, EmptyState, StatusBadge, SurfaceTabs} from '../../components/ui';
 import type {Capability, ConnectorMetadata, DatasetChartResult, DatasetDependency, DatasetProfile, DatasetQueryResult, DatasetSQLNotebook, DatasetSQLQueryResult, FileNode, FilePreview, MetadataBrowser, MetadataSearchResult, SavedDatasetQuery, SQLNotebookCell, SQLRun, SQLiteMetadataStatus, SQLiteQueryResult, WorkspaceFreshnessStatus, WorkspaceSnapshot} from '../../types';
 import {ConnectorMetadataBrowser} from './ConnectorMetadataBrowser';
 import {DataStudioPanel, SortableDataTable} from './DataStudioPanel';
@@ -102,6 +102,8 @@ type DataOperationsPanelProps = {
     workspaceFreshness: WorkspaceFreshnessStatus | null;
 };
 
+type DataOperationsSurface = 'sources' | 'operations' | 'metadata';
+
 export function DataOperationsPanel({
     activeDatasetProfile,
     capabilities,
@@ -196,6 +198,8 @@ export function DataOperationsPanel({
     workspace,
     workspaceFreshness,
 }: DataOperationsPanelProps) {
+    const [activeSurface, setActiveSurface] = useState<DataOperationsSurface>('sources');
+
     if (!workspace) {
         return (
             <div className="data-operations-panel">
@@ -219,148 +223,161 @@ export function DataOperationsPanel({
 
     return (
         <div className="data-operations-panel">
-            <div className="data-operations-column primary">
-                <div className="bottom-section-heading">
-                    <strong>Data & Analytics</strong>
-                    <small>{datasetProfiles.length} profiles available for this workspace.</small>
-                    <Button disabled={!canProfileDataset || isProfilingDataset} onClick={onProfileDataset} variant="subtle">
-                        {isProfilingDataset ? 'Profiling...' : 'Profile dataset'}
-                    </Button>
+            <SurfaceTabs
+                active={activeSurface}
+                items={[
+                    {id: 'sources', label: 'Sources'},
+                    {id: 'operations', label: 'Operations'},
+                    {id: 'metadata', label: 'Metadata'},
+                ]}
+                onSelect={setActiveSurface}
+            />
+            {activeSurface === 'sources' && (
+                <div className="data-operations-column primary">
+                    <div className="bottom-section-heading">
+                        <strong>Data & Analytics</strong>
+                        <small>{datasetProfiles.length} profiles available for this workspace.</small>
+                        <Button disabled={!canProfileDataset || isProfilingDataset} onClick={onProfileDataset} variant="subtle">
+                            {isProfilingDataset ? 'Profiling...' : 'Profile dataset'}
+                        </Button>
+                    </div>
+                    <DataSourceCards
+                        onInspect={onInspectDataSource}
+                        onOpen={onOpenDataSource}
+                        onProfile={onProfileDataSource}
+                        sources={dataSources}
+                    />
+                    {hasDataStudio ? (
+                        <DataStudioPanel
+                            activeDatasetProfile={activeDatasetProfile}
+                            chartCategory={datasetChartCategory}
+                            chartPreview={datasetChartPreview}
+                            chartType={datasetChartType}
+                            chartValue={datasetChartValue}
+                            columns={filePreview?.table?.columns ?? activeDatasetProfile?.profiles.map((profile) => profile.name) ?? []}
+                            isCreatingChart={isCreatingDatasetChart}
+                            isCreatingSummary={isCreatingDatasetSummary}
+                            isExporting={isExportingDatasetQuery}
+                            isPreviewingChart={isPreviewingDatasetChart}
+                            isQuerying={isQueryingDataset}
+                            isSavingQuery={isSavingDatasetQuery}
+                            onChartCategoryChange={onDatasetChartCategoryChange}
+                            onChartTypeChange={onDatasetChartTypeChange}
+                            onChartValueChange={onDatasetChartValueChange}
+                            onCreateChart={onCreateDatasetChart}
+                            onCreateSummary={onCreateDatasetSummary}
+                            onExportQuery={onExportDatasetQuery}
+                            onPreviewChart={onPreviewDatasetChart}
+                            onQuery={onQueryDataset}
+                            onQueryChange={onDatasetQueryChange}
+                            onQueryLabelChange={onDatasetQueryLabelChange}
+                            onSaveQuery={onSaveDatasetQuery}
+                            onRebuildDependency={onRebuildDatasetDependency}
+                            rebuildingDependencyId={rebuildingDatasetDependencyId}
+                            profiles={filePreview?.table?.profiles ?? activeDatasetProfile?.profiles ?? []}
+                            query={datasetQuery}
+                            queryLabel={datasetQueryLabel}
+                            queryResult={datasetQueryResult}
+                            sqlQuery={datasetSQLQuery}
+                            sqlLabel={datasetSQLQueryLabel}
+                            sqlResult={datasetSQLQueryResult}
+                            savedQueries={savedDatasetQueries}
+                            savedSQLQueries={savedDatasetSQLQueries}
+                            sqlRuns={datasetSQLRuns}
+                            dependencies={datasetDependencies}
+                            table={filePreview?.table ?? null}
+                            isQueryingSQL={isQueryingDatasetSQL}
+                            isExportingSQL={isExportingDatasetSQL}
+                            isSavingSQL={isSavingDatasetSQLQuery}
+                            isSavingSQLNotebook={isSavingDatasetSQLNotebook}
+                            onSQLChange={onDatasetSQLQueryChange}
+                            onSQLLabelChange={onDatasetSQLQueryLabelChange}
+                            onSQLQuery={onQueryDatasetSQL}
+                            onSQLExport={onExportDatasetSQL}
+                            onSQLSave={onSaveDatasetSQLQuery}
+                            onSQLNotebookSave={onSaveDatasetSQLNotebook}
+                            onSQLNotebookLoad={onLoadDatasetSQLNotebook}
+                            savedSQLNotebooks={savedDatasetSQLNotebooks}
+                        />
+                    ) : (
+                        <EmptyState
+                            detail="Select a CSV, spreadsheet, or saved profile to work with data."
+                            icon={brandAssets.icons.data}
+                            title="No active dataset"
+                        />
+                    )}
                 </div>
-                <DataSourceCards
-                    onInspect={onInspectDataSource}
-                    onOpen={onOpenDataSource}
-                    onProfile={onProfileDataSource}
-                    sources={dataSources}
-                />
-                {hasDataStudio ? (
-                    <DataStudioPanel
-                        activeDatasetProfile={activeDatasetProfile}
-                        chartCategory={datasetChartCategory}
-                        chartPreview={datasetChartPreview}
-                        chartType={datasetChartType}
-                        chartValue={datasetChartValue}
-                        columns={filePreview?.table?.columns ?? activeDatasetProfile?.profiles.map((profile) => profile.name) ?? []}
-                        isCreatingChart={isCreatingDatasetChart}
-                        isCreatingSummary={isCreatingDatasetSummary}
-                        isExporting={isExportingDatasetQuery}
-                        isPreviewingChart={isPreviewingDatasetChart}
-                        isQuerying={isQueryingDataset}
-                        isSavingQuery={isSavingDatasetQuery}
-                        onChartCategoryChange={onDatasetChartCategoryChange}
-                        onChartTypeChange={onDatasetChartTypeChange}
-                        onChartValueChange={onDatasetChartValueChange}
-                        onCreateChart={onCreateDatasetChart}
-                        onCreateSummary={onCreateDatasetSummary}
-                        onExportQuery={onExportDatasetQuery}
-                        onPreviewChart={onPreviewDatasetChart}
-                        onQuery={onQueryDataset}
-                        onQueryChange={onDatasetQueryChange}
-                        onQueryLabelChange={onDatasetQueryLabelChange}
-                        onSaveQuery={onSaveDatasetQuery}
-                        onRebuildDependency={onRebuildDatasetDependency}
-                        rebuildingDependencyId={rebuildingDatasetDependencyId}
-                        profiles={filePreview?.table?.profiles ?? activeDatasetProfile?.profiles ?? []}
-                        query={datasetQuery}
-                        queryLabel={datasetQueryLabel}
-                        queryResult={datasetQueryResult}
-                        sqlQuery={datasetSQLQuery}
-                        sqlLabel={datasetSQLQueryLabel}
-                        sqlResult={datasetSQLQueryResult}
-                        savedQueries={savedDatasetQueries}
-                        savedSQLQueries={savedDatasetSQLQueries}
-                        sqlRuns={datasetSQLRuns}
-                        dependencies={datasetDependencies}
-                        table={filePreview?.table ?? null}
-                        isQueryingSQL={isQueryingDatasetSQL}
-                        isExportingSQL={isExportingDatasetSQL}
-                        isSavingSQL={isSavingDatasetSQLQuery}
-                        isSavingSQLNotebook={isSavingDatasetSQLNotebook}
-                        onSQLChange={onDatasetSQLQueryChange}
-                        onSQLLabelChange={onDatasetSQLQueryLabelChange}
-                        onSQLQuery={onQueryDatasetSQL}
-                        onSQLExport={onExportDatasetSQL}
-                        onSQLSave={onSaveDatasetSQLQuery}
-                        onSQLNotebookSave={onSaveDatasetSQLNotebook}
-                        onSQLNotebookLoad={onLoadDatasetSQLNotebook}
-                        savedSQLNotebooks={savedDatasetSQLNotebooks}
-                    />
-                ) : (
-                    <EmptyState
-                        detail="Select a CSV, spreadsheet, or saved profile to work with data."
-                        icon={brandAssets.icons.data}
-                        title="No active dataset"
-                    />
-                )}
-            </div>
-
-            <div className="data-operations-column">
-                <div className="bottom-section-heading">
-                    <strong>Operations</strong>
-                    <small>Read-only service, database, and workspace metadata surfaces.</small>
+            )}
+            {activeSurface === 'operations' && (
+                <div className="data-operations-column">
+                    <div className="bottom-section-heading">
+                        <strong>Operations</strong>
+                        <small>Read-only service, database, and workspace metadata surfaces.</small>
+                    </div>
+                    <OperationsInspector preview={filePreview} workspace={workspace} />
+                    {filePreview?.fileType === 'database' && (
+                        <SQLiteConnectorPanel
+                            isQuerying={isQueryingSQLiteConnector}
+                            isInspecting={isInspectingSQLiteConnector}
+                            isSaving={isSavingSQLiteConnectorQuery}
+                            isExportingCSV={isExportingSQLiteConnectorCSV}
+                            isExportingMarkdown={isExportingSQLiteConnectorMarkdown}
+                            sqlRuns={datasetSQLRuns}
+                            savedQueries={savedSQLiteConnectorQueries}
+                            metadata={sqliteConnectorMetadata}
+                            onChange={onSQLiteConnectorQueryChange}
+                            onCancel={onCancelSQLiteConnectorQuery}
+                            onExplainObject={onExplainSQLiteSchemaObject}
+                            onInspect={onInspectSQLiteConnector}
+                            onLabelChange={onSQLiteConnectorQueryLabelChange}
+                            onPreviewObject={onPreviewSQLiteSchemaObject}
+                            onQuery={onQuerySQLiteConnector}
+                            onResultLimitChange={onSQLiteConnectorResultLimitChange}
+                            onExportCSV={onExportSQLiteConnectorCSV}
+                            onExportMarkdown={onExportSQLiteConnectorMarkdown}
+                            onSave={onSaveSQLiteConnectorQuery}
+                            onTimeoutSecondsChange={onSQLiteConnectorTimeoutSecondsChange}
+                            query={sqliteConnectorQuery}
+                            queryLabel={sqliteConnectorQueryLabel}
+                            resultLimit={sqliteConnectorResultLimit}
+                            result={sqliteConnectorResult}
+                            timeoutSeconds={sqliteConnectorTimeoutSeconds}
+                        />
+                    )}
+                    {workspaceFreshness && (
+                        <WorkspaceFreshnessPanel
+                            isRefreshing={isRefreshingStaleContext}
+                            onRefreshContext={onRefreshStaleContext}
+                            status={workspaceFreshness}
+                        />
+                    )}
                 </div>
-                <OperationsInspector preview={filePreview} workspace={workspace} />
-                {filePreview?.fileType === 'database' && (
-                    <SQLiteConnectorPanel
-                        isQuerying={isQueryingSQLiteConnector}
-                        isInspecting={isInspectingSQLiteConnector}
-                        isSaving={isSavingSQLiteConnectorQuery}
-                        isExportingCSV={isExportingSQLiteConnectorCSV}
-                        isExportingMarkdown={isExportingSQLiteConnectorMarkdown}
-                        sqlRuns={datasetSQLRuns}
-                        savedQueries={savedSQLiteConnectorQueries}
-                        metadata={sqliteConnectorMetadata}
-                        onChange={onSQLiteConnectorQueryChange}
-                        onCancel={onCancelSQLiteConnectorQuery}
-                        onExplainObject={onExplainSQLiteSchemaObject}
-                        onInspect={onInspectSQLiteConnector}
-                        onLabelChange={onSQLiteConnectorQueryLabelChange}
-                        onPreviewObject={onPreviewSQLiteSchemaObject}
-                        onQuery={onQuerySQLiteConnector}
-                        onResultLimitChange={onSQLiteConnectorResultLimitChange}
-                        onExportCSV={onExportSQLiteConnectorCSV}
-                        onExportMarkdown={onExportSQLiteConnectorMarkdown}
-                        onSave={onSaveSQLiteConnectorQuery}
-                        onTimeoutSecondsChange={onSQLiteConnectorTimeoutSecondsChange}
-                        query={sqliteConnectorQuery}
-                        queryLabel={sqliteConnectorQueryLabel}
-                        resultLimit={sqliteConnectorResultLimit}
-                        result={sqliteConnectorResult}
-                        timeoutSeconds={sqliteConnectorTimeoutSeconds}
-                    />
-                )}
-                {workspaceFreshness && (
-                    <WorkspaceFreshnessPanel
-                        isRefreshing={isRefreshingStaleContext}
-                        onRefreshContext={onRefreshStaleContext}
-                        status={workspaceFreshness}
-                    />
-                )}
-            </div>
-
-            <div className="data-operations-column">
-                <div className="bottom-section-heading">
-                    <strong>Metadata</strong>
-                    <small>SQLite metadata mirror and history search.</small>
+            )}
+            {activeSurface === 'metadata' && (
+                <div className="data-operations-column">
+                    <div className="bottom-section-heading">
+                        <strong>Metadata</strong>
+                        <small>SQLite metadata mirror and history search.</small>
+                    </div>
+                    {sqliteStatus && <MetadataStorePanel status={sqliteStatus} />}
+                    {metadataBrowser && (
+                        <MetadataBrowserPanel
+                            browser={metadataBrowser}
+                            isSearching={isSearchingMetadata}
+                            onQueryChange={onMetadataSearchQueryChange}
+                            onSearch={onSearchMetadata}
+                            query={metadataSearchQuery}
+                            results={metadataSearchResults}
+                        />
+                    )}
+                    <div className="metadata-action-row">
+                        <Button disabled={isPreparingMetadataStore} onClick={onPrepareMetadataStore} variant="subtle">
+                            {isPreparingMetadataStore ? 'Preparing...' : 'Prepare metadata'}
+                        </Button>
+                        <Button onClick={onInspectMetadata} variant="subtle">Inspect metadata</Button>
+                    </div>
                 </div>
-                {sqliteStatus && <MetadataStorePanel status={sqliteStatus} />}
-                {metadataBrowser && (
-                    <MetadataBrowserPanel
-                        browser={metadataBrowser}
-                        isSearching={isSearchingMetadata}
-                        onQueryChange={onMetadataSearchQueryChange}
-                        onSearch={onSearchMetadata}
-                        query={metadataSearchQuery}
-                        results={metadataSearchResults}
-                    />
-                )}
-                <div className="metadata-action-row">
-                    <Button disabled={isPreparingMetadataStore} onClick={onPrepareMetadataStore} variant="subtle">
-                        {isPreparingMetadataStore ? 'Preparing...' : 'Prepare metadata'}
-                    </Button>
-                    <Button onClick={onInspectMetadata} variant="subtle">Inspect metadata</Button>
-                </div>
-            </div>
+            )}
         </div>
     );
 }

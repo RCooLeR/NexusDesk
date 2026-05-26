@@ -46,6 +46,7 @@ cd frontend
 npm.cmd run build
 npm.cmd run smoke
 npm.cmd run smoke:visual
+npm.cmd run smoke:gallery
 cd ..
 wails build
 ```
@@ -118,7 +119,21 @@ Steps:
 - [x] Reuse existing drawer surfaces as temporary primary route surfaces until full studios land.
 - [x] Add first Workbench utility surface for editor session, project status, repository status placeholder, and work queues.
 - [x] Remove duplicated route-owned tabs from the bottom drawer; keep the drawer for Git, Approvals, and Activity.
+- [x] Run visual QA across Workbench, Data & Analytics, Artifacts, Settings, drawer tabs, command palette, and quick open; fix main-route panel overflow so route pages scroll internally instead of horizontally.
+- [x] Add shared styled UI button baseline so route panels do not fall back to native browser buttons.
+- [x] Add route-local tabs for Data & Analytics and Artifact Studio so dense workflows are grouped instead of stacked into one long panel.
+- [x] Add route-local Provider and Connectors tabs for Settings.
+- [x] Extract route-local tab rendering into a shared `SurfaceTabs` UI component.
+- [x] Make Workbench action buttons scroll inside the topbar on compact widths instead of clipping.
+- [x] Cover the real approval modal in visual smoke through a mocked delete-preview flow.
 - [x] Replace current tree visual treatment with denser IDE-style project tree foundation.
+- [x] Keep the bottom Git drawer command toolbar as a horizontal action rail so repository actions do not consume the changed-file/diff viewport.
+- [x] Tighten compact mobile shell chrome so the navigator exposes workspace/search controls instead of duplicating the full product lockup.
+- [x] Capture a full manual UI gallery from the production build for Workbench, route tabs, drawer tabs, overlays, modal, and compact mobile views.
+- [x] Add repeatable visual gallery contact sheet for route, drawer, modal, overlay, and compact mobile review.
+- [x] Close project-tree context menus on Escape so transient overlays do not leak across studio routes.
+- [x] Remove duplicate navigator product header and move brand identity into an expandable desktop main rail with the full horizontal logo.
+- [x] Add Font Awesome icons to the workspace action row, tree tools, and file context menu so the shell chrome reads closer to an IDE-grade desktop product.
 
 Exit criteria:
 
@@ -156,6 +171,9 @@ Steps:
 - [x] Add safe new file draft creation.
 - [x] Add safe text/code edit preview with diff.
 - [x] Add safe apply flow for file writes.
+- [x] Decouple write content size from inline diff rendering so known large text files can still be overwritten through the safe write boundary.
+- [x] Replace line-index write diffs with LCS-based diffs so inserted/deleted lines do not make every following line look rewritten.
+- [x] Add append-only backend write path for agent append operations so large files are not truncated by bounded preview reads.
 - [x] Add safe file delete.
 - [x] Add safe rename/move.
 - [x] Add Ctrl+S, Ctrl+F, Ctrl+W, Ctrl+Tab, and Ctrl+Shift+Tab editor shortcuts.
@@ -192,7 +210,11 @@ Steps:
 - [x] Add Ollama runtime diagnostics for model, endpoint, and GPU/VRAM offload.
 - [x] Add non-streaming chat.
 - [x] Add streaming chat with Wails events.
+- [x] Resolve redacted LLM API-key references before backend agent model calls.
+- [x] Quote workspace context with sentinel delimiters and escape context-provided fences/sentinels before provider calls.
+- [x] Preserve nested JSON object/array action arguments as JSON strings when parsing agent tool calls.
 - [x] Persist chat history per workspace.
+- [x] Send recent token-budgeted user/assistant chat history turns to the model before the current prompt.
 - [x] Use distinct user/assistant timestamps so streamed deltas do not overwrite prompts.
 - [x] Add readable chat panel with Markdown-style rendering.
 - [x] Add OpenAI-style composer with model, Ask/Agent mode, and submit controls.
@@ -220,6 +242,7 @@ Steps:
 - [x] Include source citations in assistant answers and saved artifacts.
 - [x] Warn when cited source paths changed.
 - [x] Show the latest agent activity in chat while keeping the detailed run trace in Activity/tool-run records.
+- [x] Constrain approved model-directed shell execution to argv-parsed allow-listed commands instead of shell-interpreted strings.
 - [x] Add model comparison/retry.
 - [x] Add weak-evidence and missing-context UI.
 - [x] Add assistant memory and prompt profiles.
@@ -337,10 +360,12 @@ Implemented:
 - [x] SVG chart artifacts.
 - [x] Dataset summary artifacts.
 - [x] DuckDB-compatible SQL surface with bounded fallback.
+- [x] Data & Analytics route-local tabs for Sources, Operations, and Metadata.
 - [x] CGO-gated DuckDB driver path behind `duckdb` build tag.
 - [x] Read-only SQLite workspace connector.
 - [x] SQLite connector metadata inspection.
 - [x] SQLite mutation keyword blocking and single-statement validation.
+- [x] Make read-only SQL mutation keyword checks ignore comments and string literals to avoid false positives.
 - [x] Connector profile storage with protected credential references.
 - [x] Dataset dependencies and rebuild actions.
 
@@ -777,6 +802,7 @@ Implemented:
 - [x] Workspace scan report artifacts.
 - [x] Sidecar provenance metadata.
 - [x] Artifact list in the Artifact Studio route surface.
+- [x] Artifact Studio route-local tabs for Library, Metadata, and Lineage.
 - [x] Artifact metadata panel.
 - [x] Archive artifact.
 - [x] Delete artifact with approval.
@@ -788,7 +814,8 @@ Implemented:
 Next steps:
 
 - [x] Move Artifact Studio to a first-class route entry with primary fallback surface.
-- [ ] Replace Artifact fallback surface with native route layout and filters.
+- [x] Replace Artifact fallback surface with first native tabbed route layout.
+- [ ] Add richer artifact filters inside the native route layout.
 - [ ] Add artifact type filters.
 - [ ] Add artifact search.
 - [ ] Add artifact tags.
@@ -1017,6 +1044,24 @@ Step 15.5: Navigation discipline
 - [ ] Keep document intelligence contextual through Workbench, Artifacts, and Assistant until it justifies a separate surface.
 - [ ] Keep operations capabilities contextual/read-only first, then promote only if Docker/log/runbook workflows become deep enough.
 - [ ] Keep AI Assistant always visible as orchestration, not a default top-level route.
+
+Step 15.6: Static review hardening backlog
+
+- [x] Resolve redacted LLM credentials before agent runtime provider calls.
+- [x] Replace model-directed append rewrite behavior with an append-only backend path.
+- [x] Decouple write content size from inline diff size for large text-file overwrites.
+- [x] Replace Markdown-fenced selected context with escaped sentinel-delimited quoted context.
+- [x] Replace shell-interpreted model commands with argv parsing and a small command/subcommand allow-list.
+- [ ] Add macOS Keychain and Linux Secret Service/libsecret credential storage; until then, non-Windows builds refuse secret persistence on unsupported platforms.
+- [x] Feed token-budgeted prior chat turns into normal chat requests so the assistant behaves conversationally.
+- [x] Keep streaming chat `done` events and returned chat results aligned with persisted source citations.
+- [x] Replace line-index write diffs with a real LCS diff.
+- [ ] Unify registered tool execution and agent runtime tool execution behind one dispatcher and generate the tool prompt from the registry.
+- [ ] Add frontend unit/component tests for shell hooks, Wails adapter normalization, model catalog, and patch/diff helpers.
+- [x] Reduce SQL read-only guard false positives for mutation keywords inside comments and string literals.
+- [ ] Refresh frontend toolchain versions and migrate smoke/visual checks after the upgrade.
+- [x] Switch SQL Server driver from `github.com/denisenkom/go-mssqldb` to the maintained Microsoft fork before deepening SQL Server support.
+- [ ] Move chat/approval/history backup and restore into explicit local-first export flows.
 
 Exit criteria:
 

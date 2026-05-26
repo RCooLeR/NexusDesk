@@ -1,4 +1,6 @@
+import {useState} from 'react';
 import type {AgentToolDescriptor, AgentToolPlanItem, AgentToolRunRecord, ApprovalRecord, ArtifactComparison, ArtifactLineage, ArtifactMetadata, Capability, ConnectorMetadata, ConnectorProfile, DatasetChartResult, DatasetDependency, DatasetProfile, DatasetQueryResult, DatasetSQLNotebook, DatasetSQLQueryResult, FilePreview, GitFileAction, GitFileActionPreview, GitFileDiff, GitHunkActionPreview, GitHunkActionRequest, GitStatus, LLMProbeResult, LLMSettings, MetadataBrowser, MetadataSearchResult, SavedDatasetQuery, SQLNotebookCell, SQLRun, SQLiteMetadataStatus, SQLiteQueryResult, ToolEvent, WorkspaceArtifact, WorkspaceFreshnessStatus, WorkspaceProblemSummary, WorkspaceSearchResult, WorkspaceSnapshot, WorkspaceTask, WorkspaceTaskRunResult, WorkspaceTaskSummary} from '../../types';
+import {SurfaceTabs} from '../../components/ui';
 import {AgentToolPlanCard} from './AgentToolPlanCard';
 import {ApprovalLogPanel} from './ApprovalLogPanel';
 import {ArtifactStudioPanel} from './ArtifactStudioPanel';
@@ -10,6 +12,7 @@ import {LLMSettingsCard} from './LLMSettingsCard';
 import {ToolTimeline} from './ToolTimeline';
 
 type BottomStudioTab = 'code' | 'settings' | 'data' | 'tools' | 'artifacts' | 'git' | 'approvals' | 'activity';
+type SettingsSurface = 'provider' | 'connectors';
 
 type BottomStudioPanelProps = {
     activeTab: BottomStudioTab;
@@ -408,6 +411,8 @@ export function BottomStudioPanel({
     className = '',
     showTabs = true,
 }: BottomStudioPanelProps) {
+    const [activeSettingsSurface, setActiveSettingsSurface] = useState<SettingsSurface>('provider');
+
     return (
         <section className={['bottom-studio-panel', className].filter(Boolean).join(' ')} aria-label={ariaLabel}>
             {showTabs && (
@@ -478,29 +483,41 @@ export function BottomStudioPanel({
                             <strong>Settings</strong>
                             <small>Provider, model, runtime, and local assistant configuration.</small>
                         </div>
-                        <LLMSettingsCard
-                            isSavingSettings={isSavingSettings}
-                            isTestingConnection={isTestingConnection}
-                            onSaveSettings={onSaveSettings}
-                            onSettingsDraftChange={onSettingsDraftChange}
-                            onTestConnection={onTestConnection}
-                            probeResult={probeResult}
-                            settingsDraft={settingsDraft}
-                            settingsStatus={settingsStatus}
+                        <SurfaceTabs
+                            active={activeSettingsSurface}
+                            items={[
+                                {id: 'provider', label: 'Provider'},
+                                {id: 'connectors', label: 'Connectors'},
+                            ]}
+                            onSelect={setActiveSettingsSurface}
                         />
-                        <ConnectorProfilesCard
-                            draft={connectorProfileDraft}
-                            isSaving={isSavingConnectorProfile}
-                            metadata={connectorProfileMetadata}
-                            onDelete={onDeleteConnectorProfile}
-                            onDraftChange={onConnectorProfileDraftChange}
-                            onExplainObject={onExplainConnectorProfileSchemaObject}
-                            onInspect={onInspectConnectorProfile}
-                            onSave={onSaveConnectorProfile}
-                            onTest={onTestConnectorProfile}
-                            profiles={connectorProfiles}
-                            status={connectorProfilesStatus}
-                        />
+                        {activeSettingsSurface === 'provider' && (
+                            <LLMSettingsCard
+                                isSavingSettings={isSavingSettings}
+                                isTestingConnection={isTestingConnection}
+                                onSaveSettings={onSaveSettings}
+                                onSettingsDraftChange={onSettingsDraftChange}
+                                onTestConnection={onTestConnection}
+                                probeResult={probeResult}
+                                settingsDraft={settingsDraft}
+                                settingsStatus={settingsStatus}
+                            />
+                        )}
+                        {activeSettingsSurface === 'connectors' && (
+                            <ConnectorProfilesCard
+                                draft={connectorProfileDraft}
+                                isSaving={isSavingConnectorProfile}
+                                metadata={connectorProfileMetadata}
+                                onDelete={onDeleteConnectorProfile}
+                                onDraftChange={onConnectorProfileDraftChange}
+                                onExplainObject={onExplainConnectorProfileSchemaObject}
+                                onInspect={onInspectConnectorProfile}
+                                onSave={onSaveConnectorProfile}
+                                onTest={onTestConnectorProfile}
+                                profiles={connectorProfiles}
+                                status={connectorProfilesStatus}
+                            />
+                        )}
                     </div>
                 )}
                 {activeTab === 'tools' && (

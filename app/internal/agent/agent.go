@@ -96,6 +96,10 @@ func (a *Agent) Run(ctx context.Context, request RunRequest, execute ToolExecuto
 	if err != nil {
 		return RunResult{}, err
 	}
+	settings, err = a.llmStore.ResolveForUse(settings)
+	if err != nil {
+		return RunResult{}, err
+	}
 
 	maxIterations := request.MaxIterations
 	if maxIterations <= 0 || maxIterations > 12 {
@@ -372,7 +376,7 @@ func parseAction(message string) (ToolCall, bool) {
 		decoded := map[string]any{}
 		if err := json.Unmarshal([]byte(rawArgs), &decoded); err == nil {
 			for key, value := range decoded {
-				args[key] = fmt.Sprint(value)
+				args[key] = stringifyActionArgument(value)
 			}
 			return ToolCall{Name: strings.TrimSpace(matches[1]), Arguments: args}, true
 		}
@@ -386,6 +390,21 @@ func parseAction(message string) (ToolCall, bool) {
 		args[strings.TrimSpace(key)] = strings.Trim(strings.TrimSpace(value), `"'`)
 	}
 	return ToolCall{Name: strings.TrimSpace(matches[1]), Arguments: args}, true
+}
+
+func stringifyActionArgument(value any) string {
+	switch typed := value.(type) {
+	case string:
+		return typed
+	case nil:
+		return ""
+	case map[string]any, []any:
+		encoded, err := json.Marshal(typed)
+		if err == nil {
+			return string(encoded)
+		}
+	}
+	return fmt.Sprint(value)
 }
 
 func parseFinalAnswer(message string) string {

@@ -13,8 +13,8 @@ export function ToolTimeline({events}: ToolTimelineProps) {
                 <small>Model, tools, and workspace events</small>
             </div>
             <div className="timeline-items">
-                {events.map((event) => (
-                    <div className="timeline-item" key={`${event.time}-${event.title}`}>
+                {events.map((event, index) => (
+                    <div className="timeline-item" key={`${event.time}-${event.title}-${index}`}>
                         <time>{event.time}</time>
                         <strong>{event.title}</strong>
                         <p>{event.detail}</p>

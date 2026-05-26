@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"os/exec"
 	"path/filepath"
-	"regexp"
 	"runtime"
 	"strconv"
 	"strings"
@@ -206,18 +205,36 @@ func (a *App) agentWriteFile(root string, call agent.ToolCall, approved bool) (a
 
 func (a *App) agentAppendFile(root string, call agent.ToolCall, approved bool) (agent.ToolCall, error) {
 	relPath := cleanAgentRelPath(firstNonEmpty(call.Arguments["relPath"], call.Arguments["path"]))
-	preview, err := workspace.Preview(root, relPath, workspace.PreviewOptions{MaxBytes: 512 * 1024})
+	content := call.Arguments["content"]
+	if content == "" {
+		call.Error = "append content is required"
+		return call, errors.New(call.Error)
+	}
+	encoding := strings.TrimSpace(call.Arguments["encoding"])
+	if encoding == "" {
+		if preview, err := workspace.Preview(root, relPath, workspace.PreviewOptions{MaxBytes: 64 * 1024}); err == nil && preview.Encoding != "" {
+			encoding = preview.Encoding
+		}
+	}
+	request := workspace.FileWriteRequest{RelPath: relPath, Content: content, Encoding: encoding}
+	proposal, err := workspace.PreviewFileAppend(root, request)
 	if err != nil {
 		call.Error = err.Error()
 		return call, err
 	}
-	content := preview.Content
-	if content != "" && !strings.HasSuffix(content, "\n") {
-		content += "\n"
+	if !approved {
+		call.Observation = "Approval required before appending file. Proposed diff:\n" + proposal.Diff
+		call.Error = "approval required"
+		return call, errors.New(call.Error)
 	}
-	call.Arguments["content"] = content + call.Arguments["content"]
-	call.Arguments["relPath"] = relPath
-	return a.agentWriteFile(root, call, approved)
+	applied, err := workspace.ApplyFileAppend(root, request)
+	if err != nil {
+		call.Error = err.Error()
+		return call, err
+	}
+	a.recordApproval("agent.append_file", applied.RelPath, "high", applied.Message)
+	call.Observation = applied.Message + "\n" + proposal.Diff
+	return call, nil
 }
 
 func (a *App) agentExecuteShell(ctx context.Context, root string, call agent.ToolCall, request agent.RunRequest) (agent.ToolCall, error) {
@@ -231,7 +248,8 @@ func (a *App) agentExecuteShell(ctx context.Context, root string, call agent.Too
 		call.Error = "approval required"
 		return call, errors.New(call.Error)
 	}
-	if !isAgentShellCommandAllowed(command) {
+	executable, args, ok := parseAllowedAgentShellCommand(command)
+	if !ok {
 		call.Observation = "Shell command blocked by workspace sandbox policy: " + command
 		call.Error = "command escapes workspace sandbox"
 		return call, errors.New(call.Error)
@@ -239,12 +257,7 @@ func (a *App) agentExecuteShell(ctx context.Context, root string, call agent.Too
 
 	shellCtx, cancel := context.WithTimeout(ctx, 30*time.Second)
 	defer cancel()
-	var cmd *exec.Cmd
-	if runtime.GOOS == "windows" {
-		cmd = exec.CommandContext(shellCtx, "cmd", "/c", command)
-	} else {
-		cmd = exec.CommandContext(shellCtx, "sh", "-c", command)
-	}
+	cmd := exec.CommandContext(shellCtx, executable, args...)
 	configureHiddenCommand(cmd)
 	cmd.Dir = root
 	output, err := cmd.CombinedOutput()
@@ -347,23 +360,82 @@ func limitAgentOutput(value string, maxBytes int) string {
 	return value[:maxBytes] + "\n[truncated]"
 }
 
-func isAgentShellCommandAllowed(command string) bool {
+func parseAllowedAgentShellCommand(command string) (string, []string, bool) {
 	normalized := strings.ToLower(strings.TrimSpace(command))
 	if normalized == "" {
-		return false
+		return "", nil, false
 	}
-	forbidden := []string{
-		"..",
-		"~",
-		"%userprofile%",
-		"%home%",
-		"$home",
+	if strings.ContainsAny(command, "&|;<>`$%*?{}[]()") || strings.Contains(command, "\n") || strings.Contains(command, "\r") {
+		return "", nil, false
 	}
-	for _, token := range forbidden {
-		if strings.Contains(normalized, token) {
-			return false
+	parts := strings.Fields(command)
+	if len(parts) == 0 {
+		return "", nil, false
+	}
+	executable := strings.ToLower(parts[0])
+	args := parts[1:]
+	if runtime.GOOS == "windows" {
+		executable = strings.TrimSuffix(executable, ".exe")
+		executable = strings.TrimSuffix(executable, ".cmd")
+		executable = strings.TrimSuffix(executable, ".bat")
+	}
+	if !isAllowedAgentExecutable(executable, args) {
+		return "", nil, false
+	}
+	for _, arg := range args {
+		if !isWorkspaceRelativeShellArg(arg) {
+			return "", nil, false
 		}
 	}
-	absolutePathPattern := regexp.MustCompile(`(?i)(^|\s)([a-z]:\\|\\\\|/)`)
-	return !absolutePathPattern.MatchString(command)
+	return parts[0], args, true
+}
+
+func isAllowedAgentExecutable(executable string, args []string) bool {
+	switch executable {
+	case "go", "node", "python", "python3":
+		return true
+	case "npm":
+		return len(args) > 0 && (args[0] == "run" || args[0] == "test" || args[0] == "install")
+	case "npx":
+		return len(args) > 0
+	case "docker":
+		return len(args) > 0 && (args[0] == "ps" || args[0] == "logs" || args[0] == "compose")
+	case "git":
+		return len(args) > 0 && isAllowedAgentGitSubcommand(args[0])
+	default:
+		return false
+	}
+}
+
+func isAllowedAgentGitSubcommand(subcommand string) bool {
+	switch subcommand {
+	case "status", "diff", "log", "show", "branch", "rev-parse", "ls-files", "grep":
+		return true
+	default:
+		return false
+	}
+}
+
+func isWorkspaceRelativeShellArg(arg string) bool {
+	trimmed := strings.TrimSpace(strings.Trim(arg, `"'`))
+	if trimmed == "" {
+		return true
+	}
+	normalized := filepath.ToSlash(strings.ToLower(trimmed))
+	if normalized == "." || strings.HasPrefix(normalized, "-") {
+		return true
+	}
+	if normalized == "./..." || normalized == "..." {
+		return true
+	}
+	if strings.Contains(normalized, "..") || strings.HasPrefix(normalized, "~") {
+		return false
+	}
+	if filepath.IsAbs(trimmed) || strings.HasPrefix(normalized, "/") || strings.HasPrefix(normalized, `\\`) {
+		return false
+	}
+	if len(normalized) >= 2 && normalized[1] == ':' {
+		return false
+	}
+	return true
 }

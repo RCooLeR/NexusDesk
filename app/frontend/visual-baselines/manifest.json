@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-05-26T14:34:19.107Z",
+  "generatedAt": "2026-05-26T19:18:00.822Z",
   "source": "dist/index.html",
   "viewports": [
     "desktop",
@@ -12,12 +12,16 @@
     "panel-overflow",
     "project-tree",
     "tree-context-menu",
+    "approval-modal",
     "tool-run-detail",
     "code-route",
     "code-git-diff",
     "settings-route",
+    "settings-tabs",
     "data-route",
+    "data-route-tabs",
     "artifacts-route",
+    "artifact-route-tabs",
     "approvals-tab",
     "lineage-export",
     "lineage-filter",

@@ -9,6 +9,7 @@ import (
 	"path/filepath"
 	"strings"
 	"time"
+	"unicode"
 
 	"NexusAugenticStudio/internal/safety"
 	_ "modernc.org/sqlite"
@@ -212,11 +213,77 @@ func tokenizeSQL(query string) []string {
 	if query == "" {
 		return nil
 	}
-	normalized := strings.TrimSpace(strings.ToLower(query))
-	normalized = strings.ReplaceAll(normalized, "(", " ")
-	normalized = strings.ReplaceAll(normalized, ")", " ")
-	normalized = strings.ReplaceAll(normalized, ";", " ")
-	return strings.Fields(normalized)
+	tokens := []string{}
+	var builder strings.Builder
+	var quote rune
+	lineComment := false
+	blockComment := false
+
+	flush := func() {
+		if builder.Len() == 0 {
+			return
+		}
+		tokens = append(tokens, strings.ToLower(builder.String()))
+		builder.Reset()
+	}
+
+	runes := []rune(query)
+	for index := 0; index < len(runes); index++ {
+		current := runes[index]
+		if lineComment {
+			if current == '\n' {
+				lineComment = false
+			}
+			continue
+		}
+		if blockComment {
+			if current == '*' && index+1 < len(runes) && runes[index+1] == '/' {
+				blockComment = false
+				index++
+			}
+			continue
+		}
+		if quote != 0 {
+			if current == quote {
+				if index+1 < len(runes) && runes[index+1] == quote {
+					index++
+					continue
+				}
+				quote = 0
+			}
+			continue
+		}
+
+		switch current {
+		case '\'', '"':
+			flush()
+			quote = current
+		case '-':
+			if index+1 < len(runes) && runes[index+1] == '-' {
+				flush()
+				lineComment = true
+				index++
+				continue
+			}
+			flush()
+		case '/':
+			if index+1 < len(runes) && runes[index+1] == '*' {
+				flush()
+				blockComment = true
+				index++
+				continue
+			}
+			flush()
+		default:
+			if unicode.IsLetter(current) || unicode.IsDigit(current) || current == '_' {
+				builder.WriteRune(current)
+			} else {
+				flush()
+			}
+		}
+	}
+	flush()
+	return tokens
 }
 
 func validateSingleStatement(query string) error {

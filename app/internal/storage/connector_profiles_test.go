@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"os"
 	"path/filepath"
+	"runtime"
 	"strings"
 	"testing"
 )
@@ -21,6 +22,8 @@ func TestConnectorProfileStoreReturnsEmptyListWhenMissing(t *testing.T) {
 }
 
 func TestConnectorProfileStoreSavesRedactedCredentialReference(t *testing.T) {
+	requireProtectedConnectorSecretStorage(t)
+
 	path := filepath.Join(t.TempDir(), "connector-profiles.json")
 	store := NewConnectorProfileStore(path)
 
@@ -87,6 +90,8 @@ func TestConnectorProfileStoreSavesRedactedCredentialReference(t *testing.T) {
 }
 
 func TestConnectorProfileStorePreservesRedactedCredentialOnSave(t *testing.T) {
+	requireProtectedConnectorSecretStorage(t)
+
 	path := filepath.Join(t.TempDir(), "connector-profiles.json")
 	store := NewConnectorProfileStore(path)
 
@@ -127,6 +132,8 @@ func TestConnectorProfileStorePreservesRedactedCredentialOnSave(t *testing.T) {
 }
 
 func TestConnectorProfileStoreResolvesProfileByIDForUse(t *testing.T) {
+	requireProtectedConnectorSecretStorage(t)
+
 	path := filepath.Join(t.TempDir(), "connector-profiles.json")
 	store := NewConnectorProfileStore(path)
 
@@ -155,6 +162,8 @@ func TestConnectorProfileStoreResolvesProfileByIDForUse(t *testing.T) {
 }
 
 func TestConnectorProfileStoreClearsCredentialWhenBlankReferenceIsSaved(t *testing.T) {
+	requireProtectedConnectorSecretStorage(t)
+
 	path := filepath.Join(t.TempDir(), "connector-profiles.json")
 	store := NewConnectorProfileStore(path)
 
@@ -227,4 +236,12 @@ func readRawConnectorProfiles(t *testing.T, path string) []ConnectorProfile {
 		t.Fatalf("Unmarshal failed: %v", err)
 	}
 	return profiles
+}
+
+func requireProtectedConnectorSecretStorage(t *testing.T) {
+	t.Helper()
+
+	if runtime.GOOS != "windows" {
+		t.Skip("protected secret sidecar storage is only implemented on Windows until Keychain/libsecret support lands")
+	}
 }

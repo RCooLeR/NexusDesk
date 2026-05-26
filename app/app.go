@@ -110,6 +110,9 @@ const chatContextMaxBudgetBytes = 4 * 1024 * 1024
 const chatContextTokenByteEstimate = 4
 const chatContextOverheadTokens = 2048
 const chatContextMaxFilesCap = 256
+const chatHistoryMaxMessages = 10
+const chatHistoryMinBudgetBytes = 4 * 1024
+const chatHistoryMaxBudgetBytes = 64 * 1024
 const chatStreamEventName = "nexus:chat-stream"
 const agentRunEventName = "nexus:agent-run"
 
@@ -807,6 +810,7 @@ func (a *App) AskLLM(prompt string, relPath string) (llm.ChatResult, error) {
 		return llm.ChatResult{}, errors.New(sanitizeProviderMessageWithAudit(err.Error(), "ask_llm_chat"))
 	}
 
+	result = chatResultWithSourceCitations(result)
 	if err := a.persistChatPair(prompt, chatRequest, result); err != nil {
 		return llm.ChatResult{}, errors.New(sanitizeProviderMessageWithAudit(err.Error(), "ask_llm_persist"))
 	}
@@ -837,6 +841,7 @@ func (a *App) AskLLMStream(prompt string, relPath string, requestID string) (llm
 		return llm.ChatResult{}, sanitized
 	}
 
+	result = chatResultWithSourceCitations(result)
 	if err := a.persistChatPair(prompt, chatRequest, result); err != nil {
 		sanitized := errors.New(sanitizeProviderMessageWithAudit(err.Error(), "ask_llm_stream_persist"))
 		a.emitChatStreamEvent(ChatStreamEvent{RequestID: requestID, Type: "error", Message: sanitized.Error()})
@@ -866,6 +871,7 @@ func (a *App) AskLLMContextPack(prompt string, relPaths []string) (llm.ChatResul
 	if err != nil {
 		return llm.ChatResult{}, errors.New(sanitizeProviderMessageWithAudit(err.Error(), "ask_llm_context_pack"))
 	}
+	result = chatResultWithSourceCitations(result)
 	if err := a.persistChatPair(prompt, chatRequest, result); err != nil {
 		return llm.ChatResult{}, errors.New(sanitizeProviderMessageWithAudit(err.Error(), "ask_llm_context_pack_persist"))
 	}
@@ -894,6 +900,7 @@ func (a *App) AskLLMStreamContextPack(prompt string, relPaths []string, requestI
 		a.emitChatStreamEvent(ChatStreamEvent{RequestID: requestID, Type: "error", Message: sanitized.Error()})
 		return llm.ChatResult{}, sanitized
 	}
+	result = chatResultWithSourceCitations(result)
 	if err := a.persistChatPair(prompt, chatRequest, result); err != nil {
 		sanitized := errors.New(sanitizeProviderMessageWithAudit(err.Error(), "ask_llm_stream_context_persist"))
 		a.emitChatStreamEvent(ChatStreamEvent{RequestID: requestID, Type: "error", Message: sanitized.Error()})
@@ -982,6 +989,11 @@ func (a *App) prepareChat(prompt string, relPaths []string) (llm.ChatRequest, st
 	}
 	if profile, err := a.profileStore.Get(); err == nil {
 		chatRequest.Prompt = applyAssistantProfileToPrompt(prompt, profile)
+	}
+	if root := a.getWorkspaceRoot(); root != "" {
+		if history, err := a.GetChatHistory(); err == nil {
+			chatRequest.Conversation = buildChatConversationHistory(history, chatHistoryBudgetBytes(resolvedSettings))
+		}
 	}
 
 	contextPaths := cleanContextPaths(relPaths)
@@ -1258,6 +1270,57 @@ func truncateContextString(content string, maxBytes int) string {
 		truncated = truncated[:len(truncated)-1]
 	}
 	return truncated
+}
+
+func buildChatConversationHistory(messages []storage.ChatMessage, maxBytes int) []llm.ChatTurn {
+	if maxBytes <= 0 || len(messages) == 0 {
+		return []llm.ChatTurn{}
+	}
+
+	turns := []llm.ChatTurn{}
+	usedBytes := 0
+	for index := len(messages) - 1; index >= 0 && len(turns) < chatHistoryMaxMessages; index-- {
+		role := normalizeConversationRole(messages[index].Role)
+		content := strings.TrimSpace(messages[index].Content)
+		if role == "" || content == "" {
+			continue
+		}
+		remaining := maxBytes - usedBytes
+		if remaining <= 0 {
+			break
+		}
+		if len(content) > remaining {
+			content = truncateContextString(content, remaining)
+		}
+		if strings.TrimSpace(content) == "" {
+			break
+		}
+		turns = append([]llm.ChatTurn{{Role: role, Content: content}}, turns...)
+		usedBytes += len(content)
+	}
+	return turns
+}
+
+func normalizeConversationRole(role string) string {
+	switch strings.ToLower(strings.TrimSpace(role)) {
+	case "user":
+		return "user"
+	case "assistant":
+		return "assistant"
+	default:
+		return ""
+	}
+}
+
+func chatHistoryBudgetBytes(settings storage.LLMSettings) int {
+	budget := chatContextBudgetBytes(settings) / 8
+	if budget < chatHistoryMinBudgetBytes {
+		return chatHistoryMinBudgetBytes
+	}
+	if budget > chatHistoryMaxBudgetBytes {
+		return chatHistoryMaxBudgetBytes
+	}
+	return budget
 }
 
 func chatContextBudgetBytes(settings storage.LLMSettings) int {
@@ -1538,6 +1601,11 @@ func appendSourceCitations(message string, sourcePaths []string) string {
 		builder.WriteString("\n")
 	}
 	return builder.String()
+}
+
+func chatResultWithSourceCitations(result llm.ChatResult) llm.ChatResult {
+	result.Message = appendSourceCitations(result.Message, result.SourcePaths)
+	return result
 }
 
 func compactStrings(values []string) []string {

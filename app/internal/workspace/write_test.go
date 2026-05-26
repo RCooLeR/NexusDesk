@@ -50,6 +50,86 @@ func TestApplyFileWriteUpdatesTextFile(t *testing.T) {
 	}
 }
 
+func TestPreviewFileWriteUsesLCSForInsertedLines(t *testing.T) {
+	root := t.TempDir()
+	writeFile(t, root, "docs/notes.md", "alpha\nbeta\ngamma\n")
+
+	proposal, err := PreviewFileWrite(root, FileWriteRequest{
+		RelPath: "docs/notes.md",
+		Content: "alpha\ninserted\nbeta\ngamma\n",
+	})
+	if err != nil {
+		t.Fatalf("PreviewFileWrite returned error: %v", err)
+	}
+
+	if !strings.Contains(proposal.Diff, " alpha\n+inserted\n beta\n gamma\n") {
+		t.Fatalf("expected inserted line with following lines preserved, got %s", proposal.Diff)
+	}
+	if strings.Contains(proposal.Diff, "-beta\n+inserted") {
+		t.Fatalf("expected beta to remain context instead of rewritten, got %s", proposal.Diff)
+	}
+}
+
+func TestApplyFileAppendDoesNotTruncateLargeFile(t *testing.T) {
+	root := t.TempDir()
+	large := strings.Repeat("a", 600*1024)
+	writeFile(t, root, "docs/large.txt", large)
+
+	proposal, err := ApplyFileAppend(root, FileWriteRequest{
+		RelPath: "docs/large.txt",
+		Content: "\nappended\n",
+	})
+	if err != nil {
+		t.Fatalf("ApplyFileAppend returned error: %v", err)
+	}
+	if proposal.Action != "append" {
+		t.Fatalf("expected append action, got %s", proposal.Action)
+	}
+
+	content, err := os.ReadFile(filepath.Join(root, "docs", "large.txt"))
+	if err != nil {
+		t.Fatalf("ReadFile failed: %v", err)
+	}
+	if string(content) != large+"\nappended\n" {
+		t.Fatalf("append changed existing content or failed to append, got %d bytes", len(content))
+	}
+}
+
+func TestApplyFileWriteCanOverwriteLargeTextFile(t *testing.T) {
+	root := t.TempDir()
+	writeFile(t, root, "docs/large.txt", strings.Repeat("a", 300*1024))
+
+	proposal, err := ApplyFileWrite(root, FileWriteRequest{
+		RelPath: "docs/large.txt",
+		Content: "replacement\n",
+	})
+	if err != nil {
+		t.Fatalf("ApplyFileWrite returned error: %v", err)
+	}
+	if proposal.Action != "update" {
+		t.Fatalf("expected update action, got %s", proposal.Action)
+	}
+	if !strings.Contains(proposal.Diff, "larger than inline diff limit") {
+		t.Fatalf("expected large-file diff omission marker, got %q", proposal.Diff)
+	}
+
+	content, err := os.ReadFile(filepath.Join(root, "docs", "large.txt"))
+	if err != nil {
+		t.Fatalf("ReadFile failed: %v", err)
+	}
+	if string(content) != "replacement\n" {
+		t.Fatalf("expected replacement content, got %q", string(content))
+	}
+}
+
+func TestPreviewFileAppendRejectsMetadataWrites(t *testing.T) {
+	root := t.TempDir()
+
+	if _, err := PreviewFileAppend(root, FileWriteRequest{RelPath: ".nexusdesk/config.json", Content: "{}"}); err == nil {
+		t.Fatal("expected metadata append to be rejected")
+	}
+}
+
 func TestApplyFileWritePreservesRequestedUTF16LEEncoding(t *testing.T) {
 	root := t.TempDir()
 

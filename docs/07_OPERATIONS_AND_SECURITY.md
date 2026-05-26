@@ -65,6 +65,8 @@ Rules:
 - mark suspected secret files as restricted
 - require confirmation before sending sensitive content to remote models
 
+Windows builds currently protect secret sidecar blobs with DPAPI. macOS Keychain and Linux Secret Service/libsecret are not implemented yet, so non-Windows builds refuse to save API keys or connector credentials instead of falling back to plaintext secret files. Matching storage tests skip protected-secret round trips on unsupported OSes until those native backends land.
+
 ## File System Security
 
 Default rules:
@@ -85,9 +87,14 @@ Current implementation:
 
 - workspace scans and previews are rooted in `app/internal/workspace/`
 - create/update writes require a backend diff preview before apply
+- large text-file overwrites are allowed through the same approval path even when the existing file is too large for inline diff rendering; the diff payload marks the omitted existing content instead of rejecting the write only because of preview size
+- inline write diffs use an LCS-based comparison so simple line insertions/deletions preserve surrounding context instead of showing the rest of the file as removed and re-added
+- append operations have a dedicated append-only backend path so appending to a large file cannot truncate unread preview bytes
 - deletes reject directories, symlinks, metadata paths, and traversal before frontend confirmation
 - rename/move rejects traversal, metadata paths, directories, symlinks, same-path moves, directory-like targets, and overwrites
 - direct `.nexusdesk/` metadata writes and deletes are blocked
+- approved model-directed shell execution parses a single command into argv, rejects shell metacharacters and escaping paths, and only allows a small set of workspace-scoped commands/subcommands; arbitrary shell strings are not run through `cmd /c` or `sh -c`
+- read-only SQL guards strip comments and string literals before checking blocked mutation keywords, so values like `'delete'` or comments that mention `update` do not reject otherwise read-only SELECT queries
 - CSV query exports are created only from bounded query results and exclusive artifact writes
 - chart artifacts are created only through bounded CSV aggregation and exclusive artifact writes
 - scan-report artifacts are created from backend scan status and exclusive artifact writes

@@ -137,6 +137,38 @@ func TestPrepareChatUsesConfiguredContextWindowBudget(t *testing.T) {
 	}
 }
 
+func TestPrepareChatIncludesRecentConversationHistory(t *testing.T) {
+	root := t.TempDir()
+	app := NewApp()
+	app.llmStore = storage.NewLLMSettingsStore(filepath.Join(t.TempDir(), "llm-settings.json"))
+	app.chatStore = storage.NewChatHistoryStore(filepath.Join(t.TempDir(), "chat.json"))
+	app.setWorkspaceRoot(root)
+
+	if _, err := app.chatStore.AppendPair(root, storage.ChatMessage{
+		Role:    "user",
+		Content: "What is this project?",
+	}, storage.ChatMessage{
+		Role:    "assistant",
+		Content: "It is Nexus.",
+	}); err != nil {
+		t.Fatalf("AppendPair failed: %v", err)
+	}
+
+	request, _, err := app.prepareChat("continue", nil)
+	if err != nil {
+		t.Fatalf("prepareChat returned error: %v", err)
+	}
+	if len(request.Conversation) != 2 {
+		t.Fatalf("expected two history turns, got %#v", request.Conversation)
+	}
+	if request.Conversation[0].Role != "user" || request.Conversation[0].Content != "What is this project?" {
+		t.Fatalf("unexpected first history turn: %#v", request.Conversation[0])
+	}
+	if request.Conversation[1].Role != "assistant" || request.Conversation[1].Content != "It is Nexus." {
+		t.Fatalf("unexpected second history turn: %#v", request.Conversation[1])
+	}
+}
+
 func TestTruncateContextStringKeepsUTF8Valid(t *testing.T) {
 	content := "prefix " + string('\u03C0')
 	truncated := truncateContextString(content, len("prefix \u03C0")+1)

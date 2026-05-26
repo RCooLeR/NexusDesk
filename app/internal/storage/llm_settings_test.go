@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"os"
 	"path/filepath"
+	"runtime"
 	"strings"
 	"testing"
 )
@@ -53,6 +54,8 @@ func TestLLMSettingsStoreUsesModelContextDefaults(t *testing.T) {
 }
 
 func TestLLMSettingsStoreSavesAndReadsSettings(t *testing.T) {
+	requireProtectedSecretStorage(t)
+
 	path := filepath.Join(t.TempDir(), "settings.json")
 	store := NewLLMSettingsStore(path)
 
@@ -127,6 +130,8 @@ func TestLLMSettingsStoreNormalizesContextReserve(t *testing.T) {
 }
 
 func TestLLMSettingsStorePreservesRedactedAPIKeyOnSave(t *testing.T) {
+	requireProtectedSecretStorage(t)
+
 	path := filepath.Join(t.TempDir(), "settings.json")
 	store := NewLLMSettingsStore(path)
 
@@ -166,6 +171,8 @@ func TestLLMSettingsStorePreservesRedactedAPIKeyOnSave(t *testing.T) {
 }
 
 func TestLLMSettingsStoreResolvesRedactedAPIKeyForUse(t *testing.T) {
+	requireProtectedSecretStorage(t)
+
 	path := filepath.Join(t.TempDir(), "settings.json")
 	store := NewLLMSettingsStore(path)
 
@@ -193,6 +200,8 @@ func TestLLMSettingsStoreResolvesRedactedAPIKeyForUse(t *testing.T) {
 }
 
 func TestLLMSettingsStoreClearsAPIKeyWhenBlankIsSaved(t *testing.T) {
+	requireProtectedSecretStorage(t)
+
 	path := filepath.Join(t.TempDir(), "settings.json")
 	store := NewLLMSettingsStore(path)
 
@@ -256,4 +265,12 @@ func readRawLLMSettings(t *testing.T, path string) LLMSettings {
 	}
 
 	return settings
+}
+
+func requireProtectedSecretStorage(t *testing.T) {
+	t.Helper()
+
+	if runtime.GOOS != "windows" {
+		t.Skip("protected secret sidecar storage is only implemented on Windows until Keychain/libsecret support lands")
+	}
 }

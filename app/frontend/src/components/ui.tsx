@@ -37,6 +37,17 @@ type InlineAlertProps = {
     tone?: StateTone;
 };
 
+type SurfaceTabItem<T extends string> = {
+    id: T;
+    label: string;
+};
+
+type SurfaceTabsProps<T extends string> = {
+    active: T;
+    items: SurfaceTabItem<T>[];
+    onSelect: (value: T) => void;
+};
+
 export function Button({children, className = '', type = 'button', variant = 'secondary', ...props}: ButtonProps) {
     return (
         <button className={mergeClassNames('ui-button', `ui-button-${variant}`, className)} type={type} {...props}>
@@ -100,6 +111,25 @@ function StateIcon({icon, iconSrc}: {icon?: IconDefinition; iconSrc?: string}) {
 
 export function InlineAlert({children, tone = 'neutral'}: InlineAlertProps) {
     return <div className={mergeClassNames('inline-alert', `inline-alert-${tone}`)}>{children}</div>;
+}
+
+export function SurfaceTabs<T extends string>({active, items, onSelect}: SurfaceTabsProps<T>) {
+    return (
+        <div className="surface-tab-strip" role="tablist">
+            {items.map((item) => (
+                <button
+                    aria-selected={active === item.id}
+                    className={active === item.id ? 'active' : ''}
+                    key={item.id}
+                    onClick={() => onSelect(item.id)}
+                    role="tab"
+                    type="button"
+                >
+                    {item.label}
+                </button>
+            ))}
+        </div>
+    );
 }
 
 function mergeClassNames(...classNames: string[]) {

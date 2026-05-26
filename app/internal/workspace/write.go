@@ -12,7 +12,10 @@ import (
 	"golang.org/x/text/encoding/charmap"
 )
 
-const writePreviewMaxBytes = 256 * 1024
+const (
+	writeDiffMaxBytes    = 256 * 1024
+	writeContentMaxBytes = 2 * 1024 * 1024
+)
 
 type FileWriteRequest struct {
 	RelPath  string `json:"relPath"`
@@ -35,14 +38,14 @@ func PreviewFileWrite(root string, request FileWriteRequest) (FileWriteProposal,
 	if err != nil {
 		return FileWriteProposal{}, err
 	}
-	if len(request.Content) > writePreviewMaxBytes {
+	if len(request.Content) > writeContentMaxBytes {
 		return FileWriteProposal{}, errors.New("file write preview is too large")
 	}
 	encoded, encoding, err := encodeWriteContent(request.Content, request.Encoding)
 	if err != nil {
 		return FileWriteProposal{}, err
 	}
-	if len(encoded) > writePreviewMaxBytes {
+	if len(encoded) > writeContentMaxBytes {
 		return FileWriteProposal{}, errors.New("encoded file write preview is too large")
 	}
 
@@ -84,6 +87,69 @@ func ApplyFileWrite(root string, request FileWriteRequest) (FileWriteProposal, e
 	}
 
 	proposal.Message = fmt.Sprintf("%s applied for %s as %s.", titleAction(proposal.Action), proposal.RelPath, proposal.Encoding)
+	return proposal, nil
+}
+
+func PreviewFileAppend(root string, request FileWriteRequest) (FileWriteProposal, error) {
+	_, absTarget, cleanRel, err := resolveWriteTarget(root, request.RelPath)
+	if err != nil {
+		return FileWriteProposal{}, err
+	}
+	if len(request.Content) > writeContentMaxBytes {
+		return FileWriteProposal{}, errors.New("file append preview is too large")
+	}
+	encoded, encoding, err := encodeWriteContent(request.Content, request.Encoding)
+	if err != nil {
+		return FileWriteProposal{}, err
+	}
+	if len(encoded) > writeContentMaxBytes {
+		return FileWriteProposal{}, errors.New("encoded file append preview is too large")
+	}
+	if info, err := os.Lstat(absTarget); err == nil {
+		if info.IsDir() {
+			return FileWriteProposal{}, errors.New("file append target must be a file")
+		}
+	}
+
+	rel := filepath.ToSlash(cleanRel)
+	return FileWriteProposal{
+		RelPath:  rel,
+		Name:     filepath.Base(cleanRel),
+		Action:   "append",
+		Diff:     buildAppendDiff(rel, request.Content),
+		Encoding: encoding,
+		Size:     len(encoded),
+		Message:  fmt.Sprintf("Preview ready to append %d bytes to %s as %s inside the workspace.", len(encoded), rel, encoding),
+	}, nil
+}
+
+func ApplyFileAppend(root string, request FileWriteRequest) (FileWriteProposal, error) {
+	proposal, err := PreviewFileAppend(root, request)
+	if err != nil {
+		return FileWriteProposal{}, err
+	}
+
+	_, absTarget, _, err := resolveWriteTarget(root, request.RelPath)
+	if err != nil {
+		return FileWriteProposal{}, err
+	}
+	if err := os.MkdirAll(filepath.Dir(absTarget), 0o755); err != nil {
+		return FileWriteProposal{}, err
+	}
+	encoded, _, err := encodeWriteContent(request.Content, request.Encoding)
+	if err != nil {
+		return FileWriteProposal{}, err
+	}
+	file, err := os.OpenFile(absTarget, os.O_CREATE|os.O_APPEND|os.O_WRONLY, 0o644)
+	if err != nil {
+		return FileWriteProposal{}, err
+	}
+	defer file.Close()
+	if _, err := file.Write(encoded); err != nil {
+		return FileWriteProposal{}, err
+	}
+
+	proposal.Message = fmt.Sprintf("Append applied for %s as %s.", proposal.RelPath, proposal.Encoding)
 	return proposal, nil
 }
 
@@ -212,8 +278,8 @@ func readExistingWriteTarget(absRoot string, absTarget string) (string, string, 
 	if err != nil {
 		return "", "", err
 	}
-	if len(content) > writePreviewMaxBytes {
-		return "", "", errors.New("existing file is too large for write preview")
+	if len(content) > writeDiffMaxBytes {
+		return "[existing file omitted: larger than inline diff limit]", "update", nil
 	}
 	normalized, _, ok := normalizePreviewText(content)
 	if !ok || isLikelyBinary(normalized) {
@@ -230,40 +296,75 @@ func buildUnifiedDiff(relPath string, before string, after string) string {
 	builder.WriteString(relPath)
 	builder.WriteString("\n")
 
-	beforeLines := splitDiffLines(before)
-	afterLines := splitDiffLines(after)
-	maxLines := len(beforeLines)
-	if len(afterLines) > maxLines {
-		maxLines = len(afterLines)
+	for _, line := range lcsDiffLines(splitDiffLines(before), splitDiffLines(after)) {
+		builder.WriteString(line)
+		builder.WriteString("\n")
 	}
 
-	for index := 0; index < maxLines; index++ {
-		beforeLine := ""
-		afterLine := ""
-		if index < len(beforeLines) {
-			beforeLine = beforeLines[index]
+	return builder.String()
+}
+
+func lcsDiffLines(beforeLines []string, afterLines []string) []string {
+	table := make([][]int, len(beforeLines)+1)
+	for index := range table {
+		table[index] = make([]int, len(afterLines)+1)
+	}
+	for left := len(beforeLines) - 1; left >= 0; left-- {
+		for right := len(afterLines) - 1; right >= 0; right-- {
+			if beforeLines[left] == afterLines[right] {
+				table[left][right] = table[left+1][right+1] + 1
+			} else if table[left+1][right] >= table[left][right+1] {
+				table[left][right] = table[left+1][right]
+			} else {
+				table[left][right] = table[left][right+1]
+			}
 		}
-		if index < len(afterLines) {
-			afterLine = afterLines[index]
-		}
-		if beforeLine == afterLine {
-			builder.WriteString(" ")
-			builder.WriteString(beforeLine)
-			builder.WriteString("\n")
+	}
+
+	diff := []string{}
+	left := 0
+	right := 0
+	for left < len(beforeLines) && right < len(afterLines) {
+		if beforeLines[left] == afterLines[right] {
+			diff = append(diff, " "+beforeLines[left])
+			left++
+			right++
 			continue
 		}
-		if index < len(beforeLines) {
-			builder.WriteString("-")
-			builder.WriteString(beforeLine)
-			builder.WriteString("\n")
-		}
-		if index < len(afterLines) {
-			builder.WriteString("+")
-			builder.WriteString(afterLine)
-			builder.WriteString("\n")
+		if table[left+1][right] >= table[left][right+1] {
+			diff = append(diff, "-"+beforeLines[left])
+			left++
+		} else {
+			diff = append(diff, "+"+afterLines[right])
+			right++
 		}
 	}
+	for left < len(beforeLines) {
+		diff = append(diff, "-"+beforeLines[left])
+		left++
+	}
+	for right < len(afterLines) {
+		diff = append(diff, "+"+afterLines[right])
+		right++
+	}
+	return diff
+}
 
+func buildAppendDiff(relPath string, appended string) string {
+	var builder strings.Builder
+	builder.WriteString("--- a/")
+	builder.WriteString(relPath)
+	builder.WriteString("\n+++ b/")
+	builder.WriteString(relPath)
+	builder.WriteString("\n@@ append @@\n")
+	for _, line := range splitDiffLines(appended) {
+		builder.WriteString("+")
+		builder.WriteString(line)
+		builder.WriteString("\n")
+	}
+	if appended == "" {
+		builder.WriteString("+\n")
+	}
 	return builder.String()
 }
 

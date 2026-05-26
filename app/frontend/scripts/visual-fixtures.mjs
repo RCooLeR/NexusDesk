@@ -136,6 +136,7 @@ export async function installNexusMocks(page) {
                     }),
                     ListAgentToolRuns: async () => [{id: 'smoke-tool', toolName: 'dataset.query', title: 'Query Dataset', target: 'data/campaigns.csv', risk: 'low', requiresApproval: false, status: 'dry-run', mode: 'dry-run', inputs: {query: 'spend > 10'}, outputSummary: 'Ready to query dataset.', error: '', approvalId: 'approval-smoke', startedAt: '2026-05-14T00:00:00Z', completedAt: '2026-05-14T00:00:01Z', durationMs: 1000}],
                     ListAgentTools: async () => [],
+                    PreviewFileDelete: async (relPath) => ({relPath, name: relPath.split('/').pop() || relPath, action: 'delete', diff: `--- a/${relPath}\n+++ /dev/null\n@@\n-deleted smoke preview\n`, size: 64, message: `Delete preview ready for ${relPath}.`}),
                     ReadWorkspaceFile: async (relPath) => {
                         if (relPath === 'data/local.sqlite') {
                             return {relPath, name: 'local.sqlite', kind: 'file', fileType: 'database', content: '', text: '', encoding: '', truncated: false, message: 'SQLite database file ready for read-only connector queries.', size: 4096};

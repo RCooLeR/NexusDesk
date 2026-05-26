@@ -53,3 +53,7 @@ workspace-cache/
 services/.env
 services/data/
 services/tmp/
+
+# AI artifacts
+.codex-ui-screenshots/
+/claude-analysis.md
