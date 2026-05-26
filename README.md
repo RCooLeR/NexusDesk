@@ -30,15 +30,18 @@ Nexus Augentic Studio is not only a chatbot. It should feel like a serious IDE-s
 
 ## Current Project Layout
 
-The repository has its first runnable Wails app scaffold. The directories that exist now are:
+The repository has a runnable Wails desktop application plus product and engineering docs. The directories that exist now are:
 
 ```text
-app/       Wails desktop app with Go backend and React/TypeScript frontend.
-docs/      Product, engineering, and brand documentation.
-services/  Development and testing helper services.
+app/                 Wails desktop app with Go backend and React/TypeScript frontend.
+app/internal/        Backend packages for workspace, artifacts, datasets, metadata, LLM, agent, safety, and storage.
+app/frontend/src/    React shell, feature panels, Wails API adapter, brand assets, and reusable UI.
+docs/                Product, architecture, delivery, security, and developer-experience documentation.
+services/            Development and testing helper services.
+tracker.md           Long-range implementation tracker and current architecture hardening checklist.
 ```
 
-The fuller backend module, storage, indexing, connector, and tool layout is tracked in the developer experience doc as the target implementation shape.
+Generated runtime state such as `.nexusdesk/`, frontend build output, Wails binaries, and dependency folders are ignored.
 
 ## Core Principles
 

@@ -130,7 +130,26 @@ Responsibilities:
 
 The frontend should render structured data from the backend. It should not contain business rules for file permissions, database safety, or Docker safety.
 
-Current implementation note: generated Wails bindings are imported through `app/frontend/src/api/wailsClient.ts`, not directly from feature components. `NexusShell.tsx` remains the main orchestrator, but panel resize state, studio-route state, Git workflows, and editor-outline extraction/presentation now live in focused modules so future workspace, chat, artifact, and data controllers can follow the same pattern.
+Current implementation note: generated Wails bindings are imported through `app/frontend/src/api/wailsClient.ts`, not directly from feature components. `NexusShell.tsx` remains the main orchestrator, but panel resize state, studio-route state, Git workflows, Code AI prompt/patch helpers, and editor-outline extraction/presentation now live in focused modules so future workspace, chat, artifact, and data controllers can follow the same pattern.
+
+### Current Architecture Review
+
+Review status as of the latest full project pass:
+
+- The product shape is still sound: a small primary rail for Workbench, Data & Analytics, Artifacts, and Settings, with the AI assistant always visible.
+- The backend has useful service facades for workspace, dataset, artifact, and git workflows, but `app/app.go` is still large and still owns chat/context, metadata orchestration, and several bridge-specific helpers.
+- The frontend has good feature panels and the Wails API adapter boundary is clean, but `NexusShell.tsx` remains the main state owner. It should continue shrinking into focused controllers before deeper connector/document/operations work lands.
+- Git work is correctly manual on folder open, so opening a workspace should not launch external Git commands or desktop command windows.
+- Code AI actions now reuse the chat/artifact pipeline and route accepted single-file patch drafts through the existing safe write preview/apply boundary.
+- Slow or external future work, especially OCR, dump imports, connector pulls, deeper indexing, and long agent runs, must go through a job runner before it is attached to folder-open or route-load flows.
+
+Near-term architecture corrections:
+
+- Extract chat/context/agent state into a `useChatController` and a backend `ChatService`.
+- Extract artifact and dataset frontend state into controller hooks before adding more route depth.
+- Complete ArtifactService ownership for lineage/regeneration so artifact workflows do not drift back into `app/app.go`.
+- Add a durable job model and keep folder open limited to bounded first-render scanning.
+- Promote SQLite metadata repositories to primary persistence once migration/recovery tests exist.
 
 ### 3. Workspace Manager
 

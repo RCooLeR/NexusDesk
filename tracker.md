@@ -937,6 +937,8 @@ Goal: keep the product architecture simple to reason about as features deepen, w
 
 Status: first hardening slice expanded with Git backend/frontend extraction, preview-only stage/unstage planning, generated Wails binding isolation, editor-outline extraction from the Workbench panel, and first workspace/artifact/dataset backend service facades.
 
+Latest full review finding: the architecture direction is still good, but the next risk is orchestration mass, not product shape. `NexusShell.tsx`, `BottomStudioPanel.tsx`, `WorkbenchPanel.tsx`, `GitDiffPanel.tsx`, and `app/app.go` are now the largest files. Keep extracting owned controllers, pure helpers, and backend services before adding deep connector/document/operations workflows. Folder open must stay bounded and must never start Git, Docker, OCR, connector pulls, dump imports, or long agent jobs.
+
 Step 15.1: Backend service facades
 
 - [x] Keep Wails method names stable while moving orchestration out of `app/app.go`.
@@ -957,6 +959,10 @@ Step 15.2: Frontend controller hooks
 - [ ] Split chat/context/agent state and actions into `useChatController`.
 - [ ] Keep `NexusShell.tsx` focused on layout composition, cross-panel wiring, modals, global shortcuts, and route/drawer placement.
 - [x] Add smoke checks that generated Wails bindings remain isolated behind `app/frontend/src/api/wailsClient.ts`.
+- [x] Extract Code AI prompt builders and assistant patch parsing from `NexusShell.tsx`.
+- [ ] Split command palette action assembly out of `NexusShell.tsx` once more route actions accumulate.
+- [ ] Split assistant patch preview orchestration into a Code AI controller after chat/file-write controllers exist.
+- [ ] Add focused tests for assistant unified-diff parsing, including fenced diffs, path-matched diffs, mismatched hunks, and no-final-newline patches.
 
 Step 15.3: Persistence simplification
 
@@ -973,6 +979,7 @@ Step 15.4: Job-based slow work
 - [ ] Surface jobs in a Workbench/Activity panel with cancel, retry, inspect logs, and open artifact actions.
 - [ ] Ensure folder open only scans the bounded tree needed for first render; deeper indexing must run as a cancelable job.
 - [ ] Persist job records in SQLite and link outputs to artifacts/lineage.
+- [ ] Add regression coverage that folder open cannot trigger Git, Docker, OCR, connector pulls, dump import, long indexing, or shell execution.
 
 Step 15.5: Navigation discipline
 
@@ -1064,6 +1071,8 @@ Reasoning: read-only navigation and diff review are now credible, file and hunk 
 `app/frontend/src/features/shell/useResizablePanels.ts` owns navigator, assistant, and bottom drawer sizing plus resize drag handlers.
 
 `app/frontend/src/features/shell/useGitController.ts` owns Git status refresh, selected changed-file state, selected-file diff loading, file stage/unstage preview/apply state, hunk action preview/apply state, null-response normalization, and the manual-only Git refresh boundary.
+
+`app/frontend/src/features/shell/codeAiActions.ts` owns pure Code AI prompt builders and single-file unified-diff parsing for assistant patch drafts. `NexusShell.tsx` still orchestrates the model calls and safe write preview/apply boundary, but prompt templates and patch parsing should not drift back into the shell.
 
 Workspace scan counters are diagnostic data, not primary navigation content. Keep them in scan reports/diagnostics instead of the always-visible sidebar header.
 

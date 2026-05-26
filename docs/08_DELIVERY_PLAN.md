@@ -263,6 +263,16 @@ This batch made more of the studio inspectable and auditable without turning on 
 2. Add explicit refresh/rebuild buttons for dataset dependencies so saved SQL reports, charts, summaries, and exports can be regenerated from recorded inputs.
 3. Add connector approval policy docs/tests for read-only proofs, blocked SQL statements, result caps, and redacted errors.
 
+## Prepared Batch: Architecture Hardening Before Deeper Studios
+
+1. Extract chat/context/agent orchestration into a `useChatController` frontend hook and a backend `ChatService`.
+2. Extract artifact route state/actions into `useArtifactController`; finish ArtifactService ownership for lineage and regeneration.
+3. Extract dataset/SQL/connector route state/actions into `useDatasetController` before adding notebooks or connector profiles.
+4. Keep folder open bounded and prove it cannot start Git, Docker, OCR, connector pulls, dump imports, long indexing, or shell execution.
+5. Add focused tests for assistant unified-diff patch parsing before expanding multi-file patch workflows.
+6. Add a durable job model for slow work and surface job progress in Activity before connecting OCR, dump restore, connector pulls, or long agent runs.
+7. Promote SQLite repositories to primary persistence only after migration, fallback, and corruption/export recovery tests exist.
+
 ## Prepared Batch: Studio Query And Connector Maturity
 
 1. Add a richer metadata history tab with filters by kind, time, source path, and jump-to-chat/artifact/tool actions.
@@ -270,7 +280,7 @@ This batch made more of the studio inspectable and auditable without turning on 
 3. Add artifact lineage JSON import comparison in the UI, including validation errors and graph diff previews.
 4. Promote dataset dependency and SQL run records into first-class UI navigation from Data & Analytics, Artifacts, and Metadata Browser.
 5. Start a DuckDB multi-file workspace dataset surface for joins across CSV/XLSX-derived tables.
-6. Split large shell orchestration state where connector/history flows start to crowd `NexusShell.tsx`.
+6. Continue splitting large shell orchestration state before connector/history flows grow again.
 
 ## Strategic Studio Batches
 

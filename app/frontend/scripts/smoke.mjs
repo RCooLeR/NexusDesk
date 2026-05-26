@@ -157,6 +157,10 @@ const checks = [
         terms: ['useStudioNavigation', 'studioRouteSurfaceTab', 'changeStudioRoute', 'changeBottomStudioTab', 'mainStudioTabForRoute', 'localStorage', 'nexus:studio-navigation', "'git'"],
     },
     {
+        file: 'src/features/shell/codeAiActions.ts',
+        terms: ['buildGenerateTestsPrompt', 'buildPatchProposalPrompt', 'buildDependencyGraphPrompt', 'buildPullRequestSummaryPrompt', 'buildPullRequestDescriptionPrompt', 'applyUnifiedDiffToContent', 'unifiedDiffLinesForPath', 'splitUnifiedDiffSections', 'sectionMatchesRelPath'],
+    },
+    {
         file: 'src/features/shell/AgentToolPlanCard.tsx',
         terms: ['AgentToolPlanCard', 'Tool Plan', 'tool-plan-list', 'requiresApproval', 'Dry run', 'Execute', 'tool-run-list', 'Replay dry run', 'Diff target'],
     },
