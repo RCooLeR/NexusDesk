@@ -325,6 +325,7 @@ Implemented:
 - [x] CSV column profiles.
 - [x] TSV, JSON, and NDJSON table previews.
 - [x] TSV, JSON, and NDJSON column profiles.
+- [x] Parquet footer metadata inspection.
 - [x] Dataset profile persistence under `.nexusdesk/datasets/`.
 - [x] Bounded CSV/TSV/JSON/NDJSON query/filter flow.
 - [x] Numeric comparisons, contains, limit, and order by.
@@ -347,7 +348,7 @@ Step 5.1: File dataset coverage
 - [x] Add legacy binary XLS workbook inspector or explicit conversion/import guidance.
 - [x] Add JSON loader.
 - [x] Add NDJSON loader.
-- [ ] Add Parquet inspection.
+- [x] Add Parquet inspection.
 - [x] Add SQLite file dataset cards separate from connector sessions.
 - [ ] Add log dataset profiling.
 - [x] Add compressed export detection.
@@ -1002,7 +1003,7 @@ Exit criteria:
 
 ## Next Logical Batch
 
-Completed batch: Data Source Cards And File Classification.
+Completed batch: Parquet Metadata Inspection.
 
 Steps:
 
@@ -1012,19 +1013,22 @@ Steps:
 4. [x] Detect compressed exports and SQL/dump/bak database dump files without starting imports.
 5. [x] Add explicit legacy binary XLS guidance: convert to XLSX or CSV before profiling.
 6. [x] Keep source cards bounded to the already-scanned workspace tree so folder open remains cheap and side-effect free.
+7. [x] Add bounded Parquet footer/magic inspection without scanning full columnar data.
+8. [x] Persist Parquet profile metadata under `.nexusdesk/datasets/`.
+9. [x] Show profiled Parquet footer/data byte summaries in Data & Analytics.
 
 Recommended next batch: Parquet, Logs, And Connector Metadata.
 
 Steps:
 
-1. [ ] Add Parquet metadata inspection.
+1. [x] Add Parquet metadata inspection.
 2. [ ] Add log dataset profiling.
 3. [ ] Start the connector metadata interface needed by future database and analytics sources.
 4. [ ] Define connection profiles with secure credential references.
 5. [ ] Expand SQLite schema browsing beyond the first connector query surface.
 6. [ ] Add data source card actions for open, profile, inspect connector, and planned import workflows.
 
-Reasoning: Data & Analytics now has first-pass source discovery without new background work. The next gap is deeper metadata for source types that cannot be represented by the existing table/profile path, especially Parquet, logs, and connector-backed databases.
+Reasoning: Data & Analytics now has first-pass source discovery plus a bounded Parquet metadata profile. The next gap is deeper metadata for source types that cannot be represented by the existing table/profile path, especially logs and connector-backed databases.
 
 ## Directory Ownership Notes
 

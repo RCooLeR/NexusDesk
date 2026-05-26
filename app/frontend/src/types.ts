@@ -385,6 +385,7 @@ export type DatasetProfile = {
     columns: number;
     sheets: string[];
     workbook: WorkbookInfo;
+    parquet: ParquetInfo;
     profiles: ColumnProfile[];
     updatedAt: string;
     message: string;
@@ -412,6 +413,14 @@ export type WorkbookTableInfo = {
     name: string;
     sheet: string;
     ref: string;
+};
+
+export type ParquetInfo = {
+    fileSize: number;
+    footerMetadataBytes: number;
+    dataBytes: number;
+    magic: string;
+    message: string;
 };
 
 export type DatasetQueryResult = {

@@ -2,6 +2,7 @@ package dataset
 
 import (
 	"archive/zip"
+	"encoding/binary"
 	"os"
 	"path/filepath"
 	"testing"
@@ -159,6 +160,59 @@ func TestBuildReturnsLegacyXLSGuidance(t *testing.T) {
 		t.Fatal("expected legacy xls guidance error")
 	}
 	if got := err.Error(); got != "legacy binary XLS profiling is not available yet; convert the workbook to XLSX or CSV before profiling" {
+		t.Fatalf("unexpected error: %s", got)
+	}
+}
+
+func TestBuildInspectsParquetFooter(t *testing.T) {
+	root := t.TempDir()
+	path := filepath.Join(root, "data", "sample.parquet")
+	if err := os.MkdirAll(filepath.Dir(path), 0o755); err != nil {
+		t.Fatalf("MkdirAll failed: %v", err)
+	}
+	dataPage := []byte("row-group-bytes")
+	metadata := []byte("footer-metadata")
+	content := append([]byte("PAR1"), dataPage...)
+	content = append(content, metadata...)
+	footerLength := make([]byte, 4)
+	binary.LittleEndian.PutUint32(footerLength, uint32(len(metadata)))
+	content = append(content, footerLength...)
+	content = append(content, []byte("PAR1")...)
+	if err := os.WriteFile(path, content, 0o644); err != nil {
+		t.Fatalf("WriteFile failed: %v", err)
+	}
+
+	profile, err := Build(root, "data/sample.parquet")
+	if err != nil {
+		t.Fatalf("Build returned error: %v", err)
+	}
+
+	if profile.Kind != "parquet" {
+		t.Fatalf("expected parquet profile, got %s", profile.Kind)
+	}
+	if profile.Parquet.FileSize != int64(len(content)) {
+		t.Fatalf("expected file size %d, got %d", len(content), profile.Parquet.FileSize)
+	}
+	if profile.Parquet.FooterMetadataBytes != int64(len(metadata)) {
+		t.Fatalf("expected metadata length %d, got %d", len(metadata), profile.Parquet.FooterMetadataBytes)
+	}
+	if profile.Parquet.DataBytes != int64(4+len(dataPage)) {
+		t.Fatalf("expected data bytes %d, got %d", 4+len(dataPage), profile.Parquet.DataBytes)
+	}
+	if profile.Parquet.Magic != "PAR1" {
+		t.Fatalf("expected PAR1 magic, got %s", profile.Parquet.Magic)
+	}
+}
+
+func TestBuildRejectsInvalidParquet(t *testing.T) {
+	root := t.TempDir()
+	writeFile(t, root, "data/broken.parquet", "not a parquet file")
+
+	_, err := Build(root, "data/broken.parquet")
+	if err == nil {
+		t.Fatal("expected invalid parquet to be rejected")
+	}
+	if got := err.Error(); got != "parquet file magic header not found" {
 		t.Fatalf("unexpected error: %s", got)
 	}
 }

@@ -55,7 +55,7 @@ Deliverables:
 - bounded CSV/TSV/JSON/NDJSON table preview: implemented
 - bounded CSV/TSV/JSON/NDJSON column profiles: implemented
 - larger capped table profile sample: implemented
-- persistent CSV/TSV/JSON/NDJSON/XLSX dataset profiles: first implementation, with XLSX workbook metadata
+- persistent CSV/TSV/JSON/NDJSON/XLSX/Parquet dataset profiles: first implementation, with XLSX workbook metadata and Parquet footer metadata
 - bounded CSV/TSV/JSON/NDJSON query/filter flow: first implementation
 - dataset query result export artifact flow: first implementation
 - dataset-to-SVG bar chart artifact flow: first implementation
@@ -107,6 +107,7 @@ Current status:
 - Text preview stays inside the approved workspace root and refuses binary/unsafe paths.
 - Text preview decodes common UTF-8, UTF-16, and Windows-1251 Cyrillic files.
 - CSV, TSV, JSON, and NDJSON files render as bounded table previews with lightweight column profiles from a larger capped sample while retaining raw text for selected chat context.
+- Parquet files can be profiled through a bounded footer/magic inspection that records file, data, and footer metadata byte counts without scanning full columnar data.
 - Common image previews render inline as capped data URLs from inside the approved workspace root.
 - PDF previews render inline as capped data URLs from inside the approved workspace root and expose extracted text by page when available.
 - DOCX files expose extracted body text when the document XML is readable.
@@ -174,6 +175,7 @@ Current status:
 - Stale-context refresh can rebuild a context preview from changed files and records the refresh in the approval/metadata trail.
 - Dataset dependency rebuild now removes the prior generated artifact before re-running so repeated refreshes avoid same-timestamp collisions.
 - Data & Analytics clears visible query/chart/profile state when the selected dataset changes on disk.
+- Data & Analytics source cards show profiled Parquet footer/data byte summaries after metadata inspection.
 - Workspace freshness reports dataset-derived views that need refresh when table/workbook sources change.
 - SQL query results can be exported as Markdown artifacts with SQL text, engine, row counts, preview rows, and dataset citations.
 - Data & Analytics saves read-only SQL snippets separately from lightweight row filters.
@@ -285,6 +287,13 @@ This batch made more of the studio inspectable and auditable without turning on 
 4. SQL dumps and compressed exports are classified without starting imports, containers, or extraction jobs.
 5. Legacy `.xls` files now show explicit conversion guidance instead of attempting unsupported binary parsing.
 
+## Completed Batch: Parquet Metadata Inspection
+
+1. Parquet profiles now validate the fixed `PAR1` header/footer and footer metadata length before persisting metadata.
+2. Profiling reads only fixed header/footer bytes, avoiding full-file scans, schema decoding, external commands, or background work on folder open.
+3. Persisted Parquet profiles record file size, data bytes, footer metadata bytes, magic marker, and an explicit schema-decoding-pending message.
+4. Data & Analytics source cards and profile summaries show profiled Parquet footer/data byte summaries.
+
 ## Prepared Batch: Architecture Hardening Before Deeper Studios
 
 1. Extract chat/context/agent orchestration into a `useChatController` frontend hook and a backend `ChatService`.
@@ -328,7 +337,7 @@ These batches describe the next product direction. They are broader than the cur
 
 ### Batch: Data & Analytics Expansion
 
-1. Expand file dataset support to TSV, JSON, NDJSON, Parquet, logs, compressed exports, and SQL/database dump files.
+1. Expand file dataset support to TSV, JSON, NDJSON, Parquet, logs, compressed exports, and SQL/database dump files. TSV/JSON/NDJSON table profiling and Parquet footer metadata inspection are implemented; logs and imports remain planned.
 2. Build database connector framework for SQLite, PostgreSQL, MySQL/MariaDB, SQL Server, and DuckDB with read-only defaults.
 3. Add schema browser with tables, views, columns, keys, indexes, row counts, samples, and generated relationship views.
 4. Add query notebook with multiple cells, result tabs, saved queries, cancellation, query history, charts, and export actions.

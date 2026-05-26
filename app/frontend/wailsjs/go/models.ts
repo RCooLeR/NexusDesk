@@ -616,6 +616,26 @@ export namespace artifact {
 
 export namespace dataset {
 
+	export class ParquetInfo {
+	    fileSize: number;
+	    footerMetadataBytes: number;
+	    dataBytes: number;
+	    magic: string;
+	    message: string;
+
+	    static createFrom(source: any = {}) {
+	        return new ParquetInfo(source);
+	    }
+
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.fileSize = source["fileSize"];
+	        this.footerMetadataBytes = source["footerMetadataBytes"];
+	        this.dataBytes = source["dataBytes"];
+	        this.magic = source["magic"];
+	        this.message = source["message"];
+	    }
+	}
 	export class WorkbookTableInfo {
 	    name: string;
 	    sheet: string;
@@ -702,6 +722,7 @@ export namespace dataset {
 	    columns: number;
 	    sheets: string[];
 	    workbook: WorkbookInfo;
+	    parquet: ParquetInfo;
 	    profiles: workspace.ColumnProfile[];
 	    updatedAt: string;
 	    message: string;
@@ -719,6 +740,7 @@ export namespace dataset {
 	        this.columns = source["columns"];
 	        this.sheets = source["sheets"];
 	        this.workbook = this.convertValues(source["workbook"], WorkbookInfo);
+	        this.parquet = this.convertValues(source["parquet"], ParquetInfo);
 	        this.profiles = this.convertValues(source["profiles"], workspace.ColumnProfile);
 	        this.updatedAt = source["updatedAt"];
 	        this.message = source["message"];

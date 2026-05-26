@@ -503,6 +503,11 @@ function DatasetProfileSummary({profile}: {profile: DatasetProfile}) {
                         <small>{profile.workbook.pivotTables.length} pivots</small>
                     )}
                 </>
+            ) : profile.kind === 'parquet' ? (
+                <>
+                    <p>{formatBytes(profile.parquet?.fileSize ?? 0)} file, {formatBytes(profile.parquet?.footerMetadataBytes ?? 0)} footer metadata</p>
+                    <small>{profile.parquet?.message || profile.message}</small>
+                </>
             ) : (
                 <p>{profile.rows} rows, {profile.columns} columns</p>
             )}
@@ -615,4 +620,18 @@ function formatChartPoint(value: number) {
         return '0';
     }
     return Number.isInteger(value) ? value.toString() : value.toFixed(2);
+}
+
+function formatBytes(value: number) {
+    if (!Number.isFinite(value) || value <= 0) {
+        return '0 B';
+    }
+    const units = ['B', 'KB', 'MB', 'GB'];
+    let current = value;
+    let unitIndex = 0;
+    while (current >= 1024 && unitIndex < units.length - 1) {
+        current /= 1024;
+        unitIndex += 1;
+    }
+    return `${current >= 10 || unitIndex === 0 ? current.toFixed(0) : current.toFixed(1)} ${units[unitIndex]}`;
 }

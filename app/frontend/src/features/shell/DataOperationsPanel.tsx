@@ -350,7 +350,7 @@ function dataSourceFromNode(node: FileNode, profile: DatasetProfile | undefined,
         return plannedSourceCard(node, active, 'legacy workbook', 'Convert to XLSX or CSV before profiling.');
     }
     if (extension === 'parquet') {
-        return plannedSourceCard(node, active, 'parquet', 'Columnar inspection is planned.');
+        return sourceCard(node, profile, active, 'parquet', profile ? `${formatBytes(profile.parquet?.footerMetadataBytes ?? 0)} footer, ${formatBytes(profile.parquet?.dataBytes ?? 0)} data` : 'Footer metadata inspection available.');
     }
     if (['sqlite', 'sqlite3', 'db'].includes(extension)) {
         return sourceCard(node, profile, active, 'sqlite file', 'Read-only connector available separately from dataset profiles.');
@@ -405,6 +405,20 @@ function compareDataSources(left: DataSourceCard, right: DataSourceCard) {
 function fileExtension(name: string) {
     const index = name.lastIndexOf('.');
     return index >= 0 ? name.slice(index + 1).toLowerCase() : '';
+}
+
+function formatBytes(value: number) {
+    if (!Number.isFinite(value) || value <= 0) {
+        return '0 B';
+    }
+    const units = ['B', 'KB', 'MB', 'GB'];
+    let current = value;
+    let unitIndex = 0;
+    while (current >= 1024 && unitIndex < units.length - 1) {
+        current /= 1024;
+        unitIndex += 1;
+    }
+    return `${current >= 10 || unitIndex === 0 ? current.toFixed(0) : current.toFixed(1)} ${units[unitIndex]}`;
 }
 
 function MetadataStorePanel({status}: {status: SQLiteMetadataStatus}) {

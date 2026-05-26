@@ -2,6 +2,7 @@ package dataset
 
 import (
 	"archive/zip"
+	"encoding/binary"
 	"encoding/json"
 	"encoding/xml"
 	"errors"
@@ -24,6 +25,7 @@ type Profile struct {
 	Columns   int                       `json:"columns"`
 	Sheets    []string                  `json:"sheets"`
 	Workbook  WorkbookInfo              `json:"workbook"`
+	Parquet   ParquetInfo               `json:"parquet"`
 	Profiles  []workspace.ColumnProfile `json:"profiles"`
 	UpdatedAt string                    `json:"updatedAt"`
 	Message   string                    `json:"message"`
@@ -51,6 +53,14 @@ type WorkbookTableInfo struct {
 	Name  string `json:"name"`
 	Sheet string `json:"sheet"`
 	Ref   string `json:"ref"`
+}
+
+type ParquetInfo struct {
+	FileSize            int64  `json:"fileSize"`
+	FooterMetadataBytes int64  `json:"footerMetadataBytes"`
+	DataBytes           int64  `json:"dataBytes"`
+	Magic               string `json:"magic"`
+	Message             string `json:"message"`
 }
 
 func Build(root string, relPath string) (Profile, error) {
@@ -91,10 +101,18 @@ func Build(root string, relPath string) (Profile, error) {
 		profile.Rows = workbookRows(workbook.Sheets)
 		profile.Columns = workbookColumns(workbook.Sheets)
 		profile.Message = "Excel workbook profile persisted with sheet, formula, named range, table, and pivot metadata."
+	case ".parquet":
+		parquet, err := inspectParquetFile(absTarget)
+		if err != nil {
+			return Profile{}, err
+		}
+		profile.Kind = "parquet"
+		profile.Parquet = parquet
+		profile.Message = parquet.Message
 	case ".xls":
 		return Profile{}, errors.New("legacy binary XLS profiling is not available yet; convert the workbook to XLSX or CSV before profiling")
 	default:
-		return Profile{}, errors.New("dataset profiles currently support CSV, TSV, JSON, NDJSON, and XLSX files")
+		return Profile{}, errors.New("dataset profiles currently support CSV, TSV, JSON, NDJSON, XLSX, and Parquet files")
 	}
 
 	if err := saveProfile(absRoot, profile); err != nil {
@@ -102,6 +120,52 @@ func Build(root string, relPath string) (Profile, error) {
 	}
 
 	return profile, nil
+}
+
+func inspectParquetFile(path string) (ParquetInfo, error) {
+	file, err := os.Open(path)
+	if err != nil {
+		return ParquetInfo{}, err
+	}
+	defer file.Close()
+
+	stat, err := file.Stat()
+	if err != nil {
+		return ParquetInfo{}, err
+	}
+	size := stat.Size()
+	if size < 12 {
+		return ParquetInfo{}, errors.New("parquet file is too small to contain a valid footer")
+	}
+
+	header := make([]byte, 4)
+	if _, err := file.ReadAt(header, 0); err != nil {
+		return ParquetInfo{}, err
+	}
+	if string(header) != "PAR1" {
+		return ParquetInfo{}, errors.New("parquet file magic header not found")
+	}
+
+	footer := make([]byte, 8)
+	if _, err := file.ReadAt(footer, size-8); err != nil {
+		return ParquetInfo{}, err
+	}
+	if string(footer[4:]) != "PAR1" {
+		return ParquetInfo{}, errors.New("parquet file magic footer not found")
+	}
+
+	metadataBytes := int64(binary.LittleEndian.Uint32(footer[:4]))
+	if metadataBytes < 0 || metadataBytes+8 > size {
+		return ParquetInfo{}, errors.New("parquet footer metadata length is invalid")
+	}
+
+	return ParquetInfo{
+		FileSize:            size,
+		FooterMetadataBytes: metadataBytes,
+		DataBytes:           size - metadataBytes - 8,
+		Magic:               "PAR1",
+		Message:             "Parquet footer metadata inspected; schema decoding is planned.",
+	}, nil
 }
 
 func datasetKindFromExtension(extension string) string {
