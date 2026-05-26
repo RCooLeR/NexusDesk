@@ -97,6 +97,7 @@ The first `nexus-app` slice includes:
 - first native workspace search service and bottom result panel for bounded path/content search with preview-tab opening;
 - first native Problems service and bottom panel for bounded TODO/FIXME/HACK/BUG, merge-conflict, and invalid JSON scanning;
 - first native Git status service and manual bottom Git refresh panel with hidden Windows command execution;
+- directory-grouped changed-file rendering in the native Git panel;
 - framework-free workspace domain model.
 
 Full execution is blocked in the current shell until CGO is enabled with a Windows C compiler. Non-driver internal packages can already be tested.

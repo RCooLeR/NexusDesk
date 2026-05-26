@@ -2,6 +2,9 @@ package shell
 
 import (
 	"fmt"
+	"path"
+	"sort"
+	"strings"
 
 	"fyne.io/fyne/v2"
 	"fyne.io/fyne/v2/container"
@@ -11,6 +14,11 @@ import (
 
 	gitSvc "nexusdesk/internal/services/git"
 )
+
+type gitChangeGroup struct {
+	Directory string
+	Changes   []gitSvc.FileChange
+}
 
 func (v *View) newGitPanel() fyne.CanvasObject {
 	refresh := widget.NewButtonWithIcon("Refresh git", theme.ViewRefreshIcon(), v.refreshGitStatus)
@@ -59,12 +67,60 @@ func gitRows(status gitSvc.Status) []fyne.CanvasObject {
 		rows = append(rows, widget.NewLabel("Working tree is clean."))
 		return rows
 	}
-	for _, change := range status.ChangedFiles {
-		label := change.Path
-		if change.OldPath != "" {
-			label = change.OldPath + " -> " + change.Path
+	for _, group := range groupGitChanges(status.ChangedFiles) {
+		rows = append(rows, gitDirectoryRow(group.Directory))
+		for _, change := range group.Changes {
+			rows = append(rows, gitChangeRow(change))
 		}
-		rows = append(rows, container.NewBorder(nil, nil, widget.NewIcon(theme.FileTextIcon()), nil, widget.NewLabel(fmt.Sprintf("%s - %s", change.Summary, label))))
 	}
 	return rows
+}
+
+func groupGitChanges(changes []gitSvc.FileChange) []gitChangeGroup {
+	grouped := map[string][]gitSvc.FileChange{}
+	for _, change := range changes {
+		directory := path.Dir(strings.TrimSpace(change.Path))
+		if directory == "." || directory == "/" {
+			directory = "Workspace root"
+		}
+		grouped[directory] = append(grouped[directory], change)
+	}
+	directories := make([]string, 0, len(grouped))
+	for directory := range grouped {
+		directories = append(directories, directory)
+	}
+	sort.Slice(directories, func(left int, right int) bool {
+		if directories[left] == "Workspace root" {
+			return true
+		}
+		if directories[right] == "Workspace root" {
+			return false
+		}
+		return strings.ToLower(directories[left]) < strings.ToLower(directories[right])
+	})
+	groups := make([]gitChangeGroup, 0, len(directories))
+	for _, directory := range directories {
+		changes := grouped[directory]
+		sort.Slice(changes, func(left int, right int) bool {
+			return strings.ToLower(changes[left].Path) < strings.ToLower(changes[right].Path)
+		})
+		groups = append(groups, gitChangeGroup{Directory: directory, Changes: changes})
+	}
+	return groups
+}
+
+func gitDirectoryRow(directory string) fyne.CanvasObject {
+	label := widget.NewLabel(directory)
+	label.TextStyle = fyne.TextStyle{Bold: true}
+	return container.NewBorder(nil, nil, widget.NewIcon(theme.FolderIcon()), nil, label)
+}
+
+func gitChangeRow(change gitSvc.FileChange) fyne.CanvasObject {
+	label := change.Path
+	if change.OldPath != "" {
+		label = change.OldPath + " -> " + change.Path
+	}
+	text := widget.NewLabel(fmt.Sprintf("%s - %s", change.Summary, label))
+	text.Truncation = fyne.TextTruncateEllipsis
+	return container.NewBorder(nil, nil, widget.NewIcon(theme.FileTextIcon()), nil, container.NewPadded(text))
 }
