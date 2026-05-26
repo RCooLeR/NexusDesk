@@ -25,7 +25,15 @@ func (v *View) newGitPanel() fyne.CanvasObject {
 	header := container.NewBorder(nil, nil, v.gitStatus, refresh)
 	scroll := container.NewScroll(v.gitResults)
 	scroll.SetMinSize(fyne.NewSize(240, 110))
-	diff := container.NewBorder(v.gitDiffStatus, nil, nil, nil, v.gitDiffText)
+	diffMode := widget.NewSelect(gitDiffModeLabels(), func(label string) {
+		v.gitDiffMode = gitDiffModeFromLabel(label)
+		if v.gitLastDiff.Path != "" {
+			v.gitDiffText.SetText(formatGitDiff(v.gitLastDiff, v.gitDiffMode))
+		}
+	})
+	diffMode.SetSelected(gitDiffModeUnified.Label())
+	diffHeader := container.NewBorder(nil, nil, v.gitDiffStatus, diffMode)
+	diff := container.NewBorder(diffHeader, nil, nil, nil, v.gitDiffText)
 	split := container.NewVSplit(scroll, diff)
 	split.Offset = 0.42
 	return container.NewBorder(header, nil, nil, nil, split)
@@ -51,8 +59,9 @@ func (v *View) openGitDiff(path string) {
 		dialog.ShowError(err, v.window)
 		return
 	}
+	v.gitLastDiff = diff
 	v.gitDiffStatus.SetText(diff.Message)
-	v.gitDiffText.SetText(formatGitDiff(diff))
+	v.gitDiffText.SetText(formatGitDiff(diff, v.gitDiffMode))
 	v.addActivity(diff.Message)
 }
 
@@ -142,36 +151,4 @@ func gitChangeRow(change gitSvc.FileChange, onOpen func(string)) fyne.CanvasObje
 	text := widget.NewLabel(fmt.Sprintf("%s - %s", change.Summary, label))
 	text.Truncation = fyne.TextTruncateEllipsis
 	return container.NewBorder(nil, nil, open, nil, container.NewPadded(text))
-}
-
-func formatGitDiff(diff gitSvc.FileDiff) string {
-	var builder strings.Builder
-	if diff.StagedDiff != "" {
-		builder.WriteString("Staged diff / ")
-		builder.WriteString(diff.Path)
-		builder.WriteString("\n")
-		builder.WriteString(diff.StagedDiff)
-		if !strings.HasSuffix(diff.StagedDiff, "\n") {
-			builder.WriteString("\n")
-		}
-	}
-	if diff.UnstagedDiff != "" {
-		if builder.Len() > 0 {
-			builder.WriteString("\n")
-		}
-		builder.WriteString("Unstaged diff / ")
-		builder.WriteString(diff.Path)
-		builder.WriteString("\n")
-		builder.WriteString(diff.UnstagedDiff)
-		if !strings.HasSuffix(diff.UnstagedDiff, "\n") {
-			builder.WriteString("\n")
-		}
-	}
-	if builder.Len() == 0 {
-		return "No staged or unstaged diff for " + diff.Path + "."
-	}
-	if diff.StagedDiffTruncated || diff.UnstagedDiffTruncated {
-		builder.WriteString("\nDiff output was truncated.\n")
-	}
-	return builder.String()
 }

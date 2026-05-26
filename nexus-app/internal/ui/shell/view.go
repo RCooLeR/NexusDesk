@@ -33,6 +33,8 @@ type View struct {
 	gitStatus        *widget.Label
 	gitDiffText      *widget.Entry
 	gitDiffStatus    *widget.Label
+	gitDiffMode      gitDiffMode
+	gitLastDiff      gitSvc.FileDiff
 	rollbackResults  *fyne.Container
 	rollbackStatus   *widget.Label
 }
@@ -71,6 +73,7 @@ func New(window fyne.Window) *View {
 		gitStatus:        widget.NewLabel("Git status has not been loaded."),
 		gitDiffText:      gitDiffText,
 		gitDiffStatus:    widget.NewLabel("Select a changed file to load a read-only diff."),
+		gitDiffMode:      gitDiffModeUnified,
 		rollbackResults:  container.NewVBox(widget.NewLabel("Refresh rollback records to inspect undo points.")),
 		rollbackStatus:   widget.NewLabel("Rollback records have not been loaded."),
 	}

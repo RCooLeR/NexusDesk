@@ -35,7 +35,7 @@ func TestFormatGitDiffIncludesSectionsAndTruncation(t *testing.T) {
 		StagedDiff:            "diff --git a/src/app.go b/src/app.go\n+staged",
 		UnstagedDiff:          "diff --git a/src/app.go b/src/app.go\n+unstaged",
 		UnstagedDiffTruncated: true,
-	})
+	}, gitDiffModeUnified)
 
 	for _, expected := range []string{
 		"Staged diff / src/app.go",
@@ -51,8 +51,53 @@ func TestFormatGitDiffIncludesSectionsAndTruncation(t *testing.T) {
 }
 
 func TestFormatGitDiffEmpty(t *testing.T) {
-	text := formatGitDiff(gitSvc.FileDiff{Path: "README.md"})
+	text := formatGitDiff(gitSvc.FileDiff{Path: "README.md"}, gitDiffModeUnified)
 	if text != "No staged or unstaged diff for README.md." {
 		t.Fatalf("unexpected empty diff message: %q", text)
+	}
+}
+
+func TestFormatGitDiffSplitMode(t *testing.T) {
+	text := formatGitDiff(gitSvc.FileDiff{
+		Path: "src/app.go",
+		UnstagedDiff: strings.Join([]string{
+			"diff --git a/src/app.go b/src/app.go",
+			"@@ -1,3 +1,3 @@",
+			" context",
+			"-old",
+			"+new",
+		}, "\n"),
+	}, gitDiffModeSplit)
+
+	for _, expected := range []string{
+		"Old\tNew",
+		"context\tcontext",
+		"old\t",
+		"\tnew",
+	} {
+		if !strings.Contains(text, expected) {
+			t.Fatalf("expected split diff to contain %q, got:\n%s", expected, text)
+		}
+	}
+}
+
+func TestFormatGitDiffDiffOnlyModeSkipsContext(t *testing.T) {
+	text := formatGitDiff(gitSvc.FileDiff{
+		Path: "src/app.go",
+		UnstagedDiff: strings.Join([]string{
+			"diff --git a/src/app.go b/src/app.go",
+			"@@ -1,3 +1,3 @@",
+			" unchanged",
+			"-old",
+			"+new",
+			" still unchanged",
+		}, "\n"),
+	}, gitDiffModeDiffOnly)
+
+	if strings.Contains(text, "unchanged") {
+		t.Fatalf("expected diff-only output to skip context, got:\n%s", text)
+	}
+	if !strings.Contains(text, "old\tnew") {
+		t.Fatalf("expected changed lines side by side, got:\n%s", text)
 	}
 }
