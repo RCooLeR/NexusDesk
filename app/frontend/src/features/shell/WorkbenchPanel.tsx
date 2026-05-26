@@ -16,6 +16,7 @@ type WorkbenchPanelProps = {
     activeFile: string;
     dirtyTabPaths: string[];
     fileDraft: string;
+    fileDraftEncoding: string;
     filePreview: FilePreview | null;
     isApplyingWrite: boolean;
     isEditingFile: boolean;
@@ -33,6 +34,7 @@ type WorkbenchPanelProps = {
     onCreateReport: () => void;
     onSummarizeContext: () => void;
     onFileDraftChange: (content: string) => void;
+    onFileDraftEncodingChange: (encoding: string) => void;
     onDeleteFile: () => void;
     onMoveFile: () => void;
     onPinContext: () => void;
@@ -61,6 +63,7 @@ export function WorkbenchPanel({
     activeFile,
     dirtyTabPaths,
     fileDraft,
+    fileDraftEncoding,
     filePreview,
     isApplyingWrite,
     isEditingFile,
@@ -78,6 +81,7 @@ export function WorkbenchPanel({
     onCreateReport,
     onSummarizeContext,
     onFileDraftChange,
+    onFileDraftEncodingChange,
     onDeleteFile,
     onMoveFile,
     onPinContext,
@@ -346,6 +350,7 @@ export function WorkbenchPanel({
                                         activeFile={activeFile}
                                         definitionNonce={definitionNonce}
                                         fileDraft={fileDraft}
+                                        fileDraftEncoding={fileDraftEncoding}
                                         filePreview={filePreview}
                                         formatNonce={formatNonce}
                                         findQuery={findQuery}
@@ -358,6 +363,7 @@ export function WorkbenchPanel({
                                         onApplyFileWrite={onApplyFileWrite}
                                         onCancelFileEdit={onCancelFileEdit}
                                         onFileDraftChange={onFileDraftChange}
+                                        onFileDraftEncodingChange={onFileDraftEncodingChange}
                                         onPreviewFileWrite={onPreviewFileWrite}
                                         outlineTargetLine={outlineTargetLine}
                                         outlineTargetNonce={outlineTargetNonce}
@@ -444,6 +450,7 @@ function PrimaryPreviewPane({
     activeFile,
     definitionNonce,
     fileDraft,
+    fileDraftEncoding,
     filePreview,
     formatNonce,
     findQuery,
@@ -456,6 +463,7 @@ function PrimaryPreviewPane({
     onApplyFileWrite,
     onCancelFileEdit,
     onFileDraftChange,
+    onFileDraftEncodingChange,
     onPreviewFileWrite,
     outlineTargetLine,
     outlineTargetNonce,
@@ -466,6 +474,7 @@ function PrimaryPreviewPane({
     activeFile: string;
     definitionNonce: number;
     fileDraft: string;
+    fileDraftEncoding: string;
     filePreview: FilePreview | null;
     formatNonce: number;
     findQuery: string;
@@ -478,6 +487,7 @@ function PrimaryPreviewPane({
     onApplyFileWrite: () => void;
     onCancelFileEdit: () => void;
     onFileDraftChange: (content: string) => void;
+    onFileDraftEncodingChange: (encoding: string) => void;
     onPreviewFileWrite: () => void;
     outlineTargetLine: number;
     outlineTargetNonce: number;
@@ -511,11 +521,13 @@ function PrimaryPreviewPane({
             ) : isEditingFile ? (
                 <FileWriteEditor
                     draft={fileDraft}
+                    encoding={fileDraftEncoding}
                     isApplying={isApplyingWrite}
                     isPreviewing={isPreviewingWrite}
                     onApply={onApplyFileWrite}
                     onCancel={onCancelFileEdit}
                     onChange={onFileDraftChange}
+                    onEncodingChange={onFileDraftEncodingChange}
                     onPreview={onPreviewFileWrite}
                     proposal={writeProposal}
                     originalContent={filePreview?.content ?? ''}
@@ -730,15 +742,27 @@ function countFindMatches(content: string, query: string) {
     return count;
 }
 
+function formatBytes(value: number) {
+    if (!Number.isFinite(value) || value < 0) {
+        return '0 B';
+    }
+    if (value < 1024) {
+        return `${value} B`;
+    }
+    return `${(value / 1024).toFixed(1)} KB`;
+}
+
 function FileWriteEditor({
     draft,
     definitionNonce,
+    encoding,
     formatNonce,
     isApplying,
     isPreviewing,
     onApply,
     onCancel,
     onChange,
+    onEncodingChange,
     onPreview,
     proposal,
     originalContent,
@@ -750,6 +774,7 @@ function FileWriteEditor({
 }: {
     draft: string;
     definitionNonce: number;
+    encoding: string;
     formatNonce: number;
     fileName: string;
     revealLine: number;
@@ -760,6 +785,7 @@ function FileWriteEditor({
     onApply: () => void;
     onCancel: () => void;
     onChange: (content: string) => void;
+    onEncodingChange: (encoding: string) => void;
     onPreview: () => void;
     proposal: FileWriteProposal | null;
     originalContent: string;
@@ -781,6 +807,21 @@ function FileWriteEditor({
                 <span className={isDirty ? 'dirty-indicator dirty' : 'dirty-indicator'}>
                     {isDirty ? 'Unsaved changes' : 'No changes'}
                 </span>
+                <label className="encoding-control">
+                    <span>Save as</span>
+                    <select
+                        aria-label="Save file encoding"
+                        disabled={isApplying}
+                        onChange={(event) => onEncodingChange(event.target.value)}
+                        value={encoding}
+                    >
+                        <option value="utf-8">UTF-8</option>
+                        <option value="utf-8-bom">UTF-8 BOM</option>
+                        <option value="utf-16le">UTF-16 LE</option>
+                        <option value="utf-16be">UTF-16 BE</option>
+                        <option value="windows-1251">Windows-1251</option>
+                    </select>
+                </label>
                 <Button disabled={!isDirty || isPreviewing || isApplying} onClick={onPreview}>
                     {isPreviewing ? 'Previewing...' : 'Preview diff'}
                 </Button>
@@ -794,11 +835,11 @@ function FileWriteEditor({
                     Cancel
                 </Button>
             </div>
-                <MonacoFileEditor
-                    definitionNonce={definitionNonce}
-                    fileName={fileName}
-                    formatNonce={formatNonce}
-                    onChange={onChange}
+            <MonacoFileEditor
+                definitionNonce={definitionNonce}
+                fileName={fileName}
+                formatNonce={formatNonce}
+                onChange={onChange}
                 onSave={saveDraftShortcut}
                 revealLine={revealLine}
                 revealNonce={revealNonce}
@@ -808,6 +849,7 @@ function FileWriteEditor({
             {proposal && (
                 <div className="write-diff">
                     <InlineAlert>{proposal.message}</InlineAlert>
+                    <small className="write-encoding-summary">{proposal.encoding} / {formatBytes(proposal.size)}</small>
                     <HighlightedCode content={proposal.diff} fileName={`${proposal.name}.diff`} />
                 </div>
             )}

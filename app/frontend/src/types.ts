@@ -68,6 +68,7 @@ export type TextPage = {
 export type FileWriteRequest = {
     relPath: string;
     content: string;
+    encoding?: string;
 };
 
 export type FileWriteProposal = {
@@ -75,6 +76,7 @@ export type FileWriteProposal = {
     name: string;
     action: string;
     diff: string;
+    encoding: string;
     size: number;
     message: string;
 };

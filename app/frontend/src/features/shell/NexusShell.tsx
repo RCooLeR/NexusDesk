@@ -247,6 +247,7 @@ export function NexusShell({
     const [isPreparingMetadataStore, setIsPreparingMetadataStore] = useState(false);
     const [editingFilePaths, setEditingFilePaths] = useState<string[]>([]);
     const [fileDrafts, setFileDrafts] = useState<Record<string, string>>({});
+    const [fileDraftEncodings, setFileDraftEncodings] = useState<Record<string, string>>({});
     const [writeProposals, setWriteProposals] = useState<Record<string, FileWriteProposal>>({});
     const [pinnedTabPaths, setPinnedTabPaths] = useState<string[]>([]);
     const [showEditorMinimap, setShowEditorMinimap] = useState(false);
@@ -263,6 +264,7 @@ export function NexusShell({
     const [isRunningAgentTool, setIsRunningAgentTool] = useState(false);
     const approvalResolverRef = useRef<((approved: boolean) => void) | null>(null);
     const fileDraft = activeFile ? fileDrafts[activeFile] ?? '' : '';
+    const fileDraftEncoding = activeFile ? fileDraftEncodings[activeFile] ?? filePreview?.encoding ?? 'utf-8' : 'utf-8';
     const writeProposal = activeFile ? writeProposals[activeFile] ?? null : null;
     const isEditingFile = Boolean(activeFile && editingFilePaths.includes(activeFile));
     const dirtyTabPaths = dirtyDraftPaths(fileDrafts, openTabs);
@@ -952,6 +954,10 @@ export function NexusShell({
             ...current,
             [filePreview.relPath]: current[filePreview.relPath] ?? filePreview.content,
         }));
+        setFileDraftEncodings((current) => ({
+            ...current,
+            [filePreview.relPath]: current[filePreview.relPath] ?? filePreview.encoding ?? 'utf-8',
+        }));
         setWriteProposals((current) => omitKey(current, filePreview.relPath));
     }
 
@@ -999,6 +1005,7 @@ export function NexusShell({
         upsertOpenTab(preview);
         setEditingFilePaths((current) => current.includes(relPath) ? current : [...current, relPath]);
         setFileDrafts((current) => ({...current, [relPath]: draft}));
+        setFileDraftEncodings((current) => ({...current, [relPath]: preview.encoding ?? 'utf-8'}));
         setWriteProposals((current) => omitKey(current, relPath));
         setActiveDatasetProfile(null);
         setWorkspaceStatus(`${relPath} draft ready. Preview diff before applying the create.`);
@@ -1009,6 +1016,7 @@ export function NexusShell({
         if (activeFile) {
             setEditingFilePaths((current) => current.filter((relPath) => relPath !== activeFile));
             setFileDrafts((current) => omitKey(current, activeFile));
+            setFileDraftEncodings((current) => omitKey(current, activeFile));
             setWriteProposals((current) => omitKey(current, activeFile));
         }
         setIsPreviewingWrite(false);
@@ -1039,6 +1047,18 @@ export function NexusShell({
         setWriteProposals((current) => omitKey(current, activeFile));
     }
 
+    function updateFileDraftEncoding(encoding: string) {
+        if (!activeFile) {
+            return;
+        }
+        setFileDraftEncodings((current) => ({
+            ...current,
+            [activeFile]: encoding,
+        }));
+        setWriteProposals((current) => omitKey(current, activeFile));
+        setWorkspaceStatus(`Draft will be saved as ${encoding}. Preview diff before applying.`);
+    }
+
     async function previewFileWrite() {
         if (!workspace || !filePreview) {
             setWorkspaceStatus('Open a workspace and select a file before previewing writes.');
@@ -1047,7 +1067,7 @@ export function NexusShell({
 
         setIsPreviewingWrite(true);
         try {
-            const proposal = await PreviewFileWrite({relPath: filePreview.relPath, content: fileDraft});
+            const proposal = await PreviewFileWrite({relPath: filePreview.relPath, content: fileDraft, encoding: fileDraftEncoding});
             setWriteProposals((current) => ({
                 ...current,
                 [proposal.relPath]: proposal,
@@ -1082,7 +1102,7 @@ export function NexusShell({
 
         setIsApplyingWrite(true);
         try {
-            const proposal = await ApplyFileWrite({relPath: filePreview.relPath, content: fileDraft});
+            const proposal = await ApplyFileWrite({relPath: filePreview.relPath, content: fileDraft, encoding: fileDraftEncoding});
             const result = await RefreshWorkspace();
             if (result.selected) {
                 onWorkspaceChange(result.snapshot);
@@ -1091,6 +1111,7 @@ export function NexusShell({
             }
             setEditingFilePaths((current) => current.filter((relPath) => relPath !== proposal.relPath));
             setFileDrafts((current) => omitKey(current, proposal.relPath));
+            setFileDraftEncodings((current) => omitKey(current, proposal.relPath));
             setWriteProposals((current) => omitKey(current, proposal.relPath));
             setWorkspaceStatus(proposal.message);
             pushToolEvent('File write applied', proposal.relPath);
@@ -1361,6 +1382,7 @@ export function NexusShell({
             setOpenTabs([]);
             setEditingFilePaths([]);
             setFileDrafts({});
+            setFileDraftEncodings({});
             setWriteProposals({});
             setPinnedTabPaths([]);
             setIsSplitEditorEnabled(false);
@@ -1477,6 +1499,7 @@ export function NexusShell({
         setOpenTabs((current) => current.filter((tab) => tab.relPath !== relPath));
         setEditingFilePaths((current) => current.filter((path) => path !== relPath));
         setFileDrafts((current) => omitKey(current, relPath));
+        setFileDraftEncodings((current) => omitKey(current, relPath));
         setWriteProposals((current) => omitKey(current, relPath));
         setPinnedTabPaths((current) => current.filter((path) => path !== relPath));
         setSecondaryEditorPath((current) => current === relPath ? '' : current);
@@ -3023,7 +3046,7 @@ export function NexusShell({
             return;
         }
         try {
-            const proposal = await PreviewFileWrite({relPath: run.target, content: nextContent});
+            const proposal = await PreviewFileWrite({relPath: run.target, content: nextContent, encoding: filePreview?.encoding ?? 'utf-8'});
             setWriteProposals((current) => ({...current, [run.target]: proposal}));
             setChatStatus(proposal.message);
         } catch (error) {
@@ -3411,6 +3434,7 @@ export function NexusShell({
                 <WorkbenchPanel
                     activeFile={activeFile}
                     fileDraft={fileDraft}
+                    fileDraftEncoding={fileDraftEncoding}
                     filePreview={filePreview}
                     dirtyTabPaths={dirtyTabPaths}
                     isCreatingReport={isCreatingReport}
@@ -3429,6 +3453,7 @@ export function NexusShell({
                     onDeleteFile={() => void deleteActiveFile()}
                     onMoveFile={() => void moveActiveFile()}
                     onFileDraftChange={updateFileDraft}
+                    onFileDraftEncodingChange={updateFileDraftEncoding}
                     onExplainContext={() => void explainSelectedContext()}
                     onSummarizeContext={() => void summarizeSelectedContext()}
                     onPinContext={pinSelectedContext}

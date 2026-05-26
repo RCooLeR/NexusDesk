@@ -166,7 +166,7 @@ Steps:
 - [x] Add minimap toggle.
 - [x] Add go-to-definition hook where language services exist.
 - [x] Add formatting hooks.
-- [ ] Add file encoding selector and save-as-encoding support.
+- [x] Add file encoding selector and save-as-encoding support.
 
 Exit criteria:
 
@@ -1023,7 +1023,7 @@ Steps:
 9. [x] Detect npm scripts and Go tests into a Tasks panel with read-only listing.
 10. Keep visual smoke focused on no blank screen, no whole-window scroll, Git drawer behavior, route switching, and no slow/external work on folder open.
 
-Reasoning: read-only navigation and diff review are now credible, stage/unstage previews establish the approval boundary without mutating the repository, hunk selection exists as UI state, hunk discard/revert now goes through the approval modal before backend patch application, Workbench has a real search utility panel backed by the existing safe workspace search flow, task/script detection now lists npm scripts plus Go test commands without running external processes, and Phase 2 has split editor groups, outline navigation, Monaco go-to-definition dispatch, and safe draft formatting. The current correction path is closing the remaining earliest editor item, encoding-aware save, before going deeper into new studio surfaces.
+Reasoning: read-only navigation and diff review are now credible, stage/unstage previews establish the approval boundary without mutating the repository, hunk selection exists as UI state, hunk discard/revert now goes through the approval modal before backend patch application, Workbench has a real search utility panel backed by the existing safe workspace search flow, task/script detection now lists npm scripts plus Go test commands without running external processes, and Phase 2 now has split editor groups, outline navigation, Monaco go-to-definition dispatch, safe draft formatting, and encoding-aware save. The next correction path can move to Phase 4 Workbench depth or Phase 15 architecture hardening.
 
 ## Directory Ownership Notes
 

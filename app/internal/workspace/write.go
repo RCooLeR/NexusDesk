@@ -1,27 +1,33 @@
 package workspace
 
 import (
+	"encoding/binary"
 	"errors"
 	"fmt"
 	"os"
 	"path/filepath"
 	"strings"
+	"unicode/utf16"
+
+	"golang.org/x/text/encoding/charmap"
 )
 
 const writePreviewMaxBytes = 256 * 1024
 
 type FileWriteRequest struct {
-	RelPath string `json:"relPath"`
-	Content string `json:"content"`
+	RelPath  string `json:"relPath"`
+	Content  string `json:"content"`
+	Encoding string `json:"encoding"`
 }
 
 type FileWriteProposal struct {
-	RelPath string `json:"relPath"`
-	Name    string `json:"name"`
-	Action  string `json:"action"`
-	Diff    string `json:"diff"`
-	Size    int    `json:"size"`
-	Message string `json:"message"`
+	RelPath  string `json:"relPath"`
+	Name     string `json:"name"`
+	Action   string `json:"action"`
+	Diff     string `json:"diff"`
+	Encoding string `json:"encoding"`
+	Size     int    `json:"size"`
+	Message  string `json:"message"`
 }
 
 func PreviewFileWrite(root string, request FileWriteRequest) (FileWriteProposal, error) {
@@ -32,6 +38,13 @@ func PreviewFileWrite(root string, request FileWriteRequest) (FileWriteProposal,
 	if len(request.Content) > writePreviewMaxBytes {
 		return FileWriteProposal{}, errors.New("file write preview is too large")
 	}
+	encoded, encoding, err := encodeWriteContent(request.Content, request.Encoding)
+	if err != nil {
+		return FileWriteProposal{}, err
+	}
+	if len(encoded) > writePreviewMaxBytes {
+		return FileWriteProposal{}, errors.New("encoded file write preview is too large")
+	}
 
 	existing, action, err := readExistingWriteTarget(absRoot, absTarget)
 	if err != nil {
@@ -39,12 +52,13 @@ func PreviewFileWrite(root string, request FileWriteRequest) (FileWriteProposal,
 	}
 
 	return FileWriteProposal{
-		RelPath: filepath.ToSlash(cleanRel),
-		Name:    filepath.Base(cleanRel),
-		Action:  action,
-		Diff:    buildUnifiedDiff(filepath.ToSlash(cleanRel), existing, request.Content),
-		Size:    len([]byte(request.Content)),
-		Message: fmt.Sprintf("Preview ready to %s %s inside the workspace.", action, filepath.ToSlash(cleanRel)),
+		RelPath:  filepath.ToSlash(cleanRel),
+		Name:     filepath.Base(cleanRel),
+		Action:   action,
+		Diff:     buildUnifiedDiff(filepath.ToSlash(cleanRel), existing, request.Content),
+		Encoding: encoding,
+		Size:     len(encoded),
+		Message:  fmt.Sprintf("Preview ready to %s %s as %s inside the workspace.", action, filepath.ToSlash(cleanRel), encoding),
 	}, nil
 }
 
@@ -61,12 +75,68 @@ func ApplyFileWrite(root string, request FileWriteRequest) (FileWriteProposal, e
 	if err := os.MkdirAll(filepath.Dir(absTarget), 0o755); err != nil {
 		return FileWriteProposal{}, err
 	}
-	if err := os.WriteFile(absTarget, []byte(request.Content), 0o644); err != nil {
+	encoded, _, err := encodeWriteContent(request.Content, request.Encoding)
+	if err != nil {
+		return FileWriteProposal{}, err
+	}
+	if err := os.WriteFile(absTarget, encoded, 0o644); err != nil {
 		return FileWriteProposal{}, err
 	}
 
-	proposal.Message = fmt.Sprintf("%s applied for %s.", titleAction(proposal.Action), proposal.RelPath)
+	proposal.Message = fmt.Sprintf("%s applied for %s as %s.", titleAction(proposal.Action), proposal.RelPath, proposal.Encoding)
 	return proposal, nil
+}
+
+func encodeWriteContent(content string, requestedEncoding string) ([]byte, string, error) {
+	encoding := normalizeWriteEncoding(requestedEncoding)
+	switch encoding {
+	case "utf-8":
+		return []byte(content), encoding, nil
+	case "utf-8-bom":
+		return append([]byte{0xef, 0xbb, 0xbf}, []byte(content)...), encoding, nil
+	case "utf-16le":
+		return encodeUTF16(content, binary.LittleEndian, []byte{0xff, 0xfe}), encoding, nil
+	case "utf-16be":
+		return encodeUTF16(content, binary.BigEndian, []byte{0xfe, 0xff}), encoding, nil
+	case "windows-1251":
+		encoded, err := charmap.Windows1251.NewEncoder().Bytes([]byte(content))
+		if err != nil {
+			return nil, "", errors.New("content cannot be encoded as windows-1251")
+		}
+		return encoded, encoding, nil
+	default:
+		return nil, "", fmt.Errorf("unsupported write encoding %q", requestedEncoding)
+	}
+}
+
+func normalizeWriteEncoding(value string) string {
+	encoding := strings.ToLower(strings.TrimSpace(value))
+	switch encoding {
+	case "", "utf8", "utf-8":
+		return "utf-8"
+	case "utf8-bom", "utf-8-bom", "utf-8 bom":
+		return "utf-8-bom"
+	case "utf16le", "utf-16le", "utf-16 le":
+		return "utf-16le"
+	case "utf16be", "utf-16be", "utf-16 be":
+		return "utf-16be"
+	case "cp1251", "windows1251", "windows-1251":
+		return "windows-1251"
+	default:
+		return encoding
+	}
+}
+
+func encodeUTF16(content string, byteOrder binary.ByteOrder, bom []byte) []byte {
+	values := utf16.Encode([]rune(content))
+	encoded := make([]byte, 0, len(bom)+len(values)*2)
+	encoded = append(encoded, bom...)
+	buffer := make([]byte, 2)
+	for _, value := range values {
+		byteOrder.PutUint16(buffer, value)
+		encoded = append(encoded, buffer...)
+	}
+	return encoded
 }
 
 func resolveWriteTarget(root string, relPath string) (string, string, string, error) {

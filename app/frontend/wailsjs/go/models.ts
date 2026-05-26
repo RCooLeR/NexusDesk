@@ -1870,6 +1870,7 @@ export namespace workspace {
 	    name: string;
 	    action: string;
 	    diff: string;
+	    encoding: string;
 	    size: number;
 	    message: string;
 
@@ -1883,6 +1884,7 @@ export namespace workspace {
 	        this.name = source["name"];
 	        this.action = source["action"];
 	        this.diff = source["diff"];
+	        this.encoding = source["encoding"];
 	        this.size = source["size"];
 	        this.message = source["message"];
 	    }
@@ -1890,6 +1892,7 @@ export namespace workspace {
 	export class FileWriteRequest {
 	    relPath: string;
 	    content: string;
+	    encoding: string;
 
 	    static createFrom(source: any = {}) {
 	        return new FileWriteRequest(source);
@@ -1899,6 +1902,7 @@ export namespace workspace {
 	        if ('string' === typeof source) source = JSON.parse(source);
 	        this.relPath = source["relPath"];
 	        this.content = source["content"];
+	        this.encoding = source["encoding"];
 	    }
 	}
 	export class FreshnessStatus {

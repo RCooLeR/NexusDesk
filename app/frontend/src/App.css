@@ -1474,6 +1474,24 @@ button:disabled {
     color: #9a3412;
 }
 
+.encoding-control {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    color: var(--nd-muted-text);
+    font-size: 11px;
+    font-weight: 700;
+}
+
+.encoding-control select {
+    border: 1px solid #ccd5e1;
+    border-radius: var(--nd-radius-sm);
+    background: var(--nd-panel);
+    color: #1f2937;
+    min-height: 32px;
+    padding: 0 8px;
+}
+
 .write-toolbar button {
     border: 1px solid #ccd5e1;
     border-radius: var(--nd-radius-sm);
@@ -1482,6 +1500,14 @@ button:disabled {
     cursor: pointer;
     min-height: 32px;
     padding: 0 10px;
+}
+
+.write-encoding-summary {
+    display: block;
+    color: var(--nd-muted-text);
+    font-size: 12px;
+    font-weight: 700;
+    padding: 8px 12px 0;
 }
 
 .monaco-file-editor {

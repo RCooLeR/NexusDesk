@@ -182,6 +182,7 @@ Current implementation:
 - builds bounded multi-file context packs from pinned text, CSV, and extracted-PDF previews using the active model context-window budget
 - trims partial UTF-8 characters at truncation boundaries
 - shows unsupported state for binary or unsupported text-encoding files
+- previews and applies safe text writes with explicit UTF-8, UTF-8 BOM, UTF-16 LE/BE, or Windows-1251 output encoding
 - excludes image and PDF data URLs from text chat context, but allows extracted PDF text as context
 - creates Markdown report artifacts under `.nexusdesk/artifacts/` from selected previews
 - lists generated Markdown, CSV, and SVG artifacts from `.nexusdesk/artifacts/`
