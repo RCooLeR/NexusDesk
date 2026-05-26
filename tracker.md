@@ -395,7 +395,8 @@ Step 5.3: Schema and relationship explorer
 - [x] Generate ERD-like relationship view.
 - [x] Add clickable connector relationship map with selected-object highlighting, table/view nodes, primary-key hints, and FK/inferred link rows.
 - [x] Let AI explain selected SQLite schema objects with inspected columns, indexes, samples, and relationship hints as citations.
-- [ ] Generalize relationship inference and AI schema explanation across external connectors.
+- [x] Generalize relationship inference and AI schema explanation across external connectors.
+- [x] Reuse the connector schema explanation prompt for saved PostgreSQL/MySQL/MariaDB/SQL Server/DuckDB profile metadata from Settings.
 
 Step 5.4: Query notebook
 

@@ -130,6 +130,7 @@ type BottomStudioPanelProps = {
     onQueryDataset: () => void;
     onQueryDatasetSQL: () => void;
     onCancelSQLiteConnectorQuery: () => void;
+    onExplainConnectorProfileSchemaObject: (objectName: string) => void;
     onExplainSQLiteSchemaObject: (objectName: string) => void;
     onQuerySQLiteConnector: () => void;
     onRebuildDatasetDependency: (dependencyId: string) => void;
@@ -327,6 +328,7 @@ export function BottomStudioPanel({
     onQueryDataset,
     onQueryDatasetSQL,
     onCancelSQLiteConnectorQuery,
+    onExplainConnectorProfileSchemaObject,
     onExplainSQLiteSchemaObject,
     onQuerySQLiteConnector,
     onRebuildDatasetDependency,
@@ -484,6 +486,7 @@ export function BottomStudioPanel({
                             metadata={connectorProfileMetadata}
                             onDelete={onDeleteConnectorProfile}
                             onDraftChange={onConnectorProfileDraftChange}
+                            onExplainObject={onExplainConnectorProfileSchemaObject}
                             onInspect={onInspectConnectorProfile}
                             onSave={onSaveConnectorProfile}
                             onTest={onTestConnectorProfile}

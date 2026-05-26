@@ -9,6 +9,7 @@ type ConnectorProfilesCardProps = {
     metadata: ConnectorMetadata | null;
     onDelete: (id: string) => void;
     onDraftChange: (field: keyof ConnectorProfile, value: string | number | boolean) => void;
+    onExplainObject?: (objectName: string) => void;
     onInspect: (id: string) => void;
     onSave: () => void;
     onTest: (id: string) => void;
@@ -31,6 +32,7 @@ export function ConnectorProfilesCard({
     metadata,
     onDelete,
     onDraftChange,
+    onExplainObject,
     onInspect,
     onSave,
     onTest,
@@ -128,7 +130,7 @@ export function ConnectorProfilesCard({
                 <div className="connector-profile-metadata">
                     <strong>{metadata.name}</strong>
                     <small>{metadata.tables.length} tables / {metadata.views.length} views / {metadata.relationships.length} relationships</small>
-                    <ConnectorMetadataBrowser metadata={metadata} />
+                    <ConnectorMetadataBrowser metadata={metadata} onExplainObject={onExplainObject} />
                 </div>
             )}
         </Card>

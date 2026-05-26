@@ -551,6 +551,7 @@ Current implementation:
 - Only single-statement `SELECT`/`WITH` SQL is accepted for the guarded profile query path.
 - Schema inspection returns non-system tables/views, columns, indexes, declared foreign keys, capped sample rows, provider row estimates/counts where available, and conservative `*_id` relationship hints.
 - The connector metadata browser renders those relationships as both a textual list and a compact ERD-like map with selectable table/view nodes.
+- The assistant schema-explanation action is shared with workspace SQLite: it receives only inspected columns, indexes, sample rows, and relationship hints from the selected connector object.
 - The current UI exposes Test and Inspect actions in Settings; full query notebook integration remains planned.
 
 ### Read-only Dataset SQL

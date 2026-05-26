@@ -3886,21 +3886,48 @@ export function NexusShell({
             setChatStatus('Inspect a SQLite schema object before asking the assistant to explain it.');
             return;
         }
-        const objects = [...sqliteConnectorMetadata.tables, ...sqliteConnectorMetadata.views];
+        await explainConnectorSchemaObject(sqliteConnectorMetadata, objectName, {
+            emptyMessage: 'Select a SQLite table or view before asking for a schema explanation.',
+            eventTitle: 'SQLite schema explanation requested',
+            saveArtifactSource: 'Nexus SQLite schema explanation',
+            sourcePaths: [sqliteConnectorMetadata.relPath],
+        });
+    }
+
+    async function explainConnectorProfileSchemaObject(objectName: string) {
+        if (!connectorProfileMetadata) {
+            setChatStatus('Inspect an external connector profile before asking the assistant to explain its schema.');
+            return;
+        }
+        await explainConnectorSchemaObject(connectorProfileMetadata, objectName, {
+            emptyMessage: 'Select a connector table or view before asking for a schema explanation.',
+            eventTitle: 'Connector schema explanation requested',
+            saveArtifactSource: 'Nexus connector schema explanation',
+            sourcePaths: [],
+        });
+    }
+
+    async function explainConnectorSchemaObject(metadata: ConnectorMetadata, objectName: string, options: {
+        emptyMessage: string;
+        eventTitle: string;
+        saveArtifactSource: string;
+        sourcePaths: string[];
+    }) {
+        const objects = [...metadata.tables, ...metadata.views];
         const object = objects.find((item) => item.name === objectName);
         if (!object) {
-            setChatStatus('Select a SQLite table or view before asking for a schema explanation.');
+            setChatStatus(options.emptyMessage);
             return;
         }
 
-        const prompt = buildSQLiteSchemaExplanationPrompt(sqliteConnectorMetadata, object);
-        pushToolEvent('SQLite schema explanation requested', `${sqliteConnectorMetadata.relPath}: ${object.name}`);
+        const prompt = buildConnectorSchemaExplanationPrompt(metadata, object);
+        pushToolEvent(options.eventTitle, `${metadata.kind}: ${metadata.name}: ${object.name}`);
         await sendPromptText(prompt, {
             clearComposer: false,
             contextPaths: [],
-            saveArtifactSource: 'Nexus SQLite schema explanation',
-            saveArtifactTitle: `SQLite Schema - ${object.name}`,
-            sourcePaths: [sqliteConnectorMetadata.relPath],
+            saveArtifactSource: options.saveArtifactSource,
+            saveArtifactTitle: `${connectorKindLabel(metadata)} Schema - ${object.name}`,
+            sourcePaths: options.sourcePaths,
         });
     }
 
@@ -4278,6 +4305,7 @@ export function NexusShell({
                 onQueryDataset={() => void querySelectedDataset()}
                 onQueryDatasetSQL={() => void querySelectedDatasetSQL()}
                 onCancelSQLiteConnectorQuery={() => void cancelActiveSQLiteQuery()}
+                onExplainConnectorProfileSchemaObject={(objectName) => void explainConnectorProfileSchemaObject(objectName)}
                 onExplainSQLiteSchemaObject={(objectName) => void explainSQLiteSchemaObject(objectName)}
                 onQuerySQLiteConnector={() => void queryActiveSQLiteFile()}
                 onRebuildDatasetDependency={(dependencyId) => void rebuildDatasetDependency(dependencyId)}
@@ -4905,7 +4933,7 @@ function clampConnectorNumber(value: unknown, min: number, max: number, fallback
     return Math.min(max, Math.max(min, Math.trunc(numeric)));
 }
 
-function buildSQLiteSchemaExplanationPrompt(metadata: ConnectorMetadata, object: ConnectorTable) {
+function buildConnectorSchemaExplanationPrompt(metadata: ConnectorMetadata, object: ConnectorTable) {
     const relationships = (metadata.relationships ?? []).filter((relationship) => relationship.fromTable === object.name || relationship.toTable === object.name);
     const columns = object.columns.map((column) => [
         column.name,
@@ -4915,15 +4943,18 @@ function buildSQLiteSchemaExplanationPrompt(metadata: ConnectorMetadata, object:
         column.default ? `default ${column.default}` : '',
     ].filter(Boolean).join(' / '));
     const indexes = object.indexes.map((index) => `${index.unique ? 'unique ' : ''}${index.name}: ${index.columns.join(', ')}`);
-    const relationshipLines = relationships.map(formatSQLiteRelationshipPromptLine);
+    const relationshipLines = relationships.map(formatConnectorRelationshipPromptLine);
     const sampleRows = object.sampleRows.slice(0, 5).map((row, index) => `row ${index + 1}: ${row.slice(0, object.columns.length).join(' | ')}`);
+    const connectorLabel = connectorKindLabel(metadata);
 
     return [
-        `Explain the SQLite ${object.type} "${object.name}" from workspace database ${metadata.relPath}.`,
+        `Explain the ${connectorLabel} ${object.type} "${object.name}" from inspected connector ${metadata.name}.`,
         'Stay grounded only in this inspected schema metadata. Do not assume tables, columns, or data that are not shown.',
         'Return concise Markdown with: purpose guess, important columns, keys/indexes, relationships, sample-data caveats, risks, and 3 useful read-only SQL questions to ask next.',
         '',
-        `Database: ${metadata.relPath}`,
+        `Connector: ${metadata.name}`,
+        `Connector ID/path: ${metadata.relPath}`,
+        `Kind: ${metadata.kind}`,
         `Engine: ${metadata.engine}`,
         `Read-only: ${metadata.readOnly ? 'yes' : 'no'}`,
         `Object: ${object.type} ${object.name}`,
@@ -4943,9 +4974,28 @@ function buildSQLiteSchemaExplanationPrompt(metadata: ConnectorMetadata, object:
     ].join('\n');
 }
 
-function formatSQLiteRelationshipPromptLine(relationship: ConnectorRelationship) {
+function formatConnectorRelationshipPromptLine(relationship: ConnectorRelationship) {
     const targetColumn = relationship.toColumn || 'id';
     return `${relationship.kind} (${relationship.confidence}): ${relationship.fromTable}.${relationship.fromColumn} -> ${relationship.toTable}.${targetColumn}; ${relationship.reason}`;
+}
+
+function connectorKindLabel(metadata: ConnectorMetadata) {
+    switch (metadata.kind) {
+    case 'sqlite':
+        return 'SQLite';
+    case 'postgres':
+        return 'PostgreSQL';
+    case 'mysql':
+        return 'MySQL';
+    case 'mariadb':
+        return 'MariaDB';
+    case 'sqlserver':
+        return 'SQL Server';
+    case 'duckdb':
+        return 'DuckDB';
+    default:
+        return metadata.kind || 'connector';
+    }
 }
 
 function quoteSQLiteIdentifier(value: string) {
