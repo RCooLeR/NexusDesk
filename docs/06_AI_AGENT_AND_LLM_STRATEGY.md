@@ -91,6 +91,7 @@ Capabilities should be explicit. The app should not assume every model supports 
 Current implementation:
 
 - `app/internal/storage/llm_settings.go` stores provider name, base URL, and model in local JSON config.
+- `app/internal/storage/assistant_profile.go` stores local assistant memory plus prompt profiles. `prepareChat` prepends the active profile and memory as user-provided guidance, explicitly separate from source evidence.
 - Saved API keys are stored in a sidecar credential blob protected by the OS where available and are redacted before settings are returned to the frontend.
 - When the frontend sends the redacted API key marker back, the backend resolves the stored secret only for save/test flows that need it.
 - The frontend settings card exposes a curated local model dropdown capped at 26B parameters.

@@ -27,6 +27,7 @@ import {
     ExportArtifactLineageJSON,
     GetArtifactMetadata,
     GetArtifactLineage,
+    GetAssistantProfile,
     InspectMetadataStore,
     GetChatHistory,
     ListAgentTools,
@@ -57,6 +58,7 @@ import {
     RefreshStaleContext,
     RebuildDatasetDependency,
     SaveLLMSettings,
+    SaveAssistantProfile,
     SaveDatasetQuery,
     SaveDatasetSQLQuery,
     SearchMetadata,
@@ -66,6 +68,7 @@ import {
     TestLLMConnection,
     EventsOn,
 } from '../../api/wailsClient';
+import {storage} from '../../../wailsjs/go/models';
 import type {
     ApprovalRecord,
     AgentToolDescriptor,
@@ -75,6 +78,7 @@ import type {
     ArtifactComparison,
     ArtifactLineage,
     ArtifactMetadata,
+    AssistantProfile,
     ChatStreamEvent,
     ChatMessage,
     ContextPreview,
@@ -183,6 +187,9 @@ export function NexusShell({
     const [chatPrompt, setChatPrompt] = useState('');
     const [chatMessages, setChatMessages] = useState<ChatMessage[]>([]);
     const [chatStatus, setChatStatus] = useState('Select text context and ask the assistant.');
+    const [assistantProfile, setAssistantProfile] = useState<AssistantProfile>(defaultAssistantProfile());
+    const [assistantProfileDraft, setAssistantProfileDraft] = useState<AssistantProfile>(defaultAssistantProfile());
+    const [isSavingAssistantProfile, setIsSavingAssistantProfile] = useState(false);
     const [contextPackPaths, setContextPackPaths] = useState<string[]>([]);
     const [contextPackPreview, setContextPackPreview] = useState<ContextPreview | null>(null);
     const [localToolEvents, setLocalToolEvents] = useState<ToolEvent[]>(state.toolEvents);
@@ -311,6 +318,7 @@ export function NexusShell({
 
     useEffect(() => {
         void refreshAgentTools();
+        void refreshAssistantProfile();
     }, []);
 
     useEffect(() => {
@@ -1907,6 +1915,38 @@ export function NexusShell({
         } finally {
             setIsManagingRecent(false);
         }
+    }
+
+    async function refreshAssistantProfile() {
+        try {
+            const profile = normalizeAssistantProfile(await GetAssistantProfile());
+            setAssistantProfile(profile);
+            setAssistantProfileDraft(profile);
+        } catch {
+            const fallback = defaultAssistantProfile();
+            setAssistantProfile(fallback);
+            setAssistantProfileDraft(fallback);
+        }
+    }
+
+    async function saveAssistantProfile(nextProfile: AssistantProfile = assistantProfileDraft) {
+        setIsSavingAssistantProfile(true);
+        try {
+            const saved = normalizeAssistantProfile(await SaveAssistantProfile(new storage.AssistantProfile(nextProfile)));
+            setAssistantProfile(saved);
+            setAssistantProfileDraft(saved);
+            setChatStatus('Assistant memory and prompt profile saved.');
+            pushToolEvent('Assistant profile saved', activePromptProfileName(saved));
+        } catch (error) {
+            const message = error instanceof Error ? error.message : '';
+            setChatStatus(message || 'Could not save assistant profile.');
+        } finally {
+            setIsSavingAssistantProfile(false);
+        }
+    }
+
+    function updateAssistantProfileDraft(nextProfile: AssistantProfile) {
+        setAssistantProfileDraft(normalizeAssistantProfile(nextProfile));
     }
 
     function updateSettingsDraft(field: keyof LLMSettings, value: string) {
@@ -3532,6 +3572,8 @@ export function NexusShell({
             />
 
             <AgentPanel
+                assistantProfile={assistantProfile}
+                assistantProfileDraft={assistantProfileDraft}
                 chatMessages={chatMessages}
                 chatPrompt={chatPrompt}
                 chatStatus={chatStatus}
@@ -3542,16 +3584,19 @@ export function NexusShell({
                 staleSourcePaths={staleSourcePaths(chatMessages, contextPackPreview, workspaceFreshness)}
                 canSaveLatestAssistantArtifact={canSaveLatestAssistantArtifact}
                 canRetryLatestAssistant={Boolean(latestAssistantTurn(chatMessages))}
+                isSavingAssistantProfile={isSavingAssistantProfile}
                 isSavingChatArtifact={isSavingChatArtifact}
                 isSendingPrompt={isSendingPrompt}
                 onChatPromptChange={setChatPrompt}
                 onClearChatHistory={() => void clearChatHistory()}
                 onClearContextPack={() => setContextPackPaths([])}
                 onCompareLatestAssistant={() => void compareLatestAssistantAnswer()}
+                onAssistantProfileDraftChange={updateAssistantProfileDraft}
                 onModelChange={changeChatModel}
                 onRemoveContextPath={removeContextPath}
                 onRetryLatestAssistant={() => void retryLatestAssistantAnswer()}
                 onRunAgent={() => void runAgentPrompt()}
+                onSaveAssistantProfile={() => void saveAssistantProfile()}
                 onSaveLatestAssistantArtifact={() => void saveLatestAssistantArtifact()}
                 onSendPrompt={() => void sendPrompt()}
                 tagline={state.tagline}
@@ -3817,6 +3862,60 @@ function normalizeLLMSettings(settings: Partial<LLMSettings>, fallback: LLMSetti
         responseReserveTokens: responseReserveTokens >= maxContextTokens ? Math.floor(maxContextTokens / 4) : responseReserveTokens,
         updatedAt: settings.updatedAt || fallback.updatedAt,
     };
+}
+
+function defaultAssistantProfile(): AssistantProfile {
+    return {
+        memory: '',
+        activeProfileId: 'balanced',
+        promptProfiles: [
+            {
+                id: 'balanced',
+                name: 'Balanced',
+                instructions: 'Answer clearly, stay grounded in attached sources, call out uncertainty, and suggest practical next steps.',
+            },
+            {
+                id: 'reviewer',
+                name: 'Reviewer',
+                instructions: 'Review for bugs, risks, regressions, missing tests, unclear assumptions, and source-backed fixes. Lead with findings.',
+            },
+            {
+                id: 'architect',
+                name: 'Architect',
+                instructions: 'Focus on architecture, module boundaries, data flow, safety boundaries, maintainability, and phased implementation.',
+            },
+            {
+                id: 'report',
+                name: 'Report Writer',
+                instructions: 'Produce polished Markdown with concise headings, source-grounded claims, decisions, risks, and action items.',
+            },
+        ],
+        updatedAt: '',
+    };
+}
+
+function normalizeAssistantProfile(profile: Partial<AssistantProfile>): AssistantProfile {
+    const fallback = defaultAssistantProfile();
+    const promptProfiles = Array.isArray(profile.promptProfiles) && profile.promptProfiles.length > 0
+        ? profile.promptProfiles.map((item) => ({
+            id: String(item.id || '').trim(),
+            instructions: String(item.instructions || '').trim(),
+            name: String(item.name || '').trim(),
+        })).filter((item) => item.id && item.name)
+        : fallback.promptProfiles;
+    const activeProfileId = promptProfiles.some((item) => item.id === profile.activeProfileId)
+        ? String(profile.activeProfileId)
+        : promptProfiles[0]?.id ?? fallback.activeProfileId;
+    return {
+        memory: String(profile.memory || ''),
+        activeProfileId,
+        promptProfiles,
+        updatedAt: String(profile.updatedAt || ''),
+    };
+}
+
+function activePromptProfileName(profile: AssistantProfile) {
+    return profile.promptProfiles.find((item) => item.id === profile.activeProfileId)?.name ?? 'Balanced';
 }
 
 function numericLLMSetting(value: unknown, fallback: number) {

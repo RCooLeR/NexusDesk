@@ -222,7 +222,7 @@ Steps:
 - [x] Show the latest agent activity in chat while keeping the detailed run trace in Activity/tool-run records.
 - [x] Add model comparison/retry.
 - [x] Add weak-evidence and missing-context UI.
-- [ ] Add assistant memory and prompt profiles.
+- [x] Add assistant memory and prompt profiles.
 
 Exit criteria:
 
@@ -1051,7 +1051,7 @@ Reasoning: read-only navigation and diff review are now credible, stage/unstage 
 
 `app/process_windows.go` and `app/process_other.go` own platform-specific child process configuration. Windows desktop builds hide app-launched child processes so user-triggered Git refreshes and approved shell tools do not flash console windows.
 
-`app/internal/storage/` owns local app config such as recent workspaces and non-secret LLM settings. Secret values must stay in credential storage or protected sidecars.
+`app/internal/storage/` owns local app config such as recent workspaces, non-secret LLM settings, chat history, and assistant prompt profile/memory preferences. Secret values must stay in credential storage or protected sidecars.
 
 `app/frontend/src/api/wailsClient.ts` is the frontend boundary for generated Wails bindings.
 

@@ -3643,6 +3643,62 @@ button.code-studio-row.selected {
     line-height: 1.35;
 }
 
+.assistant-profile-panel {
+    border-top: 1px solid var(--nd-border-soft);
+    background: #fbfdff;
+    display: grid;
+    gap: 8px;
+    padding: 10px 12px;
+}
+
+.assistant-profile-panel > div {
+    display: grid;
+    gap: 2px;
+}
+
+.assistant-profile-panel strong {
+    color: #111827;
+    font-size: 12px;
+}
+
+.assistant-profile-panel small {
+    color: var(--nd-muted-text);
+    font-size: 11px;
+}
+
+.assistant-profile-panel select,
+.assistant-profile-panel textarea {
+    border: 1px solid #ccd5e1;
+    border-radius: var(--nd-radius-sm);
+    background: var(--nd-panel);
+    color: #1f2937;
+    font: inherit;
+    min-width: 0;
+    padding: 8px;
+}
+
+.assistant-profile-panel textarea {
+    min-height: 68px;
+    resize: vertical;
+}
+
+.assistant-profile-panel .ui-button {
+    justify-self: end;
+    border: 1px solid #ccd5e1;
+    border-radius: var(--nd-radius-sm);
+    background: #ffffff;
+    color: #1f2937;
+    cursor: pointer;
+    font-size: 12px;
+    font-weight: 700;
+    padding: 7px 10px;
+}
+
+.assistant-profile-panel .ui-button:hover {
+    border-color: #99a8bb;
+    background: #f8fafc;
+}
+
 .settings-card {
     min-height: 0;
     overflow: auto;

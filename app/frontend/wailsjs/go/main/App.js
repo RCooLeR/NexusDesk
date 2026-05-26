@@ -110,6 +110,10 @@ export function GetArtifactMetadata(arg1) {
   return window['go']['main']['App']['GetArtifactMetadata'](arg1);
 }
 
+export function GetAssistantProfile() {
+  return window['go']['main']['App']['GetAssistantProfile']();
+}
+
 export function GetChatHistory() {
   return window['go']['main']['App']['GetChatHistory']();
 }
@@ -256,6 +260,10 @@ export function RemoveRecentWorkspace(arg1) {
 
 export function RunAgent(arg1) {
   return window['go']['main']['App']['RunAgent'](arg1);
+}
+
+export function SaveAssistantProfile(arg1) {
+  return window['go']['main']['App']['SaveAssistantProfile'](arg1);
 }
 
 export function SaveDatasetQuery(arg1, arg2, arg3) {

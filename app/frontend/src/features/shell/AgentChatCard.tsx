@@ -1,11 +1,13 @@
 import {useState} from 'react';
 import {productBrand} from '../../brand/assets';
 import {Button, Card} from '../../components/ui';
-import type {ChatMessage, ContextPreview} from '../../types';
+import type {AssistantProfile, ChatMessage, ContextPreview} from '../../types';
 import {ChatMessageContent} from './ChatMessageContent';
 import {recommendedModelOptions} from './llmModelCatalog';
 
 type AgentChatCardProps = {
+    assistantProfile: AssistantProfile;
+    assistantProfileDraft: AssistantProfile;
     chatMessages: ChatMessage[];
     chatPrompt: string;
     chatStatus: string;
@@ -16,9 +18,11 @@ type AgentChatCardProps = {
     staleSourcePaths: string[];
     canSaveLatestAssistantArtifact: boolean;
     canRetryLatestAssistant: boolean;
+    isSavingAssistantProfile: boolean;
     isSavingChatArtifact: boolean;
     isSendingPrompt: boolean;
     onChatPromptChange: (value: string) => void;
+    onAssistantProfileDraftChange: (profile: AssistantProfile) => void;
     onClearChatHistory: () => void;
     onClearContextPack: () => void;
     onCompareLatestAssistant: () => void;
@@ -26,11 +30,14 @@ type AgentChatCardProps = {
     onRemoveContextPath: (relPath: string) => void;
     onRetryLatestAssistant: () => void;
     onRunAgent: () => void;
+    onSaveAssistantProfile: () => void;
     onSaveLatestAssistantArtifact: () => void;
     onSendPrompt: () => void;
 };
 
 export function AgentChatCard({
+    assistantProfile,
+    assistantProfileDraft,
     chatMessages,
     chatPrompt,
     chatStatus,
@@ -41,9 +48,11 @@ export function AgentChatCard({
     staleSourcePaths,
     canSaveLatestAssistantArtifact,
     canRetryLatestAssistant,
+    isSavingAssistantProfile,
     isSavingChatArtifact,
     isSendingPrompt,
     onChatPromptChange,
+    onAssistantProfileDraftChange,
     onClearChatHistory,
     onClearContextPack,
     onCompareLatestAssistant,
@@ -51,10 +60,14 @@ export function AgentChatCard({
     onRemoveContextPath,
     onRetryLatestAssistant,
     onRunAgent,
+    onSaveAssistantProfile,
     onSaveLatestAssistantArtifact,
     onSendPrompt,
 }: AgentChatCardProps) {
     const [submitMode, setSubmitMode] = useState<'ask' | 'agent'>('ask');
+    const activeProfile = assistantProfileDraft.promptProfiles.find((profile) => profile.id === assistantProfileDraft.activeProfileId);
+    const savedProfile = assistantProfile.promptProfiles.find((profile) => profile.id === assistantProfile.activeProfileId);
+    const hasProfileChanges = assistantProfileDraft.memory !== assistantProfile.memory || assistantProfileDraft.activeProfileId !== assistantProfile.activeProfileId;
     const chatModelOptions = recommendedModelOptions.map((option) => ({id: option.id, label: option.chatLabel}));
     const modelOptions = currentModel && !chatModelOptions.some((option) => option.id === currentModel)
         ? [{id: currentModel, label: currentModel}, ...chatModelOptions]
@@ -132,6 +145,31 @@ export function AgentChatCard({
                     <span>Select or pin a file, folder, diff, dataset, or artifact before asking for grounded analysis.</span>
                 </div>
             )}
+            <div className="assistant-profile-panel">
+                <div>
+                    <strong>Prompt profile</strong>
+                    <small>{profileStatusLabel(activeProfile?.name, savedProfile?.name, hasProfileChanges)}</small>
+                </div>
+                <select
+                    aria-label="Assistant prompt profile"
+                    onChange={(event) => onAssistantProfileDraftChange({...assistantProfileDraft, activeProfileId: event.target.value})}
+                    value={assistantProfileDraft.activeProfileId}
+                >
+                    {assistantProfileDraft.promptProfiles.map((profile) => (
+                        <option key={profile.id} value={profile.id}>{profile.name}</option>
+                    ))}
+                </select>
+                <textarea
+                    aria-label="Assistant memory"
+                    onChange={(event) => onAssistantProfileDraftChange({...assistantProfileDraft, memory: event.target.value})}
+                    placeholder="Memory: preferred style, project conventions, recurring facts..."
+                    rows={3}
+                    value={assistantProfileDraft.memory}
+                />
+                <Button disabled={isSavingAssistantProfile} onClick={onSaveAssistantProfile} variant="subtle">
+                    {isSavingAssistantProfile ? 'Saving...' : 'Save memory'}
+                </Button>
+            </div>
             {contextPackPaths.length > 0 && (
                 <div className="context-pack-list">
                     <div className="context-pack-heading">
@@ -199,6 +237,10 @@ export function AgentChatCard({
             </div>
         </Card>
     );
+}
+
+function profileStatusLabel(activeName = 'Assistant guidance', savedName = activeName, hasChanges = false) {
+    return hasChanges ? `Unsaved: ${activeName} (saved ${savedName})` : `Active: ${savedName}`;
 }
 
 function messageHasWeakEvidence(message: ChatMessage) {

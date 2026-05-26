@@ -328,8 +328,8 @@ These batches describe the next product direction. They are broader than the cur
 1. Promote Assistant from chat panel to cross-studio orchestrator with explicit context, model, agent mode, tool plan, memory, and citation controls.
 2. Add context sources for git diffs, database schemas, query results, analytics connector runs, document sets, operations logs, and artifacts.
 3. Add agent modes: Ask, Plan, Review, Edit, Research, Analyze, Debug Ops, Generate Artifact, and Report Builder.
-4. Add assistant memory and prompt profiles; model comparison/retry, weak-evidence warnings, missing-context prompts, and source freshness indicators now exist in the first chat foundation.
-5. Add persistent workspace memory for accepted facts, decisions, preferred report style, and reusable prompts.
+4. Local assistant memory and prompt profiles now exist alongside model comparison/retry, weak-evidence warnings, missing-context prompts, and source freshness indicators.
+5. Add persistent workspace memory for accepted facts, decisions, preferred report style, reusable prompts, and source-linked decisions.
 
 ## Phase 2: Files, Documents, And Artifacts
 

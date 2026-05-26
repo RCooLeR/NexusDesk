@@ -67,6 +67,8 @@ export function GetArtifactLineage():Promise<main.ArtifactLineage>;
 
 export function GetArtifactMetadata(arg1:string):Promise<artifact.ArtifactMetadata>;
 
+export function GetAssistantProfile():Promise<storage.AssistantProfile>;
+
 export function GetChatHistory():Promise<Array<storage.ChatMessage>>;
 
 export function GetGitFileDiff(arg1:string):Promise<main.GitFileDiff>;
@@ -140,6 +142,8 @@ export function RefreshWorkspace():Promise<main.WorkspaceOpenResult>;
 export function RemoveRecentWorkspace(arg1:string):Promise<Array<storage.RecentWorkspace>>;
 
 export function RunAgent(arg1:agent.RunRequest):Promise<agent.RunResult>;
+
+export function SaveAssistantProfile(arg1:storage.AssistantProfile):Promise<storage.AssistantProfile>;
 
 export function SaveDatasetQuery(arg1:string,arg2:string,arg3:string):Promise<dataset.SavedQuery>;
 

@@ -121,6 +121,7 @@ type App struct {
 	ctx           context.Context
 	llmClient     *llm.Client
 	chatStore     *storage.ChatHistoryStore
+	profileStore  *storage.AssistantProfileStore
 	llmStore      *storage.LLMSettingsStore
 	recentStore   *storage.RecentWorkspaceStore
 	workspaceMu   sync.RWMutex
@@ -131,10 +132,11 @@ type App struct {
 
 func NewApp() *App {
 	return &App{
-		llmClient:   llm.NewClient(),
-		chatStore:   storage.NewDefaultChatHistoryStore(),
-		llmStore:    storage.NewDefaultLLMSettingsStore(),
-		recentStore: storage.NewDefaultRecentWorkspaceStore(),
+		llmClient:    llm.NewClient(),
+		chatStore:    storage.NewDefaultChatHistoryStore(),
+		profileStore: storage.NewDefaultAssistantProfileStore(),
+		llmStore:     storage.NewDefaultLLMSettingsStore(),
+		recentStore:  storage.NewDefaultRecentWorkspaceStore(),
 	}
 }
 
@@ -1092,6 +1094,14 @@ func (a *App) SaveLLMSettings(settings storage.LLMSettings) (storage.LLMSettings
 	return a.llmStore.Save(settings)
 }
 
+func (a *App) GetAssistantProfile() (storage.AssistantProfile, error) {
+	return a.profileStore.Get()
+}
+
+func (a *App) SaveAssistantProfile(profile storage.AssistantProfile) (storage.AssistantProfile, error) {
+	return a.profileStore.Save(profile)
+}
+
 func (a *App) TestLLMConnection(settings storage.LLMSettings) (llm.ProbeResult, error) {
 	resolvedSettings, err := a.llmStore.ResolveForUse(settings)
 	if err != nil {
@@ -1316,6 +1326,9 @@ func (a *App) prepareChat(prompt string, relPaths []string) (llm.ChatRequest, st
 	chatRequest := llm.ChatRequest{
 		Prompt: prompt,
 	}
+	if profile, err := a.profileStore.Get(); err == nil {
+		chatRequest.Prompt = applyAssistantProfileToPrompt(prompt, profile)
+	}
 
 	contextPaths := cleanContextPaths(relPaths)
 	if len(contextPaths) == 1 && !a.contextPathRequiresPack(contextPaths[0]) {
@@ -1366,6 +1379,49 @@ func (a *App) persistChatPair(prompt string, chatRequest llm.ChatRequest, result
 	}
 
 	return nil
+}
+
+func applyAssistantProfileToPrompt(prompt string, profile storage.AssistantProfile) string {
+	profile = normalizeAssistantProfileForPrompt(profile)
+	active := activePromptProfile(profile)
+	sections := []string{}
+	if active.Instructions != "" {
+		sections = append(sections, "Active prompt profile: "+active.Name+"\n"+active.Instructions)
+	}
+	if profile.Memory != "" {
+		sections = append(sections, "Assistant memory for this user/workspace:\n"+profile.Memory)
+	}
+	if len(sections) == 0 {
+		return prompt
+	}
+	return strings.Join([]string{
+		"Use the following assistant preferences while answering. They are user-provided guidance, not source evidence.",
+		strings.Join(sections, "\n\n"),
+		"User request:",
+		prompt,
+	}, "\n\n")
+}
+
+func normalizeAssistantProfileForPrompt(profile storage.AssistantProfile) storage.AssistantProfile {
+	if len(profile.PromptProfiles) == 0 {
+		return storage.DefaultAssistantProfile()
+	}
+	if activePromptProfile(profile).ID == "" {
+		profile.ActiveProfileID = profile.PromptProfiles[0].ID
+	}
+	return profile
+}
+
+func activePromptProfile(profile storage.AssistantProfile) storage.PromptProfile {
+	for _, item := range profile.PromptProfiles {
+		if item.ID == profile.ActiveProfileID {
+			return item
+		}
+	}
+	if len(profile.PromptProfiles) > 0 {
+		return profile.PromptProfiles[0]
+	}
+	return storage.PromptProfile{}
 }
 
 func (a *App) emitChatStreamEvent(event ChatStreamEvent) {

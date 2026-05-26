@@ -33,6 +33,8 @@ const checks = [
             'QueryDatasetSQL',
             'QueryWorkspaceSQLite',
             'SearchMetadata',
+            'GetAssistantProfile',
+            'SaveAssistantProfile',
             'ExportArtifactLineageJSON',
             'EnsureSQLiteMetadataStore',
             'InspectMetadataStore',
@@ -106,6 +108,9 @@ const checks = [
             'First token received',
             'summarizeGitDiff',
             'draftGitCommitMessage',
+            'assistantProfileDraft',
+            'saveAssistantProfile',
+            'defaultAssistantProfile',
             'refreshWorkspaceTasks',
             'selectedGitDiffPromptContext',
             'handleTreeContextAction',
@@ -224,7 +229,7 @@ const checks = [
     },
     {
         file: 'src/features/shell/AgentChatCard.tsx',
-        terms: ['ChatMessageContent', 'recommendedModelOptions', 'chat-card-header', 'Save answer', 'Retry', 'Compare', 'onRetryLatestAssistant', 'onCompareLatestAssistant', 'weak-evidence-warning', 'missing-context-warning', 'No explicit source context is attached to this answer.', 'Select or pin a file', 'textarea', 'composer-shell', 'composer-controls', 'Submit mode', 'onModelChange', 'onRunAgent', 'Agent', 'Clear pack', 'staleSourcePaths', 'Context changed since this answer was created.'],
+        terms: ['AssistantProfile', 'ChatMessageContent', 'recommendedModelOptions', 'chat-card-header', 'Save answer', 'Retry', 'Compare', 'onRetryLatestAssistant', 'onCompareLatestAssistant', 'assistant-profile-panel', 'Prompt profile', 'Save memory', 'onAssistantProfileDraftChange', 'onSaveAssistantProfile', 'weak-evidence-warning', 'missing-context-warning', 'No explicit source context is attached to this answer.', 'Select or pin a file', 'textarea', 'composer-shell', 'composer-controls', 'Submit mode', 'onModelChange', 'onRunAgent', 'Agent', 'Clear pack', 'staleSourcePaths', 'Context changed since this answer was created.'],
     },
     {
         file: 'src/features/shell/BottomStudioPanel.tsx',
@@ -326,11 +331,12 @@ const checks = [
             '.editor-outline-panel',
             '.dirty-indicator',
             '.find-highlight',
+            '.assistant-profile-panel',
         ],
     },
     {
         file: 'wailsjs/go/main/App.d.ts',
-        terms: ['AskLLMContextPack', 'RunAgent', 'PreviewFileWrite', 'ApplyFileDelete', 'ApplyFileMove', 'ProfileDataset', 'CreateDatasetChartArtifact', 'CreateDatasetQueryArtifact', 'CreateDatasetSQLArtifact', 'CreateDatasetSummaryArtifact', 'CreateChatMarkdownArtifact', 'CreateScanReportArtifact', 'PreviewChatContextPack', 'PreviewDatasetChart', 'SaveDatasetQuery', 'SaveDatasetSQLQuery', 'ListDatasetSQLQueries', 'ListDatasetDependencies', 'ListDatasetSQLRuns', 'ListWorkspaceTasks', 'RefreshStaleContext', 'SearchMetadata', 'QueryWorkspaceSQLite', 'ExportArtifactLineageJSON', 'GetGitStatus', 'GetGitFileDiff', 'PreviewGitFileAction', 'PreviewGitHunkAction', 'ApplyGitHunkAction', 'ListApprovals', 'ListAgentTools', 'ListAgentToolRuns', 'PreviewAgentTool', 'ExecuteAgentTool', 'QueryDatasetSQL', 'EnsureSQLiteMetadataStore', 'InspectMetadataStore', 'GetArtifactLineage', 'CheckWorkspaceFreshness', 'CompareArtifacts', 'ArchiveArtifact', 'DeleteArtifact'],
+        terms: ['AskLLMContextPack', 'RunAgent', 'PreviewFileWrite', 'ApplyFileDelete', 'ApplyFileMove', 'ProfileDataset', 'CreateDatasetChartArtifact', 'CreateDatasetQueryArtifact', 'CreateDatasetSQLArtifact', 'CreateDatasetSummaryArtifact', 'CreateChatMarkdownArtifact', 'CreateScanReportArtifact', 'PreviewChatContextPack', 'PreviewDatasetChart', 'SaveDatasetQuery', 'SaveDatasetSQLQuery', 'ListDatasetSQLQueries', 'ListDatasetDependencies', 'ListDatasetSQLRuns', 'ListWorkspaceTasks', 'RefreshStaleContext', 'SearchMetadata', 'GetAssistantProfile', 'SaveAssistantProfile', 'QueryWorkspaceSQLite', 'ExportArtifactLineageJSON', 'GetGitStatus', 'GetGitFileDiff', 'PreviewGitFileAction', 'PreviewGitHunkAction', 'ApplyGitHunkAction', 'ListApprovals', 'ListAgentTools', 'ListAgentToolRuns', 'PreviewAgentTool', 'ExecuteAgentTool', 'QueryDatasetSQL', 'EnsureSQLiteMetadataStore', 'InspectMetadataStore', 'GetArtifactLineage', 'CheckWorkspaceFreshness', 'CompareArtifacts', 'ArchiveArtifact', 'DeleteArtifact'],
     },
     {
         file: '../app_tasks.go',

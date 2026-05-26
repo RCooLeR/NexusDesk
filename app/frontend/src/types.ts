@@ -489,6 +489,19 @@ export type LLMSettings = {
     updatedAt: string;
 };
 
+export type PromptProfile = {
+    id: string;
+    name: string;
+    instructions: string;
+};
+
+export type AssistantProfile = {
+    memory: string;
+    activeProfileId: string;
+    promptProfiles: PromptProfile[];
+    updatedAt: string;
+};
+
 export type LLMProbeResult = {
     ok: boolean;
     message: string;
