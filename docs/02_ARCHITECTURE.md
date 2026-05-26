@@ -135,6 +135,8 @@ Git integration is also service-led: `nexus-app/internal/services/git` owns manu
 
 Rollback browsing follows the same boundary: `nexus-app/internal/services/workspace` owns rollback records and apply semantics, while the Fyne shell owns only record listing, confirmation, and workspace refresh after apply.
 
+Workspace tree actions call the same service boundary: the Fyne navigator action strip collects user intent and confirmation, then dispatches create, copy, rename/move, and delete through `nexus-app/internal/services/workspace` so rollback and rooted validation stay centralized.
+
 ### 2. Frontend
 
 Responsibilities:

@@ -305,7 +305,7 @@ Exit criteria:
 ## Next Batch
 
 1. Configure Windows CGO compiler and verify `nexus-app` runs.
-2. Add native tree context actions that call the file operation services after confirmation.
-3. Add settings store and native provider/model settings page skeleton.
-4. Add read-only Git file diff service and first unified diff panel.
-5. Add staged/unstaged controls after Git diff preview exists.
+2. Add settings store and native provider/model settings page skeleton.
+3. Add read-only Git file diff service and first unified diff panel.
+4. Add staged/unstaged controls after Git diff preview exists.
+5. Add richer navigator context menus once the first action strip is validated in Fyne.

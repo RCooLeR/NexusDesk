@@ -38,7 +38,7 @@ func (v *View) openWorkspace(root string) {
 		return
 	}
 	v.state.SetWorkspace(workspace)
-	v.navigator.Objects = []fyne.CanvasObject{newWorkspaceTree(v.state, v.workspaceService, v.openWorkspaceNode)}
+	v.navigator.Objects = []fyne.CanvasObject{v.newWorkspaceNavigator()}
 	v.navigator.Refresh()
 	v.status.SetText(fmt.Sprintf("%s: %d indexed, %d ignored, %d unreadable", workspace.Name, workspace.Summary.Included, workspace.Summary.Ignored, workspace.Summary.Unreadable))
 	v.addActivity("Opened workspace " + workspace.Root)
