@@ -10,6 +10,7 @@ import (
 	"fyne.io/fyne/v2/theme"
 	"fyne.io/fyne/v2/widget"
 
+	artifactsSvc "nexusdesk/internal/services/artifacts"
 	jobsSvc "nexusdesk/internal/services/jobs"
 	metadataSvc "nexusdesk/internal/services/metadata"
 	tasksSvc "nexusdesk/internal/services/tasks"
@@ -98,9 +99,44 @@ func (v *View) persistTaskRun(jobID string, result tasksSvc.RunResult) {
 	if v.metadataStore == nil {
 		return
 	}
-	record := taskRunRecord(jobID, result)
+	record := v.metadataStore.NormalizeTaskRunRecord(taskRunRecord(jobID, result))
+	if artifact, err := writeTaskRunArtifact(v.state.Workspace().Root, record); err == nil {
+		record.ArtifactPath = artifact.RelPath
+		v.addActivity(artifact.Message)
+	} else {
+		v.addActivity("Could not write task report artifact: " + err.Error())
+	}
 	if err := v.metadataStore.SaveTaskRun(record); err != nil {
 		v.addActivity("Could not persist task run: " + err.Error())
+	}
+}
+
+func writeTaskRunArtifact(root string, record metadataSvc.TaskRunRecord) (artifactsSvc.Artifact, error) {
+	store, err := artifactsSvc.NewStore(root)
+	if err != nil {
+		return artifactsSvc.Artifact{}, err
+	}
+	return store.WriteTaskRunReport(taskRunArtifactInput(record))
+}
+
+func taskRunArtifactInput(record metadataSvc.TaskRunRecord) artifactsSvc.TaskRunReport {
+	return artifactsSvc.TaskRunReport{
+		ID:          record.ID,
+		JobID:       record.JobID,
+		TaskID:      record.TaskID,
+		Kind:        record.Kind,
+		Label:       record.Label,
+		Command:     record.Command,
+		Cwd:         record.Cwd,
+		Source:      record.Source,
+		Status:      record.Status,
+		ExitCode:    record.ExitCode,
+		Stdout:      record.Stdout,
+		Stderr:      record.Stderr,
+		Message:     record.Message,
+		StartedAt:   record.StartedAt,
+		CompletedAt: record.CompletedAt,
+		DurationMs:  record.DurationMs,
 	}
 }
 

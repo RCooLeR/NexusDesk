@@ -14,20 +14,21 @@ type Status struct {
 }
 
 type TaskRunRecord struct {
-	ID          string
-	JobID       string
-	TaskID      string
-	Kind        string
-	Label       string
-	Command     string
-	Cwd         string
-	Source      string
-	Status      string
-	ExitCode    int
-	Stdout      string
-	Stderr      string
-	Message     string
-	StartedAt   time.Time
-	CompletedAt time.Time
-	DurationMs  int64
+	ID           string
+	JobID        string
+	TaskID       string
+	Kind         string
+	Label        string
+	Command      string
+	Cwd          string
+	Source       string
+	Status       string
+	ExitCode     int
+	Stdout       string
+	Stderr       string
+	Message      string
+	ArtifactPath string
+	StartedAt    time.Time
+	CompletedAt  time.Time
+	DurationMs   int64
 }

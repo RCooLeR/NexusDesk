@@ -44,7 +44,7 @@ nexus-app/build/
 # Local app data and generated artifacts
 .nexusdesk/
 data/
-artifacts/
+/artifacts/
 workspace-cache/
 *.db
 *.db-shm

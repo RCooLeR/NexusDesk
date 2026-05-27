@@ -2,7 +2,6 @@ package metadata
 
 import (
 	"encoding/json"
-	"strings"
 
 	jobssvc "nexusdesk/internal/services/jobs"
 )
@@ -79,18 +78,17 @@ func (s *Store) SaveTaskRun(record TaskRunRecord) error {
 		return err
 	}
 	defer db.Close()
-	if record.ID == "" {
-		record.ID = hashID(strings.Join([]string{s.root, record.JobID, record.TaskID, formatTime(record.StartedAt)}, "|"))
-	}
+	record = s.NormalizeTaskRunRecord(record)
 	_, err = db.Exec(
-		`INSERT INTO task_runs (id, workspace_root, job_id, task_id, kind, label, command, cwd, source, status, exit_code, stdout, stderr, message, started_at, completed_at, duration_ms)
-		 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+		`INSERT INTO task_runs (id, workspace_root, job_id, task_id, kind, label, command, cwd, source, status, exit_code, stdout, stderr, message, artifact_path, started_at, completed_at, duration_ms)
+		 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
 		 ON CONFLICT(id) DO UPDATE SET
 		    status = excluded.status,
 		    exit_code = excluded.exit_code,
 		    stdout = excluded.stdout,
 		    stderr = excluded.stderr,
 		    message = excluded.message,
+		    artifact_path = excluded.artifact_path,
 		    completed_at = excluded.completed_at,
 		    duration_ms = excluded.duration_ms`,
 		record.ID,
@@ -107,6 +105,7 @@ func (s *Store) SaveTaskRun(record TaskRunRecord) error {
 		record.Stdout,
 		record.Stderr,
 		record.Message,
+		record.ArtifactPath,
 		formatTime(record.StartedAt),
 		formatTime(record.CompletedAt),
 		record.DurationMs,
@@ -124,7 +123,7 @@ func (s *Store) ListTaskRuns(limit int) ([]TaskRunRecord, error) {
 	}
 	defer db.Close()
 	rows, err := db.Query(
-		`SELECT id, job_id, task_id, kind, label, command, cwd, source, status, exit_code, stdout, stderr, message, started_at, completed_at, duration_ms
+		`SELECT id, job_id, task_id, kind, label, command, cwd, source, status, exit_code, stdout, stderr, message, artifact_path, started_at, completed_at, duration_ms
 		 FROM task_runs WHERE workspace_root = ? ORDER BY started_at DESC, id DESC LIMIT ?`,
 		s.root,
 		limit,
@@ -152,6 +151,7 @@ func (s *Store) ListTaskRuns(limit int) ([]TaskRunRecord, error) {
 			&record.Stdout,
 			&record.Stderr,
 			&record.Message,
+			&record.ArtifactPath,
 			&started,
 			&completed,
 			&record.DurationMs,

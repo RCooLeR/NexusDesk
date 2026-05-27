@@ -79,4 +79,8 @@ func TestTaskRunRecordMapsResult(t *testing.T) {
 	if record.JobID != "job-0001" || record.TaskID != "go-test-root" || record.DurationMs != 1000 {
 		t.Fatalf("unexpected task run record: %#v", record)
 	}
+	artifactInput := taskRunArtifactInput(record)
+	if artifactInput.JobID != record.JobID || artifactInput.Command != record.Command {
+		t.Fatalf("unexpected task artifact input: %#v", artifactInput)
+	}
 }

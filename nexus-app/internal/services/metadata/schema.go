@@ -1,6 +1,6 @@
 package metadata
 
-const schemaVersion = 1
+const schemaVersion = 2
 
 const schemaSQL = `PRAGMA journal_mode = WAL;
 PRAGMA foreign_keys = ON;
@@ -40,6 +40,7 @@ CREATE TABLE IF NOT EXISTS task_runs (
     stdout TEXT,
     stderr TEXT,
     message TEXT,
+    artifact_path TEXT,
     started_at TEXT NOT NULL,
     completed_at TEXT,
     duration_ms INTEGER

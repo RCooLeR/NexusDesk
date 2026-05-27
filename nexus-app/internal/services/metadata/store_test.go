@@ -1,7 +1,9 @@
 package metadata
 
 import (
+	"database/sql"
 	"os"
+	"path/filepath"
 	"testing"
 	"time"
 
@@ -17,7 +19,7 @@ func TestEnsureCreatesSQLiteStoreAndManifest(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Ensure returned error: %v", err)
 	}
-	if status.SchemaVersion != 1 || status.SchemaHash == "" {
+	if status.SchemaVersion != 2 || status.SchemaHash == "" {
 		t.Fatalf("unexpected status: %#v", status)
 	}
 	if _, err := os.Stat(status.Path); err != nil {
@@ -61,19 +63,20 @@ func TestSaveAndListTaskRuns(t *testing.T) {
 	store := mustStore(t)
 	started := time.Date(2026, 5, 27, 12, 0, 0, 0, time.UTC)
 	record := TaskRunRecord{
-		JobID:       "job-0001",
-		TaskID:      "go-test-root",
-		Kind:        "go-test",
-		Label:       "go test ./...",
-		Command:     "go test ./...",
-		Cwd:         ".",
-		Status:      "success",
-		ExitCode:    0,
-		Stdout:      "ok\n",
-		Message:     "done",
-		StartedAt:   started,
-		CompletedAt: started.Add(time.Second),
-		DurationMs:  1000,
+		JobID:        "job-0001",
+		TaskID:       "go-test-root",
+		Kind:         "go-test",
+		Label:        "go test ./...",
+		Command:      "go test ./...",
+		Cwd:          ".",
+		Status:       "success",
+		ExitCode:     0,
+		Stdout:       "ok\n",
+		Message:      "done",
+		ArtifactPath: ".nexusdesk/artifacts/task-runs/run.md",
+		StartedAt:    started,
+		CompletedAt:  started.Add(time.Second),
+		DurationMs:   1000,
 	}
 	if err := store.SaveTaskRun(record); err != nil {
 		t.Fatalf("SaveTaskRun returned error: %v", err)
@@ -82,8 +85,62 @@ func TestSaveAndListTaskRuns(t *testing.T) {
 	if err != nil {
 		t.Fatalf("ListTaskRuns returned error: %v", err)
 	}
-	if len(runs) != 1 || runs[0].TaskID != "go-test-root" || runs[0].Stdout != "ok\n" {
+	if len(runs) != 1 || runs[0].TaskID != "go-test-root" || runs[0].Stdout != "ok\n" || runs[0].ArtifactPath == "" {
 		t.Fatalf("unexpected task runs: %#v", runs)
+	}
+}
+
+func TestEnsureMigratesTaskRunsArtifactPathColumn(t *testing.T) {
+	root := t.TempDir()
+	dbPath := filepath.Join(root, filepath.FromSlash(metadataDirRelPath), "nexusdesk.sqlite")
+	if err := os.MkdirAll(filepath.Dir(dbPath), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	db, err := sql.Open("sqlite", dbPath)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := db.Exec(`CREATE TABLE task_runs (
+		id TEXT PRIMARY KEY,
+		workspace_root TEXT NOT NULL,
+		job_id TEXT,
+		task_id TEXT NOT NULL,
+		kind TEXT NOT NULL,
+		label TEXT NOT NULL,
+		command TEXT NOT NULL,
+		cwd TEXT NOT NULL,
+		source TEXT,
+		status TEXT NOT NULL,
+		exit_code INTEGER,
+		stdout TEXT,
+		stderr TEXT,
+		message TEXT,
+		started_at TEXT NOT NULL,
+		completed_at TEXT,
+		duration_ms INTEGER
+	)`); err != nil {
+		t.Fatal(err)
+	}
+	_ = db.Close()
+	store, err := NewStore(root)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := store.Ensure(); err != nil {
+		t.Fatalf("Ensure migration returned error: %v", err)
+	}
+	if err := store.SaveTaskRun(TaskRunRecord{
+		JobID:        "job-0001",
+		TaskID:       "go-test-root",
+		Kind:         "go-test",
+		Label:        "go test ./...",
+		Command:      "go test ./...",
+		Cwd:          ".",
+		Status:       "success",
+		ArtifactPath: ".nexusdesk/artifacts/task-runs/run.md",
+		StartedAt:    time.Now().UTC(),
+	}); err != nil {
+		t.Fatalf("SaveTaskRun after migration returned error: %v", err)
 	}
 }
 

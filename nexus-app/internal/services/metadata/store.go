@@ -6,6 +6,7 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"os"
 	"path/filepath"
 	"strings"
@@ -48,6 +49,9 @@ func (s *Store) Ensure() (Status, error) {
 	if _, err := db.Exec(schemaSQL); err != nil {
 		return Status{}, err
 	}
+	if err := ensureColumn(db, "task_runs", "artifact_path", "TEXT"); err != nil {
+		return Status{}, err
+	}
 	now := time.Now().UTC()
 	if _, err := db.Exec(
 		`INSERT INTO workspaces (id, root, name, opened_at)
@@ -74,6 +78,13 @@ func (s *Store) Ensure() (Status, error) {
 		return Status{}, err
 	}
 	return status, nil
+}
+
+func (s *Store) NormalizeTaskRunRecord(record TaskRunRecord) TaskRunRecord {
+	if record.ID == "" {
+		record.ID = hashID(strings.Join([]string{s.root, record.JobID, record.TaskID, formatTime(record.StartedAt)}, "|"))
+	}
+	return record
 }
 
 func (s *Store) Path() string {
@@ -127,6 +138,33 @@ func listTables(db *sql.DB) ([]string, error) {
 		tables = append(tables, table)
 	}
 	return tables, rows.Err()
+}
+
+func ensureColumn(db *sql.DB, table string, column string, definition string) error {
+	rows, err := db.Query("PRAGMA table_info(" + table + ")")
+	if err != nil {
+		return err
+	}
+	defer rows.Close()
+	for rows.Next() {
+		var cid int
+		var name string
+		var dataType string
+		var notNull int
+		var defaultValue sql.NullString
+		var pk int
+		if err := rows.Scan(&cid, &name, &dataType, &notNull, &defaultValue, &pk); err != nil {
+			return err
+		}
+		if name == column {
+			return nil
+		}
+	}
+	if err := rows.Err(); err != nil {
+		return err
+	}
+	_, err = db.Exec(fmt.Sprintf("ALTER TABLE %s ADD COLUMN %s %s", table, column, definition))
+	return err
 }
 
 func cleanRoot(root string) (string, error) {
