@@ -211,6 +211,7 @@ Goal: restore generated-output workflows with provenance and native inspection.
 - [x] Add native artifact browser for task-run report artifacts.
 - [x] Expand native artifact browser to generic artifact metadata sidecars, metadata search, archive/delete actions, and task-report lineage.
 - [x] Add first native document-set Markdown artifact writer from selected file/folder/project context with source lineage.
+- [x] Add first same-kind artifact comparison surface with read-only generated-output diffs.
 - [ ] Add document preview/extraction for Markdown, TXT, PDF, DOCX, XLSX, HTML/XML.
 - [ ] Add presentation/report generation targets after artifact lineage is stable.
 - [ ] Add read-only operations scanners for Dockerfiles, Compose, env/config/logs.
@@ -255,11 +256,11 @@ Exit criteria:
 
 ## Next Batch
 
-1. Add first artifact compare surface for same-kind generated outputs.
-2. Add first native artifact-to-agent context affordance so generated outputs can be cited in follow-up prompts.
-3. Add first Workbench file-status badges from Git status once manual Git refresh has run.
-4. Add first chat-to-agent/context action so a prior answer can seed a follow-up prompt.
-5. Add first document-set artifact actions for opening cited source files from lineage.
+1. Add first native artifact-to-agent context affordance so generated outputs can be cited in follow-up prompts.
+2. Add first Workbench file-status badges from Git status once manual Git refresh has run.
+3. Add first chat-to-agent/context action so a prior answer can seed a follow-up prompt.
+4. Add first document-set artifact actions for opening cited source files from lineage.
+5. Add compare-result artifact export once the read-only comparison flow stabilizes.
 
 ## Preserved Post-Port Backlog
 

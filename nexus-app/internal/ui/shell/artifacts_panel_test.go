@@ -51,3 +51,18 @@ func TestArtifactLineageTextIncludesNodesAndEdges(t *testing.T) {
 		}
 	}
 }
+
+func TestFormatArtifactComparison(t *testing.T) {
+	text := formatArtifactComparison(artifactsSvc.ArtifactComparison{
+		Kind:      "document-report",
+		LeftPath:  ".nexusdesk/artifacts/document-sets/a.md",
+		RightPath: ".nexusdesk/artifacts/document-sets/b.md",
+		Diff:      "--- a\n+++ b\n-old\n+new\n",
+		Message:   "Compared a with b.",
+	})
+	for _, expected := range []string{"Artifact Comparison", "Kind: document-report", "Left: .nexusdesk", "Compared a with b.", "-old", "+new"} {
+		if !strings.Contains(text, expected) {
+			t.Fatalf("comparison text missing %q:\n%s", expected, text)
+		}
+	}
+}

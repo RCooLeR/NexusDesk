@@ -80,3 +80,14 @@ type LineageEdge struct {
 	To    string
 	Label string
 }
+
+type ArtifactComparison struct {
+	Kind       string
+	LeftPath   string
+	RightPath  string
+	LeftTitle  string
+	RightTitle string
+	Diff       string
+	Same       bool
+	Message    string
+}

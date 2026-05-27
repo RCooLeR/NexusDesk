@@ -61,6 +61,7 @@ type View struct {
 	artifactResults        *fyne.Container
 	artifactStatus         *widget.Label
 	artifactPreview        *widget.Entry
+	artifactCompareLeft    artifactsCompareSelection
 	chatHistoryResults     *fyne.Container
 	chatHistoryStatus      *widget.Label
 	chatHistoryDetail      *widget.Entry
@@ -74,6 +75,12 @@ type View struct {
 	assistantContextList   *fyne.Container
 	assistantHistoryStatus *widget.Label
 	assistantHistoryList   *fyne.Container
+}
+
+type artifactsCompareSelection struct {
+	RelPath string
+	Kind    string
+	Title   string
 }
 
 func New(window fyne.Window) *View {

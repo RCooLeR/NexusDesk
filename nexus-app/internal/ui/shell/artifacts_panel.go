@@ -105,7 +105,7 @@ func (v *View) refreshArtifactsWithQuery(query string) {
 		status += " matching " + strings.TrimSpace(query)
 	}
 	v.artifactStatus.SetText(status)
-	v.artifactResults.Objects = artifactRows(artifacts, v.previewArtifact, v.archiveArtifact, v.deleteArtifact)
+	v.artifactResults.Objects = artifactRows(artifacts, v.previewArtifact, v.compareArtifact, v.archiveArtifact, v.deleteArtifact)
 	v.artifactResults.Refresh()
 	v.addActivity(fmt.Sprintf("Loaded %d artifact(s).", len(artifacts)))
 }
@@ -133,6 +133,39 @@ func (v *View) previewArtifact(artifact artifactsSvc.Artifact) {
 	v.artifactPreview.SetText(artifactLineageText(lineage) + "\n\n---\n\n" + text)
 	v.artifactStatus.SetText("Previewing " + artifact.RelPath)
 	v.addActivity("Previewed artifact " + artifact.RelPath + ".")
+}
+
+func (v *View) compareArtifact(artifact artifactsSvc.Artifact) {
+	if v.artifactCompareLeft.RelPath == "" {
+		v.artifactCompareLeft = artifactsCompareSelection{
+			RelPath: artifact.RelPath,
+			Kind:    artifact.Kind,
+			Title:   artifactTitle(artifact),
+		}
+		v.artifactStatus.SetText("Compare base selected: " + artifact.RelPath)
+		v.artifactPreview.SetText("Select another " + artifact.Kind + " artifact to compare with:\n\n" + artifact.RelPath)
+		v.addActivity("Selected artifact compare base " + artifact.RelPath + ".")
+		return
+	}
+	left := v.artifactCompareLeft
+	v.artifactCompareLeft = artifactsCompareSelection{}
+	workspace := v.state.Workspace()
+	if workspace.Root == "" {
+		return
+	}
+	store, err := artifactsSvc.NewStore(workspace.Root)
+	if err != nil {
+		dialog.ShowError(err, v.window)
+		return
+	}
+	comparison, err := store.CompareArtifacts(left.RelPath, artifact.RelPath)
+	if err != nil {
+		dialog.ShowError(err, v.window)
+		return
+	}
+	v.artifactPreview.SetText(formatArtifactComparison(comparison))
+	v.artifactStatus.SetText(comparison.Message)
+	v.addActivity(comparison.Message)
 }
 
 func (v *View) archiveArtifact(artifact artifactsSvc.Artifact) {
@@ -179,6 +212,7 @@ func (v *View) deleteArtifact(artifact artifactsSvc.Artifact) {
 func artifactRows(
 	artifacts []artifactsSvc.Artifact,
 	onPreview func(artifactsSvc.Artifact),
+	onCompare func(artifactsSvc.Artifact),
 	onArchive func(artifactsSvc.Artifact),
 	onDelete func(artifactsSvc.Artifact),
 ) []fyne.CanvasObject {
@@ -192,6 +226,10 @@ func artifactRows(
 			onPreview(artifact)
 		})
 		preview.Importance = widget.LowImportance
+		compare := widget.NewButtonWithIcon("", theme.ContentCopyIcon(), func() {
+			onCompare(artifact)
+		})
+		compare.Importance = widget.LowImportance
 		archive := widget.NewButtonWithIcon("", theme.FolderIcon(), func() {
 			onArchive(artifact)
 		})
@@ -205,7 +243,7 @@ func artifactRows(
 		title.Truncation = fyne.TextTruncateEllipsis
 		meta := widget.NewLabel(artifactMeta(artifact))
 		meta.Truncation = fyne.TextTruncateEllipsis
-		actions := container.NewHBox(preview, archive, deleteButton)
+		actions := container.NewHBox(preview, compare, archive, deleteButton)
 		rows = append(rows, container.NewBorder(nil, nil, actions, nil, container.NewVBox(title, meta)))
 	}
 	return rows
@@ -269,4 +307,30 @@ func artifactLineageText(lineage artifactsSvc.Lineage) string {
 		}
 	}
 	return builder.String()
+}
+
+func formatArtifactComparison(comparison artifactsSvc.ArtifactComparison) string {
+	var builder strings.Builder
+	builder.WriteString("Artifact Comparison\n")
+	writeArtifactComparisonKV(&builder, "Kind", comparison.Kind)
+	writeArtifactComparisonKV(&builder, "Left", comparison.LeftPath)
+	writeArtifactComparisonKV(&builder, "Right", comparison.RightPath)
+	writeArtifactComparisonKV(&builder, "Same", fmt.Sprintf("%t", comparison.Same))
+	builder.WriteString("\n")
+	builder.WriteString(comparison.Message)
+	builder.WriteString("\n\n---\n\n")
+	builder.WriteString(comparison.Diff)
+	return builder.String()
+}
+
+func writeArtifactComparisonKV(builder *strings.Builder, key string, value string) {
+	value = strings.TrimSpace(value)
+	if value == "" {
+		value = "-"
+	}
+	builder.WriteString("- ")
+	builder.WriteString(key)
+	builder.WriteString(": ")
+	builder.WriteString(value)
+	builder.WriteString("\n")
 }
