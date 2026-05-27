@@ -149,7 +149,7 @@ Goal: port the LLM and agent runtime without recreating the Wails bridge problem
 - [x] Port agent runtime as an internal service, not a UI callback.
 - [x] Unify registered tools and agent tools behind one dispatcher.
 - [x] Add approval queue UI and full-access policy UI.
-- [ ] Add rollback browser for model-authored file mutations.
+- [x] Add rollback browser for model-authored file mutations.
 - [ ] Add live activity tail with final-answer replacement behavior.
 
 Exit criteria:
@@ -243,11 +243,11 @@ Exit criteria:
 
 ## Next Batch
 
-1. Add rollback browser integration for model-authored file mutations.
-2. Add live activity tail with final-answer replacement behavior for native agent runs.
-3. Wire the native agent runtime and tool dispatcher into the assistant panel behind Ask/Agent mode.
-4. Add richer navigator context menus once the first action strip is validated in Fyne.
-5. Add assistant context-pack UI affordances for pinning the workspace root, directories, and multiple files explicitly.
+1. Add live activity tail with final-answer replacement behavior for native agent runs.
+2. Wire the native agent runtime and tool dispatcher into the assistant panel behind Ask/Agent mode.
+3. Add richer navigator context menus once the first action strip is validated in Fyne.
+4. Add assistant context-pack UI affordances for pinning the workspace root, directories, and multiple files explicitly.
+5. Add native artifact browser for task reports before porting the full artifact surface.
 
 ## Preserved Post-Port Backlog
 

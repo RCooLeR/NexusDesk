@@ -38,6 +38,8 @@ func NewDefaultDispatcher(deps Dependencies) *Dispatcher {
 		Tool{Descriptor: agent.ToolDescriptor{Name: "read_git_diff", Description: "Read a bounded staged/unstaged diff for one changed file.", Risk: "low", Inputs: "relPath"}, Handler: handlers.readGitDiff},
 		Tool{Descriptor: agent.ToolDescriptor{Name: "list_tasks", Description: "List safe discovered workspace tasks.", Risk: "low", Inputs: ""}, Handler: handlers.listTasks},
 		Tool{Descriptor: agent.ToolDescriptor{Name: "run_task", Description: "Run a discovered safe workspace task when shell approval is granted.", Risk: "high", Inputs: "taskId"}, Handler: handlers.runTask},
+		Tool{Descriptor: agent.ToolDescriptor{Name: "list_rollbacks", Description: "List rollback snapshots for approved workspace file mutations.", Risk: "low", Inputs: ""}, Handler: handlers.listRollbacks},
+		Tool{Descriptor: agent.ToolDescriptor{Name: "rollback_file_mutation", Description: "Restore or remove files from one rollback snapshot when write approval is granted.", Risk: "high", Inputs: "id"}, Handler: handlers.rollbackFileMutation},
 	)
 }
 
@@ -208,4 +210,46 @@ func (h defaultHandlers) runTask(ctx context.Context, call agent.ToolCall, reque
 		Observation: fmt.Sprintf("%s\nStatus: %s\nExit: %d\nStdout:\n%s\nStderr:\n%s", result.Message, result.Status, result.ExitCode, result.Stdout, result.Stderr),
 		Mutated:     false,
 	}, nil
+}
+
+func (h defaultHandlers) listRollbacks(ctx context.Context, call agent.ToolCall, request agent.Request) (agent.ToolResult, error) {
+	root, err := workspaceRoot(request)
+	if err != nil {
+		return toolError(call, "low", err), err
+	}
+	records, err := h.deps.Workspace.ListRollbacks(root)
+	if err != nil {
+		return toolError(call, "low", err), err
+	}
+	lines := []string{fmt.Sprintf("%d rollback snapshot(s).", len(records))}
+	for _, record := range records {
+		lines = append(lines, fmt.Sprintf("- %s [%s] %s target=%s paths=%d created=%s", record.ID, record.Status, record.Action, record.Target, len(record.Entries), record.CreatedAt.Format("2006-01-02 15:04:05")))
+	}
+	return toolOK(call, "low", strings.Join(lines, "\n")), nil
+}
+
+func (h defaultHandlers) rollbackFileMutation(ctx context.Context, call agent.ToolCall, request agent.Request) (agent.ToolResult, error) {
+	if !request.ApproveWrites {
+		err := errors.New("approval is required before applying a rollback")
+		return agent.ToolResult{Name: call.Name, Args: call.Args, Risk: "high", Observation: err.Error(), Error: err.Error()}, err
+	}
+	root, err := workspaceRoot(request)
+	if err != nil {
+		return toolError(call, "high", err), err
+	}
+	id := firstArg(call, "id", "rollbackId")
+	if id == "" {
+		err := errors.New("rollback id is required")
+		return toolError(call, "high", err), err
+	}
+	result, err := h.deps.Workspace.ApplyRollback(root, id)
+	if err != nil {
+		return toolError(call, "high", err), err
+	}
+	lines := []string{
+		result.Message,
+		"Restored: " + strings.Join(result.Restored, ", "),
+		"Removed: " + strings.Join(result.Removed, ", "),
+	}
+	return agent.ToolResult{Name: call.Name, Args: call.Args, Risk: "high", Observation: strings.Join(lines, "\n"), Mutated: true}, nil
 }

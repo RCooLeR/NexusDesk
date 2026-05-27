@@ -68,3 +68,45 @@ func TestRunTaskRequiresApproval(t *testing.T) {
 		t.Fatalf("expected approval error, got result=%#v err=%v", result, err)
 	}
 }
+
+func TestDefaultDispatcherRollbackTools(t *testing.T) {
+	root := t.TempDir()
+	workspace := workspaceSvc.New()
+	if err := os.WriteFile(filepath.Join(root, "notes.md"), []byte("before\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	applied, err := workspace.ApplyFileWrite(root, workspaceSvc.FileWriteRequest{RelPath: "notes.md", Content: "after\n"})
+	if err != nil {
+		t.Fatalf("ApplyFileWrite returned error: %v", err)
+	}
+	dispatcher := NewDefaultDispatcher(Dependencies{Workspace: workspace})
+	request := agent.Request{WorkspaceRoot: root}
+
+	listed, err := dispatcher.ExecuteTool(context.Background(), agent.ToolCall{Name: "list_rollbacks"}, request)
+	if err != nil {
+		t.Fatalf("list_rollbacks returned error: %v", err)
+	}
+	if !strings.Contains(listed.Observation, applied.RollbackID) {
+		t.Fatalf("rollback list missing id %q:\n%s", applied.RollbackID, listed.Observation)
+	}
+
+	blocked, err := dispatcher.ExecuteTool(context.Background(), agent.ToolCall{Name: "rollback_file_mutation", Args: map[string]string{"id": applied.RollbackID}}, request)
+	if err == nil || !strings.Contains(blocked.Observation, "approval") {
+		t.Fatalf("expected approval block, got result=%#v err=%v", blocked, err)
+	}
+
+	rolledBack, err := dispatcher.ExecuteTool(context.Background(), agent.ToolCall{Name: "rollback_file_mutation", Args: map[string]string{"id": applied.RollbackID}}, agent.Request{WorkspaceRoot: root, ApproveWrites: true})
+	if err != nil {
+		t.Fatalf("rollback_file_mutation returned error: %v", err)
+	}
+	if !rolledBack.Mutated || !strings.Contains(rolledBack.Observation, "applied") {
+		t.Fatalf("unexpected rollback result: %#v", rolledBack)
+	}
+	data, err := os.ReadFile(filepath.Join(root, "notes.md"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if string(data) != "before\n" {
+		t.Fatalf("rollback did not restore file, got %q", data)
+	}
+}
