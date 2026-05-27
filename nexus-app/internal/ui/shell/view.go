@@ -5,6 +5,7 @@ import (
 	"fyne.io/fyne/v2/container"
 	"fyne.io/fyne/v2/widget"
 
+	agentSvc "nexusdesk/internal/services/agent"
 	approvalsSvc "nexusdesk/internal/services/approvals"
 	assistantSvc "nexusdesk/internal/services/assistant"
 	editorSvc "nexusdesk/internal/services/editor"
@@ -14,6 +15,7 @@ import (
 	metadataSvc "nexusdesk/internal/services/metadata"
 	settingsSvc "nexusdesk/internal/services/settings"
 	tasksSvc "nexusdesk/internal/services/tasks"
+	toolsSvc "nexusdesk/internal/services/tools"
 	workspaceSvc "nexusdesk/internal/services/workspace"
 )
 
@@ -25,6 +27,7 @@ type View struct {
 	jobService       *jobsSvc.Service
 	approvalService  *approvalsSvc.Service
 	assistantService *assistantSvc.Service
+	agentService     *agentSvc.Service
 	metadataStore    *metadataSvc.Store
 	settingsStore    *settingsSvc.Store
 	taskService      *tasksSvc.Service
@@ -77,17 +80,27 @@ func New(window fyne.Window) *View {
 	taskOutput.Wrapping = fyne.TextWrapOff
 	taskOutput.Disable()
 	workspaceService := workspaceSvc.New()
-	assistantService := assistantSvc.New(settingsStore, workspaceService, llmSvc.NewClient())
+	llmClient := llmSvc.NewClient()
+	assistantService := assistantSvc.New(settingsStore, workspaceService, llmClient)
+	gitService := gitSvc.New()
+	taskService := tasksSvc.New()
+	toolDispatcher := toolsSvc.NewDefaultDispatcher(toolsSvc.Dependencies{
+		Workspace: workspaceService,
+		Git:       gitService,
+		Tasks:     taskService,
+	})
+	agentService := agentSvc.New(settingsStore, llmClient, toolDispatcher)
 	view := &View{
 		window:           window,
 		state:            NewState(),
 		workspaceService: workspaceService,
-		gitService:       gitSvc.New(),
+		gitService:       gitService,
 		jobService:       jobsSvc.New(),
 		approvalService:  approvalsSvc.New(),
 		assistantService: assistantService,
+		agentService:     agentService,
 		settingsStore:    settingsStore,
-		taskService:      tasksSvc.New(),
+		taskService:      taskService,
 		editorSession:    editorSession,
 		status:           widget.NewLabel("No workspace open"),
 		navigator:        container.NewStack(widget.NewLabel("Open a workspace to browse files.")),

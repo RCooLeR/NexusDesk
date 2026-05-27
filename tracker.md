@@ -65,7 +65,7 @@ cd nexus-app
 
 Some tracker items are intentionally out of phase order because they depend on missing foundations:
 
-- Phase 2 live-agent UI wiring is still pending because the native assistant panel has not been switched to the new agent runtime yet.
+- Phase 2 is functionally wired for first native Ask and Agent modes; persistence/audit depth is still pending.
 - Phase 3 AI diff summary and commit drafting are pending until the native assistant service exists.
 - Destructive hunk mutations remain pending until native approval policy is integrated into those specific Git actions.
 - Durable persisted jobs and task-run records now have a SQLite foundation, and completed native task runs write Markdown report artifacts linked from those records.
@@ -150,7 +150,7 @@ Goal: port the LLM and agent runtime without recreating the Wails bridge problem
 - [x] Unify registered tools and agent tools behind one dispatcher.
 - [x] Add approval queue UI and full-access policy UI.
 - [x] Add rollback browser for model-authored file mutations.
-- [ ] Add live activity tail with final-answer replacement behavior.
+- [x] Add live activity tail with final-answer replacement behavior.
 
 Exit criteria:
 
@@ -243,11 +243,11 @@ Exit criteria:
 
 ## Next Batch
 
-1. Add live activity tail with final-answer replacement behavior for native agent runs.
-2. Wire the native agent runtime and tool dispatcher into the assistant panel behind Ask/Agent mode.
-3. Add richer navigator context menus once the first action strip is validated in Fyne.
-4. Add assistant context-pack UI affordances for pinning the workspace root, directories, and multiple files explicitly.
-5. Add native artifact browser for task reports before porting the full artifact surface.
+1. Add richer navigator context menus once the first action strip is validated in Fyne.
+2. Add assistant context-pack UI affordances for pinning the workspace root, directories, and multiple files explicitly.
+3. Add native artifact browser for task reports before porting the full artifact surface.
+4. Add job/tool-run audit persistence for native agent runs.
+5. Add agent-safe write/append tools gated by full-project access and rollback snapshots.
 
 ## Preserved Post-Port Backlog
 
