@@ -51,7 +51,7 @@ func (v *View) newBottomPanel() fyne.CanvasObject {
 		container.NewTabItemWithIcon("Tasks", theme.MediaPlayIcon(), v.newTasksPanel()),
 		container.NewTabItemWithIcon("Jobs", theme.ListIcon(), v.newJobsPanel()),
 		container.NewTabItemWithIcon("Rollbacks", theme.ContentUndoIcon(), v.newRollbackPanel()),
-		container.NewTabItemWithIcon("Approvals", theme.ConfirmIcon(), widget.NewLabel("Approval queue and access policy UI will live here.")),
+		container.NewTabItemWithIcon("Approvals", theme.ConfirmIcon(), v.newApprovalsPanel()),
 	)
 	tabs.SetTabLocation(container.TabLocationTop)
 	return tabs

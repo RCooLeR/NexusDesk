@@ -141,7 +141,9 @@ Rollback browsing follows the same boundary: `nexus-app/internal/services/worksp
 
 Workspace tree actions call the same service boundary: the Fyne navigator action strip collects user intent and confirmation, then dispatches create, copy, rename/move, and delete through `nexus-app/internal/services/workspace` so rollback and rooted validation stay centralized.
 
-Native settings are split into `nexus-app/internal/services/settings` for non-secret provider/model/context persistence and `nexus-app/internal/ui/shell` for the Settings tab. Secret storage and access-policy persistence remain separate future work.
+Native approvals are split into `nexus-app/internal/services/approvals` for append-only approval records plus scoped full-project access policy, and `nexus-app/internal/ui/shell` for the bottom Approvals tab. Full project access is persisted under `.nexusdesk/approvals/policy.json`, scoped to the active workspace root, time-limited, and audited in `.nexusdesk/approvals/log.json`. This does not enable arbitrary shell execution; shell remains a separate high-risk policy.
+
+Native settings are split into `nexus-app/internal/services/settings` for non-secret provider/model/context persistence and `nexus-app/internal/ui/shell` for the Settings tab. Secret storage remains separate future work.
 
 Native LLM transport is service-owned: `nexus-app/internal/services/llm` owns OpenAI-compatible chat, streaming chat, provider model probes, Ollama runtime probes, context-window options, response reserve, and workspace-context sentinel escaping. The Fyne assistant panel calls it through `nexus-app/internal/services/assistant`, which owns the first assistant request orchestration and selected context attachment so widgets do not embed HTTP/provider details.
 

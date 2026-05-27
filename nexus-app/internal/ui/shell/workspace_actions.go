@@ -55,6 +55,7 @@ func (v *View) openWorkspace(root string) {
 	v.navigator.Refresh()
 	v.status.SetText(fmt.Sprintf("%s: %d indexed, %d ignored, %d unreadable", workspace.Name, workspace.Summary.Included, workspace.Summary.Ignored, workspace.Summary.Unreadable))
 	v.addActivity("Opened workspace " + workspace.Root)
+	v.refreshApprovals()
 }
 
 func (v *View) openWorkspaceNode(node domain.WorkspaceNode) {

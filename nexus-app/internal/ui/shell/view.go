@@ -5,6 +5,7 @@ import (
 	"fyne.io/fyne/v2/container"
 	"fyne.io/fyne/v2/widget"
 
+	approvalsSvc "nexusdesk/internal/services/approvals"
 	assistantSvc "nexusdesk/internal/services/assistant"
 	editorSvc "nexusdesk/internal/services/editor"
 	gitSvc "nexusdesk/internal/services/git"
@@ -22,6 +23,7 @@ type View struct {
 	workspaceService *workspaceSvc.Service
 	gitService       *gitSvc.Service
 	jobService       *jobsSvc.Service
+	approvalService  *approvalsSvc.Service
 	assistantService *assistantSvc.Service
 	metadataStore    *metadataSvc.Store
 	settingsStore    *settingsSvc.Store
@@ -53,6 +55,9 @@ type View struct {
 	jobStatus        *widget.Label
 	rollbackResults  *fyne.Container
 	rollbackStatus   *widget.Label
+	approvalResults  *fyne.Container
+	approvalStatus   *widget.Label
+	accessStatus     *widget.Label
 }
 
 func New(window fyne.Window) *View {
@@ -79,6 +84,7 @@ func New(window fyne.Window) *View {
 		workspaceService: workspaceService,
 		gitService:       gitSvc.New(),
 		jobService:       jobsSvc.New(),
+		approvalService:  approvalsSvc.New(),
 		assistantService: assistantService,
 		settingsStore:    settingsStore,
 		taskService:      tasksSvc.New(),
@@ -107,6 +113,9 @@ func New(window fyne.Window) *View {
 		jobStatus:        widget.NewLabel("No jobs yet."),
 		rollbackResults:  container.NewVBox(widget.NewLabel("Refresh rollback records to inspect undo points.")),
 		rollbackStatus:   widget.NewLabel("Rollback records have not been loaded."),
+		approvalResults:  container.NewVBox(widget.NewLabel("Open a workspace to inspect approval records.")),
+		approvalStatus:   widget.NewLabel("Approval records have not been loaded."),
+		accessStatus:     widget.NewLabel("Full project access: inactive"),
 	}
 	view.configureEditorTabs()
 	return view
