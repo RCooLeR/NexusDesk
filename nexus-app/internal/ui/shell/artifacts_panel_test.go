@@ -52,6 +52,30 @@ func TestArtifactLineageTextIncludesNodesAndEdges(t *testing.T) {
 	}
 }
 
+func TestArtifactSourcePathsPreferMetadataSources(t *testing.T) {
+	sources := artifactSourcePaths(
+		artifactsSvc.Artifact{SourcePaths: []string{"docs/a.md", "docs/a.md", "docs/b.md"}},
+		artifactsSvc.Lineage{Nodes: []artifactsSvc.LineageNode{{Kind: "source", Label: "fallback.md"}}},
+	)
+	if len(sources) != 2 || sources[0] != "docs/a.md" || sources[1] != "docs/b.md" {
+		t.Fatalf("unexpected source paths: %#v", sources)
+	}
+}
+
+func TestArtifactSourcePathsFallsBackToLineage(t *testing.T) {
+	sources := artifactSourcePaths(
+		artifactsSvc.Artifact{},
+		artifactsSvc.Lineage{Nodes: []artifactsSvc.LineageNode{
+			{Kind: "artifact", Label: "report.md"},
+			{Kind: "source", Label: "docs/a.md"},
+			{Kind: "source", Label: "docs/a.md"},
+		}},
+	)
+	if len(sources) != 1 || sources[0] != "docs/a.md" {
+		t.Fatalf("unexpected lineage source paths: %#v", sources)
+	}
+}
+
 func TestFormatArtifactComparison(t *testing.T) {
 	text := formatArtifactComparison(artifactsSvc.ArtifactComparison{
 		Kind:      "document-report",

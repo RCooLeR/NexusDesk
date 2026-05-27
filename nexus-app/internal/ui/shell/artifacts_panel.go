@@ -28,7 +28,10 @@ func (v *View) newArtifactsPanel() fyne.CanvasObject {
 	header := container.NewBorder(nil, nil, v.artifactStatus, container.NewHBox(documentReport, refresh), search)
 	listScroll := container.NewScroll(v.artifactResults)
 	listScroll.SetMinSize(fyne.NewSize(260, 110))
-	preview := container.NewBorder(widget.NewLabel("Artifact preview and lineage"), nil, nil, nil, v.artifactPreview)
+	sourceScroll := container.NewVScroll(v.artifactSources)
+	sourceScroll.SetMinSize(fyne.NewSize(320, 80))
+	previewHeader := container.NewVBox(widget.NewLabel("Artifact preview and lineage"), v.artifactSourceStatus, sourceScroll)
+	preview := container.NewBorder(previewHeader, nil, nil, nil, v.artifactPreview)
 	split := container.NewVSplit(listScroll, preview)
 	split.Offset = 0.42
 	return container.NewBorder(header, nil, nil, nil, split)
@@ -74,6 +77,7 @@ func (v *View) generateDocumentSetArtifact() {
 		return
 	}
 	v.artifactPreview.SetText("")
+	v.refreshArtifactSources(nil)
 	v.artifactStatus.SetText("Created " + artifact.RelPath)
 	v.addActivity(artifact.Message)
 	v.refreshArtifactsWithQuery("kind:document-report")
@@ -131,6 +135,7 @@ func (v *View) previewArtifact(artifact artifactsSvc.Artifact) {
 		return
 	}
 	v.artifactPreview.SetText(artifactLineageText(lineage) + "\n\n---\n\n" + text)
+	v.refreshArtifactSources(artifactSourcePaths(artifact, lineage))
 	v.artifactStatus.SetText("Previewing " + artifact.RelPath)
 	v.addActivity("Previewed artifact " + artifact.RelPath + ".")
 }
@@ -153,6 +158,7 @@ func (v *View) compareArtifact(artifact artifactsSvc.Artifact) {
 		}
 		v.artifactStatus.SetText("Compare base selected: " + artifact.RelPath)
 		v.artifactPreview.SetText("Select another " + artifact.Kind + " artifact to compare with:\n\n" + artifact.RelPath)
+		v.refreshArtifactSources(nil)
 		v.addActivity("Selected artifact compare base " + artifact.RelPath + ".")
 		return
 	}
@@ -173,6 +179,7 @@ func (v *View) compareArtifact(artifact artifactsSvc.Artifact) {
 		return
 	}
 	v.artifactPreview.SetText(formatArtifactComparison(comparison))
+	v.refreshArtifactSources(nil)
 	v.artifactStatus.SetText(comparison.Message)
 	v.addActivity(comparison.Message)
 }
@@ -193,6 +200,7 @@ func (v *View) archiveArtifact(artifact artifactsSvc.Artifact) {
 			return
 		}
 		v.artifactPreview.SetText("")
+		v.refreshArtifactSources(nil)
 		v.addActivity("Archived artifact to " + archived.RelPath + ".")
 		v.refreshArtifacts()
 	}, v.window)
@@ -213,9 +221,56 @@ func (v *View) deleteArtifact(artifact artifactsSvc.Artifact) {
 			return
 		}
 		v.artifactPreview.SetText("")
+		v.refreshArtifactSources(nil)
 		v.addActivity("Deleted artifact " + artifact.RelPath + ".")
 		v.refreshArtifacts()
 	}, v.window)
+}
+
+func (v *View) refreshArtifactSources(sources []string) {
+	if v.artifactSources == nil || v.artifactSourceStatus == nil {
+		return
+	}
+	v.artifactSources.Objects = nil
+	if len(sources) == 0 {
+		v.artifactSourceStatus.SetText("Sources: none available for this artifact.")
+		v.artifactSources.Add(widget.NewLabel("No cited source files."))
+		v.artifactSources.Refresh()
+		return
+	}
+	v.artifactSourceStatus.SetText(fmt.Sprintf("Sources: %d cited file(s).", len(sources)))
+	for _, source := range sources {
+		source := source
+		label := widget.NewLabel(source)
+		label.Truncation = fyne.TextTruncateEllipsis
+		open := widget.NewButtonWithIcon("", theme.FileIcon(), func() {
+			v.openArtifactSource(source)
+		})
+		open.Importance = widget.LowImportance
+		pin := widget.NewButtonWithIcon("", theme.MailAttachmentIcon(), func() {
+			v.pinAssistantContextPath(source)
+		})
+		pin.Importance = widget.LowImportance
+		v.artifactSources.Add(container.NewBorder(nil, nil, container.NewHBox(open, pin), nil, label))
+	}
+	v.artifactSources.Refresh()
+}
+
+func (v *View) openArtifactSource(relPath string) {
+	workspace := v.state.Workspace()
+	if workspace.Root == "" {
+		v.addActivity("Open a workspace before opening artifact sources.")
+		return
+	}
+	preview, err := v.workspaceService.PreviewFile(workspace.Root, relPath)
+	if err != nil {
+		dialog.ShowError(err, v.window)
+		return
+	}
+	v.state.SetSelectedPath(relPath)
+	v.openPreviewTab(preview)
+	v.refreshAssistantContextPins()
+	v.addActivity("Opened artifact source " + relPath + ".")
 }
 
 func artifactRows(
@@ -321,6 +376,34 @@ func artifactLineageText(lineage artifactsSvc.Lineage) string {
 		}
 	}
 	return builder.String()
+}
+
+func artifactSourcePaths(artifact artifactsSvc.Artifact, lineage artifactsSvc.Lineage) []string {
+	seen := map[string]bool{}
+	sources := make([]string, 0, len(artifact.SourcePaths))
+	for _, source := range artifact.SourcePaths {
+		source = strings.TrimSpace(source)
+		if source == "" || seen[source] {
+			continue
+		}
+		seen[source] = true
+		sources = append(sources, source)
+	}
+	if len(sources) > 0 {
+		return sources
+	}
+	for _, node := range lineage.Nodes {
+		if node.Kind != "source" {
+			continue
+		}
+		source := strings.TrimSpace(node.Label)
+		if source == "" || seen[source] {
+			continue
+		}
+		seen[source] = true
+		sources = append(sources, source)
+	}
+	return sources
 }
 
 func formatArtifactComparison(comparison artifactsSvc.ArtifactComparison) string {

@@ -62,6 +62,8 @@ type View struct {
 	artifactResults        *fyne.Container
 	artifactStatus         *widget.Label
 	artifactPreview        *widget.Entry
+	artifactSourceStatus   *widget.Label
+	artifactSources        *fyne.Container
 	artifactCompareLeft    artifactsCompareSelection
 	chatHistoryResults     *fyne.Container
 	chatHistoryStatus      *widget.Label
@@ -165,6 +167,10 @@ func New(window fyne.Window) *View {
 		artifactResults:  container.NewVBox(widget.NewLabel("Refresh artifacts to inspect generated task reports.")),
 		artifactStatus:   widget.NewLabel("Artifacts have not been loaded."),
 		artifactPreview:  artifactPreview,
+		artifactSourceStatus: widget.NewLabel(
+			"Artifact sources have not been loaded.",
+		),
+		artifactSources: container.NewVBox(widget.NewLabel("Preview an artifact to inspect cited sources.")),
 		chatHistoryResults: container.NewVBox(
 			widget.NewLabel("Open a workspace to search persisted chat messages."),
 		),

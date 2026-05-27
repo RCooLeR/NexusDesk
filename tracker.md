@@ -215,6 +215,7 @@ Goal: restore generated-output workflows with provenance and native inspection.
 - [x] Add first native document-set Markdown artifact writer from selected file/folder/project context with source lineage.
 - [x] Add first same-kind artifact comparison surface with read-only generated-output diffs.
 - [x] Add first artifact-to-assistant/agent context affordance so generated outputs can be cited in follow-up prompts.
+- [x] Add first document-set artifact source actions for opening and pinning cited source files.
 - [ ] Add document preview/extraction for Markdown, TXT, PDF, DOCX, XLSX, HTML/XML.
 - [ ] Add presentation/report generation targets after artifact lineage is stable.
 - [ ] Add read-only operations scanners for Dockerfiles, Compose, env/config/logs.
@@ -259,11 +260,11 @@ Exit criteria:
 
 ## Next Batch
 
-1. Add first document-set artifact actions for opening cited source files from lineage.
-2. Add compare-result artifact export once the read-only comparison flow stabilizes.
-3. Add first document preview/extraction service slice for Markdown/TXT/HTML/XML artifacts.
-4. Add first native data profiling slice for CSV/TSV/JSON files.
-5. Add first native metadata/history navigation from chat, artifacts, jobs, and agent audit records.
+1. Add compare-result artifact export once the read-only comparison flow stabilizes.
+2. Add first document preview/extraction service slice for Markdown/TXT/HTML/XML artifacts.
+3. Add first native data profiling slice for CSV/TSV/JSON files.
+4. Add first native metadata/history navigation from chat, artifacts, jobs, and agent audit records.
+5. Add artifact source freshness checks so reports can warn when cited files moved or changed.
 
 ## Preserved Post-Port Backlog
 
