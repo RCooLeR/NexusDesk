@@ -54,11 +54,33 @@ func (v *View) newDataPanel() fyne.CanvasObject {
 	loadNotebookButton := widget.NewButtonWithIcon("Load notebook", theme.FolderOpenIcon(), v.loadSelectedDatasetNotebook)
 	runNotebookButton := widget.NewButtonWithIcon("Run notebook", theme.MediaPlayIcon(), v.runLatestDatasetNotebook)
 	exportNotebookButton := widget.NewButtonWithIcon("Export notebook", theme.DocumentSaveIcon(), v.exportDatasetNotebookArtifact)
+	refreshNotebookCellsButton := widget.NewButtonWithIcon("Cells", theme.ViewRefreshIcon(), v.refreshNotebookCellSelector)
+	moveNotebookCellUpButton := widget.NewButtonWithIcon("Move up", theme.MoveUpIcon(), func() {
+		v.moveSelectedNotebookCell(-1)
+	})
+	moveNotebookCellDownButton := widget.NewButtonWithIcon("Move down", theme.MoveDownIcon(), func() {
+		v.moveSelectedNotebookCell(1)
+	})
+	deleteNotebookCellButton := widget.NewButtonWithIcon("Delete cell", theme.DeleteIcon(), v.deleteSelectedNotebookCell)
+	notebookLabel := widget.NewEntry()
+	notebookLabel.SetPlaceHolder("Notebook label")
+	notebookLabel.SetText("SQL Notebook")
+	notebookCellSelect := widget.NewSelect([]string{}, func(choice string) {
+		v.dataNotebookCellIndex = notebookCellOptionIndex(v.dataNotebookCellSelect.Options, choice)
+	})
+	notebookCellSelect.PlaceHolder = "Notebook cells"
+	v.dataNotebookLabel = notebookLabel
+	v.dataNotebookCellSelect = notebookCellSelect
 	reuseSQLButton := widget.NewButtonWithIcon("Use latest SQL", theme.ContentPasteIcon(), v.reuseLatestDatasetSQLRun)
 	rerunSQLButton := widget.NewButtonWithIcon("Rerun latest SQL", theme.MediaReplayIcon(), v.rerunLatestDatasetSQLRun)
+	notebookControls := container.NewVBox(
+		dataActionStrip(addSQLCellButton, addChartCellButton, saveNotebookButton, loadNotebookButton, runNotebookButton, exportNotebookButton),
+		container.NewGridWithColumns(2, notebookLabel, notebookCellSelect),
+		dataActionStrip(refreshNotebookCellsButton, moveNotebookCellUpButton, moveNotebookCellDownButton, deleteNotebookCellButton),
+	)
 	actions := container.NewAppTabs(
 		container.NewTabItem("Source", dataActionStrip(profileButton, queryButton, sqlButton, sqliteButton, sqliteQueryButton, cancelSQLiteButton)),
-		container.NewTabItem("Notebook", dataActionStrip(addSQLCellButton, addChartCellButton, saveNotebookButton, loadNotebookButton, runNotebookButton, exportNotebookButton)),
+		container.NewTabItem("Notebook", notebookControls),
 		container.NewTabItem("Visuals", dataActionStrip(chartButton, exportChartButton, dashboardButton, exportDashboardButton)),
 		container.NewTabItem("History", dataActionStrip(historyButton, reuseSQLButton, rerunSQLButton, saveSQLiteQueryButton, savedSQLiteQueriesButton, exportSQLiteCSVButton, exportSQLiteReportButton)),
 	)
@@ -125,9 +147,11 @@ func (v *View) insertNotebookCellTemplate(kind string) {
 	v.dataQueryEntry.SetText(updated)
 	if kind == "chart" {
 		v.dataProfileStatus.SetText("Added chart notebook cell template.")
+		v.refreshNotebookCellSelector()
 		return
 	}
 	v.dataProfileStatus.SetText("Added SQL notebook cell template.")
+	v.refreshNotebookCellSelector()
 }
 
 func (v *View) runSelectedSQLiteQuery(sqlText string) {
@@ -330,9 +354,14 @@ func (v *View) saveSelectedDatasetNotebook() {
 		v.dataProfileStatus.SetText("Write a SELECT query before saving a SQL notebook.")
 		return
 	}
+	label := notebookLabelForDataset(selected)
+	if v.dataNotebookLabel != nil && strings.TrimSpace(v.dataNotebookLabel.Text) != "" {
+		label = strings.TrimSpace(v.dataNotebookLabel.Text)
+	}
 	saved, err := v.datasetService.SaveNotebook(workspace.Root, datasetsSvc.NotebookSaveRequest{
+		ID:      v.dataActiveNotebookID,
 		RelPath: selected,
-		Label:   notebookLabelForDataset(selected),
+		Label:   label,
 		Cells:   notebookCellsFromEditor(sqlText),
 	})
 	if err != nil {
@@ -341,6 +370,11 @@ func (v *View) saveSelectedDatasetNotebook() {
 		return
 	}
 	v.persistDatasetDependency(notebookDependencyRecord(selected, saved))
+	v.dataActiveNotebookID = saved.ID
+	if v.dataNotebookLabel != nil {
+		v.dataNotebookLabel.SetText(saved.Label)
+	}
+	v.refreshNotebookCellSelector()
 	v.dataLastNotebookRun = datasetsSvc.NotebookRunResult{}
 	v.dataProfileStatus.SetText(fmt.Sprintf("Saved SQL notebook %s with %d cell(s).", saved.Label, len(saved.Cells)))
 	v.setDataSummary(formatDatasetNotebooks([]datasetsSvc.Notebook{saved}))
@@ -369,7 +403,12 @@ func (v *View) loadSelectedDatasetNotebook() {
 		v.setDataSummary(formatDatasetNotebooks(nil))
 		return
 	}
+	v.dataActiveNotebookID = notebooks[0].ID
+	if v.dataNotebookLabel != nil {
+		v.dataNotebookLabel.SetText(notebooks[0].Label)
+	}
 	v.dataQueryEntry.SetText(formatNotebookForEditor(notebooks[0]))
+	v.refreshNotebookCellSelector()
 	v.dataLastNotebookRun = datasetsSvc.NotebookRunResult{}
 	v.dataProfileStatus.SetText(fmt.Sprintf("Loaded %d SQL notebook(s) for %s.", len(notebooks), selected))
 	v.setDataSummary(formatDatasetNotebooks(notebooks))

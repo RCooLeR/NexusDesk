@@ -68,6 +68,10 @@ type View struct {
 	dataSQLiteQueryMu       sync.Mutex
 	dataSQLiteCancel        func()
 	dataSQLiteQueryID       string
+	dataNotebookLabel       *widget.Entry
+	dataNotebookCellSelect  *widget.Select
+	dataNotebookCellIndex   int
+	dataActiveNotebookID    string
 	operationsResults       *fyne.Container
 	operationsStatus        *widget.Label
 	operationsDetail        *widget.Entry

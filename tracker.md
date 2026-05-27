@@ -289,7 +289,7 @@ Exit criteria:
 
 ## Next Batch
 
-1. Continue native SQL notebooks with richer explain output and fuller cell management.
+1. Continue native SQL notebooks with richer explain output, notebook-level result navigation, and a less text-box-like editor surface.
 2. Route long indexing, OCR, dump imports, connector pulls, report generation, and long agent runs through jobs.
 3. Add dump import job design before any Docker/database imports.
 4. Add richer SQLite connector lineage actions on top of cancellation, saved queries, and CSV/Markdown exports.
@@ -325,7 +325,8 @@ The Fyne migration must not drop product ambition, but this section is intention
 - [x] First native SQL history reuse/rerun actions for selected dataset or SQLite sources.
 - [x] First native Data panel result tabs for notebook summary, rows, plan, and charts.
 - [x] First native visual notebook controls for inserting SQL and chart cell templates without memorizing directives.
-- [ ] Full SQL notebook shell with richer explain output, cell selection/reorder/delete controls, and notebook-level result navigation.
+- [x] First native SQL notebook cell selector with move up/down, delete, editor outline refresh, and save-over-loaded-notebook identity.
+- [ ] Full SQL notebook shell with richer explain output, notebook-level result navigation, per-cell run/export, and a dedicated editor surface beyond directive text.
 - [x] First SQLite workspace database browser with schema, views, indexes, row counts, capped samples, and relationship hints.
 - [x] First SQLite connector query preview with SELECT/WITH guard, single-statement validation, visible default row cap/timeout, SQL run metadata, dependency lineage, and read-only result rendering.
 - [x] SQLite connector saved queries plus CSV/Markdown result exports.

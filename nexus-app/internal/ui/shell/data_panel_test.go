@@ -383,6 +383,44 @@ func TestFormatNotebookForEditorRoundTripsCellDirectives(t *testing.T) {
 	}
 }
 
+func TestNotebookCellControlsMoveAndDeleteCells(t *testing.T) {
+	cells := notebookCellsFromEditor("-- cell: First\nselect id from dataset\n\n-- chart: Chart\nselect channel, spend from dataset\n\n-- cell: Third\nselect * from dataset limit 3")
+	moved, activeIndex, ok := moveNotebookCells(cells, 2, -1)
+	if !ok || activeIndex != 1 {
+		t.Fatalf("expected third cell to move up, active=%d ok=%v", activeIndex, ok)
+	}
+	if moved[1].Label != "Third" || moved[1].ID != "cell-2" {
+		t.Fatalf("unexpected moved cells: %#v", moved)
+	}
+	deleted, activeIndex, ok := deleteNotebookCell(moved, 1)
+	if !ok || activeIndex != 1 || len(deleted) != 2 {
+		t.Fatalf("expected moved cell to delete, active=%d ok=%v cells=%#v", activeIndex, ok, deleted)
+	}
+	if deleted[1].Label != "Chart" || deleted[1].ID != "cell-2" {
+		t.Fatalf("unexpected remaining cells: %#v", deleted)
+	}
+	if _, _, ok := deleteNotebookCell(deleted[:1], 0); ok {
+		t.Fatal("expected last notebook cell deletion to be blocked")
+	}
+}
+
+func TestNotebookCellOptionsAndOutlineMarkActiveCell(t *testing.T) {
+	cells := []datasetsSvc.NotebookCell{
+		{ID: "cell-1", Kind: "sql", Label: "Top spend", SQL: "select * from dataset limit 5"},
+		{ID: "cell-2", Kind: "chart", Label: "Spend chart", SQL: "select channel, spend from dataset"},
+	}
+	options := notebookCellOptions(cells)
+	if len(options) != 2 || notebookCellOptionIndex(options, options[1]) != 1 {
+		t.Fatalf("unexpected notebook options: %#v", options)
+	}
+	outline := formatNotebookCellOutline(cells, 1)
+	for _, expected := range []string{"# SQL Notebook Cells", "* 2. Spend chart [chart]", "select channel, spend from dataset"} {
+		if !strings.Contains(outline, expected) {
+			t.Fatalf("outline missing %q:\n%s", expected, outline)
+		}
+	}
+}
+
 func TestFormatNotebookRunResultIncludesCellRowsPlansAndChart(t *testing.T) {
 	result := datasetsSvc.NotebookRunResult{
 		RelPath:    "sales.csv",
