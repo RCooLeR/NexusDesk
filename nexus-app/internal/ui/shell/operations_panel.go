@@ -10,13 +10,15 @@ import (
 	"fyne.io/fyne/v2/theme"
 	"fyne.io/fyne/v2/widget"
 
+	artifactsSvc "nexusdesk/internal/services/artifacts"
 	operationsSvc "nexusdesk/internal/services/operations"
 )
 
 func (v *View) newOperationsPanel() fyne.CanvasObject {
 	scanButton := widget.NewButtonWithIcon("Scan ops files", theme.SearchIcon(), v.scanOperationsFiles)
 	inspectButton := widget.NewButtonWithIcon("Inspect selected", theme.DocumentIcon(), v.inspectSelectedOperationsFile)
-	actions := container.NewHBox(scanButton, inspectButton)
+	exportButton := widget.NewButtonWithIcon("Export runbook", theme.DocumentSaveIcon(), v.exportSelectedOperationsRunbook)
+	actions := container.NewHBox(scanButton, inspectButton, exportButton)
 	header := container.NewBorder(nil, nil, nil, actions, v.operationsStatus)
 	results := container.NewScroll(v.operationsResults)
 	results.SetMinSize(fyne.NewSize(280, 120))
@@ -82,11 +84,70 @@ func (v *View) inspectOperationsFile(relPath string) {
 	v.addActivity("Inspected operations file " + inspection.File.RelPath + ".")
 }
 
+func (v *View) exportSelectedOperationsRunbook() {
+	workspace := v.state.Workspace()
+	if workspace.Root == "" {
+		v.operationsStatus.SetText("Open a workspace before exporting an operations runbook.")
+		return
+	}
+	selected := selectedPathOrEmpty(v)
+	if selected == "" {
+		v.operationsStatus.SetText("Select an operations file before exporting a runbook.")
+		return
+	}
+	inspection, err := v.operationsService.Inspect(workspace.Root, selected)
+	if err != nil {
+		v.operationsStatus.SetText("Operations runbook export failed for " + selected)
+		dialog.ShowError(err, v.window)
+		return
+	}
+	store, err := artifactsSvc.NewStore(workspace.Root)
+	if err != nil {
+		dialog.ShowError(err, v.window)
+		return
+	}
+	artifact, err := store.WriteOperationsRunbook(operationsRunbookArtifactInput(inspection))
+	if err != nil {
+		dialog.ShowError(err, v.window)
+		return
+	}
+	v.operationsStatus.SetText("Created operations runbook " + artifact.RelPath)
+	v.operationsDetail.SetText(formatOperationsInspection(inspection))
+	v.persistArtifactRecord(artifact)
+	v.addActivity(artifact.Message)
+	v.refreshArtifacts()
+	v.refreshHistory("", "")
+}
+
 func formatOperationsScanStatus(result operationsSvc.ScanResult) string {
 	if strings.TrimSpace(result.Message) != "" {
 		return result.Message
 	}
 	return fmt.Sprintf("%d operations files found.", len(result.Files))
+}
+
+func operationsRunbookArtifactInput(inspection operationsSvc.Inspection) artifactsSvc.OperationsRunbookReport {
+	services := make([]artifactsSvc.OperationsServiceSummary, 0, len(inspection.Services))
+	for _, service := range inspection.Services {
+		services = append(services, artifactsSvc.OperationsServiceSummary{
+			Name:      service.Name,
+			Image:     service.Image,
+			Ports:     append([]string{}, service.Ports...),
+			Volumes:   append([]string{}, service.Volumes...),
+			DependsOn: append([]string{}, service.DependsOn...),
+		})
+	}
+	return artifactsSvc.OperationsRunbookReport{
+		Title:       "Operations Runbook - " + inspection.File.Name,
+		SourcePath:  inspection.File.RelPath,
+		Kind:        string(inspection.File.Kind),
+		Size:        inspection.File.Size,
+		Content:     formatOperationsInspection(inspection),
+		Services:    services,
+		Warnings:    append([]string{}, inspection.Warnings...),
+		Truncated:   inspection.Truncated,
+		GeneratedBy: "Nexus native operations inspector",
+	}
 }
 
 func formatOperationsFileLabel(file operationsSvc.File) string {

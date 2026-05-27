@@ -76,6 +76,26 @@ type ChartArtifactReport struct {
 	Truncated      bool
 }
 
+type OperationsRunbookReport struct {
+	Title       string
+	SourcePath  string
+	Kind        string
+	Size        int64
+	Content     string
+	Services    []OperationsServiceSummary
+	Warnings    []string
+	Truncated   bool
+	GeneratedBy string
+}
+
+type OperationsServiceSummary struct {
+	Name      string
+	Image     string
+	Ports     []string
+	Volumes   []string
+	DependsOn []string
+}
+
 type ListOptions struct {
 	Query           string
 	IncludeArchived bool

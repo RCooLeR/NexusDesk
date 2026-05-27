@@ -98,6 +98,7 @@ Current implementation:
 - CSV query exports are created only from bounded query results and exclusive artifact writes
 - chart artifacts are created only through bounded CSV aggregation and exclusive artifact writes
 - scan-report artifacts are created from backend scan status and exclusive artifact writes
+- operations runbook artifacts are created only from bounded, redacted, read-only operations inspections and exclusive artifact writes
 - artifact archive/delete actions validate workspace-relative artifact paths and move/remove sibling metadata sidecars through backend methods
 - explicit agent tool dry-runs/executions persist auditable records under `.nexusdesk/tool-runs/log.json`
 - SQLite metadata preparation writes schema and manifest files under `.nexusdesk/metadata/`, opens `.nexusdesk/metadata/nexusdesk.sqlite` through `modernc.org/sqlite`, applies the schema, and accepts direct fresh writes for chats, approvals, artifacts, tool runs, jobs, SQL runs, and dataset dependencies
@@ -166,7 +167,7 @@ High-risk actions:
 
 High-risk Docker actions require approval. The UI should show the exact planned action and affected resources.
 
-Operations Studio can surface Docker state, logs, Compose files, and generated configs, but it should keep start, stop, build, run, exec, volume, and network actions behind the same high-risk approval flow. The current implementation parses selected Compose files into service names, images, ports, volumes, and dependencies without calling Docker or mutating local state.
+Operations Studio can surface Docker state, logs, Compose files, and generated configs, but it should keep start, stop, build, run, exec, volume, and network actions behind the same high-risk approval flow. The current implementation parses selected Compose files into service names, images, ports, volumes, and dependencies without calling Docker or mutating local state, and its generated runbooks cite only the inspected source file plus redacted bounded evidence.
 
 ## Network Security
 

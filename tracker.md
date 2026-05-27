@@ -228,6 +228,7 @@ Goal: restore generated-output workflows with provenance and native inspection.
 - [x] Extend native document extraction artifacts to DOCX and PDF preview text with PDF page metadata.
 - [ ] Add presentation/report generation targets after artifact lineage is stable.
 - [x] Add read-only operations scanners for Dockerfiles, Compose, env/config/logs.
+- [x] Add first operations runbook artifact export from inspected Docker/Compose/env/config/log evidence.
 - [ ] Add job-based OCR/document extraction before heavy parsing.
 
 Exit criteria:
@@ -271,11 +272,11 @@ Exit criteria:
 
 ## Next Batch
 
-1. Add the first operations artifact/runbook export from inspected Docker/Compose/env/config/log evidence.
-2. Expand dataset profiling from the current CSV/TSV/JSON/XLSX slice to NDJSON, Parquet metadata, and logs.
-3. Extend native charting beyond first SVG bar charts to line charts and richer dashboard visuals.
-4. Promote SQL run/dependency history into Data & Analytics and History navigation instead of only persisting rows.
-5. Start JSON compatibility import from Wails-era workspace metadata into native SQLite.
+1. Expand dataset profiling from the current CSV/TSV/JSON/XLSX slice to NDJSON, Parquet metadata, and logs.
+2. Extend native charting beyond first SVG bar charts to line charts and richer dashboard visuals.
+3. Promote SQL run/dependency history into Data & Analytics and History navigation instead of only persisting rows.
+4. Start JSON compatibility import from Wails-era workspace metadata into native SQLite.
+5. Add Compose service topology summary from inspected Compose files.
 
 ## Preserved Post-Port Backlog
 
@@ -348,7 +349,7 @@ The Fyne migration must not drop product ambition, but this section is intention
 - [x] Read-only Dockerfile, Compose, env/config, script, and log inspection.
 - [ ] Compose service topology and config validation.
 - [ ] Container/image/log workflows only after approval policy and job model are mature.
-- [ ] Runbook artifacts and operations summaries with source citations.
+- [x] First runbook artifacts and operations summaries with source citations.
 - [ ] Strict separation between read-only inspection and mutating Docker/system actions.
 
 ### Security, Access, And Audit

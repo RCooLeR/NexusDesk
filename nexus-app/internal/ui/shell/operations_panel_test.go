@@ -29,3 +29,22 @@ func TestFormatOperationsFileLabelShowsKind(t *testing.T) {
 		t.Fatalf("unexpected label: %s", label)
 	}
 }
+
+func TestOperationsRunbookArtifactInputPreservesEvidence(t *testing.T) {
+	input := operationsRunbookArtifactInput(operationsSvc.Inspection{
+		File: operationsSvc.File{RelPath: "compose.yml", Name: "compose.yml", Kind: operationsSvc.FileKindCompose, Size: 42},
+		Text: "services:\n  api:\n    image: app\n",
+		Services: []operationsSvc.ComposeService{
+			{Name: "api", Image: "app", Ports: []string{"8080:80"}},
+		},
+		Warnings: []string{"Read-only inspection only."},
+	})
+	if input.SourcePath != "compose.yml" || input.Kind != "compose" || len(input.Services) != 1 {
+		t.Fatalf("unexpected operations runbook input: %#v", input)
+	}
+	for _, want := range []string{"# Operations Inspection", "compose.yml", "Read-only inspection only."} {
+		if !strings.Contains(input.Content, want) {
+			t.Fatalf("runbook content missing %q:\n%s", want, input.Content)
+		}
+	}
+}
