@@ -47,6 +47,7 @@ type View struct {
 	editorTabs              *container.DocTabs
 	openTabs                map[string]*container.TabItem
 	tabIDs                  map[*container.TabItem]string
+	navigatorClipboard      navigatorClipboard
 	activityLog             *widget.RichText
 	activityText            string
 	searchResults           *fyne.Container

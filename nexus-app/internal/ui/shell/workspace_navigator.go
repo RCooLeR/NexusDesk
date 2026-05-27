@@ -15,11 +15,18 @@ import (
 const (
 	navigatorActionCreate     = "Create file near selection"
 	navigatorActionCopy       = "Copy selected file"
+	navigatorActionCut        = "Cut selected file"
+	navigatorActionPaste      = "Paste file into selection"
 	navigatorActionRename     = "Rename or move selected file"
 	navigatorActionDelete     = "Delete selected file"
 	navigatorActionCopyPath   = "Copy relative path"
 	navigatorActionUseContext = "Use as assistant context"
 )
+
+type navigatorClipboard struct {
+	Mode          string
+	SourceRelPath string
+}
 
 func (v *View) newWorkspaceNavigator() fyne.CanvasObject {
 	summary := widget.NewLabel(navigatorSelectionSummary(""))
@@ -105,25 +112,34 @@ func navigatorVisibilitySummary(includeIgnored bool, summary domain.ScanSummary)
 	return fmt.Sprintf("%d shown, %d ignored hidden", summary.Included, summary.Ignored)
 }
 
-func navigatorActionOptions(selected string, kind domain.WorkspaceNodeKind) []string {
+func navigatorActionOptions(selected string, kind domain.WorkspaceNodeKind, hasClipboard bool) []string {
 	if selected == "" {
 		return []string{navigatorActionCreate}
 	}
 	if kind == domain.NodeDirectory {
-		return []string{
+		options := []string{
 			navigatorActionCreate,
 			navigatorActionCopyPath,
 			navigatorActionUseContext,
 		}
+		if hasClipboard {
+			options = append([]string{navigatorActionCreate, navigatorActionPaste}, options[1:]...)
+		}
+		return options
 	}
-	return []string{
+	options := []string{
 		navigatorActionCreate,
 		navigatorActionCopy,
+		navigatorActionCut,
 		navigatorActionRename,
 		navigatorActionDelete,
 		navigatorActionCopyPath,
 		navigatorActionUseContext,
 	}
+	if hasClipboard {
+		options = append(options[:3], append([]string{navigatorActionPaste}, options[3:]...)...)
+	}
+	return options
 }
 
 func navigatorContextMenuItems(options []string, onAction func(string)) []*fyne.MenuItem {
@@ -141,7 +157,7 @@ func navigatorContextMenuItems(options []string, onAction func(string)) []*fyne.
 }
 
 func (v *View) showNavigatorContextMenu(node domain.WorkspaceNode, event *fyne.PointEvent) {
-	options := navigatorActionOptions(node.RelPath, node.Kind)
+	options := navigatorActionOptions(node.RelPath, node.Kind, v.hasNavigatorClipboard())
 	menu := fyne.NewMenu("", navigatorContextMenuItems(options, v.handleNavigatorAction)...)
 	widget.ShowPopUpMenuAtPosition(menu, v.window.Canvas(), event.AbsolutePosition)
 }
@@ -151,7 +167,11 @@ func (v *View) handleNavigatorAction(action string) {
 	case navigatorActionCreate:
 		v.promptCreateFile()
 	case navigatorActionCopy:
-		v.promptCopyFile()
+		v.setNavigatorClipboard("copy")
+	case navigatorActionCut:
+		v.setNavigatorClipboard("cut")
+	case navigatorActionPaste:
+		v.pasteNavigatorClipboard()
 	case navigatorActionRename:
 		v.promptRenameFile()
 	case navigatorActionDelete:

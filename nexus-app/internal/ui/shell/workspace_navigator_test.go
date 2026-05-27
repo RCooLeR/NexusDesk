@@ -26,18 +26,26 @@ func TestDefaultCopyPathAddsCopySuffix(t *testing.T) {
 }
 
 func TestNavigatorActionOptionsRespectSelectionKind(t *testing.T) {
-	fileOptions := navigatorActionOptions("docs/readme.md", domain.NodeFile)
-	for _, option := range []string{navigatorActionCopy, navigatorActionRename, navigatorActionDelete, navigatorActionCopyPath, navigatorActionUseContext} {
+	fileOptions := navigatorActionOptions("docs/readme.md", domain.NodeFile, true)
+	for _, option := range []string{navigatorActionCopy, navigatorActionCut, navigatorActionPaste, navigatorActionRename, navigatorActionDelete, navigatorActionCopyPath, navigatorActionUseContext} {
 		if !slices.Contains(fileOptions, option) {
 			t.Fatalf("file options are missing %q: %#v", option, fileOptions)
 		}
 	}
 
-	directoryOptions := navigatorActionOptions("docs", domain.NodeDirectory)
-	for _, option := range []string{navigatorActionCopy, navigatorActionRename, navigatorActionDelete} {
+	directoryOptions := navigatorActionOptions("docs", domain.NodeDirectory, true)
+	if !slices.Contains(directoryOptions, navigatorActionPaste) {
+		t.Fatalf("directory options should include paste when clipboard is active: %#v", directoryOptions)
+	}
+	for _, option := range []string{navigatorActionCopy, navigatorActionCut, navigatorActionRename, navigatorActionDelete} {
 		if slices.Contains(directoryOptions, option) {
 			t.Fatalf("directory options should not include file-only action %q: %#v", option, directoryOptions)
 		}
+	}
+
+	emptyClipboardOptions := navigatorActionOptions("docs", domain.NodeDirectory, false)
+	if slices.Contains(emptyClipboardOptions, navigatorActionPaste) {
+		t.Fatalf("directory options should hide paste without clipboard: %#v", emptyClipboardOptions)
 	}
 }
 
@@ -75,5 +83,34 @@ func TestNavigatorVisibilitySummary(t *testing.T) {
 	visible := navigatorVisibilitySummary(true, domain.ScanSummary{Included: 6, Ignored: 2})
 	if visible != "6 shown, 2 ignored visible where safe" {
 		t.Fatalf("unexpected visible summary: %q", visible)
+	}
+}
+
+func TestNavigatorPasteDirectoryUsesSelectionKind(t *testing.T) {
+	workspace := domain.Workspace{Tree: []domain.WorkspaceNode{
+		{RelPath: "docs", Kind: domain.NodeDirectory, Children: []domain.WorkspaceNode{
+			{RelPath: "docs/readme.md", Kind: domain.NodeFile},
+		}},
+	}}
+	if got := navigatorPasteDirectory(workspace, "docs"); got != "docs" {
+		t.Fatalf("unexpected directory paste target: %q", got)
+	}
+	if got := navigatorPasteDirectory(workspace, "docs/readme.md"); got != "docs" {
+		t.Fatalf("unexpected file paste target: %q", got)
+	}
+	if got := navigatorPasteDirectory(workspace, "README.md"); got != "" {
+		t.Fatalf("unexpected root paste target: %q", got)
+	}
+}
+
+func TestNavigatorUniqueCopyPathAvoidsExistingTreeNode(t *testing.T) {
+	workspace := domain.Workspace{Tree: []domain.WorkspaceNode{
+		{RelPath: "docs", Kind: domain.NodeDirectory, Children: []domain.WorkspaceNode{
+			{RelPath: "docs/readme.md", Kind: domain.NodeFile},
+			{RelPath: "docs/readme-copy-2.md", Kind: domain.NodeFile},
+		}},
+	}}
+	if got := navigatorUniqueCopyPath(workspace, "docs/readme.md"); got != "docs/readme-copy-3.md" {
+		t.Fatalf("unexpected unique path: %q", got)
 	}
 }
