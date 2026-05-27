@@ -52,6 +52,37 @@ func TestListChildrenSortsDirectoriesFirstAndSkipsIgnored(t *testing.T) {
 	}
 }
 
+func TestListChildrenCanIncludeIgnoredExceptMetadata(t *testing.T) {
+	root := t.TempDir()
+	mkdir(t, filepath.Join(root, ".git"))
+	mkdir(t, filepath.Join(root, ".nexusdesk"))
+	mkdir(t, filepath.Join(root, "node_modules"))
+	writeFile(t, filepath.Join(root, "README.md"), "# project\n")
+
+	result, err := New().ListChildrenWithOptions(root, "", ListOptions{IncludeIgnored: true})
+	if err != nil {
+		t.Fatalf("ListChildrenWithOptions returned error: %v", err)
+	}
+	got := names(result)
+	want := []string{".git", "node_modules", "README.md"}
+	if !sameStrings(got, want) {
+		t.Fatalf("unexpected visible nodes: got %#v want %#v", got, want)
+	}
+	if result.Summary.Ignored != 3 {
+		t.Fatalf("expected ignored count to include metadata, got %#v", result.Summary)
+	}
+	for _, node := range result.Nodes {
+		if node.Name == ".git" || node.Name == "node_modules" {
+			if !node.Ignored {
+				t.Fatalf("expected %s to be marked ignored", node.Name)
+			}
+		}
+		if node.Name == ".nexusdesk" {
+			t.Fatal("metadata directory should stay hidden even when ignored paths are shown")
+		}
+	}
+}
+
 func TestListChildrenRejectsTraversal(t *testing.T) {
 	root := t.TempDir()
 	if _, err := New().ListChildren(root, "../outside"); err == nil {

@@ -66,3 +66,14 @@ func TestNavigatorSelectionSummary(t *testing.T) {
 		t.Fatalf("unexpected selected summary: %q", got)
 	}
 }
+
+func TestNavigatorVisibilitySummary(t *testing.T) {
+	hidden := navigatorVisibilitySummary(false, domain.ScanSummary{Included: 4, Ignored: 2})
+	if hidden != "4 shown, 2 ignored hidden" {
+		t.Fatalf("unexpected hidden summary: %q", hidden)
+	}
+	visible := navigatorVisibilitySummary(true, domain.ScanSummary{Included: 6, Ignored: 2})
+	if visible != "6 shown, 2 ignored visible where safe" {
+		t.Fatalf("unexpected visible summary: %q", visible)
+	}
+}

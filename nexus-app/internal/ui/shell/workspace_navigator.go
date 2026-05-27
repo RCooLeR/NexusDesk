@@ -1,6 +1,7 @@
 package shell
 
 import (
+	"fmt"
 	"path"
 
 	"fyne.io/fyne/v2"
@@ -23,6 +24,8 @@ const (
 func (v *View) newWorkspaceNavigator() fyne.CanvasObject {
 	summary := widget.NewLabel(navigatorSelectionSummary(""))
 	summary.Truncation = fyne.TextTruncateEllipsis
+	visibility := widget.NewLabel("")
+	visibility.Truncation = fyne.TextTruncateEllipsis
 
 	quickActions := container.NewHBox(
 		widget.NewButtonWithIcon("", theme.FileIcon(), v.promptCreateFile),
@@ -30,8 +33,7 @@ func (v *View) newWorkspaceNavigator() fyne.CanvasObject {
 		widget.NewButtonWithIcon("", theme.DocumentCreateIcon(), v.promptRenameFile),
 		widget.NewButtonWithIcon("", theme.DeleteIcon(), v.confirmDeleteFile),
 	)
-	header := container.NewVBox(summary, quickActions)
-	tree := newWorkspaceTree(v.state, v.workspaceService, func(node domain.WorkspaceNode) {
+	tree, store := newWorkspaceTree(v.state, v.workspaceService, func(node domain.WorkspaceNode) {
 		summary.SetText(navigatorSelectionSummary(node.RelPath))
 		v.openWorkspaceNode(node)
 	}, func(node domain.WorkspaceNode, event *fyne.PointEvent) {
@@ -39,6 +41,36 @@ func (v *View) newWorkspaceNavigator() fyne.CanvasObject {
 		summary.SetText(navigatorSelectionSummary(node.RelPath))
 		v.showNavigatorContextMenu(node, event)
 	})
+	refreshVisibility := func() {
+		visibility.SetText(navigatorVisibilitySummary(store.includeIgnored, store.summary("")))
+	}
+	refreshVisibility()
+	showIgnored := widget.NewCheck("Show ignored", func(include bool) {
+		if err := store.setIncludeIgnored(include); err != nil {
+			v.addActivity("Could not reload project tree: " + err.Error())
+			return
+		}
+		tree.CloseAllBranches()
+		tree.Refresh()
+		refreshVisibility()
+	})
+	revealButton := widget.NewButtonWithIcon("", theme.ZoomFitIcon(), func() {
+		branches := store.branchPathForSelection(v.state.SelectedPath())
+		if len(branches) == 0 {
+			for _, rootID := range store.roots {
+				tree.OpenBranch(rootID)
+			}
+			return
+		}
+		for _, branch := range branches {
+			tree.OpenBranch(branch)
+		}
+	})
+	collapseButton := widget.NewButtonWithIcon("", theme.MenuDropUpIcon(), func() {
+		tree.CloseAllBranches()
+	})
+	treeControls := container.NewHBox(showIgnored, revealButton, collapseButton)
+	header := container.NewVBox(summary, quickActions, treeControls, visibility)
 	return container.NewBorder(header, nil, nil, nil, tree)
 }
 
@@ -61,6 +93,16 @@ func navigatorSelectionSummary(selected string) string {
 		return "No file selected"
 	}
 	return selected
+}
+
+func navigatorVisibilitySummary(includeIgnored bool, summary domain.ScanSummary) string {
+	if includeIgnored {
+		return fmt.Sprintf("%d shown, %d ignored visible where safe", summary.Included, summary.Ignored)
+	}
+	if summary.Ignored == 0 {
+		return fmt.Sprintf("%d shown", summary.Included)
+	}
+	return fmt.Sprintf("%d shown, %d ignored hidden", summary.Included, summary.Ignored)
 }
 
 func navigatorActionOptions(selected string, kind domain.WorkspaceNodeKind) []string {

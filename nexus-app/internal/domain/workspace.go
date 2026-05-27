@@ -22,6 +22,7 @@ type WorkspaceNode struct {
 	RelPath  string
 	Kind     WorkspaceNodeKind
 	Size     int64
+	Ignored  bool
 	Children []WorkspaceNode
 }
 

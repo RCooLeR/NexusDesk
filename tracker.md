@@ -132,6 +132,7 @@ Goal: recreate the useful local project workbench without Wails or React.
 - [x] Add first native file create/delete/rename/move/copy operation services with rooted validation and rollback records.
 - [x] Add first selected-item navigator action menu for safe file operations, relative-path copy, and assistant-context selection.
 - [x] Replace the selected-item navigator action menu with true tree-row secondary-click context menus.
+- [x] Add first project-tree reveal/collapse controls and ignored-path visibility affordances.
 - [x] Add first native workspace path/content search service and bottom result panel.
 - [x] Add first native Problems service and bottom panel from the bounded marker/JSON scanner.
 
@@ -252,11 +253,11 @@ Exit criteria:
 
 ## Next Batch
 
-1. Add first project-tree reveal/collapse controls and ignored-path visibility affordances.
-2. Add first native chat search/history panel after artifact metadata search exists.
-3. Port first document-set artifact writer after artifact lineage metadata stabilizes.
-4. Add first artifact compare surface for same-kind generated outputs.
-5. Add first native artifact-to-agent context affordance so generated outputs can be cited in follow-up prompts.
+1. Add first native chat search/history panel after artifact metadata search exists.
+2. Port first document-set artifact writer after artifact lineage metadata stabilizes.
+3. Add first artifact compare surface for same-kind generated outputs.
+4. Add first native artifact-to-agent context affordance so generated outputs can be cited in follow-up prompts.
+5. Add first Workbench file-status badges from Git status once manual Git refresh has run.
 
 ## Preserved Post-Port Backlog
 

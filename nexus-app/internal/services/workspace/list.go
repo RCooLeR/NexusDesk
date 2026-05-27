@@ -24,7 +24,15 @@ type ListResult struct {
 	Summary domain.ScanSummary
 }
 
+type ListOptions struct {
+	IncludeIgnored bool
+}
+
 func (s *Service) ListChildren(root string, relPath string) (ListResult, error) {
+	return s.ListChildrenWithOptions(root, relPath, ListOptions{})
+}
+
+func (s *Service) ListChildrenWithOptions(root string, relPath string, options ListOptions) (ListResult, error) {
 	target, cleanRelPath, err := resolveDirectory(root, relPath)
 	if err != nil {
 		return ListResult{}, err
@@ -34,17 +42,17 @@ func (s *Service) ListChildren(root string, relPath string) (ListResult, error) 
 		return ListResult{Summary: domain.ScanSummary{Unreadable: 1}}, nil
 	}
 	sortEntries(entries)
-	return s.nodesFromEntries(cleanRelPath, entries), nil
+	return s.nodesFromEntries(cleanRelPath, entries, options), nil
 }
 
-func (s *Service) nodesFromEntries(parentID string, entries []os.DirEntry) ListResult {
+func (s *Service) nodesFromEntries(parentID string, entries []os.DirEntry, options ListOptions) ListResult {
 	result := ListResult{Nodes: []domain.WorkspaceNode{}}
 	for _, entry := range entries {
 		if result.Summary.Included >= s.entryLimit {
 			result.Summary.EntryCap++
 			break
 		}
-		node, ok := nodeFromEntry(parentID, entry, &result.Summary)
+		node, ok := nodeFromEntry(parentID, entry, options, &result.Summary)
 		if ok {
 			result.Nodes = append(result.Nodes, node)
 			result.Summary.Included++
@@ -76,11 +84,14 @@ func resolveDirectory(root string, relPath string) (string, string, error) {
 	return target, cleanRelPath, nil
 }
 
-func nodeFromEntry(parentID string, entry os.DirEntry, summary *domain.ScanSummary) (domain.WorkspaceNode, bool) {
+func nodeFromEntry(parentID string, entry os.DirEntry, options ListOptions, summary *domain.ScanSummary) (domain.WorkspaceNode, bool) {
 	name := entry.Name()
-	if isIgnoredName(name) {
+	ignored := isIgnoredName(name)
+	if ignored {
 		summary.Ignored++
-		return domain.WorkspaceNode{}, false
+		if !options.IncludeIgnored || isInternalMetadataPath(filepath.ToSlash(filepath.Join(parentID, name))) {
+			return domain.WorkspaceNode{}, false
+		}
 	}
 	info, err := entry.Info()
 	if err != nil {
@@ -104,6 +115,7 @@ func nodeFromEntry(parentID string, entry os.DirEntry, summary *domain.ScanSumma
 		RelPath:  childRelPath,
 		Kind:     kind,
 		Size:     info.Size(),
+		Ignored:  ignored,
 	}, true
 }
 

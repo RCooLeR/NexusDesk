@@ -1,6 +1,8 @@
 package shell
 
 import (
+	"strings"
+
 	"fyne.io/fyne/v2"
 	"fyne.io/fyne/v2/container"
 	"fyne.io/fyne/v2/theme"
@@ -11,12 +13,14 @@ import (
 )
 
 type treeStore struct {
-	root     string
-	service  *workspaceSvc.Service
-	roots    []string
-	children map[string][]string
-	loaded   map[string]bool
-	nodes    map[string]domain.WorkspaceNode
+	root           string
+	service        *workspaceSvc.Service
+	includeIgnored bool
+	roots          []string
+	children       map[string][]string
+	loaded         map[string]bool
+	nodes          map[string]domain.WorkspaceNode
+	summaries      map[string]domain.ScanSummary
 }
 
 func newTreeStore(workspace domain.Workspace, service *workspaceSvc.Service) *treeStore {
@@ -27,6 +31,9 @@ func newTreeStore(workspace domain.Workspace, service *workspaceSvc.Service) *tr
 		children: map[string][]string{},
 		loaded:   map[string]bool{"": true},
 		nodes:    map[string]domain.WorkspaceNode{},
+		summaries: map[string]domain.ScanSummary{
+			"": workspace.Summary,
+		},
 	}
 	store.setChildren("", workspace.Tree)
 	return store
@@ -40,13 +47,24 @@ func (s *treeStore) childIDs(parentID string) []string {
 }
 
 func (s *treeStore) load(parentID string) error {
-	listing, err := s.service.ListChildren(s.root, parentID)
+	listing, err := s.service.ListChildrenWithOptions(s.root, parentID, workspaceSvc.ListOptions{IncludeIgnored: s.includeIgnored})
 	if err != nil {
 		return err
 	}
 	s.setChildren(parentID, listing.Nodes)
+	s.summaries[parentID] = listing.Summary
 	s.loaded[parentID] = true
 	return nil
+}
+
+func (s *treeStore) setIncludeIgnored(include bool) error {
+	s.includeIgnored = include
+	s.roots = []string{}
+	s.children = map[string][]string{}
+	s.loaded = map[string]bool{}
+	s.nodes = map[string]domain.WorkspaceNode{}
+	s.summaries = map[string]domain.ScanSummary{}
+	return s.load("")
 }
 
 func (s *treeStore) setChildren(parentID string, nodes []domain.WorkspaceNode) {
@@ -66,12 +84,35 @@ func (s *treeStore) node(uid widget.TreeNodeID) (domain.WorkspaceNode, bool) {
 	return node, ok
 }
 
+func (s *treeStore) summary(parentID string) domain.ScanSummary {
+	return s.summaries[parentID]
+}
+
+func (s *treeStore) branchPathForSelection(selected string) []string {
+	selected = strings.Trim(selected, "/")
+	if selected == "" {
+		return []string{}
+	}
+	if node, ok := s.nodes[selected]; ok && node.Kind != domain.NodeDirectory {
+		selected = node.ParentID
+	}
+	parts := strings.Split(selected, "/")
+	branches := []string{}
+	for index := range parts {
+		branch := strings.Join(parts[:index+1], "/")
+		if node, ok := s.nodes[branch]; ok && node.Kind == domain.NodeDirectory {
+			branches = append(branches, branch)
+		}
+	}
+	return branches
+}
+
 func newWorkspaceTree(
 	state *State,
 	service *workspaceSvc.Service,
 	onSelected func(domain.WorkspaceNode),
 	onContext func(domain.WorkspaceNode, *fyne.PointEvent),
-) *widget.Tree {
+) (*widget.Tree, *treeStore) {
 	store := newTreeStore(state.Workspace(), service)
 	tree := widget.NewTree(
 		func(uid widget.TreeNodeID) []widget.TreeNodeID {
@@ -110,7 +151,7 @@ func newWorkspaceTree(
 		}
 		tree.Refresh()
 	}
-	return tree
+	return tree, store
 }
 
 type workspaceTreeRow struct {
@@ -118,6 +159,7 @@ type workspaceTreeRow struct {
 
 	icon        *widget.Icon
 	label       *widget.Label
+	badge       *widget.Label
 	node        domain.WorkspaceNode
 	onSecondary func(domain.WorkspaceNode, *fyne.PointEvent)
 }
@@ -126,9 +168,11 @@ func newWorkspaceTreeRow(onSecondary func(domain.WorkspaceNode, *fyne.PointEvent
 	row := &workspaceTreeRow{
 		icon:        widget.NewIcon(nil),
 		label:       widget.NewLabel(""),
+		badge:       widget.NewLabel(""),
 		onSecondary: onSecondary,
 	}
 	row.label.Truncation = fyne.TextTruncateEllipsis
+	row.badge.TextStyle = fyne.TextStyle{Italic: true}
 	row.ExtendBaseWidget(row)
 	return row
 }
@@ -141,11 +185,18 @@ func (r *workspaceTreeRow) setNode(node domain.WorkspaceNode) {
 		r.icon.SetResource(theme.FileIcon())
 	}
 	r.label.SetText(node.Name)
+	if node.Ignored {
+		r.badge.SetText("ignored")
+		r.badge.Show()
+	} else {
+		r.badge.SetText("")
+		r.badge.Hide()
+	}
 	r.Refresh()
 }
 
 func (r *workspaceTreeRow) CreateRenderer() fyne.WidgetRenderer {
-	return widget.NewSimpleRenderer(container.NewBorder(nil, nil, r.icon, nil, r.label))
+	return widget.NewSimpleRenderer(container.NewBorder(nil, nil, r.icon, r.badge, r.label))
 }
 
 func (r *workspaceTreeRow) TappedSecondary(event *fyne.PointEvent) {
