@@ -339,7 +339,7 @@ func TestFormatNotebookForEditorRoundTripsCellDirectives(t *testing.T) {
 }
 
 func TestFormatNotebookRunResultIncludesCellRowsPlansAndChart(t *testing.T) {
-	output := formatNotebookRunResult(datasetsSvc.NotebookRunResult{
+	result := datasetsSvc.NotebookRunResult{
 		RelPath:    "sales.csv",
 		NotebookID: "book",
 		Label:      "Sales Notebook",
@@ -369,14 +369,45 @@ func TestFormatNotebookRunResultIncludesCellRowsPlansAndChart(t *testing.T) {
 					SVG:     "<svg/>",
 					Points:  []datasetsSvc.ChartPoint{{Label: "search", Value: 1}},
 					Message: "Bar chart.",
+					Mode:    "count",
 				},
 			},
 		},
-	})
+	}
+	output := formatNotebookRunResult(result)
 	for _, expected := range []string{"# SQL Notebook Run", "Cell 1: Top spend", "Rows", "search", "Chart", "Points: 1"} {
 		if !strings.Contains(output, expected) {
 			t.Fatalf("notebook run output missing %q:\n%s", expected, output)
 		}
+	}
+	rows := formatNotebookRowsTab(result)
+	plan := formatNotebookPlanTab(result)
+	charts := formatNotebookChartsTab(result)
+	for _, assertion := range []struct {
+		name     string
+		output   string
+		expected string
+	}{
+		{name: "rows", output: rows, expected: "channel\nsearch"},
+		{name: "plan", output: plan, expected: "Validate SELECT-only native dataset SQL."},
+		{name: "charts", output: charts, expected: "<svg/>"},
+	} {
+		if !strings.Contains(assertion.output, assertion.expected) {
+			t.Fatalf("%s tab missing %q:\n%s", assertion.name, assertion.expected, assertion.output)
+		}
+	}
+}
+
+func TestFormatNotebookTabsShowEmptyStates(t *testing.T) {
+	result := datasetsSvc.NotebookRunResult{Label: "Empty", Cells: []datasetsSvc.NotebookCellRun{{CellID: "cell-1", Label: "Broken", Error: "blocked"}}}
+	if !strings.Contains(formatNotebookRowsTab(result), "No tabular rows") {
+		t.Fatalf("rows tab missing empty state")
+	}
+	if !strings.Contains(formatNotebookPlanTab(result), "Status: failed") {
+		t.Fatalf("plan tab should include failed cell details")
+	}
+	if !strings.Contains(formatNotebookChartsTab(result), "No charts") {
+		t.Fatalf("charts tab missing empty state")
 	}
 }
 

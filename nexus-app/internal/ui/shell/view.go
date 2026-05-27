@@ -53,6 +53,10 @@ type View struct {
 	problemStatus           *widget.Label
 	dataProfileStatus       *widget.Label
 	dataProfileDetail       *widget.Entry
+	dataRowsDetail          *widget.Entry
+	dataPlanDetail          *widget.Entry
+	dataChartDetail         *widget.Entry
+	dataResultTabs          *container.AppTabs
 	dataQueryEntry          *widget.Entry
 	dataLastQuery           datasetsSvc.QueryResult
 	dataLastChart           datasetsSvc.ChartResult
@@ -160,6 +164,18 @@ func New(window fyne.Window) *View {
 	dataProfileDetail.TextStyle = fyne.TextStyle{Monospace: true}
 	dataProfileDetail.Wrapping = fyne.TextWrapWord
 	dataProfileDetail.Disable()
+	dataRowsDetail := widget.NewMultiLineEntry()
+	dataRowsDetail.TextStyle = fyne.TextStyle{Monospace: true}
+	dataRowsDetail.Wrapping = fyne.TextWrapOff
+	dataRowsDetail.Disable()
+	dataPlanDetail := widget.NewMultiLineEntry()
+	dataPlanDetail.TextStyle = fyne.TextStyle{Monospace: true}
+	dataPlanDetail.Wrapping = fyne.TextWrapWord
+	dataPlanDetail.Disable()
+	dataChartDetail := widget.NewMultiLineEntry()
+	dataChartDetail.TextStyle = fyne.TextStyle{Monospace: true}
+	dataChartDetail.Wrapping = fyne.TextWrapWord
+	dataChartDetail.Disable()
 	dataQueryEntry := widget.NewMultiLineEntry()
 	dataQueryEntry.SetPlaceHolder("Search/filter, SQL, or notebook cells. Use -- cell: Label and -- chart: Label to save multiple cells.")
 	operationsDetail := widget.NewMultiLineEntry()
@@ -196,6 +212,9 @@ func New(window fyne.Window) *View {
 			"Select a CSV, TSV, or JSON file, then profile or query it.",
 		),
 		dataProfileDetail: dataProfileDetail,
+		dataRowsDetail:    dataRowsDetail,
+		dataPlanDetail:    dataPlanDetail,
+		dataChartDetail:   dataChartDetail,
 		dataQueryEntry:    dataQueryEntry,
 		operationsResults: container.NewVBox(widget.NewLabel("Scan the workspace to inspect Docker, Compose, env, config, script, and log files.")),
 		operationsStatus:  widget.NewLabel("Operations scan has not been run."),

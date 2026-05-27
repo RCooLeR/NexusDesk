@@ -47,9 +47,52 @@ func (v *View) newDataPanel() fyne.CanvasObject {
 	actions := container.NewHBox(profileButton, queryButton, sqlButton, sqliteButton, sqliteQueryButton, saveNotebookButton, loadNotebookButton, runNotebookButton, exportNotebookButton, chartButton, exportChartButton, dashboardButton, exportDashboardButton, historyButton, reuseSQLButton, rerunSQLButton)
 	queryBar := container.NewBorder(nil, nil, nil, actions, v.dataQueryEntry)
 	header := container.NewVBox(v.dataProfileStatus, queryBar)
-	detail := container.NewScroll(v.dataProfileDetail)
-	detail.SetMinSize(fyne.NewSize(320, 130))
-	return container.NewBorder(header, nil, nil, nil, detail)
+	summary := container.NewScroll(v.dataProfileDetail)
+	rows := container.NewScroll(v.dataRowsDetail)
+	plan := container.NewScroll(v.dataPlanDetail)
+	charts := container.NewScroll(v.dataChartDetail)
+	for _, scroll := range []*container.Scroll{summary, rows, plan, charts} {
+		scroll.SetMinSize(fyne.NewSize(320, 130))
+	}
+	v.dataResultTabs = container.NewAppTabs(
+		container.NewTabItem("Summary", summary),
+		container.NewTabItem("Rows", rows),
+		container.NewTabItem("Plan", plan),
+		container.NewTabItem("Charts", charts),
+	)
+	return container.NewBorder(header, nil, nil, nil, v.dataResultTabs)
+}
+
+func (v *View) setDataSummary(summary string) {
+	v.dataProfileDetail.SetText(summary)
+	if v.dataRowsDetail != nil {
+		v.dataRowsDetail.SetText("")
+	}
+	if v.dataPlanDetail != nil {
+		v.dataPlanDetail.SetText("")
+	}
+	if v.dataChartDetail != nil {
+		v.dataChartDetail.SetText("")
+	}
+	if v.dataResultTabs != nil && len(v.dataResultTabs.Items) > 0 {
+		v.dataResultTabs.Select(v.dataResultTabs.Items[0])
+	}
+}
+
+func (v *View) setDataNotebookRunTabs(result datasetsSvc.NotebookRunResult) {
+	v.dataProfileDetail.SetText(formatNotebookRunResult(result))
+	if v.dataRowsDetail != nil {
+		v.dataRowsDetail.SetText(formatNotebookRowsTab(result))
+	}
+	if v.dataPlanDetail != nil {
+		v.dataPlanDetail.SetText(formatNotebookPlanTab(result))
+	}
+	if v.dataChartDetail != nil {
+		v.dataChartDetail.SetText(formatNotebookChartsTab(result))
+	}
+	if v.dataResultTabs != nil && len(v.dataResultTabs.Items) > 0 {
+		v.dataResultTabs.Select(v.dataResultTabs.Items[0])
+	}
 }
 
 func (v *View) runSelectedSQLiteQuery(sqlText string) {
@@ -87,7 +130,7 @@ func (v *View) runSelectedSQLiteQuery(sqlText string) {
 		return
 	}
 	v.dataProfileStatus.SetText(sqliteQueryStatus(result))
-	v.dataProfileDetail.SetText(formatSQLiteQueryResult(result))
+	v.setDataSummary(formatSQLiteQueryResult(result))
 	v.dataLastQuery = sqliteQueryAsDatasetResult(result)
 	v.dataLastChart = datasetsSvc.ChartResult{}
 	v.dataLastDashboard = datasetsSvc.DashboardResult{}
@@ -112,7 +155,7 @@ func (v *View) inspectSelectedSQLite() {
 		return
 	}
 	v.dataProfileStatus.SetText(metadata.Message)
-	v.dataProfileDetail.SetText(formatSQLiteMetadata(metadata))
+	v.setDataSummary(formatSQLiteMetadata(metadata))
 	v.dataLastQuery = datasetsSvc.QueryResult{}
 	v.dataLastChart = datasetsSvc.ChartResult{}
 	v.dataLastDashboard = datasetsSvc.DashboardResult{}
@@ -148,7 +191,7 @@ func (v *View) saveSelectedDatasetNotebook() {
 	v.persistDatasetDependency(notebookDependencyRecord(selected, saved))
 	v.dataLastNotebookRun = datasetsSvc.NotebookRunResult{}
 	v.dataProfileStatus.SetText(fmt.Sprintf("Saved SQL notebook %s with %d cell(s).", saved.Label, len(saved.Cells)))
-	v.dataProfileDetail.SetText(formatDatasetNotebooks([]datasetsSvc.Notebook{saved}))
+	v.setDataSummary(formatDatasetNotebooks([]datasetsSvc.Notebook{saved}))
 	v.addActivity("Saved SQL notebook for " + selected + ".")
 }
 
@@ -171,13 +214,13 @@ func (v *View) loadSelectedDatasetNotebook() {
 	}
 	if len(notebooks) == 0 {
 		v.dataProfileStatus.SetText("No saved SQL notebooks for " + selected + ".")
-		v.dataProfileDetail.SetText(formatDatasetNotebooks(nil))
+		v.setDataSummary(formatDatasetNotebooks(nil))
 		return
 	}
 	v.dataQueryEntry.SetText(formatNotebookForEditor(notebooks[0]))
 	v.dataLastNotebookRun = datasetsSvc.NotebookRunResult{}
 	v.dataProfileStatus.SetText(fmt.Sprintf("Loaded %d SQL notebook(s) for %s.", len(notebooks), selected))
-	v.dataProfileDetail.SetText(formatDatasetNotebooks(notebooks))
+	v.setDataSummary(formatDatasetNotebooks(notebooks))
 	v.addActivity("Loaded SQL notebooks for " + selected + ".")
 }
 
@@ -200,7 +243,7 @@ func (v *View) runLatestDatasetNotebook() {
 	}
 	if len(notebooks) == 0 {
 		v.dataProfileStatus.SetText("No saved SQL notebooks for " + selected + ".")
-		v.dataProfileDetail.SetText(formatDatasetNotebooks(nil))
+		v.setDataSummary(formatDatasetNotebooks(nil))
 		return
 	}
 	result, err := v.datasetService.RunNotebook(workspace.Root, notebooks[0])
@@ -211,7 +254,7 @@ func (v *View) runLatestDatasetNotebook() {
 	}
 	v.persistNotebookRunSQL(result)
 	v.dataProfileStatus.SetText(result.Message)
-	v.dataProfileDetail.SetText(formatNotebookRunResult(result))
+	v.setDataNotebookRunTabs(result)
 	v.dataLastQuery = lastNotebookQueryResult(result)
 	v.dataLastChart = lastNotebookChartResult(result)
 	v.dataLastDashboard = datasetsSvc.DashboardResult{}
@@ -238,7 +281,7 @@ func (v *View) showDatasetSQLHistory() {
 		return
 	}
 	v.dataProfileStatus.SetText(datasetHistoryStatus(selected, runs, dependencies))
-	v.dataProfileDetail.SetText(formatDatasetHistory(selected, runs, dependencies))
+	v.setDataSummary(formatDatasetHistory(selected, runs, dependencies))
 	v.addActivity("Loaded dataset SQL history.")
 }
 
@@ -249,7 +292,7 @@ func (v *View) reuseLatestDatasetSQLRun() {
 	}
 	v.dataQueryEntry.SetText(run.SQL)
 	v.dataProfileStatus.SetText("Loaded latest SQL history entry for " + run.RelPath + ".")
-	v.dataProfileDetail.SetText(formatSQLRunReuse("Loaded latest SQL for editing", run))
+	v.setDataSummary(formatSQLRunReuse("Loaded latest SQL for editing", run))
 	v.addActivity("Loaded SQL history entry for " + run.RelPath + ".")
 }
 
@@ -286,7 +329,7 @@ func (v *View) latestReusableSQLRun() (metadataSvc.SQLRunRecord, bool) {
 	run, ok := latestReusableSQLRun(runs, selected)
 	if !ok {
 		v.dataProfileStatus.SetText("No reusable SQL history entry found for " + selected + ".")
-		v.dataProfileDetail.SetText(formatSQLRunReuseEmpty(selected))
+		v.setDataSummary(formatSQLRunReuseEmpty(selected))
 		return metadataSvc.SQLRunRecord{}, false
 	}
 	return run, true
@@ -319,7 +362,7 @@ func (v *View) runSelectedDatasetSQL(sqlText string) {
 		return
 	}
 	v.dataProfileStatus.SetText(sqlStatus(result))
-	v.dataProfileDetail.SetText(formatDatasetSQLResult(result))
+	v.setDataSummary(formatDatasetSQLResult(result))
 	v.dataLastQuery = result.QueryResult
 	v.dataLastChart = datasetsSvc.ChartResult{}
 	v.dataLastDashboard = datasetsSvc.DashboardResult{}
@@ -344,7 +387,7 @@ func (v *View) profileSelectedDataset() {
 		return
 	}
 	v.dataProfileStatus.SetText(profileStatus(profile))
-	v.dataProfileDetail.SetText(formatDatasetProfile(profile))
+	v.setDataSummary(formatDatasetProfile(profile))
 	v.dataLastQuery = datasetsSvc.QueryResult{}
 	v.dataLastChart = datasetsSvc.ChartResult{}
 	v.dataLastDashboard = datasetsSvc.DashboardResult{}
@@ -369,7 +412,7 @@ func (v *View) querySelectedDataset(query string) {
 		return
 	}
 	v.dataProfileStatus.SetText(queryStatus(result))
-	v.dataProfileDetail.SetText(formatDatasetQueryResult(result))
+	v.setDataSummary(formatDatasetQueryResult(result))
 	v.dataLastQuery = result
 	v.dataLastChart = datasetsSvc.ChartResult{}
 	v.dataLastDashboard = datasetsSvc.DashboardResult{}
@@ -389,7 +432,7 @@ func (v *View) previewDatasetChart() {
 	}
 	v.dataLastChart = chart
 	v.dataProfileStatus.SetText(chart.Message)
-	v.dataProfileDetail.SetText(formatDatasetChart(chart))
+	v.setDataSummary(formatDatasetChart(chart))
 	v.addActivity("Previewed chart for " + chart.RelPath + ".")
 }
 
@@ -407,7 +450,7 @@ func (v *View) previewDatasetDashboard() {
 	v.dataLastChart = dashboard.Chart
 	v.dataLastDashboard = dashboard
 	v.dataProfileStatus.SetText(dashboard.Message)
-	v.dataProfileDetail.SetText(formatDatasetDashboard(dashboard))
+	v.setDataSummary(formatDatasetDashboard(dashboard))
 	v.addActivity("Previewed dashboard for " + dashboard.RelPath + ".")
 }
 
@@ -1203,6 +1246,94 @@ func formatNotebookRunResult(result datasetsSvc.NotebookRunResult) string {
 			builder.WriteString(cell.ChartResult.Message)
 			builder.WriteString(fmt.Sprintf("\nPoints: %d\n", len(cell.ChartResult.Points)))
 		}
+	}
+	return builder.String()
+}
+
+func formatNotebookRowsTab(result datasetsSvc.NotebookRunResult) string {
+	var builder strings.Builder
+	builder.WriteString("# Notebook Rows\n\n")
+	written := 0
+	for index, cell := range result.Cells {
+		if cell.Error != "" || len(cell.SQLResult.Columns) == 0 {
+			continue
+		}
+		written++
+		builder.WriteString(fmt.Sprintf("## Cell %d: %s\n\n", index+1, firstNonEmptyString(cell.Label, cell.CellID)))
+		builder.WriteString(fmt.Sprintf("Shown %d/%d row(s)\n\n", len(cell.SQLResult.Rows), cell.SQLResult.MatchedRows))
+		builder.WriteString(strings.Join(cell.SQLResult.Columns, "\t"))
+		builder.WriteString("\n")
+		for _, row := range cell.SQLResult.Rows {
+			builder.WriteString(strings.Join(row, "\t"))
+			builder.WriteString("\n")
+		}
+		builder.WriteString("\n")
+	}
+	if written == 0 {
+		builder.WriteString("No tabular rows were produced by the latest notebook run.\n")
+	}
+	return builder.String()
+}
+
+func formatNotebookPlanTab(result datasetsSvc.NotebookRunResult) string {
+	var builder strings.Builder
+	builder.WriteString("# Notebook Plan\n\n")
+	written := 0
+	for index, cell := range result.Cells {
+		if cell.Error != "" {
+			written++
+			builder.WriteString(fmt.Sprintf("## Cell %d: %s\n\n", index+1, firstNonEmptyString(cell.Label, cell.CellID)))
+			builder.WriteString("Status: failed\n")
+			builder.WriteString(cell.Error)
+			builder.WriteString("\n\n")
+			continue
+		}
+		if len(cell.SQLResult.Plan) == 0 {
+			continue
+		}
+		written++
+		builder.WriteString(fmt.Sprintf("## Cell %d: %s\n\n", index+1, firstNonEmptyString(cell.Label, cell.CellID)))
+		for _, step := range cell.SQLResult.Plan {
+			builder.WriteString("- ")
+			builder.WriteString(step)
+			builder.WriteString("\n")
+		}
+		builder.WriteString("\n")
+	}
+	if written == 0 {
+		builder.WriteString("No execution plan was produced by the latest notebook run.\n")
+	}
+	return builder.String()
+}
+
+func formatNotebookChartsTab(result datasetsSvc.NotebookRunResult) string {
+	var builder strings.Builder
+	builder.WriteString("# Notebook Charts\n\n")
+	written := 0
+	for index, cell := range result.Cells {
+		if cell.Error != "" || cell.ChartResult.SVG == "" {
+			continue
+		}
+		written++
+		builder.WriteString(fmt.Sprintf("## Cell %d: %s\n\n", index+1, firstNonEmptyString(cell.Label, cell.CellID)))
+		builder.WriteString("Mode: ")
+		builder.WriteString(cell.ChartResult.Mode)
+		builder.WriteString("\nCategory: ")
+		builder.WriteString(cell.ChartResult.CategoryColumn)
+		if cell.ChartResult.ValueColumn != "" {
+			builder.WriteString("\nValue: ")
+			builder.WriteString(cell.ChartResult.ValueColumn)
+		}
+		builder.WriteString(fmt.Sprintf("\nPoints: %d\n\n", len(cell.ChartResult.Points)))
+		if strings.TrimSpace(cell.ChartResult.Message) != "" {
+			builder.WriteString(cell.ChartResult.Message)
+			builder.WriteString("\n\n")
+		}
+		builder.WriteString(cell.ChartResult.SVG)
+		builder.WriteString("\n\n")
+	}
+	if written == 0 {
+		builder.WriteString("No charts were produced by the latest notebook run.\n")
 	}
 	return builder.String()
 }
