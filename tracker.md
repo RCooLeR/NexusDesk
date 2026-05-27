@@ -251,7 +251,8 @@ Goal: make slow and durable workflows reliable.
 - [x] Add repositories for artifacts, SQL runs, and dataset dependencies.
 - [x] Add first native SQLite artifact repository rows and history integration for explicit artifact writes, refreshes, archive/restore, and delete.
 - [x] Add approval metadata repository coverage with JSON compatibility fallback.
-- [ ] Migrate/import relevant `.nexusdesk` data from Wails-era workspaces.
+- [x] Import Wails-era JSON chat, approval, artifact sidecar, and tool-run metadata into native SQLite on workspace open.
+- [ ] Migrate/import remaining Wails-era dataset SQL/dependency data from legacy SQLite metadata stores.
 - [ ] Route long indexing, OCR, dump imports, connector pulls, report generation, and long agent runs through jobs.
 - [ ] Add native job monitor with cancel/retry/open-output actions.
 
@@ -276,11 +277,11 @@ Exit criteria:
 
 ## Next Batch
 
-1. Start JSON compatibility import from Wails-era workspace metadata into native SQLite.
-2. Add Compose service topology summary from inspected Compose files.
-3. Add richer dashboard visuals after the first bar/line SVG chart renderer.
-4. Add full Parquet schema/row-group profiling behind an explicit dependency/build decision.
-5. Port the first SQL notebook model on top of the native SQL/history foundation.
+1. Add Compose service topology summary from inspected Compose files.
+2. Add richer dashboard visuals after the first bar/line SVG chart renderer.
+3. Add full Parquet schema/row-group profiling behind an explicit dependency/build decision.
+4. Port the first SQL notebook model on top of the native SQL/history foundation.
+5. Migrate/import remaining Wails-era dataset SQL/dependency data from legacy SQLite metadata stores.
 
 ## Preserved Post-Port Backlog
 
@@ -371,7 +372,7 @@ The Fyne migration must not drop product ambition, but this section is intention
 ### Jobs, Persistence, And Observability
 
 - [ ] SQLite-first metadata store for chats, approvals, artifacts, tool runs, jobs, SQL runs, dataset dependencies, and search metadata.
-- [ ] JSON compatibility import from Wails-era workspaces.
+- [x] JSON compatibility import from Wails-era workspaces for chat history, approvals, artifact sidecars, and tool-run logs.
 - [ ] Durable job model with progress, log tail, cancellation, retry, outputs, and artifact links.
 - [ ] Folder open remains cheap: no Git, Docker, OCR, connector pulls, dump imports, model calls, shell commands, or deep indexing.
 - [ ] Diagnostics panel for app logs, provider status, GPU/model status, metadata health, and job history.

@@ -46,6 +46,11 @@ func (v *View) openWorkspace(root string) {
 			v.approvalService.SetRepository(newApprovalMetadataRepository(store))
 			v.jobService.SetRepository(store, true)
 			v.addActivity(status.Message)
+			if report, err := store.ImportCompatibilityData(metadataSvc.CompatibilityImportOptions{}); err == nil {
+				v.addActivity(report.Message)
+			} else {
+				v.addActivity("Compatibility metadata import skipped: " + err.Error())
+			}
 			v.refreshJobs()
 			v.loadAssistantChatHistory()
 			v.refreshChatHistory("")
