@@ -3,6 +3,7 @@ package shell
 import (
 	"strings"
 	"testing"
+	"time"
 
 	datasetsSvc "nexusdesk/internal/services/datasets"
 )
@@ -76,6 +77,36 @@ func TestFormatDatasetChartIncludesSVGAndPoints(t *testing.T) {
 	}
 }
 
+func TestFormatDatasetSQLResultIncludesPlanAndRows(t *testing.T) {
+	output := formatDatasetSQLResult(datasetsSvc.SQLResult{
+		QueryResult: datasetsSvc.QueryResult{
+			RelPath:     "sales.csv",
+			Format:      "CSV",
+			Columns:     []string{"channel", "spend"},
+			Rows:        [][]string{{"search", "20"}},
+			TotalRows:   4,
+			MatchedRows: 1,
+		},
+		SQL:        "select * from dataset",
+		Engine:     "native-dataset-sql",
+		Plan:       []string{"Validate SELECT-only native dataset SQL."},
+		DurationMs: 2,
+	})
+	for _, expected := range []string{"# Dataset SQL", "native-dataset-sql", "Plan", "search\t20"} {
+		if !strings.Contains(output, expected) {
+			t.Fatalf("SQL output missing %q:\n%s", expected, output)
+		}
+	}
+}
+
+func TestSQLRunRecordCapturesFailure(t *testing.T) {
+	started := time.Date(2026, 5, 27, 12, 0, 0, 0, time.UTC)
+	record := sqlRunRecord(datasetsSvc.SQLResult{StartedAt: started}, "sales.csv", "delete from dataset", errForTest("blocked"))
+	if record.Status != "failed" || record.Error != "blocked" || record.RelPath != "sales.csv" {
+		t.Fatalf("unexpected failed SQL record: %#v", record)
+	}
+}
+
 func TestChartArtifactInputPreservesSourceAndSVG(t *testing.T) {
 	input := chartArtifactInput(datasetsSvc.ChartResult{
 		RelPath:        "sales.csv",
@@ -88,4 +119,10 @@ func TestChartArtifactInputPreservesSourceAndSVG(t *testing.T) {
 	if input.SourcePath != "sales.csv" || input.SVG != "<svg/>" || input.PointCount != 1 {
 		t.Fatalf("unexpected chart artifact input: %#v", input)
 	}
+}
+
+type errForTest string
+
+func (e errForTest) Error() string {
+	return string(e)
 }

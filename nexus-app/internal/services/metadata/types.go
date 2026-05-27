@@ -93,3 +93,31 @@ type ArtifactRecord struct {
 	GeneratedAt  time.Time
 	UpdatedAt    time.Time
 }
+
+type SQLRunRecord struct {
+	ID           string
+	RelPath      string
+	SQL          string
+	Engine       string
+	Status       string
+	RowCount     int
+	MatchedRows  int
+	ShownRows    int
+	Message      string
+	Error        string
+	ArtifactPath string
+	StartedAt    time.Time
+	CompletedAt  time.Time
+	DurationMs   int64
+}
+
+type DatasetDependencyRecord struct {
+	ID            string
+	SourcePath    string
+	DependentKind string
+	DependentRef  string
+	Relation      string
+	Metadata      map[string]string
+	CreatedAt     time.Time
+	UpdatedAt     time.Time
+}

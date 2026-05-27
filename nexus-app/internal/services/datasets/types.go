@@ -1,5 +1,7 @@
 package datasets
 
+import "time"
+
 type Profile struct {
 	RelPath     string
 	Format      string
@@ -55,4 +57,14 @@ type ChartResult struct {
 type ChartPoint struct {
 	Label string
 	Value float64
+}
+
+type SQLResult struct {
+	QueryResult
+	SQL         string
+	Engine      string
+	Plan        []string
+	StartedAt   time.Time
+	CompletedAt time.Time
+	DurationMs  int64
 }

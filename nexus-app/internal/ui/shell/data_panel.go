@@ -3,6 +3,7 @@ package shell
 import (
 	"fmt"
 	"strings"
+	"time"
 
 	"fyne.io/fyne/v2"
 	"fyne.io/fyne/v2/container"
@@ -12,6 +13,7 @@ import (
 
 	artifactsSvc "nexusdesk/internal/services/artifacts"
 	datasetsSvc "nexusdesk/internal/services/datasets"
+	metadataSvc "nexusdesk/internal/services/metadata"
 )
 
 func (v *View) newDataPanel() fyne.CanvasObject {
@@ -19,17 +21,53 @@ func (v *View) newDataPanel() fyne.CanvasObject {
 	queryButton := widget.NewButtonWithIcon("Run query", theme.MediaPlayIcon(), func() {
 		v.querySelectedDataset(v.dataQueryEntry.Text)
 	})
+	sqlButton := widget.NewButtonWithIcon("Run SQL", theme.ComputerIcon(), func() {
+		v.runSelectedDatasetSQL(v.dataQueryEntry.Text)
+	})
 	v.dataQueryEntry.OnSubmitted = func(query string) {
 		v.querySelectedDataset(query)
 	}
 	chartButton := widget.NewButtonWithIcon("Preview chart", theme.ViewFullScreenIcon(), v.previewDatasetChart)
 	exportChartButton := widget.NewButtonWithIcon("Export chart", theme.DocumentSaveIcon(), v.exportDatasetChartArtifact)
-	actions := container.NewHBox(profileButton, queryButton, chartButton, exportChartButton)
+	actions := container.NewHBox(profileButton, queryButton, sqlButton, chartButton, exportChartButton)
 	queryBar := container.NewBorder(nil, nil, nil, actions, v.dataQueryEntry)
 	header := container.NewVBox(v.dataProfileStatus, queryBar)
 	detail := container.NewScroll(v.dataProfileDetail)
 	detail.SetMinSize(fyne.NewSize(320, 130))
 	return container.NewBorder(header, nil, nil, nil, detail)
+}
+
+func (v *View) runSelectedDatasetSQL(sqlText string) {
+	workspace := v.state.Workspace()
+	if workspace.Root == "" {
+		v.dataProfileStatus.SetText("Open a workspace before running dataset SQL.")
+		return
+	}
+	selected := selectedPathOrEmpty(v)
+	if selected == "" {
+		v.dataProfileStatus.SetText("Select a CSV, TSV, JSON, or XLSX file first.")
+		return
+	}
+	result, err := v.datasetService.QuerySQL(workspace.Root, selected, sqlText)
+	record := sqlRunRecord(result, selected, sqlText, err)
+	if v.metadataStore != nil {
+		record = v.metadataStore.NormalizeSQLRunRecord(record)
+		if saveErr := v.metadataStore.SaveSQLRun(record); saveErr != nil {
+			v.addActivity("Could not persist SQL run metadata: " + saveErr.Error())
+		} else if err == nil {
+			v.persistDatasetDependency(datasetDependencyRecord(selected, record))
+		}
+	}
+	if err != nil {
+		v.dataProfileStatus.SetText("SQL failed for " + selected)
+		dialog.ShowError(err, v.window)
+		return
+	}
+	v.dataProfileStatus.SetText(sqlStatus(result))
+	v.dataProfileDetail.SetText(formatDatasetSQLResult(result))
+	v.dataLastQuery = result.QueryResult
+	v.dataLastChart = datasetsSvc.ChartResult{}
+	v.addActivity("Ran native dataset SQL for " + result.RelPath + ".")
 }
 
 func (v *View) profileSelectedDataset() {
@@ -219,6 +257,10 @@ func queryStatus(result datasetsSvc.QueryResult) string {
 	return fmt.Sprintf("%s: %s%s query, %d/%d rows shown", result.RelPath, result.Format, truncated, len(result.Rows), result.MatchedRows)
 }
 
+func sqlStatus(result datasetsSvc.SQLResult) string {
+	return fmt.Sprintf("%s: %s SQL, %d/%d rows shown", result.RelPath, result.Engine, len(result.Rows), result.MatchedRows)
+}
+
 func formatDatasetQueryResult(result datasetsSvc.QueryResult) string {
 	var builder strings.Builder
 	builder.WriteString("# Dataset Query\n\n")
@@ -258,6 +300,29 @@ func formatDatasetQueryResult(result datasetsSvc.QueryResult) string {
 		builder.WriteString(strings.Join(values, "\t"))
 		builder.WriteString("\n")
 	}
+	return builder.String()
+}
+
+func formatDatasetSQLResult(result datasetsSvc.SQLResult) string {
+	var builder strings.Builder
+	builder.WriteString("# Dataset SQL\n\n")
+	builder.WriteString("Path: ")
+	builder.WriteString(result.RelPath)
+	builder.WriteString("\nEngine: ")
+	builder.WriteString(result.Engine)
+	builder.WriteString("\nSQL: ")
+	builder.WriteString(result.SQL)
+	builder.WriteString(fmt.Sprintf("\nLoaded rows: %d\nMatched rows: %d\nShown rows: %d\nDuration: %d ms\n", result.TotalRows, result.MatchedRows, len(result.Rows), result.DurationMs))
+	if len(result.Plan) > 0 {
+		builder.WriteString("\nPlan\n")
+		for _, step := range result.Plan {
+			builder.WriteString("- ")
+			builder.WriteString(step)
+			builder.WriteString("\n")
+		}
+	}
+	builder.WriteString("\n")
+	builder.WriteString(formatDatasetQueryResult(result.QueryResult))
 	return builder.String()
 }
 
@@ -315,4 +380,75 @@ func chartArtifactTitle(chart datasetsSvc.ChartResult) string {
 		return fmt.Sprintf("Chart - %s by %s", chart.ValueColumn, chart.CategoryColumn)
 	}
 	return fmt.Sprintf("Chart - rows by %s", chart.CategoryColumn)
+}
+
+func sqlRunRecord(result datasetsSvc.SQLResult, relPath string, sqlText string, runErr error) metadataSvc.SQLRunRecord {
+	status := "success"
+	message := result.Message
+	errorText := ""
+	completed := result.CompletedAt
+	if completed.IsZero() {
+		completed = result.StartedAt
+	}
+	if runErr != nil {
+		status = "failed"
+		errorText = runErr.Error()
+		message = errorText
+	}
+	return metadataSvc.SQLRunRecord{
+		RelPath:     firstNonEmptyString(result.RelPath, relPath),
+		SQL:         strings.TrimSpace(firstNonEmptyString(result.SQL, sqlText)),
+		Engine:      firstNonEmptyString(result.Engine, "native-dataset-sql"),
+		Status:      status,
+		RowCount:    result.TotalRows,
+		MatchedRows: result.MatchedRows,
+		ShownRows:   len(result.Rows),
+		Message:     message,
+		Error:       errorText,
+		StartedAt:   firstNonZeroTime(result.StartedAt, completed),
+		CompletedAt: completed,
+		DurationMs:  result.DurationMs,
+	}
+}
+
+func datasetDependencyRecord(source string, sqlRun metadataSvc.SQLRunRecord) metadataSvc.DatasetDependencyRecord {
+	return metadataSvc.DatasetDependencyRecord{
+		SourcePath:    source,
+		DependentKind: "sql-run",
+		DependentRef:  sqlRun.ID,
+		Relation:      "reads",
+		Metadata: map[string]string{
+			"engine": sqlRun.Engine,
+			"sql":    sqlRun.SQL,
+		},
+		CreatedAt: sqlRun.StartedAt,
+		UpdatedAt: sqlRun.CompletedAt,
+	}
+}
+
+func (v *View) persistDatasetDependency(record metadataSvc.DatasetDependencyRecord) {
+	if v.metadataStore == nil {
+		return
+	}
+	if err := v.metadataStore.SaveDatasetDependency(record); err != nil {
+		v.addActivity("Could not persist dataset dependency metadata: " + err.Error())
+	}
+}
+
+func firstNonEmptyString(values ...string) string {
+	for _, value := range values {
+		if strings.TrimSpace(value) != "" {
+			return value
+		}
+	}
+	return ""
+}
+
+func firstNonZeroTime(values ...time.Time) time.Time {
+	for _, value := range values {
+		if !value.IsZero() {
+			return value
+		}
+	}
+	return time.Now().UTC()
 }

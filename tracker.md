@@ -196,6 +196,7 @@ Goal: rebuild Data & Analytics as native data tooling, not a crowded web panel.
 - [ ] Port dataset profiling for CSV, TSV, JSON, NDJSON, XLSX, Parquet metadata, and logs.
 - [x] Add first native sample-based data profiling slice for selected CSV, TSV, and JSON files.
 - [x] Port first bounded row query/filter/order service for selected CSV, TSV, and JSON files.
+- [x] Add first SELECT-only native dataset SQL run over the selected dataset with persisted run/dependency metadata.
 - [ ] Port SQL notebook model.
 - [ ] Port SQLite workspace connector.
 - [ ] Port external DB profile storage and read-only query guards.
@@ -242,8 +243,9 @@ Goal: make slow and durable workflows reliable.
 - [x] Add durable SQLite repository for native jobs and task-run records.
 - [x] Add task-run Markdown artifacts linked from persisted task-run records.
 - [x] Add SQLite repository for native chat messages.
-- [ ] Add repositories for approvals, artifacts, SQL runs, and dataset dependencies.
+- [x] Add repositories for artifacts, SQL runs, and dataset dependencies.
 - [x] Add first native SQLite artifact repository rows and history integration for explicit artifact writes, refreshes, archive/restore, and delete.
+- [ ] Add approval metadata repository coverage or explicitly document the remaining approval-store split.
 - [ ] Migrate/import relevant `.nexusdesk` data from Wails-era workspaces.
 - [ ] Route long indexing, OCR, dump imports, connector pulls, report generation, and long agent runs through jobs.
 - [ ] Add native job monitor with cancel/retry/open-output actions.
@@ -269,11 +271,11 @@ Exit criteria:
 
 ## Next Batch
 
-1. Add first native SQL run and dataset-dependency metadata repositories.
-2. Add approval metadata repository coverage or explicitly document the remaining approval-store split.
-3. Add the first operations artifact/runbook export from inspected Docker/Compose/env/config/log evidence.
-4. Expand dataset profiling from the current CSV/TSV/JSON/XLSX slice to NDJSON, Parquet metadata, and logs.
-5. Extend native charting beyond first SVG bar charts to line charts and richer dashboard visuals.
+1. Add approval metadata repository coverage or explicitly document the remaining approval-store split.
+2. Add the first operations artifact/runbook export from inspected Docker/Compose/env/config/log evidence.
+3. Expand dataset profiling from the current CSV/TSV/JSON/XLSX slice to NDJSON, Parquet metadata, and logs.
+4. Extend native charting beyond first SVG bar charts to line charts and richer dashboard visuals.
+5. Promote SQL run/dependency history into Data & Analytics and History navigation instead of only persisting rows.
 
 ## Preserved Post-Port Backlog
 
@@ -295,6 +297,7 @@ The Fyne migration must not drop product ambition, but this section is intention
 
 - [ ] Dataset profiling for CSV, TSV, JSON, NDJSON, XLSX, Parquet metadata, logs, and database exports.
 - [ ] Bounded filter/query/order/limit workflows for table-like files.
+- [x] First SELECT-only native SQL run over the selected dataset with one predicate, order, limit, projection, execution plan, and metadata persistence.
 - [ ] DuckDB-capable SQL over datasets when the optional CGO-backed build is available.
 - [ ] SQL notebooks with multiple cells, saved notebooks, run history, reuse/rerun, explain output, and artifact export.
 - [ ] SQLite workspace database browser with schema, views, indexes, samples, row caps, query cancellation, saved queries, CSV/Markdown exports, and lineage.

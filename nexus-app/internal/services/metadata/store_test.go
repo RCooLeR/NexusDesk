@@ -19,7 +19,7 @@ func TestEnsureCreatesSQLiteStoreAndManifest(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Ensure returned error: %v", err)
 	}
-	if status.SchemaVersion != 5 || status.SchemaHash == "" {
+	if status.SchemaVersion != 6 || status.SchemaHash == "" {
 		t.Fatalf("unexpected status: %#v", status)
 	}
 	if _, err := os.Stat(status.Path); err != nil {
@@ -141,6 +141,53 @@ func TestSaveListAndDeleteArtifacts(t *testing.T) {
 	}
 	if len(all) != 0 {
 		t.Fatalf("expected artifact record deletion, got %#v", all)
+	}
+}
+
+func TestSaveSQLRunAndDatasetDependency(t *testing.T) {
+	store := mustStore(t)
+	started := time.Date(2026, 5, 27, 12, 0, 0, 0, time.UTC)
+	sqlRun := SQLRunRecord{
+		RelPath:     "data/sales.csv",
+		SQL:         "select * from dataset",
+		Engine:      "native-dataset-sql",
+		Status:      "success",
+		RowCount:    4,
+		MatchedRows: 2,
+		ShownRows:   2,
+		Message:     "ok",
+		StartedAt:   started,
+		CompletedAt: started.Add(time.Second),
+		DurationMs:  1000,
+	}
+	sqlRun = store.NormalizeSQLRunRecord(sqlRun)
+	if err := store.SaveSQLRun(sqlRun); err != nil {
+		t.Fatalf("SaveSQLRun returned error: %v", err)
+	}
+	if err := store.SaveDatasetDependency(DatasetDependencyRecord{
+		SourcePath:    "data/sales.csv",
+		DependentKind: "sql-run",
+		DependentRef:  sqlRun.ID,
+		Relation:      "reads",
+		Metadata:      map[string]string{"engine": "native-dataset-sql"},
+		CreatedAt:     started,
+		UpdatedAt:     started,
+	}); err != nil {
+		t.Fatalf("SaveDatasetDependency returned error: %v", err)
+	}
+	runs, err := store.ListSQLRuns(10)
+	if err != nil {
+		t.Fatalf("ListSQLRuns returned error: %v", err)
+	}
+	if len(runs) != 1 || runs[0].RelPath != "data/sales.csv" || runs[0].ShownRows != 2 {
+		t.Fatalf("unexpected sql runs: %#v", runs)
+	}
+	dependencies, err := store.ListDatasetDependencies("data/sales.csv", 10)
+	if err != nil {
+		t.Fatalf("ListDatasetDependencies returned error: %v", err)
+	}
+	if len(dependencies) != 1 || dependencies[0].DependentRef != sqlRun.ID || dependencies[0].Metadata["engine"] == "" {
+		t.Fatalf("unexpected dependencies: %#v", dependencies)
 	}
 }
 

@@ -1,6 +1,6 @@
 package metadata
 
-const schemaVersion = 5
+const schemaVersion = 6
 
 const schemaSQL = `PRAGMA journal_mode = WAL;
 PRAGMA foreign_keys = ON;
@@ -105,6 +105,37 @@ CREATE TABLE IF NOT EXISTS artifacts (
     generated_at TEXT,
     updated_at TEXT NOT NULL,
     UNIQUE(workspace_root, rel_path)
+);
+
+CREATE TABLE IF NOT EXISTS sql_runs (
+    id TEXT PRIMARY KEY,
+    workspace_root TEXT NOT NULL,
+    rel_path TEXT NOT NULL,
+    sql_text TEXT NOT NULL,
+    engine TEXT NOT NULL,
+    status TEXT NOT NULL,
+    row_count INTEGER,
+    matched_rows INTEGER,
+    shown_rows INTEGER,
+    message TEXT,
+    error TEXT,
+    artifact_path TEXT,
+    started_at TEXT NOT NULL,
+    completed_at TEXT,
+    duration_ms INTEGER
+);
+
+CREATE TABLE IF NOT EXISTS dataset_dependencies (
+    id TEXT PRIMARY KEY,
+    workspace_root TEXT NOT NULL,
+    source_path TEXT NOT NULL,
+    dependent_kind TEXT NOT NULL,
+    dependent_ref TEXT NOT NULL,
+    relation TEXT NOT NULL,
+    metadata_json TEXT,
+    created_at TEXT NOT NULL,
+    updated_at TEXT NOT NULL,
+    UNIQUE(workspace_root, source_path, dependent_kind, dependent_ref, relation)
 );
 `
 
