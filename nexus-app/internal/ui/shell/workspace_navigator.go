@@ -24,26 +24,20 @@ func (v *View) newWorkspaceNavigator() fyne.CanvasObject {
 	summary := widget.NewLabel(navigatorSelectionSummary(""))
 	summary.Truncation = fyne.TextTruncateEllipsis
 
-	var actionMenu *widget.Select
-	actionMenu = widget.NewSelect(navigatorActionOptions("", ""), func(action string) {
-		v.handleNavigatorAction(action)
-		actionMenu.ClearSelected()
-	})
-	actionMenu.PlaceHolder = "Actions"
-
 	quickActions := container.NewHBox(
 		widget.NewButtonWithIcon("", theme.FileIcon(), v.promptCreateFile),
 		widget.NewButtonWithIcon("", theme.ContentCopyIcon(), v.promptCopyFile),
 		widget.NewButtonWithIcon("", theme.DocumentCreateIcon(), v.promptRenameFile),
 		widget.NewButtonWithIcon("", theme.DeleteIcon(), v.confirmDeleteFile),
 	)
-	actions := container.NewBorder(nil, nil, actionMenu, nil, quickActions)
-	header := container.NewVBox(summary, actions)
+	header := container.NewVBox(summary, quickActions)
 	tree := newWorkspaceTree(v.state, v.workspaceService, func(node domain.WorkspaceNode) {
 		summary.SetText(navigatorSelectionSummary(node.RelPath))
-		actionMenu.SetOptions(navigatorActionOptions(node.RelPath, node.Kind))
-		actionMenu.ClearSelected()
 		v.openWorkspaceNode(node)
+	}, func(node domain.WorkspaceNode, event *fyne.PointEvent) {
+		v.state.SetSelectedPath(node.RelPath)
+		summary.SetText(navigatorSelectionSummary(node.RelPath))
+		v.showNavigatorContextMenu(node, event)
 	})
 	return container.NewBorder(header, nil, nil, nil, tree)
 }
@@ -88,6 +82,26 @@ func navigatorActionOptions(selected string, kind domain.WorkspaceNodeKind) []st
 		navigatorActionCopyPath,
 		navigatorActionUseContext,
 	}
+}
+
+func navigatorContextMenuItems(options []string, onAction func(string)) []*fyne.MenuItem {
+	items := make([]*fyne.MenuItem, 0, len(options)+1)
+	for index, option := range options {
+		if index == 1 {
+			items = append(items, fyne.NewMenuItemSeparator())
+		}
+		action := option
+		items = append(items, fyne.NewMenuItem(option, func() {
+			onAction(action)
+		}))
+	}
+	return items
+}
+
+func (v *View) showNavigatorContextMenu(node domain.WorkspaceNode, event *fyne.PointEvent) {
+	options := navigatorActionOptions(node.RelPath, node.Kind)
+	menu := fyne.NewMenu("", navigatorContextMenuItems(options, v.handleNavigatorAction)...)
+	widget.ShowPopUpMenuAtPosition(menu, v.window.Canvas(), event.AbsolutePosition)
 }
 
 func (v *View) handleNavigatorAction(action string) {

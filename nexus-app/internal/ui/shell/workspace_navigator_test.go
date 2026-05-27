@@ -41,6 +41,23 @@ func TestNavigatorActionOptionsRespectSelectionKind(t *testing.T) {
 	}
 }
 
+func TestNavigatorContextMenuItemsDispatchAction(t *testing.T) {
+	var selected string
+	items := navigatorContextMenuItems([]string{navigatorActionCreate, navigatorActionCopyPath}, func(action string) {
+		selected = action
+	})
+	if len(items) != 3 {
+		t.Fatalf("expected action, separator, action menu items, got %d", len(items))
+	}
+	if items[0].Label != navigatorActionCreate {
+		t.Fatalf("unexpected first menu item label: %q", items[0].Label)
+	}
+	items[2].Action()
+	if selected != navigatorActionCopyPath {
+		t.Fatalf("unexpected dispatched action: %q", selected)
+	}
+}
+
 func TestNavigatorSelectionSummary(t *testing.T) {
 	if got := navigatorSelectionSummary(""); got != "No file selected" {
 		t.Fatalf("unexpected empty selection summary: %q", got)

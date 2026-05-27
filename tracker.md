@@ -131,6 +131,7 @@ Goal: recreate the useful local project workbench without Wails or React.
 - [x] Wire draft editor Save through the native safe write service and rollback log.
 - [x] Add first native file create/delete/rename/move/copy operation services with rooted validation and rollback records.
 - [x] Add first selected-item navigator action menu for safe file operations, relative-path copy, and assistant-context selection.
+- [x] Replace the selected-item navigator action menu with true tree-row secondary-click context menus.
 - [x] Add first native workspace path/content search service and bottom result panel.
 - [x] Add first native Problems service and bottom panel from the bounded marker/JSON scanner.
 
@@ -247,11 +248,11 @@ Exit criteria:
 
 ## Next Batch
 
-1. Replace the selected-item navigator action menu with true tree-row secondary-click menus if the Fyne widget pass remains lightweight.
-2. Add persisted chat history after the native assistant context-pack controls settle.
-3. Expand the native artifact browser from task reports to metadata, search, archive/delete, and lineage.
-4. Add native audit/history UI for persisted agent runs and tool runs.
-5. Add agent-safe copy/move/delete and patch tools gated by full-project access and rollback snapshots.
+1. Add persisted chat history after the native assistant context-pack controls settle.
+2. Expand the native artifact browser from task reports to metadata, search, archive/delete, and lineage.
+3. Add native audit/history UI for persisted agent runs and tool runs.
+4. Add agent-safe copy/move/delete and patch tools gated by full-project access and rollback snapshots.
+5. Add first project-tree reveal/collapse controls and ignored-path visibility affordances.
 
 ## Preserved Post-Port Backlog
 
@@ -259,7 +260,7 @@ The Fyne migration must not drop product ambition, but this section is intention
 
 ### Workbench / Code Studio
 
-- [ ] Native IDE-style project tree with lazy loading, ignored-path controls, file status badges, context menus, and safe copy/move/delete/rename.
+- [ ] Native IDE-style project tree with lazy loading, ignored-path controls, file status badges, context menus, reveal/collapse controls, and safe copy/move/delete/rename.
 - [ ] Multi-tab editor with pinned tabs, dirty state, close guards, split editor groups, breadcrumbs, outline, minimap, find, format, and go-to-definition where available.
 - [ ] Syntax highlighting strategy for common languages, Markdown, SQL, JSON/YAML/XML, Docker/Compose, logs, and config files.
 - [ ] Markdown source/rendered toggle.
