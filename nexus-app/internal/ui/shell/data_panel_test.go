@@ -246,6 +246,54 @@ func TestFormatDatasetHistoryFiltersSelectedRunsAndListsDependencies(t *testing.
 	}
 }
 
+func TestLatestReusableSQLRunFiltersSelectedSource(t *testing.T) {
+	runs := []metadataSvc.SQLRunRecord{
+		{RelPath: "data/other.csv", SQL: "select * from dataset"},
+		{RelPath: "data/sales.csv"},
+		{RelPath: "data/sales.csv", SQL: "select channel from dataset order by spend desc", Engine: "native-dataset-sql"},
+	}
+	run, ok := latestReusableSQLRun(runs, "data/sales.csv")
+	if !ok {
+		t.Fatal("expected reusable SQL run")
+	}
+	if run.SQL != "select channel from dataset order by spend desc" || run.RelPath != "data/sales.csv" {
+		t.Fatalf("unexpected reusable SQL run: %#v", run)
+	}
+	if _, ok := latestReusableSQLRun(runs, "data/missing.csv"); ok {
+		t.Fatal("expected no reusable run for missing dataset")
+	}
+}
+
+func TestFormatSQLRunReuseIncludesRunnableSQL(t *testing.T) {
+	output := formatSQLRunReuse("Loaded latest SQL for editing", metadataSvc.SQLRunRecord{
+		RelPath:     "data/sales.csv",
+		SQL:         "select channel from dataset",
+		Engine:      "native-dataset-sql",
+		Status:      "success",
+		MatchedRows: 2,
+		ShownRows:   2,
+		DurationMs:  5,
+		Message:     "OK",
+	})
+	for _, expected := range []string{"# Loaded latest SQL for editing", "data/sales.csv", "native-dataset-sql", "select channel from dataset"} {
+		if !strings.Contains(output, expected) {
+			t.Fatalf("reuse output missing %q:\n%s", expected, output)
+		}
+	}
+}
+
+func TestIsSQLiteRunUsesEngineOrPath(t *testing.T) {
+	if !isSQLiteRun(metadataSvc.SQLRunRecord{Engine: "sqlite-readonly", RelPath: "data/store.bin"}) {
+		t.Fatal("expected sqlite engine to be detected")
+	}
+	if !isSQLiteRun(metadataSvc.SQLRunRecord{Engine: "native-dataset-sql", RelPath: "data/store.sqlite3"}) {
+		t.Fatal("expected sqlite path to be detected")
+	}
+	if isSQLiteRun(metadataSvc.SQLRunRecord{Engine: "native-dataset-sql", RelPath: "data/sales.csv"}) {
+		t.Fatal("did not expect CSV run to be detected as sqlite")
+	}
+}
+
 func TestFormatDatasetNotebooksListsCells(t *testing.T) {
 	when := time.Date(2026, 5, 27, 12, 0, 0, 0, time.UTC)
 	output := formatDatasetNotebooks([]datasetsSvc.Notebook{{

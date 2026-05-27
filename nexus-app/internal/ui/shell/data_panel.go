@@ -42,7 +42,9 @@ func (v *View) newDataPanel() fyne.CanvasObject {
 	loadNotebookButton := widget.NewButtonWithIcon("Load notebook", theme.FolderOpenIcon(), v.loadSelectedDatasetNotebook)
 	runNotebookButton := widget.NewButtonWithIcon("Run notebook", theme.MediaPlayIcon(), v.runLatestDatasetNotebook)
 	exportNotebookButton := widget.NewButtonWithIcon("Export notebook", theme.DocumentSaveIcon(), v.exportDatasetNotebookArtifact)
-	actions := container.NewHBox(profileButton, queryButton, sqlButton, sqliteButton, sqliteQueryButton, saveNotebookButton, loadNotebookButton, runNotebookButton, exportNotebookButton, chartButton, exportChartButton, dashboardButton, exportDashboardButton, historyButton)
+	reuseSQLButton := widget.NewButtonWithIcon("Use latest SQL", theme.ContentPasteIcon(), v.reuseLatestDatasetSQLRun)
+	rerunSQLButton := widget.NewButtonWithIcon("Rerun latest SQL", theme.MediaReplayIcon(), v.rerunLatestDatasetSQLRun)
+	actions := container.NewHBox(profileButton, queryButton, sqlButton, sqliteButton, sqliteQueryButton, saveNotebookButton, loadNotebookButton, runNotebookButton, exportNotebookButton, chartButton, exportChartButton, dashboardButton, exportDashboardButton, historyButton, reuseSQLButton, rerunSQLButton)
 	queryBar := container.NewBorder(nil, nil, nil, actions, v.dataQueryEntry)
 	header := container.NewVBox(v.dataProfileStatus, queryBar)
 	detail := container.NewScroll(v.dataProfileDetail)
@@ -238,6 +240,56 @@ func (v *View) showDatasetSQLHistory() {
 	v.dataProfileStatus.SetText(datasetHistoryStatus(selected, runs, dependencies))
 	v.dataProfileDetail.SetText(formatDatasetHistory(selected, runs, dependencies))
 	v.addActivity("Loaded dataset SQL history.")
+}
+
+func (v *View) reuseLatestDatasetSQLRun() {
+	run, ok := v.latestReusableSQLRun()
+	if !ok {
+		return
+	}
+	v.dataQueryEntry.SetText(run.SQL)
+	v.dataProfileStatus.SetText("Loaded latest SQL history entry for " + run.RelPath + ".")
+	v.dataProfileDetail.SetText(formatSQLRunReuse("Loaded latest SQL for editing", run))
+	v.addActivity("Loaded SQL history entry for " + run.RelPath + ".")
+}
+
+func (v *View) rerunLatestDatasetSQLRun() {
+	run, ok := v.latestReusableSQLRun()
+	if !ok {
+		return
+	}
+	v.dataQueryEntry.SetText(run.SQL)
+	v.dataProfileStatus.SetText("Rerunning latest SQL history entry for " + run.RelPath + ".")
+	if isSQLiteRun(run) {
+		v.runSelectedSQLiteQuery(run.SQL)
+		return
+	}
+	v.runSelectedDatasetSQL(run.SQL)
+}
+
+func (v *View) latestReusableSQLRun() (metadataSvc.SQLRunRecord, bool) {
+	if v.metadataStore == nil {
+		v.dataProfileStatus.SetText("Open a workspace before reusing SQL history.")
+		return metadataSvc.SQLRunRecord{}, false
+	}
+	selected := selectedPathOrEmpty(v)
+	if selected == "" {
+		v.dataProfileStatus.SetText("Select a dataset or SQLite source before reusing SQL history.")
+		return metadataSvc.SQLRunRecord{}, false
+	}
+	runs, err := v.metadataStore.ListSQLRuns(100)
+	if err != nil {
+		v.dataProfileStatus.SetText("SQL history unavailable.")
+		dialog.ShowError(err, v.window)
+		return metadataSvc.SQLRunRecord{}, false
+	}
+	run, ok := latestReusableSQLRun(runs, selected)
+	if !ok {
+		v.dataProfileStatus.SetText("No reusable SQL history entry found for " + selected + ".")
+		v.dataProfileDetail.SetText(formatSQLRunReuseEmpty(selected))
+		return metadataSvc.SQLRunRecord{}, false
+	}
+	return run, true
 }
 
 func (v *View) runSelectedDatasetSQL(sqlText string) {
@@ -1022,6 +1074,59 @@ func formatDatasetHistory(selected string, runs []metadataSvc.SQLRunRecord, depe
 		}
 	}
 	return builder.String()
+}
+
+func latestReusableSQLRun(runs []metadataSvc.SQLRunRecord, selected string) (metadataSvc.SQLRunRecord, bool) {
+	selected = strings.TrimSpace(selected)
+	for _, run := range runs {
+		if strings.TrimSpace(run.SQL) == "" {
+			continue
+		}
+		if selected != "" && run.RelPath != selected {
+			continue
+		}
+		return run, true
+	}
+	return metadataSvc.SQLRunRecord{}, false
+}
+
+func formatSQLRunReuse(title string, run metadataSvc.SQLRunRecord) string {
+	var builder strings.Builder
+	builder.WriteString("# ")
+	builder.WriteString(title)
+	builder.WriteString("\n\n")
+	builder.WriteString("Path: ")
+	builder.WriteString(run.RelPath)
+	builder.WriteString("\nEngine: ")
+	builder.WriteString(firstNonEmptyString(run.Engine, "unknown"))
+	builder.WriteString("\nStatus: ")
+	builder.WriteString(firstNonEmptyString(run.Status, "unknown"))
+	builder.WriteString(fmt.Sprintf("\nShown: %d/%d\nDuration: %d ms\n", run.ShownRows, run.MatchedRows, run.DurationMs))
+	if strings.TrimSpace(firstNonEmptyString(run.Message, run.Error)) != "" {
+		builder.WriteString("Message: ")
+		builder.WriteString(firstNonEmptyString(run.Message, run.Error))
+		builder.WriteString("\n")
+	}
+	builder.WriteString("\nSQL\n\n")
+	builder.WriteString(strings.TrimSpace(run.SQL))
+	builder.WriteString("\n")
+	return builder.String()
+}
+
+func formatSQLRunReuseEmpty(selected string) string {
+	if strings.TrimSpace(selected) == "" {
+		return "# Dataset SQL History\n\nNo reusable SQL history entry found.\n"
+	}
+	return "# Dataset SQL History\n\nNo reusable SQL history entry found for " + selected + ".\n"
+}
+
+func isSQLiteRun(run metadataSvc.SQLRunRecord) bool {
+	engine := strings.ToLower(strings.TrimSpace(run.Engine))
+	if strings.Contains(engine, "sqlite") {
+		return true
+	}
+	lowerPath := strings.ToLower(strings.TrimSpace(run.RelPath))
+	return strings.HasSuffix(lowerPath, ".sqlite") || strings.HasSuffix(lowerPath, ".sqlite3") || strings.HasSuffix(lowerPath, ".db")
 }
 
 func formatDatasetNotebooks(notebooks []datasetsSvc.Notebook) string {
