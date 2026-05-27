@@ -72,6 +72,45 @@ func TestSourceFreshnessRejectsUnsafeSourcePath(t *testing.T) {
 	}
 }
 
+func TestSourceFreshnessDetectsSameTimestampContentChange(t *testing.T) {
+	root := t.TempDir()
+	writeArtifactSource(t, root, "docs/a.md", "old")
+
+	store, err := NewStore(root)
+	if err != nil {
+		t.Fatal(err)
+	}
+	artifact, err := store.WriteDocumentSetReport(DocumentSetReport{
+		Title:       "Docs",
+		Roots:       []string{"docs"},
+		SourcePaths: []string{"docs/a.md"},
+		Content:     "snapshot",
+	})
+	if err != nil {
+		t.Fatalf("WriteDocumentSetReport returned error: %v", err)
+	}
+	metadata, _ := store.readMetadata(artifact.RelPath)
+	if len(metadata.SourceFingerprints) != 1 || metadata.SourceFingerprints[0].SHA256 == "" {
+		t.Fatalf("expected source fingerprint in metadata: %#v", metadata)
+	}
+	sourcePath := filepath.Join(root, "docs", "a.md")
+	originalModifiedAt := metadata.SourceFingerprints[0].ModifiedAt
+	if err := os.WriteFile(sourcePath, []byte("new"), 0o644); err != nil {
+		t.Fatalf("WriteFile returned error: %v", err)
+	}
+	if err := os.Chtimes(sourcePath, originalModifiedAt, originalModifiedAt); err != nil {
+		t.Fatalf("Chtimes returned error: %v", err)
+	}
+
+	report, err := store.SourceFreshness(artifact.RelPath)
+	if err != nil {
+		t.Fatalf("SourceFreshness returned error: %v", err)
+	}
+	if !report.Stale || report.ChangedCount != 1 || !strings.Contains(report.Sources[0].Message, "fingerprint changed") {
+		t.Fatalf("expected fingerprint freshness change, got %#v", report)
+	}
+}
+
 func writeArtifactSource(t *testing.T, root string, relPath string, content string) {
 	t.Helper()
 	target := filepath.Join(root, filepath.FromSlash(relPath))

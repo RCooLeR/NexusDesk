@@ -19,8 +19,9 @@ func (s *Store) SourceFreshness(relPath string) (SourceFreshness, error) {
 		ArtifactRelPath: artifact.RelPath,
 		GeneratedAt:     generatedAt,
 	}
+	fingerprints := sourceFingerprintMap(artifact.Fingerprints)
 	for _, source := range artifactFreshnessSources(artifact) {
-		status := s.sourceFreshnessStatus(source, generatedAt)
+		status := s.sourceFreshnessStatus(source, generatedAt, fingerprints[source])
 		if status.Changed {
 			report.ChangedCount++
 		}
@@ -36,7 +37,7 @@ func (s *Store) SourceFreshness(relPath string) (SourceFreshness, error) {
 	return report, nil
 }
 
-func (s *Store) sourceFreshnessStatus(source string, generatedAt time.Time) SourceFreshnessStatus {
+func (s *Store) sourceFreshnessStatus(source string, generatedAt time.Time, expected SourceFingerprint) SourceFreshnessStatus {
 	status := SourceFreshnessStatus{RelPath: filepath.ToSlash(strings.TrimSpace(source))}
 	absPath, err := s.resolveWorkspaceSourcePath(status.RelPath)
 	if err != nil {
@@ -56,6 +57,22 @@ func (s *Store) sourceFreshnessStatus(source string, generatedAt time.Time) Sour
 	}
 	status.Exists = true
 	status.ModifiedAt = info.ModTime().UTC()
+	status.Size = info.Size()
+	if expected.SHA256 != "" {
+		status.ExpectedFingerprint = expected.SHA256
+		current := s.sourceFingerprint(status.RelPath)
+		if current.Error != "" {
+			status.Unknown = true
+			status.Message = current.Error
+			return status
+		}
+		status.Fingerprint = current.SHA256
+		if current.SHA256 != expected.SHA256 || current.Size != expected.Size {
+			status.Changed = true
+			status.Message = "Source content fingerprint changed since artifact generation."
+			return status
+		}
+	}
 	if sourceChangedAfterGenerated(status.ModifiedAt, generatedAt) {
 		status.Changed = true
 		status.Message = "Source changed after artifact generation."
@@ -107,6 +124,17 @@ func artifactFreshnessSources(artifact Artifact) []string {
 		sources = append(sources, source)
 	}
 	return sources
+}
+
+func sourceFingerprintMap(fingerprints []SourceFingerprint) map[string]SourceFingerprint {
+	byPath := map[string]SourceFingerprint{}
+	for _, fingerprint := range fingerprints {
+		relPath := filepath.ToSlash(strings.TrimSpace(fingerprint.RelPath))
+		if relPath != "" {
+			byPath[relPath] = fingerprint
+		}
+	}
+	return byPath
 }
 
 func sourceFreshnessMessage(report SourceFreshness) string {

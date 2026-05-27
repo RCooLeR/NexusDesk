@@ -124,6 +124,7 @@ func (s *Store) artifactFromFile(relPath string, absPath string, info os.FileInf
 		TaskID:       metadata.TaskID,
 		Source:       metadata.Source,
 		SourcePaths:  append([]string{}, metadata.SourcePaths...),
+		Fingerprints: append([]SourceFingerprint{}, metadata.SourceFingerprints...),
 		Archived:     strings.HasPrefix(relPath, artifactsDirRelPath+"/archive/"),
 	}
 }

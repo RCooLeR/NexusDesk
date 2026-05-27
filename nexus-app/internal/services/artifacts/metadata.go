@@ -17,6 +17,9 @@ func (s *Store) writeMetadata(metadata Metadata) error {
 	if metadata.GeneratedAt.IsZero() {
 		metadata.GeneratedAt = time.Now().UTC()
 	}
+	if len(metadata.SourceFingerprints) == 0 {
+		metadata.SourceFingerprints = s.sourceFingerprints(metadataSources(metadata))
+	}
 	metadataPath := s.absPath(metadata.RelPath) + ".json"
 	data, err := json.MarshalIndent(metadata, "", "  ")
 	if err != nil {

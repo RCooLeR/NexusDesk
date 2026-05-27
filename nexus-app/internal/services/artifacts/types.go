@@ -17,6 +17,7 @@ type Artifact struct {
 	TaskID       string
 	Source       string
 	SourcePaths  []string
+	Fingerprints []SourceFingerprint
 	Archived     bool
 }
 
@@ -68,14 +69,23 @@ type ListOptions struct {
 }
 
 type Metadata struct {
-	Kind        string    `json:"kind"`
-	Title       string    `json:"title"`
-	RelPath     string    `json:"relPath"`
-	JobID       string    `json:"jobId,omitempty"`
-	TaskID      string    `json:"taskId,omitempty"`
-	Source      string    `json:"source,omitempty"`
-	SourcePaths []string  `json:"sourcePaths,omitempty"`
-	GeneratedAt time.Time `json:"generatedAt"`
+	Kind               string              `json:"kind"`
+	Title              string              `json:"title"`
+	RelPath            string              `json:"relPath"`
+	JobID              string              `json:"jobId,omitempty"`
+	TaskID             string              `json:"taskId,omitempty"`
+	Source             string              `json:"source,omitempty"`
+	SourcePaths        []string            `json:"sourcePaths,omitempty"`
+	SourceFingerprints []SourceFingerprint `json:"sourceFingerprints,omitempty"`
+	GeneratedAt        time.Time           `json:"generatedAt"`
+}
+
+type SourceFingerprint struct {
+	RelPath    string    `json:"relPath"`
+	Size       int64     `json:"size"`
+	ModifiedAt time.Time `json:"modifiedAt"`
+	SHA256     string    `json:"sha256,omitempty"`
+	Error      string    `json:"error,omitempty"`
 }
 
 type Lineage struct {
@@ -118,10 +128,13 @@ type SourceFreshness struct {
 }
 
 type SourceFreshnessStatus struct {
-	RelPath    string
-	Exists     bool
-	Changed    bool
-	Unknown    bool
-	ModifiedAt time.Time
-	Message    string
+	RelPath             string
+	Exists              bool
+	Changed             bool
+	Unknown             bool
+	ModifiedAt          time.Time
+	Size                int64
+	Fingerprint         string
+	ExpectedFingerprint string
+	Message             string
 }

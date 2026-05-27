@@ -220,6 +220,7 @@ Goal: restore generated-output workflows with provenance and native inspection.
 - [x] Add first document-set artifact source actions for opening and pinning cited source files.
 - [x] Add first artifact comparison report export with searchable metadata and source lineage.
 - [x] Add first artifact source freshness warnings for missing or modified cited files.
+- [x] Add source fingerprints to artifact metadata so freshness detects same-timestamp content changes.
 - [x] Add first archive restore flow for generated artifacts with collision-safe restore paths.
 - [ ] Add document preview/extraction for Markdown, TXT, PDF, DOCX, XLSX, HTML/XML.
 - [x] Add first native document extraction slice for Markdown, TXT, HTML, and XML source files with artifact export.
@@ -268,11 +269,11 @@ Exit criteria:
 
 ## Next Batch
 
-1. Add stronger artifact source fingerprints so freshness can detect same-timestamp content changes.
-2. Add read-only operations scanners for Dockerfiles, Compose, env/config, and logs.
-3. Add XLSX document/table extraction after the native data query boundary is in place.
-4. Add chart preview/artifact generation for bounded native dataset query results.
-5. Add first native SQL run and dataset-dependency metadata repositories.
+1. Add read-only operations scanners for Dockerfiles, Compose, env/config, and logs.
+2. Add XLSX document/table extraction after the native data query boundary is in place.
+3. Add chart preview/artifact generation for bounded native dataset query results.
+4. Add first native SQL run and dataset-dependency metadata repositories.
+5. Add approval metadata repository coverage or explicitly document the remaining approval-store split.
 
 ## Preserved Post-Port Backlog
 

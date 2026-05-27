@@ -117,6 +117,17 @@ func TestArtifactSourceStatusTextSummarizesProblems(t *testing.T) {
 	}
 }
 
+func TestArtifactSourceLabelPrioritizesUnknownOverMissing(t *testing.T) {
+	label := artifactSourceLabel(artifactsSvc.SourceFreshnessStatus{
+		RelPath: "docs/unsafe.md",
+		Unknown: true,
+		Message: "source path must stay inside the workspace",
+	})
+	if !strings.Contains(label, "(unchecked:") {
+		t.Fatalf("expected unchecked source label, got %q", label)
+	}
+}
+
 func TestFormatArtifactComparison(t *testing.T) {
 	text := formatArtifactComparison(artifactsSvc.ArtifactComparison{
 		Kind:      "document-report",

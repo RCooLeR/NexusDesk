@@ -602,10 +602,10 @@ func artifactSourceLabel(source artifactsSvc.SourceFreshnessStatus) string {
 	switch {
 	case source.Changed:
 		status = "changed"
-	case !source.Exists:
-		status = "missing"
 	case source.Unknown:
 		status = "unchecked"
+	case !source.Exists:
+		status = "missing"
 	}
 	if source.Message != "" {
 		return fmt.Sprintf("%s (%s: %s)", source.RelPath, status, source.Message)
