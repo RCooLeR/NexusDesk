@@ -52,35 +52,31 @@ flowchart TD
 
 ## Current Implementation Snapshot
 
-The current app implements the first safe workspace slice:
+The active Fyne app implements the first safe workspace slice in `nexus-app/`. Older `app-wails/` packages remain reference history.
 
-- `app/internal/workspace/scanner.go` scans an approved workspace root.
+- `nexus-app/internal/services/workspace` scans an approved workspace root.
 - The scanner skips noisy folders, symlinks, listings deeper than 10 levels, and oversized result sets.
 - The scanner returns nodes in filesystem tree order so descendants stay grouped under their parent directories.
-- The frontend renders indexed nodes as an expandable tree and preserves expanded directories across refreshes.
-- `SearchWorkspace` searches safe workspace paths and previewable text content within the same ignore/depth limits, while `SearchWorkspaceAdvanced` adds regex and lightweight symbol matching for the Workbench search surface.
-- `ListWorkspaceProblems` runs a read-only lightweight problem scan over bounded previews for TODO/FIXME/HACK/BUG markers, merge-conflict markers, and invalid JSON.
-- `ListWorkspaceTasks` discovers runnable task candidates, and `RunWorkspaceTask` can run only a re-discovered task ID with captured output and a saved task-run artifact.
-- `app/internal/workspace/preview.go` reads selected files only through a rooted relative path.
+- The Fyne navigator renders lazy tree nodes, preserves expansion state, supports ignored-path visibility, and keeps `.nexusdesk` hidden.
+- `nexus-app/internal/services/workspace/search.go` searches safe workspace paths and previewable text content within the same ignore/depth limits, with optional regex matching.
+- `nexus-app/internal/services/workspace/problems.go` runs a read-only lightweight problem scan over bounded previews for TODO/FIXME/HACK/BUG markers, merge-conflict markers, and invalid JSON.
+- `nexus-app/internal/services/tasks` discovers runnable task candidates, and task execution can run only a re-discovered task ID with captured output and a saved task-run artifact.
+- `nexus-app/internal/services/workspace/preview.go` reads selected files only through a rooted relative path.
 - File previews reject traversal, symlinks, binary or unsupported text encoding content, and oversized previews.
-- File creates/updates go through `app/internal/workspace/write.go` with rooted paths, size caps, diff previews, and apply-only-after-preview behavior.
-- File deletes go through `app/internal/workspace/delete.go` and reject traversal, metadata paths, directories, and symlinks before frontend confirmation.
-- File rename/move goes through `app/internal/workspace/move.go` and rejects traversal, metadata paths, directories, symlinks, same-path moves, and overwrites.
-- CSV query export reruns the bounded query through `app/internal/workspace/dataset_query.go` and writes a CSV artifact through the artifact manager.
-- Saved CSV row filters and read-only SQL snippets are stored per dataset under `.nexusdesk/datasets/queries.json` as separate query kinds.
-- Dataset summary artifacts use the bounded CSV preview/profile data to write deterministic Markdown with column profiles and suggested analysis questions.
+- File creates, folder creates, updates, appends, copies, moves, renames, deletes, and patch applications go through native workspace services with rooted paths, size caps, metadata guards, diff/operation previews, and rollback records.
+- Dataset query exports run through `nexus-app/internal/services/datasets` and `nexus-app/internal/services/artifacts`.
+- Saved row filters, read-only SQL snippets, SQLite snippets, and notebooks are stored per workspace under `.nexusdesk/datasets/`.
+- Dataset, notebook, chart, dashboard, SQLite query, document, task, and operations artifacts write deterministic metadata with source lineage.
 - Artifact metadata and chat history are included in the workspace search surface even before a full index database exists.
 - SQLite metadata search now adds chat, artifact, and tool-run history snippets once the workspace metadata store exists.
 - SQLite workspace files (`.sqlite`, `.sqlite3`, `.db`) are classified as database files and routed to the read-only connector surface rather than text preview.
-- `app/internal/workspace/freshness.go` captures file fingerprints so the shell can detect changed files, mark generated artifacts that cite changed sources as stale, and flag dataset-derived views/snippets/reports that should be refreshed.
+- Native artifact metadata captures source fingerprints so generated artifacts can warn when cited files are missing, modified, or same-timestamp changed.
 - Dataset dependency and SQL run records preserve which saved snippets, SQL reports, chart artifacts, query exports, summaries, and connector queries came from a dataset path.
-- Chat messages and context-pack previews surface stale-source warnings when their cited files change.
-- The workbench can rebuild a context preview from changed files and records that stale-context refresh in the local approval/metadata trail.
-- Data & Analytics clears visible query/chart/profile state for the active dataset when that dataset changes on disk.
+- Chat messages, context-pack previews, and richer stale-context rebuilds are native parity work that should reuse the metadata/fingerprint boundaries rather than the old Wails UI.
+- Data & Analytics clears stale visible query/chart/profile state when selected sources change.
 - Native chart generation goes through `nexus-app/internal/services/datasets/chart.go` and returns bounded categorical bar charts or ordered line charts from query results.
 - Chat context uses the same rooted preview boundary and sends only selected text content or a bounded pack of pinned previews.
-- Workspace open/recent/refresh/search/read/file mutation/freshness flows keep stable Wails method names on `app/app.go`, but dispatch through `app/workspace_service.go`.
-- Recent workspaces are stored in local JSON config through `app/internal/storage/recent_workspaces.go`.
+- Workspace open, refresh, search, read, mutation, task, Git, and connector flows are explicit native UI actions over service packages, not Wails bridge calls.
 
 The app does not yet build persistent chunks, embeddings, or an event-driven filesystem watcher. Those remain future indexing work; the current freshness pass is a polling snapshot that keeps stale-source warnings visible without background indexing complexity.
 

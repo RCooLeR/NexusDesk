@@ -21,15 +21,15 @@ The LLM should not receive the whole workspace. It should receive a compact cont
 
 ## Current Implementation Snapshot
 
-The current app implements deterministic path/text search and explicit context packing:
+The active native app implements deterministic path/text search and explicit context packing:
 
-- `app/internal/workspace/search.go` searches workspace-relative paths and previewable text/PDF/DOCX content inside scanner ignore and depth limits.
-- Quick-open searches the in-memory workspace tree and open editor tabs client-side for navigation speed.
-- Chat context is explicit: the user pins selected files, directories, or the workspace root, and the backend expands that selection through `app/internal/workspace/context.go`.
+- `nexus-app/internal/services/workspace/search.go` searches workspace-relative paths and previewable text/PDF/DOCX/table content inside scanner ignore and depth limits.
+- The Fyne navigator and editor tabs keep fast local navigation state while service searches stay bounded and rooted.
+- Chat context is explicit: the user pins selected files, directories, artifacts, or the workspace root, and the backend expands that selection through `nexus-app/internal/services/workspace/context.go`.
 - Context packs are capped by file count and bytes, skip ignored folders, binaries, symlinks, images, raw PDF data URLs, and oversized content, and preview the actual file list before send.
 - CSV context uses a structured column profile plus bounded row sample rather than sending whole datasets.
-- Workspace search now also merges artifact metadata matches from `.nexusdesk/artifacts/` and persisted workspace chat history matches, so generated outputs and prior analysis are discoverable from the same navigator search box.
-- Persistent chunk indexes, semantic search, richer artifact ranking, and full conversation faceting are still planned.
+- Workspace history and artifact searches are backed by native metadata/artifact services, so generated outputs and prior analysis are discoverable without scanning raw sidecars in widgets.
+- Persistent chunk indexes, semantic search, richer ranking, full conversation faceting, and cross-connector retrieval are still planned.
 
 ## Query Pipeline
 

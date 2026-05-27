@@ -2,7 +2,9 @@
 
 ## Current Implementation Note
 
-The current repository implements the early local-first subset of this model. Workspaces are represented by a selected root path and a scanned `WorkspaceSnapshot`; file nodes are returned by `app/internal/workspace/scanner.go`; previews, searches, context packs, dataset profiles, artifacts, LLM settings, recent workspaces, agent tool descriptors, freshness checks, lineage, and chat history are implemented with Go structs and local JSON/provenance files. SQLite schema initialization, mirroring, direct fresh-row writes, metadata search, dataset dependency records, and SQL run history now exist; JSON remains the compatibility fallback while repository coverage expands.
+The active repository implements a broad native subset of this model in `nexus-app/`. Workspaces are represented by a selected root path and a scanned `WorkspaceSnapshot`; file nodes, previews, searches, context packs, safe mutations, rollback records, dataset profiles, artifacts, LLM settings, approvals, jobs, agent/tool audit records, lineage, and chat history are implemented through native Go services. SQLite metadata is now the primary native store for chats, approvals, artifacts, tool runs, jobs, SQL runs, dataset dependencies, and history where repositories exist; JSON and artifact sidecars remain compatibility and human-readable layers.
+
+The preserved `app-wails/` implementation is still useful reference history, especially for external connector profiles, richer profile/memory UX, and some Monaco-era editor workflows. New domain work should target `nexus-app/internal/domain` and `nexus-app/internal/services`.
 
 The richer IDs below describe the intended durable domain model. Do not treat every listed field as a created database column yet.
 

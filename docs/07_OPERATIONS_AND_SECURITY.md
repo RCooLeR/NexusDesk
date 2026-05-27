@@ -43,7 +43,7 @@ Runtime changes should be stored locally and optionally exportable as workspace 
 
 Product surfaces can change which tools and panels are visible, but they must not change the underlying safety boundary. Workbench, Data & Analytics, Artifacts, Settings, and future analytics/document/operations capabilities all share the same workspace roots, path checks, approval rules, secret handling, and audit model.
 
-The current implementation has an append-only local approval/action log for applied file writes, deletes, moves, artifact creation, scan-report creation, artifact archive, artifact delete, full-project access grants/revokes, and approved agent tool executions. Native approval records are written under `.nexusdesk/approvals/log.json` for compatibility and to the SQLite `approval_records` table when the active metadata store exists; the Approvals tab reads SQLite first and falls back to JSON for older workspaces. Modal approval prompts now cover higher-risk file, artifact, and explicit agent tool actions; mutating Docker/database actions and autonomous model-directed agent tool execution remain planned.
+The native implementation has an append-only local approval/action log for file writes, deletes, moves, artifact operations, rollback application, full-project access grants/revokes, task execution, Git staging actions, and agent tool executions. Native approval records are written under `.nexusdesk/approvals/log.json` for compatibility and to the SQLite `approval_records` table when the active metadata store exists; the Approvals tab reads SQLite first and falls back to JSON for older workspaces. Modal approval prompts now cover higher-risk file, artifact, rollback, Git, task, and agent tool actions. Mutating Docker/database actions remain planned and must use the same approval/audit model.
 
 ## Secrets
 
@@ -65,7 +65,7 @@ Rules:
 - mark suspected secret files as restricted
 - require confirmation before sending sensitive content to remote models
 
-Windows builds currently protect secret sidecar blobs with DPAPI. macOS Keychain and Linux Secret Service/libsecret are not implemented yet, so non-Windows builds refuse to save API keys or connector credentials instead of falling back to plaintext secret files. Matching storage tests skip protected-secret round trips on unsupported OSes until those native backends land.
+Secret storage is currently a native parity gap. The preserved Wails reference has DPAPI-backed sidecar storage on Windows and refusal behavior for unsupported OS secret backends. The Fyne app should not claim equivalent credential-vault support until protected secret storage is ported into a native service.
 
 ## File System Security
 
@@ -83,9 +83,9 @@ Default rules:
 
 IDE-style convenience must remain scoped. Quick-open, editor tabs, project context packs, source previews, and artifact navigation should all resolve through the same rooted workspace APIs instead of reading arbitrary filesystem paths from the frontend.
 
-Current implementation:
+Current native implementation:
 
-- workspace scans and previews are rooted in `app/internal/workspace/`
+- workspace scans, previews, search, problems, writes, patches, file operations, context packs, and rollback application are rooted in `nexus-app/internal/services/workspace`
 - create/update writes require a backend diff preview before apply
 - large text-file overwrites are allowed through the same approval path even when the existing file is too large for inline diff rendering; the diff payload marks the omitted existing content instead of rejecting the write only because of preview size
 - inline write diffs use an LCS-based comparison so simple line insertions/deletions preserve surrounding context instead of showing the rest of the file as removed and re-added
@@ -93,20 +93,20 @@ Current implementation:
 - deletes reject directories, symlinks, metadata paths, and traversal before frontend confirmation
 - rename/move rejects traversal, metadata paths, directories, symlinks, same-path moves, directory-like targets, and overwrites
 - direct `.nexusdesk/` metadata writes and deletes are blocked
-- approved model-directed shell execution parses a single command into argv, rejects shell metacharacters and escaping paths, and only allows a small set of workspace-scoped commands/subcommands; arbitrary shell strings are not run through `cmd /c` or `sh -c`
+- native model-directed shell execution is not part of the default tool surface; shell remains a future high-risk policy domain
 - read-only SQL guards strip comments and string literals before checking blocked mutation keywords, so values like `'delete'` or comments that mention `update` do not reject otherwise read-only SELECT queries
 - CSV query exports are created only from bounded query results and exclusive artifact writes
 - chart artifacts are created only through bounded CSV aggregation and exclusive artifact writes
 - scan-report artifacts are created from backend scan status and exclusive artifact writes
 - operations runbook artifacts are created only from bounded, redacted, read-only operations inspections and exclusive artifact writes
 - artifact archive/delete actions validate workspace-relative artifact paths and move/remove sibling metadata sidecars through backend methods
-- explicit agent tool dry-runs/executions persist auditable records under `.nexusdesk/tool-runs/log.json`
+- explicit native agent/tool executions persist auditable records through SQLite metadata where available, with compatibility import for older tool-run logs
 - SQLite metadata preparation writes schema and manifest files under `.nexusdesk/metadata/`, opens `.nexusdesk/metadata/nexusdesk.sqlite` through `modernc.org/sqlite`, applies the schema, and accepts direct fresh writes for chats, approvals, artifacts, tool runs, jobs, SQL runs, and dataset dependencies
 - SQLite metadata inspection exposes table columns, row counts, filterable columns, copyable sample rows, dataset SQL view summaries, and searchable chat/artifact/tool-run history
 - dataset dependency and SQL run metadata records tie saved snippets, reports, charts, summaries, and connector queries back to source datasets
 - workspace freshness checks ignore internal metadata/tool-run paths, detect source file changes, mark generated artifacts with stale source provenance, flag stale dataset-derived views, and warn chat/context surfaces when cited files changed
-- read-only Git refreshes are user-triggered rather than automatic on workspace open, and approved agent shell commands run as hidden/no-console child processes on Windows desktop builds
-- frontend commands call Wails bindings rather than reading or mutating arbitrary paths directly
+- read-only Git refreshes and task/Compose validation runs are user-triggered rather than automatic on workspace open, and spawned Git/task processes run as hidden/no-console child processes on Windows desktop builds
+- Fyne widgets call service methods rather than reading or mutating arbitrary paths directly
 
 ## Database Security
 

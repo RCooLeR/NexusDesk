@@ -14,6 +14,18 @@ We are moving away from Wails because the product wants to become a native, loca
 
 This is a breaking migration, not an incremental UI refresh.
 
+## Current Review
+
+Latest full project review: `docs/12_PROJECT_REVIEW.md`.
+
+Summary:
+
+- The Fyne migration remains the correct direction and `nexus-app/` is now the active product.
+- The architecture is still healthy: root-thin module, framework-free services, Fyne-only UI packages, explicit approvals, safe workspace mutation boundaries, manual Git/Docker actions, and SQLite metadata.
+- The biggest risk is UI and orchestration complexity accumulating in `internal/ui/shell`; future UI work should keep extracting focused panels, controllers, and service-owned behavior.
+- The highest-priority unfinished work is migration parity, not new top-level studios: editor quality, external database profiles, durable job routing for slow workflows, connector/dump jobs, assistant maturity, and native UI polish.
+- `app-wails/` should remain as reference until native parity is good enough for daily use.
+
 ## Repository State
 
 - [x] `app-wails/` preserves the existing Wails application and all current migration source code.
@@ -141,7 +153,7 @@ Goal: recreate the useful local project workbench without Wails or React.
 
 Exit criteria:
 
-- [ ] A user can open a real project, browse files, preview content, and safely edit text/code files.
+- [x] A user can open a real project, browse files, preview content, and safely edit text/code files.
 
 ## Phase 2: Native Assistant And Agent
 
@@ -168,7 +180,7 @@ Goal: port the LLM and agent runtime without recreating the Wails bridge problem
 
 Exit criteria:
 
-- [ ] The assistant can answer with selected workspace context and can request approved tools safely.
+- [x] The assistant can answer with selected workspace context and can request approved tools safely.
 
 ## Phase 3: Git And IDE Operations
 
@@ -190,7 +202,7 @@ Goal: make Workbench credible as an IDE-like surface.
 
 Exit criteria:
 
-- [ ] Workbench can inspect repository state and run approved project tasks without command-window flashes.
+- [x] Workbench can inspect repository state and run approved project tasks without command-window flashes.
 
 ## Phase 4: Data And Analytics
 
@@ -221,7 +233,7 @@ Goal: rebuild Data & Analytics as native data tooling, not a crowded web panel.
 
 Exit criteria:
 
-- [ ] A user can inspect local datasets and run bounded read-only analysis workflows.
+- [x] A user can inspect local datasets and run bounded read-only analysis workflows.
 
 ## Phase 5: Artifacts, Documents, And Operations
 
@@ -289,11 +301,12 @@ Exit criteria:
 
 ## Next Batch
 
-1. Continue native SQL notebooks with richer explain output, notebook-level result navigation, and a less text-box-like editor surface.
-2. Route long indexing, OCR, dump imports, connector pulls, report generation, and long agent runs through jobs.
-3. Add dump import job design before any Docker/database imports.
-4. Add richer SQLite connector lineage actions on top of cancellation, saved queries, and CSV/Markdown exports.
-5. Continue native UI parity by replacing remaining cramped Wails-era workflow strips with structured native tabs, dialogs, and split panes.
+1. Finish native editor/UI parity: syntax highlighting plan, find/replace, split editor groups, breadcrumbs/outline/minimap strategy, and less cramped native panels.
+2. Port external database profile storage and guarded read-only query workflows from Wails reference into native services and Settings/Data UI.
+3. Route long indexing, OCR, dump imports, connector pulls, report generation, and long agent runs through durable jobs.
+4. Add dump import job design before any Docker/database import execution.
+5. Add richer connector lineage actions for SQLite and future external profiles: open source, dependent artifacts, stale-output rebuild, and history jumps.
+6. Keep cleaning Wails-era documentation wording so active docs clearly describe `nexus-app/` behavior and mark `app-wails/` as reference history.
 
 ## Preserved Post-Port Backlog
 
@@ -307,11 +320,13 @@ The Fyne migration must not drop product ambition, but this section is intention
 - [x] First native multi-tab editor state with pinned ordering, dirty markers, safe save, revert, and explicit discard confirmation when closing modified tabs.
 - [ ] Multi-tab editor polish with split editor groups, breadcrumbs, outline, minimap, find, format, and go-to-definition where available.
 - [ ] Syntax highlighting strategy for common languages, Markdown, SQL, JSON/YAML/XML, Docker/Compose, logs, and config files.
-- [ ] Markdown source/rendered toggle.
-- [ ] Safe edit preview/apply/rollback for text, code, patches, appends, encoding changes, and allowed binary writes.
-- [ ] Workspace search over paths, text, symbols, artifacts, and chat history.
-- [ ] Problems panel for TODO/FIXME/HACK/BUG markers, merge conflicts, JSON errors, and later language diagnostics.
-- [ ] Git status, branch, changed-file tree, staged/unstaged groups, file diff, split/unified/diff-only views, hunk actions, history, blame, AI review, test suggestions, commit draft, and PR draft.
+- [x] Markdown source/rendered toggle.
+- [x] Safe edit preview/apply/rollback for text, code, patches, appends, encoding-aware writes, and agent-safe mutation tools.
+- [x] Workspace search over paths, previewable text, artifacts, chat history, and lightweight regex content matches.
+- [x] Problems panel for TODO/FIXME/HACK/BUG markers, merge conflicts, and JSON errors.
+- [ ] Problems panel language diagnostics beyond lightweight local scans.
+- [x] Git status, branch, changed-file tree, staged/unstaged groups, file diff, split/unified/diff-only views, hunk actions, AI diff summary, and commit draft.
+- [ ] Git history, blame, broader AI review, test suggestions, PR draft, and destructive revert/discard actions.
 - [x] Task discovery and approved task runs for npm, Go, and Docker Compose validation.
 
 ### Data & Analytics Studio
@@ -363,20 +378,26 @@ The Fyne migration must not drop product ambition, but this section is intention
 ### AI Assistant And Agent
 
 - [ ] Provider settings for Ollama/OpenAI-compatible endpoints, curated local model catalog, runtime context-window detection, response reserve, GPU diagnostics, and provider probes.
-- [ ] Streaming chat with selected files/directories/project context, token-budgeted history, source citation, weak-evidence warnings, retries, and answer comparison.
+- [x] Native provider settings for Ollama/OpenAI-compatible endpoints, provider probes, context-window options, response reserve, and Ollama runtime diagnostics.
+- [ ] Curated native local model catalog, deeper GPU diagnostics, and automatic loaded-model context-window tuning.
+- [x] Streaming chat with selected files/directories/project context, token-budgeted history, persisted turns, and source-path context.
+- [ ] Weak-evidence warnings, retries, answer comparison, richer citations, and assistant memory/profile parity in native UI.
 - [ ] Local assistant memory and prompt profiles.
-- [ ] Agent runtime with plan updates, bounded observations, model-driven tool calls, no frontend iteration cap, emergency backend loop guard, and final-answer fallback when context is exhausted.
-- [ ] Unified tool registry and dispatcher for deterministic tools and model-requested tools.
-- [ ] Agent tools for read context, read changed files, git diff/history/blame, problems, tasks, artifacts, artifact lineage, datasets, SQL, documents, operations files, web fetch, safe writes, patches, copy/move/delete, rollback, and approved shell.
-- [ ] Live activity tail that shows the last one or two model/tool steps while preserving full trace in Activity.
+- [x] Agent runtime with plan updates, bounded observations, model-driven tool calls, no frontend iteration cap, emergency backend loop guard, and final-answer fallback behavior.
+- [x] Unified tool registry and dispatcher for deterministic tools and model-requested tools.
+- [x] Agent tools for read context, workspace search, problems, Git status/diff, tasks, artifacts, datasets, SQLite, documents, operations files, safe writes, patches, copy/move/delete, and rollback.
+- [ ] Agent tools for Git history/blame, richer artifact lineage actions, web fetch, and approved shell.
+- [x] Live activity tail that shows compact model/tool progress while preserving persisted agent audit history.
 
 ### Artifacts And Provenance
 
-- [ ] Markdown, CSV, SVG/chart, SQL result, scan report, task report, chat answer, and future presentation artifacts.
-- [ ] Provenance sidecars with source files, chat IDs, tool run IDs, dataset/query IDs, and generated timestamps.
-- [ ] Artifact browser with search, metadata, preview, compare, archive, delete, restore, and open-source navigation.
-- [ ] Artifact lineage graph import/export and stale-source warnings.
-- [ ] Regeneration workflows that reuse original source context and parameters.
+- [x] Markdown, CSV, SVG/chart, SQL result, task report, notebook report, document report, operations runbook, comparison, and extracted-document artifacts.
+- [ ] Scan report, chat-answer, presentation, and richer generated document artifacts in native UI.
+- [x] Provenance sidecars with source files, query IDs, generated timestamps, metadata rows, and freshness fingerprints for explicit artifact writes.
+- [ ] Complete chat/tool-run provenance coverage for every generated output type.
+- [x] Artifact browser with search, metadata, preview, compare, archive, delete, restore, and open-source navigation.
+- [x] Artifact lineage/freshness warnings for current native artifacts.
+- [ ] Artifact lineage graph import/export UI parity and regeneration workflows that reuse original source context and parameters.
 
 ### Operations Studio
 
@@ -391,15 +412,17 @@ The Fyne migration must not drop product ambition, but this section is intention
 
 - [x] Native approval queue and modal flows for high-risk actions.
 - [x] Full-access project policy with clear scope, expiration, and visible status.
-- [ ] Path-root enforcement, traversal protection, ignored-state protection, and `.nexusdesk` protection.
-- [ ] Rollback snapshots for approved mutations where practical.
+- [x] Path-root enforcement, traversal protection, ignored-state protection, and `.nexusdesk` protection across native workspace/file mutation services.
+- [x] Rollback snapshots for approved native workspace mutations where practical.
 - [ ] OS-protected secrets on Windows, macOS Keychain, and Linux Secret Service/libsecret.
-- [ ] Append-only audit records for approvals, tool runs, file changes, tasks, connector queries, jobs, and artifacts.
+- [x] Append-only/persisted audit records for approvals, native agent/tool runs, file changes with rollback records, tasks, jobs, SQL runs, and artifacts.
+- [ ] Extend audit coverage to future connector sync jobs, OCR, dump imports, shell, and Docker mutations.
 - [ ] Export/backup flows for local-first data.
 
 ### Jobs, Persistence, And Observability
 
-- [ ] SQLite-first metadata store for chats, approvals, artifacts, tool runs, jobs, SQL runs, dataset dependencies, and search metadata.
+- [x] SQLite-first metadata store for chats, approvals, artifacts, tool runs, jobs, SQL runs, and dataset dependencies.
+- [ ] Search index metadata and broader recovery/export flows.
 - [x] JSON compatibility import from Wails-era workspaces for chat history, approvals, artifact sidecars, and tool-run logs.
 - [x] Legacy Wails SQLite dataset SQL run and dataset dependency import into native SQLite metadata.
 - [x] First durable job monitor with progress log tail, cancellation, retry from persisted task runs, and task-report output opening.

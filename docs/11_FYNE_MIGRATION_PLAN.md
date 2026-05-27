@@ -70,7 +70,7 @@ Rules:
 
 ## Current Baseline
 
-The first `nexus-app` slice includes:
+The latest reviewed `nexus-app` baseline includes the original shell slice plus substantial native parity. See `docs/12_PROJECT_REVIEW.md` for the dated review. Current implemented areas include:
 
 - native app lifecycle;
 - branded dark theme foundation;
@@ -117,6 +117,12 @@ The first `nexus-app` slice includes:
 - first native in-memory Jobs service and Jobs tab for task-run status, log tail, and cancellation requests;
 - first native SQLite metadata store under `.nexusdesk/metadata` with schema/manifest creation, persisted jobs, and persisted task-run records;
 - first native task-run Markdown report artifacts under `.nexusdesk/artifacts/task-runs` linked from persisted task-run records;
+- native workspace file create/folder create/copy/move/rename/delete actions with rollback records and tree-row context menus;
+- native editor dirty close confirmations, pinned ordering, safe save, and rollback-backed writes;
+- native Search, Problems, Git, Tasks, Jobs, Operations, Data, History, Agent Audit, Artifacts, Rollbacks, Approvals, and Settings panels;
+- native data profiling/query/SQL/notebooks/charts for CSV, TSV, JSON, NDJSON, XLSX, logs, Parquet metadata, and workspace SQLite;
+- native artifact browsing, metadata search, archive/delete/restore, comparison, source freshness, document extraction, operations runbooks, and notebook/SQLite/chart/dashboard artifacts;
+- native Ask/Agent modes with LLM streaming, deterministic tool dispatch, approval-gated safe mutations, compact activity tail, and persisted audit records;
 - framework-free workspace domain model.
 
 Full execution now works on the current workstation when the MSYS2 UCRT64 compiler path is configured. `nexus-app/scripts/dev-env.ps1` prepends `C:\msys64\ucrt64\bin` and `C:\msys64\usr\bin`, sets `CGO_ENABLED=1`, can run tests, builds, or the desktop app, and calls `build-windows-icon.ps1` during Windows builds so `build\nexusdesk.exe` has the approved executable icon resource. `CGO_ENABLED=0 go build .` still fails because Fyne's OpenGL binding requires CGO-backed files.

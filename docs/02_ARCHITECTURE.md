@@ -152,7 +152,7 @@ Native settings are split into `nexus-app/internal/services/settings` for non-se
 
 Native LLM transport is service-owned: `nexus-app/internal/services/llm` owns OpenAI-compatible chat, streaming chat, provider model probes, Ollama runtime probes, context-window options, response reserve, and workspace-context sentinel escaping. The Fyne assistant panel calls it through `nexus-app/internal/services/assistant` for Ask mode and `nexus-app/internal/services/agent` plus `nexus-app/internal/services/tools` for Agent mode. Widgets own only prompt composition, explicit context-pin controls, compact recent-history display, the compact live activity tail, job/audit handoff, final answer replacement, and read-only audit rendering; provider calls, context-pack construction, recent chat persistence, agent loops, deterministic tool dispatch, and SQLite audit records stay in services. Agent mode now receives the same pinned or selected context pack as Ask mode, including explicitly pinned generated artifacts under `.nexusdesk/artifacts`.
 
-### 2. Frontend
+### 2. Native UI Layer
 
 Responsibilities:
 
@@ -160,8 +160,8 @@ Responsibilities:
 - file tree
 - tabs and editor state
 - Workbench git visibility and project-tree context actions
-- studio mode surfaces for code, data, analytics, documents, operations, and artifacts
-- Monaco-backed code/text previews and draft editing
+- studio surfaces for Workbench, Data & Analytics, Artifacts, and Settings
+- Fyne-native code/text previews and draft editing, with a future strategy needed for IDE-grade editor depth
 - image and PDF preview
 - CSV table preview and XLSX sheet metadata display
 - chat UI
@@ -172,29 +172,29 @@ Responsibilities:
 - settings screens
 - artifact browser
 
-The frontend should render structured data from the backend. It should not contain business rules for file permissions, database safety, or Docker safety.
+The UI should render structured data from services. It should not contain business rules for file permissions, database safety, or Docker safety.
 
-Current implementation note: generated Wails bindings are imported through `app/frontend/src/api/wailsClient.ts`, not directly from feature components. `NexusShell.tsx` remains the main orchestrator, but panel resize state, studio-route state, Git workflows, Code AI prompt/patch helpers, and editor-outline extraction/presentation now live in focused modules so future workspace, chat, artifact, and data controllers can follow the same pattern.
+Current implementation note: `nexus-app/internal/ui/shell` is the active native UI. It is split by panel and workflow (`view`, `panels`, `tabs`, workspace tree/actions, assistant, Git, Data, Jobs, History, Artifacts, Approvals, Settings, Operations, and preview files). The preserved React/Wails UI under `app-wails/frontend/` remains a workflow reference only.
 
 ### Current Architecture Review
 
-Review status as of the latest full project pass:
+Review status as of 2026-05-27:
 
 - The product shape is still sound: a small primary rail for Workbench, Data & Analytics, Artifacts, and Settings, with the AI assistant always visible.
-- The Wails backend has useful service facades for workspace, dataset, artifact, git, and agent-runtime workflows. Those should be ported capability-by-capability into `nexus-app/internal/services/`.
+- The Fyne app is now the active implementation, not a placeholder shell. `nexus-app/internal/services/` contains real workspace, editor, Git, data, artifact, metadata, LLM, agent, task, job, operations, approval, history, document, and connector slices.
+- The Wails backend still has useful reference implementations for external connector profiles, web fetch, richer profile/memory UX, and some Monaco-era editor workflows. Those should be ported capability-by-capability rather than copied as large bridge files.
 - The React frontend has good workflow references, but it should not dictate the new native structure. Fyne UI should be rebuilt around native panels, menus, dialogs, tabs, jobs, and approval surfaces.
 - Git work is correctly manual on folder open, so opening a workspace should not launch external Git commands or desktop command windows.
-- Code AI actions now reuse the chat/artifact pipeline and route accepted single-file patch drafts through the existing safe write preview/apply boundary.
-- Slow or external future work, especially OCR, dump imports, connector pulls, deeper indexing, and long agent runs, must go through a job runner before it is attached to folder-open or route-load flows.
+- Native agent file mutations now go through the same safe workspace mutation and rollback services as manual writes.
+- Slow or external future work, especially OCR, dump imports, connector pulls, deeper indexing, report generation, and long agent runs, must go through the durable job model before it is attached to UI events.
 
 Near-term architecture corrections:
 
-- Configure Windows CGO/Fyne toolchain and verify the native app runs.
-- Add native UI affordances for file operations and rollback browsing while keeping the mutation policy in `nexus-app/internal/services/workspace`.
-- Keep editor tab/session and draft rules in `nexus-app/internal/services/editor` rather than in Fyne widget callbacks; Fyne editor chrome should only render and dispatch those state transitions.
-- Port remaining assistant/agent, data, artifact, and metadata services without recreating a bridge-shaped root package.
-- Route additional slow workflows through the durable job model now that task jobs support cancellation, retry from persisted task-run records, and opening task-report outputs.
-- Promote SQLite metadata repositories to primary persistence once migration/recovery tests exist.
+- Continue extracting focused native UI state as `internal/ui/shell` grows; do not let it become the new bridge-shaped monolith.
+- Finish native editor quality without pushing language rules into widgets.
+- Port external database profiles and connector credential flows into native services and settings/data surfaces.
+- Route additional slow workflows through the durable job model now that task jobs support cancellation, retry from persisted records, and output artifacts.
+- Keep `app-wails/` until native parity is good enough for day-to-day use.
 
 ### 3. Workspace Manager
 
@@ -275,11 +275,12 @@ Current responsibilities:
 - apply tool policies
 - stop loops safely
 
-Current implementation:
+Current native implementation:
 
-- `app/internal/agent/` owns the backend ReAct loop, system prompt, plan updates, action parsing, observation handling, and memory pruning.
-- `app/agent_runtime.go` exposes `RunAgent` and maps model-requested tools to deterministic workspace, data, artifact, shell, and registered agent-tool handlers.
-- High-impact tools are blocked unless the backend request explicitly enables approval, and shell commands require a separate shell flag.
+- `nexus-app/internal/services/agent/` owns the ReAct-style loop, plan updates, action parsing, bounded observations, run state, and final-answer behavior.
+- `nexus-app/internal/services/tools/` owns deterministic tool descriptors, argument parsing, and dispatcher handlers for context, preview/search/problems, Git, tasks, rollbacks, approvals, safe mutations, artifacts, documents, operations, datasets, and SQLite.
+- High-impact tools are gated by the approval/full-project-access services and still route through safe workspace mutation services.
+- Shell execution remains outside the default native agent surface.
 
 Planned responsibilities:
 
@@ -389,10 +390,10 @@ Target studio ownership:
 ### Local Developer
 
 ```text
-wails dev
-go backend
-frontend dev server
-JSON local stores
+nexus-app Fyne module
+Go services and Fyne UI in one process
+SQLite metadata under .nexusdesk/metadata
+JSON compatibility imports/sidecars where needed
 ollama or custom LLM endpoint
 ```
 
@@ -400,9 +401,9 @@ ollama or custom LLM endpoint
 
 ```text
 Nexus Augentic Studio app
-embedded frontend assets
-Go backend in same process
-local JSON config stores today; SQLite later
+native Fyne UI
+Go services in same process
+SQLite metadata plus local artifacts/sidecars
 user-selected model endpoint
 ```
 

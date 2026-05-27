@@ -88,34 +88,18 @@ gemma4:26b
 
 Capabilities should be explicit. The app should not assume every model supports tool calling, vision, embeddings, or image generation.
 
-Current implementation:
+Current native implementation:
 
-- `app/internal/storage/llm_settings.go` stores provider name, base URL, and model in local JSON config.
-- `app/internal/storage/assistant_profile.go` stores local assistant memory plus prompt profiles. `prepareChat` prepends the active profile and memory as user-provided guidance, explicitly separate from source evidence.
-- Saved API keys are stored in a sidecar credential blob protected by the OS where available and are redacted before settings are returned to the frontend.
-- When the frontend sends the redacted API key marker back, the backend resolves the stored secret only for save/test flows that need it.
-- The frontend settings card exposes a curated local model dropdown capped at 26B parameters.
-- `app/internal/llm/probe.go` tests OpenAI-compatible `/models` endpoints.
-- The probe returns model count, a small model sample, capability hints, and configured-model warnings.
-- `app/internal/llm/chat.go` sends OpenAI-compatible `/chat/completions` requests, including streaming responses through server-sent `data:` chunks.
-- `AskLLM` and `AskLLMStream` in `app/app.go` resolve saved settings and attach selected workspace text context server-side.
-- `AskLLMContextPack` and `AskLLMStreamContextPack` build a bounded multi-file context pack from pinned previews.
-- Directory and project context use `app/internal/workspace/context.go` to expand selected folders or `.` into a capped list of previewable files before the streaming chat request is sent.
-- The saved provider settings include `maxContextTokens` and `responseReserveTokens`; chat context uses the remaining budget for selected files or context packs, local Ollama-compatible calls send `num_ctx` and `num_predict`, and compatible chat calls send `max_tokens` from the response reserve.
-- The model dropdown is backed by a shared frontend catalog plus backend storage defaults. Selecting a curated model applies the largest configured context window for that model, derives the response reserve from the window, and then prefers Ollama runtime `context_length` when the connection probe can see the loaded model.
-- Workspace search and CSV row queries are deterministic backend tools, not model-side file access.
-- `app/internal/agenttools/registry.go` now exposes a first deterministic tool registry for workspace preview/context, git diff context, file mutation, dataset profile/query/SQL, SQLite inspect/query, artifact list/read/create/archive, and operations inspect actions.
-- `app/internal/agent/` now contains a backend-first ReAct runtime that can plan, call tools, process observations, prune working memory, emit live run events for model/tool steps, continue without a frontend-supplied iteration cap, wrap up when the selected model context is full or an emergency loop guard trips, and return final answers through `RunAgent`.
-- Persistent workspace changes are now treated as a trust boundary: if a prompt asks to create, edit, fix, implement, document, or otherwise persist a workspace change and write access is approved, the runtime rejects premature final answers until a successful `write_file`, `write_binary_file`, `apply_patch`, `append_file`, or workspace-write tool record exists. Text/code/config/document writes use diff-previewed `write_file`; multi-file or precise code edits should use `apply_patch`, which applies standard unified diffs only after exact hunk matching and approval; binary files such as images, archives, fonts, databases, Office files, or generated PDFs use `write_binary_file` with standard base64 bytes and size/SHA-256 review metadata. Direct model-authored executable binary writes such as `.exe`, `.dll`, `.msi`, and `.scr` are blocked; executable artifacts should come from source builds and a signed release pipeline. If the model still claims a mutation without a successful mutating tool, the final answer receives a verification warning.
-- Final answers are post-checked for unverified workspace side-effect claims. If the model says it created, saved, wrote, generated, or modified a file/artifact but the run has no successful mutating tool record, the backend appends a verification warning instead of letting the claim stand unqualified.
-- `app/agent_runtime.go` bridges that runtime to the existing workspace, dataset, SQLite, artifact, shell, and registered agent-tool surfaces without giving the model direct filesystem or database authority.
-- The always-visible assistant renders a proposed tool plan for the active context with risk and approval labels, and user-triggered dry-run/execute actions now persist tool-run records.
-- Recent tool-run rows expand into detail drawers with captured inputs, output/error text, approval references, replay, and target diff affordances.
-- Persisted assistant answers and saved Markdown answer artifacts include the source paths used for selected-file or context-pack grounding.
-- Chat messages and context-pack previews warn when their cited source paths changed after the answer/context was created.
-- `AskLLMStream` emits `nexus:chat-stream` Wails events so the frontend can render partial assistant responses before final history persistence completes.
-- `app/internal/storage/chat_history.go` persists bounded chat history per workspace in local JSON config.
-- The local workstation endpoint is backed by the sibling `../Llm/` Compose stack. Its `rcooler-ollama` container must use `OLLAMA_LLM_LIBRARY=cuda_v12`; otherwise Ollama may select CUDA 13, fail GPU initialization, and fall back to CPU with zero VRAM offload.
+- `nexus-app/internal/services/settings` stores non-secret provider, model, context-window, and response-reserve settings.
+- Secret persistence and assistant memory/profile parity remain Wails-reference work to port carefully.
+- `nexus-app/internal/services/llm` implements OpenAI-compatible chat/completions, streaming SSE parsing, `/models` probing, Ollama `/api/ps` runtime diagnostics, context-window options, response reserve, and workspace-context sentinel escaping.
+- `nexus-app/internal/services/assistant` wraps the LLM client for Ask mode and attaches bounded selected-file, directory, project-root, and generated-artifact context packs.
+- `nexus-app/internal/services/agent` owns the native ReAct-style agent loop with plan updates, bounded observations, model-driven tool calls, an emergency backend loop guard, and final-answer behavior.
+- `nexus-app/internal/services/tools` owns the native deterministic tool dispatcher for context, file preview/search/problems, Git status/diff, tasks, rollbacks, approvals, safe file mutations, artifacts, documents, operations files, datasets, and SQLite.
+- Persistent workspace changes are treated as a trust boundary: write, append, copy, move, delete, rollback, and patch tools require scoped full-project access and still route through workspace services that enforce rooted paths, `.nexusdesk` guards, exact patch matching, rollback snapshots, and audit records.
+- The Fyne assistant panel owns only prompt composition, context-pin controls, compact recent-history display, the compact live activity tail, final-answer replacement, and read-only audit rendering.
+- Durable chat, agent, tool-run, approval, artifact, SQL, dataset dependency, and job records live in native SQLite metadata where available, with Wails-era import compatibility on workspace open.
+- The local workstation endpoint can still target the sibling `../Llm/` Compose stack and `rcooler-ollama`, but native provider diagnostics should remain optional and user-triggered.
 
 Capability hints are currently inferred from model IDs. They are useful for readiness signals, but they are not a substitute for provider-native capability metadata.
 

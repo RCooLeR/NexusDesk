@@ -27,6 +27,7 @@ Nexus Augentic Studio is not only a chatbot. It should feel like a serious IDE-s
 - [Developer Experience](docs/09_DEVELOPER_EXPERIENCE.md)
 - [Studio Roadmap](docs/10_STUDIO_ROADMAP.md)
 - [Fyne Migration Plan](docs/11_FYNE_MIGRATION_PLAN.md)
+- [Current Project Review](docs/12_PROJECT_REVIEW.md)
 - [Implementation Tracker](tracker.md)
 
 ## Current Project Layout
@@ -84,6 +85,10 @@ Agent returns grounded answer
   ->
 App creates artifacts such as reports, charts, files, or configs
 ```
+
+## Current Focus
+
+The active application is `nexus-app/`. The preserved Wails app remains a reference, but new development should finish Fyne parity first, then continue with new features. The current review is in `docs/12_PROJECT_REVIEW.md`, and the execution source of truth is `tracker.md`.
 
 ## First Stable Focus
 

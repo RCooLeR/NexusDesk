@@ -4,7 +4,7 @@
 
 This document still preserves the long-horizon delivery plan and Wails-era implementation history. The active execution tracker is `tracker.md`: Wails/React is now preserved under `app-wails/`, the new native implementation lives under `nexus-app/`, and newly completed work should be described in native terms before older Wails-only capabilities are treated as complete.
 
-Current native Data & Analytics status: `nexus-app/internal/services/datasets` handles file dataset profiling/query/SQL/notebooks/charts plus the first executable saved SQL notebook flow with multiline SQL/chart cell directives, per-cell results, SQL lineage, Markdown artifact export for completed notebook runs, latest SQL history reuse/rerun actions for the selected dataset or SQLite source, first Data panel result tabs for notebook summary, rows, plan, and charts, and native buttons that insert valid SQL/chart notebook cell templates. `nexus-app/internal/services/dbconnector` provides explicit read-only workspace SQLite schema inspection plus guarded `SELECT`/`WITH` query preview for `.sqlite`, `.sqlite3`, and `.db` files. Fuller notebook cell management, SQLite cancellation, saved connector queries, CSV/Markdown exports, external database profiles, and richer connector actions remain pending native migration items even though the preserved Wails reference contains versions of those workflows.
+Current native status: `nexus-app/` now has the active Fyne shell, native workspace tree, preview/edit/search/problems flows, safe file mutation and rollback services, assistant and agent services, approvals, metadata, Git status/diff/actions, task/jobs, Data & Analytics profiling/query/SQL/notebooks/charts, workspace SQLite inspection/query/export/cancellation, artifacts, document extraction, operations scanning/runbooks, and history/audit panels. The largest remaining migration gaps are IDE-grade editor polish, external database profile parity, slow-work job routing, dump/import design, richer assistant quality controls, and continued UI cleanup.
 
 ## Phase 0: Product Baseline
 
@@ -33,8 +33,8 @@ Goal: create a usable local desktop studio with project browsing, editor tabs, d
 
 Deliverables:
 
-- Wails desktop app shell: implemented
-- frontend layout with project tree, editor area, and chat panel: implemented
+- Fyne desktop app shell: implemented in `nexus-app/`
+- native layout with project tree, editor area, assistant panel, and bottom workbench panels: implemented
 - IDE/data/analytics studio positioning in app copy and docs: implemented
 - visible product surface vocabulary for Workbench, Data & Analytics, Artifacts, and Settings: first implementation
 - local JSON app config for recent workspaces and LLM settings: implemented
@@ -102,7 +102,8 @@ Exit criteria:
 
 Current status:
 
-- The desktop shell builds on Windows through Wails.
+- The active desktop shell builds on Windows through Fyne/CGO using `nexus-app/scripts/dev-env.ps1`.
+- The preserved Wails shell remains under `app-wails/` as a reference implementation.
 - Nexus Augentic Studio is now documented and presented as a local-first AI Workbench with Data & Analytics, Artifacts, Settings, and always-visible assistant surfaces.
 - The primary rail is intentionally limited to implemented product surfaces instead of roadmap-only studios.
 - Opening a workspace no longer triggers automatic Git refresh; Git status is manual so folder open cannot launch Git work or render malformed unavailable Git responses.
