@@ -152,3 +152,27 @@ type NotebookSaveRequest struct {
 	Label   string
 	Cells   []NotebookCell
 }
+
+type NotebookRunResult struct {
+	RelPath     string
+	NotebookID  string
+	Label       string
+	Cells       []NotebookCellRun
+	StartedAt   time.Time
+	CompletedAt time.Time
+	DurationMs  int64
+	Message     string
+}
+
+type NotebookCellRun struct {
+	CellID      string
+	Label       string
+	Kind        string
+	SQL         string
+	SQLResult   SQLResult
+	ChartResult ChartResult
+	Error       string
+	StartedAt   time.Time
+	CompletedAt time.Time
+	DurationMs  int64
+}

@@ -159,8 +159,8 @@ func New(window fyne.Window) *View {
 	dataProfileDetail.TextStyle = fyne.TextStyle{Monospace: true}
 	dataProfileDetail.Wrapping = fyne.TextWrapWord
 	dataProfileDetail.Disable()
-	dataQueryEntry := widget.NewEntry()
-	dataQueryEntry.SetPlaceHolder("Search, e.g. channel=paid order by spend desc limit 20")
+	dataQueryEntry := widget.NewMultiLineEntry()
+	dataQueryEntry.SetPlaceHolder("Search/filter, SQL, or notebook cells. Use -- cell: Label and -- chart: Label to save multiple cells.")
 	operationsDetail := widget.NewMultiLineEntry()
 	operationsDetail.TextStyle = fyne.TextStyle{Monospace: true}
 	operationsDetail.Wrapping = fyne.TextWrapWord

@@ -202,6 +202,7 @@ Goal: rebuild Data & Analytics as native data tooling, not a crowded web panel.
 - [x] Add first SELECT-only native dataset SQL run over the selected dataset with persisted run/dependency metadata.
 - [x] Promote SQL run/dependency history into the Data panel and unified History navigation.
 - [x] Port first native SQL notebook model with per-dataset save/load, capped cells, and lineage metadata.
+- [x] Add first native SQL notebook execution slice with multiline cell directives, SQL/chart cells, per-cell results, isolated failures, and SQL run lineage.
 - [x] Port first SQLite workspace connector browser with read-only schema, index, relationship, row-count, and capped-sample inspection.
 - [ ] Port external DB profile storage and read-only query guards.
 - [ ] Add native table/grid widget strategy.
@@ -280,7 +281,7 @@ Exit criteria:
 
 ## Next Batch
 
-1. Expand native SQL notebooks into the full notebook shell with multiple editable cells, result tabs, run-history reuse, explain output, chart cells, and artifact export.
+1. Continue native SQL notebooks with visual cell controls, result tabs, run-history reuse, and artifact export.
 2. Port AI diff summary and commit drafting through the native assistant service.
 3. Route long indexing, OCR, dump imports, connector pulls, report generation, and long agent runs through jobs.
 4. Add dump import job design before any Docker/database imports.
@@ -311,7 +312,8 @@ The Fyne migration must not drop product ambition, but this section is intention
 - [x] SQL run and dataset dependency history surfaced in Data & Analytics plus unified History.
 - [ ] DuckDB-capable SQL over datasets when the optional CGO-backed build is available.
 - [x] First native saved SQL notebook model with per-dataset JSON persistence, capped cells, Data panel save/load actions, and dataset dependency lineage.
-- [ ] Full SQL notebook shell with multiple editable cells, result tabs, run history, reuse/rerun, explain output, chart cells, and artifact export.
+- [x] First native SQL notebook execution flow with multiline `-- cell:` / `-- chart:` directives, saved multi-cell notebooks, per-cell SQL/chart execution, isolated failures, and SQL run lineage.
+- [ ] Full SQL notebook shell with visual cell controls, result tabs, run history, reuse/rerun, explain output, and artifact export.
 - [x] First SQLite workspace database browser with schema, views, indexes, row counts, capped samples, and relationship hints.
 - [x] First SQLite connector query preview with SELECT/WITH guard, single-statement validation, visible default row cap/timeout, SQL run metadata, dependency lineage, and read-only result rendering.
 - [ ] SQLite connector query cancellation, saved queries, CSV/Markdown exports, and richer lineage actions.

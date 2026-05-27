@@ -40,7 +40,8 @@ func (v *View) newDataPanel() fyne.CanvasObject {
 	historyButton := widget.NewButtonWithIcon("SQL history", theme.HistoryIcon(), v.showDatasetSQLHistory)
 	saveNotebookButton := widget.NewButtonWithIcon("Save notebook", theme.DocumentSaveIcon(), v.saveSelectedDatasetNotebook)
 	loadNotebookButton := widget.NewButtonWithIcon("Load notebook", theme.FolderOpenIcon(), v.loadSelectedDatasetNotebook)
-	actions := container.NewHBox(profileButton, queryButton, sqlButton, sqliteButton, sqliteQueryButton, saveNotebookButton, loadNotebookButton, chartButton, exportChartButton, dashboardButton, exportDashboardButton, historyButton)
+	runNotebookButton := widget.NewButtonWithIcon("Run notebook", theme.MediaPlayIcon(), v.runLatestDatasetNotebook)
+	actions := container.NewHBox(profileButton, queryButton, sqlButton, sqliteButton, sqliteQueryButton, saveNotebookButton, loadNotebookButton, runNotebookButton, chartButton, exportChartButton, dashboardButton, exportDashboardButton, historyButton)
 	queryBar := container.NewBorder(nil, nil, nil, actions, v.dataQueryEntry)
 	header := container.NewVBox(v.dataProfileStatus, queryBar)
 	detail := container.NewScroll(v.dataProfileDetail)
@@ -134,12 +135,7 @@ func (v *View) saveSelectedDatasetNotebook() {
 	saved, err := v.datasetService.SaveNotebook(workspace.Root, datasetsSvc.NotebookSaveRequest{
 		RelPath: selected,
 		Label:   notebookLabelForDataset(selected),
-		Cells: []datasetsSvc.NotebookCell{{
-			ID:    "cell-1",
-			Kind:  "sql",
-			Label: "Query",
-			SQL:   sqlText,
-		}},
+		Cells:   notebookCellsFromEditor(sqlText),
 	})
 	if err != nil {
 		v.dataProfileStatus.SetText("Notebook save failed for " + selected)
@@ -174,12 +170,47 @@ func (v *View) loadSelectedDatasetNotebook() {
 		v.dataProfileDetail.SetText(formatDatasetNotebooks(nil))
 		return
 	}
-	if sqlText := firstNotebookSQL(notebooks[0]); sqlText != "" {
-		v.dataQueryEntry.SetText(sqlText)
-	}
+	v.dataQueryEntry.SetText(formatNotebookForEditor(notebooks[0]))
 	v.dataProfileStatus.SetText(fmt.Sprintf("Loaded %d SQL notebook(s) for %s.", len(notebooks), selected))
 	v.dataProfileDetail.SetText(formatDatasetNotebooks(notebooks))
 	v.addActivity("Loaded SQL notebooks for " + selected + ".")
+}
+
+func (v *View) runLatestDatasetNotebook() {
+	workspace := v.state.Workspace()
+	if workspace.Root == "" {
+		v.dataProfileStatus.SetText("Open a workspace before running SQL notebooks.")
+		return
+	}
+	selected := selectedPathOrEmpty(v)
+	if selected == "" {
+		v.dataProfileStatus.SetText("Select a dataset before running SQL notebooks.")
+		return
+	}
+	notebooks, err := v.datasetService.ListNotebooks(workspace.Root, selected)
+	if err != nil {
+		v.dataProfileStatus.SetText("Notebook run failed for " + selected)
+		dialog.ShowError(err, v.window)
+		return
+	}
+	if len(notebooks) == 0 {
+		v.dataProfileStatus.SetText("No saved SQL notebooks for " + selected + ".")
+		v.dataProfileDetail.SetText(formatDatasetNotebooks(nil))
+		return
+	}
+	result, err := v.datasetService.RunNotebook(workspace.Root, notebooks[0])
+	if err != nil {
+		v.dataProfileStatus.SetText("Notebook run failed for " + selected)
+		dialog.ShowError(err, v.window)
+		return
+	}
+	v.persistNotebookRunSQL(result)
+	v.dataProfileStatus.SetText(result.Message)
+	v.dataProfileDetail.SetText(formatNotebookRunResult(result))
+	v.dataLastQuery = lastNotebookQueryResult(result)
+	v.dataLastChart = lastNotebookChartResult(result)
+	v.dataLastDashboard = datasetsSvc.DashboardResult{}
+	v.addActivity("Ran SQL notebook " + notebooks[0].Label + ".")
 }
 
 func (v *View) showDatasetSQLHistory() {
@@ -930,6 +961,59 @@ func formatDatasetNotebooks(notebooks []datasetsSvc.Notebook) string {
 	return builder.String()
 }
 
+func formatNotebookRunResult(result datasetsSvc.NotebookRunResult) string {
+	var builder strings.Builder
+	builder.WriteString("# SQL Notebook Run\n\n")
+	builder.WriteString("Notebook: ")
+	builder.WriteString(result.Label)
+	builder.WriteString("\nPath: ")
+	builder.WriteString(result.RelPath)
+	builder.WriteString(fmt.Sprintf("\nCells: %d\nDuration: %d ms\n", len(result.Cells), result.DurationMs))
+	if result.Message != "" {
+		builder.WriteString("\n")
+		builder.WriteString(result.Message)
+		builder.WriteString("\n")
+	}
+	for index, cell := range result.Cells {
+		builder.WriteString(fmt.Sprintf("\n## Cell %d: %s [%s]\n\n", index+1, firstNonEmptyString(cell.Label, cell.CellID), cell.Kind))
+		if strings.TrimSpace(cell.SQL) != "" {
+			builder.WriteString("SQL: ")
+			builder.WriteString(compactDataLine(cell.SQL, 220))
+			builder.WriteString("\n")
+		}
+		if cell.Error != "" {
+			builder.WriteString("Status: failed\nError: ")
+			builder.WriteString(cell.Error)
+			builder.WriteString("\n")
+			continue
+		}
+		builder.WriteString(fmt.Sprintf("Status: success | shown %d/%d | %d ms\n", len(cell.SQLResult.Rows), cell.SQLResult.MatchedRows, cell.DurationMs))
+		if len(cell.SQLResult.Plan) > 0 {
+			builder.WriteString("Plan\n")
+			for _, step := range cell.SQLResult.Plan {
+				builder.WriteString("- ")
+				builder.WriteString(step)
+				builder.WriteString("\n")
+			}
+		}
+		if len(cell.SQLResult.Columns) > 0 {
+			builder.WriteString("\nRows\n")
+			builder.WriteString(strings.Join(cell.SQLResult.Columns, "\t"))
+			builder.WriteString("\n")
+			for _, row := range cell.SQLResult.Rows {
+				builder.WriteString(strings.Join(row, "\t"))
+				builder.WriteString("\n")
+			}
+		}
+		if cell.ChartResult.SVG != "" {
+			builder.WriteString("\nChart\n")
+			builder.WriteString(cell.ChartResult.Message)
+			builder.WriteString(fmt.Sprintf("\nPoints: %d\n", len(cell.ChartResult.Points)))
+		}
+	}
+	return builder.String()
+}
+
 func formatDataTime(value time.Time) string {
 	if value.IsZero() {
 		return "unknown time"
@@ -1059,6 +1143,108 @@ func firstNotebookSQL(notebook datasetsSvc.Notebook) string {
 		}
 	}
 	return ""
+}
+
+func notebookCellsFromEditor(value string) []datasetsSvc.NotebookCell {
+	lines := strings.Split(value, "\n")
+	cells := []datasetsSvc.NotebookCell{}
+	currentKind := "sql"
+	currentLabel := "Query"
+	currentLines := []string{}
+	flush := func() {
+		sqlText := strings.TrimSpace(strings.Join(currentLines, "\n"))
+		if currentKind == "sql" && sqlText == "" {
+			currentLines = []string{}
+			return
+		}
+		cells = append(cells, datasetsSvc.NotebookCell{
+			ID:    fmt.Sprintf("cell-%d", len(cells)+1),
+			Kind:  currentKind,
+			Label: currentLabel,
+			SQL:   sqlText,
+		})
+		currentLines = []string{}
+	}
+	for _, line := range lines {
+		if label, ok := notebookDirective(line, "cell"); ok {
+			flush()
+			currentKind = "sql"
+			currentLabel = label
+			continue
+		}
+		if label, ok := notebookDirective(line, "chart"); ok {
+			flush()
+			currentKind = "chart"
+			currentLabel = label
+			continue
+		}
+		currentLines = append(currentLines, line)
+	}
+	flush()
+	return cells
+}
+
+func notebookDirective(line string, kind string) (string, bool) {
+	prefix := "-- " + kind + ":"
+	trimmed := strings.TrimSpace(line)
+	if !strings.HasPrefix(strings.ToLower(trimmed), prefix) {
+		return "", false
+	}
+	label := strings.TrimSpace(trimmed[len(prefix):])
+	if label == "" {
+		label = "Cell"
+		if kind == "chart" {
+			label = "Chart"
+		}
+	}
+	return label, true
+}
+
+func formatNotebookForEditor(notebook datasetsSvc.Notebook) string {
+	parts := []string{}
+	for _, cell := range notebook.Cells {
+		kind := cell.Kind
+		if kind != "chart" {
+			kind = "cell"
+		}
+		parts = append(parts, fmt.Sprintf("-- %s: %s\n%s", kind, firstNonEmptyString(cell.Label, cell.ID), strings.TrimSpace(cell.SQL)))
+	}
+	return strings.TrimSpace(strings.Join(parts, "\n\n"))
+}
+
+func (v *View) persistNotebookRunSQL(result datasetsSvc.NotebookRunResult) {
+	if v.metadataStore == nil {
+		return
+	}
+	for _, cell := range result.Cells {
+		if cell.Error != "" || strings.TrimSpace(cell.SQLResult.SQL) == "" {
+			continue
+		}
+		record := v.metadataStore.NormalizeSQLRunRecord(sqlRunRecord(cell.SQLResult, result.RelPath, cell.SQL, nil))
+		if err := v.metadataStore.SaveSQLRun(record); err != nil {
+			v.addActivity("Could not persist notebook SQL run metadata: " + err.Error())
+			continue
+		}
+		v.persistDatasetDependency(datasetDependencyRecord(result.RelPath, record))
+	}
+}
+
+func lastNotebookQueryResult(result datasetsSvc.NotebookRunResult) datasetsSvc.QueryResult {
+	for index := len(result.Cells) - 1; index >= 0; index-- {
+		if result.Cells[index].Error == "" && result.Cells[index].SQLResult.RelPath != "" {
+			return result.Cells[index].SQLResult.QueryResult
+		}
+	}
+	return datasetsSvc.QueryResult{}
+}
+
+func lastNotebookChartResult(result datasetsSvc.NotebookRunResult) datasetsSvc.ChartResult {
+	for index := len(result.Cells) - 1; index >= 0; index-- {
+		if result.Cells[index].Error == "" && result.Cells[index].ChartResult.SVG != "" {
+			return result.Cells[index].ChartResult
+		}
+	}
+	return datasetsSvc.ChartResult{}
 }
 
 func sqliteQueryAsDatasetResult(result dbconnectorSvc.SQLiteQueryResult) datasetsSvc.QueryResult {

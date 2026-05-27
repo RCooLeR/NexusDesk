@@ -4,7 +4,7 @@
 
 This document still preserves the long-horizon delivery plan and Wails-era implementation history. The active execution tracker is `tracker.md`: Wails/React is now preserved under `app-wails/`, the new native implementation lives under `nexus-app/`, and newly completed work should be described in native terms before older Wails-only capabilities are treated as complete.
 
-Current native Data & Analytics status: `nexus-app/internal/services/datasets` handles file dataset profiling/query/SQL/notebooks/charts, and `nexus-app/internal/services/dbconnector` now provides explicit read-only workspace SQLite schema inspection plus guarded `SELECT`/`WITH` query preview for `.sqlite`, `.sqlite3`, and `.db` files. SQLite cancellation, saved connector queries, CSV/Markdown exports, external database profiles, and richer connector actions remain pending native migration items even though the preserved Wails reference contains versions of those workflows.
+Current native Data & Analytics status: `nexus-app/internal/services/datasets` handles file dataset profiling/query/SQL/notebooks/charts plus the first executable saved SQL notebook flow with multiline SQL/chart cell directives, per-cell results, and SQL lineage. `nexus-app/internal/services/dbconnector` provides explicit read-only workspace SQLite schema inspection plus guarded `SELECT`/`WITH` query preview for `.sqlite`, `.sqlite3`, and `.db` files. Visual notebook cell controls, result tabs, notebook exports, SQLite cancellation, saved connector queries, CSV/Markdown exports, external database profiles, and richer connector actions remain pending native migration items even though the preserved Wails reference contains versions of those workflows.
 
 ## Phase 0: Product Baseline
 

@@ -566,7 +566,8 @@ Current implementation:
 - SQL result exports create Markdown artifacts with SQL text, engine, row counts, preview rows, and source dataset citations.
 - SQL snippets are saved per dataset separately from lightweight row filters.
 - SQL notebooks are saved per dataset under `.nexusdesk/datasets/notebooks.json`, capped per dataset, and contain SQL/chart cell labels plus SQL text without result snapshots.
-- The native Fyne Data panel has the first SQL notebook model wired: it can save the current selected-dataset SQL query as a durable notebook, list/load the newest saved notebook back into the query composer, and record dataset-to-notebook dependency lineage. The fuller Wails-era multi-cell notebook shell with editable cells, chart cells, row/summary/plan/history result tabs, and reuse/rerun actions is still a post-port item.
+- The native Fyne Data panel now uses a multiline notebook editor syntax: `-- cell: Label` starts a SQL cell and `-- chart: Label` starts a chart cell. Saving persists multiple cells, loading restores those directives, and `Run notebook` executes the newest saved notebook cell by cell through the bounded dataset SQL runner.
+- Notebook runs keep cell failures isolated, render per-cell rows, plan lines, chart summaries, and messages, and persist successful SQL cells into SQL run/dependency metadata. The fuller Wails-era visual notebook shell with cell tabs, result tabs, history reuse/rerun controls, and artifact export is still a post-port item.
 - SQL query results carry explain-plan lines. DuckDB builds can return native `EXPLAIN` output; the default bounded dataset engine returns a deterministic logical plan and clearly labels native explain as unavailable.
 
 ### Artifact Lineage

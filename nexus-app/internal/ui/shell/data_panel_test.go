@@ -265,6 +265,73 @@ func TestFormatDatasetNotebooksListsCells(t *testing.T) {
 	}
 }
 
+func TestNotebookCellsFromEditorParsesSQLAndChartCells(t *testing.T) {
+	cells := notebookCellsFromEditor("-- cell: Top spend\nselect * from dataset limit 5\n\n-- chart: Spend chart\nselect channel, spend from dataset")
+	if len(cells) != 2 {
+		t.Fatalf("expected two cells, got %#v", cells)
+	}
+	if cells[0].Kind != "sql" || cells[0].Label != "Top spend" || !strings.Contains(cells[0].SQL, "limit 5") {
+		t.Fatalf("unexpected first cell: %#v", cells[0])
+	}
+	if cells[1].Kind != "chart" || cells[1].Label != "Spend chart" || !strings.Contains(cells[1].SQL, "channel") {
+		t.Fatalf("unexpected second cell: %#v", cells[1])
+	}
+}
+
+func TestFormatNotebookForEditorRoundTripsCellDirectives(t *testing.T) {
+	output := formatNotebookForEditor(datasetsSvc.Notebook{Cells: []datasetsSvc.NotebookCell{
+		{ID: "cell-1", Kind: "sql", Label: "Top spend", SQL: "select * from dataset limit 5"},
+		{ID: "chart-1", Kind: "chart", Label: "Spend chart", SQL: "select channel, spend from dataset"},
+	}})
+	for _, expected := range []string{"-- cell: Top spend", "select * from dataset limit 5", "-- chart: Spend chart"} {
+		if !strings.Contains(output, expected) {
+			t.Fatalf("notebook editor output missing %q:\n%s", expected, output)
+		}
+	}
+}
+
+func TestFormatNotebookRunResultIncludesCellRowsPlansAndChart(t *testing.T) {
+	output := formatNotebookRunResult(datasetsSvc.NotebookRunResult{
+		RelPath:    "sales.csv",
+		NotebookID: "book",
+		Label:      "Sales Notebook",
+		DurationMs: 8,
+		Message:    "Ran 2 notebook cell(s).",
+		Cells: []datasetsSvc.NotebookCellRun{
+			{
+				CellID: "cell-1",
+				Label:  "Top spend",
+				Kind:   "sql",
+				SQL:    "select channel from dataset",
+				SQLResult: datasetsSvc.SQLResult{
+					QueryResult: datasetsSvc.QueryResult{
+						RelPath:     "sales.csv",
+						Columns:     []string{"channel"},
+						Rows:        [][]string{{"search"}},
+						MatchedRows: 1,
+					},
+					Plan: []string{"Validate SELECT-only native dataset SQL."},
+				},
+			},
+			{
+				CellID: "chart-1",
+				Label:  "Chart",
+				Kind:   "chart",
+				ChartResult: datasetsSvc.ChartResult{
+					SVG:     "<svg/>",
+					Points:  []datasetsSvc.ChartPoint{{Label: "search", Value: 1}},
+					Message: "Bar chart.",
+				},
+			},
+		},
+	})
+	for _, expected := range []string{"# SQL Notebook Run", "Cell 1: Top spend", "Rows", "search", "Chart", "Points: 1"} {
+		if !strings.Contains(output, expected) {
+			t.Fatalf("notebook run output missing %q:\n%s", expected, output)
+		}
+	}
+}
+
 func TestFirstNotebookSQLUsesFirstSQLCell(t *testing.T) {
 	sqlText := firstNotebookSQL(datasetsSvc.Notebook{Cells: []datasetsSvc.NotebookCell{
 		{Kind: "chart", Label: "Chart"},
