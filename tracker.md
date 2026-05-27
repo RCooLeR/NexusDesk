@@ -157,7 +157,7 @@ Goal: port the LLM and agent runtime without recreating the Wails bridge problem
 - [x] Add live activity tail with final-answer replacement behavior.
 - [x] Add durable job and SQLite tool-run audit persistence for native agent runs.
 - [x] Add native audit/history UI for persisted agent runs and tool runs.
-- [x] Add agent-safe write/append tools gated by full-project access and rollback snapshots.
+- [x] Add agent-safe write/append/copy/move/delete/apply_patch tools gated by full-project access and rollback snapshots.
 
 Exit criteria:
 
@@ -252,11 +252,11 @@ Exit criteria:
 
 ## Next Batch
 
-1. Add agent-safe copy/move/delete and patch tools gated by full-project access and rollback snapshots.
-2. Add first project-tree reveal/collapse controls and ignored-path visibility affordances.
-3. Add first native chat search/history panel after artifact metadata search exists.
-4. Port first document-set artifact writer after artifact lineage metadata stabilizes.
-5. Add first artifact compare surface for same-kind generated outputs.
+1. Add first project-tree reveal/collapse controls and ignored-path visibility affordances.
+2. Add first native chat search/history panel after artifact metadata search exists.
+3. Port first document-set artifact writer after artifact lineage metadata stabilizes.
+4. Add first artifact compare surface for same-kind generated outputs.
+5. Add first native artifact-to-agent context affordance so generated outputs can be cited in follow-up prompts.
 
 ## Preserved Post-Port Backlog
 

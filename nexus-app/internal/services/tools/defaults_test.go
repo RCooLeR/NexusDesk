@@ -129,6 +129,91 @@ func TestDefaultDispatcherAppendToolUsesSafeAppend(t *testing.T) {
 	}
 }
 
+func TestDefaultDispatcherFileOperationToolsRequireApprovalAndRollback(t *testing.T) {
+	root := t.TempDir()
+	workspace := workspaceSvc.New()
+	dispatcher := NewDefaultDispatcher(Dependencies{Workspace: workspace})
+	if err := os.MkdirAll(filepath.Join(root, "docs"), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(root, "docs", "source.txt"), []byte("source\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	copyCall := agent.ToolCall{Name: "copy_file", Args: map[string]string{"sourceRelPath": "docs/source.txt", "targetRelPath": "docs/copy.txt"}}
+
+	blocked, err := dispatcher.ExecuteTool(context.Background(), copyCall, agent.Request{WorkspaceRoot: root})
+	if err == nil || !strings.Contains(blocked.Observation, "approval") {
+		t.Fatalf("expected approval block, got result=%#v err=%v", blocked, err)
+	}
+	copied, err := dispatcher.ExecuteTool(context.Background(), copyCall, agent.Request{WorkspaceRoot: root, ApproveWrites: true})
+	if err != nil {
+		t.Fatalf("copy_file returned error: %v", err)
+	}
+	if !copied.Mutated || !strings.Contains(copied.Observation, "Rollback:") || !strings.Contains(copied.Observation, "docs/copy.txt") {
+		t.Fatalf("unexpected copy result: %#v", copied)
+	}
+
+	moved, err := dispatcher.ExecuteTool(context.Background(), agent.ToolCall{Name: "move_file", Args: map[string]string{"sourceRelPath": "docs/copy.txt", "targetRelPath": "docs/moved.txt"}}, agent.Request{WorkspaceRoot: root, ApproveWrites: true})
+	if err != nil {
+		t.Fatalf("move_file returned error: %v", err)
+	}
+	if !moved.Mutated || !strings.Contains(moved.Observation, "docs/moved.txt") {
+		t.Fatalf("unexpected move result: %#v", moved)
+	}
+
+	deleted, err := dispatcher.ExecuteTool(context.Background(), agent.ToolCall{Name: "delete_file", Args: map[string]string{"relPath": "docs/moved.txt"}}, agent.Request{WorkspaceRoot: root, ApproveWrites: true})
+	if err != nil {
+		t.Fatalf("delete_file returned error: %v", err)
+	}
+	if !deleted.Mutated || !strings.Contains(deleted.Observation, "delete") {
+		t.Fatalf("unexpected delete result: %#v", deleted)
+	}
+	if _, err := os.Stat(filepath.Join(root, "docs", "moved.txt")); !os.IsNotExist(err) {
+		t.Fatalf("expected moved file to be deleted, got err=%v", err)
+	}
+	rollbacks, err := workspace.ListRollbacks(root)
+	if err != nil {
+		t.Fatalf("ListRollbacks returned error: %v", err)
+	}
+	if len(rollbacks) != 3 {
+		t.Fatalf("expected three rollback records, got %#v", rollbacks)
+	}
+}
+
+func TestDefaultDispatcherApplyPatchTool(t *testing.T) {
+	root := t.TempDir()
+	if err := os.WriteFile(filepath.Join(root, "notes.txt"), []byte("one\ntwo\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	dispatcher := NewDefaultDispatcher(Dependencies{Workspace: workspaceSvc.New()})
+	call := agent.ToolCall{Name: "apply_patch", Args: map[string]string{"patch": `--- a/notes.txt
++++ b/notes.txt
+@@ -1,2 +1,2 @@
+ one
+-two
++TWO
+`}}
+
+	blocked, err := dispatcher.ExecuteTool(context.Background(), call, agent.Request{WorkspaceRoot: root})
+	if err == nil || !strings.Contains(blocked.Observation, "approval") {
+		t.Fatalf("expected approval block, got result=%#v err=%v", blocked, err)
+	}
+	applied, err := dispatcher.ExecuteTool(context.Background(), call, agent.Request{WorkspaceRoot: root, ApproveWrites: true})
+	if err != nil {
+		t.Fatalf("apply_patch returned error: %v", err)
+	}
+	if !applied.Mutated || !strings.Contains(applied.Observation, "Rollback:") || !strings.Contains(applied.Observation, "notes.txt") {
+		t.Fatalf("unexpected patch result: %#v", applied)
+	}
+	data, err := os.ReadFile(filepath.Join(root, "notes.txt"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if string(data) != "one\nTWO\n" {
+		t.Fatalf("unexpected patched content: %q", data)
+	}
+}
+
 func TestDefaultDispatcherRollbackTools(t *testing.T) {
 	root := t.TempDir()
 	workspace := workspaceSvc.New()

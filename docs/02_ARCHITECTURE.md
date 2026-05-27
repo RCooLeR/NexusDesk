@@ -127,7 +127,7 @@ Preview data remains framework-free: `nexus-app/internal/services/workspace` cla
 
 File mutation data remains framework-free as well: `nexus-app/internal/services/workspace` now owns rooted text/code write previews, append/apply flows, encoding-aware writes, file create/delete/copy/move/rename operations, and rollback snapshots under `.nexusdesk/rollbacks`. The native draft editor Save action calls this service, promotes the saved draft back into the editor session source state, and never writes directly from a widget callback.
 
-Agent-authored file writes use that same framework-free mutation boundary. The native deterministic tool dispatcher exposes approval-gated `write_file` and `append_file` tools, but they only run when scoped full-project access is active and still call the workspace safe write/append service so traversal protection, `.nexusdesk` guards, text/binary checks, encoding rules, diff observations, and rollback snapshots stay centralized.
+Agent-authored file mutations use that same framework-free mutation boundary. The native deterministic tool dispatcher exposes approval-gated `write_file`, `append_file`, `copy_file`, `move_file`, `delete_file`, and `apply_patch` tools, but they only run when scoped full-project access is active and still call the workspace safe mutation services so traversal protection, `.nexusdesk` guards, text/binary checks, encoding rules, exact-match unified patch validation, diff observations, and rollback snapshots stay centralized.
 
 Workspace search remains framework-free: `nexus-app/internal/services/workspace` owns bounded path/content search, while the Fyne shell owns only the toolbar entry, bottom Search tab, and result-to-preview navigation.
 

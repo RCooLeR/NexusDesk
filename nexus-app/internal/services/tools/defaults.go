@@ -40,6 +40,10 @@ func NewDefaultDispatcher(deps Dependencies) *Dispatcher {
 		Tool{Descriptor: agent.ToolDescriptor{Name: "run_task", Description: "Run a discovered safe workspace task when shell approval is granted.", Risk: "high", Inputs: "taskId"}, Handler: handlers.runTask},
 		Tool{Descriptor: agent.ToolDescriptor{Name: "write_file", Description: "Create or replace a text/code file inside the workspace through safe write validation and rollback.", Risk: "high", Inputs: "relPath, content, encoding(optional)"}, Handler: handlers.writeFile},
 		Tool{Descriptor: agent.ToolDescriptor{Name: "append_file", Description: "Append text to a workspace file through safe append validation and rollback.", Risk: "high", Inputs: "relPath, content, encoding(optional)"}, Handler: handlers.appendFile},
+		Tool{Descriptor: agent.ToolDescriptor{Name: "copy_file", Description: "Copy one workspace file to a new path through safe path validation and rollback.", Risk: "high", Inputs: "sourceRelPath, targetRelPath"}, Handler: handlers.copyFile},
+		Tool{Descriptor: agent.ToolDescriptor{Name: "move_file", Description: "Move or rename one workspace file through safe path validation and rollback.", Risk: "high", Inputs: "sourceRelPath, targetRelPath"}, Handler: handlers.moveFile},
+		Tool{Descriptor: agent.ToolDescriptor{Name: "delete_file", Description: "Delete one workspace file through safe path validation and rollback.", Risk: "high", Inputs: "relPath"}, Handler: handlers.deleteFile},
+		Tool{Descriptor: agent.ToolDescriptor{Name: "apply_patch", Description: "Apply an exact-match unified diff to one or more safe text files with one rollback snapshot.", Risk: "high", Inputs: "patch"}, Handler: handlers.applyPatch},
 		Tool{Descriptor: agent.ToolDescriptor{Name: "list_rollbacks", Description: "List rollback snapshots for approved workspace file mutations.", Risk: "low", Inputs: ""}, Handler: handlers.listRollbacks},
 		Tool{Descriptor: agent.ToolDescriptor{Name: "rollback_file_mutation", Description: "Restore or remove files from one rollback snapshot when write approval is granted.", Risk: "high", Inputs: "id"}, Handler: handlers.rollbackFileMutation},
 	)
@@ -212,132 +216,4 @@ func (h defaultHandlers) runTask(ctx context.Context, call agent.ToolCall, reque
 		Observation: fmt.Sprintf("%s\nStatus: %s\nExit: %d\nStdout:\n%s\nStderr:\n%s", result.Message, result.Status, result.ExitCode, result.Stdout, result.Stderr),
 		Mutated:     false,
 	}, nil
-}
-
-func (h defaultHandlers) writeFile(ctx context.Context, call agent.ToolCall, request agent.Request) (agent.ToolResult, error) {
-	if !request.ApproveWrites {
-		err := errors.New("approval is required before writing workspace files")
-		return agent.ToolResult{Name: call.Name, Args: call.Args, Risk: "high", Observation: err.Error(), Error: err.Error()}, err
-	}
-	root, err := workspaceRoot(request)
-	if err != nil {
-		return toolError(call, "high", err), err
-	}
-	relPath := firstArg(call, "relPath", "path")
-	if relPath == "" {
-		err := errors.New("relPath is required")
-		return toolError(call, "high", err), err
-	}
-	content, ok := call.Args["content"]
-	if !ok {
-		err := errors.New("content is required")
-		return toolError(call, "high", err), err
-	}
-	proposal, err := h.deps.Workspace.ApplyFileWrite(root, workspacesvc.FileWriteRequest{
-		RelPath:  relPath,
-		Content:  content,
-		Encoding: call.Args["encoding"],
-	})
-	if err != nil {
-		return toolError(call, "high", err), err
-	}
-	return agent.ToolResult{
-		Name:        call.Name,
-		Args:        call.Args,
-		Risk:        "high",
-		Observation: fileWriteObservation(proposal),
-		Mutated:     true,
-	}, nil
-}
-
-func (h defaultHandlers) appendFile(ctx context.Context, call agent.ToolCall, request agent.Request) (agent.ToolResult, error) {
-	if !request.ApproveWrites {
-		err := errors.New("approval is required before appending workspace files")
-		return agent.ToolResult{Name: call.Name, Args: call.Args, Risk: "high", Observation: err.Error(), Error: err.Error()}, err
-	}
-	root, err := workspaceRoot(request)
-	if err != nil {
-		return toolError(call, "high", err), err
-	}
-	relPath := firstArg(call, "relPath", "path")
-	if relPath == "" {
-		err := errors.New("relPath is required")
-		return toolError(call, "high", err), err
-	}
-	content, ok := call.Args["content"]
-	if !ok {
-		err := errors.New("content is required")
-		return toolError(call, "high", err), err
-	}
-	proposal, err := h.deps.Workspace.ApplyFileAppend(root, workspacesvc.FileWriteRequest{
-		RelPath:  relPath,
-		Content:  content,
-		Encoding: call.Args["encoding"],
-	})
-	if err != nil {
-		return toolError(call, "high", err), err
-	}
-	return agent.ToolResult{
-		Name:        call.Name,
-		Args:        call.Args,
-		Risk:        "high",
-		Observation: fileWriteObservation(proposal),
-		Mutated:     true,
-	}, nil
-}
-
-func (h defaultHandlers) listRollbacks(ctx context.Context, call agent.ToolCall, request agent.Request) (agent.ToolResult, error) {
-	root, err := workspaceRoot(request)
-	if err != nil {
-		return toolError(call, "low", err), err
-	}
-	records, err := h.deps.Workspace.ListRollbacks(root)
-	if err != nil {
-		return toolError(call, "low", err), err
-	}
-	lines := []string{fmt.Sprintf("%d rollback snapshot(s).", len(records))}
-	for _, record := range records {
-		lines = append(lines, fmt.Sprintf("- %s [%s] %s target=%s paths=%d created=%s", record.ID, record.Status, record.Action, record.Target, len(record.Entries), record.CreatedAt.Format("2006-01-02 15:04:05")))
-	}
-	return toolOK(call, "low", strings.Join(lines, "\n")), nil
-}
-
-func (h defaultHandlers) rollbackFileMutation(ctx context.Context, call agent.ToolCall, request agent.Request) (agent.ToolResult, error) {
-	if !request.ApproveWrites {
-		err := errors.New("approval is required before applying a rollback")
-		return agent.ToolResult{Name: call.Name, Args: call.Args, Risk: "high", Observation: err.Error(), Error: err.Error()}, err
-	}
-	root, err := workspaceRoot(request)
-	if err != nil {
-		return toolError(call, "high", err), err
-	}
-	id := firstArg(call, "id", "rollbackId")
-	if id == "" {
-		err := errors.New("rollback id is required")
-		return toolError(call, "high", err), err
-	}
-	result, err := h.deps.Workspace.ApplyRollback(root, id)
-	if err != nil {
-		return toolError(call, "high", err), err
-	}
-	lines := []string{
-		result.Message,
-		"Restored: " + strings.Join(result.Restored, ", "),
-		"Removed: " + strings.Join(result.Removed, ", "),
-	}
-	return agent.ToolResult{Name: call.Name, Args: call.Args, Risk: "high", Observation: strings.Join(lines, "\n"), Mutated: true}, nil
-}
-
-func fileWriteObservation(proposal workspacesvc.FileWriteProposal) string {
-	lines := []string{
-		proposal.Message,
-		"Path: " + proposal.RelPath,
-		"Action: " + proposal.Action,
-		"Encoding: " + proposal.Encoding,
-		"Rollback: " + proposal.RollbackID,
-	}
-	if proposal.Diff != "" {
-		lines = append(lines, "Diff:\n"+proposal.Diff)
-	}
-	return strings.Join(lines, "\n")
 }
