@@ -56,7 +56,7 @@ Until that toolchain is installed, use the focused test command above for the na
 
 Some tracker items are intentionally out of phase order because they depend on missing foundations:
 
-- Phase 2 agent items are still pending because context packs, approvals, and deterministic tool dispatch are not ported into the native assistant runtime yet.
+- Phase 2 agent items are still pending because approvals and deterministic tool dispatch are not ported into the native assistant runtime yet.
 - Phase 3 AI diff summary and commit drafting are pending until the native assistant service exists.
 - Approval-backed hunk mutations are pending until native approval policy/UI is ready enough to protect destructive Git actions.
 - Durable persisted jobs and task-run artifacts are pending until the SQLite metadata store lands.
@@ -136,7 +136,7 @@ Goal: port the LLM and agent runtime without recreating the Wails bridge problem
 - [x] Port OpenAI-compatible/Ollama client.
 - [x] Add native provider/model settings page skeleton.
 - [x] Add streaming assistant panel using Go channels/events instead of Wails events.
-- [ ] Port context-pack builder.
+- [x] Port context-pack builder.
 - [ ] Port agent runtime as an internal service, not a UI callback.
 - [ ] Unify registered tools and agent tools behind one dispatcher.
 - [ ] Add approval queue UI and full-access policy UI.
@@ -233,10 +233,10 @@ Exit criteria:
 ## Next Batch
 
 1. Configure Windows CGO compiler and verify `nexus-app` runs.
-2. Port the context-pack builder so assistant requests can include selected directories and project-level context, not just the selected file.
-3. Add approval-backed hunk stage/unstage actions on top of parsed hunk metadata.
-4. Add durable persisted jobs and task-run artifacts.
-5. Add richer navigator context menus once the first action strip is validated in Fyne.
+2. Add approval-backed hunk stage/unstage actions on top of parsed hunk metadata.
+3. Add durable persisted jobs and task-run artifacts.
+4. Add richer navigator context menus once the first action strip is validated in Fyne.
+5. Add assistant context-pack UI affordances for pinning the workspace root, directories, and multiple files explicitly.
 
 ## Preserved Post-Port Backlog
 

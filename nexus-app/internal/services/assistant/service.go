@@ -6,7 +6,6 @@ import (
 	"context"
 	"strings"
 
-	"nexusdesk/internal/domain"
 	"nexusdesk/internal/services/llm"
 	settingssvc "nexusdesk/internal/services/settings"
 	workspacesvc "nexusdesk/internal/services/workspace"
@@ -18,8 +17,8 @@ type SettingsStore interface {
 	Load() (settingssvc.Settings, error)
 }
 
-type Previewer interface {
-	PreviewFile(root string, relPath string) (domain.FilePreview, error)
+type ContextPacker interface {
+	BuildContextPack(root string, relPaths []string, options workspacesvc.ContextPackOptions) (workspacesvc.ContextPack, error)
 }
 
 type StreamClient interface {
@@ -28,7 +27,7 @@ type StreamClient interface {
 
 type Service struct {
 	settingsStore SettingsStore
-	previewer     Previewer
+	contextPacker ContextPacker
 	client        StreamClient
 }
 
@@ -49,11 +48,11 @@ type Result struct {
 }
 
 func New(settingsStore *settingssvc.Store, previewer *workspacesvc.Service, client *llm.Client) *Service {
-	return &Service{settingsStore: settingsStore, previewer: previewer, client: client}
+	return &Service{settingsStore: settingsStore, contextPacker: previewer, client: client}
 }
 
-func NewWithDependencies(settingsStore SettingsStore, previewer Previewer, client StreamClient) *Service {
-	return &Service{settingsStore: settingsStore, previewer: previewer, client: client}
+func NewWithDependencies(settingsStore SettingsStore, contextPacker ContextPacker, client StreamClient) *Service {
+	return &Service{settingsStore: settingsStore, contextPacker: contextPacker, client: client}
 }
 
 func (s *Service) AskStream(ctx context.Context, request Request, onDelta func(string) error) (Result, error) {
@@ -84,55 +83,28 @@ func (s *Service) AskStream(ctx context.Context, request Request, onDelta func(s
 func (s *Service) attachSelectedContext(config llm.Config, request Request, chatRequest *llm.ChatRequest) string {
 	root := strings.TrimSpace(request.WorkspaceRoot)
 	selectedPath := strings.TrimSpace(request.SelectedPath)
-	if root == "" || selectedPath == "" || s.previewer == nil {
+	if root == "" || selectedPath == "" || s.contextPacker == nil {
 		return ""
 	}
-	preview, err := s.previewer.PreviewFile(root, selectedPath)
+	pack, err := s.contextPacker.BuildContextPack(root, []string{selectedPath}, workspacesvc.ContextPackOptions{
+		MaxBytes: contextBudgetBytes(config),
+	})
 	if err != nil {
-		return "Selected file was not included: " + err.Error()
+		return "Selected context was not included: " + err.Error()
 	}
-	content := previewContextText(preview)
-	if strings.TrimSpace(content) == "" {
-		return "Selected file has no previewable text context."
-	}
-	content, truncated := fitContext(content, config)
-	chatRequest.ContextRelPath = preview.RelPath
-	chatRequest.ContextContent = content
-	chatRequest.SourcePaths = []string{preview.RelPath}
-	if truncated {
-		return "Selected file context was capped to fit the model budget."
+	chatRequest.ContextRelPath = pack.Label
+	chatRequest.ContextContent = pack.Content
+	chatRequest.SourcePaths = append([]string{}, pack.SourcePaths...)
+	if pack.Truncated {
+		return "Selected context pack was capped to fit the model budget."
 	}
 	return ""
 }
 
-func previewContextText(preview domain.FilePreview) string {
-	switch preview.Kind {
-	case domain.PreviewText, domain.PreviewTable, domain.PreviewDoc, domain.PreviewPDF:
-		return preview.Text
-	default:
-		return ""
-	}
-}
-
-func fitContext(content string, config llm.Config) (string, bool) {
+func contextBudgetBytes(config llm.Config) int {
 	budgetTokens := config.ContextTokens - config.ResponseReserveTokens
 	if budgetTokens <= 0 {
-		return "", true
+		return charsPerTokenEstimate
 	}
-	limit := budgetTokens * charsPerTokenEstimate
-	if limit <= 0 || len(content) <= limit {
-		return content, false
-	}
-	return string([]rune(content)[:maxRunePrefix(content, limit)]) + "\n[context truncated]", true
-}
-
-func maxRunePrefix(content string, byteLimit int) int {
-	totalBytes := 0
-	for index, value := range []rune(content) {
-		totalBytes += len(string(value))
-		if totalBytes > byteLimit {
-			return index
-		}
-	}
-	return len([]rune(content))
+	return budgetTokens * charsPerTokenEstimate
 }

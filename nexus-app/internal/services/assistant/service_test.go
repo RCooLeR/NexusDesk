@@ -2,12 +2,13 @@ package assistant
 
 import (
 	"context"
+	"errors"
 	"strings"
 	"testing"
 
-	"nexusdesk/internal/domain"
 	"nexusdesk/internal/services/llm"
 	settingssvc "nexusdesk/internal/services/settings"
+	workspacesvc "nexusdesk/internal/services/workspace"
 )
 
 func TestAskStreamLoadsSettingsAndStreamsSelectedContext(t *testing.T) {
@@ -18,13 +19,13 @@ func TestAskStreamLoadsSettingsAndStreamsSelectedContext(t *testing.T) {
 		ContextTokens:         2000,
 		ResponseReserveTokens: 500,
 	}}
-	previewer := fakePreviewer{preview: domain.FilePreview{
-		RelPath: "README.md",
-		Kind:    domain.PreviewText,
-		Text:    "workspace context",
+	contextPacker := &fakeContextPacker{pack: workspacesvc.ContextPack{
+		Label:       "context: README.md",
+		Content:     "workspace context",
+		SourcePaths: []string{"README.md"},
 	}}
 	client := &fakeStreamClient{message: "final answer", deltas: []string{"final ", "answer"}}
-	service := NewWithDependencies(store, previewer, client)
+	service := NewWithDependencies(store, contextPacker, client)
 
 	var streamed strings.Builder
 	result, err := service.AskStream(context.Background(), Request{
@@ -44,7 +45,7 @@ func TestAskStreamLoadsSettingsAndStreamsSelectedContext(t *testing.T) {
 	if client.config.Model != "model-a" {
 		t.Fatalf("settings were not passed to LLM client: %#v", client.config)
 	}
-	if client.request.ContextRelPath != "README.md" || client.request.ContextContent != "workspace context" {
+	if client.request.ContextRelPath != "context: README.md" || client.request.ContextContent != "workspace context" {
 		t.Fatalf("selected context was not attached: %#v", client.request)
 	}
 }
@@ -57,13 +58,14 @@ func TestAskStreamCapsSelectedContextToBudget(t *testing.T) {
 		ContextTokens:         20,
 		ResponseReserveTokens: 10,
 	}}
-	previewer := fakePreviewer{preview: domain.FilePreview{
-		RelPath: "large.txt",
-		Kind:    domain.PreviewText,
-		Text:    strings.Repeat("a", 100),
+	contextPacker := &fakeContextPacker{pack: workspacesvc.ContextPack{
+		Label:       "context: large.txt",
+		Content:     strings.Repeat("a", 40) + "\n[context pack truncated]",
+		SourcePaths: []string{"large.txt"},
+		Truncated:   true,
 	}}
 	client := &fakeStreamClient{message: "ok", deltas: []string{"ok"}}
-	service := NewWithDependencies(store, previewer, client)
+	service := NewWithDependencies(store, contextPacker, client)
 
 	result, err := service.AskStream(context.Background(), Request{
 		Prompt:        "Read",
@@ -76,16 +78,19 @@ func TestAskStreamCapsSelectedContextToBudget(t *testing.T) {
 	if result.ContextWarning == "" {
 		t.Fatal("expected context warning")
 	}
-	if !strings.Contains(client.request.ContextContent, "[context truncated]") {
+	if contextPacker.options.MaxBytes != 40 {
+		t.Fatalf("expected model budget to be passed, got %d", contextPacker.options.MaxBytes)
+	}
+	if !strings.Contains(client.request.ContextContent, "[context pack truncated]") {
 		t.Fatalf("expected capped context, got %q", client.request.ContextContent)
 	}
 }
 
 func TestAskStreamSkipsBinarySelection(t *testing.T) {
 	store := fakeSettingsStore{settings: settingssvc.Defaults()}
-	previewer := fakePreviewer{preview: domain.FilePreview{RelPath: "image.png", Kind: domain.PreviewImage}}
+	contextPacker := &fakeContextPacker{err: errNoContext}
 	client := &fakeStreamClient{message: "ok", deltas: []string{"ok"}}
-	service := NewWithDependencies(store, previewer, client)
+	service := NewWithDependencies(store, contextPacker, client)
 
 	result, err := service.AskStream(context.Background(), Request{
 		Prompt:        "Describe",
@@ -112,14 +117,18 @@ func (s fakeSettingsStore) Load() (settingssvc.Settings, error) {
 	return s.settings, s.err
 }
 
-type fakePreviewer struct {
-	preview domain.FilePreview
+type fakeContextPacker struct {
+	pack    workspacesvc.ContextPack
+	options workspacesvc.ContextPackOptions
 	err     error
 }
 
-func (p fakePreviewer) PreviewFile(string, string) (domain.FilePreview, error) {
-	return p.preview, p.err
+func (p *fakeContextPacker) BuildContextPack(_ string, _ []string, options workspacesvc.ContextPackOptions) (workspacesvc.ContextPack, error) {
+	p.options = options
+	return p.pack, p.err
 }
+
+var errNoContext = errors.New("context paths did not contain previewable text files")
 
 type fakeStreamClient struct {
 	config  llm.Config
