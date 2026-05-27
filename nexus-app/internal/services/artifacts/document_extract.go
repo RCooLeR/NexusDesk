@@ -76,6 +76,9 @@ func documentExtractionMarkdown(report DocumentExtractionReport, title string, c
 	writeKV(&builder, "Size", fmt.Sprintf("%d bytes", report.Size))
 	writeKV(&builder, "Lines", fmt.Sprintf("%d", report.Lines))
 	writeKV(&builder, "Words", fmt.Sprintf("%d", report.Words))
+	if report.Pages > 0 {
+		writeKV(&builder, "Pages", fmt.Sprintf("%d", report.Pages))
+	}
 	writeKV(&builder, "Truncated", fmt.Sprintf("%t", report.Truncated))
 	builder.WriteString("\n## Extracted Text\n\n")
 	builder.WriteString(strings.TrimSpace(report.Content))

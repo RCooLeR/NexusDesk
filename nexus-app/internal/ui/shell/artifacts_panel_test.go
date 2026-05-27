@@ -52,9 +52,10 @@ func TestDocumentExtractionArtifactInputMapsDocumentFields(t *testing.T) {
 		Size:      42,
 		Lines:     2,
 		Words:     1,
+		Pages:     3,
 		Truncated: true,
 	})
-	if input.Title != "Guide" || input.RelPath != "docs/guide.md" || input.Content != "content" || !input.Truncated {
+	if input.Title != "Guide" || input.RelPath != "docs/guide.md" || input.Content != "content" || input.Pages != 3 || !input.Truncated {
 		t.Fatalf("unexpected document extraction artifact input: %#v", input)
 	}
 }

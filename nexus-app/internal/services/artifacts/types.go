@@ -58,6 +58,7 @@ type DocumentExtractionReport struct {
 	Size      int64
 	Lines     int
 	Words     int
+	Pages     int
 	Truncated bool
 }
 

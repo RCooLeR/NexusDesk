@@ -62,6 +62,58 @@ func TestExtractXMLStripsTags(t *testing.T) {
 	}
 }
 
+func TestExtractDOCXPreviewText(t *testing.T) {
+	service := New(fakePreviewer{preview: domain.FilePreview{
+		RelPath:   "docs/brief.docx",
+		Kind:      domain.PreviewDoc,
+		Text:      "Executive brief\n\nUse local-first workflows.",
+		MediaType: "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+		Size:      2048,
+		Document:  &domain.DocumentPreview{Text: "Executive brief\n\nUse local-first workflows.", Truncated: true},
+	}})
+
+	document, err := service.Extract("C:/repo", "docs/brief.docx")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if document.Format != "docx" || document.Title != "Executive brief" || !document.Truncated {
+		t.Fatalf("unexpected DOCX extraction: %#v", document)
+	}
+}
+
+func TestExtractPDFPreviewTextAndPages(t *testing.T) {
+	service := New(fakePreviewer{preview: domain.FilePreview{
+		RelPath:   "reports/brief.pdf",
+		Kind:      domain.PreviewPDF,
+		Text:      "Page one\n\nPage two",
+		MediaType: "application/pdf",
+		Size:      4096,
+		PDF: &domain.PDFPreview{
+			Text:  "Page one\n\nPage two",
+			Pages: []domain.TextPage{{Page: 1, Text: "Page one"}, {Page: 2, Text: "Page two"}},
+		},
+	}})
+
+	document, err := service.Extract("C:/repo", "reports/brief.pdf")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if document.Format != "pdf" || document.Pages != 2 || document.Title != "Page one" {
+		t.Fatalf("unexpected PDF extraction: %#v", document)
+	}
+}
+
+func TestExtractRejectsPDFWithoutText(t *testing.T) {
+	service := New(fakePreviewer{preview: domain.FilePreview{
+		RelPath: "scanned.pdf",
+		Kind:    domain.PreviewPDF,
+		PDF:     &domain.PDFPreview{},
+	}})
+	if _, err := service.Extract("C:/repo", "scanned.pdf"); err == nil || !strings.Contains(err.Error(), "extractable text") {
+		t.Fatalf("expected scanned PDF extraction to be rejected, got %v", err)
+	}
+}
+
 func TestExtractRejectsUnsupportedAndNonText(t *testing.T) {
 	service := New(fakePreviewer{preview: domain.FilePreview{RelPath: "image.png", Kind: domain.PreviewImage}})
 	if _, err := service.Extract("C:/repo", "image.png"); err == nil {

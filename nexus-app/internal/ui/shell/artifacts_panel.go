@@ -99,7 +99,7 @@ func (v *View) generateDocumentExtractionArtifact() {
 	}
 	source := selectedPathOrEmpty(v)
 	if strings.TrimSpace(source) == "" {
-		v.addActivity("Select a Markdown, TXT, HTML, or XML file before extracting a document.")
+		v.addActivity("Select a Markdown, TXT, HTML, XML, DOCX, or PDF file before extracting a document.")
 		return
 	}
 	extractor := documentsSvc.New(v.workspaceService)
@@ -459,6 +459,7 @@ func documentExtractionArtifactInput(document documentsSvc.ExtractedDocument) ar
 		Size:      document.Size,
 		Lines:     document.Lines,
 		Words:     document.Words,
+		Pages:     document.Pages,
 		Truncated: document.Truncated,
 	}
 }

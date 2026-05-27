@@ -21,6 +21,7 @@ func TestWriteDocumentExtractionReportCreatesArtifact(t *testing.T) {
 		Size:      128,
 		Lines:     1,
 		Words:     3,
+		Pages:     2,
 	})
 	if err != nil {
 		t.Fatalf("WriteDocumentExtractionReport returned error: %v", err)
@@ -32,7 +33,7 @@ func TestWriteDocumentExtractionReportCreatesArtifact(t *testing.T) {
 	if err != nil {
 		t.Fatalf("ReadArtifactText returned error: %v", err)
 	}
-	for _, expected := range []string{"# Document Extraction - Guide", "Source:** docs/guide.html", "Readable guide text"} {
+	for _, expected := range []string{"# Document Extraction - Guide", "Source:** docs/guide.html", "Pages:** 2", "Readable guide text"} {
 		if !strings.Contains(text, expected) {
 			t.Fatalf("artifact text missing %q:\n%s", expected, text)
 		}

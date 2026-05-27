@@ -31,13 +31,17 @@ func (s *Service) Extract(root string, relPath string) (ExtractedDocument, error
 	}
 	format := documentFormat(preview.RelPath)
 	if !supportedDocumentFormat(format) {
-		return ExtractedDocument{}, errors.New("document extraction currently supports Markdown, TXT, HTML, and XML files")
+		return ExtractedDocument{}, errors.New("document extraction currently supports Markdown, TXT, HTML, XML, DOCX, and PDF files")
 	}
-	if preview.Kind != domain.PreviewText {
-		return ExtractedDocument{}, errors.New("document extraction requires a previewable text document")
+	if !previewKindMatchesFormat(format, preview.Kind) {
+		return ExtractedDocument{}, errors.New("document extraction requires a previewable text, DOCX, or PDF document")
 	}
 	text := extractReadableText(format, preview.Text)
-	truncated := false
+	if text == "" {
+		return ExtractedDocument{}, errors.New("document preview did not contain extractable text")
+	}
+	pages := previewPageCount(preview)
+	truncated := previewTruncated(preview)
 	if len(text) > extractedDocumentMaxChars {
 		text = truncateDocumentText(text, extractedDocumentMaxChars)
 		truncated = true
@@ -52,6 +56,7 @@ func (s *Service) Extract(root string, relPath string) (ExtractedDocument, error
 		Size:      preview.Size,
 		Lines:     countDocumentLines(text),
 		Words:     len(strings.Fields(text)),
+		Pages:     pages,
 		Truncated: truncated,
 	}, nil
 }
@@ -66,6 +71,10 @@ func documentFormat(relPath string) string {
 		return "html"
 	case ".xml":
 		return "xml"
+	case ".docx":
+		return "docx"
+	case ".pdf":
+		return "pdf"
 	default:
 		return ""
 	}
@@ -73,11 +82,39 @@ func documentFormat(relPath string) string {
 
 func supportedDocumentFormat(format string) bool {
 	switch format {
-	case "markdown", "txt", "html", "xml":
+	case "markdown", "txt", "html", "xml", "docx", "pdf":
 		return true
 	default:
 		return false
 	}
+}
+
+func previewKindMatchesFormat(format string, kind domain.PreviewKind) bool {
+	switch format {
+	case "docx":
+		return kind == domain.PreviewDoc
+	case "pdf":
+		return kind == domain.PreviewPDF
+	default:
+		return kind == domain.PreviewText
+	}
+}
+
+func previewTruncated(preview domain.FilePreview) bool {
+	if preview.Document != nil && preview.Document.Truncated {
+		return true
+	}
+	if preview.PDF != nil && preview.PDF.Truncated {
+		return true
+	}
+	return false
+}
+
+func previewPageCount(preview domain.FilePreview) int {
+	if preview.PDF == nil {
+		return 0
+	}
+	return len(preview.PDF.Pages)
 }
 
 func extractReadableText(format string, text string) string {
