@@ -31,6 +31,25 @@ func (v *View) promptCreateFile() {
 	}, v.window)
 }
 
+func (v *View) promptCreateFolder() {
+	workspace := v.state.Workspace()
+	if workspace.Root == "" {
+		v.addActivity("Open a workspace before creating folders.")
+		return
+	}
+	target := widget.NewEntry()
+	target.SetText(defaultCreateFolderPath(selectedPathOrEmpty(v)))
+	dialog.ShowForm("Create folder", "Create", "Cancel", []*widget.FormItem{
+		widget.NewFormItem("Path", target),
+	}, func(confirm bool) {
+		if !confirm {
+			return
+		}
+		proposal, err := v.workspaceService.ApplyDirectoryCreate(workspace.Root, workspaceSvc.DirectoryCreateRequest{RelPath: target.Text})
+		v.finishFileOperation(proposal.Message, err)
+	}, v.window)
+}
+
 func (v *View) promptCopyFile() {
 	source := selectedPathOrEmpty(v)
 	if source == "" {
@@ -240,4 +259,14 @@ func defaultCopyPath(source string) string {
 		return copyName
 	}
 	return path.Join(dir, copyName)
+}
+
+func defaultCreateFolderPath(selected string) string {
+	if selected == "" {
+		return "new-folder"
+	}
+	if path.Ext(selected) == "" {
+		return path.Join(selected, "new-folder")
+	}
+	return path.Join(path.Dir(selected), "new-folder")
 }

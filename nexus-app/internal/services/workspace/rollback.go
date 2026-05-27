@@ -111,6 +111,23 @@ func (s *Service) ApplyRollback(root string, id string) (RollbackApplyResult, er
 			return RollbackApplyResult{}, errors.New("rollback path must stay inside the root")
 		}
 		if info, err := os.Lstat(absTarget); err == nil {
+			if !entry.Existed {
+				if info.Mode()&os.ModeSymlink != 0 {
+					return RollbackApplyResult{}, fmt.Errorf("rollback target %s is now a symlink", relPath)
+				}
+				if info.IsDir() {
+					if err := os.Remove(absTarget); err != nil && !os.IsNotExist(err) {
+						return RollbackApplyResult{}, err
+					}
+					result.Removed = append(result.Removed, relPath)
+					continue
+				}
+				if err := os.Remove(absTarget); err != nil && !os.IsNotExist(err) {
+					return RollbackApplyResult{}, err
+				}
+				result.Removed = append(result.Removed, relPath)
+				continue
+			}
 			if info.IsDir() {
 				return RollbackApplyResult{}, fmt.Errorf("rollback target %s is now a directory", relPath)
 			}
@@ -122,9 +139,6 @@ func (s *Service) ApplyRollback(root string, id string) (RollbackApplyResult, er
 		}
 
 		if !entry.Existed {
-			if err := os.Remove(absTarget); err != nil && !os.IsNotExist(err) {
-				return RollbackApplyResult{}, err
-			}
 			result.Removed = append(result.Removed, relPath)
 			continue
 		}

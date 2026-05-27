@@ -14,6 +14,7 @@ import (
 
 const (
 	navigatorActionCreate     = "Create file near selection"
+	navigatorActionCreateDir  = "Create folder near selection"
 	navigatorActionCopy       = "Copy selected file"
 	navigatorActionCut        = "Cut selected file"
 	navigatorActionPaste      = "Paste file into selection"
@@ -36,6 +37,7 @@ func (v *View) newWorkspaceNavigator() fyne.CanvasObject {
 
 	quickActions := container.NewHBox(
 		widget.NewButtonWithIcon("", theme.FileIcon(), v.promptCreateFile),
+		widget.NewButtonWithIcon("", theme.FolderNewIcon(), v.promptCreateFolder),
 		widget.NewButtonWithIcon("", theme.ContentCopyIcon(), v.promptCopyFile),
 		widget.NewButtonWithIcon("", theme.DocumentCreateIcon(), v.promptRenameFile),
 		widget.NewButtonWithIcon("", theme.DeleteIcon(), v.confirmDeleteFile),
@@ -114,21 +116,23 @@ func navigatorVisibilitySummary(includeIgnored bool, summary domain.ScanSummary)
 
 func navigatorActionOptions(selected string, kind domain.WorkspaceNodeKind, hasClipboard bool) []string {
 	if selected == "" {
-		return []string{navigatorActionCreate}
+		return []string{navigatorActionCreate, navigatorActionCreateDir}
 	}
 	if kind == domain.NodeDirectory {
 		options := []string{
 			navigatorActionCreate,
+			navigatorActionCreateDir,
 			navigatorActionCopyPath,
 			navigatorActionUseContext,
 		}
 		if hasClipboard {
-			options = append([]string{navigatorActionCreate, navigatorActionPaste}, options[1:]...)
+			options = append([]string{navigatorActionCreate, navigatorActionCreateDir, navigatorActionPaste}, options[2:]...)
 		}
 		return options
 	}
 	options := []string{
 		navigatorActionCreate,
+		navigatorActionCreateDir,
 		navigatorActionCopy,
 		navigatorActionCut,
 		navigatorActionRename,
@@ -137,7 +141,7 @@ func navigatorActionOptions(selected string, kind domain.WorkspaceNodeKind, hasC
 		navigatorActionUseContext,
 	}
 	if hasClipboard {
-		options = append(options[:3], append([]string{navigatorActionPaste}, options[3:]...)...)
+		options = append(options[:4], append([]string{navigatorActionPaste}, options[4:]...)...)
 	}
 	return options
 }
@@ -166,6 +170,8 @@ func (v *View) handleNavigatorAction(action string) {
 	switch action {
 	case navigatorActionCreate:
 		v.promptCreateFile()
+	case navigatorActionCreateDir:
+		v.promptCreateFolder()
 	case navigatorActionCopy:
 		v.setNavigatorClipboard("copy")
 	case navigatorActionCut:

@@ -16,6 +16,15 @@ func TestDefaultCreatePathUsesSelectedDirectory(t *testing.T) {
 	}
 }
 
+func TestDefaultCreateFolderPathUsesSelectedDirectory(t *testing.T) {
+	if got := defaultCreateFolderPath("docs"); got != "docs/new-folder" {
+		t.Fatalf("unexpected create folder path: %q", got)
+	}
+	if got := defaultCreateFolderPath("docs/readme.md"); got != "docs/new-folder" {
+		t.Fatalf("unexpected create folder path near selected file: %q", got)
+	}
+}
+
 func TestDefaultCopyPathAddsCopySuffix(t *testing.T) {
 	if got := defaultCopyPath("docs/readme.md"); got != "docs/readme-copy.md" {
 		t.Fatalf("unexpected copy path: %q", got)
@@ -27,13 +36,16 @@ func TestDefaultCopyPathAddsCopySuffix(t *testing.T) {
 
 func TestNavigatorActionOptionsRespectSelectionKind(t *testing.T) {
 	fileOptions := navigatorActionOptions("docs/readme.md", domain.NodeFile, true)
-	for _, option := range []string{navigatorActionCopy, navigatorActionCut, navigatorActionPaste, navigatorActionRename, navigatorActionDelete, navigatorActionCopyPath, navigatorActionUseContext} {
+	for _, option := range []string{navigatorActionCreateDir, navigatorActionCopy, navigatorActionCut, navigatorActionPaste, navigatorActionRename, navigatorActionDelete, navigatorActionCopyPath, navigatorActionUseContext} {
 		if !slices.Contains(fileOptions, option) {
 			t.Fatalf("file options are missing %q: %#v", option, fileOptions)
 		}
 	}
 
 	directoryOptions := navigatorActionOptions("docs", domain.NodeDirectory, true)
+	if !slices.Contains(directoryOptions, navigatorActionCreateDir) {
+		t.Fatalf("directory options should include folder creation: %#v", directoryOptions)
+	}
 	if !slices.Contains(directoryOptions, navigatorActionPaste) {
 		t.Fatalf("directory options should include paste when clipboard is active: %#v", directoryOptions)
 	}

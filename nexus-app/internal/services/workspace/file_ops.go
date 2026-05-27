@@ -13,6 +13,10 @@ type FileCreateRequest struct {
 	RelPath string
 }
 
+type DirectoryCreateRequest struct {
+	RelPath string
+}
+
 type FileCopyRequest struct {
 	SourceRelPath string
 	TargetRelPath string
@@ -76,6 +80,45 @@ func (s *Service) ApplyFileCreate(root string, request FileCreateRequest) (FileO
 	}
 	proposal.RollbackID = rollback.ID
 	proposal.Message = fmt.Sprintf("Created %s. Rollback %s is available.", proposal.TargetRelPath, rollback.ID)
+	return proposal, nil
+}
+
+func (s *Service) PreviewDirectoryCreate(root string, request DirectoryCreateRequest) (FileOperationProposal, error) {
+	_, _, cleanRelPath, err := resolveNewDirectoryTarget(root, request.RelPath, "create folder")
+	if err != nil {
+		return FileOperationProposal{}, err
+	}
+	relPath := filepath.ToSlash(cleanRelPath)
+	return FileOperationProposal{
+		TargetRelPath: relPath,
+		Name:          filepath.Base(cleanRelPath),
+		Action:        "create-folder",
+		Message:       fmt.Sprintf("Preview ready to create folder %s.", relPath),
+	}, nil
+}
+
+func (s *Service) ApplyDirectoryCreate(root string, request DirectoryCreateRequest) (FileOperationProposal, error) {
+	proposal, err := s.PreviewDirectoryCreate(root, request)
+	if err != nil {
+		return FileOperationProposal{}, err
+	}
+	_, absTarget, cleanRelPath, err := resolveNewDirectoryTarget(root, request.RelPath, "create folder")
+	if err != nil {
+		return FileOperationProposal{}, err
+	}
+	rollback, err := s.prepareRollback(root, proposal.Action, proposal.TargetRelPath, []string{cleanRelPath})
+	if err != nil {
+		return FileOperationProposal{}, err
+	}
+	if err := os.MkdirAll(absTarget, 0o755); err != nil {
+		return FileOperationProposal{}, err
+	}
+	rollback, err = s.commitRollback(root, rollback)
+	if err != nil {
+		return FileOperationProposal{}, err
+	}
+	proposal.RollbackID = rollback.ID
+	proposal.Message = fmt.Sprintf("Created folder %s. Rollback %s is available.", proposal.TargetRelPath, rollback.ID)
 	return proposal, nil
 }
 

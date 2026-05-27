@@ -302,7 +302,8 @@ The Fyne migration must not drop product ambition, but this section is intention
 ### Workbench / Code Studio
 
 - [x] Native project tree baseline with lazy loading, ignored-path controls, file status badges, secondary-click context menus, reveal/collapse controls, safe copy/move/delete/rename, and file clipboard paste through copy/move services.
-- [ ] IDE-grade project tree polish with richer density, better icons/badges, folder create flow, keyboard navigation, and broader context actions.
+- [x] Native folder create flow with rooted validation, metadata guard, rollback removal for empty created folders, quick action, and tree context menu action.
+- [ ] IDE-grade project tree polish with richer density, better icons/badges, keyboard navigation, and broader context actions.
 - [ ] Multi-tab editor with pinned tabs, dirty state, close guards, split editor groups, breadcrumbs, outline, minimap, find, format, and go-to-definition where available.
 - [ ] Syntax highlighting strategy for common languages, Markdown, SQL, JSON/YAML/XML, Docker/Compose, logs, and config files.
 - [ ] Markdown source/rendered toggle.

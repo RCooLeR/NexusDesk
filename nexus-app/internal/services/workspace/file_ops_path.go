@@ -62,6 +62,36 @@ func resolveNewFileTarget(root string, relPath string, action string) (string, s
 	return absRoot, absTarget, cleanRelPath, nil
 }
 
+func resolveNewDirectoryTarget(root string, relPath string, action string) (string, string, string, error) {
+	absRoot, err := cleanRoot(root)
+	if err != nil {
+		return "", "", "", err
+	}
+	cleanRelPath, err := cleanRel(relPath)
+	if err != nil {
+		return "", "", "", err
+	}
+	if cleanRelPath == "" {
+		return "", "", "", fmt.Errorf("%s target must name a folder", action)
+	}
+	if isInternalMetadataPath(cleanRelPath) {
+		return "", "", "", fmt.Errorf("direct %ss involving Nexus metadata are not allowed", action)
+	}
+	absTarget, err := filepath.Abs(filepath.Join(absRoot, filepath.FromSlash(cleanRelPath)))
+	if err != nil {
+		return "", "", "", err
+	}
+	if !isInside(absRoot, absTarget) {
+		return "", "", "", errors.New("workspace path must stay inside the root")
+	}
+	if _, err := os.Lstat(absTarget); err == nil {
+		return "", "", "", fmt.Errorf("%s target already exists", action)
+	} else if !os.IsNotExist(err) {
+		return "", "", "", err
+	}
+	return absRoot, absTarget, cleanRelPath, nil
+}
+
 func resolveTransferTargets(root string, sourceRelPath string, targetRelPath string, action string) (string, string, string, string, os.FileInfo, error) {
 	absSource, cleanSource, info, err := resolveExistingFile(root, sourceRelPath, action+" source")
 	if err != nil {

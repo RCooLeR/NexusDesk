@@ -32,6 +32,33 @@ func TestApplyFileCreateCreatesEmptyFileAndRollbackRemovesIt(t *testing.T) {
 	}
 }
 
+func TestApplyDirectoryCreateCreatesFolderAndRollbackRemovesIt(t *testing.T) {
+	root := t.TempDir()
+	service := New()
+
+	proposal, err := service.ApplyDirectoryCreate(root, DirectoryCreateRequest{RelPath: "docs/new-section"})
+	if err != nil {
+		t.Fatalf("ApplyDirectoryCreate returned error: %v", err)
+	}
+	if proposal.Action != "create-folder" || proposal.RollbackID == "" {
+		t.Fatalf("unexpected folder create proposal: %#v", proposal)
+	}
+	if info, err := os.Stat(filepath.Join(root, "docs", "new-section")); err != nil || !info.IsDir() {
+		t.Fatalf("expected created folder, info=%#v err=%v", info, err)
+	}
+
+	result, err := service.ApplyRollback(root, proposal.RollbackID)
+	if err != nil {
+		t.Fatalf("ApplyRollback returned error: %v", err)
+	}
+	if len(result.Removed) != 1 || result.Removed[0] != "docs/new-section" {
+		t.Fatalf("expected created folder rollback removal, got %#v", result)
+	}
+	if _, err := os.Stat(filepath.Join(root, "docs", "new-section")); !os.IsNotExist(err) {
+		t.Fatalf("expected rollback to remove created folder, got err=%v", err)
+	}
+}
+
 func TestApplyFileDeleteRemovesFileAndRollbackRestoresIt(t *testing.T) {
 	root := t.TempDir()
 	service := New()
@@ -141,6 +168,12 @@ func TestFileOperationsRejectUnsafeTargets(t *testing.T) {
 
 	if _, err := service.PreviewFileCreate(root, FileCreateRequest{RelPath: ".nexusdesk/config.json"}); err == nil {
 		t.Fatal("expected metadata create to be rejected")
+	}
+	if _, err := service.PreviewDirectoryCreate(root, DirectoryCreateRequest{RelPath: ".nexusdesk/reports"}); err == nil {
+		t.Fatal("expected metadata folder create to be rejected")
+	}
+	if _, err := service.PreviewDirectoryCreate(root, DirectoryCreateRequest{RelPath: "docs"}); err == nil {
+		t.Fatal("expected existing folder create target to be rejected")
 	}
 	if _, err := service.PreviewFileCopy(root, FileCopyRequest{SourceRelPath: "docs/source.md", TargetRelPath: "../copy.md"}); err == nil {
 		t.Fatal("expected traversal copy target to be rejected")
