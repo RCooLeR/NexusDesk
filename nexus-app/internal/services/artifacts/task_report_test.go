@@ -36,6 +36,9 @@ func TestWriteTaskRunReportCreatesMarkdownArtifact(t *testing.T) {
 	if !strings.HasPrefix(artifact.RelPath, ".nexusdesk/artifacts/task-runs/") {
 		t.Fatalf("unexpected artifact path: %q", artifact.RelPath)
 	}
+	if artifact.MetadataPath == "" || artifact.JobID != "job-0001" || artifact.TaskID != "go-test-root" {
+		t.Fatalf("expected metadata-backed task report artifact, got %#v", artifact)
+	}
 	data, err := os.ReadFile(artifact.AbsPath)
 	if err != nil {
 		t.Fatalf("expected report file: %v", err)
@@ -103,5 +106,73 @@ func TestListAndReadTaskRunReports(t *testing.T) {
 	outside := filepath.ToSlash(filepath.Join("..", "outside.md"))
 	if _, err := store.ReadArtifactText(outside); err == nil {
 		t.Fatal("expected traversal read to fail")
+	}
+}
+
+func TestListArtifactsSearchArchiveDeleteAndLineage(t *testing.T) {
+	root := t.TempDir()
+	store, err := NewStore(root)
+	if err != nil {
+		t.Fatal(err)
+	}
+	report, err := store.WriteTaskRunReport(TaskRunReport{
+		ID:        "report",
+		JobID:     "job-42",
+		TaskID:    "task-42",
+		Label:     "Nightly report",
+		Command:   "go test ./...",
+		Cwd:       ".",
+		Source:    "package.json",
+		Status:    "success",
+		StartedAt: time.Date(2026, 5, 27, 12, 0, 0, 0, time.UTC),
+		Message:   "done",
+	})
+	if err != nil {
+		t.Fatalf("WriteTaskRunReport returned error: %v", err)
+	}
+	matches, err := store.ListArtifacts(ListOptions{Query: "nightly"})
+	if err != nil {
+		t.Fatalf("ListArtifacts returned error: %v", err)
+	}
+	if len(matches) != 1 || matches[0].JobID != "job-42" {
+		t.Fatalf("unexpected artifact search matches: %#v", matches)
+	}
+	lineage, err := store.Lineage(report.RelPath)
+	if err != nil {
+		t.Fatalf("Lineage returned error: %v", err)
+	}
+	if len(lineage.Nodes) < 4 || len(lineage.Edges) < 3 {
+		t.Fatalf("expected artifact/job/task/source lineage, got %#v", lineage)
+	}
+	archived, err := store.ArchiveArtifact(report.RelPath)
+	if err != nil {
+		t.Fatalf("ArchiveArtifact returned error: %v", err)
+	}
+	if !archived.Archived || !strings.Contains(archived.RelPath, "/archive/") {
+		t.Fatalf("unexpected archived artifact: %#v", archived)
+	}
+	active, err := store.ListArtifacts(ListOptions{})
+	if err != nil {
+		t.Fatalf("ListArtifacts active returned error: %v", err)
+	}
+	if len(active) != 0 {
+		t.Fatalf("archived artifact should be hidden by default: %#v", active)
+	}
+	all, err := store.ListArtifacts(ListOptions{IncludeArchived: true})
+	if err != nil {
+		t.Fatalf("ListArtifacts archived returned error: %v", err)
+	}
+	if len(all) != 1 || !all[0].Archived {
+		t.Fatalf("expected archived artifact when included: %#v", all)
+	}
+	if err := store.DeleteArtifact(archived.RelPath); err != nil {
+		t.Fatalf("DeleteArtifact returned error: %v", err)
+	}
+	all, err = store.ListArtifacts(ListOptions{IncludeArchived: true})
+	if err != nil {
+		t.Fatalf("ListArtifacts after delete returned error: %v", err)
+	}
+	if len(all) != 0 {
+		t.Fatalf("expected delete to remove artifact and sidecar: %#v", all)
 	}
 }

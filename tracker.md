@@ -206,6 +206,7 @@ Goal: restore generated-output workflows with provenance and native inspection.
 
 - [ ] Port artifact writer, metadata, search, compare, archive, delete, and lineage.
 - [x] Add native artifact browser for task-run report artifacts.
+- [x] Expand native artifact browser to generic artifact metadata sidecars, metadata search, archive/delete actions, and task-report lineage.
 - [ ] Add document preview/extraction for Markdown, TXT, PDF, DOCX, XLSX, HTML/XML.
 - [ ] Add presentation/report generation targets after artifact lineage is stable.
 - [ ] Add read-only operations scanners for Dockerfiles, Compose, env/config/logs.
@@ -250,11 +251,11 @@ Exit criteria:
 
 ## Next Batch
 
-1. Expand the native artifact browser from task reports to metadata, search, archive/delete, and lineage.
-2. Add native audit/history UI for persisted agent runs and tool runs.
-3. Add agent-safe copy/move/delete and patch tools gated by full-project access and rollback snapshots.
-4. Add first project-tree reveal/collapse controls and ignored-path visibility affordances.
-5. Add first native chat search/history panel after artifact metadata search exists.
+1. Add native audit/history UI for persisted agent runs and tool runs.
+2. Add agent-safe copy/move/delete and patch tools gated by full-project access and rollback snapshots.
+3. Add first project-tree reveal/collapse controls and ignored-path visibility affordances.
+4. Add first native chat search/history panel after artifact metadata search exists.
+5. Port first document-set artifact writer after artifact lineage metadata stabilizes.
 
 ## Preserved Post-Port Backlog
 

@@ -11,40 +11,57 @@ import (
 const artifactPreviewMaxBytes = 256 * 1024
 
 func (s *Store) ListTaskRunReports() ([]Artifact, error) {
-	reportsDir := s.absPath(s.relPath("task-runs"))
-	entries, err := os.ReadDir(reportsDir)
-	if os.IsNotExist(err) {
+	return s.ListArtifacts(ListOptions{Query: "kind:task-report"})
+}
+
+func (s *Store) ListArtifacts(options ListOptions) ([]Artifact, error) {
+	artifactsDir := s.absPath(artifactsDirRelPath)
+	if _, err := os.Stat(artifactsDir); os.IsNotExist(err) {
 		return []Artifact{}, nil
-	}
-	if err != nil {
+	} else if err != nil {
 		return nil, err
 	}
-	reports := []Artifact{}
-	for _, entry := range entries {
-		if entry.IsDir() || strings.ToLower(filepath.Ext(entry.Name())) != ".md" {
-			continue
+	artifacts := []Artifact{}
+	err := filepath.WalkDir(artifactsDir, func(absPath string, entry os.DirEntry, walkErr error) error {
+		if walkErr != nil {
+			return nil
+		}
+		if entry.IsDir() {
+			if !options.IncludeArchived && entry.Name() == "archive" {
+				return filepath.SkipDir
+			}
+			return nil
+		}
+		if isMetadataSidecar(entry.Name()) {
+			return nil
 		}
 		info, err := entry.Info()
 		if err != nil {
-			continue
+			return nil
 		}
-		relPath := s.relPath("task-runs", entry.Name())
-		reports = append(reports, Artifact{
-			Kind:      "task-report",
-			Title:     strings.TrimSuffix(entry.Name(), filepath.Ext(entry.Name())),
-			RelPath:   relPath,
-			AbsPath:   s.absPath(relPath),
-			Size:      info.Size(),
-			CreatedAt: info.ModTime().UTC(),
-		})
-	}
-	sort.SliceStable(reports, func(i, j int) bool {
-		if reports[i].CreatedAt.Equal(reports[j].CreatedAt) {
-			return reports[i].RelPath > reports[j].RelPath
+		relPath, err := filepath.Rel(s.root, absPath)
+		if err != nil {
+			return nil
 		}
-		return reports[i].CreatedAt.After(reports[j].CreatedAt)
+		artifact := s.artifactFromFile(filepath.ToSlash(relPath), absPath, info)
+		if !artifactMatches(artifact, options.Query) {
+			return nil
+		}
+		artifacts = append(artifacts, artifact)
+		return nil
 	})
-	return reports, nil
+	if err != nil {
+		return nil, err
+	}
+	sort.SliceStable(artifacts, func(i, j int) bool {
+		left := firstTime(artifacts[i].GeneratedAt, artifacts[i].CreatedAt)
+		right := firstTime(artifacts[j].GeneratedAt, artifacts[j].CreatedAt)
+		if left.Equal(right) {
+			return artifacts[i].RelPath > artifacts[j].RelPath
+		}
+		return left.After(right)
+	})
+	return artifacts, nil
 }
 
 func (s *Store) ReadArtifactText(relPath string) (string, error) {
@@ -67,6 +84,48 @@ func (s *Store) ReadArtifactText(relPath string) (string, error) {
 		return "", err
 	}
 	return string(content), nil
+}
+
+func (s *Store) artifactByPath(relPath string) (Artifact, error) {
+	absPath, err := s.resolveArtifactPath(relPath)
+	if err != nil {
+		return Artifact{}, err
+	}
+	info, err := os.Stat(absPath)
+	if err != nil {
+		return Artifact{}, err
+	}
+	if info.IsDir() {
+		return Artifact{}, errors.New("artifact path must be a file")
+	}
+	return s.artifactFromFile(filepath.ToSlash(relPath), absPath, info), nil
+}
+
+func (s *Store) artifactFromFile(relPath string, absPath string, info os.FileInfo) Artifact {
+	metadata, metadataRelPath := s.readMetadata(relPath)
+	kind := metadata.Kind
+	if kind == "" {
+		kind = inferKind(relPath)
+	}
+	title := metadata.Title
+	if title == "" {
+		title = strings.TrimSuffix(filepath.Base(relPath), filepath.Ext(relPath))
+	}
+	return Artifact{
+		Kind:         kind,
+		Title:        title,
+		RelPath:      relPath,
+		AbsPath:      absPath,
+		MetadataPath: metadataRelPath,
+		Size:         info.Size(),
+		CreatedAt:    info.ModTime().UTC(),
+		GeneratedAt:  metadata.GeneratedAt,
+		JobID:        metadata.JobID,
+		TaskID:       metadata.TaskID,
+		Source:       metadata.Source,
+		SourcePaths:  append([]string{}, metadata.SourcePaths...),
+		Archived:     strings.HasPrefix(relPath, artifactsDirRelPath+"/archive/"),
+	}
 }
 
 func (s *Store) resolveArtifactPath(relPath string) (string, error) {

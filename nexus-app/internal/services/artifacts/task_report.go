@@ -35,14 +35,31 @@ func (s *Store) WriteTaskRunReport(record TaskRunReport) (Artifact, error) {
 	if _, err := file.WriteString(content); err != nil {
 		return Artifact{}, err
 	}
+	metadata := Metadata{
+		Kind:        "task-report",
+		Title:       record.Label,
+		RelPath:     relPath,
+		JobID:       record.JobID,
+		TaskID:      record.TaskID,
+		Source:      record.Source,
+		GeneratedAt: createdAt,
+	}
+	if err := s.writeMetadata(metadata); err != nil {
+		return Artifact{}, err
+	}
 	return Artifact{
-		Kind:      "task-report",
-		Title:     record.Label,
-		RelPath:   relPath,
-		AbsPath:   absPath,
-		Message:   "Task report artifact created at " + relPath + ".",
-		Size:      int64(len(content)),
-		CreatedAt: createdAt,
+		Kind:         "task-report",
+		Title:        record.Label,
+		RelPath:      relPath,
+		AbsPath:      absPath,
+		MetadataPath: relPath + ".json",
+		Message:      "Task report artifact created at " + relPath + ".",
+		Size:         int64(len(content)),
+		CreatedAt:    createdAt,
+		GeneratedAt:  createdAt,
+		JobID:        record.JobID,
+		TaskID:       record.TaskID,
+		Source:       record.Source,
 	}, nil
 }
 

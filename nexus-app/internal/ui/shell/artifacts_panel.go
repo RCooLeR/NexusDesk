@@ -3,6 +3,7 @@ package shell
 import (
 	"fmt"
 	"path/filepath"
+	"strings"
 
 	"fyne.io/fyne/v2"
 	"fyne.io/fyne/v2/container"
@@ -14,17 +15,28 @@ import (
 )
 
 func (v *View) newArtifactsPanel() fyne.CanvasObject {
-	refresh := widget.NewButtonWithIcon("Refresh", theme.ViewRefreshIcon(), v.refreshArtifacts)
-	header := container.NewBorder(nil, nil, v.artifactStatus, refresh)
+	search := widget.NewEntry()
+	search.SetPlaceHolder("Search artifacts by title, path, kind, source, job, or task")
+	refresh := widget.NewButtonWithIcon("Refresh", theme.ViewRefreshIcon(), func() {
+		v.refreshArtifactsWithQuery(search.Text)
+	})
+	search.OnSubmitted = func(string) {
+		v.refreshArtifactsWithQuery(search.Text)
+	}
+	header := container.NewBorder(nil, nil, v.artifactStatus, refresh, search)
 	listScroll := container.NewScroll(v.artifactResults)
 	listScroll.SetMinSize(fyne.NewSize(260, 110))
-	preview := container.NewBorder(widget.NewLabel("Task report preview"), nil, nil, nil, v.artifactPreview)
+	preview := container.NewBorder(widget.NewLabel("Artifact preview and lineage"), nil, nil, nil, v.artifactPreview)
 	split := container.NewVSplit(listScroll, preview)
 	split.Offset = 0.42
 	return container.NewBorder(header, nil, nil, nil, split)
 }
 
 func (v *View) refreshArtifacts() {
+	v.refreshArtifactsWithQuery("")
+}
+
+func (v *View) refreshArtifactsWithQuery(query string) {
 	workspace := v.state.Workspace()
 	if workspace.Root == "" {
 		v.artifactStatus.SetText("Open a workspace before reading artifacts.")
@@ -36,15 +48,19 @@ func (v *View) refreshArtifacts() {
 		dialog.ShowError(err, v.window)
 		return
 	}
-	reports, err := store.ListTaskRunReports()
+	artifacts, err := store.ListArtifacts(artifactsSvc.ListOptions{Query: query})
 	if err != nil {
 		dialog.ShowError(err, v.window)
 		return
 	}
-	v.artifactStatus.SetText(fmt.Sprintf("%d task report artifact(s)", len(reports)))
-	v.artifactResults.Objects = artifactRows(reports, v.previewArtifact)
+	status := fmt.Sprintf("%d artifact(s)", len(artifacts))
+	if strings.TrimSpace(query) != "" {
+		status += " matching " + strings.TrimSpace(query)
+	}
+	v.artifactStatus.SetText(status)
+	v.artifactResults.Objects = artifactRows(artifacts, v.previewArtifact, v.archiveArtifact, v.deleteArtifact)
 	v.artifactResults.Refresh()
-	v.addActivity(fmt.Sprintf("Loaded %d task report artifact(s).", len(reports)))
+	v.addActivity(fmt.Sprintf("Loaded %d artifact(s).", len(artifacts)))
 }
 
 func (v *View) previewArtifact(artifact artifactsSvc.Artifact) {
@@ -62,14 +78,65 @@ func (v *View) previewArtifact(artifact artifactsSvc.Artifact) {
 		dialog.ShowError(err, v.window)
 		return
 	}
-	v.artifactPreview.SetText(text)
+	lineage, err := store.Lineage(artifact.RelPath)
+	if err != nil {
+		dialog.ShowError(err, v.window)
+		return
+	}
+	v.artifactPreview.SetText(artifactLineageText(lineage) + "\n\n---\n\n" + text)
 	v.artifactStatus.SetText("Previewing " + artifact.RelPath)
 	v.addActivity("Previewed artifact " + artifact.RelPath + ".")
 }
 
-func artifactRows(artifacts []artifactsSvc.Artifact, onPreview func(artifactsSvc.Artifact)) []fyne.CanvasObject {
+func (v *View) archiveArtifact(artifact artifactsSvc.Artifact) {
+	dialog.ShowConfirm("Archive artifact", "Archive "+artifact.RelPath+"?", func(confirm bool) {
+		if !confirm {
+			return
+		}
+		store, err := artifactsSvc.NewStore(v.state.Workspace().Root)
+		if err != nil {
+			dialog.ShowError(err, v.window)
+			return
+		}
+		archived, err := store.ArchiveArtifact(artifact.RelPath)
+		if err != nil {
+			dialog.ShowError(err, v.window)
+			return
+		}
+		v.artifactPreview.SetText("")
+		v.addActivity("Archived artifact to " + archived.RelPath + ".")
+		v.refreshArtifacts()
+	}, v.window)
+}
+
+func (v *View) deleteArtifact(artifact artifactsSvc.Artifact) {
+	dialog.ShowConfirm("Delete artifact", "Permanently delete "+artifact.RelPath+"?", func(confirm bool) {
+		if !confirm {
+			return
+		}
+		store, err := artifactsSvc.NewStore(v.state.Workspace().Root)
+		if err != nil {
+			dialog.ShowError(err, v.window)
+			return
+		}
+		if err := store.DeleteArtifact(artifact.RelPath); err != nil {
+			dialog.ShowError(err, v.window)
+			return
+		}
+		v.artifactPreview.SetText("")
+		v.addActivity("Deleted artifact " + artifact.RelPath + ".")
+		v.refreshArtifacts()
+	}, v.window)
+}
+
+func artifactRows(
+	artifacts []artifactsSvc.Artifact,
+	onPreview func(artifactsSvc.Artifact),
+	onArchive func(artifactsSvc.Artifact),
+	onDelete func(artifactsSvc.Artifact),
+) []fyne.CanvasObject {
 	if len(artifacts) == 0 {
-		return []fyne.CanvasObject{widget.NewLabel("No task report artifacts yet. Run a task to generate one.")}
+		return []fyne.CanvasObject{widget.NewLabel("No artifacts yet. Run a task or generate an output to create one.")}
 	}
 	rows := make([]fyne.CanvasObject, 0, len(artifacts))
 	for _, artifact := range artifacts {
@@ -78,12 +145,21 @@ func artifactRows(artifacts []artifactsSvc.Artifact, onPreview func(artifactsSvc
 			onPreview(artifact)
 		})
 		preview.Importance = widget.LowImportance
+		archive := widget.NewButtonWithIcon("", theme.FolderIcon(), func() {
+			onArchive(artifact)
+		})
+		archive.Importance = widget.LowImportance
+		deleteButton := widget.NewButtonWithIcon("", theme.DeleteIcon(), func() {
+			onDelete(artifact)
+		})
+		deleteButton.Importance = widget.LowImportance
 		title := widget.NewLabel(artifactTitle(artifact))
 		title.TextStyle = fyne.TextStyle{Bold: true}
 		title.Truncation = fyne.TextTruncateEllipsis
 		meta := widget.NewLabel(artifactMeta(artifact))
 		meta.Truncation = fyne.TextTruncateEllipsis
-		rows = append(rows, container.NewBorder(nil, nil, preview, nil, container.NewVBox(title, meta)))
+		actions := container.NewHBox(preview, archive, deleteButton)
+		rows = append(rows, container.NewBorder(nil, nil, actions, nil, container.NewVBox(title, meta)))
 	}
 	return rows
 }
@@ -97,8 +173,45 @@ func artifactTitle(artifact artifactsSvc.Artifact) string {
 
 func artifactMeta(artifact artifactsSvc.Artifact) string {
 	timestamp := "unknown time"
-	if !artifact.CreatedAt.IsZero() {
+	if !artifact.GeneratedAt.IsZero() {
+		timestamp = artifact.GeneratedAt.Format("2006-01-02 15:04:05")
+	} else if !artifact.CreatedAt.IsZero() {
 		timestamp = artifact.CreatedAt.Format("2006-01-02 15:04:05")
 	}
-	return fmt.Sprintf("%s - %s - %d bytes", artifact.Kind, timestamp, artifact.Size)
+	details := fmt.Sprintf("%s - %s - %d bytes", artifact.Kind, timestamp, artifact.Size)
+	if artifact.JobID != "" {
+		details += " - job " + artifact.JobID
+	}
+	if artifact.Archived {
+		details += " - archived"
+	}
+	return details
+}
+
+func artifactLineageText(lineage artifactsSvc.Lineage) string {
+	if len(lineage.Nodes) == 0 {
+		return "Lineage: no metadata available."
+	}
+	var builder strings.Builder
+	builder.WriteString("Lineage\n")
+	for _, node := range lineage.Nodes {
+		builder.WriteString("- ")
+		builder.WriteString(node.Kind)
+		builder.WriteString(": ")
+		builder.WriteString(node.Label)
+		builder.WriteString("\n")
+	}
+	if len(lineage.Edges) > 0 {
+		builder.WriteString("\nRelationships\n")
+		for _, edge := range lineage.Edges {
+			builder.WriteString("- ")
+			builder.WriteString(edge.From)
+			builder.WriteString(" --")
+			builder.WriteString(edge.Label)
+			builder.WriteString("--> ")
+			builder.WriteString(edge.To)
+			builder.WriteString("\n")
+		}
+	}
+	return builder.String()
 }
