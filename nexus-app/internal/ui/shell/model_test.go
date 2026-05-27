@@ -4,6 +4,7 @@ import (
 	"testing"
 
 	"nexusdesk/internal/domain"
+	"nexusdesk/internal/services/llm"
 )
 
 func TestStateAssistantContextPathsDeduplicateAndResetWithWorkspace(t *testing.T) {
@@ -41,5 +42,24 @@ func TestStateRemoveAssistantContextPath(t *testing.T) {
 	paths := state.AssistantContextPaths()
 	if len(paths) != 1 || paths[0] != "docs" {
 		t.Fatalf("unexpected context paths after remove: %#v", paths)
+	}
+}
+
+func TestStateAssistantConversationResetsAndCaps(t *testing.T) {
+	state := NewState()
+	state.SetAssistantConversation([]llm.ChatTurn{{Role: "user", Content: "one"}})
+	state.AppendAssistantExchange("two", "three")
+	if got := state.AssistantConversation(); len(got) != 3 {
+		t.Fatalf("unexpected conversation after append: %#v", got)
+	}
+	for index := range 20 {
+		state.AppendAssistantExchange("prompt", string(rune('a'+index)))
+	}
+	if got := state.AssistantConversation(); len(got) != 24 {
+		t.Fatalf("conversation should be capped to 24 turns, got %d", len(got))
+	}
+	state.SetWorkspace(domain.Workspace{Root: "C:/repo", Name: "repo"})
+	if got := state.AssistantConversation(); len(got) != 0 {
+		t.Fatalf("workspace change should reset conversation, got %#v", got)
 	}
 }

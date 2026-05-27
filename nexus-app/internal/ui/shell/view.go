@@ -66,6 +66,8 @@ type View struct {
 	accessStatus           *widget.Label
 	assistantContextStatus *widget.Label
 	assistantContextList   *fyne.Container
+	assistantHistoryStatus *widget.Label
+	assistantHistoryList   *fyne.Container
 }
 
 func New(window fyne.Window) *View {

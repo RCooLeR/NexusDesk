@@ -14,7 +14,12 @@ import (
 	agentSvc "nexusdesk/internal/services/agent"
 	assistantSvc "nexusdesk/internal/services/assistant"
 	jobsSvc "nexusdesk/internal/services/jobs"
+	llmSvc "nexusdesk/internal/services/llm"
+	metadataSvc "nexusdesk/internal/services/metadata"
 )
+
+const assistantConversationLimit = 24
+const assistantHistoryPreviewLimit = 6
 
 func (v *View) newAssistantPanel() fyne.CanvasObject {
 	prompt := widget.NewMultiLineEntry()
@@ -24,6 +29,9 @@ func (v *View) newAssistantPanel() fyne.CanvasObject {
 	v.assistantContextStatus = widget.NewLabel("")
 	v.assistantContextStatus.Wrapping = fyne.TextWrapWord
 	v.assistantContextList = container.NewVBox()
+	v.assistantHistoryStatus = widget.NewLabel("")
+	v.assistantHistoryStatus.Wrapping = fyne.TextWrapWord
+	v.assistantHistoryList = container.NewVBox()
 	pinSelection := widget.NewButton("Pin selection", v.pinSelectedAssistantContext)
 	pinProject := widget.NewButton("Pin project", func() {
 		v.pinAssistantContextPath(".")
@@ -34,6 +42,10 @@ func (v *View) newAssistantPanel() fyne.CanvasObject {
 		v.assistantContextStatus,
 		v.assistantContextList,
 	)
+	historyBar := container.NewVBox(
+		v.assistantHistoryStatus,
+		v.assistantHistoryList,
+	)
 	mode := widget.NewSelect([]string{"Ask", "Agent"}, func(string) {})
 	mode.SetSelected("Ask")
 	send := widget.NewButtonWithIcon("", theme.MailSendIcon(), nil)
@@ -41,8 +53,10 @@ func (v *View) newAssistantPanel() fyne.CanvasObject {
 		v.runAssistantRequest(prompt, response, send, mode.Selected)
 	}
 	composer := container.NewBorder(nil, nil, mode, send, prompt)
-	card := widget.NewCard("Assistant", "Local-first context and tool mediation", container.NewBorder(contextBar, composer, nil, nil, response))
+	sidebar := container.NewVBox(contextBar, widget.NewSeparator(), historyBar)
+	card := widget.NewCard("Assistant", "Local-first context and tool mediation", container.NewBorder(sidebar, composer, nil, nil, response))
 	v.refreshAssistantContextPins()
+	v.refreshAssistantHistory()
 	return container.NewPadded(card)
 }
 
@@ -62,7 +76,9 @@ func (v *View) runAssistantRequest(prompt *widget.Entry, response *widget.RichTe
 		WorkspaceRoot: workspace.Root,
 		SelectedPath:  v.state.SelectedPath(),
 		ContextPaths:  v.state.AssistantContextPaths(),
+		Conversation:  v.state.AssistantConversation(),
 	}
+	startedAt := time.Now().UTC()
 	send.Disable()
 	response.ParseMarkdown("Receiving response...")
 	v.addActivity("Assistant request started.")
@@ -88,9 +104,106 @@ func (v *View) runAssistantRequest(prompt *widget.Entry, response *widget.RichTe
 			if result.ContextWarning != "" {
 				v.addActivity(result.ContextWarning)
 			}
+			v.persistAssistantExchange(text, result, startedAt)
 			v.addActivity("Assistant response completed with " + result.Model + ".")
 		})
 	}()
+}
+
+func (v *View) loadAssistantChatHistory() {
+	if v.metadataStore == nil {
+		v.state.SetAssistantConversation(nil)
+		v.refreshAssistantHistory()
+		return
+	}
+	records, err := v.metadataStore.ListChatMessages(assistantConversationLimit)
+	if err != nil {
+		v.state.SetAssistantConversation(nil)
+		v.refreshAssistantHistory()
+		v.addActivity("Assistant chat history unavailable: " + err.Error())
+		return
+	}
+	v.state.SetAssistantConversation(chatTurnsFromMetadata(records))
+	v.refreshAssistantHistory()
+	if len(records) > 0 {
+		v.addActivity(fmt.Sprintf("Loaded %d assistant chat message(s).", len(records)))
+	}
+}
+
+func (v *View) persistAssistantExchange(prompt string, result assistantSvc.Result, startedAt time.Time) {
+	if v.metadataStore == nil {
+		return
+	}
+	if err := v.metadataStore.SaveChatMessage(metadataSvc.ChatMessageRecord{
+		Role:      "user",
+		Content:   prompt,
+		CreatedAt: startedAt,
+	}); err != nil {
+		v.addActivity("Could not persist user chat message: " + err.Error())
+		return
+	}
+	if err := v.metadataStore.SaveChatMessage(metadataSvc.ChatMessageRecord{
+		Role:        "assistant",
+		Content:     result.Message,
+		Model:       result.Model,
+		SourcePaths: result.SourcePaths,
+		CreatedAt:   time.Now().UTC(),
+	}); err != nil {
+		v.addActivity("Could not persist assistant chat message: " + err.Error())
+		return
+	}
+	v.state.AppendAssistantExchange(prompt, result.Message)
+	v.refreshAssistantHistory()
+}
+
+func (v *View) refreshAssistantHistory() {
+	if v.assistantHistoryStatus == nil || v.assistantHistoryList == nil {
+		return
+	}
+	turns := v.state.AssistantConversation()
+	v.assistantHistoryList.Objects = nil
+	if len(turns) == 0 {
+		v.assistantHistoryStatus.SetText("Chat history: no persisted workspace turns yet.")
+		v.assistantHistoryList.Add(widget.NewLabel("Ask a question to start history."))
+		v.assistantHistoryList.Refresh()
+		return
+	}
+	v.assistantHistoryStatus.SetText(fmt.Sprintf("Chat history: %d recent persisted turn(s).", len(turns)))
+	start := len(turns) - assistantHistoryPreviewLimit
+	if start < 0 {
+		start = 0
+	}
+	for _, turn := range turns[start:] {
+		label := widget.NewLabel(chatTurnPreview(turn))
+		label.Truncation = fyne.TextTruncateEllipsis
+		v.assistantHistoryList.Add(label)
+	}
+	v.assistantHistoryList.Refresh()
+}
+
+func chatTurnsFromMetadata(records []metadataSvc.ChatMessageRecord) []llmSvc.ChatTurn {
+	turns := make([]llmSvc.ChatTurn, 0, len(records))
+	for _, record := range records {
+		role := strings.ToLower(strings.TrimSpace(record.Role))
+		content := strings.TrimSpace(record.Content)
+		if content == "" || (role != "user" && role != "assistant") {
+			continue
+		}
+		turns = append(turns, llmSvc.ChatTurn{Role: role, Content: content})
+	}
+	return turns
+}
+
+func chatTurnPreview(turn llmSvc.ChatTurn) string {
+	role := strings.ToLower(strings.TrimSpace(turn.Role))
+	if role == "" {
+		role = "turn"
+	}
+	content := strings.Join(strings.Fields(turn.Content), " ")
+	if len(content) > 90 {
+		content = content[:87] + "..."
+	}
+	return strings.ToUpper(role[:1]) + role[1:] + ": " + content
 }
 
 func (v *View) pinSelectedAssistantContext() {

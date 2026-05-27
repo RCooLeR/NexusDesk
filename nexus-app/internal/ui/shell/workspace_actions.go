@@ -45,10 +45,15 @@ func (v *View) openWorkspace(root string) {
 			v.jobService.SetRepository(store, true)
 			v.addActivity(status.Message)
 			v.refreshJobs()
+			v.loadAssistantChatHistory()
 		} else {
+			v.metadataStore = nil
+			v.loadAssistantChatHistory()
 			v.addActivity("Metadata store unavailable: " + err.Error())
 		}
 	} else {
+		v.metadataStore = nil
+		v.loadAssistantChatHistory()
 		v.addActivity("Metadata store unavailable: " + err.Error())
 	}
 	v.navigator.Objects = []fyne.CanvasObject{v.newWorkspaceNavigator()}

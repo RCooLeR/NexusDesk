@@ -67,3 +67,12 @@ type ToolRunRecord struct {
 	StartedAt   time.Time
 	CompletedAt time.Time
 }
+
+type ChatMessageRecord struct {
+	ID          string
+	Role        string
+	Content     string
+	Model       string
+	SourcePaths []string
+	CreatedAt   time.Time
+}

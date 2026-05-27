@@ -3,8 +3,11 @@ package shell
 import (
 	"strings"
 	"testing"
+	"time"
 
 	agentSvc "nexusdesk/internal/services/agent"
+	llmSvc "nexusdesk/internal/services/llm"
+	metadataSvc "nexusdesk/internal/services/metadata"
 )
 
 func TestAgentActivityTailKeepsLastTwoMessages(t *testing.T) {
@@ -39,5 +42,23 @@ func TestAgentFinalMarkdownIncludesStopReason(t *testing.T) {
 	text := agentFinalMarkdown(agentSvc.Result{Message: "Done", StopReason: "safety_guard"})
 	if !strings.Contains(text, "Done") || !strings.Contains(text, "safety_guard") {
 		t.Fatalf("unexpected final markdown: %q", text)
+	}
+}
+
+func TestChatTurnsFromMetadataKeepsValidConversationTurns(t *testing.T) {
+	turns := chatTurnsFromMetadata([]metadataSvc.ChatMessageRecord{
+		{Role: "user", Content: " Hello ", CreatedAt: time.Now()},
+		{Role: "system", Content: "ignored"},
+		{Role: "assistant", Content: "World"},
+	})
+	if len(turns) != 2 || turns[0].Role != "user" || turns[1].Content != "World" {
+		t.Fatalf("unexpected turns: %#v", turns)
+	}
+}
+
+func TestChatTurnPreviewCompactsLongContent(t *testing.T) {
+	preview := chatTurnPreview(llmSvc.ChatTurn{Role: "assistant", Content: strings.Repeat("word ", 40)})
+	if !strings.HasPrefix(preview, "Assistant: ") || len(preview) > 105 {
+		t.Fatalf("unexpected preview: %q", preview)
 	}
 }

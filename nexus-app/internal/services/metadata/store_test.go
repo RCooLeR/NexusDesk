@@ -19,7 +19,7 @@ func TestEnsureCreatesSQLiteStoreAndManifest(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Ensure returned error: %v", err)
 	}
-	if status.SchemaVersion != 3 || status.SchemaHash == "" {
+	if status.SchemaVersion != 4 || status.SchemaHash == "" {
 		t.Fatalf("unexpected status: %#v", status)
 	}
 	if _, err := os.Stat(status.Path); err != nil {
@@ -87,6 +87,34 @@ func TestSaveAndListTaskRuns(t *testing.T) {
 	}
 	if len(runs) != 1 || runs[0].TaskID != "go-test-root" || runs[0].Stdout != "ok\n" || runs[0].ArtifactPath == "" {
 		t.Fatalf("unexpected task runs: %#v", runs)
+	}
+}
+
+func TestSaveAndListChatMessages(t *testing.T) {
+	store := mustStore(t)
+	started := time.Date(2026, 5, 27, 12, 0, 0, 0, time.UTC)
+	if err := store.SaveChatMessage(ChatMessageRecord{
+		Role:      "user",
+		Content:   "What changed?",
+		CreatedAt: started,
+	}); err != nil {
+		t.Fatalf("SaveChatMessage user returned error: %v", err)
+	}
+	if err := store.SaveChatMessage(ChatMessageRecord{
+		Role:        "assistant",
+		Content:     "The native app gained chat persistence.",
+		Model:       "qwen2.5-coder:14b",
+		SourcePaths: []string{"tracker.md"},
+		CreatedAt:   started.Add(time.Second),
+	}); err != nil {
+		t.Fatalf("SaveChatMessage assistant returned error: %v", err)
+	}
+	messages, err := store.ListChatMessages(10)
+	if err != nil {
+		t.Fatalf("ListChatMessages returned error: %v", err)
+	}
+	if len(messages) != 2 || messages[0].Role != "user" || messages[1].Model == "" || len(messages[1].SourcePaths) != 1 {
+		t.Fatalf("unexpected chat messages: %#v", messages)
 	}
 }
 

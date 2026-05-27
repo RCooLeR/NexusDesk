@@ -5,6 +5,7 @@ import (
 	"sync"
 
 	"nexusdesk/internal/domain"
+	"nexusdesk/internal/services/llm"
 )
 
 type State struct {
@@ -12,6 +13,7 @@ type State struct {
 	workspace             domain.Workspace
 	selected              string
 	assistantContextPaths []string
+	assistantConversation []llm.ChatTurn
 }
 
 func NewState() *State {
@@ -30,6 +32,7 @@ func (s *State) SetWorkspace(workspace domain.Workspace) {
 	s.workspace = workspace
 	s.selected = ""
 	s.assistantContextPaths = nil
+	s.assistantConversation = nil
 }
 
 func (s *State) SelectedPath() string {
@@ -87,4 +90,33 @@ func (s *State) ClearAssistantContextPaths() {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	s.assistantContextPaths = nil
+}
+
+func (s *State) AssistantConversation() []llm.ChatTurn {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+	return append([]llm.ChatTurn{}, s.assistantConversation...)
+}
+
+func (s *State) SetAssistantConversation(turns []llm.ChatTurn) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	s.assistantConversation = append([]llm.ChatTurn{}, turns...)
+}
+
+func (s *State) AppendAssistantExchange(prompt string, response string) {
+	prompt = strings.TrimSpace(prompt)
+	response = strings.TrimSpace(response)
+	if prompt == "" || response == "" {
+		return
+	}
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	s.assistantConversation = append(s.assistantConversation,
+		llm.ChatTurn{Role: "user", Content: prompt},
+		llm.ChatTurn{Role: "assistant", Content: response},
+	)
+	if len(s.assistantConversation) > 24 {
+		s.assistantConversation = s.assistantConversation[len(s.assistantConversation)-24:]
+	}
 }

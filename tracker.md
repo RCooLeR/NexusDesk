@@ -149,6 +149,7 @@ Goal: port the LLM and agent runtime without recreating the Wails bridge problem
 - [x] Add streaming assistant panel using Go channels/events instead of Wails events.
 - [x] Port context-pack builder.
 - [x] Add assistant context-pack UI affordances for pinning the workspace root, directories, and multiple files explicitly.
+- [x] Add persisted native chat history and reload recent workspace turns into Ask mode.
 - [x] Port agent runtime as an internal service, not a UI callback.
 - [x] Unify registered tools and agent tools behind one dispatcher.
 - [x] Add approval queue UI and full-access policy UI.
@@ -222,7 +223,8 @@ Goal: make slow and durable workflows reliable.
 - [x] Add SQLite primary metadata store in `nexus-app`.
 - [x] Add durable SQLite repository for native jobs and task-run records.
 - [x] Add task-run Markdown artifacts linked from persisted task-run records.
-- [ ] Add repositories for chats, approvals, artifacts, SQL runs, and dataset dependencies.
+- [x] Add SQLite repository for native chat messages.
+- [ ] Add repositories for approvals, artifacts, SQL runs, and dataset dependencies.
 - [ ] Migrate/import relevant `.nexusdesk` data from Wails-era workspaces.
 - [ ] Route long indexing, OCR, dump imports, connector pulls, report generation, and long agent runs through jobs.
 - [ ] Add native job monitor with cancel/retry/open-output actions.
@@ -248,11 +250,11 @@ Exit criteria:
 
 ## Next Batch
 
-1. Add persisted chat history after the native assistant context-pack controls settle.
-2. Expand the native artifact browser from task reports to metadata, search, archive/delete, and lineage.
-3. Add native audit/history UI for persisted agent runs and tool runs.
-4. Add agent-safe copy/move/delete and patch tools gated by full-project access and rollback snapshots.
-5. Add first project-tree reveal/collapse controls and ignored-path visibility affordances.
+1. Expand the native artifact browser from task reports to metadata, search, archive/delete, and lineage.
+2. Add native audit/history UI for persisted agent runs and tool runs.
+3. Add agent-safe copy/move/delete and patch tools gated by full-project access and rollback snapshots.
+4. Add first project-tree reveal/collapse controls and ignored-path visibility affordances.
+5. Add first native chat search/history panel after artifact metadata search exists.
 
 ## Preserved Post-Port Backlog
 
