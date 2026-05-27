@@ -130,6 +130,7 @@ Goal: recreate the useful local project workbench without Wails or React.
 - [x] Add first native safe write preview/apply/append/rollback service port for text and code files.
 - [x] Wire draft editor Save through the native safe write service and rollback log.
 - [x] Add first native file create/delete/rename/move/copy operation services with rooted validation and rollback records.
+- [x] Add first selected-item navigator action menu for safe file operations, relative-path copy, and assistant-context selection.
 - [x] Add first native workspace path/content search service and bottom result panel.
 - [x] Add first native Problems service and bottom panel from the bounded marker/JSON scanner.
 
@@ -243,11 +244,11 @@ Exit criteria:
 
 ## Next Batch
 
-1. Add richer navigator context menus once the first action strip is validated in Fyne.
-2. Add assistant context-pack UI affordances for pinning the workspace root, directories, and multiple files explicitly.
-3. Add native artifact browser for task reports before porting the full artifact surface.
-4. Add job/tool-run audit persistence for native agent runs.
-5. Add agent-safe write/append tools gated by full-project access and rollback snapshots.
+1. Add assistant context-pack UI affordances for pinning the workspace root, directories, and multiple files explicitly.
+2. Add native artifact browser for task reports before porting the full artifact surface.
+3. Add job/tool-run audit persistence for native agent runs.
+4. Add agent-safe write/append tools gated by full-project access and rollback snapshots.
+5. Replace the selected-item navigator action menu with true tree-row secondary-click menus if the Fyne widget pass remains lightweight.
 
 ## Preserved Post-Port Backlog
 
