@@ -35,6 +35,7 @@ type Request struct {
 	Prompt        string
 	WorkspaceRoot string
 	SelectedPath  string
+	ContextPaths  []string
 	Conversation  []llm.ChatTurn
 }
 
@@ -82,11 +83,11 @@ func (s *Service) AskStream(ctx context.Context, request Request, onDelta func(s
 
 func (s *Service) attachSelectedContext(config llm.Config, request Request, chatRequest *llm.ChatRequest) string {
 	root := strings.TrimSpace(request.WorkspaceRoot)
-	selectedPath := strings.TrimSpace(request.SelectedPath)
-	if root == "" || selectedPath == "" || s.contextPacker == nil {
+	contextPaths := requestedContextPaths(request)
+	if root == "" || len(contextPaths) == 0 || s.contextPacker == nil {
 		return ""
 	}
-	pack, err := s.contextPacker.BuildContextPack(root, []string{selectedPath}, workspacesvc.ContextPackOptions{
+	pack, err := s.contextPacker.BuildContextPack(root, contextPaths, workspacesvc.ContextPackOptions{
 		MaxBytes: contextBudgetBytes(config),
 	})
 	if err != nil {
@@ -99,6 +100,24 @@ func (s *Service) attachSelectedContext(config llm.Config, request Request, chat
 		return "Selected context pack was capped to fit the model budget."
 	}
 	return ""
+}
+
+func requestedContextPaths(request Request) []string {
+	seen := map[string]bool{}
+	paths := make([]string, 0, len(request.ContextPaths)+1)
+	for _, relPath := range request.ContextPaths {
+		relPath = strings.TrimSpace(relPath)
+		if relPath == "" || seen[relPath] {
+			continue
+		}
+		seen[relPath] = true
+		paths = append(paths, relPath)
+	}
+	selectedPath := strings.TrimSpace(request.SelectedPath)
+	if len(paths) == 0 && selectedPath != "" {
+		paths = append(paths, selectedPath)
+	}
+	return paths
 }
 
 func contextBudgetBytes(config llm.Config) int {

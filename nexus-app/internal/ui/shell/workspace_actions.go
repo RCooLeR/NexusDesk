@@ -53,6 +53,7 @@ func (v *View) openWorkspace(root string) {
 	}
 	v.navigator.Objects = []fyne.CanvasObject{v.newWorkspaceNavigator()}
 	v.navigator.Refresh()
+	v.refreshAssistantContextPins()
 	v.status.SetText(fmt.Sprintf("%s: %d indexed, %d ignored, %d unreadable", workspace.Name, workspace.Summary.Included, workspace.Summary.Ignored, workspace.Summary.Unreadable))
 	v.addActivity("Opened workspace " + workspace.Root)
 	v.refreshApprovals()
@@ -61,6 +62,7 @@ func (v *View) openWorkspace(root string) {
 func (v *View) openWorkspaceNode(node domain.WorkspaceNode) {
 	if node.Kind == domain.NodeDirectory {
 		v.addActivity("Selected folder " + node.RelPath)
+		v.refreshAssistantContextPins()
 		return
 	}
 	workspace := v.state.Workspace()
@@ -71,4 +73,5 @@ func (v *View) openWorkspaceNode(node domain.WorkspaceNode) {
 	}
 	v.openPreviewTab(preview)
 	v.addActivity("Opened " + node.RelPath)
+	v.refreshAssistantContextPins()
 }

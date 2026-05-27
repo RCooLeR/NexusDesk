@@ -48,6 +48,33 @@ func TestAskStreamLoadsSettingsAndStreamsSelectedContext(t *testing.T) {
 	if client.request.ContextRelPath != "context: README.md" || client.request.ContextContent != "workspace context" {
 		t.Fatalf("selected context was not attached: %#v", client.request)
 	}
+	if len(contextPacker.paths) != 1 || contextPacker.paths[0] != "README.md" {
+		t.Fatalf("unexpected context paths: %#v", contextPacker.paths)
+	}
+}
+
+func TestAskStreamUsesPinnedContextPathsBeforeSelectedPath(t *testing.T) {
+	store := fakeSettingsStore{settings: settingssvc.Defaults()}
+	contextPacker := &fakeContextPacker{pack: workspacesvc.ContextPack{
+		Label:       "context: 2 roots",
+		Content:     "workspace context",
+		SourcePaths: []string{"README.md", "docs/guide.md"},
+	}}
+	client := &fakeStreamClient{message: "ok", deltas: []string{"ok"}}
+	service := NewWithDependencies(store, contextPacker, client)
+
+	_, err := service.AskStream(context.Background(), Request{
+		Prompt:        "Summarize",
+		WorkspaceRoot: "C:/repo",
+		SelectedPath:  "ignored.md",
+		ContextPaths:  []string{"README.md", "docs", "README.md", " "},
+	}, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(contextPacker.paths) != 2 || contextPacker.paths[0] != "README.md" || contextPacker.paths[1] != "docs" {
+		t.Fatalf("expected deduplicated pinned context paths, got %#v", contextPacker.paths)
+	}
 }
 
 func TestAskStreamCapsSelectedContextToBudget(t *testing.T) {
@@ -120,10 +147,12 @@ func (s fakeSettingsStore) Load() (settingssvc.Settings, error) {
 type fakeContextPacker struct {
 	pack    workspacesvc.ContextPack
 	options workspacesvc.ContextPackOptions
+	paths   []string
 	err     error
 }
 
-func (p *fakeContextPacker) BuildContextPack(_ string, _ []string, options workspacesvc.ContextPackOptions) (workspacesvc.ContextPack, error) {
+func (p *fakeContextPacker) BuildContextPack(_ string, paths []string, options workspacesvc.ContextPackOptions) (workspacesvc.ContextPack, error) {
+	p.paths = append([]string{}, paths...)
 	p.options = options
 	return p.pack, p.err
 }

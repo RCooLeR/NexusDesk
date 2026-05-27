@@ -123,5 +123,5 @@ func (v *View) useSelectedPathForAssistantContext() {
 		v.addActivity("Select a file or folder before using it as assistant context.")
 		return
 	}
-	v.addActivity("Assistant context now points at " + selected + ".")
+	v.pinAssistantContextPath(selected)
 }

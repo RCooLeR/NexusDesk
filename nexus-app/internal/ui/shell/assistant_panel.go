@@ -20,6 +20,19 @@ func (v *View) newAssistantPanel() fyne.CanvasObject {
 	prompt.SetPlaceHolder("Ask Nexus about this workspace")
 	prompt.Wrapping = fyne.TextWrapWord
 	response := widget.NewRichTextFromMarkdown("Assistant output will stream here.")
+	v.assistantContextStatus = widget.NewLabel("")
+	v.assistantContextStatus.Wrapping = fyne.TextWrapWord
+	v.assistantContextList = container.NewVBox()
+	pinSelection := widget.NewButton("Pin selection", v.pinSelectedAssistantContext)
+	pinProject := widget.NewButton("Pin project", func() {
+		v.pinAssistantContextPath(".")
+	})
+	clearPins := widget.NewButton("Clear", v.clearAssistantContextPins)
+	contextBar := container.NewVBox(
+		container.NewHBox(pinSelection, pinProject, clearPins),
+		v.assistantContextStatus,
+		v.assistantContextList,
+	)
 	mode := widget.NewSelect([]string{"Ask", "Agent"}, func(string) {})
 	mode.SetSelected("Ask")
 	send := widget.NewButtonWithIcon("", theme.MailSendIcon(), nil)
@@ -27,7 +40,8 @@ func (v *View) newAssistantPanel() fyne.CanvasObject {
 		v.runAssistantRequest(prompt, response, send, mode.Selected)
 	}
 	composer := container.NewBorder(nil, nil, mode, send, prompt)
-	card := widget.NewCard("Assistant", "Local-first context and tool mediation", container.NewBorder(nil, composer, nil, nil, response))
+	card := widget.NewCard("Assistant", "Local-first context and tool mediation", container.NewBorder(contextBar, composer, nil, nil, response))
+	v.refreshAssistantContextPins()
 	return container.NewPadded(card)
 }
 
@@ -46,6 +60,7 @@ func (v *View) runAssistantRequest(prompt *widget.Entry, response *widget.RichTe
 		Prompt:        text,
 		WorkspaceRoot: workspace.Root,
 		SelectedPath:  v.state.SelectedPath(),
+		ContextPaths:  v.state.AssistantContextPaths(),
 	}
 	send.Disable()
 	response.ParseMarkdown("Receiving response...")
@@ -75,6 +90,76 @@ func (v *View) runAssistantRequest(prompt *widget.Entry, response *widget.RichTe
 			v.addActivity("Assistant response completed with " + result.Model + ".")
 		})
 	}()
+}
+
+func (v *View) pinSelectedAssistantContext() {
+	selected := selectedPathOrEmpty(v)
+	if selected == "" {
+		v.addActivity("Select a file or folder before pinning assistant context.")
+		return
+	}
+	v.pinAssistantContextPath(selected)
+}
+
+func (v *View) pinAssistantContextPath(relPath string) {
+	workspace := v.state.Workspace()
+	if workspace.Root == "" {
+		v.addActivity("Open a workspace before pinning assistant context.")
+		return
+	}
+	if v.state.AddAssistantContextPath(relPath) {
+		v.addActivity("Pinned assistant context " + relPath + ".")
+	} else {
+		v.addActivity("Assistant context already includes " + relPath + ".")
+	}
+	v.refreshAssistantContextPins()
+}
+
+func (v *View) removeAssistantContextPin(relPath string) {
+	if v.state.RemoveAssistantContextPath(relPath) {
+		v.addActivity("Removed assistant context " + relPath + ".")
+	}
+	v.refreshAssistantContextPins()
+}
+
+func (v *View) clearAssistantContextPins() {
+	if len(v.state.AssistantContextPaths()) == 0 {
+		v.addActivity("No assistant context pins to clear.")
+		return
+	}
+	v.state.ClearAssistantContextPaths()
+	v.addActivity("Cleared assistant context pins.")
+	v.refreshAssistantContextPins()
+}
+
+func (v *View) refreshAssistantContextPins() {
+	if v.assistantContextStatus == nil || v.assistantContextList == nil {
+		return
+	}
+	paths := v.state.AssistantContextPaths()
+	v.assistantContextList.Objects = nil
+	if len(paths) == 0 {
+		selected := selectedPathOrEmpty(v)
+		if selected == "" {
+			v.assistantContextStatus.SetText("Context: pin files, folders, or the project root before sending.")
+		} else {
+			v.assistantContextStatus.SetText("Context: selected item will be used unless pins are added: " + selected)
+		}
+		v.assistantContextList.Add(widget.NewLabel("No pinned context."))
+		v.assistantContextList.Refresh()
+		return
+	}
+	v.assistantContextStatus.SetText(fmt.Sprintf("Context pack: %d pinned root(s).", len(paths)))
+	for _, relPath := range paths {
+		pinnedPath := relPath
+		label := widget.NewLabel(pinnedPath)
+		label.Truncation = fyne.TextTruncateEllipsis
+		remove := widget.NewButtonWithIcon("", theme.DeleteIcon(), func() {
+			v.removeAssistantContextPin(pinnedPath)
+		})
+		v.assistantContextList.Add(container.NewBorder(nil, nil, nil, remove, label))
+	}
+	v.assistantContextList.Refresh()
 }
 
 func (v *View) runAgentRequest(text string, response *widget.RichText, send *widget.Button) {

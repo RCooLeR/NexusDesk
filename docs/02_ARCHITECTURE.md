@@ -145,7 +145,7 @@ Native approvals are split into `nexus-app/internal/services/approvals` for appe
 
 Native settings are split into `nexus-app/internal/services/settings` for non-secret provider/model/context persistence and `nexus-app/internal/ui/shell` for the Settings tab. Secret storage remains separate future work.
 
-Native LLM transport is service-owned: `nexus-app/internal/services/llm` owns OpenAI-compatible chat, streaming chat, provider model probes, Ollama runtime probes, context-window options, response reserve, and workspace-context sentinel escaping. The Fyne assistant panel calls it through `nexus-app/internal/services/assistant` for Ask mode and `nexus-app/internal/services/agent` plus `nexus-app/internal/services/tools` for Agent mode. Widgets own only prompt composition, the compact live activity tail, and final answer replacement; provider calls, agent loops, and deterministic tool dispatch stay in services.
+Native LLM transport is service-owned: `nexus-app/internal/services/llm` owns OpenAI-compatible chat, streaming chat, provider model probes, Ollama runtime probes, context-window options, response reserve, and workspace-context sentinel escaping. The Fyne assistant panel calls it through `nexus-app/internal/services/assistant` for Ask mode and `nexus-app/internal/services/agent` plus `nexus-app/internal/services/tools` for Agent mode. Widgets own only prompt composition, explicit context-pin controls, the compact live activity tail, and final answer replacement; provider calls, context-pack construction, agent loops, and deterministic tool dispatch stay in services.
 
 ### 2. Frontend
 

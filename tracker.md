@@ -147,6 +147,7 @@ Goal: port the LLM and agent runtime without recreating the Wails bridge problem
 - [x] Add native provider/model settings page skeleton.
 - [x] Add streaming assistant panel using Go channels/events instead of Wails events.
 - [x] Port context-pack builder.
+- [x] Add assistant context-pack UI affordances for pinning the workspace root, directories, and multiple files explicitly.
 - [x] Port agent runtime as an internal service, not a UI callback.
 - [x] Unify registered tools and agent tools behind one dispatcher.
 - [x] Add approval queue UI and full-access policy UI.
@@ -244,11 +245,11 @@ Exit criteria:
 
 ## Next Batch
 
-1. Add assistant context-pack UI affordances for pinning the workspace root, directories, and multiple files explicitly.
-2. Add native artifact browser for task reports before porting the full artifact surface.
-3. Add job/tool-run audit persistence for native agent runs.
-4. Add agent-safe write/append tools gated by full-project access and rollback snapshots.
-5. Replace the selected-item navigator action menu with true tree-row secondary-click menus if the Fyne widget pass remains lightweight.
+1. Add native artifact browser for task reports before porting the full artifact surface.
+2. Add job/tool-run audit persistence for native agent runs.
+3. Add agent-safe write/append tools gated by full-project access and rollback snapshots.
+4. Replace the selected-item navigator action menu with true tree-row secondary-click menus if the Fyne widget pass remains lightweight.
+5. Add persisted chat history after the native assistant context-pack controls settle.
 
 ## Preserved Post-Port Backlog
 
