@@ -46,6 +46,7 @@ func (v *View) newBottomPanel() fyne.CanvasObject {
 	tabs := container.NewAppTabs(
 		container.NewTabItemWithIcon("Activity", theme.HistoryIcon(), activity),
 		container.NewTabItemWithIcon("Data", theme.StorageIcon(), v.newDataPanel()),
+		container.NewTabItemWithIcon("Operations", theme.ComputerIcon(), v.newOperationsPanel()),
 		container.NewTabItemWithIcon("Search", theme.SearchIcon(), v.newSearchPanel()),
 		container.NewTabItemWithIcon("Problems", theme.WarningIcon(), v.newProblemsPanel()),
 		container.NewTabItemWithIcon("Git", theme.ContentCopyIcon(), v.newGitPanel()),

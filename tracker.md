@@ -226,7 +226,7 @@ Goal: restore generated-output workflows with provenance and native inspection.
 - [x] Add first native document extraction slice for Markdown, TXT, HTML, and XML source files with artifact export.
 - [x] Extend native document extraction artifacts to DOCX and PDF preview text with PDF page metadata.
 - [ ] Add presentation/report generation targets after artifact lineage is stable.
-- [ ] Add read-only operations scanners for Dockerfiles, Compose, env/config/logs.
+- [x] Add read-only operations scanners for Dockerfiles, Compose, env/config/logs.
 - [ ] Add job-based OCR/document extraction before heavy parsing.
 
 Exit criteria:
@@ -269,11 +269,11 @@ Exit criteria:
 
 ## Next Batch
 
-1. Add read-only operations scanners for Dockerfiles, Compose, env/config, and logs.
-2. Add XLSX document/table extraction after the native data query boundary is in place.
-3. Add chart preview/artifact generation for bounded native dataset query results.
-4. Add first native SQL run and dataset-dependency metadata repositories.
-5. Add approval metadata repository coverage or explicitly document the remaining approval-store split.
+1. Add XLSX document/table extraction after the native data query boundary is in place.
+2. Add chart preview/artifact generation for bounded native dataset query results.
+3. Add first native SQL run and dataset-dependency metadata repositories.
+4. Add approval metadata repository coverage or explicitly document the remaining approval-store split.
+5. Add the first operations artifact/runbook export from inspected Docker/Compose/env/config/log evidence.
 
 ## Preserved Post-Port Backlog
 
@@ -340,7 +340,7 @@ The Fyne migration must not drop product ambition, but this section is intention
 
 ### Operations Studio
 
-- [ ] Read-only Dockerfile, Compose, env/config, script, and log inspection.
+- [x] Read-only Dockerfile, Compose, env/config, script, and log inspection.
 - [ ] Compose service topology and config validation.
 - [ ] Container/image/log workflows only after approval policy and job model are mature.
 - [ ] Runbook artifacts and operations summaries with source citations.

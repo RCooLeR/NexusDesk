@@ -1,0 +1,146 @@
+package operations
+
+import (
+	"errors"
+	"fmt"
+	"os"
+	"path/filepath"
+	"sort"
+	"strings"
+)
+
+const (
+	defaultFileCap     = 800
+	defaultReadMaxByte = 256 * 1024
+)
+
+type Service struct {
+	fileCap     int
+	readMaxByte int64
+}
+
+func New() *Service {
+	return &Service{fileCap: defaultFileCap, readMaxByte: defaultReadMaxByte}
+}
+
+func (s *Service) Scan(root string) (ScanResult, error) {
+	absRoot, err := cleanRoot(root)
+	if err != nil {
+		return ScanResult{}, err
+	}
+	result := ScanResult{Files: []File{}}
+	err = filepath.WalkDir(absRoot, func(path string, entry os.DirEntry, walkErr error) error {
+		if walkErr != nil {
+			result.Summary.Unreadable++
+			if entry != nil && entry.IsDir() {
+				return filepath.SkipDir
+			}
+			return nil
+		}
+		if path == absRoot {
+			return nil
+		}
+		relPath := relFile(absRoot, path)
+		if entry.IsDir() {
+			if shouldSkipDir(entry.Name(), relPath) {
+				result.Summary.SkippedDirs++
+				return filepath.SkipDir
+			}
+			return nil
+		}
+		if len(result.Files) >= s.fileCap {
+			result.Summary.EntryCap++
+			return nil
+		}
+		info, err := entry.Info()
+		if err != nil {
+			result.Summary.Unreadable++
+			return nil
+		}
+		if info.Mode()&os.ModeSymlink != 0 {
+			return nil
+		}
+		file, ok := classifyFile(relPath, info.Size())
+		if !ok {
+			return nil
+		}
+		result.Files = append(result.Files, file)
+		countKind(&result.Summary, file.Kind)
+		return nil
+	})
+	if err != nil {
+		return ScanResult{}, err
+	}
+	sort.Slice(result.Files, func(left, right int) bool {
+		if result.Files[left].Kind != result.Files[right].Kind {
+			return result.Files[left].Kind < result.Files[right].Kind
+		}
+		return strings.ToLower(result.Files[left].RelPath) < strings.ToLower(result.Files[right].RelPath)
+	})
+	result.Summary.Files = len(result.Files)
+	result.Message = fmt.Sprintf("%d operations files found: %d Compose, %d Dockerfiles, %d env, %d config, %d logs, %d scripts.",
+		result.Summary.Files,
+		result.Summary.Compose,
+		result.Summary.Dockerfiles,
+		result.Summary.Env,
+		result.Summary.Config,
+		result.Summary.Logs,
+		result.Summary.Scripts,
+	)
+	return result, nil
+}
+
+func (s *Service) Inspect(root string, relPath string) (Inspection, error) {
+	_, cleanRelPath, target, info, err := resolveFile(root, relPath)
+	if err != nil {
+		return Inspection{}, err
+	}
+	file, ok := classifyFile(cleanRelPath, info.Size())
+	if !ok {
+		return Inspection{}, errors.New("selected file is not an operations context file")
+	}
+	readLimit := s.readMaxByte
+	truncated := false
+	if info.Size() > readLimit {
+		truncated = true
+	}
+	content, err := readBounded(target, readLimit)
+	if err != nil {
+		return Inspection{}, err
+	}
+	text := string(content)
+	warnings := []string{"Read-only inspection only. Nexus did not run Docker, shell, or service commands."}
+	if truncated {
+		warnings = append(warnings, fmt.Sprintf("File was truncated to %d bytes for interactive inspection.", readLimit))
+	}
+	if strings.ContainsRune(text, '\x00') {
+		return Inspection{}, errors.New("operations inspector only supports text-like files")
+	}
+	inspection := Inspection{
+		File:      file,
+		Text:      redactSecrets(text),
+		Truncated: truncated,
+		Warnings:  warnings,
+	}
+	if file.Kind == FileKindCompose {
+		inspection.Services = ParseComposeServices(inspection.Text)
+	}
+	return inspection, nil
+}
+
+func countKind(summary *Summary, kind FileKind) {
+	switch kind {
+	case FileKindDockerfile:
+		summary.Dockerfiles++
+	case FileKindCompose:
+		summary.Compose++
+	case FileKindEnv:
+		summary.Env++
+	case FileKindConfig:
+		summary.Config++
+	case FileKindLog:
+		summary.Logs++
+	case FileKindScript:
+		summary.Scripts++
+	}
+}

@@ -16,6 +16,7 @@ import (
 	jobsSvc "nexusdesk/internal/services/jobs"
 	llmSvc "nexusdesk/internal/services/llm"
 	metadataSvc "nexusdesk/internal/services/metadata"
+	operationsSvc "nexusdesk/internal/services/operations"
 	settingsSvc "nexusdesk/internal/services/settings"
 	tasksSvc "nexusdesk/internal/services/tasks"
 	toolsSvc "nexusdesk/internal/services/tools"
@@ -32,6 +33,7 @@ type View struct {
 	assistantService        *assistantSvc.Service
 	agentService            *agentSvc.Service
 	datasetService          *datasetsSvc.Service
+	operationsService       *operationsSvc.Service
 	metadataStore           *metadataSvc.Store
 	settingsStore           *settingsSvc.Store
 	taskService             *tasksSvc.Service
@@ -50,6 +52,9 @@ type View struct {
 	dataProfileStatus       *widget.Label
 	dataProfileDetail       *widget.Entry
 	dataQueryEntry          *widget.Entry
+	operationsResults       *fyne.Container
+	operationsStatus        *widget.Label
+	operationsDetail        *widget.Entry
 	gitResults              *fyne.Container
 	gitStatus               *widget.Label
 	gitDiffText             *widget.Entry
@@ -150,35 +155,43 @@ func New(window fyne.Window) *View {
 	dataProfileDetail.Disable()
 	dataQueryEntry := widget.NewEntry()
 	dataQueryEntry.SetPlaceHolder("Search, e.g. channel=paid order by spend desc limit 20")
+	operationsDetail := widget.NewMultiLineEntry()
+	operationsDetail.TextStyle = fyne.TextStyle{Monospace: true}
+	operationsDetail.Wrapping = fyne.TextWrapWord
+	operationsDetail.Disable()
 	view := &View{
-		window:           window,
-		state:            NewState(),
-		workspaceService: workspaceService,
-		gitService:       gitService,
-		jobService:       jobsSvc.New(),
-		approvalService:  approvalsSvc.New(),
-		assistantService: assistantService,
-		agentService:     agentService,
-		datasetService:   datasetService,
-		settingsStore:    settingsStore,
-		taskService:      taskService,
-		editorSession:    editorSession,
-		status:           widget.NewLabel("No workspace open"),
-		navigator:        container.NewStack(widget.NewLabel("Open a workspace to browse files.")),
-		editorTabs:       editorTabs,
-		openTabs:         map[string]*container.TabItem{welcome.ID: editorTabs.Items[0]},
-		tabIDs:           map[*container.TabItem]string{editorTabs.Items[0]: welcome.ID},
-		activityLog:      widget.NewRichTextFromMarkdown("Ready."),
-		activityText:     "Ready.",
-		searchResults:    container.NewVBox(widget.NewLabel("Search results will appear here.")),
-		searchStatus:     widget.NewLabel("No search yet."),
-		problemResults:   container.NewVBox(widget.NewLabel("Run a scan to inspect lightweight workspace problems.")),
-		problemStatus:    widget.NewLabel("No problem scan yet."),
+		window:            window,
+		state:             NewState(),
+		workspaceService:  workspaceService,
+		gitService:        gitService,
+		jobService:        jobsSvc.New(),
+		approvalService:   approvalsSvc.New(),
+		assistantService:  assistantService,
+		agentService:      agentService,
+		datasetService:    datasetService,
+		operationsService: operationsSvc.New(),
+		settingsStore:     settingsStore,
+		taskService:       taskService,
+		editorSession:     editorSession,
+		status:            widget.NewLabel("No workspace open"),
+		navigator:         container.NewStack(widget.NewLabel("Open a workspace to browse files.")),
+		editorTabs:        editorTabs,
+		openTabs:          map[string]*container.TabItem{welcome.ID: editorTabs.Items[0]},
+		tabIDs:            map[*container.TabItem]string{editorTabs.Items[0]: welcome.ID},
+		activityLog:       widget.NewRichTextFromMarkdown("Ready."),
+		activityText:      "Ready.",
+		searchResults:     container.NewVBox(widget.NewLabel("Search results will appear here.")),
+		searchStatus:      widget.NewLabel("No search yet."),
+		problemResults:    container.NewVBox(widget.NewLabel("Run a scan to inspect lightweight workspace problems.")),
+		problemStatus:     widget.NewLabel("No problem scan yet."),
 		dataProfileStatus: widget.NewLabel(
 			"Select a CSV, TSV, or JSON file, then profile or query it.",
 		),
 		dataProfileDetail: dataProfileDetail,
 		dataQueryEntry:    dataQueryEntry,
+		operationsResults: container.NewVBox(widget.NewLabel("Scan the workspace to inspect Docker, Compose, env, config, script, and log files.")),
+		operationsStatus:  widget.NewLabel("Operations scan has not been run."),
+		operationsDetail:  operationsDetail,
 		gitResults:        container.NewVBox(widget.NewLabel("Press Refresh git to inspect repository status.")),
 		gitStatus:         widget.NewLabel("Git status has not been loaded."),
 		gitDiffText:       gitDiffText,
