@@ -2,6 +2,7 @@ package artifacts
 
 import (
 	"os"
+	"path/filepath"
 	"strings"
 	"testing"
 	"time"
@@ -50,5 +51,57 @@ func TestWriteTaskRunReportCreatesMarkdownArtifact(t *testing.T) {
 func TestSafeNameFallsBackForEmptyInput(t *testing.T) {
 	if got := safeName(" ??? "); got != "task-run" {
 		t.Fatalf("safeName fallback = %q", got)
+	}
+}
+
+func TestListAndReadTaskRunReports(t *testing.T) {
+	root := t.TempDir()
+	store, err := NewStore(root)
+	if err != nil {
+		t.Fatal(err)
+	}
+	first, err := store.WriteTaskRunReport(TaskRunReport{
+		ID:        "first",
+		Label:     "First task",
+		Command:   "go test ./...",
+		Cwd:       ".",
+		Status:    "success",
+		StartedAt: time.Date(2026, 5, 27, 12, 0, 0, 0, time.UTC),
+		Message:   "first done",
+	})
+	if err != nil {
+		t.Fatalf("WriteTaskRunReport first returned error: %v", err)
+	}
+	second, err := store.WriteTaskRunReport(TaskRunReport{
+		ID:        "second",
+		Label:     "Second task",
+		Command:   "npm test",
+		Cwd:       ".",
+		Status:    "failed",
+		StartedAt: time.Date(2026, 5, 27, 12, 0, 1, 0, time.UTC),
+		Message:   "second done",
+	})
+	if err != nil {
+		t.Fatalf("WriteTaskRunReport second returned error: %v", err)
+	}
+
+	reports, err := store.ListTaskRunReports()
+	if err != nil {
+		t.Fatalf("ListTaskRunReports returned error: %v", err)
+	}
+	if len(reports) != 2 || reports[0].RelPath != second.RelPath || reports[1].RelPath != first.RelPath {
+		t.Fatalf("unexpected report order: %#v", reports)
+	}
+	text, err := store.ReadArtifactText(second.RelPath)
+	if err != nil {
+		t.Fatalf("ReadArtifactText returned error: %v", err)
+	}
+	if !strings.Contains(text, "Second task") || !strings.Contains(text, "npm test") {
+		t.Fatalf("unexpected artifact text: %s", text)
+	}
+
+	outside := filepath.ToSlash(filepath.Join("..", "outside.md"))
+	if _, err := store.ReadArtifactText(outside); err == nil {
+		t.Fatal("expected traversal read to fail")
 	}
 }

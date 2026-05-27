@@ -109,6 +109,7 @@ func (v *View) persistTaskRun(jobID string, result tasksSvc.RunResult) {
 	if err := v.metadataStore.SaveTaskRun(record); err != nil {
 		v.addActivity("Could not persist task run: " + err.Error())
 	}
+	v.refreshArtifacts()
 }
 
 func writeTaskRunArtifact(root string, record metadataSvc.TaskRunRecord) (artifactsSvc.Artifact, error) {

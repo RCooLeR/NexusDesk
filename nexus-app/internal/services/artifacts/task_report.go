@@ -41,6 +41,7 @@ func (s *Store) WriteTaskRunReport(record TaskRunReport) (Artifact, error) {
 		RelPath:   relPath,
 		AbsPath:   absPath,
 		Message:   "Task report artifact created at " + relPath + ".",
+		Size:      int64(len(content)),
 		CreatedAt: createdAt,
 	}, nil
 }

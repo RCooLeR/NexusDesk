@@ -9,6 +9,7 @@ type Artifact struct {
 	RelPath   string
 	AbsPath   string
 	Message   string
+	Size      int64
 	CreatedAt time.Time
 }
 

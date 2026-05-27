@@ -201,7 +201,7 @@ Exit criteria:
 Goal: restore generated-output workflows with provenance and native inspection.
 
 - [ ] Port artifact writer, metadata, search, compare, archive, delete, and lineage.
-- [ ] Add native artifact browser.
+- [x] Add native artifact browser for task-run report artifacts.
 - [ ] Add document preview/extraction for Markdown, TXT, PDF, DOCX, XLSX, HTML/XML.
 - [ ] Add presentation/report generation targets after artifact lineage is stable.
 - [ ] Add read-only operations scanners for Dockerfiles, Compose, env/config/logs.
@@ -245,11 +245,11 @@ Exit criteria:
 
 ## Next Batch
 
-1. Add native artifact browser for task reports before porting the full artifact surface.
-2. Add job/tool-run audit persistence for native agent runs.
-3. Add agent-safe write/append tools gated by full-project access and rollback snapshots.
-4. Replace the selected-item navigator action menu with true tree-row secondary-click menus if the Fyne widget pass remains lightweight.
-5. Add persisted chat history after the native assistant context-pack controls settle.
+1. Add job/tool-run audit persistence for native agent runs.
+2. Add agent-safe write/append tools gated by full-project access and rollback snapshots.
+3. Replace the selected-item navigator action menu with true tree-row secondary-click menus if the Fyne widget pass remains lightweight.
+4. Add persisted chat history after the native assistant context-pack controls settle.
+5. Expand the native artifact browser from task reports to metadata, search, archive/delete, and lineage.
 
 ## Preserved Post-Port Backlog
 

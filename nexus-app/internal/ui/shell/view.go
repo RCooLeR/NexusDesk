@@ -58,6 +58,9 @@ type View struct {
 	jobStatus              *widget.Label
 	rollbackResults        *fyne.Container
 	rollbackStatus         *widget.Label
+	artifactResults        *fyne.Container
+	artifactStatus         *widget.Label
+	artifactPreview        *widget.Entry
 	approvalResults        *fyne.Container
 	approvalStatus         *widget.Label
 	accessStatus           *widget.Label
@@ -81,6 +84,10 @@ func New(window fyne.Window) *View {
 	taskOutput.TextStyle = fyne.TextStyle{Monospace: true}
 	taskOutput.Wrapping = fyne.TextWrapOff
 	taskOutput.Disable()
+	artifactPreview := widget.NewMultiLineEntry()
+	artifactPreview.TextStyle = fyne.TextStyle{Monospace: true}
+	artifactPreview.Wrapping = fyne.TextWrapWord
+	artifactPreview.Disable()
 	workspaceService := workspaceSvc.New()
 	llmClient := llmSvc.NewClient()
 	assistantService := assistantSvc.New(settingsStore, workspaceService, llmClient)
@@ -128,6 +135,9 @@ func New(window fyne.Window) *View {
 		jobStatus:        widget.NewLabel("No jobs yet."),
 		rollbackResults:  container.NewVBox(widget.NewLabel("Refresh rollback records to inspect undo points.")),
 		rollbackStatus:   widget.NewLabel("Rollback records have not been loaded."),
+		artifactResults:  container.NewVBox(widget.NewLabel("Refresh artifacts to inspect generated task reports.")),
+		artifactStatus:   widget.NewLabel("Artifacts have not been loaded."),
+		artifactPreview:  artifactPreview,
 		approvalResults:  container.NewVBox(widget.NewLabel("Open a workspace to inspect approval records.")),
 		approvalStatus:   widget.NewLabel("Approval records have not been loaded."),
 		accessStatus:     widget.NewLabel("Full project access: inactive"),
