@@ -6,6 +6,7 @@ import (
 	"time"
 
 	artifactsSvc "nexusdesk/internal/services/artifacts"
+	documentsSvc "nexusdesk/internal/services/documents"
 )
 
 func TestArtifactMetaFormatsTaskReport(t *testing.T) {
@@ -37,6 +38,24 @@ func TestDocumentSetArtifactTitle(t *testing.T) {
 	}
 	if got := documentSetArtifactTitle("docs"); got != "Document Set Report - docs" {
 		t.Fatalf("unexpected selected document title: %q", got)
+	}
+}
+
+func TestDocumentExtractionArtifactInputMapsDocumentFields(t *testing.T) {
+	input := documentExtractionArtifactInput(documentsSvc.ExtractedDocument{
+		Title:     "Guide",
+		RelPath:   "docs/guide.md",
+		Format:    "markdown",
+		MediaType: "text/markdown",
+		Encoding:  "utf-8",
+		Text:      "content",
+		Size:      42,
+		Lines:     2,
+		Words:     1,
+		Truncated: true,
+	})
+	if input.Title != "Guide" || input.RelPath != "docs/guide.md" || input.Content != "content" || !input.Truncated {
+		t.Fatalf("unexpected document extraction artifact input: %#v", input)
 	}
 }
 

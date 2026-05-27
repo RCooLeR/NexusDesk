@@ -48,6 +48,19 @@ type DocumentSetReport struct {
 	GeneratedBy string
 }
 
+type DocumentExtractionReport struct {
+	Title     string
+	RelPath   string
+	Format    string
+	MediaType string
+	Encoding  string
+	Content   string
+	Size      int64
+	Lines     int
+	Words     int
+	Truncated bool
+}
+
 type ListOptions struct {
 	Query           string
 	IncludeArchived bool

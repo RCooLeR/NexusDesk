@@ -12,6 +12,7 @@ import (
 	"fyne.io/fyne/v2/widget"
 
 	artifactsSvc "nexusdesk/internal/services/artifacts"
+	documentsSvc "nexusdesk/internal/services/documents"
 	workspaceSvc "nexusdesk/internal/services/workspace"
 )
 
@@ -19,6 +20,7 @@ func (v *View) newArtifactsPanel() fyne.CanvasObject {
 	search := widget.NewEntry()
 	search.SetPlaceHolder("Search artifacts by title, path, kind, source, job, or task")
 	documentReport := widget.NewButtonWithIcon("Document report", theme.DocumentCreateIcon(), v.generateDocumentSetArtifact)
+	documentExtract := widget.NewButtonWithIcon("Extract doc", theme.FileTextIcon(), v.generateDocumentExtractionArtifact)
 	exportComparison := widget.NewButtonWithIcon("Export compare", theme.DocumentSaveIcon(), v.exportArtifactComparison)
 	refresh := widget.NewButtonWithIcon("Refresh", theme.ViewRefreshIcon(), func() {
 		v.refreshArtifactsWithQuery(search.Text)
@@ -26,7 +28,7 @@ func (v *View) newArtifactsPanel() fyne.CanvasObject {
 	search.OnSubmitted = func(string) {
 		v.refreshArtifactsWithQuery(search.Text)
 	}
-	header := container.NewBorder(nil, nil, v.artifactStatus, container.NewHBox(documentReport, exportComparison, refresh), search)
+	header := container.NewBorder(nil, nil, v.artifactStatus, container.NewHBox(documentReport, documentExtract, exportComparison, refresh), search)
 	listScroll := container.NewScroll(v.artifactResults)
 	listScroll.SetMinSize(fyne.NewSize(260, 110))
 	sourceScroll := container.NewVScroll(v.artifactSources)
@@ -82,6 +84,40 @@ func (v *View) generateDocumentSetArtifact() {
 	v.artifactStatus.SetText("Created " + artifact.RelPath)
 	v.addActivity(artifact.Message)
 	v.refreshArtifactsWithQuery("kind:document-report")
+}
+
+func (v *View) generateDocumentExtractionArtifact() {
+	workspace := v.state.Workspace()
+	if workspace.Root == "" {
+		v.addActivity("Open a workspace before extracting a document.")
+		return
+	}
+	source := selectedPathOrEmpty(v)
+	if strings.TrimSpace(source) == "" {
+		v.addActivity("Select a Markdown, TXT, HTML, or XML file before extracting a document.")
+		return
+	}
+	extractor := documentsSvc.New(v.workspaceService)
+	document, err := extractor.Extract(workspace.Root, source)
+	if err != nil {
+		dialog.ShowError(err, v.window)
+		return
+	}
+	store, err := artifactsSvc.NewStore(workspace.Root)
+	if err != nil {
+		dialog.ShowError(err, v.window)
+		return
+	}
+	artifact, err := store.WriteDocumentExtractionReport(documentExtractionArtifactInput(document))
+	if err != nil {
+		dialog.ShowError(err, v.window)
+		return
+	}
+	v.artifactPreview.SetText("")
+	v.refreshArtifactSources(nil)
+	v.artifactStatus.SetText("Created " + artifact.RelPath)
+	v.addActivity(artifact.Message)
+	v.refreshArtifactsWithQuery("kind:document-extract")
 }
 
 func (v *View) refreshArtifacts() {
@@ -365,6 +401,21 @@ func documentSetArtifactTitle(root string) string {
 		return "Project Document Set Report"
 	}
 	return "Document Set Report - " + root
+}
+
+func documentExtractionArtifactInput(document documentsSvc.ExtractedDocument) artifactsSvc.DocumentExtractionReport {
+	return artifactsSvc.DocumentExtractionReport{
+		Title:     document.Title,
+		RelPath:   document.RelPath,
+		Format:    document.Format,
+		MediaType: document.MediaType,
+		Encoding:  document.Encoding,
+		Content:   document.Text,
+		Size:      document.Size,
+		Lines:     document.Lines,
+		Words:     document.Words,
+		Truncated: document.Truncated,
+	}
 }
 
 func artifactMeta(artifact artifactsSvc.Artifact) string {
