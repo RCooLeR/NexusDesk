@@ -14,10 +14,21 @@ const approvalLogName = "log.json"
 const policyName = "policy.json"
 const maxApprovalRecords = 200
 
-type Service struct{}
+type Repository interface {
+	SaveApprovalRecord(record Record) error
+	ListApprovalRecords(limit int) ([]Record, error)
+}
+
+type Service struct {
+	repository Repository
+}
 
 func New() *Service {
 	return &Service{}
+}
+
+func (s *Service) SetRepository(repository Repository) {
+	s.repository = repository
 }
 
 func (s *Service) Append(root string, record Record) ([]Record, error) {
@@ -47,6 +58,11 @@ func (s *Service) Append(root string, record Record) ([]Record, error) {
 	if err := writeJSON(logPath(absRoot), records); err != nil {
 		return nil, err
 	}
+	if s.repository != nil {
+		for _, record := range records {
+			_ = s.repository.SaveApprovalRecord(record)
+		}
+	}
 	return records, nil
 }
 
@@ -58,6 +74,12 @@ func (s *Service) List(root string) ([]Record, error) {
 	records := []Record{}
 	if err := readJSON(logPath(absRoot), &records); err != nil {
 		return nil, err
+	}
+	if s.repository != nil {
+		metadataRecords, err := s.repository.ListApprovalRecords(maxApprovalRecords)
+		if err == nil && len(metadataRecords) > 0 {
+			return metadataRecords, nil
+		}
 	}
 	return records, nil
 }

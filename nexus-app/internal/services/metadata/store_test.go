@@ -19,7 +19,7 @@ func TestEnsureCreatesSQLiteStoreAndManifest(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Ensure returned error: %v", err)
 	}
-	if status.SchemaVersion != 6 || status.SchemaHash == "" {
+	if status.SchemaVersion != 7 || status.SchemaHash == "" {
 		t.Fatalf("unexpected status: %#v", status)
 	}
 	if _, err := os.Stat(status.Path); err != nil {
@@ -188,6 +188,32 @@ func TestSaveSQLRunAndDatasetDependency(t *testing.T) {
 	}
 	if len(dependencies) != 1 || dependencies[0].DependentRef != sqlRun.ID || dependencies[0].Metadata["engine"] == "" {
 		t.Fatalf("unexpected dependencies: %#v", dependencies)
+	}
+}
+
+func TestSaveAndListApprovalRecords(t *testing.T) {
+	store := mustStore(t)
+	started := time.Date(2026, 5, 27, 12, 0, 0, 0, time.UTC)
+	record := ApprovalRecord{
+		Action:    "access.full_project.grant",
+		Target:    ".",
+		Risk:      "high",
+		Decision:  "granted",
+		Message:   "Full project access granted.",
+		CreatedAt: started,
+	}
+	if err := store.SaveApprovalRecord(record); err != nil {
+		t.Fatalf("SaveApprovalRecord returned error: %v", err)
+	}
+	records, err := store.ListApprovalRecords(10)
+	if err != nil {
+		t.Fatalf("ListApprovalRecords returned error: %v", err)
+	}
+	if len(records) != 1 || records[0].Action != "access.full_project.grant" || records[0].Risk != "high" {
+		t.Fatalf("unexpected approval records: %#v", records)
+	}
+	if records[0].ID == "" || records[0].CreatedAt.IsZero() {
+		t.Fatalf("expected normalized approval record: %#v", records[0])
 	}
 }
 

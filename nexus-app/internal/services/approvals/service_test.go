@@ -23,6 +23,50 @@ func TestAppendAndListApprovalRecords(t *testing.T) {
 	}
 }
 
+func TestAppendWritesRepositoryAndListPrefersRepository(t *testing.T) {
+	root := t.TempDir()
+	repository := &fakeApprovalRepository{}
+	service := New()
+	service.SetRepository(repository)
+	if _, err := service.Append(root, Record{Action: "write", Target: "notes.md"}); err != nil {
+		t.Fatalf("Append returned error: %v", err)
+	}
+	if len(repository.records) != 1 || repository.records[0].Action != "write" {
+		t.Fatalf("expected repository save: %#v", repository.records)
+	}
+	repository.records = append([]Record{{
+		ID:        "repo-only",
+		Action:    "repo",
+		Target:    "metadata",
+		Risk:      "low",
+		Decision:  "recorded",
+		CreatedAt: time.Now().UTC(),
+	}}, repository.records...)
+	records, err := service.List(root)
+	if err != nil {
+		t.Fatalf("List returned error: %v", err)
+	}
+	if records[0].ID != "repo-only" {
+		t.Fatalf("expected repository-backed list, got %#v", records)
+	}
+}
+
+type fakeApprovalRepository struct {
+	records []Record
+}
+
+func (r *fakeApprovalRepository) SaveApprovalRecord(record Record) error {
+	r.records = append([]Record{record}, r.records...)
+	return nil
+}
+
+func (r *fakeApprovalRepository) ListApprovalRecords(limit int) ([]Record, error) {
+	if limit > 0 && len(r.records) > limit {
+		return r.records[:limit], nil
+	}
+	return r.records, nil
+}
+
 func TestGrantAndRevokeFullProjectAccess(t *testing.T) {
 	root := t.TempDir()
 	service := New()

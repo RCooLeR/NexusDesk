@@ -43,6 +43,7 @@ func (v *View) openWorkspace(root string) {
 	if store, err := metadataSvc.NewStore(workspace.Root); err == nil {
 		if status, err := store.Ensure(); err == nil {
 			v.metadataStore = store
+			v.approvalService.SetRepository(newApprovalMetadataRepository(store))
 			v.jobService.SetRepository(store, true)
 			v.addActivity(status.Message)
 			v.refreshJobs()
@@ -52,6 +53,7 @@ func (v *View) openWorkspace(root string) {
 			v.refreshHistory("", "")
 		} else {
 			v.metadataStore = nil
+			v.approvalService.SetRepository(nil)
 			v.loadAssistantChatHistory()
 			v.refreshChatHistory("")
 			v.refreshAgentAudit()
@@ -60,6 +62,7 @@ func (v *View) openWorkspace(root string) {
 		}
 	} else {
 		v.metadataStore = nil
+		v.approvalService.SetRepository(nil)
 		v.loadAssistantChatHistory()
 		v.refreshChatHistory("")
 		v.refreshAgentAudit()

@@ -43,7 +43,7 @@ Runtime changes should be stored locally and optionally exportable as workspace 
 
 Product surfaces can change which tools and panels are visible, but they must not change the underlying safety boundary. Workbench, Data & Analytics, Artifacts, Settings, and future analytics/document/operations capabilities all share the same workspace roots, path checks, approval rules, secret handling, and audit model.
 
-The current implementation has an append-only local approval/action log for applied file writes, deletes, moves, artifact creation, scan-report creation, artifact archive, artifact delete, and approved agent tool executions. It writes records under `.nexusdesk/approvals/log.json` and mirrors fresh records into SQLite metadata when the store exists. Modal approval prompts now cover higher-risk file, artifact, and explicit agent tool actions; mutating Docker/database actions and autonomous model-directed agent tool execution remain planned.
+The current implementation has an append-only local approval/action log for applied file writes, deletes, moves, artifact creation, scan-report creation, artifact archive, artifact delete, full-project access grants/revokes, and approved agent tool executions. Native approval records are written under `.nexusdesk/approvals/log.json` for compatibility and to the SQLite `approval_records` table when the active metadata store exists; the Approvals tab reads SQLite first and falls back to JSON for older workspaces. Modal approval prompts now cover higher-risk file, artifact, and explicit agent tool actions; mutating Docker/database actions and autonomous model-directed agent tool execution remain planned.
 
 ## Secrets
 
@@ -100,7 +100,7 @@ Current implementation:
 - scan-report artifacts are created from backend scan status and exclusive artifact writes
 - artifact archive/delete actions validate workspace-relative artifact paths and move/remove sibling metadata sidecars through backend methods
 - explicit agent tool dry-runs/executions persist auditable records under `.nexusdesk/tool-runs/log.json`
-- SQLite metadata preparation writes schema and manifest files under `.nexusdesk/metadata/`, opens `.nexusdesk/metadata/nexusdesk.sqlite` through `modernc.org/sqlite`, applies the schema, mirrors existing compatibility records, and accepts direct fresh writes for chats, approvals, artifacts, and tool runs
+- SQLite metadata preparation writes schema and manifest files under `.nexusdesk/metadata/`, opens `.nexusdesk/metadata/nexusdesk.sqlite` through `modernc.org/sqlite`, applies the schema, and accepts direct fresh writes for chats, approvals, artifacts, tool runs, jobs, SQL runs, and dataset dependencies
 - SQLite metadata inspection exposes table columns, row counts, filterable columns, copyable sample rows, dataset SQL view summaries, and searchable chat/artifact/tool-run history
 - dataset dependency and SQL run metadata records tie saved snippets, reports, charts, summaries, and connector queries back to source datasets
 - workspace freshness checks ignore internal metadata/tool-run paths, detect source file changes, mark generated artifacts with stale source provenance, flag stale dataset-derived views, and warn chat/context surfaces when cited files changed

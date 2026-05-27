@@ -94,6 +94,16 @@ type ArtifactRecord struct {
 	UpdatedAt    time.Time
 }
 
+type ApprovalRecord struct {
+	ID        string
+	Action    string
+	Target    string
+	Risk      string
+	Decision  string
+	Message   string
+	CreatedAt time.Time
+}
+
 type SQLRunRecord struct {
 	ID           string
 	RelPath      string

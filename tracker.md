@@ -245,7 +245,7 @@ Goal: make slow and durable workflows reliable.
 - [x] Add SQLite repository for native chat messages.
 - [x] Add repositories for artifacts, SQL runs, and dataset dependencies.
 - [x] Add first native SQLite artifact repository rows and history integration for explicit artifact writes, refreshes, archive/restore, and delete.
-- [ ] Add approval metadata repository coverage or explicitly document the remaining approval-store split.
+- [x] Add approval metadata repository coverage with JSON compatibility fallback.
 - [ ] Migrate/import relevant `.nexusdesk` data from Wails-era workspaces.
 - [ ] Route long indexing, OCR, dump imports, connector pulls, report generation, and long agent runs through jobs.
 - [ ] Add native job monitor with cancel/retry/open-output actions.
@@ -271,11 +271,11 @@ Exit criteria:
 
 ## Next Batch
 
-1. Add approval metadata repository coverage or explicitly document the remaining approval-store split.
-2. Add the first operations artifact/runbook export from inspected Docker/Compose/env/config/log evidence.
-3. Expand dataset profiling from the current CSV/TSV/JSON/XLSX slice to NDJSON, Parquet metadata, and logs.
-4. Extend native charting beyond first SVG bar charts to line charts and richer dashboard visuals.
-5. Promote SQL run/dependency history into Data & Analytics and History navigation instead of only persisting rows.
+1. Add the first operations artifact/runbook export from inspected Docker/Compose/env/config/log evidence.
+2. Expand dataset profiling from the current CSV/TSV/JSON/XLSX slice to NDJSON, Parquet metadata, and logs.
+3. Extend native charting beyond first SVG bar charts to line charts and richer dashboard visuals.
+4. Promote SQL run/dependency history into Data & Analytics and History navigation instead of only persisting rows.
+5. Start JSON compatibility import from Wails-era workspace metadata into native SQLite.
 
 ## Preserved Post-Port Backlog
 
@@ -353,8 +353,8 @@ The Fyne migration must not drop product ambition, but this section is intention
 
 ### Security, Access, And Audit
 
-- [ ] Native approval queue and modal flows for high-risk actions.
-- [ ] Full-access project policy with clear scope, expiration, and visible status.
+- [x] Native approval queue and modal flows for high-risk actions.
+- [x] Full-access project policy with clear scope, expiration, and visible status.
 - [ ] Path-root enforcement, traversal protection, ignored-state protection, and `.nexusdesk` protection.
 - [ ] Rollback snapshots for approved mutations where practical.
 - [ ] OS-protected secrets on Windows, macOS Keychain, and Linux Secret Service/libsecret.
