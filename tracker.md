@@ -65,6 +65,7 @@ Some tracker items are intentionally out of phase order because they depend on m
 
 - Keep Wails code as read-only reference unless explicitly patching a critical source bug.
 - Port services by capability, not by copying giant files.
+- Port Wails-era functionality first, then build new features on top of the native architecture.
 - Avoid giant source files. Prefer packages, small files by responsibility, and tests near the code they protect.
 - Design code so external contributors can understand ownership quickly.
 - Domain and service packages must not import Fyne.
@@ -74,102 +75,9 @@ Some tracker items are intentionally out of phase order because they depend on m
 - Approval, rollback, audit, and path safety remain backend service responsibilities.
 - Do not chase feature parity blindly; rebuild only the workflows that fit the native product direction.
 
-## Preserved Long-Term Functionality Backlog
+## Active Native Porting Plan
 
-The Fyne migration must not drop product ambition. These planned capabilities remain in scope after the native foundation is stable.
-
-### Workbench / Code Studio
-
-- [ ] Native IDE-style project tree with lazy loading, ignored-path controls, file status badges, context menus, and safe copy/move/delete/rename.
-- [ ] Multi-tab editor with pinned tabs, dirty state, close guards, split editor groups, breadcrumbs, outline, minimap, find, format, and go-to-definition where available.
-- [ ] Syntax highlighting strategy for common languages, Markdown, SQL, JSON/YAML/XML, Docker/Compose, logs, and config files.
-- [ ] Markdown source/rendered toggle.
-- [ ] Safe edit preview/apply/rollback for text, code, patches, appends, encoding changes, and allowed binary writes.
-- [ ] Workspace search over paths, text, symbols, artifacts, and chat history.
-- [ ] Problems panel for TODO/FIXME/HACK/BUG markers, merge conflicts, JSON errors, and later language diagnostics.
-- [ ] Git status, branch, changed-file tree, staged/unstaged groups, file diff, split/unified/diff-only views, hunk actions, history, blame, AI review, test suggestions, commit draft, and PR draft.
-- [ ] Task discovery and approved task runs for npm, Go, Docker Compose validation, and future project-specific tasks.
-
-### Data & Analytics Studio
-
-- [ ] Dataset profiling for CSV, TSV, JSON, NDJSON, XLSX, Parquet metadata, logs, and database exports.
-- [ ] Bounded filter/query/order/limit workflows for table-like files.
-- [ ] DuckDB-capable SQL over datasets when the optional CGO-backed build is available.
-- [ ] SQL notebooks with multiple cells, saved notebooks, run history, reuse/rerun, explain output, and artifact export.
-- [ ] SQLite workspace database browser with schema, views, indexes, samples, row caps, query cancellation, saved queries, CSV/Markdown exports, and lineage.
-- [ ] External database profiles for PostgreSQL, MySQL/MariaDB, SQL Server, DuckDB files, and future engines with protected credentials.
-- [ ] Read-only SQL guard with strong comment/string handling, mutation blocking, caps, timeouts, cancellation, and redacted errors.
-- [ ] Database dump import jobs using temporary isolated environments before any direct mutation workflows exist.
-- [ ] Native table/grid strategy suitable for large result sets.
-- [ ] Chart preview/artifact generation for bar, line, and later richer dashboard visuals.
-
-### Analytics Connectors
-
-- [ ] Google Analytics API connector and exported-data importer.
-- [ ] Ads platform exported-data importer and later API connectors.
-- [ ] CRM/contact-platform connectors for Eloqua, Mautic, and similar systems.
-- [ ] Connector job model for sync, cancellation, credentials, redaction, audit, and retry.
-- [ ] Cross-source analysis workflows that can cite rows, queries, connector runs, and generated artifacts.
-
-### Documents Studio / Document Intelligence
-
-- [ ] Native preview and text extraction for TXT, Markdown, PDF, DOCX, XLSX, HTML, XML, images, and common office-like files.
-- [ ] OCR job pipeline for scanned PDFs/images.
-- [ ] Document set analysis with bounded context, source citations, summary artifacts, and lineage.
-- [ ] Report and presentation generation from document sets and data sources.
-- [ ] Comparison/version workflows for generated and source documents.
-
-### AI Assistant And Agent
-
-- [ ] Provider settings for Ollama/OpenAI-compatible endpoints, curated local model catalog, runtime context-window detection, response reserve, GPU diagnostics, and provider probes.
-- [ ] Streaming chat with selected files/directories/project context, token-budgeted history, source citation, weak-evidence warnings, retries, and answer comparison.
-- [ ] Local assistant memory and prompt profiles.
-- [ ] Agent runtime with plan updates, bounded observations, model-driven tool calls, no frontend iteration cap, emergency backend loop guard, and final-answer fallback when context is exhausted.
-- [ ] Unified tool registry and dispatcher for deterministic tools and model-requested tools.
-- [ ] Agent tools for read context, read changed files, git diff/history/blame, problems, tasks, artifacts, artifact lineage, datasets, SQL, documents, operations files, web fetch, safe writes, patches, copy/move/delete, rollback, and approved shell.
-- [ ] Live activity tail that shows the last one or two model/tool steps while preserving full trace in Activity.
-
-### Artifacts And Provenance
-
-- [ ] Markdown, CSV, SVG/chart, SQL result, scan report, task report, chat answer, and future presentation artifacts.
-- [ ] Provenance sidecars with source files, chat IDs, tool run IDs, dataset/query IDs, and generated timestamps.
-- [ ] Artifact browser with search, metadata, preview, compare, archive, delete, restore, and open-source navigation.
-- [ ] Artifact lineage graph import/export and stale-source warnings.
-- [ ] Regeneration workflows that reuse original source context and parameters.
-
-### Operations Studio
-
-- [ ] Read-only Dockerfile, Compose, env/config, script, and log inspection.
-- [ ] Compose service topology and config validation.
-- [ ] Container/image/log workflows only after approval policy and job model are mature.
-- [ ] Runbook artifacts and operations summaries with source citations.
-- [ ] Strict separation between read-only inspection and mutating Docker/system actions.
-
-### Security, Access, And Audit
-
-- [ ] Native approval queue and modal flows for high-risk actions.
-- [ ] Full-access project policy with clear scope, expiration, and visible status.
-- [ ] Path-root enforcement, traversal protection, ignored-state protection, and `.nexusdesk` protection.
-- [ ] Rollback snapshots for approved mutations where practical.
-- [ ] OS-protected secrets on Windows, macOS Keychain, and Linux Secret Service/libsecret.
-- [ ] Append-only audit records for approvals, tool runs, file changes, tasks, connector queries, jobs, and artifacts.
-- [ ] Export/backup flows for local-first data.
-
-### Jobs, Persistence, And Observability
-
-- [ ] SQLite-first metadata store for chats, approvals, artifacts, tool runs, jobs, SQL runs, dataset dependencies, and search metadata.
-- [ ] JSON compatibility import from Wails-era workspaces.
-- [ ] Durable job model with progress, log tail, cancellation, retry, outputs, and artifact links.
-- [ ] Folder open remains cheap: no Git, Docker, OCR, connector pulls, dump imports, model calls, shell commands, or deep indexing.
-- [ ] Diagnostics panel for app logs, provider status, GPU/model status, metadata health, and job history.
-
-### Extensibility And Community
-
-- [ ] Package ownership docs for every major `internal/` area.
-- [ ] Contributor setup guide, coding standards, tests, and architecture decision records.
-- [ ] Plugin/MCP strategy after native core tools are stable.
-- [ ] Stable service interfaces for community-contributed connectors and document parsers.
-- [ ] CI matrix for Windows first, then Linux/macOS once platform secrets and Fyne builds are ready.
+The phases below are the active path. They track what has already been ported from Wails/React into `nexus-app/`, what is intentionally deferred because a dependency is missing, and what must happen before we resume broad new feature work.
 
 ## Phase 0: Migration Baseline
 
@@ -329,3 +237,100 @@ Exit criteria:
 3. Add approval-backed hunk stage/unstage actions on top of parsed hunk metadata.
 4. Add durable persisted jobs and task-run artifacts.
 5. Add richer navigator context menus once the first action strip is validated in Fyne.
+
+## Preserved Post-Port Backlog
+
+The Fyne migration must not drop product ambition, but this section is intentionally at the end of the tracker. These are Wails-era planned or partial capabilities that still need to be ported, redesigned, or implemented after the native foundation is buildable and stable. We should port the needed Wails functionality first, then continue adding new features on the native architecture.
+
+### Workbench / Code Studio
+
+- [ ] Native IDE-style project tree with lazy loading, ignored-path controls, file status badges, context menus, and safe copy/move/delete/rename.
+- [ ] Multi-tab editor with pinned tabs, dirty state, close guards, split editor groups, breadcrumbs, outline, minimap, find, format, and go-to-definition where available.
+- [ ] Syntax highlighting strategy for common languages, Markdown, SQL, JSON/YAML/XML, Docker/Compose, logs, and config files.
+- [ ] Markdown source/rendered toggle.
+- [ ] Safe edit preview/apply/rollback for text, code, patches, appends, encoding changes, and allowed binary writes.
+- [ ] Workspace search over paths, text, symbols, artifacts, and chat history.
+- [ ] Problems panel for TODO/FIXME/HACK/BUG markers, merge conflicts, JSON errors, and later language diagnostics.
+- [ ] Git status, branch, changed-file tree, staged/unstaged groups, file diff, split/unified/diff-only views, hunk actions, history, blame, AI review, test suggestions, commit draft, and PR draft.
+- [ ] Task discovery and approved task runs for npm, Go, Docker Compose validation, and future project-specific tasks.
+
+### Data & Analytics Studio
+
+- [ ] Dataset profiling for CSV, TSV, JSON, NDJSON, XLSX, Parquet metadata, logs, and database exports.
+- [ ] Bounded filter/query/order/limit workflows for table-like files.
+- [ ] DuckDB-capable SQL over datasets when the optional CGO-backed build is available.
+- [ ] SQL notebooks with multiple cells, saved notebooks, run history, reuse/rerun, explain output, and artifact export.
+- [ ] SQLite workspace database browser with schema, views, indexes, samples, row caps, query cancellation, saved queries, CSV/Markdown exports, and lineage.
+- [ ] External database profiles for PostgreSQL, MySQL/MariaDB, SQL Server, DuckDB files, and future engines with protected credentials.
+- [ ] Read-only SQL guard with strong comment/string handling, mutation blocking, caps, timeouts, cancellation, and redacted errors.
+- [ ] Database dump import jobs using temporary isolated environments before any direct mutation workflows exist.
+- [ ] Native table/grid strategy suitable for large result sets.
+- [ ] Chart preview/artifact generation for bar, line, and later richer dashboard visuals.
+
+### Analytics Connectors
+
+- [ ] Google Analytics API connector and exported-data importer.
+- [ ] Ads platform exported-data importer and later API connectors.
+- [ ] CRM/contact-platform connectors for Eloqua, Mautic, and similar systems.
+- [ ] Connector job model for sync, cancellation, credentials, redaction, audit, and retry.
+- [ ] Cross-source analysis workflows that can cite rows, queries, connector runs, and generated artifacts.
+
+### Documents Studio / Document Intelligence
+
+- [ ] Native preview and text extraction for TXT, Markdown, PDF, DOCX, XLSX, HTML, XML, images, and common office-like files.
+- [ ] OCR job pipeline for scanned PDFs/images.
+- [ ] Document set analysis with bounded context, source citations, summary artifacts, and lineage.
+- [ ] Report and presentation generation from document sets and data sources.
+- [ ] Comparison/version workflows for generated and source documents.
+
+### AI Assistant And Agent
+
+- [ ] Provider settings for Ollama/OpenAI-compatible endpoints, curated local model catalog, runtime context-window detection, response reserve, GPU diagnostics, and provider probes.
+- [ ] Streaming chat with selected files/directories/project context, token-budgeted history, source citation, weak-evidence warnings, retries, and answer comparison.
+- [ ] Local assistant memory and prompt profiles.
+- [ ] Agent runtime with plan updates, bounded observations, model-driven tool calls, no frontend iteration cap, emergency backend loop guard, and final-answer fallback when context is exhausted.
+- [ ] Unified tool registry and dispatcher for deterministic tools and model-requested tools.
+- [ ] Agent tools for read context, read changed files, git diff/history/blame, problems, tasks, artifacts, artifact lineage, datasets, SQL, documents, operations files, web fetch, safe writes, patches, copy/move/delete, rollback, and approved shell.
+- [ ] Live activity tail that shows the last one or two model/tool steps while preserving full trace in Activity.
+
+### Artifacts And Provenance
+
+- [ ] Markdown, CSV, SVG/chart, SQL result, scan report, task report, chat answer, and future presentation artifacts.
+- [ ] Provenance sidecars with source files, chat IDs, tool run IDs, dataset/query IDs, and generated timestamps.
+- [ ] Artifact browser with search, metadata, preview, compare, archive, delete, restore, and open-source navigation.
+- [ ] Artifact lineage graph import/export and stale-source warnings.
+- [ ] Regeneration workflows that reuse original source context and parameters.
+
+### Operations Studio
+
+- [ ] Read-only Dockerfile, Compose, env/config, script, and log inspection.
+- [ ] Compose service topology and config validation.
+- [ ] Container/image/log workflows only after approval policy and job model are mature.
+- [ ] Runbook artifacts and operations summaries with source citations.
+- [ ] Strict separation between read-only inspection and mutating Docker/system actions.
+
+### Security, Access, And Audit
+
+- [ ] Native approval queue and modal flows for high-risk actions.
+- [ ] Full-access project policy with clear scope, expiration, and visible status.
+- [ ] Path-root enforcement, traversal protection, ignored-state protection, and `.nexusdesk` protection.
+- [ ] Rollback snapshots for approved mutations where practical.
+- [ ] OS-protected secrets on Windows, macOS Keychain, and Linux Secret Service/libsecret.
+- [ ] Append-only audit records for approvals, tool runs, file changes, tasks, connector queries, jobs, and artifacts.
+- [ ] Export/backup flows for local-first data.
+
+### Jobs, Persistence, And Observability
+
+- [ ] SQLite-first metadata store for chats, approvals, artifacts, tool runs, jobs, SQL runs, dataset dependencies, and search metadata.
+- [ ] JSON compatibility import from Wails-era workspaces.
+- [ ] Durable job model with progress, log tail, cancellation, retry, outputs, and artifact links.
+- [ ] Folder open remains cheap: no Git, Docker, OCR, connector pulls, dump imports, model calls, shell commands, or deep indexing.
+- [ ] Diagnostics panel for app logs, provider status, GPU/model status, metadata health, and job history.
+
+### Extensibility And Community
+
+- [ ] Package ownership docs for every major `internal/` area.
+- [ ] Contributor setup guide, coding standards, tests, and architecture decision records.
+- [ ] Plugin/MCP strategy after native core tools are stable.
+- [ ] Stable service interfaces for community-contributed connectors and document parsers.
+- [ ] CI matrix for Windows first, then Linux/macOS once platform secrets and Fyne builds are ready.
