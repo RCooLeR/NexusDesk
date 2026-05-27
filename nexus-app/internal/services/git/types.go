@@ -62,9 +62,27 @@ const (
 	FileActionUnstage FileAction = "unstage"
 )
 
+type HunkAction string
+
+const (
+	HunkActionStage   HunkAction = "stage"
+	HunkActionUnstage HunkAction = "unstage"
+)
+
 type FileActionResult struct {
 	Path        string
 	Action      FileAction
+	Message     string
+	Status      Status
+	GeneratedAt time.Time
+}
+
+type HunkActionResult struct {
+	Path        string
+	Action      HunkAction
+	DiffKind    DiffKind
+	HunkIndex   int
+	Patch       string
 	Message     string
 	Status      Status
 	GeneratedAt time.Time

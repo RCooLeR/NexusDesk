@@ -58,7 +58,7 @@ Some tracker items are intentionally out of phase order because they depend on m
 
 - Phase 2 agent items are still pending because approvals and deterministic tool dispatch are not ported into the native assistant runtime yet.
 - Phase 3 AI diff summary and commit drafting are pending until the native assistant service exists.
-- Approval-backed hunk mutations are pending until native approval policy/UI is ready enough to protect destructive Git actions.
+- Destructive hunk mutations remain pending until native approval policy/UI is ready enough to protect working-tree discard/revert actions.
 - Durable persisted jobs and task-run artifacts are pending until the SQLite metadata store lands.
 
 ## Migration Principles
@@ -158,7 +158,7 @@ Goal: make Workbench credible as an IDE-like surface.
 - [x] Add unified/split/diff-only diff views.
 - [x] Add confirmed file-level staged/unstaged controls.
 - [x] Add parsed hunk metadata and read-only hunk navigation.
-- [ ] Add hunk selection and approval-backed hunk actions.
+- [x] Add hunk selection and approval-backed hunk stage/unstage actions.
 - [ ] Add AI diff summary and commit draft once assistant service exists.
 - [x] Add task discovery and safe task-run service.
 - [x] Add first native task discovery/run panel.
@@ -233,10 +233,10 @@ Exit criteria:
 ## Next Batch
 
 1. Configure Windows CGO compiler and verify `nexus-app` runs.
-2. Add approval-backed hunk stage/unstage actions on top of parsed hunk metadata.
-3. Add durable persisted jobs and task-run artifacts.
-4. Add richer navigator context menus once the first action strip is validated in Fyne.
-5. Add assistant context-pack UI affordances for pinning the workspace root, directories, and multiple files explicitly.
+2. Add durable persisted jobs and task-run artifacts.
+3. Add richer navigator context menus once the first action strip is validated in Fyne.
+4. Add assistant context-pack UI affordances for pinning the workspace root, directories, and multiple files explicitly.
+5. Add native approval queue/full-access policy persistence before destructive Git hunk discard/revert or model-authored mutations.
 
 ## Preserved Post-Port Backlog
 
