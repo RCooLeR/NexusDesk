@@ -1,6 +1,7 @@
 package shell
 
 import (
+	"context"
 	"fmt"
 	"sort"
 	"strings"
@@ -30,6 +31,7 @@ func (v *View) newDataPanel() fyne.CanvasObject {
 	sqliteQueryButton := widget.NewButtonWithIcon("Run SQLite", theme.MediaPlayIcon(), func() {
 		v.runSelectedSQLiteQuery(v.dataQueryEntry.Text)
 	})
+	cancelSQLiteButton := widget.NewButtonWithIcon("Cancel SQLite", theme.CancelIcon(), v.cancelActiveSQLiteQuery)
 	v.dataQueryEntry.OnSubmitted = func(query string) {
 		v.querySelectedDataset(query)
 	}
@@ -55,7 +57,7 @@ func (v *View) newDataPanel() fyne.CanvasObject {
 	reuseSQLButton := widget.NewButtonWithIcon("Use latest SQL", theme.ContentPasteIcon(), v.reuseLatestDatasetSQLRun)
 	rerunSQLButton := widget.NewButtonWithIcon("Rerun latest SQL", theme.MediaReplayIcon(), v.rerunLatestDatasetSQLRun)
 	actions := container.NewAppTabs(
-		container.NewTabItem("Source", dataActionStrip(profileButton, queryButton, sqlButton, sqliteButton, sqliteQueryButton)),
+		container.NewTabItem("Source", dataActionStrip(profileButton, queryButton, sqlButton, sqliteButton, sqliteQueryButton, cancelSQLiteButton)),
 		container.NewTabItem("Notebook", dataActionStrip(addSQLCellButton, addChartCellButton, saveNotebookButton, loadNotebookButton, runNotebookButton, exportNotebookButton)),
 		container.NewTabItem("Visuals", dataActionStrip(chartButton, exportChartButton, dashboardButton, exportDashboardButton)),
 		container.NewTabItem("History", dataActionStrip(historyButton, reuseSQLButton, rerunSQLButton, saveSQLiteQueryButton, savedSQLiteQueriesButton, exportSQLiteCSVButton, exportSQLiteReportButton)),
@@ -139,13 +141,28 @@ func (v *View) runSelectedSQLiteQuery(sqlText string) {
 		v.dataProfileStatus.SetText("Select a .sqlite, .sqlite3, or .db file before running SQLite queries.")
 		return
 	}
-	started := time.Now().UTC()
-	result, err := v.dbconnectorService.QueryWorkspaceSQLite(workspace.Root, dbconnectorSvc.SQLiteQueryRequest{
+	request := dbconnectorSvc.NormalizeSQLiteQueryRequest(dbconnectorSvc.SQLiteQueryRequest{
 		RelPath:        selected,
 		SQL:            sqlText,
 		ResultLimit:    dbconnectorSvc.DefaultSQLiteRows,
 		TimeoutSeconds: dbconnectorSvc.DefaultSQLiteTimeoutSeconds,
 	})
+	started := time.Now().UTC()
+	ctx, cancel := context.WithTimeout(context.Background(), time.Duration(request.TimeoutSeconds)*time.Second)
+	queryID := v.startSQLiteQuery(cancel)
+	v.dataProfileStatus.SetText(fmt.Sprintf("%s: SQLite query running, cap %d, timeout %ds.", selected, request.ResultLimit, request.TimeoutSeconds))
+	v.addActivity("Started read-only SQLite query for " + selected + ".")
+	go func() {
+		defer cancel()
+		result, err := v.dbconnectorService.QueryWorkspaceSQLiteContext(ctx, workspace.Root, request)
+		fyne.Do(func() {
+			v.finishSelectedSQLiteQuery(queryID, selected, sqlText, started, result, err)
+		})
+	}()
+}
+
+func (v *View) finishSelectedSQLiteQuery(queryID string, selected string, sqlText string, started time.Time, result dbconnectorSvc.SQLiteQueryResult, err error) {
+	v.clearSQLiteQuery(queryID)
 	if strings.TrimSpace(sqlText) != "" {
 		record := sqliteSQLRunRecord(result, selected, sqlText, started, err)
 		if v.metadataStore != nil {
@@ -158,6 +175,11 @@ func (v *View) runSelectedSQLiteQuery(sqlText string) {
 		}
 	}
 	if err != nil {
+		if isSQLiteQueryCanceled(err) {
+			v.dataProfileStatus.SetText("SQLite query cancelled for " + selected)
+			v.addActivity("Cancelled read-only SQLite query for " + selected + ".")
+			return
+		}
 		v.dataProfileStatus.SetText("SQLite query failed for " + selected)
 		dialog.ShowError(err, v.window)
 		return
@@ -169,6 +191,51 @@ func (v *View) runSelectedSQLiteQuery(sqlText string) {
 	v.dataLastChart = datasetsSvc.ChartResult{}
 	v.dataLastDashboard = datasetsSvc.DashboardResult{}
 	v.addActivity("Ran read-only SQLite query for " + result.RelPath + ".")
+}
+
+func (v *View) startSQLiteQuery(cancel context.CancelFunc) string {
+	id := fmt.Sprintf("sqlite-%d", time.Now().UTC().UnixNano())
+	v.dataSQLiteQueryMu.Lock()
+	previousCancel := v.dataSQLiteCancel
+	v.dataSQLiteCancel = cancel
+	v.dataSQLiteQueryID = id
+	v.dataSQLiteQueryMu.Unlock()
+	if previousCancel != nil {
+		previousCancel()
+	}
+	return id
+}
+
+func (v *View) clearSQLiteQuery(id string) {
+	v.dataSQLiteQueryMu.Lock()
+	defer v.dataSQLiteQueryMu.Unlock()
+	if v.dataSQLiteQueryID != id {
+		return
+	}
+	v.dataSQLiteCancel = nil
+	v.dataSQLiteQueryID = ""
+}
+
+func (v *View) cancelActiveSQLiteQuery() {
+	v.dataSQLiteQueryMu.Lock()
+	cancel := v.dataSQLiteCancel
+	queryID := v.dataSQLiteQueryID
+	v.dataSQLiteQueryMu.Unlock()
+	if cancel == nil {
+		v.dataProfileStatus.SetText("No SQLite connector query is currently running.")
+		return
+	}
+	cancel()
+	v.dataProfileStatus.SetText("SQLite query cancellation requested.")
+	v.addActivity("SQLite query cancel requested: " + queryID + ".")
+}
+
+func isSQLiteQueryCanceled(err error) bool {
+	if err == nil {
+		return false
+	}
+	message := strings.ToLower(err.Error())
+	return strings.Contains(message, "canceled") || strings.Contains(message, "cancelled")
 }
 
 func (v *View) inspectSelectedSQLite() {

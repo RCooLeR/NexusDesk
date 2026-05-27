@@ -1,6 +1,8 @@
 package shell
 
 import (
+	"sync"
+
 	"fyne.io/fyne/v2"
 	"fyne.io/fyne/v2/container"
 	"fyne.io/fyne/v2/widget"
@@ -63,6 +65,9 @@ type View struct {
 	dataLastChart           datasetsSvc.ChartResult
 	dataLastDashboard       datasetsSvc.DashboardResult
 	dataLastNotebookRun     datasetsSvc.NotebookRunResult
+	dataSQLiteQueryMu       sync.Mutex
+	dataSQLiteCancel        func()
+	dataSQLiteQueryID       string
 	operationsResults       *fyne.Container
 	operationsStatus        *widget.Label
 	operationsDetail        *widget.Entry

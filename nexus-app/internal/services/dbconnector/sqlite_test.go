@@ -1,9 +1,11 @@
 package dbconnector
 
 import (
+	"context"
 	"database/sql"
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 
 	_ "modernc.org/sqlite"
@@ -85,6 +87,26 @@ func TestQueryWorkspaceSQLiteRejectsMutationsAndMultiStatement(t *testing.T) {
 		if _, err := service.QueryWorkspaceSQLite(root, SQLiteQueryRequest{RelPath: filepath.Join("data", "store.sqlite"), SQL: sqlText}); err == nil {
 			t.Fatalf("expected query to be rejected: %s", sqlText)
 		}
+	}
+}
+
+func TestQueryWorkspaceSQLiteContextHonorsCanceledContext(t *testing.T) {
+	root := t.TempDir()
+	dbPath := filepath.Join(root, "data", "store.sqlite")
+	if err := makeSQLiteFixture(dbPath); err != nil {
+		t.Fatal(err)
+	}
+	ctx, cancel := context.WithCancel(context.Background())
+	cancel()
+	_, err := New().QueryWorkspaceSQLiteContext(ctx, root, SQLiteQueryRequest{
+		RelPath: filepath.Join("data", "store.sqlite"),
+		SQL:     "select id from orders",
+	})
+	if err == nil {
+		t.Fatal("expected canceled context to stop the SQLite query")
+	}
+	if !strings.Contains(strings.ToLower(err.Error()), "canceled") {
+		t.Fatalf("expected cancellation error, got %v", err)
 	}
 }
 

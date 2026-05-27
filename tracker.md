@@ -292,7 +292,7 @@ Exit criteria:
 1. Continue native SQL notebooks with richer explain output and fuller cell management.
 2. Route long indexing, OCR, dump imports, connector pulls, report generation, and long agent runs through jobs.
 3. Add dump import job design before any Docker/database imports.
-4. Add SQLite connector cancellation and richer lineage actions on top of saved queries and CSV/Markdown exports.
+4. Add richer SQLite connector lineage actions on top of cancellation, saved queries, and CSV/Markdown exports.
 5. Continue native UI parity by replacing remaining cramped Wails-era workflow strips with structured native tabs, dialogs, and split panes.
 
 ## Preserved Post-Port Backlog
@@ -329,7 +329,8 @@ The Fyne migration must not drop product ambition, but this section is intention
 - [x] First SQLite workspace database browser with schema, views, indexes, row counts, capped samples, and relationship hints.
 - [x] First SQLite connector query preview with SELECT/WITH guard, single-statement validation, visible default row cap/timeout, SQL run metadata, dependency lineage, and read-only result rendering.
 - [x] SQLite connector saved queries plus CSV/Markdown result exports.
-- [ ] SQLite connector query cancellation and richer lineage actions.
+- [x] SQLite connector query cancellation from the native Data panel using context-aware read-only query execution.
+- [ ] Richer SQLite connector lineage actions for opening sources, viewing dependent artifacts, and rebuilding stale outputs.
 - [ ] External database profiles for PostgreSQL, MySQL/MariaDB, SQL Server, DuckDB files, and future engines with protected credentials.
 - [ ] Read-only SQL guard with strong comment/string handling, mutation blocking, caps, timeouts, cancellation, and redacted errors.
 - [ ] Database dump import jobs using temporary isolated environments before any direct mutation workflows exist.
