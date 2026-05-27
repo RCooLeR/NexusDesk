@@ -88,6 +88,16 @@ func TestSaveAndListTaskRuns(t *testing.T) {
 	if len(runs) != 1 || runs[0].TaskID != "go-test-root" || runs[0].Stdout != "ok\n" || runs[0].ArtifactPath == "" {
 		t.Fatalf("unexpected task runs: %#v", runs)
 	}
+	latest, ok, err := store.LatestTaskRunForJob("job-0001")
+	if err != nil {
+		t.Fatalf("LatestTaskRunForJob returned error: %v", err)
+	}
+	if !ok || latest.TaskID != "go-test-root" || latest.ArtifactPath == "" {
+		t.Fatalf("unexpected latest task run: %#v ok=%v", latest, ok)
+	}
+	if _, ok, err := store.LatestTaskRunForJob("missing"); err != nil || ok {
+		t.Fatalf("expected missing latest task run, ok=%v err=%v", ok, err)
+	}
 }
 
 func TestSaveListAndDeleteArtifacts(t *testing.T) {

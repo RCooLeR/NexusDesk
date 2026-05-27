@@ -1,6 +1,7 @@
 package metadata
 
 import (
+	"database/sql"
 	"encoding/json"
 
 	jobssvc "nexusdesk/internal/services/jobs"
@@ -163,4 +164,48 @@ func (s *Store) ListTaskRuns(limit int) ([]TaskRunRecord, error) {
 		records = append(records, record)
 	}
 	return records, rows.Err()
+}
+
+func (s *Store) LatestTaskRunForJob(jobID string) (TaskRunRecord, bool, error) {
+	db, err := s.open()
+	if err != nil {
+		return TaskRunRecord{}, false, err
+	}
+	defer db.Close()
+	row := db.QueryRow(
+		`SELECT id, job_id, task_id, kind, label, command, cwd, source, status, exit_code, stdout, stderr, message, artifact_path, started_at, completed_at, duration_ms
+		 FROM task_runs WHERE workspace_root = ? AND job_id = ? ORDER BY started_at DESC, id DESC LIMIT 1`,
+		s.root,
+		jobID,
+	)
+	var record TaskRunRecord
+	var started string
+	var completed string
+	if err := row.Scan(
+		&record.ID,
+		&record.JobID,
+		&record.TaskID,
+		&record.Kind,
+		&record.Label,
+		&record.Command,
+		&record.Cwd,
+		&record.Source,
+		&record.Status,
+		&record.ExitCode,
+		&record.Stdout,
+		&record.Stderr,
+		&record.Message,
+		&record.ArtifactPath,
+		&started,
+		&completed,
+		&record.DurationMs,
+	); err != nil {
+		if err == sql.ErrNoRows {
+			return TaskRunRecord{}, false, nil
+		}
+		return TaskRunRecord{}, false, err
+	}
+	record.StartedAt = parseTime(started)
+	record.CompletedAt = parseTime(completed)
+	return record, true, nil
 }

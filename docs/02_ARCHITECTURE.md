@@ -192,7 +192,7 @@ Near-term architecture corrections:
 - Add native UI affordances for file operations and rollback browsing while keeping the mutation policy in `nexus-app/internal/services/workspace`.
 - Keep editor tab/session and draft rules in `nexus-app/internal/services/editor` rather than in Fyne widget callbacks; Fyne editor chrome should only render and dispatch those state transitions.
 - Port remaining assistant/agent, data, artifact, and metadata services without recreating a bridge-shaped root package.
-- Extend the durable job model with retry/open-output actions before wiring slow indexing, OCR, dump imports, connector pulls, or long agent runs.
+- Route additional slow workflows through the durable job model now that task jobs support cancellation, retry from persisted task-run records, and opening task-report outputs.
 - Promote SQLite metadata repositories to primary persistence once migration/recovery tests exist.
 
 ### 3. Workspace Manager

@@ -55,6 +55,29 @@ func TestRunRejectsUnknownTask(t *testing.T) {
 	}
 }
 
+func TestFindReturnsDiscoveredTaskByID(t *testing.T) {
+	root := t.TempDir()
+	mustWrite(t, filepath.Join(root, "package.json"), `{"scripts":{"build":"vite build"}}`)
+	service := New()
+	summary, err := service.Discover(root)
+	if err != nil {
+		t.Fatalf("Discover() error = %v", err)
+	}
+	if len(summary.Tasks) != 1 {
+		t.Fatalf("expected one task, got %#v", summary.Tasks)
+	}
+	task, ok, err := service.Find(root, summary.Tasks[0].ID)
+	if err != nil {
+		t.Fatalf("Find() error = %v", err)
+	}
+	if !ok || task.ID != summary.Tasks[0].ID || task.Command != "npm run build" {
+		t.Fatalf("unexpected found task: %#v ok=%v", task, ok)
+	}
+	if _, ok, err := service.Find(root, "missing"); err != nil || ok {
+		t.Fatalf("expected missing task without error, ok=%v err=%v", ok, err)
+	}
+}
+
 func TestRunCapturesGoTestOutput(t *testing.T) {
 	if _, err := exec.LookPath("go"); err != nil {
 		t.Skip("go executable is not available")

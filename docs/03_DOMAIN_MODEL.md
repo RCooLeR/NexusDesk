@@ -522,6 +522,7 @@ Current implementation:
 - `InspectMetadataStore` returns table columns, row counts, sample rows, and dataset SQL view summaries for the workbench; the UI can select tables, filter columns, and copy row samples.
 - Metadata search returns chat, artifact, and tool-run snippets for the workbench history surface.
 - Dataset dependency and SQL run tables record saved SQL snippets, saved SQL notebooks, SQL artifacts, chart artifacts, summaries, and connector queries.
+- Task jobs are durable enough for the native monitor to cancel running work, retry a completed task from its latest persisted task-run record when that task is still discoverable, and open the generated task-report artifact or persisted stdout/stderr output.
 
 ### Workspace SQLite Connector
 

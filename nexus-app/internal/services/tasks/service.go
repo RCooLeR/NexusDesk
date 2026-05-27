@@ -23,6 +23,19 @@ func (s *Service) Discover(root string) (Summary, error) {
 	return discover(root)
 }
 
+func (s *Service) Find(root string, taskID string) (Task, bool, error) {
+	summary, err := discover(root)
+	if err != nil {
+		return Task{}, false, err
+	}
+	for _, task := range summary.Tasks {
+		if task.ID == taskID {
+			return task, true, nil
+		}
+	}
+	return Task{}, false, nil
+}
+
 func (s *Service) Run(root string, taskID string) (RunResult, error) {
 	return runDiscovered(context.Background(), root, taskID)
 }

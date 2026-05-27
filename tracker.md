@@ -257,7 +257,7 @@ Goal: make slow and durable workflows reliable.
 - [x] Import Wails-era JSON chat, approval, artifact sidecar, and tool-run metadata into native SQLite on workspace open.
 - [x] Migrate/import remaining Wails-era dataset SQL/dependency data from legacy SQLite metadata stores.
 - [ ] Route long indexing, OCR, dump imports, connector pulls, report generation, and long agent runs through jobs.
-- [ ] Add native job monitor with cancel/retry/open-output actions.
+- [x] Add native job monitor with cancel/retry/open-output actions.
 
 Exit criteria:
 
@@ -280,11 +280,11 @@ Exit criteria:
 
 ## Next Batch
 
-1. Add native job monitor retry/open-output actions on top of the persisted job model.
-2. Add Compose config validation as a read-only task/operations workflow.
-3. Add SQLite workspace connector browser on the native service/UI foundation.
-4. Expand native SQL notebooks into the full notebook shell with multiple editable cells, result tabs, run-history reuse, explain output, chart cells, and artifact export.
-5. Port AI diff summary and commit drafting through the native assistant service.
+1. Add Compose config validation as a read-only task/operations workflow.
+2. Add SQLite workspace connector browser on the native service/UI foundation.
+3. Expand native SQL notebooks into the full notebook shell with multiple editable cells, result tabs, run-history reuse, explain output, chart cells, and artifact export.
+4. Port AI diff summary and commit drafting through the native assistant service.
+5. Route long indexing, OCR, dump imports, connector pulls, report generation, and long agent runs through jobs.
 
 ## Preserved Post-Port Backlog
 
@@ -380,7 +380,7 @@ The Fyne migration must not drop product ambition, but this section is intention
 - [ ] SQLite-first metadata store for chats, approvals, artifacts, tool runs, jobs, SQL runs, dataset dependencies, and search metadata.
 - [x] JSON compatibility import from Wails-era workspaces for chat history, approvals, artifact sidecars, and tool-run logs.
 - [x] Legacy Wails SQLite dataset SQL run and dataset dependency import into native SQLite metadata.
-- [ ] Durable job model with progress, log tail, cancellation, retry, outputs, and artifact links.
+- [x] First durable job monitor with progress log tail, cancellation, retry from persisted task runs, and task-report output opening.
 - [ ] Folder open remains cheap: no Git, Docker, OCR, connector pulls, dump imports, model calls, shell commands, or deep indexing.
 - [ ] Diagnostics panel for app logs, provider status, GPU/model status, metadata health, and job history.
 
