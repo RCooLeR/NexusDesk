@@ -76,3 +76,20 @@ type ChatMessageRecord struct {
 	SourcePaths []string
 	CreatedAt   time.Time
 }
+
+type ArtifactRecord struct {
+	ID           string
+	Kind         string
+	Title        string
+	RelPath      string
+	MetadataPath string
+	Size         int64
+	JobID        string
+	TaskID       string
+	Source       string
+	SourcePaths  []string
+	Archived     bool
+	CreatedAt    time.Time
+	GeneratedAt  time.Time
+	UpdatedAt    time.Time
+}

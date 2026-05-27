@@ -35,8 +35,24 @@ func TestListMergesWorkspaceHistorySources(t *testing.T) {
 	if err := metadataStore.SaveAgentRun(run); err != nil {
 		t.Fatalf("SaveAgentRun returned error: %v", err)
 	}
-	if _, err := artifactStore.WriteTaskRunReport(artifactsSvc.TaskRunReport{ID: "report", Label: "Task report", Command: "go test", Cwd: ".", Status: "success", StartedAt: base}); err != nil {
+	artifact, err := artifactStore.WriteTaskRunReport(artifactsSvc.TaskRunReport{ID: "report", Label: "Task report", Command: "go test", Cwd: ".", Status: "success", StartedAt: base})
+	if err != nil {
 		t.Fatalf("WriteTaskRunReport returned error: %v", err)
+	}
+	if err := metadataStore.SaveArtifact(metadataSvc.ArtifactRecord{
+		Kind:         artifact.Kind,
+		Title:        artifact.Title,
+		RelPath:      artifact.RelPath,
+		MetadataPath: artifact.MetadataPath,
+		Size:         artifact.Size,
+		JobID:        artifact.JobID,
+		TaskID:       artifact.TaskID,
+		Source:       artifact.Source,
+		SourcePaths:  artifact.SourcePaths,
+		CreatedAt:    artifact.CreatedAt,
+		GeneratedAt:  artifact.GeneratedAt,
+	}); err != nil {
+		t.Fatalf("SaveArtifact returned error: %v", err)
 	}
 
 	items, err := New(metadataStore, artifactStore).List(Options{Limit: 20})

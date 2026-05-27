@@ -19,7 +19,7 @@ func TestEnsureCreatesSQLiteStoreAndManifest(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Ensure returned error: %v", err)
 	}
-	if status.SchemaVersion != 4 || status.SchemaHash == "" {
+	if status.SchemaVersion != 5 || status.SchemaHash == "" {
 		t.Fatalf("unexpected status: %#v", status)
 	}
 	if _, err := os.Stat(status.Path); err != nil {
@@ -87,6 +87,60 @@ func TestSaveAndListTaskRuns(t *testing.T) {
 	}
 	if len(runs) != 1 || runs[0].TaskID != "go-test-root" || runs[0].Stdout != "ok\n" || runs[0].ArtifactPath == "" {
 		t.Fatalf("unexpected task runs: %#v", runs)
+	}
+}
+
+func TestSaveListAndDeleteArtifacts(t *testing.T) {
+	store := mustStore(t)
+	generated := time.Date(2026, 5, 27, 12, 0, 0, 0, time.UTC)
+	record := ArtifactRecord{
+		Kind:         "document-report",
+		Title:        "Project report",
+		RelPath:      ".nexusdesk/artifacts/document-sets/report.md",
+		MetadataPath: ".nexusdesk/artifacts/document-sets/report.md.json",
+		Size:         512,
+		Source:       "docs",
+		SourcePaths:  []string{"docs/a.md", "docs/b.md"},
+		GeneratedAt:  generated,
+		CreatedAt:    generated,
+	}
+	if err := store.SaveArtifact(record); err != nil {
+		t.Fatalf("SaveArtifact returned error: %v", err)
+	}
+	records, err := store.ListArtifacts("project", false, 10)
+	if err != nil {
+		t.Fatalf("ListArtifacts returned error: %v", err)
+	}
+	if len(records) != 1 || records[0].Title != "Project report" || len(records[0].SourcePaths) != 2 {
+		t.Fatalf("unexpected artifact records: %#v", records)
+	}
+	record.Archived = true
+	if err := store.SaveArtifact(record); err != nil {
+		t.Fatalf("SaveArtifact archive returned error: %v", err)
+	}
+	active, err := store.ListArtifacts("", false, 10)
+	if err != nil {
+		t.Fatalf("ListArtifacts active returned error: %v", err)
+	}
+	if len(active) != 0 {
+		t.Fatalf("archived artifact should be hidden by default: %#v", active)
+	}
+	all, err := store.ListArtifacts("", true, 10)
+	if err != nil {
+		t.Fatalf("ListArtifacts all returned error: %v", err)
+	}
+	if len(all) != 1 || !all[0].Archived {
+		t.Fatalf("expected archived artifact record: %#v", all)
+	}
+	if err := store.DeleteArtifact(record.RelPath); err != nil {
+		t.Fatalf("DeleteArtifact returned error: %v", err)
+	}
+	all, err = store.ListArtifacts("", true, 10)
+	if err != nil {
+		t.Fatalf("ListArtifacts after delete returned error: %v", err)
+	}
+	if len(all) != 0 {
+		t.Fatalf("expected artifact record deletion, got %#v", all)
 	}
 }
 

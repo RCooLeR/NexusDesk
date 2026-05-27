@@ -60,6 +60,27 @@ func TestDocumentExtractionArtifactInputMapsDocumentFields(t *testing.T) {
 	}
 }
 
+func TestArtifactMetadataRecordMapsArtifactFields(t *testing.T) {
+	generated := time.Date(2026, 5, 27, 12, 30, 0, 0, time.UTC)
+	record := artifactMetadataRecord(artifactsSvc.Artifact{
+		Kind:         "document-report",
+		Title:        "Report",
+		RelPath:      ".nexusdesk/artifacts/document-sets/report.md",
+		MetadataPath: ".nexusdesk/artifacts/document-sets/report.md.json",
+		Size:         42,
+		JobID:        "job-1",
+		TaskID:       "task-1",
+		Source:       "docs",
+		SourcePaths:  []string{"docs/a.md"},
+		Archived:     true,
+		CreatedAt:    generated,
+		GeneratedAt:  generated,
+	})
+	if record.Kind != "document-report" || record.RelPath == "" || !record.Archived || len(record.SourcePaths) != 1 {
+		t.Fatalf("unexpected metadata record: %#v", record)
+	}
+}
+
 func TestArtifactLineageTextIncludesNodesAndEdges(t *testing.T) {
 	text := artifactLineageText(artifactsSvc.Lineage{
 		Nodes: []artifactsSvc.LineageNode{{Kind: "artifact", Label: "report.md"}},

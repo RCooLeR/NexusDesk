@@ -242,6 +242,7 @@ Goal: make slow and durable workflows reliable.
 - [x] Add task-run Markdown artifacts linked from persisted task-run records.
 - [x] Add SQLite repository for native chat messages.
 - [ ] Add repositories for approvals, artifacts, SQL runs, and dataset dependencies.
+- [x] Add first native SQLite artifact repository rows and history integration for explicit artifact writes, refreshes, archive/restore, and delete.
 - [ ] Migrate/import relevant `.nexusdesk` data from Wails-era workspaces.
 - [ ] Route long indexing, OCR, dump imports, connector pulls, report generation, and long agent runs through jobs.
 - [ ] Add native job monitor with cancel/retry/open-output actions.
@@ -267,11 +268,11 @@ Exit criteria:
 
 ## Next Batch
 
-1. Add first native persisted artifact repository rows so artifacts are visible in SQLite metadata history, not only filesystem scans.
-2. Add stronger artifact source fingerprints so freshness can detect same-timestamp content changes.
-3. Add read-only operations scanners for Dockerfiles, Compose, env/config, and logs.
-4. Add XLSX document/table extraction after the native data query boundary is in place.
-5. Add chart preview/artifact generation for bounded native dataset query results.
+1. Add stronger artifact source fingerprints so freshness can detect same-timestamp content changes.
+2. Add read-only operations scanners for Dockerfiles, Compose, env/config, and logs.
+3. Add XLSX document/table extraction after the native data query boundary is in place.
+4. Add chart preview/artifact generation for bounded native dataset query results.
+5. Add first native SQL run and dataset-dependency metadata repositories.
 
 ## Preserved Post-Port Backlog
 

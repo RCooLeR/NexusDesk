@@ -47,8 +47,21 @@ func (s *Service) List(options Options) ([]Item, error) {
 			}
 			items = append(items, agentItems...)
 		}
+		if wants(options.Kind, KindArtifact) {
+			artifactItems, err := s.metadataArtifactItems(options.Query, limit)
+			if err != nil {
+				return nil, err
+			}
+			if len(artifactItems) == 0 && s.artifacts != nil {
+				artifactItems, err = s.artifactItems(options.Query)
+				if err != nil {
+					return nil, err
+				}
+			}
+			items = append(items, artifactItems...)
+		}
 	}
-	if s.artifacts != nil && wants(options.Kind, KindArtifact) {
+	if s.artifacts != nil && s.metadata == nil && wants(options.Kind, KindArtifact) {
 		artifactItems, err := s.artifactItems(options.Query)
 		if err != nil {
 			return nil, err
@@ -63,6 +76,18 @@ func (s *Service) List(options Options) ([]Item, error) {
 	})
 	if len(items) > limit {
 		items = items[:limit]
+	}
+	return items, nil
+}
+
+func (s *Service) metadataArtifactItems(query string, limit int) ([]Item, error) {
+	records, err := s.metadata.ListArtifacts(query, true, limit)
+	if err != nil {
+		return nil, err
+	}
+	items := make([]Item, 0, len(records))
+	for _, record := range records {
+		items = append(items, artifactItem(artifactFromRecord(record)))
 	}
 	return items, nil
 }
@@ -136,17 +161,38 @@ func (s *Service) artifactItems(query string) ([]Item, error) {
 	}
 	items := make([]Item, 0, len(artifacts))
 	for _, artifact := range artifacts {
-		items = append(items, Item{
-			Kind:        KindArtifact,
-			Ref:         artifact.RelPath,
-			Title:       firstNonEmpty(artifact.Title, artifact.RelPath),
-			Summary:     artifactSummary(artifact),
-			Detail:      artifactDetail(artifact),
-			When:        firstTime(artifact.GeneratedAt, artifact.CreatedAt),
-			SourcePaths: append([]string{}, artifact.SourcePaths...),
-		})
+		items = append(items, artifactItem(artifact))
 	}
 	return items, nil
+}
+
+func artifactItem(artifact artifactsSvc.Artifact) Item {
+	return Item{
+		Kind:        KindArtifact,
+		Ref:         artifact.RelPath,
+		Title:       firstNonEmpty(artifact.Title, artifact.RelPath),
+		Summary:     artifactSummary(artifact),
+		Detail:      artifactDetail(artifact),
+		When:        firstTime(artifact.GeneratedAt, artifact.CreatedAt),
+		SourcePaths: append([]string{}, artifact.SourcePaths...),
+	}
+}
+
+func artifactFromRecord(record metadataSvc.ArtifactRecord) artifactsSvc.Artifact {
+	return artifactsSvc.Artifact{
+		Kind:         record.Kind,
+		Title:        record.Title,
+		RelPath:      record.RelPath,
+		MetadataPath: record.MetadataPath,
+		Size:         record.Size,
+		JobID:        record.JobID,
+		TaskID:       record.TaskID,
+		Source:       record.Source,
+		SourcePaths:  append([]string{}, record.SourcePaths...),
+		Archived:     record.Archived,
+		CreatedAt:    record.CreatedAt,
+		GeneratedAt:  record.GeneratedAt,
+	}
 }
 
 func jobItem(job jobsSvc.Job) Item {

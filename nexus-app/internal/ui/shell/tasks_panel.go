@@ -102,6 +102,7 @@ func (v *View) persistTaskRun(jobID string, result tasksSvc.RunResult) {
 	record := v.metadataStore.NormalizeTaskRunRecord(taskRunRecord(jobID, result))
 	if artifact, err := writeTaskRunArtifact(v.state.Workspace().Root, record); err == nil {
 		record.ArtifactPath = artifact.RelPath
+		v.persistArtifactRecord(artifact)
 		v.addActivity(artifact.Message)
 	} else {
 		v.addActivity("Could not write task report artifact: " + err.Error())

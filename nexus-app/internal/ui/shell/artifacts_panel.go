@@ -13,6 +13,7 @@ import (
 
 	artifactsSvc "nexusdesk/internal/services/artifacts"
 	documentsSvc "nexusdesk/internal/services/documents"
+	metadataSvc "nexusdesk/internal/services/metadata"
 	workspaceSvc "nexusdesk/internal/services/workspace"
 )
 
@@ -88,6 +89,7 @@ func (v *View) generateDocumentSetArtifact() {
 	v.refreshArtifactSources(nil)
 	v.artifactStatus.SetText("Created " + artifact.RelPath)
 	v.addActivity(artifact.Message)
+	v.persistArtifactRecord(artifact)
 	v.refreshArtifactsWithQuery("kind:document-report")
 }
 
@@ -122,6 +124,7 @@ func (v *View) generateDocumentExtractionArtifact() {
 	v.refreshArtifactSources(nil)
 	v.artifactStatus.SetText("Created " + artifact.RelPath)
 	v.addActivity(artifact.Message)
+	v.persistArtifactRecord(artifact)
 	v.refreshArtifactsWithQuery("kind:document-extract")
 }
 
@@ -153,6 +156,7 @@ func (v *View) refreshArtifactsWithQuery(query string) {
 	v.artifactStatus.SetText(status)
 	v.artifactResults.Objects = artifactRows(artifacts, v.previewArtifact, v.pinArtifactForAssistantContext, v.compareArtifact, v.archiveArtifact, v.restoreArtifact, v.deleteArtifact)
 	v.artifactResults.Refresh()
+	v.persistArtifactRecords(artifacts)
 	v.addActivity(fmt.Sprintf("Loaded %d artifact(s).", len(artifacts)))
 }
 
@@ -255,6 +259,7 @@ func (v *View) exportArtifactComparison() {
 	}
 	v.artifactStatus.SetText("Exported " + artifact.RelPath)
 	v.addActivity(artifact.Message)
+	v.persistArtifactRecord(artifact)
 	v.refreshArtifactsWithQuery("kind:artifact-comparison")
 }
 
@@ -281,6 +286,8 @@ func (v *View) archiveArtifact(artifact artifactsSvc.Artifact) {
 		}
 		v.artifactPreview.SetText("")
 		v.refreshArtifactSources(nil)
+		v.deleteArtifactRecord(artifact.RelPath)
+		v.persistArtifactRecord(archived)
 		v.addActivity("Archived artifact to " + archived.RelPath + ".")
 		v.refreshArtifacts()
 	}, v.window)
@@ -303,6 +310,8 @@ func (v *View) restoreArtifact(artifact artifactsSvc.Artifact) {
 		}
 		v.artifactPreview.SetText("")
 		v.refreshArtifactSources(nil)
+		v.deleteArtifactRecord(artifact.RelPath)
+		v.persistArtifactRecord(restored)
 		v.addActivity("Restored artifact to " + restored.RelPath + ".")
 		v.refreshArtifactsWithQuery(restored.RelPath)
 	}, v.window)
@@ -324,9 +333,34 @@ func (v *View) deleteArtifact(artifact artifactsSvc.Artifact) {
 		}
 		v.artifactPreview.SetText("")
 		v.refreshArtifactSources(nil)
+		v.deleteArtifactRecord(artifact.RelPath)
 		v.addActivity("Deleted artifact " + artifact.RelPath + ".")
 		v.refreshArtifacts()
 	}, v.window)
+}
+
+func (v *View) persistArtifactRecords(artifacts []artifactsSvc.Artifact) {
+	for _, artifact := range artifacts {
+		v.persistArtifactRecord(artifact)
+	}
+}
+
+func (v *View) persistArtifactRecord(artifact artifactsSvc.Artifact) {
+	if v.metadataStore == nil || artifact.RelPath == "" {
+		return
+	}
+	if err := v.metadataStore.SaveArtifact(artifactMetadataRecord(artifact)); err != nil {
+		v.addActivity("Could not persist artifact metadata: " + err.Error())
+	}
+}
+
+func (v *View) deleteArtifactRecord(relPath string) {
+	if v.metadataStore == nil || strings.TrimSpace(relPath) == "" {
+		return
+	}
+	if err := v.metadataStore.DeleteArtifact(relPath); err != nil {
+		v.addActivity("Could not delete artifact metadata: " + err.Error())
+	}
 }
 
 func (v *View) refreshArtifactSources(sources []artifactsSvc.SourceFreshnessStatus) {
@@ -461,6 +495,23 @@ func documentExtractionArtifactInput(document documentsSvc.ExtractedDocument) ar
 		Words:     document.Words,
 		Pages:     document.Pages,
 		Truncated: document.Truncated,
+	}
+}
+
+func artifactMetadataRecord(artifact artifactsSvc.Artifact) metadataSvc.ArtifactRecord {
+	return metadataSvc.ArtifactRecord{
+		Kind:         artifact.Kind,
+		Title:        artifact.Title,
+		RelPath:      artifact.RelPath,
+		MetadataPath: artifact.MetadataPath,
+		Size:         artifact.Size,
+		JobID:        artifact.JobID,
+		TaskID:       artifact.TaskID,
+		Source:       artifact.Source,
+		SourcePaths:  append([]string{}, artifact.SourcePaths...),
+		Archived:     artifact.Archived,
+		CreatedAt:    artifact.CreatedAt,
+		GeneratedAt:  artifact.GeneratedAt,
 	}
 }
 
