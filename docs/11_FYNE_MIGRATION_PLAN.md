@@ -111,6 +111,7 @@ The first `nexus-app` slice includes:
 - first native task discovery and safe task-run service for npm scripts, Go tests, and Docker Compose config checks;
 - first native bottom Tasks tab for discovery, confirmed task runs, and read-only last-run stdout/stderr;
 - first native in-memory Jobs service and Jobs tab for task-run status, log tail, and cancellation requests;
+- first native SQLite metadata store under `.nexusdesk/metadata` with schema/manifest creation, persisted jobs, and persisted task-run records;
 - framework-free workspace domain model.
 
 Full execution is blocked in the current shell until CGO is enabled with a Windows C compiler on `PATH`. The current workstation can run focused native package tests, but `CGO_ENABLED=1 go build .` fails because `gcc` is not found, and `CGO_ENABLED=0 go build .` fails because Fyne's OpenGL binding requires CGO-backed files.

@@ -11,6 +11,7 @@ import (
 	"fyne.io/fyne/v2/widget"
 
 	jobsSvc "nexusdesk/internal/services/jobs"
+	metadataSvc "nexusdesk/internal/services/metadata"
 	tasksSvc "nexusdesk/internal/services/tasks"
 )
 
@@ -85,11 +86,42 @@ func (v *View) finishTaskJob(jobID string, result tasksSvc.RunResult, err error)
 	}
 	v.jobService.AppendLog(jobID, taskRunLogLine(result))
 	v.jobService.Finish(jobID, jobStatusFromTask(result), result.Message, nil)
+	v.persistTaskRun(jobID, result)
 	v.taskStatus.SetText(result.Message)
 	v.taskOutput.SetText(formatTaskRun(result))
 	v.addActivity(result.Message)
 	v.refreshTaskRows()
 	v.refreshJobs()
+}
+
+func (v *View) persistTaskRun(jobID string, result tasksSvc.RunResult) {
+	if v.metadataStore == nil {
+		return
+	}
+	record := taskRunRecord(jobID, result)
+	if err := v.metadataStore.SaveTaskRun(record); err != nil {
+		v.addActivity("Could not persist task run: " + err.Error())
+	}
+}
+
+func taskRunRecord(jobID string, result tasksSvc.RunResult) metadataSvc.TaskRunRecord {
+	return metadataSvc.TaskRunRecord{
+		JobID:       jobID,
+		TaskID:      result.Task.ID,
+		Kind:        result.Task.Kind,
+		Label:       result.Task.Label,
+		Command:     result.Task.Command,
+		Cwd:         result.Task.Cwd,
+		Source:      result.Task.Source,
+		Status:      result.Status,
+		ExitCode:    result.ExitCode,
+		Stdout:      result.Stdout,
+		Stderr:      result.Stderr,
+		Message:     result.Message,
+		StartedAt:   result.StartedAt,
+		CompletedAt: result.CompletedAt,
+		DurationMs:  result.Duration.Milliseconds(),
+	}
 }
 
 func (v *View) refreshTaskRows() {

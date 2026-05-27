@@ -53,3 +53,44 @@ func TestServiceCapsLogTail(t *testing.T) {
 		t.Fatalf("expected capped log tail, got %d", len(got.LogTail))
 	}
 }
+
+func TestServicePersistsJobsWhenRepositoryAttached(t *testing.T) {
+	repo := &fakeJobRepository{}
+	service := NewWithRepository(repo)
+	job, _ := service.Start("task", "go test")
+	service.AppendLog(job.ID, "line")
+	service.Finish(job.ID, StatusSuccess, "done", nil)
+
+	if len(repo.saved) != 3 {
+		t.Fatalf("expected start/log/finish saves, got %d", len(repo.saved))
+	}
+	if repo.saved[len(repo.saved)-1].Status != StatusSuccess {
+		t.Fatalf("expected final persisted status, got %#v", repo.saved[len(repo.saved)-1])
+	}
+}
+
+func TestServiceLoadsPersistedJobsAndContinuesIDs(t *testing.T) {
+	repo := &fakeJobRepository{listed: []Job{{ID: "job-0007", Kind: "task", Label: "old", Status: StatusSuccess}}}
+	service := NewWithRepository(repo)
+	job, _ := service.Start("task", "new")
+	if job.ID != "job-0008" {
+		t.Fatalf("expected next persisted id, got %q", job.ID)
+	}
+	if jobs := service.List(); len(jobs) != 2 {
+		t.Fatalf("expected loaded and new jobs, got %#v", jobs)
+	}
+}
+
+type fakeJobRepository struct {
+	listed []Job
+	saved  []Job
+}
+
+func (r *fakeJobRepository) SaveJob(job Job) error {
+	r.saved = append(r.saved, job)
+	return nil
+}
+
+func (r *fakeJobRepository) ListJobs() ([]Job, error) {
+	return append([]Job{}, r.listed...), nil
+}

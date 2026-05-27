@@ -135,7 +135,7 @@ Workspace problem scanning follows the same split: `nexus-app/internal/services/
 
 Git integration is also service-led: `nexus-app/internal/services/git` owns manual repository status discovery, porcelain parsing, staged/unstaged grouping, read-only selected-file diff loading, diff hunk parsing, file-level stage/unstage actions, index-only hunk stage/unstage patches, path validation, output caps, and Windows hidden-process execution. The Fyne shell owns only the bottom Git refresh button, status rendering, directory grouping for changed files, hunk navigation state, confirmed stage/unstage intents, and read-only unified/split/diff-only diff rendering.
 
-Task execution follows the same boundary: `nexus-app/internal/services/tasks` owns bounded workspace task discovery, noisy-directory skips, task ID generation, rediscovery before execution, command allow-listing for npm scripts, Go tests, and Docker Compose config checks, rooted working-directory validation, timeouts, capped output, and hidden Windows child-process execution. `nexus-app/internal/services/jobs` owns the first in-memory job IDs, status, log tail, completion state, and cancellation contexts. The Fyne shell owns only the bottom Tasks tab, Jobs tab, task discovery button, confirmation prompt, cancel intent, and read-only last-run output surface. UI and future agent code must request discovered task IDs rather than sending arbitrary shell commands into this service.
+Task execution follows the same boundary: `nexus-app/internal/services/tasks` owns bounded workspace task discovery, noisy-directory skips, task ID generation, rediscovery before execution, command allow-listing for npm scripts, Go tests, and Docker Compose config checks, rooted working-directory validation, timeouts, capped output, and hidden Windows child-process execution. `nexus-app/internal/services/jobs` owns job IDs, status, log tail, completion state, cancellation contexts, and an optional repository hook. `nexus-app/internal/services/metadata` now provides the first SQLite repository for persisted jobs and task-run records under `.nexusdesk/metadata`. The Fyne shell owns only the bottom Tasks tab, Jobs tab, task discovery button, confirmation prompt, cancel intent, and read-only last-run output surface. UI and future agent code must request discovered task IDs rather than sending arbitrary shell commands into this service.
 
 Rollback browsing follows the same boundary: `nexus-app/internal/services/workspace` owns rollback records and apply semantics, while the Fyne shell owns only record listing, confirmation, and workspace refresh after apply.
 
@@ -186,7 +186,7 @@ Near-term architecture corrections:
 - Add native UI affordances for file operations and rollback browsing while keeping the mutation policy in `nexus-app/internal/services/workspace`.
 - Keep editor tab/session and draft rules in `nexus-app/internal/services/editor` rather than in Fyne widget callbacks; Fyne editor chrome should only render and dispatch those state transitions.
 - Port remaining assistant/agent, data, artifact, and metadata services without recreating a bridge-shaped root package.
-- Add a durable job model before wiring slow indexing, OCR, dump imports, connector pulls, or long agent runs.
+- Extend the durable job model with retry/open-output actions before wiring slow indexing, OCR, dump imports, connector pulls, or long agent runs.
 - Promote SQLite metadata repositories to primary persistence once migration/recovery tests exist.
 
 ### 3. Workspace Manager

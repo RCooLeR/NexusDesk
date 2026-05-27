@@ -7,6 +7,7 @@ import (
 	"fyne.io/fyne/v2/dialog"
 
 	"nexusdesk/internal/domain"
+	metadataSvc "nexusdesk/internal/services/metadata"
 )
 
 func (v *View) openWorkspaceDialog() {
@@ -38,6 +39,18 @@ func (v *View) openWorkspace(root string) {
 		return
 	}
 	v.state.SetWorkspace(workspace)
+	if store, err := metadataSvc.NewStore(workspace.Root); err == nil {
+		if status, err := store.Ensure(); err == nil {
+			v.metadataStore = store
+			v.jobService.SetRepository(store, true)
+			v.addActivity(status.Message)
+			v.refreshJobs()
+		} else {
+			v.addActivity("Metadata store unavailable: " + err.Error())
+		}
+	} else {
+		v.addActivity("Metadata store unavailable: " + err.Error())
+	}
 	v.navigator.Objects = []fyne.CanvasObject{v.newWorkspaceNavigator()}
 	v.navigator.Refresh()
 	v.status.SetText(fmt.Sprintf("%s: %d indexed, %d ignored, %d unreadable", workspace.Name, workspace.Summary.Included, workspace.Summary.Ignored, workspace.Summary.Unreadable))

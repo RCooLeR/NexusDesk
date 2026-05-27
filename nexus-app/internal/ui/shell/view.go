@@ -10,6 +10,7 @@ import (
 	gitSvc "nexusdesk/internal/services/git"
 	jobsSvc "nexusdesk/internal/services/jobs"
 	llmSvc "nexusdesk/internal/services/llm"
+	metadataSvc "nexusdesk/internal/services/metadata"
 	settingsSvc "nexusdesk/internal/services/settings"
 	tasksSvc "nexusdesk/internal/services/tasks"
 	workspaceSvc "nexusdesk/internal/services/workspace"
@@ -22,6 +23,7 @@ type View struct {
 	gitService       *gitSvc.Service
 	jobService       *jobsSvc.Service
 	assistantService *assistantSvc.Service
+	metadataStore    *metadataSvc.Store
 	settingsStore    *settingsSvc.Store
 	taskService      *tasksSvc.Service
 	editorSession    *editorSvc.Session

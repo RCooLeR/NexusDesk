@@ -14,10 +14,37 @@ type Service struct {
 	nextID  int
 	jobs    []Job
 	cancels map[string]context.CancelFunc
+	repo    Repository
+}
+
+type Repository interface {
+	SaveJob(Job) error
+	ListJobs() ([]Job, error)
 }
 
 func New() *Service {
 	return &Service{cancels: map[string]context.CancelFunc{}}
+}
+
+func NewWithRepository(repo Repository) *Service {
+	service := New()
+	service.SetRepository(repo, true)
+	return service
+}
+
+func (s *Service) SetRepository(repo Repository, load bool) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	s.repo = repo
+	if !load || repo == nil {
+		return
+	}
+	jobs, err := repo.ListJobs()
+	if err != nil {
+		return
+	}
+	s.jobs = jobs
+	s.nextID = nextIDFromJobs(jobs)
 }
 
 func (s *Service) Start(kind string, label string) (Job, context.Context) {
@@ -35,6 +62,7 @@ func (s *Service) Start(kind string, label string) (Job, context.Context) {
 	}
 	s.jobs = append([]Job{job}, s.jobs...)
 	s.cancels[job.ID] = cancel
+	s.persistLocked(job)
 	return job, ctx
 }
 
@@ -49,6 +77,7 @@ func (s *Service) AppendLog(id string, line string) {
 	if len(s.jobs[index].LogTail) > maxLogLines {
 		s.jobs[index].LogTail = s.jobs[index].LogTail[len(s.jobs[index].LogTail)-maxLogLines:]
 	}
+	s.persistLocked(s.jobs[index])
 }
 
 func (s *Service) Finish(id string, status Status, message string, err error) {
@@ -69,6 +98,7 @@ func (s *Service) Finish(id string, status Status, message string, err error) {
 	}
 	s.jobs[index].CompletedAt = time.Now().UTC()
 	delete(s.cancels, id)
+	s.persistLocked(s.jobs[index])
 }
 
 func (s *Service) Cancel(id string) bool {
@@ -86,6 +116,7 @@ func (s *Service) Cancel(id string) bool {
 	s.jobs[index].Message = "Cancel requested."
 	s.jobs[index].CompletedAt = time.Now().UTC()
 	delete(s.cancels, id)
+	s.persistLocked(s.jobs[index])
 	return true
 }
 
@@ -119,4 +150,22 @@ func (s *Service) indexOf(id string) int {
 		}
 	}
 	return -1
+}
+
+func (s *Service) persistLocked(job Job) {
+	if s.repo == nil {
+		return
+	}
+	_ = s.repo.SaveJob(job)
+}
+
+func nextIDFromJobs(jobs []Job) int {
+	maxID := 0
+	for _, job := range jobs {
+		var number int
+		if _, err := fmt.Sscanf(job.ID, "job-%04d", &number); err == nil && number > maxID {
+			maxID = number
+		}
+	}
+	return maxID
 }

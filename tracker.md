@@ -59,7 +59,7 @@ Some tracker items are intentionally out of phase order because they depend on m
 - Phase 2 agent items are still pending because approvals and deterministic tool dispatch are not ported into the native assistant runtime yet.
 - Phase 3 AI diff summary and commit drafting are pending until the native assistant service exists.
 - Destructive hunk mutations remain pending until native approval policy/UI is ready enough to protect working-tree discard/revert actions.
-- Durable persisted jobs and task-run artifacts are pending until the SQLite metadata store lands.
+- Durable persisted jobs and task-run records now have a SQLite foundation; artifact files for task reports remain pending.
 
 ## Migration Principles
 
@@ -205,7 +205,8 @@ Exit criteria:
 Goal: make slow and durable workflows reliable.
 
 - [x] Define first in-memory job model: id, kind, status, log tail, cancel, timestamps, and task output status.
-- [ ] Add SQLite primary metadata store in `nexus-app`.
+- [x] Add SQLite primary metadata store in `nexus-app`.
+- [x] Add durable SQLite repository for native jobs and task-run records.
 - [ ] Add repositories for chats, approvals, artifacts, tool runs, jobs, SQL runs, and dataset dependencies.
 - [ ] Migrate/import relevant `.nexusdesk` data from Wails-era workspaces.
 - [ ] Route long indexing, OCR, dump imports, connector pulls, report generation, and long agent runs through jobs.
@@ -233,7 +234,7 @@ Exit criteria:
 ## Next Batch
 
 1. Configure Windows CGO compiler and verify `nexus-app` runs.
-2. Add durable persisted jobs and task-run artifacts.
+2. Add task-run Markdown artifacts linked from persisted task-run records.
 3. Add richer navigator context menus once the first action strip is validated in Fyne.
 4. Add assistant context-pack UI affordances for pinning the workspace root, directories, and multiple files explicitly.
 5. Add native approval queue/full-access policy persistence before destructive Git hunk discard/revert or model-authored mutations.

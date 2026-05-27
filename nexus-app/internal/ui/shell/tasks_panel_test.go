@@ -62,3 +62,21 @@ func TestTaskRunLogLine(t *testing.T) {
 		t.Fatalf("unexpected task log line: %q", line)
 	}
 }
+
+func TestTaskRunRecordMapsResult(t *testing.T) {
+	started := time.Now().UTC()
+	result := tasksSvc.RunResult{
+		Task:        tasksSvc.Task{ID: "go-test-root", Kind: "go-test", Label: "go test ./...", Command: "go test ./...", Cwd: ".", Source: "go.mod"},
+		Status:      "success",
+		ExitCode:    0,
+		Stdout:      "ok\n",
+		Message:     "done",
+		StartedAt:   started,
+		CompletedAt: started.Add(time.Second),
+		Duration:    time.Second,
+	}
+	record := taskRunRecord("job-0001", result)
+	if record.JobID != "job-0001" || record.TaskID != "go-test-root" || record.DurationMs != 1000 {
+		t.Fatalf("unexpected task run record: %#v", record)
+	}
+}
