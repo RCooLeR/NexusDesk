@@ -181,6 +181,35 @@ func TestFormatDatasetHistoryFiltersSelectedRunsAndListsDependencies(t *testing.
 	}
 }
 
+func TestFormatDatasetNotebooksListsCells(t *testing.T) {
+	when := time.Date(2026, 5, 27, 12, 0, 0, 0, time.UTC)
+	output := formatDatasetNotebooks([]datasetsSvc.Notebook{{
+		ID:        "sales-20260527120000",
+		RelPath:   "data/sales.csv",
+		Label:     "Sales SQL",
+		UpdatedAt: when,
+		Cells: []datasetsSvc.NotebookCell{
+			{ID: "cell-1", Kind: "sql", Label: "Top spend", SQL: "select * from dataset order by spend desc"},
+			{ID: "chart-1", Kind: "chart", Label: "Spend chart"},
+		},
+	}})
+	for _, expected := range []string{"# Dataset SQL Notebooks", "Sales SQL", "2 cell(s)", "Top spend [sql]: select * from dataset", "Spend chart [chart]"} {
+		if !strings.Contains(output, expected) {
+			t.Fatalf("notebook output missing %q:\n%s", expected, output)
+		}
+	}
+}
+
+func TestFirstNotebookSQLUsesFirstSQLCell(t *testing.T) {
+	sqlText := firstNotebookSQL(datasetsSvc.Notebook{Cells: []datasetsSvc.NotebookCell{
+		{Kind: "chart", Label: "Chart"},
+		{Kind: "sql", SQL: " select * from dataset limit 5 "},
+	}})
+	if sqlText != "select * from dataset limit 5" {
+		t.Fatalf("unexpected notebook SQL: %q", sqlText)
+	}
+}
+
 func TestChartArtifactInputPreservesSourceAndSVG(t *testing.T) {
 	input := chartArtifactInput(datasetsSvc.ChartResult{
 		RelPath:        "sales.csv",

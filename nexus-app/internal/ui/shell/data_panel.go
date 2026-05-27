@@ -33,12 +33,81 @@ func (v *View) newDataPanel() fyne.CanvasObject {
 	dashboardButton := widget.NewButtonWithIcon("Preview dashboard", theme.ColorPaletteIcon(), v.previewDatasetDashboard)
 	exportDashboardButton := widget.NewButtonWithIcon("Export dashboard", theme.DocumentSaveIcon(), v.exportDatasetDashboardArtifact)
 	historyButton := widget.NewButtonWithIcon("SQL history", theme.HistoryIcon(), v.showDatasetSQLHistory)
-	actions := container.NewHBox(profileButton, queryButton, sqlButton, chartButton, exportChartButton, dashboardButton, exportDashboardButton, historyButton)
+	saveNotebookButton := widget.NewButtonWithIcon("Save notebook", theme.DocumentSaveIcon(), v.saveSelectedDatasetNotebook)
+	loadNotebookButton := widget.NewButtonWithIcon("Load notebook", theme.FolderOpenIcon(), v.loadSelectedDatasetNotebook)
+	actions := container.NewHBox(profileButton, queryButton, sqlButton, saveNotebookButton, loadNotebookButton, chartButton, exportChartButton, dashboardButton, exportDashboardButton, historyButton)
 	queryBar := container.NewBorder(nil, nil, nil, actions, v.dataQueryEntry)
 	header := container.NewVBox(v.dataProfileStatus, queryBar)
 	detail := container.NewScroll(v.dataProfileDetail)
 	detail.SetMinSize(fyne.NewSize(320, 130))
 	return container.NewBorder(header, nil, nil, nil, detail)
+}
+
+func (v *View) saveSelectedDatasetNotebook() {
+	workspace := v.state.Workspace()
+	if workspace.Root == "" {
+		v.dataProfileStatus.SetText("Open a workspace before saving SQL notebooks.")
+		return
+	}
+	selected := selectedPathOrEmpty(v)
+	if selected == "" {
+		v.dataProfileStatus.SetText("Select a dataset before saving a SQL notebook.")
+		return
+	}
+	sqlText := strings.TrimSpace(v.dataQueryEntry.Text)
+	if sqlText == "" {
+		v.dataProfileStatus.SetText("Write a SELECT query before saving a SQL notebook.")
+		return
+	}
+	saved, err := v.datasetService.SaveNotebook(workspace.Root, datasetsSvc.NotebookSaveRequest{
+		RelPath: selected,
+		Label:   notebookLabelForDataset(selected),
+		Cells: []datasetsSvc.NotebookCell{{
+			ID:    "cell-1",
+			Kind:  "sql",
+			Label: "Query",
+			SQL:   sqlText,
+		}},
+	})
+	if err != nil {
+		v.dataProfileStatus.SetText("Notebook save failed for " + selected)
+		dialog.ShowError(err, v.window)
+		return
+	}
+	v.persistDatasetDependency(notebookDependencyRecord(selected, saved))
+	v.dataProfileStatus.SetText(fmt.Sprintf("Saved SQL notebook %s with %d cell(s).", saved.Label, len(saved.Cells)))
+	v.dataProfileDetail.SetText(formatDatasetNotebooks([]datasetsSvc.Notebook{saved}))
+	v.addActivity("Saved SQL notebook for " + selected + ".")
+}
+
+func (v *View) loadSelectedDatasetNotebook() {
+	workspace := v.state.Workspace()
+	if workspace.Root == "" {
+		v.dataProfileStatus.SetText("Open a workspace before loading SQL notebooks.")
+		return
+	}
+	selected := selectedPathOrEmpty(v)
+	if selected == "" {
+		v.dataProfileStatus.SetText("Select a dataset before loading SQL notebooks.")
+		return
+	}
+	notebooks, err := v.datasetService.ListNotebooks(workspace.Root, selected)
+	if err != nil {
+		v.dataProfileStatus.SetText("Notebook load failed for " + selected)
+		dialog.ShowError(err, v.window)
+		return
+	}
+	if len(notebooks) == 0 {
+		v.dataProfileStatus.SetText("No saved SQL notebooks for " + selected + ".")
+		v.dataProfileDetail.SetText(formatDatasetNotebooks(nil))
+		return
+	}
+	if sqlText := firstNotebookSQL(notebooks[0]); sqlText != "" {
+		v.dataQueryEntry.SetText(sqlText)
+	}
+	v.dataProfileStatus.SetText(fmt.Sprintf("Loaded %d SQL notebook(s) for %s.", len(notebooks), selected))
+	v.dataProfileDetail.SetText(formatDatasetNotebooks(notebooks))
+	v.addActivity("Loaded SQL notebooks for " + selected + ".")
 }
 
 func (v *View) showDatasetSQLHistory() {
@@ -623,6 +692,31 @@ func formatDatasetHistory(selected string, runs []metadataSvc.SQLRunRecord, depe
 	return builder.String()
 }
 
+func formatDatasetNotebooks(notebooks []datasetsSvc.Notebook) string {
+	var builder strings.Builder
+	builder.WriteString("# Dataset SQL Notebooks\n\n")
+	if len(notebooks) == 0 {
+		builder.WriteString("No saved notebooks for the selected dataset.\n")
+		return builder.String()
+	}
+	for _, notebook := range notebooks {
+		builder.WriteString(fmt.Sprintf("- %s | %s | %d cell(s) | updated %s\n", notebook.Label, notebook.ID, len(notebook.Cells), formatDataTime(notebook.UpdatedAt)))
+		for _, cell := range notebook.Cells {
+			builder.WriteString("  - ")
+			builder.WriteString(firstNonEmptyString(cell.Label, cell.ID))
+			builder.WriteString(" [")
+			builder.WriteString(cell.Kind)
+			builder.WriteString("]")
+			if strings.TrimSpace(cell.SQL) != "" {
+				builder.WriteString(": ")
+				builder.WriteString(compactDataLine(cell.SQL, 180))
+			}
+			builder.WriteString("\n")
+		}
+	}
+	return builder.String()
+}
+
 func formatDataTime(value time.Time) string {
 	if value.IsZero() {
 		return "unknown time"
@@ -683,6 +777,38 @@ func datasetDependencyRecord(source string, sqlRun metadataSvc.SQLRunRecord) met
 		CreatedAt: sqlRun.StartedAt,
 		UpdatedAt: sqlRun.CompletedAt,
 	}
+}
+
+func notebookDependencyRecord(source string, notebook datasetsSvc.Notebook) metadataSvc.DatasetDependencyRecord {
+	return metadataSvc.DatasetDependencyRecord{
+		SourcePath:    source,
+		DependentKind: "sql-notebook",
+		DependentRef:  notebook.ID,
+		Relation:      "saves",
+		Metadata: map[string]string{
+			"label": notebook.Label,
+			"cells": fmt.Sprintf("%d", len(notebook.Cells)),
+		},
+		CreatedAt: notebook.CreatedAt,
+		UpdatedAt: notebook.UpdatedAt,
+	}
+}
+
+func firstNotebookSQL(notebook datasetsSvc.Notebook) string {
+	for _, cell := range notebook.Cells {
+		if cell.Kind == "sql" && strings.TrimSpace(cell.SQL) != "" {
+			return strings.TrimSpace(cell.SQL)
+		}
+	}
+	return ""
+}
+
+func notebookLabelForDataset(relPath string) string {
+	name := strings.TrimSpace(relPath)
+	if name == "" {
+		return "SQL Notebook"
+	}
+	return "SQL Notebook - " + name
 }
 
 func (v *View) persistDatasetDependency(record metadataSvc.DatasetDependencyRecord) {

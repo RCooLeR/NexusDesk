@@ -127,3 +127,28 @@ type SQLResult struct {
 	CompletedAt time.Time
 	DurationMs  int64
 }
+
+type NotebookCell struct {
+	ID        string
+	Kind      string
+	Label     string
+	SQL       string
+	CreatedAt time.Time
+	UpdatedAt time.Time
+}
+
+type Notebook struct {
+	ID        string
+	RelPath   string
+	Label     string
+	Cells     []NotebookCell
+	CreatedAt time.Time
+	UpdatedAt time.Time
+}
+
+type NotebookSaveRequest struct {
+	ID      string
+	RelPath string
+	Label   string
+	Cells   []NotebookCell
+}

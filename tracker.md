@@ -201,7 +201,7 @@ Goal: rebuild Data & Analytics as native data tooling, not a crowded web panel.
 - [x] Extend bounded row query/filter/order service to NDJSON/JSONL and log line datasets.
 - [x] Add first SELECT-only native dataset SQL run over the selected dataset with persisted run/dependency metadata.
 - [x] Promote SQL run/dependency history into the Data panel and unified History navigation.
-- [ ] Port SQL notebook model.
+- [x] Port first native SQL notebook model with per-dataset save/load, capped cells, and lineage metadata.
 - [ ] Port SQLite workspace connector.
 - [ ] Port external DB profile storage and read-only query guards.
 - [ ] Add native table/grid widget strategy.
@@ -280,11 +280,11 @@ Exit criteria:
 
 ## Next Batch
 
-1. Port the first SQL notebook model on top of the native SQL/history foundation.
-2. Migrate/import remaining Wails-era dataset SQL/dependency data from legacy SQLite metadata stores.
-3. Add native job monitor retry/open-output actions on top of the persisted job model.
-4. Add Compose config validation as a read-only task/operations workflow.
-5. Add SQLite workspace connector browser on the native service/UI foundation.
+1. Migrate/import remaining Wails-era dataset SQL/dependency data from legacy SQLite metadata stores.
+2. Add native job monitor retry/open-output actions on top of the persisted job model.
+3. Add Compose config validation as a read-only task/operations workflow.
+4. Add SQLite workspace connector browser on the native service/UI foundation.
+5. Expand native SQL notebooks into the full notebook shell with multiple editable cells, result tabs, run-history reuse, explain output, chart cells, and artifact export.
 
 ## Preserved Post-Port Backlog
 
@@ -310,7 +310,8 @@ The Fyne migration must not drop product ambition, but this section is intention
 - [x] First SELECT-only native SQL run over the selected dataset with one predicate, order, limit, projection, execution plan, and metadata persistence.
 - [x] SQL run and dataset dependency history surfaced in Data & Analytics plus unified History.
 - [ ] DuckDB-capable SQL over datasets when the optional CGO-backed build is available.
-- [ ] SQL notebooks with multiple cells, saved notebooks, run history, reuse/rerun, explain output, and artifact export.
+- [x] First native saved SQL notebook model with per-dataset JSON persistence, capped cells, Data panel save/load actions, and dataset dependency lineage.
+- [ ] Full SQL notebook shell with multiple editable cells, result tabs, run history, reuse/rerun, explain output, chart cells, and artifact export.
 - [ ] SQLite workspace database browser with schema, views, indexes, samples, row caps, query cancellation, saved queries, CSV/Markdown exports, and lineage.
 - [ ] External database profiles for PostgreSQL, MySQL/MariaDB, SQL Server, DuckDB files, and future engines with protected credentials.
 - [ ] Read-only SQL guard with strong comment/string handling, mutation blocking, caps, timeouts, cancellation, and redacted errors.
