@@ -280,11 +280,11 @@ Exit criteria:
 
 ## Next Batch
 
-1. Add Compose config validation as a read-only task/operations workflow.
-2. Add SQLite workspace connector browser on the native service/UI foundation.
-3. Expand native SQL notebooks into the full notebook shell with multiple editable cells, result tabs, run-history reuse, explain output, chart cells, and artifact export.
-4. Port AI diff summary and commit drafting through the native assistant service.
-5. Route long indexing, OCR, dump imports, connector pulls, report generation, and long agent runs through jobs.
+1. Add SQLite workspace connector browser on the native service/UI foundation.
+2. Expand native SQL notebooks into the full notebook shell with multiple editable cells, result tabs, run-history reuse, explain output, chart cells, and artifact export.
+3. Port AI diff summary and commit drafting through the native assistant service.
+4. Route long indexing, OCR, dump imports, connector pulls, report generation, and long agent runs through jobs.
+5. Add dump import job design before any Docker/database imports.
 
 ## Preserved Post-Port Backlog
 
@@ -300,7 +300,7 @@ The Fyne migration must not drop product ambition, but this section is intention
 - [ ] Workspace search over paths, text, symbols, artifacts, and chat history.
 - [ ] Problems panel for TODO/FIXME/HACK/BUG markers, merge conflicts, JSON errors, and later language diagnostics.
 - [ ] Git status, branch, changed-file tree, staged/unstaged groups, file diff, split/unified/diff-only views, hunk actions, history, blame, AI review, test suggestions, commit draft, and PR draft.
-- [ ] Task discovery and approved task runs for npm, Go, Docker Compose validation, and future project-specific tasks.
+- [x] Task discovery and approved task runs for npm, Go, and Docker Compose validation.
 
 ### Data & Analytics Studio
 
@@ -360,7 +360,7 @@ The Fyne migration must not drop product ambition, but this section is intention
 
 - [x] Read-only Dockerfile, Compose, env/config, script, and log inspection.
 - [x] Compose service topology summary from inspected service dependencies, port exposures, and named volumes.
-- [ ] Compose config validation.
+- [x] Compose config validation through an explicit Operations action that runs the safe `docker compose config` task as a job.
 - [ ] Container/image/log workflows only after approval policy and job model are mature.
 - [x] First runbook artifacts and operations summaries with source citations.
 - [ ] Strict separation between read-only inspection and mutating Docker/system actions.

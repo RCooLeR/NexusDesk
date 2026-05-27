@@ -78,6 +78,21 @@ func TestFindReturnsDiscoveredTaskByID(t *testing.T) {
 	}
 }
 
+func TestFindBySourceReturnsComposeValidationTask(t *testing.T) {
+	root := t.TempDir()
+	mustWrite(t, filepath.Join(root, "ops", "compose.yml"), "services:\n  api:\n    image: nginx\n")
+	task, ok, err := New().FindBySource(root, "compose", "ops/compose.yml")
+	if err != nil {
+		t.Fatalf("FindBySource() error = %v", err)
+	}
+	if !ok || task.Kind != "compose" || task.Source != "ops/compose.yml" || task.Label != "docker compose config" {
+		t.Fatalf("unexpected compose task: %#v ok=%v", task, ok)
+	}
+	if _, ok, err := New().FindBySource(root, "compose", "missing.yml"); err != nil || ok {
+		t.Fatalf("expected missing compose task without error, ok=%v err=%v", ok, err)
+	}
+}
+
 func TestRunCapturesGoTestOutput(t *testing.T) {
 	if _, err := exec.LookPath("go"); err != nil {
 		t.Skip("go executable is not available")

@@ -2,6 +2,8 @@ package tasks
 
 import (
 	"context"
+	"path/filepath"
+	"strings"
 	"time"
 )
 
@@ -30,6 +32,21 @@ func (s *Service) Find(root string, taskID string) (Task, bool, error) {
 	}
 	for _, task := range summary.Tasks {
 		if task.ID == taskID {
+			return task, true, nil
+		}
+	}
+	return Task{}, false, nil
+}
+
+func (s *Service) FindBySource(root string, kind string, source string) (Task, bool, error) {
+	summary, err := discover(root)
+	if err != nil {
+		return Task{}, false, err
+	}
+	kind = strings.TrimSpace(kind)
+	source = filepath.ToSlash(strings.TrimSpace(source))
+	for _, task := range summary.Tasks {
+		if task.Kind == kind && filepath.ToSlash(task.Source) == source {
 			return task, true, nil
 		}
 	}

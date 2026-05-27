@@ -17,8 +17,9 @@ import (
 func (v *View) newOperationsPanel() fyne.CanvasObject {
 	scanButton := widget.NewButtonWithIcon("Scan ops files", theme.SearchIcon(), v.scanOperationsFiles)
 	inspectButton := widget.NewButtonWithIcon("Inspect selected", theme.DocumentIcon(), v.inspectSelectedOperationsFile)
+	validateButton := widget.NewButtonWithIcon("Validate Compose", theme.ConfirmIcon(), v.validateSelectedComposeConfig)
 	exportButton := widget.NewButtonWithIcon("Export runbook", theme.DocumentSaveIcon(), v.exportSelectedOperationsRunbook)
-	actions := container.NewHBox(scanButton, inspectButton, exportButton)
+	actions := container.NewHBox(scanButton, inspectButton, validateButton, exportButton)
 	header := container.NewBorder(nil, nil, nil, actions, v.operationsStatus)
 	results := container.NewScroll(v.operationsResults)
 	results.SetMinSize(fyne.NewSize(280, 120))
@@ -82,6 +83,46 @@ func (v *View) inspectOperationsFile(relPath string) {
 	v.operationsStatus.SetText(formatOperationsInspectionStatus(inspection))
 	v.operationsDetail.SetText(formatOperationsInspection(inspection))
 	v.addActivity("Inspected operations file " + inspection.File.RelPath + ".")
+}
+
+func (v *View) validateSelectedComposeConfig() {
+	workspace := v.state.Workspace()
+	if workspace.Root == "" {
+		v.operationsStatus.SetText("Open a workspace before validating Compose config.")
+		return
+	}
+	selected := selectedPathOrEmpty(v)
+	if selected == "" {
+		v.operationsStatus.SetText("Select a Compose file before validating it.")
+		return
+	}
+	inspection, err := v.operationsService.Inspect(workspace.Root, selected)
+	if err != nil {
+		v.operationsStatus.SetText("Compose validation could not inspect " + selected)
+		dialog.ShowError(err, v.window)
+		return
+	}
+	if inspection.File.Kind != operationsSvc.FileKindCompose {
+		v.operationsStatus.SetText("Select a Compose file before validating it.")
+		return
+	}
+	task, ok, err := v.taskService.FindBySource(workspace.Root, "compose", inspection.File.RelPath)
+	if err != nil {
+		dialog.ShowError(err, v.window)
+		return
+	}
+	if !ok {
+		v.operationsStatus.SetText("No safe Compose validation task found for " + inspection.File.RelPath + ".")
+		return
+	}
+	message := "Run read-only `docker compose config` for " + inspection.File.RelPath + "?"
+	dialog.ShowConfirm("Validate Compose config", message, func(confirm bool) {
+		if !confirm {
+			return
+		}
+		v.operationsStatus.SetText("Validating Compose config " + inspection.File.RelPath + " as a job.")
+		v.runTask(task)
+	}, v.window)
 }
 
 func (v *View) exportSelectedOperationsRunbook() {
