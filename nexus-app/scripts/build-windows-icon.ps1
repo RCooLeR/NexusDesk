@@ -1,0 +1,85 @@
+param(
+    [string]$IconPng = 'internal\brand\assets\nexus-app-icon-transparent.png',
+    [string]$OutDir = 'build\windows-resource',
+    [string]$SysoPath = 'resource_windows.syso'
+)
+
+$ErrorActionPreference = 'Stop'
+
+$iconPngPath = Resolve-Path $IconPng
+New-Item -ItemType Directory -Force -Path $OutDir | Out-Null
+
+$icoPath = Join-Path $OutDir 'nexus-app-icon.ico'
+$rcPath = Join-Path $OutDir 'nexus-app-icon.rc'
+
+Add-Type -AssemblyName System.Drawing
+
+$source = [System.Drawing.Image]::FromFile($iconPngPath)
+try {
+    $size = 256
+    $bitmap = New-Object System.Drawing.Bitmap $size, $size, ([System.Drawing.Imaging.PixelFormat]::Format32bppArgb)
+    try {
+        $graphics = [System.Drawing.Graphics]::FromImage($bitmap)
+        try {
+            $graphics.Clear([System.Drawing.Color]::Transparent)
+            $graphics.InterpolationMode = [System.Drawing.Drawing2D.InterpolationMode]::HighQualityBicubic
+            $graphics.SmoothingMode = [System.Drawing.Drawing2D.SmoothingMode]::HighQuality
+            $graphics.PixelOffsetMode = [System.Drawing.Drawing2D.PixelOffsetMode]::HighQuality
+
+            $scale = [Math]::Min($size / $source.Width, $size / $source.Height)
+            $width = [int][Math]::Round($source.Width * $scale)
+            $height = [int][Math]::Round($source.Height * $scale)
+            $x = [int][Math]::Floor(($size - $width) / 2)
+            $y = [int][Math]::Floor(($size - $height) / 2)
+            $graphics.DrawImage($source, $x, $y, $width, $height)
+        } finally {
+            $graphics.Dispose()
+        }
+
+        $pngStream = New-Object System.IO.MemoryStream
+        try {
+            $bitmap.Save($pngStream, [System.Drawing.Imaging.ImageFormat]::Png)
+            $pngBytes = $pngStream.ToArray()
+        } finally {
+            $pngStream.Dispose()
+        }
+    } finally {
+        $bitmap.Dispose()
+    }
+} finally {
+    $source.Dispose()
+}
+
+$icoStream = [System.IO.File]::Create($icoPath)
+try {
+    $writer = New-Object System.IO.BinaryWriter $icoStream
+    try {
+        $writer.Write([UInt16]0)
+        $writer.Write([UInt16]1)
+        $writer.Write([UInt16]1)
+        $writer.Write([Byte]0)
+        $writer.Write([Byte]0)
+        $writer.Write([Byte]0)
+        $writer.Write([Byte]0)
+        $writer.Write([UInt16]1)
+        $writer.Write([UInt16]32)
+        $writer.Write([UInt32]$pngBytes.Length)
+        $writer.Write([UInt32]22)
+        $writer.Write($pngBytes)
+    } finally {
+        $writer.Dispose()
+    }
+} finally {
+    $icoStream.Dispose()
+}
+
+$escapedIconPath = (Resolve-Path $icoPath).Path.Replace('\', '\\')
+Set-Content -Path $rcPath -Value "1 ICON `"$escapedIconPath`"" -Encoding ASCII
+
+$windres = Get-Command windres -ErrorAction SilentlyContinue
+if ($null -eq $windres) {
+    throw 'windres.exe was not found on PATH. Run scripts\dev-env.ps1 so MSYS2 UCRT64 bin is available.'
+}
+
+& $windres.Source -O coff -F pe-x86-64 -i $rcPath -o $SysoPath
+Write-Host "Windows icon resource generated at $SysoPath"

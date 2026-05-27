@@ -20,7 +20,7 @@ cd nexus-app
 .\scripts\dev-env.ps1 -Run
 ```
 
-Current build status on this workstation: MSYS2 UCRT64 GCC is installed under `C:\msys64\ucrt64\bin`, `nexus-app/scripts/dev-env.ps1` configures the current shell, focused native package tests pass, full `go build -o build\nexusdesk.exe .` succeeds, and `go run .` has been smoke-verified under CGO. `CGO_ENABLED=0 go build .` still fails because the Fyne OpenGL binding has no buildable files without CGO.
+Current build status on this workstation: MSYS2 UCRT64 GCC is installed under `C:\msys64\ucrt64\bin`, `nexus-app/scripts/dev-env.ps1` configures the current shell, focused native package tests pass, `.\scripts\dev-env.ps1 -Build` stamps the approved brand icon into `resource_windows.syso` and writes `build\nexusdesk.exe`, and `go run .` has been smoke-verified under CGO. `CGO_ENABLED=0 go build .` still fails because the Fyne OpenGL binding has no buildable files without CGO.
 
 Legacy Wails reference verification:
 

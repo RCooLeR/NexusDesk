@@ -35,6 +35,9 @@ if ($Test) {
 
 if ($Build) {
     New-Item -ItemType Directory -Force -Path build | Out-Null
+    if ($IsWindows -or $env:OS -eq 'Windows_NT') {
+        & (Join-Path $PSScriptRoot 'build-windows-icon.ps1')
+    }
     go build -o build\nexusdesk.exe .
 }
 

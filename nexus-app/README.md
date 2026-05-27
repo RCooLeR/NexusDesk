@@ -20,4 +20,6 @@ Fyne desktop builds need CGO and a C compiler on Windows. This workstation uses 
 .\scripts\dev-env.ps1 -Run
 ```
 
+On Windows, `-Build` also generates `resource_windows.syso` from the approved brand PNG before `go build`, so `build\nexusdesk.exe` carries the app icon in Explorer and the taskbar.
+
 If your machine uses another MSYS2 location, set `MSYS2_ROOT` before invoking the helper. `CGO_ENABLED=0 go build .` still fails because the Fyne OpenGL driver requires CGO-backed bindings.

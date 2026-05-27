@@ -41,14 +41,15 @@ Full Fyne app run/build requires CGO and a C compiler on Windows:
 ```powershell
 cd nexus-app
 $env:CGO_ENABLED='1'
-go build -o build\nexusdesk.exe .
+.\scripts\dev-env.ps1 -Build
 ```
 
 Current build reality on this workstation:
 
 - MSYS2 is installed at `C:\msys64`, and UCRT64 GCC is available at `C:\msys64\ucrt64\bin\gcc.exe`.
 - `nexus-app/scripts/dev-env.ps1` configures the current PowerShell session with the MSYS2 compiler path, `CGO_ENABLED=1`, and default readonly module flags.
-- `CGO_ENABLED=1 go build -o build\nexusdesk.exe .` succeeds when that helper is used.
+- `nexus-app/scripts/build-windows-icon.ps1` generates `resource_windows.syso` from the approved brand PNG so the Windows `.exe` is stamped with the app icon.
+- `.\scripts\dev-env.ps1 -Build` succeeds and writes `build\nexusdesk.exe` with the executable icon resource.
 - `go run .` has been smoke-verified by staying alive for 5 seconds under the configured CGO toolchain.
 - `CGO_ENABLED=0 go build .` still fails because Fyne's OpenGL binding excludes all Go files without CGO.
 
@@ -100,6 +101,7 @@ Goal: preserve the old app, establish the native shell, and make the new archite
 - [x] Document CGO/Fyne toolchain requirement.
 - [x] Install/configure a Windows CGO compiler and verify `go run .`.
 - [x] Add app icon and brand assets from `docs/brand/`.
+- [x] Stamp the Windows executable icon resource during native builds.
 - [x] Add native main menu: File, Edit, View, Navigate, Tools, Help.
 - [x] Add keyboard shortcut registry for common IDE actions.
 
