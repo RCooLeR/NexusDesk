@@ -143,7 +143,7 @@ Integration tests should use small fixtures and avoid starting external services
 
 ## Current Review Findings
 
-See `docs/12_PROJECT_REVIEW.md` for the latest full project review. The key engineering direction is:
+See `docs/12_PROJECT_REVIEW.md` for the latest full project review and `docs/13_PRODUCTION_READINESS.md` for the production gates. The key engineering direction is:
 
 - finish Fyne parity before adding new top-level studios;
 - keep extracting `internal/ui/shell` state as workflows grow;

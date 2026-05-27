@@ -6,6 +6,8 @@ This document still preserves the long-horizon delivery plan and Wails-era imple
 
 Current native status: `nexus-app/` now has the active Fyne shell, native workspace tree, preview/edit/search/problems flows, safe file mutation and rollback services, assistant and agent services, approvals, metadata, Git status/diff/actions, task/jobs, Data & Analytics profiling/query/SQL/notebooks/charts, workspace SQLite inspection/query/export/cancellation, artifacts, document extraction, operations scanning/runbooks, and history/audit panels. The largest remaining migration gaps are IDE-grade editor polish, external database profile parity, slow-work job routing, dump/import design, richer assistant quality controls, and continued UI cleanup.
 
+The production path is now defined in `docs/13_PRODUCTION_READINESS.md`. In short: finish Native Parity Beta first, then Safety/Reliability Beta, then Packaging/Platform Beta, then Private Beta. Do not treat the long historical sections below as production status; use `tracker.md` and the production-readiness gates for current execution.
+
 ## Phase 0: Product Baseline
 
 Goal: lock the product direction and preserve the strongest idea.

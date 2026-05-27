@@ -70,7 +70,7 @@ Rules:
 
 ## Current Baseline
 
-The latest reviewed `nexus-app` baseline includes the original shell slice plus substantial native parity. See `docs/12_PROJECT_REVIEW.md` for the dated review. Current implemented areas include:
+The latest reviewed `nexus-app` baseline includes the original shell slice plus substantial native parity. See `docs/12_PROJECT_REVIEW.md` for the dated review and `docs/13_PRODUCTION_READINESS.md` for release gates. Current implemented areas include:
 
 - native app lifecycle;
 - branded dark theme foundation;
