@@ -533,9 +533,11 @@ Current implementation:
 - `.sqlite`, `.sqlite3`, and `.db` files are classified as database files in the workspace tree.
 - `nexus-app/internal/services/dbconnector/` opens those files read-only through `modernc.org/sqlite` for explicit user-triggered inspection.
 - `InspectWorkspaceSQLite` validates that the selected database path stays inside the workspace, rejects symlinks and non-SQLite extensions, applies a short inspection timeout, and returns connector identity, engine, read-only state, tables, views, columns, indexes, row counts, capped samples, declared foreign keys, and conservative `*_id` relationship hints.
-- The Fyne Data & Analytics panel exposes an explicit `Inspect SQLite` action for the selected workspace database file and renders the returned schema metadata in the read-only data detail pane.
+- `QueryWorkspaceSQLite` accepts only a single read-only `SELECT` or `WITH` statement, blocks mutation-oriented tokens outside quoted strings/comments, opens the selected database read-only, applies the visible default cap/timeout, and returns bounded rows plus timing metadata.
+- The Fyne Data & Analytics panel exposes explicit `Inspect SQLite` and `Run SQLite` actions for the selected workspace database file and renders schema/query output in the read-only data detail pane.
+- Successful and failed SQLite connector previews write SQL run metadata when the workspace SQLite metadata store is active; successful previews also write dataset dependency rows linking the source database to the connector query.
 - Folder open only classifies database files; it does not inspect schemas, execute queries, open external connections, or run connector jobs automatically.
-- Guarded SQLite `SELECT`/`WITH` execution, request-ID cancellation, saved connector queries, CSV/Markdown exports, and SQL/dependency lineage remain planned native ports.
+- Request-ID cancellation, saved connector queries, CSV/Markdown exports, and richer connector-query actions remain planned native ports.
 - Data & Analytics can use this for local inspection without introducing stored credentials or external database access.
 
 ### External SQL Connector Profiles

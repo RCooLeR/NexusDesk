@@ -337,43 +337,6 @@ func sqliteSampleRows(ctx context.Context, db *sql.DB, name string) ([][]string,
 	return scanRowsAsStrings(rows)
 }
 
-func scanRowsAsStrings(rows *sql.Rows) ([][]string, error) {
-	columns, err := rows.Columns()
-	if err != nil {
-		return nil, err
-	}
-	scanners := make([]any, len(columns))
-	for index := range scanners {
-		var value any
-		scanners[index] = &value
-	}
-	result := [][]string{}
-	for rows.Next() {
-		if err := rows.Scan(scanners...); err != nil {
-			return nil, err
-		}
-		row := make([]string, len(scanners))
-		for index, scanner := range scanners {
-			value := scanner.(*any)
-			if value == nil || *value == nil {
-				continue
-			}
-			row[index] = stringifyValue(*value)
-		}
-		result = append(result, row)
-	}
-	return result, rows.Err()
-}
-
-func stringifyValue(value any) string {
-	switch typed := value.(type) {
-	case []byte:
-		return string(typed)
-	default:
-		return fmt.Sprint(typed)
-	}
-}
-
 func quoteSQLiteIdent(value string) string {
 	return `"` + strings.ReplaceAll(value, `"`, `""`) + `"`
 }

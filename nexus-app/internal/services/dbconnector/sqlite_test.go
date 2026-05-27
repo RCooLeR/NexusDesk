@@ -48,6 +48,46 @@ func TestInspectWorkspaceSQLiteRejectsUnsafePaths(t *testing.T) {
 	}
 }
 
+func TestQueryWorkspaceSQLiteReturnsBoundedRows(t *testing.T) {
+	root := t.TempDir()
+	dbPath := filepath.Join(root, "data", "store.sqlite")
+	if err := makeSQLiteFixture(dbPath); err != nil {
+		t.Fatal(err)
+	}
+	result, err := New().QueryWorkspaceSQLite(root, SQLiteQueryRequest{
+		RelPath:     filepath.Join("data", "store.sqlite"),
+		SQL:         "select id, customer_id, total from orders order by id",
+		ResultLimit: 1,
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if result.RelPath != "data/store.sqlite" || result.Engine != "sqlite-readonly" || result.ResultLimit != 1 || result.TimeoutSeconds != DefaultSQLiteTimeoutSeconds {
+		t.Fatalf("unexpected query header: %#v", result)
+	}
+	if len(result.Columns) != 3 || len(result.Rows) != 1 || result.Rows[0][0] != "10" || !result.Truncated {
+		t.Fatalf("unexpected bounded result: %#v", result)
+	}
+}
+
+func TestQueryWorkspaceSQLiteRejectsMutationsAndMultiStatement(t *testing.T) {
+	root := t.TempDir()
+	dbPath := filepath.Join(root, "data", "store.sqlite")
+	if err := makeSQLiteFixture(dbPath); err != nil {
+		t.Fatal(err)
+	}
+	service := New()
+	for _, sqlText := range []string{
+		"delete from orders",
+		"select * from orders; select * from customers",
+		"pragma table_info(orders)",
+	} {
+		if _, err := service.QueryWorkspaceSQLite(root, SQLiteQueryRequest{RelPath: filepath.Join("data", "store.sqlite"), SQL: sqlText}); err == nil {
+			t.Fatalf("expected query to be rejected: %s", sqlText)
+		}
+	}
+}
+
 func findSQLiteObject(objects []SQLiteObject, name string) SQLiteObject {
 	for _, object := range objects {
 		if object.Name == name {

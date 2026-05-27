@@ -27,6 +27,9 @@ func (v *View) newDataPanel() fyne.CanvasObject {
 		v.runSelectedDatasetSQL(v.dataQueryEntry.Text)
 	})
 	sqliteButton := widget.NewButtonWithIcon("Inspect SQLite", theme.StorageIcon(), v.inspectSelectedSQLite)
+	sqliteQueryButton := widget.NewButtonWithIcon("Run SQLite", theme.MediaPlayIcon(), func() {
+		v.runSelectedSQLiteQuery(v.dataQueryEntry.Text)
+	})
 	v.dataQueryEntry.OnSubmitted = func(query string) {
 		v.querySelectedDataset(query)
 	}
@@ -37,12 +40,54 @@ func (v *View) newDataPanel() fyne.CanvasObject {
 	historyButton := widget.NewButtonWithIcon("SQL history", theme.HistoryIcon(), v.showDatasetSQLHistory)
 	saveNotebookButton := widget.NewButtonWithIcon("Save notebook", theme.DocumentSaveIcon(), v.saveSelectedDatasetNotebook)
 	loadNotebookButton := widget.NewButtonWithIcon("Load notebook", theme.FolderOpenIcon(), v.loadSelectedDatasetNotebook)
-	actions := container.NewHBox(profileButton, queryButton, sqlButton, sqliteButton, saveNotebookButton, loadNotebookButton, chartButton, exportChartButton, dashboardButton, exportDashboardButton, historyButton)
+	actions := container.NewHBox(profileButton, queryButton, sqlButton, sqliteButton, sqliteQueryButton, saveNotebookButton, loadNotebookButton, chartButton, exportChartButton, dashboardButton, exportDashboardButton, historyButton)
 	queryBar := container.NewBorder(nil, nil, nil, actions, v.dataQueryEntry)
 	header := container.NewVBox(v.dataProfileStatus, queryBar)
 	detail := container.NewScroll(v.dataProfileDetail)
 	detail.SetMinSize(fyne.NewSize(320, 130))
 	return container.NewBorder(header, nil, nil, nil, detail)
+}
+
+func (v *View) runSelectedSQLiteQuery(sqlText string) {
+	workspace := v.state.Workspace()
+	if workspace.Root == "" {
+		v.dataProfileStatus.SetText("Open a workspace before running SQLite queries.")
+		return
+	}
+	selected := selectedPathOrEmpty(v)
+	if selected == "" {
+		v.dataProfileStatus.SetText("Select a .sqlite, .sqlite3, or .db file before running SQLite queries.")
+		return
+	}
+	started := time.Now().UTC()
+	result, err := v.dbconnectorService.QueryWorkspaceSQLite(workspace.Root, dbconnectorSvc.SQLiteQueryRequest{
+		RelPath:        selected,
+		SQL:            sqlText,
+		ResultLimit:    dbconnectorSvc.DefaultSQLiteRows,
+		TimeoutSeconds: dbconnectorSvc.DefaultSQLiteTimeoutSeconds,
+	})
+	if strings.TrimSpace(sqlText) != "" {
+		record := sqliteSQLRunRecord(result, selected, sqlText, started, err)
+		if v.metadataStore != nil {
+			record = v.metadataStore.NormalizeSQLRunRecord(record)
+			if saveErr := v.metadataStore.SaveSQLRun(record); saveErr != nil {
+				v.addActivity("Could not persist SQLite query metadata: " + saveErr.Error())
+			} else if err == nil {
+				v.persistDatasetDependency(sqliteDependencyRecord(selected, record))
+			}
+		}
+	}
+	if err != nil {
+		v.dataProfileStatus.SetText("SQLite query failed for " + selected)
+		dialog.ShowError(err, v.window)
+		return
+	}
+	v.dataProfileStatus.SetText(sqliteQueryStatus(result))
+	v.dataProfileDetail.SetText(formatSQLiteQueryResult(result))
+	v.dataLastQuery = sqliteQueryAsDatasetResult(result)
+	v.dataLastChart = datasetsSvc.ChartResult{}
+	v.dataLastDashboard = datasetsSvc.DashboardResult{}
+	v.addActivity("Ran read-only SQLite query for " + result.RelPath + ".")
 }
 
 func (v *View) inspectSelectedSQLite() {
@@ -468,6 +513,14 @@ func sqlStatus(result datasetsSvc.SQLResult) string {
 	return fmt.Sprintf("%s: %s SQL, %d/%d rows shown", result.RelPath, result.Engine, len(result.Rows), result.MatchedRows)
 }
 
+func sqliteQueryStatus(result dbconnectorSvc.SQLiteQueryResult) string {
+	truncated := ""
+	if result.Truncated {
+		truncated = " capped"
+	}
+	return fmt.Sprintf("%s: SQLite%s query, %d row(s) shown, cap %d, timeout %ds", result.RelPath, truncated, len(result.Rows), result.ResultLimit, result.TimeoutSeconds)
+}
+
 func formatDatasetQueryResult(result datasetsSvc.QueryResult) string {
 	var builder strings.Builder
 	builder.WriteString("# Dataset Query\n\n")
@@ -530,6 +583,44 @@ func formatDatasetSQLResult(result datasetsSvc.SQLResult) string {
 	}
 	builder.WriteString("\n")
 	builder.WriteString(formatDatasetQueryResult(result.QueryResult))
+	return builder.String()
+}
+
+func formatSQLiteQueryResult(result dbconnectorSvc.SQLiteQueryResult) string {
+	var builder strings.Builder
+	builder.WriteString("# SQLite Query Preview\n\n")
+	builder.WriteString("Path: ")
+	builder.WriteString(result.RelPath)
+	builder.WriteString("\nEngine: ")
+	builder.WriteString(result.Engine)
+	builder.WriteString("\nSQL: ")
+	builder.WriteString(result.SQL)
+	builder.WriteString(fmt.Sprintf("\nShown rows: %d\nObserved rows: %d\nRow cap: %d\nTimeout: %d seconds\nDuration: %d ms\n", len(result.Rows), result.TotalRows, result.ResultLimit, result.TimeoutSeconds, result.DurationMs))
+	if result.Truncated {
+		builder.WriteString("Scope: result was stopped at the visible SQLite row cap\n")
+	}
+	if result.Message != "" {
+		builder.WriteString("\n")
+		builder.WriteString(result.Message)
+		builder.WriteString("\n")
+	}
+	if len(result.Columns) == 0 {
+		builder.WriteString("\nNo columns were returned.\n")
+		return builder.String()
+	}
+	builder.WriteString("\n")
+	builder.WriteString(strings.Join(result.Columns, "\t"))
+	builder.WriteString("\n")
+	for _, row := range result.Rows {
+		values := make([]string, len(result.Columns))
+		for index := range values {
+			if index < len(row) {
+				values[index] = row[index]
+			}
+		}
+		builder.WriteString(strings.Join(values, "\t"))
+		builder.WriteString("\n")
+	}
 	return builder.String()
 }
 
@@ -886,10 +977,55 @@ func sqlRunRecord(result datasetsSvc.SQLResult, relPath string, sqlText string, 
 	}
 }
 
+func sqliteSQLRunRecord(result dbconnectorSvc.SQLiteQueryResult, relPath string, sqlText string, started time.Time, runErr error) metadataSvc.SQLRunRecord {
+	status := "success"
+	message := result.Message
+	errorText := ""
+	completed := time.Now().UTC()
+	if runErr != nil {
+		status = "failed"
+		errorText = runErr.Error()
+		message = errorText
+	}
+	duration := result.DurationMs
+	if duration == 0 && !started.IsZero() {
+		duration = completed.Sub(started).Milliseconds()
+	}
+	return metadataSvc.SQLRunRecord{
+		RelPath:     firstNonEmptyString(result.RelPath, relPath),
+		SQL:         strings.TrimSpace(firstNonEmptyString(result.SQL, sqlText)),
+		Engine:      firstNonEmptyString(result.Engine, "sqlite-readonly"),
+		Status:      status,
+		RowCount:    result.TotalRows,
+		MatchedRows: result.TotalRows,
+		ShownRows:   len(result.Rows),
+		Message:     message,
+		Error:       errorText,
+		StartedAt:   firstNonZeroTime(started, completed),
+		CompletedAt: completed,
+		DurationMs:  duration,
+	}
+}
+
 func datasetDependencyRecord(source string, sqlRun metadataSvc.SQLRunRecord) metadataSvc.DatasetDependencyRecord {
 	return metadataSvc.DatasetDependencyRecord{
 		SourcePath:    source,
 		DependentKind: "sql-run",
+		DependentRef:  sqlRun.ID,
+		Relation:      "reads",
+		Metadata: map[string]string{
+			"engine": sqlRun.Engine,
+			"sql":    sqlRun.SQL,
+		},
+		CreatedAt: sqlRun.StartedAt,
+		UpdatedAt: sqlRun.CompletedAt,
+	}
+}
+
+func sqliteDependencyRecord(source string, sqlRun metadataSvc.SQLRunRecord) metadataSvc.DatasetDependencyRecord {
+	return metadataSvc.DatasetDependencyRecord{
+		SourcePath:    source,
+		DependentKind: "sqlite-query",
 		DependentRef:  sqlRun.ID,
 		Relation:      "reads",
 		Metadata: map[string]string{
@@ -923,6 +1059,20 @@ func firstNotebookSQL(notebook datasetsSvc.Notebook) string {
 		}
 	}
 	return ""
+}
+
+func sqliteQueryAsDatasetResult(result dbconnectorSvc.SQLiteQueryResult) datasetsSvc.QueryResult {
+	return datasetsSvc.QueryResult{
+		RelPath:     result.RelPath,
+		Format:      "SQLite",
+		Query:       result.SQL,
+		Columns:     result.Columns,
+		Rows:        result.Rows,
+		TotalRows:   result.TotalRows,
+		MatchedRows: result.TotalRows,
+		Truncated:   result.Truncated,
+		Message:     result.Message,
+	}
 }
 
 func notebookLabelForDataset(relPath string) string {

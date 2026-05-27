@@ -129,7 +129,7 @@ Data & Analytics should make read-only status visible near schema, query, chart,
 
 The current read-only SQL surface accepts a constrained `SELECT` subset over CSV data, blocks mutation keywords, enforces single-statement input (including comment/quote-aware semicolon checks), and returns only a bounded preview.
 
-- Native SQLite workspace connector inspection currently exposes capped sample rows from explicit user-triggered schema inspection. Guarded SQLite query execution will add visible row caps, timeouts, cancellation, and SQL run metadata before arbitrary read-only connector SQL is enabled.
+- Native SQLite workspace connector actions are explicit and user-triggered. Schema inspection exposes capped sample rows, while guarded query preview accepts only single-statement read-only `SELECT`/`WITH` SQL, blocks mutation-oriented tokens, opens the database read-only, and applies visible default row caps/timeouts before writing SQL run metadata. Cancellation and export actions remain planned native work.
 - CSV SQL fallback queries preserve `TotalRows`/`MatchedRows` from the dataset query engine and return up to 50 preview rows by default.
 - Real DuckDB `database/sql` execution paths are implemented behind the `duckdb` build tag for CGO-enabled machines; the default Windows loop keeps CGO disabled unless a C compiler is installed.
 - SQL artifact metadata now records full `TotalRows` for completed and failed SQL run records.

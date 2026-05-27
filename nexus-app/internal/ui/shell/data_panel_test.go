@@ -192,6 +192,34 @@ func TestFormatSQLiteMetadataIncludesSchemaIndexesSamplesAndRelationships(t *tes
 	}
 }
 
+func TestFormatSQLiteQueryResultIncludesCapsAndRows(t *testing.T) {
+	output := formatSQLiteQueryResult(dbconnectorSvc.SQLiteQueryResult{
+		RelPath:        "data/store.sqlite",
+		Engine:         "sqlite-readonly",
+		SQL:            "select id, total from orders",
+		Columns:        []string{"id", "total"},
+		Rows:           [][]string{{"10", "42.5"}},
+		TotalRows:      1,
+		ResultLimit:    100,
+		TimeoutSeconds: 30,
+		DurationMs:     4,
+		Message:        "Read-only SQLite query returned 1 row(s).",
+	})
+	for _, expected := range []string{"# SQLite Query Preview", "Path: data/store.sqlite", "Row cap: 100", "Timeout: 30 seconds", "id\ttotal", "10\t42.5"} {
+		if !strings.Contains(output, expected) {
+			t.Fatalf("SQLite query output missing %q:\n%s", expected, output)
+		}
+	}
+}
+
+func TestSQLiteSQLRunRecordCapturesFailure(t *testing.T) {
+	started := time.Date(2026, 5, 27, 12, 0, 0, 0, time.UTC)
+	record := sqliteSQLRunRecord(dbconnectorSvc.SQLiteQueryResult{}, "data/store.sqlite", "delete from orders", started, errForTest("blocked"))
+	if record.Status != "failed" || record.Error != "blocked" || record.Engine != "sqlite-readonly" || record.RelPath != "data/store.sqlite" {
+		t.Fatalf("unexpected SQLite failed SQL record: %#v", record)
+	}
+}
+
 func TestSQLRunRecordCapturesFailure(t *testing.T) {
 	started := time.Date(2026, 5, 27, 12, 0, 0, 0, time.UTC)
 	record := sqlRunRecord(datasetsSvc.SQLResult{StartedAt: started}, "sales.csv", "delete from dataset", errForTest("blocked"))

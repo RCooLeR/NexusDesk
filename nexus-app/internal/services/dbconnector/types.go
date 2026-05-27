@@ -46,3 +46,24 @@ type SQLiteRelationship struct {
 	Confidence string
 	Reason     string
 }
+
+type SQLiteQueryRequest struct {
+	RelPath        string
+	SQL            string
+	ResultLimit    int
+	TimeoutSeconds int
+}
+
+type SQLiteQueryResult struct {
+	RelPath        string
+	SQL            string
+	Engine         string
+	Columns        []string
+	Rows           [][]string
+	TotalRows      int
+	Truncated      bool
+	ResultLimit    int
+	TimeoutSeconds int
+	DurationMs     int64
+	Message        string
+}
