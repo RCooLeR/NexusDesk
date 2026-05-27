@@ -60,12 +60,53 @@ func TestInspectRedactsSecretsAndParsesComposeServices(t *testing.T) {
 	if len(inspection.Services[0].DependsOn) != 1 || inspection.Services[0].DependsOn[0] != "db" {
 		t.Fatalf("depends_on was not parsed: %#v", inspection.Services[0])
 	}
+	if inspection.Topology.Summary == "" || len(inspection.Topology.Edges) != 1 || inspection.Topology.Edges[0].From != "api" || inspection.Topology.Edges[0].To != "db" {
+		t.Fatalf("topology was not built: %#v", inspection.Topology)
+	}
 }
 
 func TestInspectRejectsTraversal(t *testing.T) {
 	root := t.TempDir()
 	if _, err := New().Inspect(root, "../Dockerfile"); err == nil {
 		t.Fatal("expected traversal rejection")
+	}
+}
+
+func TestBuildComposeTopologySummarizesDependenciesPortsAndVolumes(t *testing.T) {
+	topology := BuildComposeTopology([]ComposeService{
+		{Name: "api", Image: "example/api", Ports: []string{"8080:80"}, Volumes: []string{"./src:/app", "app-cache:/cache"}, DependsOn: []string{"db", "missing"}},
+		{Name: "db", Image: "postgres", Volumes: []string{"pgdata:/var/lib/postgresql/data"}},
+	})
+	if topology.Summary != "2 service(s), 2 dependency edge(s), 1 exposed port(s), 2 named volume(s)." {
+		t.Fatalf("unexpected summary: %q", topology.Summary)
+	}
+	if len(topology.ExposedPorts) != 1 || topology.ExposedPorts[0].Service != "api" || topology.ExposedPorts[0].Port != "8080:80" {
+		t.Fatalf("unexpected port exposures: %#v", topology.ExposedPorts)
+	}
+	if strings.Join(topology.NamedVolumes, ",") != "app-cache,pgdata" {
+		t.Fatalf("unexpected named volumes: %#v", topology.NamedVolumes)
+	}
+	if len(topology.Warnings) != 1 || !strings.Contains(topology.Warnings[0], "missing") {
+		t.Fatalf("expected missing dependency warning, got %#v", topology.Warnings)
+	}
+}
+
+func TestParseComposeServicesSupportsDependsOnMapping(t *testing.T) {
+	services := ParseComposeServices(strings.Join([]string{
+		"services:",
+		"  api:",
+		"    image: app",
+		"    depends_on:",
+		"      db:",
+		"        condition: service_healthy",
+		"  db:",
+		"    image: postgres",
+	}, "\n"))
+	if len(services) != 2 {
+		t.Fatalf("services = %d, want 2: %#v", len(services), services)
+	}
+	if len(services[0].DependsOn) != 1 || services[0].DependsOn[0] != "db" {
+		t.Fatalf("depends_on mapping was not parsed: %#v", services[0])
 	}
 }
 

@@ -37,6 +37,13 @@ func ParseComposeServices(content string) []ComposeService {
 		if current == nil || indent < 4 {
 			continue
 		}
+		if currentList == "depends_on" && indent >= 6 && strings.HasSuffix(trimmed, ":") {
+			dependency := strings.TrimSuffix(trimmed, ":")
+			if dependency != "" {
+				current.DependsOn = append(current.DependsOn, dependency)
+			}
+			continue
+		}
 		if key, value, ok := splitComposeKey(trimmed); ok {
 			currentList = ""
 			switch key {

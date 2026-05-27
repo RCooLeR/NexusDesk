@@ -77,15 +77,19 @@ type ChartArtifactReport struct {
 }
 
 type OperationsRunbookReport struct {
-	Title       string
-	SourcePath  string
-	Kind        string
-	Size        int64
-	Content     string
-	Services    []OperationsServiceSummary
-	Warnings    []string
-	Truncated   bool
-	GeneratedBy string
+	Title           string
+	SourcePath      string
+	Kind            string
+	Size            int64
+	Content         string
+	Services        []OperationsServiceSummary
+	TopologySummary string
+	TopologyEdges   []OperationsTopologyEdge
+	ExposedPorts    []OperationsPortExposure
+	NamedVolumes    []string
+	Warnings        []string
+	Truncated       bool
+	GeneratedBy     string
 }
 
 type OperationsServiceSummary struct {
@@ -94,6 +98,18 @@ type OperationsServiceSummary struct {
 	Ports     []string
 	Volumes   []string
 	DependsOn []string
+}
+
+type OperationsTopologyEdge struct {
+	From     string
+	To       string
+	Relation string
+	Missing  bool
+}
+
+type OperationsPortExposure struct {
+	Service string
+	Port    string
 }
 
 type ListOptions struct {

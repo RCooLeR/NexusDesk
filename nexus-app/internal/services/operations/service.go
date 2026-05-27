@@ -124,6 +124,7 @@ func (s *Service) Inspect(root string, relPath string) (Inspection, error) {
 	}
 	if file.Kind == FileKindCompose {
 		inspection.Services = ParseComposeServices(inspection.Text)
+		inspection.Topology = BuildComposeTopology(inspection.Services)
 	}
 	return inspection, nil
 }

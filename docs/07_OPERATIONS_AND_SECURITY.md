@@ -167,7 +167,7 @@ High-risk actions:
 
 High-risk Docker actions require approval. The UI should show the exact planned action and affected resources.
 
-Operations Studio can surface Docker state, logs, Compose files, and generated configs, but it should keep start, stop, build, run, exec, volume, and network actions behind the same high-risk approval flow. The current implementation parses selected Compose files into service names, images, ports, volumes, and dependencies without calling Docker or mutating local state, and its generated runbooks cite only the inspected source file plus redacted bounded evidence.
+Operations Studio can surface Docker state, logs, Compose files, and generated configs, but it should keep start, stop, build, run, exec, volume, and network actions behind the same high-risk approval flow. The current implementation parses selected Compose files into service names, images, ports, volumes, and dependencies, then derives a read-only topology summary covering dependency edges, exposed ports, named volumes, and missing dependency warnings. It does this without calling Docker or mutating local state, and generated runbooks cite only the inspected source file plus redacted bounded evidence.
 
 ## Network Security
 

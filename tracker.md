@@ -232,6 +232,7 @@ Goal: restore generated-output workflows with provenance and native inspection.
 - [x] Extend native document extraction artifacts to DOCX and PDF preview text with PDF page metadata.
 - [ ] Add presentation/report generation targets after artifact lineage is stable.
 - [x] Add read-only operations scanners for Dockerfiles, Compose, env/config/logs.
+- [x] Add Compose service topology summary from inspected Compose files.
 - [x] Add first operations runbook artifact export from inspected Docker/Compose/env/config/log evidence.
 - [ ] Add job-based OCR/document extraction before heavy parsing.
 
@@ -277,11 +278,11 @@ Exit criteria:
 
 ## Next Batch
 
-1. Add Compose service topology summary from inspected Compose files.
-2. Add richer dashboard visuals after the first bar/line SVG chart renderer.
-3. Add full Parquet schema/row-group profiling behind an explicit dependency/build decision.
-4. Port the first SQL notebook model on top of the native SQL/history foundation.
-5. Migrate/import remaining Wails-era dataset SQL/dependency data from legacy SQLite metadata stores.
+1. Add richer dashboard visuals after the first bar/line SVG chart renderer.
+2. Add full Parquet schema/row-group profiling behind an explicit dependency/build decision.
+3. Port the first SQL notebook model on top of the native SQL/history foundation.
+4. Migrate/import remaining Wails-era dataset SQL/dependency data from legacy SQLite metadata stores.
+5. Add native job monitor retry/open-output actions on top of the persisted job model.
 
 ## Preserved Post-Port Backlog
 
@@ -354,7 +355,8 @@ The Fyne migration must not drop product ambition, but this section is intention
 ### Operations Studio
 
 - [x] Read-only Dockerfile, Compose, env/config, script, and log inspection.
-- [ ] Compose service topology and config validation.
+- [x] Compose service topology summary from inspected service dependencies, port exposures, and named volumes.
+- [ ] Compose config validation.
 - [ ] Container/image/log workflows only after approval policy and job model are mature.
 - [x] First runbook artifacts and operations summaries with source citations.
 - [ ] Strict separation between read-only inspection and mutating Docker/system actions.

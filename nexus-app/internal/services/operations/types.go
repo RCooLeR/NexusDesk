@@ -46,10 +46,39 @@ type ComposeService struct {
 	DependsOn []string
 }
 
+type ComposeTopology struct {
+	Summary      string
+	Services     []ComposeTopologyService
+	Edges        []ComposeTopologyEdge
+	ExposedPorts []ComposePortExposure
+	NamedVolumes []string
+	Warnings     []string
+}
+
+type ComposeTopologyService struct {
+	Name    string
+	Image   string
+	Ports   []string
+	Volumes []string
+}
+
+type ComposeTopologyEdge struct {
+	From     string
+	To       string
+	Relation string
+	Missing  bool
+}
+
+type ComposePortExposure struct {
+	Service string
+	Port    string
+}
+
 type Inspection struct {
 	File      File
 	Text      string
 	Truncated bool
 	Services  []ComposeService
+	Topology  ComposeTopology
 	Warnings  []string
 }

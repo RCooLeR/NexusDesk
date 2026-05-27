@@ -103,6 +103,47 @@ func operationsRunbookMarkdown(report OperationsRunbookReport, title string, cre
 		}
 	}
 
+	if strings.TrimSpace(report.TopologySummary) != "" || len(report.TopologyEdges) > 0 || len(report.ExposedPorts) > 0 || len(report.NamedVolumes) > 0 {
+		builder.WriteString("\n## Compose Topology\n\n")
+		if strings.TrimSpace(report.TopologySummary) != "" {
+			builder.WriteString(report.TopologySummary)
+			builder.WriteString("\n")
+		}
+		if len(report.TopologyEdges) > 0 {
+			builder.WriteString("\nDependencies:\n")
+			for _, edge := range report.TopologyEdges {
+				builder.WriteString("- ")
+				builder.WriteString(edge.From)
+				builder.WriteString(" -> ")
+				builder.WriteString(edge.To)
+				if edge.Relation != "" {
+					builder.WriteString(" (")
+					builder.WriteString(edge.Relation)
+					builder.WriteString(")")
+				}
+				if edge.Missing {
+					builder.WriteString(" [missing target]")
+				}
+				builder.WriteString("\n")
+			}
+		}
+		if len(report.ExposedPorts) > 0 {
+			builder.WriteString("\nExposed ports:\n")
+			for _, exposure := range report.ExposedPorts {
+				builder.WriteString("- ")
+				builder.WriteString(exposure.Service)
+				builder.WriteString(" exposes ")
+				builder.WriteString(exposure.Port)
+				builder.WriteString("\n")
+			}
+		}
+		if len(report.NamedVolumes) > 0 {
+			builder.WriteString("\nNamed volumes: ")
+			builder.WriteString(strings.Join(report.NamedVolumes, ", "))
+			builder.WriteString("\n")
+		}
+	}
+
 	builder.WriteString("\n## Operator Checklist\n\n")
 	builder.WriteString("- Confirm the source file still matches the generated runbook before use.\n")
 	builder.WriteString("- Review environment and secret references; redacted values require local operator knowledge.\n")

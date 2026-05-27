@@ -24,7 +24,10 @@ func TestWriteOperationsRunbookCreatesMarkdownArtifact(t *testing.T) {
 		Services: []OperationsServiceSummary{
 			{Name: "api", Image: "app", Ports: []string{"8080:80"}, DependsOn: []string{"db"}},
 		},
-		Warnings: []string{"Read-only inspection only."},
+		TopologySummary: "1 service(s), 1 dependency edge(s), 1 exposed port(s), 0 named volume(s).",
+		TopologyEdges:   []OperationsTopologyEdge{{From: "api", To: "db", Relation: "depends_on", Missing: true}},
+		ExposedPorts:    []OperationsPortExposure{{Service: "api", Port: "8080:80"}},
+		Warnings:        []string{"Read-only inspection only."},
 	})
 	if err != nil {
 		t.Fatalf("WriteOperationsRunbook() error = %v", err)
@@ -39,7 +42,7 @@ func TestWriteOperationsRunbookCreatesMarkdownArtifact(t *testing.T) {
 	if err != nil {
 		t.Fatalf("ReadArtifactText() error = %v", err)
 	}
-	for _, expected := range []string{"# Operations Runbook", "compose.yml", "Safety Notes", "api", "Operator Checklist", "Source Evidence"} {
+	for _, expected := range []string{"# Operations Runbook", "compose.yml", "Safety Notes", "api", "Compose Topology", "api -> db", "api exposes 8080:80", "Operator Checklist", "Source Evidence"} {
 		if !strings.Contains(text, expected) {
 			t.Fatalf("expected runbook to contain %q, got:\n%s", expected, text)
 		}

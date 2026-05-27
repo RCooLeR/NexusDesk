@@ -14,9 +14,17 @@ func TestFormatOperationsInspectionIncludesServicesAndWarnings(t *testing.T) {
 		Services: []operationsSvc.ComposeService{
 			{Name: "api", Image: "app", Ports: []string{"8080:80"}, DependsOn: []string{"db"}},
 		},
+		Topology: operationsSvc.ComposeTopology{
+			Summary: "1 service(s), 1 dependency edge(s), 1 exposed port(s), 0 named volume(s).",
+			Edges: []operationsSvc.ComposeTopologyEdge{
+				{From: "api", To: "db", Relation: "depends_on", Missing: true},
+			},
+			ExposedPorts: []operationsSvc.ComposePortExposure{{Service: "api", Port: "8080:80"}},
+			Warnings:     []string{"Service \"api\" depends on \"db\", but that service was not found."},
+		},
 		Warnings: []string{"Read-only inspection only."},
 	})
-	for _, want := range []string{"# Operations Inspection", "compose.yml", "Compose Services", "api | image: app", "Read-only inspection only."} {
+	for _, want := range []string{"# Operations Inspection", "compose.yml", "Compose Services", "api | image: app", "Compose Topology", "api -> db", "api exposes 8080:80", "Read-only inspection only."} {
 		if !strings.Contains(text, want) {
 			t.Fatalf("formatted inspection missing %q:\n%s", want, text)
 		}
@@ -37,9 +45,13 @@ func TestOperationsRunbookArtifactInputPreservesEvidence(t *testing.T) {
 		Services: []operationsSvc.ComposeService{
 			{Name: "api", Image: "app", Ports: []string{"8080:80"}},
 		},
+		Topology: operationsSvc.ComposeTopology{
+			Summary:      "1 service(s), 0 dependency edge(s), 1 exposed port(s), 0 named volume(s).",
+			ExposedPorts: []operationsSvc.ComposePortExposure{{Service: "api", Port: "8080:80"}},
+		},
 		Warnings: []string{"Read-only inspection only."},
 	})
-	if input.SourcePath != "compose.yml" || input.Kind != "compose" || len(input.Services) != 1 {
+	if input.SourcePath != "compose.yml" || input.Kind != "compose" || len(input.Services) != 1 || input.TopologySummary == "" || len(input.ExposedPorts) != 1 {
 		t.Fatalf("unexpected operations runbook input: %#v", input)
 	}
 	for _, want := range []string{"# Operations Inspection", "compose.yml", "Read-only inspection only."} {

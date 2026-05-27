@@ -137,16 +137,38 @@ func operationsRunbookArtifactInput(inspection operationsSvc.Inspection) artifac
 			DependsOn: append([]string{}, service.DependsOn...),
 		})
 	}
+	topologyEdges := make([]artifactsSvc.OperationsTopologyEdge, 0, len(inspection.Topology.Edges))
+	for _, edge := range inspection.Topology.Edges {
+		topologyEdges = append(topologyEdges, artifactsSvc.OperationsTopologyEdge{
+			From:     edge.From,
+			To:       edge.To,
+			Relation: edge.Relation,
+			Missing:  edge.Missing,
+		})
+	}
+	exposedPorts := make([]artifactsSvc.OperationsPortExposure, 0, len(inspection.Topology.ExposedPorts))
+	for _, exposure := range inspection.Topology.ExposedPorts {
+		exposedPorts = append(exposedPorts, artifactsSvc.OperationsPortExposure{
+			Service: exposure.Service,
+			Port:    exposure.Port,
+		})
+	}
+	warnings := append([]string{}, inspection.Warnings...)
+	warnings = append(warnings, inspection.Topology.Warnings...)
 	return artifactsSvc.OperationsRunbookReport{
-		Title:       "Operations Runbook - " + inspection.File.Name,
-		SourcePath:  inspection.File.RelPath,
-		Kind:        string(inspection.File.Kind),
-		Size:        inspection.File.Size,
-		Content:     formatOperationsInspection(inspection),
-		Services:    services,
-		Warnings:    append([]string{}, inspection.Warnings...),
-		Truncated:   inspection.Truncated,
-		GeneratedBy: "Nexus native operations inspector",
+		Title:           "Operations Runbook - " + inspection.File.Name,
+		SourcePath:      inspection.File.RelPath,
+		Kind:            string(inspection.File.Kind),
+		Size:            inspection.File.Size,
+		Content:         formatOperationsInspection(inspection),
+		Services:        services,
+		TopologySummary: inspection.Topology.Summary,
+		TopologyEdges:   topologyEdges,
+		ExposedPorts:    exposedPorts,
+		NamedVolumes:    append([]string{}, inspection.Topology.NamedVolumes...),
+		Warnings:        warnings,
+		Truncated:       inspection.Truncated,
+		GeneratedBy:     "Nexus native operations inspector",
 	}
 }
 
@@ -199,6 +221,49 @@ func formatOperationsInspection(inspection operationsSvc.Inspection) string {
 				builder.WriteString(" | depends on: ")
 				builder.WriteString(strings.Join(service.DependsOn, ", "))
 			}
+			builder.WriteString("\n")
+		}
+	}
+	if inspection.Topology.Summary != "" {
+		builder.WriteString("\nCompose Topology\n")
+		builder.WriteString(inspection.Topology.Summary)
+		builder.WriteString("\n")
+		if len(inspection.Topology.Edges) > 0 {
+			builder.WriteString("Dependencies\n")
+			for _, edge := range inspection.Topology.Edges {
+				builder.WriteString("- ")
+				builder.WriteString(edge.From)
+				builder.WriteString(" -> ")
+				builder.WriteString(edge.To)
+				if edge.Relation != "" {
+					builder.WriteString(" (")
+					builder.WriteString(edge.Relation)
+					builder.WriteString(")")
+				}
+				if edge.Missing {
+					builder.WriteString(" [missing target]")
+				}
+				builder.WriteString("\n")
+			}
+		}
+		if len(inspection.Topology.ExposedPorts) > 0 {
+			builder.WriteString("Exposed Ports\n")
+			for _, exposure := range inspection.Topology.ExposedPorts {
+				builder.WriteString("- ")
+				builder.WriteString(exposure.Service)
+				builder.WriteString(" exposes ")
+				builder.WriteString(exposure.Port)
+				builder.WriteString("\n")
+			}
+		}
+		if len(inspection.Topology.NamedVolumes) > 0 {
+			builder.WriteString("Named Volumes: ")
+			builder.WriteString(strings.Join(inspection.Topology.NamedVolumes, ", "))
+			builder.WriteString("\n")
+		}
+		for _, warning := range inspection.Topology.Warnings {
+			builder.WriteString("Topology Warning: ")
+			builder.WriteString(warning)
 			builder.WriteString("\n")
 		}
 	}
