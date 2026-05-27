@@ -200,7 +200,7 @@ Goal: rebuild Data & Analytics as native data tooling, not a crowded web panel.
 - [ ] Port SQLite workspace connector.
 - [ ] Port external DB profile storage and read-only query guards.
 - [ ] Add native table/grid widget strategy.
-- [ ] Add chart preview/artifact generation.
+- [x] Add chart preview/artifact generation.
 - [ ] Add dump import job design before any Docker/database imports.
 
 Exit criteria:
@@ -269,11 +269,11 @@ Exit criteria:
 
 ## Next Batch
 
-1. Add chart preview/artifact generation for bounded native dataset query results.
-2. Add first native SQL run and dataset-dependency metadata repositories.
-3. Add approval metadata repository coverage or explicitly document the remaining approval-store split.
-4. Add the first operations artifact/runbook export from inspected Docker/Compose/env/config/log evidence.
-5. Expand dataset profiling from the current CSV/TSV/JSON/XLSX slice to NDJSON, Parquet metadata, and logs.
+1. Add first native SQL run and dataset-dependency metadata repositories.
+2. Add approval metadata repository coverage or explicitly document the remaining approval-store split.
+3. Add the first operations artifact/runbook export from inspected Docker/Compose/env/config/log evidence.
+4. Expand dataset profiling from the current CSV/TSV/JSON/XLSX slice to NDJSON, Parquet metadata, and logs.
+5. Extend native charting beyond first SVG bar charts to line charts and richer dashboard visuals.
 
 ## Preserved Post-Port Backlog
 
@@ -302,7 +302,8 @@ The Fyne migration must not drop product ambition, but this section is intention
 - [ ] Read-only SQL guard with strong comment/string handling, mutation blocking, caps, timeouts, cancellation, and redacted errors.
 - [ ] Database dump import jobs using temporary isolated environments before any direct mutation workflows exist.
 - [ ] Native table/grid strategy suitable for large result sets.
-- [ ] Chart preview/artifact generation for bar, line, and later richer dashboard visuals.
+- [x] First SVG bar chart preview/artifact generation from bounded query results.
+- [ ] Line charts and later richer dashboard visuals.
 
 ### Analytics Connectors
 

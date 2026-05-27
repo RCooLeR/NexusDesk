@@ -10,6 +10,7 @@ import (
 	"fyne.io/fyne/v2/theme"
 	"fyne.io/fyne/v2/widget"
 
+	artifactsSvc "nexusdesk/internal/services/artifacts"
 	datasetsSvc "nexusdesk/internal/services/datasets"
 )
 
@@ -21,7 +22,9 @@ func (v *View) newDataPanel() fyne.CanvasObject {
 	v.dataQueryEntry.OnSubmitted = func(query string) {
 		v.querySelectedDataset(query)
 	}
-	actions := container.NewHBox(profileButton, queryButton)
+	chartButton := widget.NewButtonWithIcon("Preview chart", theme.ViewFullScreenIcon(), v.previewDatasetChart)
+	exportChartButton := widget.NewButtonWithIcon("Export chart", theme.DocumentSaveIcon(), v.exportDatasetChartArtifact)
+	actions := container.NewHBox(profileButton, queryButton, chartButton, exportChartButton)
 	queryBar := container.NewBorder(nil, nil, nil, actions, v.dataQueryEntry)
 	header := container.NewVBox(v.dataProfileStatus, queryBar)
 	detail := container.NewScroll(v.dataProfileDetail)
@@ -48,6 +51,8 @@ func (v *View) profileSelectedDataset() {
 	}
 	v.dataProfileStatus.SetText(profileStatus(profile))
 	v.dataProfileDetail.SetText(formatDatasetProfile(profile))
+	v.dataLastQuery = datasetsSvc.QueryResult{}
+	v.dataLastChart = datasetsSvc.ChartResult{}
 	v.addActivity("Profiled dataset " + profile.RelPath + ".")
 }
 
@@ -70,7 +75,78 @@ func (v *View) querySelectedDataset(query string) {
 	}
 	v.dataProfileStatus.SetText(queryStatus(result))
 	v.dataProfileDetail.SetText(formatDatasetQueryResult(result))
+	v.dataLastQuery = result
+	v.dataLastChart = datasetsSvc.ChartResult{}
 	v.addActivity("Queried dataset " + result.RelPath + ".")
+}
+
+func (v *View) previewDatasetChart() {
+	result, ok := v.ensureDatasetQueryForChart()
+	if !ok {
+		return
+	}
+	chart, err := datasetsSvc.BuildChart(result)
+	if err != nil {
+		v.dataProfileStatus.SetText("Chart preview failed for " + result.RelPath)
+		dialog.ShowError(err, v.window)
+		return
+	}
+	v.dataLastChart = chart
+	v.dataProfileStatus.SetText(chart.Message)
+	v.dataProfileDetail.SetText(formatDatasetChart(chart))
+	v.addActivity("Previewed chart for " + chart.RelPath + ".")
+}
+
+func (v *View) exportDatasetChartArtifact() {
+	workspace := v.state.Workspace()
+	if workspace.Root == "" {
+		v.dataProfileStatus.SetText("Open a workspace before exporting chart artifacts.")
+		return
+	}
+	if v.dataLastChart.SVG == "" {
+		v.previewDatasetChart()
+		if v.dataLastChart.SVG == "" {
+			return
+		}
+	}
+	store, err := artifactsSvc.NewStore(workspace.Root)
+	if err != nil {
+		dialog.ShowError(err, v.window)
+		return
+	}
+	artifact, err := store.WriteChartArtifact(chartArtifactInput(v.dataLastChart))
+	if err != nil {
+		dialog.ShowError(err, v.window)
+		return
+	}
+	v.persistArtifactRecord(artifact)
+	v.dataProfileStatus.SetText("Exported chart " + artifact.RelPath)
+	v.addActivity(artifact.Message)
+	v.refreshArtifactsWithQuery("kind:chart")
+}
+
+func (v *View) ensureDatasetQueryForChart() (datasetsSvc.QueryResult, bool) {
+	workspace := v.state.Workspace()
+	if workspace.Root == "" {
+		v.dataProfileStatus.SetText("Open a workspace before charting data.")
+		return datasetsSvc.QueryResult{}, false
+	}
+	selected := selectedPathOrEmpty(v)
+	if v.dataLastQuery.RelPath != "" && (selected == "" || selected == v.dataLastQuery.RelPath) {
+		return v.dataLastQuery, true
+	}
+	if selected == "" {
+		v.dataProfileStatus.SetText("Select a CSV, TSV, JSON, or XLSX file before charting data.")
+		return datasetsSvc.QueryResult{}, false
+	}
+	result, err := v.datasetService.Query(workspace.Root, selected, v.dataQueryEntry.Text)
+	if err != nil {
+		v.dataProfileStatus.SetText("Chart query failed for " + selected)
+		dialog.ShowError(err, v.window)
+		return datasetsSvc.QueryResult{}, false
+	}
+	v.dataLastQuery = result
+	return result, true
 }
 
 func profileStatus(profile datasetsSvc.Profile) string {
@@ -183,4 +259,60 @@ func formatDatasetQueryResult(result datasetsSvc.QueryResult) string {
 		builder.WriteString("\n")
 	}
 	return builder.String()
+}
+
+func formatDatasetChart(chart datasetsSvc.ChartResult) string {
+	var builder strings.Builder
+	builder.WriteString("# Dataset Chart\n\n")
+	builder.WriteString("Path: ")
+	builder.WriteString(chart.RelPath)
+	builder.WriteString("\nFormat: ")
+	builder.WriteString(chart.Format)
+	builder.WriteString("\nMode: ")
+	builder.WriteString(chart.Mode)
+	builder.WriteString("\nCategory column: ")
+	builder.WriteString(chart.CategoryColumn)
+	if chart.ValueColumn != "" {
+		builder.WriteString("\nValue column: ")
+		builder.WriteString(chart.ValueColumn)
+	}
+	if strings.TrimSpace(chart.Query) != "" {
+		builder.WriteString("\nQuery: ")
+		builder.WriteString(chart.Query)
+	}
+	builder.WriteString(fmt.Sprintf("\nPoints: %d\n", len(chart.Points)))
+	if chart.Truncated {
+		builder.WriteString("Scope: chart points are bounded by query and chart caps\n")
+	}
+	builder.WriteString("\n")
+	builder.WriteString(chart.Message)
+	builder.WriteString("\n\n")
+	for _, point := range chart.Points {
+		builder.WriteString(fmt.Sprintf("- %s: %.4g\n", point.Label, point.Value))
+	}
+	builder.WriteString("\nSVG\n\n")
+	builder.WriteString(chart.SVG)
+	return builder.String()
+}
+
+func chartArtifactInput(chart datasetsSvc.ChartResult) artifactsSvc.ChartArtifactReport {
+	return artifactsSvc.ChartArtifactReport{
+		Title:          chartArtifactTitle(chart),
+		SourcePath:     chart.RelPath,
+		Query:          chart.Query,
+		Format:         chart.Format,
+		Mode:           chart.Mode,
+		CategoryColumn: chart.CategoryColumn,
+		ValueColumn:    chart.ValueColumn,
+		SVG:            chart.SVG,
+		PointCount:     len(chart.Points),
+		Truncated:      chart.Truncated,
+	}
+}
+
+func chartArtifactTitle(chart datasetsSvc.ChartResult) string {
+	if chart.Mode == "sum" && chart.ValueColumn != "" {
+		return fmt.Sprintf("Chart - %s by %s", chart.ValueColumn, chart.CategoryColumn)
+	}
+	return fmt.Sprintf("Chart - rows by %s", chart.CategoryColumn)
 }

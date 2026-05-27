@@ -56,3 +56,36 @@ func TestQueryStatusMarksBoundedResults(t *testing.T) {
 		t.Fatalf("unexpected query status: %q", status)
 	}
 }
+
+func TestFormatDatasetChartIncludesSVGAndPoints(t *testing.T) {
+	output := formatDatasetChart(datasetsSvc.ChartResult{
+		RelPath:        "sales.csv",
+		Format:         "CSV",
+		Mode:           "sum",
+		CategoryColumn: "channel",
+		ValueColumn:    "spend",
+		Query:          "channel=search",
+		Points:         []datasetsSvc.ChartPoint{{Label: "search", Value: 20}},
+		SVG:            `<svg></svg>`,
+		Message:        "Bar chart: spend by channel.",
+	})
+	for _, expected := range []string{"# Dataset Chart", "Value column: spend", "search: 20", "<svg></svg>"} {
+		if !strings.Contains(output, expected) {
+			t.Fatalf("chart output missing %q:\n%s", expected, output)
+		}
+	}
+}
+
+func TestChartArtifactInputPreservesSourceAndSVG(t *testing.T) {
+	input := chartArtifactInput(datasetsSvc.ChartResult{
+		RelPath:        "sales.csv",
+		Format:         "CSV",
+		Mode:           "count",
+		CategoryColumn: "channel",
+		SVG:            "<svg/>",
+		Points:         []datasetsSvc.ChartPoint{{Label: "search", Value: 2}},
+	})
+	if input.SourcePath != "sales.csv" || input.SVG != "<svg/>" || input.PointCount != 1 {
+		t.Fatalf("unexpected chart artifact input: %#v", input)
+	}
+}

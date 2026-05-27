@@ -38,3 +38,21 @@ type QueryResult struct {
 	Truncated   bool
 	Message     string
 }
+
+type ChartResult struct {
+	RelPath        string
+	Query          string
+	Format         string
+	Mode           string
+	CategoryColumn string
+	ValueColumn    string
+	Points         []ChartPoint
+	SVG            string
+	Truncated      bool
+	Message        string
+}
+
+type ChartPoint struct {
+	Label string
+	Value float64
+}

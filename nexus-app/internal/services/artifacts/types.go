@@ -63,6 +63,19 @@ type DocumentExtractionReport struct {
 	Truncated bool
 }
 
+type ChartArtifactReport struct {
+	Title          string
+	SourcePath     string
+	Query          string
+	Format         string
+	Mode           string
+	CategoryColumn string
+	ValueColumn    string
+	SVG            string
+	PointCount     int
+	Truncated      bool
+}
+
 type ListOptions struct {
 	Query           string
 	IncludeArchived bool

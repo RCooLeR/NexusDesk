@@ -52,6 +52,8 @@ type View struct {
 	dataProfileStatus       *widget.Label
 	dataProfileDetail       *widget.Entry
 	dataQueryEntry          *widget.Entry
+	dataLastQuery           datasetsSvc.QueryResult
+	dataLastChart           datasetsSvc.ChartResult
 	operationsResults       *fyne.Container
 	operationsStatus        *widget.Label
 	operationsDetail        *widget.Entry
