@@ -16,11 +16,11 @@ Full native app run/build requires CGO and a Windows C compiler:
 
 ```powershell
 cd nexus-app
-$env:CGO_ENABLED='1'
-go build -o build\nexusdesk.exe .
+.\scripts\dev-env.ps1 -Build
+.\scripts\dev-env.ps1 -Run
 ```
 
-Current build status on this workstation: focused native package tests pass, but full app build is blocked until a compiler is installed or added to `PATH`. `CGO_ENABLED=1 go build .` fails with `C compiler "gcc" not found`; `CGO_ENABLED=0 go build .` fails because the Fyne OpenGL binding has no buildable files without CGO.
+Current build status on this workstation: MSYS2 UCRT64 GCC is installed under `C:\msys64\ucrt64\bin`, `nexus-app/scripts/dev-env.ps1` configures the current shell, focused native package tests pass, full `go build -o build\nexusdesk.exe .` succeeds, and `go run .` has been smoke-verified under CGO. `CGO_ENABLED=0 go build .` still fails because the Fyne OpenGL binding has no buildable files without CGO.
 
 Legacy Wails reference verification:
 

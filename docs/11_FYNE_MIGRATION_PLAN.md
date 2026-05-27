@@ -115,22 +115,21 @@ The first `nexus-app` slice includes:
 - first native task-run Markdown report artifacts under `.nexusdesk/artifacts/task-runs` linked from persisted task-run records;
 - framework-free workspace domain model.
 
-Full execution is blocked in the current shell until CGO is enabled with a Windows C compiler on `PATH`. The current workstation can run focused native package tests, but `CGO_ENABLED=1 go build .` fails because `gcc` is not found, and `CGO_ENABLED=0 go build .` fails because Fyne's OpenGL binding requires CGO-backed files.
+Full execution now works on the current workstation when the MSYS2 UCRT64 compiler path is configured. `nexus-app/scripts/dev-env.ps1` prepends `C:\msys64\ucrt64\bin` and `C:\msys64\usr\bin`, sets `CGO_ENABLED=1`, and can run tests, builds, or the desktop app. `CGO_ENABLED=0 go build .` still fails because Fyne's OpenGL binding requires CGO-backed files.
 
 Current verification:
 
 ```powershell
 cd nexus-app
-$env:GOFLAGS='-mod=readonly'
-go test ./internal/domain ./internal/services/... ./internal/ui/shell ./internal/ui/theme ./internal/brand
+.\scripts\dev-env.ps1 -Test
 ```
 
-Native app build after installing/configuring a compiler:
+Native app build/run:
 
 ```powershell
 cd nexus-app
-$env:CGO_ENABLED='1'
-go build -o build\nexusdesk.exe .
+.\scripts\dev-env.ps1 -Build
+.\scripts\dev-env.ps1 -Run
 ```
 
 ## Contributor-Grade Structure

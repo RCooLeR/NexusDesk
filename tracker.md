@@ -46,11 +46,20 @@ go build -o build\nexusdesk.exe .
 
 Current build reality on this workstation:
 
-- `CGO_ENABLED=0 go build .` fails because Fyne's OpenGL binding excludes all Go files without CGO.
-- `CGO_ENABLED=1 go build .` fails because no C compiler is on `PATH` (`gcc`, `clang`, `cl`, and `zig` are not visible).
-- `winget` is available, so the next environment step is to install/configure a Windows C toolchain such as MSYS2 MinGW-w64, then rerun the full build.
+- MSYS2 is installed at `C:\msys64`, and UCRT64 GCC is available at `C:\msys64\ucrt64\bin\gcc.exe`.
+- `nexus-app/scripts/dev-env.ps1` configures the current PowerShell session with the MSYS2 compiler path, `CGO_ENABLED=1`, and default readonly module flags.
+- `CGO_ENABLED=1 go build -o build\nexusdesk.exe .` succeeds when that helper is used.
+- `go run .` has been smoke-verified by staying alive for 5 seconds under the configured CGO toolchain.
+- `CGO_ENABLED=0 go build .` still fails because Fyne's OpenGL binding excludes all Go files without CGO.
 
-Until that toolchain is installed, use the focused test command above for the native services and shell.
+Use the helper for native service tests, full builds, and local runs:
+
+```powershell
+cd nexus-app
+.\scripts\dev-env.ps1 -Test
+.\scripts\dev-env.ps1 -Build
+.\scripts\dev-env.ps1 -Run
+```
 
 ## Ordering Notes
 
@@ -89,16 +98,16 @@ Goal: preserve the old app, establish the native shell, and make the new archite
 - [x] Add first framework-free workspace domain model.
 - [x] Add first lazy workspace listing service with entry cap, ignored folders, symlink skip, traversal protection, and unreadable tracking.
 - [x] Document CGO/Fyne toolchain requirement.
-- [ ] Install/configure a Windows CGO compiler and verify `go run .`.
+- [x] Install/configure a Windows CGO compiler and verify `go run .`.
 - [x] Add app icon and brand assets from `docs/brand/`.
 - [x] Add native main menu: File, Edit, View, Navigate, Tools, Help.
 - [x] Add keyboard shortcut registry for common IDE actions.
 
 Exit criteria:
 
-- [ ] `nexus-app` opens as a native Fyne desktop window on the workstation.
-- [ ] The old Wails implementation is still available as reference.
-- [ ] New code follows the root-thin/internal-structured rule.
+- [x] `nexus-app` opens as a native Fyne desktop window on the workstation.
+- [x] The old Wails implementation is still available as reference.
+- [x] New code follows the root-thin/internal-structured rule.
 
 ## Phase 1: Native Workbench Foundation
 
@@ -234,11 +243,11 @@ Exit criteria:
 
 ## Next Batch
 
-1. Configure Windows CGO compiler and verify `nexus-app` runs.
-2. Add richer navigator context menus once the first action strip is validated in Fyne.
-3. Add assistant context-pack UI affordances for pinning the workspace root, directories, and multiple files explicitly.
-4. Add native approval queue/full-access policy persistence before destructive Git hunk discard/revert or model-authored mutations.
-5. Add native artifact browser for task reports before porting the full artifact surface.
+1. Add richer navigator context menus once the first action strip is validated in Fyne.
+2. Add assistant context-pack UI affordances for pinning the workspace root, directories, and multiple files explicitly.
+3. Add native approval queue/full-access policy persistence before destructive Git hunk discard/revert or model-authored mutations.
+4. Add native artifact browser for task reports before porting the full artifact surface.
+5. Port the agent runtime as an internal service, once approval policy persistence exists.
 
 ## Preserved Post-Port Backlog
 
