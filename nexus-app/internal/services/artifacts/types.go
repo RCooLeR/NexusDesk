@@ -110,6 +110,21 @@ type NotebookRunCellReport struct {
 	DurationMs   int64
 }
 
+type SQLiteQueryReport struct {
+	Title          string
+	SourcePath     string
+	SQL            string
+	Engine         string
+	Columns        []string
+	Rows           [][]string
+	TotalRows      int
+	ResultLimit    int
+	TimeoutSeconds int
+	DurationMs     int64
+	Truncated      bool
+	Message        string
+}
+
 type OperationsRunbookReport struct {
 	Title           string
 	SourcePath      string

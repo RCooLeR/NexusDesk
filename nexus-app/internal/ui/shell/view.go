@@ -59,6 +59,7 @@ type View struct {
 	dataResultTabs          *container.AppTabs
 	dataQueryEntry          *widget.Entry
 	dataLastQuery           datasetsSvc.QueryResult
+	dataLastSQLiteQuery     dbconnectorSvc.SQLiteQueryResult
 	dataLastChart           datasetsSvc.ChartResult
 	dataLastDashboard       datasetsSvc.DashboardResult
 	dataLastNotebookRun     datasetsSvc.NotebookRunResult

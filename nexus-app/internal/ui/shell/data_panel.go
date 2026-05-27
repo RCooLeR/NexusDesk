@@ -38,6 +38,10 @@ func (v *View) newDataPanel() fyne.CanvasObject {
 	dashboardButton := widget.NewButtonWithIcon("Preview dashboard", theme.ColorPaletteIcon(), v.previewDatasetDashboard)
 	exportDashboardButton := widget.NewButtonWithIcon("Export dashboard", theme.DocumentSaveIcon(), v.exportDatasetDashboardArtifact)
 	historyButton := widget.NewButtonWithIcon("SQL history", theme.HistoryIcon(), v.showDatasetSQLHistory)
+	saveSQLiteQueryButton := widget.NewButtonWithIcon("Save SQLite query", theme.DocumentSaveIcon(), v.saveSelectedSQLiteQuery)
+	savedSQLiteQueriesButton := widget.NewButtonWithIcon("Saved SQLite", theme.ListIcon(), v.showSavedSQLiteQueries)
+	exportSQLiteCSVButton := widget.NewButtonWithIcon("Export SQLite CSV", theme.DownloadIcon(), v.exportSQLiteQueryCSVArtifact)
+	exportSQLiteReportButton := widget.NewButtonWithIcon("Export SQLite report", theme.DocumentSaveIcon(), v.exportSQLiteQueryMarkdownArtifact)
 	addSQLCellButton := widget.NewButtonWithIcon("Add SQL cell", theme.ContentAddIcon(), func() {
 		v.insertNotebookCellTemplate("cell")
 	})
@@ -54,7 +58,7 @@ func (v *View) newDataPanel() fyne.CanvasObject {
 		container.NewTabItem("Source", dataActionStrip(profileButton, queryButton, sqlButton, sqliteButton, sqliteQueryButton)),
 		container.NewTabItem("Notebook", dataActionStrip(addSQLCellButton, addChartCellButton, saveNotebookButton, loadNotebookButton, runNotebookButton, exportNotebookButton)),
 		container.NewTabItem("Visuals", dataActionStrip(chartButton, exportChartButton, dashboardButton, exportDashboardButton)),
-		container.NewTabItem("History", dataActionStrip(historyButton, reuseSQLButton, rerunSQLButton)),
+		container.NewTabItem("History", dataActionStrip(historyButton, reuseSQLButton, rerunSQLButton, saveSQLiteQueryButton, savedSQLiteQueriesButton, exportSQLiteCSVButton, exportSQLiteReportButton)),
 	)
 	actions.SetTabLocation(container.TabLocationTop)
 	queryBar := container.NewBorder(nil, nil, nil, nil, v.dataQueryEntry)
@@ -161,6 +165,7 @@ func (v *View) runSelectedSQLiteQuery(sqlText string) {
 	v.dataProfileStatus.SetText(sqliteQueryStatus(result))
 	v.setDataSummary(formatSQLiteQueryResult(result))
 	v.dataLastQuery = sqliteQueryAsDatasetResult(result)
+	v.dataLastSQLiteQuery = result
 	v.dataLastChart = datasetsSvc.ChartResult{}
 	v.dataLastDashboard = datasetsSvc.DashboardResult{}
 	v.addActivity("Ran read-only SQLite query for " + result.RelPath + ".")
@@ -186,9 +191,60 @@ func (v *View) inspectSelectedSQLite() {
 	v.dataProfileStatus.SetText(metadata.Message)
 	v.setDataSummary(formatSQLiteMetadata(metadata))
 	v.dataLastQuery = datasetsSvc.QueryResult{}
+	v.dataLastSQLiteQuery = dbconnectorSvc.SQLiteQueryResult{}
 	v.dataLastChart = datasetsSvc.ChartResult{}
 	v.dataLastDashboard = datasetsSvc.DashboardResult{}
 	v.addActivity("Inspected SQLite database " + metadata.RelPath + ".")
+}
+
+func (v *View) saveSelectedSQLiteQuery() {
+	workspace := v.state.Workspace()
+	if workspace.Root == "" {
+		v.dataProfileStatus.SetText("Open a workspace before saving SQLite queries.")
+		return
+	}
+	selected := selectedPathOrEmpty(v)
+	if selected == "" {
+		v.dataProfileStatus.SetText("Select a .sqlite, .sqlite3, or .db file before saving SQLite queries.")
+		return
+	}
+	sqlText := strings.TrimSpace(v.dataQueryEntry.Text)
+	if sqlText == "" {
+		v.dataProfileStatus.SetText("Enter a read-only SQLite query before saving it.")
+		return
+	}
+	saved, err := v.datasetService.SaveQuery(workspace.Root, selected, sqlText, "", "sqlite-sql")
+	if err != nil {
+		v.dataProfileStatus.SetText("SQLite query save failed for " + selected)
+		dialog.ShowError(err, v.window)
+		return
+	}
+	v.persistDatasetDependency(sqliteSavedQueryDependencyRecord(selected, saved))
+	v.dataProfileStatus.SetText("Saved SQLite query " + saved.Label + ".")
+	v.setDataSummary(formatSavedQueries("Saved SQLite Queries", []datasetsSvc.SavedQuery{saved}))
+	v.addActivity("Saved SQLite query for " + selected + ".")
+}
+
+func (v *View) showSavedSQLiteQueries() {
+	workspace := v.state.Workspace()
+	if workspace.Root == "" {
+		v.dataProfileStatus.SetText("Open a workspace before listing SQLite queries.")
+		return
+	}
+	selected := selectedPathOrEmpty(v)
+	if selected == "" {
+		v.dataProfileStatus.SetText("Select a SQLite source before listing saved queries.")
+		return
+	}
+	queries, err := v.datasetService.ListSavedQueries(workspace.Root, selected, "sqlite-sql")
+	if err != nil {
+		v.dataProfileStatus.SetText("Saved SQLite queries unavailable for " + selected)
+		dialog.ShowError(err, v.window)
+		return
+	}
+	v.dataProfileStatus.SetText(fmt.Sprintf("%s: %d saved SQLite query snippet(s).", selected, len(queries)))
+	v.setDataSummary(formatSavedQueries("Saved SQLite Queries", queries))
+	v.addActivity("Listed saved SQLite queries for " + selected + ".")
 }
 
 func (v *View) saveSelectedDatasetNotebook() {
@@ -393,6 +449,7 @@ func (v *View) runSelectedDatasetSQL(sqlText string) {
 	v.dataProfileStatus.SetText(sqlStatus(result))
 	v.setDataSummary(formatDatasetSQLResult(result))
 	v.dataLastQuery = result.QueryResult
+	v.dataLastSQLiteQuery = dbconnectorSvc.SQLiteQueryResult{}
 	v.dataLastChart = datasetsSvc.ChartResult{}
 	v.dataLastDashboard = datasetsSvc.DashboardResult{}
 	v.addActivity("Ran native dataset SQL for " + result.RelPath + ".")
@@ -418,6 +475,7 @@ func (v *View) profileSelectedDataset() {
 	v.dataProfileStatus.SetText(profileStatus(profile))
 	v.setDataSummary(formatDatasetProfile(profile))
 	v.dataLastQuery = datasetsSvc.QueryResult{}
+	v.dataLastSQLiteQuery = dbconnectorSvc.SQLiteQueryResult{}
 	v.dataLastChart = datasetsSvc.ChartResult{}
 	v.dataLastDashboard = datasetsSvc.DashboardResult{}
 	v.addActivity("Profiled dataset " + profile.RelPath + ".")
@@ -443,6 +501,7 @@ func (v *View) querySelectedDataset(query string) {
 	v.dataProfileStatus.SetText(queryStatus(result))
 	v.setDataSummary(formatDatasetQueryResult(result))
 	v.dataLastQuery = result
+	v.dataLastSQLiteQuery = dbconnectorSvc.SQLiteQueryResult{}
 	v.dataLastChart = datasetsSvc.ChartResult{}
 	v.dataLastDashboard = datasetsSvc.DashboardResult{}
 	v.addActivity("Queried dataset " + result.RelPath + ".")
@@ -566,6 +625,78 @@ func (v *View) exportDatasetNotebookArtifact() {
 	v.dataProfileStatus.SetText("Exported SQL notebook run " + artifact.RelPath)
 	v.addActivity(artifact.Message)
 	v.refreshArtifactsWithQuery("kind:sql-notebook-run")
+}
+
+func (v *View) exportSQLiteQueryCSVArtifact() {
+	v.exportSQLiteQueryArtifact("csv")
+}
+
+func (v *View) exportSQLiteQueryMarkdownArtifact() {
+	v.exportSQLiteQueryArtifact("markdown")
+}
+
+func (v *View) exportSQLiteQueryArtifact(kind string) {
+	workspace := v.state.Workspace()
+	if workspace.Root == "" {
+		v.dataProfileStatus.SetText("Open a workspace before exporting SQLite query artifacts.")
+		return
+	}
+	result, ok := v.ensureSQLiteQueryForArtifact()
+	if !ok {
+		return
+	}
+	store, err := artifactsSvc.NewStore(workspace.Root)
+	if err != nil {
+		dialog.ShowError(err, v.window)
+		return
+	}
+	input := sqliteQueryArtifactInput(result)
+	var artifact artifactsSvc.Artifact
+	switch kind {
+	case "csv":
+		artifact, err = store.WriteSQLiteQueryCSVArtifact(input)
+	default:
+		artifact, err = store.WriteSQLiteQueryMarkdownArtifact(input)
+	}
+	if err != nil {
+		dialog.ShowError(err, v.window)
+		return
+	}
+	v.persistArtifactRecord(artifact)
+	v.persistSQLiteArtifactLineage(result, artifact)
+	v.dataProfileStatus.SetText("Exported SQLite query artifact " + artifact.RelPath)
+	v.addActivity(artifact.Message)
+	if kind == "csv" {
+		v.refreshArtifactsWithQuery("kind:sqlite-query-csv")
+		return
+	}
+	v.refreshArtifactsWithQuery("kind:sqlite-query-report")
+}
+
+func (v *View) ensureSQLiteQueryForArtifact() (dbconnectorSvc.SQLiteQueryResult, bool) {
+	workspace := v.state.Workspace()
+	selected := selectedPathOrEmpty(v)
+	if v.dataLastSQLiteQuery.RelPath != "" && (selected == "" || selected == v.dataLastSQLiteQuery.RelPath) {
+		return v.dataLastSQLiteQuery, true
+	}
+	if selected == "" {
+		v.dataProfileStatus.SetText("Select a SQLite source before exporting query artifacts.")
+		return dbconnectorSvc.SQLiteQueryResult{}, false
+	}
+	result, err := v.dbconnectorService.QueryWorkspaceSQLite(workspace.Root, dbconnectorSvc.SQLiteQueryRequest{
+		RelPath:        selected,
+		SQL:            v.dataQueryEntry.Text,
+		ResultLimit:    dbconnectorSvc.DefaultSQLiteRows,
+		TimeoutSeconds: dbconnectorSvc.DefaultSQLiteTimeoutSeconds,
+	})
+	if err != nil {
+		v.dataProfileStatus.SetText("SQLite export query failed for " + selected)
+		dialog.ShowError(err, v.window)
+		return dbconnectorSvc.SQLiteQueryResult{}, false
+	}
+	v.dataLastSQLiteQuery = result
+	v.dataLastQuery = sqliteQueryAsDatasetResult(result)
+	return result, true
 }
 
 func (v *View) ensureDatasetQueryForChart() (datasetsSvc.QueryResult, bool) {
@@ -808,6 +939,32 @@ func formatSQLiteQueryResult(result dbconnectorSvc.SQLiteQueryResult) string {
 		}
 		builder.WriteString(strings.Join(values, "\t"))
 		builder.WriteString("\n")
+	}
+	return builder.String()
+}
+
+func formatSavedQueries(title string, queries []datasetsSvc.SavedQuery) string {
+	var builder strings.Builder
+	builder.WriteString("# ")
+	builder.WriteString(title)
+	builder.WriteString("\n\n")
+	if len(queries) == 0 {
+		builder.WriteString("No saved queries for the selected source.\n")
+		return builder.String()
+	}
+	for index, query := range queries {
+		builder.WriteString(fmt.Sprintf("%d. %s\n", index+1, firstNonEmptyString(query.Label, "Saved query")))
+		builder.WriteString("   Path: ")
+		builder.WriteString(query.RelPath)
+		builder.WriteString("\n   Kind: ")
+		builder.WriteString(query.Kind)
+		if !query.UpdatedAt.IsZero() {
+			builder.WriteString("\n   Updated: ")
+			builder.WriteString(formatDataTime(query.UpdatedAt))
+		}
+		builder.WriteString("\n   SQL: ")
+		builder.WriteString(compactDataLine(query.Query, 220))
+		builder.WriteString("\n\n")
 	}
 	return builder.String()
 }
@@ -1056,6 +1213,23 @@ func notebookRunArtifactInput(result datasetsSvc.NotebookRunResult) artifactsSvc
 		})
 	}
 	return report
+}
+
+func sqliteQueryArtifactInput(result dbconnectorSvc.SQLiteQueryResult) artifactsSvc.SQLiteQueryReport {
+	return artifactsSvc.SQLiteQueryReport{
+		Title:          "SQLite Query - " + result.RelPath,
+		SourcePath:     result.RelPath,
+		SQL:            result.SQL,
+		Engine:         result.Engine,
+		Columns:        append([]string{}, result.Columns...),
+		Rows:           copyTableRows(result.Rows),
+		TotalRows:      result.TotalRows,
+		ResultLimit:    result.ResultLimit,
+		TimeoutSeconds: result.TimeoutSeconds,
+		DurationMs:     result.DurationMs,
+		Truncated:      result.Truncated,
+		Message:        result.Message,
+	}
 }
 
 func copyTableRows(rows [][]string) [][]string {
@@ -1474,6 +1648,41 @@ func sqliteDependencyRecord(source string, sqlRun metadataSvc.SQLRunRecord) meta
 	}
 }
 
+func sqliteSavedQueryDependencyRecord(source string, query datasetsSvc.SavedQuery) metadataSvc.DatasetDependencyRecord {
+	updated := query.UpdatedAt
+	if updated.IsZero() {
+		updated = time.Now().UTC()
+	}
+	return metadataSvc.DatasetDependencyRecord{
+		SourcePath:    source,
+		DependentKind: "sqlite-query-snippet",
+		DependentRef:  query.Label,
+		Relation:      "saves",
+		Metadata: map[string]string{
+			"kind":  query.Kind,
+			"query": query.Query,
+		},
+		CreatedAt: updated,
+		UpdatedAt: updated,
+	}
+}
+
+func sqliteArtifactDependencyRecord(source string, sqlRun metadataSvc.SQLRunRecord, artifact artifactsSvc.Artifact) metadataSvc.DatasetDependencyRecord {
+	return metadataSvc.DatasetDependencyRecord{
+		SourcePath:    source,
+		DependentKind: "sqlite-query-artifact",
+		DependentRef:  artifact.RelPath,
+		Relation:      "exports",
+		Metadata: map[string]string{
+			"engine":   sqlRun.Engine,
+			"sql":      sqlRun.SQL,
+			"artifact": artifact.RelPath,
+		},
+		CreatedAt: sqlRun.StartedAt,
+		UpdatedAt: sqlRun.CompletedAt,
+	}
+}
+
 func notebookDependencyRecord(source string, notebook datasetsSvc.Notebook) metadataSvc.DatasetDependencyRecord {
 	return metadataSvc.DatasetDependencyRecord{
 		SourcePath:    source,
@@ -1645,6 +1854,19 @@ func (v *View) persistDatasetDependency(record metadataSvc.DatasetDependencyReco
 	if err := v.metadataStore.SaveDatasetDependency(record); err != nil {
 		v.addActivity("Could not persist dataset dependency metadata: " + err.Error())
 	}
+}
+
+func (v *View) persistSQLiteArtifactLineage(result dbconnectorSvc.SQLiteQueryResult, artifact artifactsSvc.Artifact) {
+	if v.metadataStore == nil {
+		return
+	}
+	record := v.metadataStore.NormalizeSQLRunRecord(sqliteSQLRunRecord(result, result.RelPath, result.SQL, time.Now().UTC(), nil))
+	record.ArtifactPath = artifact.RelPath
+	if err := v.metadataStore.SaveSQLRun(record); err != nil {
+		v.addActivity("Could not persist SQLite artifact SQL metadata: " + err.Error())
+		return
+	}
+	v.persistDatasetDependency(sqliteArtifactDependencyRecord(result.RelPath, record, artifact))
 }
 
 func firstNonEmptyString(values ...string) string {

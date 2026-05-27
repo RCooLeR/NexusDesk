@@ -211,6 +211,7 @@ Goal: rebuild Data & Analytics as native data tooling, not a crowded web panel.
 - [x] Add first native Data panel result tabs for notebook summary, rows, plan, and charts.
 - [x] Add first native visual notebook controls for inserting SQL and chart cell templates.
 - [x] Port first SQLite workspace connector browser with read-only schema, index, relationship, row-count, and capped-sample inspection.
+- [x] Add native SQLite connector saved query snippets plus CSV and Markdown query-result artifacts with lineage metadata.
 - [ ] Port external DB profile storage and read-only query guards.
 - [ ] Add native table/grid widget strategy.
 - [x] Add chart preview/artifact generation.
@@ -291,7 +292,7 @@ Exit criteria:
 1. Continue native SQL notebooks with richer explain output and fuller cell management.
 2. Route long indexing, OCR, dump imports, connector pulls, report generation, and long agent runs through jobs.
 3. Add dump import job design before any Docker/database imports.
-4. Add SQLite connector cancellation, saved queries, and CSV/Markdown exports on top of the guarded query preview.
+4. Add SQLite connector cancellation and richer lineage actions on top of saved queries and CSV/Markdown exports.
 5. Continue native UI parity by replacing remaining cramped Wails-era workflow strips with structured native tabs, dialogs, and split panes.
 
 ## Preserved Post-Port Backlog
@@ -327,7 +328,8 @@ The Fyne migration must not drop product ambition, but this section is intention
 - [ ] Full SQL notebook shell with richer explain output, cell selection/reorder/delete controls, and notebook-level result navigation.
 - [x] First SQLite workspace database browser with schema, views, indexes, row counts, capped samples, and relationship hints.
 - [x] First SQLite connector query preview with SELECT/WITH guard, single-statement validation, visible default row cap/timeout, SQL run metadata, dependency lineage, and read-only result rendering.
-- [ ] SQLite connector query cancellation, saved queries, CSV/Markdown exports, and richer lineage actions.
+- [x] SQLite connector saved queries plus CSV/Markdown result exports.
+- [ ] SQLite connector query cancellation and richer lineage actions.
 - [ ] External database profiles for PostgreSQL, MySQL/MariaDB, SQL Server, DuckDB files, and future engines with protected credentials.
 - [ ] Read-only SQL guard with strong comment/string handling, mutation blocking, caps, timeouts, cancellation, and redacted errors.
 - [ ] Database dump import jobs using temporary isolated environments before any direct mutation workflows exist.

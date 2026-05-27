@@ -212,6 +212,34 @@ func TestFormatSQLiteQueryResultIncludesCapsAndRows(t *testing.T) {
 	}
 }
 
+func TestFormatSavedQueriesListsNewestSnippets(t *testing.T) {
+	output := formatSavedQueries("Saved SQLite Queries", []datasetsSvc.SavedQuery{
+		{RelPath: "data/store.sqlite", Label: "Orders", Kind: "sqlite-sql", Query: "select * from orders"},
+	})
+	for _, expected := range []string{"# Saved SQLite Queries", "Orders", "data/store.sqlite", "select * from orders"} {
+		if !strings.Contains(output, expected) {
+			t.Fatalf("saved query output missing %q:\n%s", expected, output)
+		}
+	}
+}
+
+func TestSQLiteQueryArtifactInputMapsRowsAndCaps(t *testing.T) {
+	input := sqliteQueryArtifactInput(dbconnectorSvc.SQLiteQueryResult{
+		RelPath:        "data/store.sqlite",
+		SQL:            "select id from users",
+		Engine:         "sqlite-readonly",
+		Columns:        []string{"id"},
+		Rows:           [][]string{{"1"}},
+		TotalRows:      1,
+		ResultLimit:    100,
+		TimeoutSeconds: 30,
+		DurationMs:     7,
+	})
+	if input.SourcePath != "data/store.sqlite" || input.SQL != "select id from users" || input.Rows[0][0] != "1" || input.ResultLimit != 100 {
+		t.Fatalf("unexpected SQLite artifact input: %#v", input)
+	}
+}
+
 func TestSQLiteSQLRunRecordCapturesFailure(t *testing.T) {
 	started := time.Date(2026, 5, 27, 12, 0, 0, 0, time.UTC)
 	record := sqliteSQLRunRecord(dbconnectorSvc.SQLiteQueryResult{}, "data/store.sqlite", "delete from orders", started, errForTest("blocked"))

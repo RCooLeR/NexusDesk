@@ -176,3 +176,11 @@ type NotebookCellRun struct {
 	CompletedAt time.Time
 	DurationMs  int64
 }
+
+type SavedQuery struct {
+	RelPath   string    `json:"relPath"`
+	Query     string    `json:"query"`
+	Label     string    `json:"label"`
+	Kind      string    `json:"kind"`
+	UpdatedAt time.Time `json:"updatedAt"`
+}
