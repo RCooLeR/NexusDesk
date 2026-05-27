@@ -41,7 +41,8 @@ func (v *View) newDataPanel() fyne.CanvasObject {
 	saveNotebookButton := widget.NewButtonWithIcon("Save notebook", theme.DocumentSaveIcon(), v.saveSelectedDatasetNotebook)
 	loadNotebookButton := widget.NewButtonWithIcon("Load notebook", theme.FolderOpenIcon(), v.loadSelectedDatasetNotebook)
 	runNotebookButton := widget.NewButtonWithIcon("Run notebook", theme.MediaPlayIcon(), v.runLatestDatasetNotebook)
-	actions := container.NewHBox(profileButton, queryButton, sqlButton, sqliteButton, sqliteQueryButton, saveNotebookButton, loadNotebookButton, runNotebookButton, chartButton, exportChartButton, dashboardButton, exportDashboardButton, historyButton)
+	exportNotebookButton := widget.NewButtonWithIcon("Export notebook", theme.DocumentSaveIcon(), v.exportDatasetNotebookArtifact)
+	actions := container.NewHBox(profileButton, queryButton, sqlButton, sqliteButton, sqliteQueryButton, saveNotebookButton, loadNotebookButton, runNotebookButton, exportNotebookButton, chartButton, exportChartButton, dashboardButton, exportDashboardButton, historyButton)
 	queryBar := container.NewBorder(nil, nil, nil, actions, v.dataQueryEntry)
 	header := container.NewVBox(v.dataProfileStatus, queryBar)
 	detail := container.NewScroll(v.dataProfileDetail)
@@ -143,6 +144,7 @@ func (v *View) saveSelectedDatasetNotebook() {
 		return
 	}
 	v.persistDatasetDependency(notebookDependencyRecord(selected, saved))
+	v.dataLastNotebookRun = datasetsSvc.NotebookRunResult{}
 	v.dataProfileStatus.SetText(fmt.Sprintf("Saved SQL notebook %s with %d cell(s).", saved.Label, len(saved.Cells)))
 	v.dataProfileDetail.SetText(formatDatasetNotebooks([]datasetsSvc.Notebook{saved}))
 	v.addActivity("Saved SQL notebook for " + selected + ".")
@@ -171,6 +173,7 @@ func (v *View) loadSelectedDatasetNotebook() {
 		return
 	}
 	v.dataQueryEntry.SetText(formatNotebookForEditor(notebooks[0]))
+	v.dataLastNotebookRun = datasetsSvc.NotebookRunResult{}
 	v.dataProfileStatus.SetText(fmt.Sprintf("Loaded %d SQL notebook(s) for %s.", len(notebooks), selected))
 	v.dataProfileDetail.SetText(formatDatasetNotebooks(notebooks))
 	v.addActivity("Loaded SQL notebooks for " + selected + ".")
@@ -210,6 +213,7 @@ func (v *View) runLatestDatasetNotebook() {
 	v.dataLastQuery = lastNotebookQueryResult(result)
 	v.dataLastChart = lastNotebookChartResult(result)
 	v.dataLastDashboard = datasetsSvc.DashboardResult{}
+	v.dataLastNotebookRun = result
 	v.addActivity("Ran SQL notebook " + notebooks[0].Label + ".")
 }
 
@@ -409,6 +413,35 @@ func (v *View) exportDatasetDashboardArtifact() {
 	v.dataProfileStatus.SetText("Exported dashboard " + artifact.RelPath)
 	v.addActivity(artifact.Message)
 	v.refreshArtifactsWithQuery("kind:dashboard")
+}
+
+func (v *View) exportDatasetNotebookArtifact() {
+	workspace := v.state.Workspace()
+	if workspace.Root == "" {
+		v.dataProfileStatus.SetText("Open a workspace before exporting SQL notebook artifacts.")
+		return
+	}
+	selected := selectedPathOrEmpty(v)
+	if v.dataLastNotebookRun.RelPath == "" || (selected != "" && v.dataLastNotebookRun.RelPath != selected) {
+		v.runLatestDatasetNotebook()
+		if v.dataLastNotebookRun.RelPath == "" {
+			return
+		}
+	}
+	store, err := artifactsSvc.NewStore(workspace.Root)
+	if err != nil {
+		dialog.ShowError(err, v.window)
+		return
+	}
+	artifact, err := store.WriteNotebookRunReport(notebookRunArtifactInput(v.dataLastNotebookRun))
+	if err != nil {
+		dialog.ShowError(err, v.window)
+		return
+	}
+	v.persistArtifactRecord(artifact)
+	v.dataProfileStatus.SetText("Exported SQL notebook run " + artifact.RelPath)
+	v.addActivity(artifact.Message)
+	v.refreshArtifactsWithQuery("kind:sql-notebook-run")
 }
 
 func (v *View) ensureDatasetQueryForChart() (datasetsSvc.QueryResult, bool) {
@@ -855,6 +888,61 @@ func dashboardArtifactInput(dashboard datasetsSvc.DashboardResult) artifactsSvc.
 		PointCount:     len(dashboard.Chart.Points),
 		Truncated:      dashboard.Truncated,
 	}
+}
+
+func notebookRunArtifactInput(result datasetsSvc.NotebookRunResult) artifactsSvc.NotebookRunReport {
+	report := artifactsSvc.NotebookRunReport{
+		Title:       "SQL Notebook Run - " + firstNonEmptyString(result.Label, result.NotebookID, result.RelPath),
+		SourcePath:  result.RelPath,
+		NotebookID:  result.NotebookID,
+		Label:       result.Label,
+		Message:     result.Message,
+		StartedAt:   result.StartedAt,
+		CompletedAt: result.CompletedAt,
+		DurationMs:  result.DurationMs,
+		Cells:       []artifactsSvc.NotebookRunCellReport{},
+	}
+	for _, cell := range result.Cells {
+		status := "success"
+		if cell.Error != "" {
+			status = "failed"
+		}
+		sqlResult := cell.SQLResult
+		chartResult := cell.ChartResult
+		report.Cells = append(report.Cells, artifactsSvc.NotebookRunCellReport{
+			CellID:       cell.CellID,
+			Label:        cell.Label,
+			Kind:         cell.Kind,
+			SQL:          cell.SQL,
+			Status:       status,
+			Error:        cell.Error,
+			Engine:       sqlResult.Engine,
+			Columns:      append([]string{}, sqlResult.Columns...),
+			Rows:         copyTableRows(sqlResult.Rows),
+			MatchedRows:  sqlResult.MatchedRows,
+			ShownRows:    len(sqlResult.Rows),
+			Plan:         append([]string{}, sqlResult.Plan...),
+			ChartMode:    chartResult.Mode,
+			ChartMessage: chartResult.Message,
+			ChartSVG:     chartResult.SVG,
+			ChartPoints:  len(chartResult.Points),
+			StartedAt:    cell.StartedAt,
+			CompletedAt:  cell.CompletedAt,
+			DurationMs:   cell.DurationMs,
+		})
+	}
+	return report
+}
+
+func copyTableRows(rows [][]string) [][]string {
+	if len(rows) == 0 {
+		return nil
+	}
+	copied := make([][]string, 0, len(rows))
+	for _, row := range rows {
+		copied = append(copied, append([]string{}, row...))
+	}
+	return copied
 }
 
 func chartArtifactTitle(chart datasetsSvc.ChartResult) string {

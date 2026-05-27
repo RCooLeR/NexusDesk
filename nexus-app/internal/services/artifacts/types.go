@@ -76,6 +76,40 @@ type ChartArtifactReport struct {
 	Truncated      bool
 }
 
+type NotebookRunReport struct {
+	Title       string
+	SourcePath  string
+	NotebookID  string
+	Label       string
+	Message     string
+	StartedAt   time.Time
+	CompletedAt time.Time
+	DurationMs  int64
+	Cells       []NotebookRunCellReport
+}
+
+type NotebookRunCellReport struct {
+	CellID       string
+	Label        string
+	Kind         string
+	SQL          string
+	Status       string
+	Error        string
+	Engine       string
+	Columns      []string
+	Rows         [][]string
+	MatchedRows  int
+	ShownRows    int
+	Plan         []string
+	ChartMode    string
+	ChartMessage string
+	ChartSVG     string
+	ChartPoints  int
+	StartedAt    time.Time
+	CompletedAt  time.Time
+	DurationMs   int64
+}
+
 type OperationsRunbookReport struct {
 	Title           string
 	SourcePath      string

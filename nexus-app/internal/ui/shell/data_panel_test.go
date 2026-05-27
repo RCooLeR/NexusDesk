@@ -372,6 +372,52 @@ func TestDashboardArtifactInputUsesDashboardMode(t *testing.T) {
 	}
 }
 
+func TestNotebookRunArtifactInputPreservesCellsRowsAndCharts(t *testing.T) {
+	input := notebookRunArtifactInput(datasetsSvc.NotebookRunResult{
+		RelPath:    "sales.csv",
+		NotebookID: "book-1",
+		Label:      "Sales Notebook",
+		Message:    "Ran 2 notebook cell(s).",
+		Cells: []datasetsSvc.NotebookCellRun{
+			{
+				CellID: "cell-1",
+				Label:  "Top spend",
+				Kind:   "sql",
+				SQL:    "select channel from dataset",
+				SQLResult: datasetsSvc.SQLResult{
+					QueryResult: datasetsSvc.QueryResult{
+						Columns:     []string{"channel"},
+						Rows:        [][]string{{"search"}},
+						MatchedRows: 1,
+					},
+					Engine: "native-dataset-sql",
+					Plan:   []string{"Validate SELECT-only native dataset SQL."},
+				},
+			},
+			{
+				CellID: "chart-1",
+				Label:  "Spend chart",
+				Kind:   "chart",
+				ChartResult: datasetsSvc.ChartResult{
+					Mode:    "sum",
+					SVG:     "<svg/>",
+					Points:  []datasetsSvc.ChartPoint{{Label: "search", Value: 2}},
+					Message: "Bar chart.",
+				},
+			},
+		},
+	})
+	if input.SourcePath != "sales.csv" || input.NotebookID != "book-1" || len(input.Cells) != 2 {
+		t.Fatalf("unexpected notebook artifact input: %#v", input)
+	}
+	if input.Cells[0].Columns[0] != "channel" || input.Cells[0].Rows[0][0] != "search" || input.Cells[0].Plan[0] == "" {
+		t.Fatalf("unexpected SQL cell artifact input: %#v", input.Cells[0])
+	}
+	if input.Cells[1].ChartSVG != "<svg/>" || input.Cells[1].ChartPoints != 1 {
+		t.Fatalf("unexpected chart cell artifact input: %#v", input.Cells[1])
+	}
+}
+
 type errForTest string
 
 func (e errForTest) Error() string {
