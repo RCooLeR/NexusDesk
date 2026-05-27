@@ -141,6 +141,8 @@ Workspace tree actions call the same service boundary: the Fyne navigator action
 
 Native settings are split into `nexus-app/internal/services/settings` for non-secret provider/model/context persistence and `nexus-app/internal/ui/shell` for the Settings tab. Secret storage and access-policy persistence remain separate future work.
 
+Native LLM transport is service-owned: `nexus-app/internal/services/llm` owns OpenAI-compatible chat, streaming chat, provider model probes, Ollama runtime probes, context-window options, response reserve, and workspace-context sentinel escaping. Fyne UI and future agents should call this package through a small assistant/orchestration service rather than embedding HTTP/provider details in widgets.
+
 ### 2. Frontend
 
 Responsibilities:
@@ -181,7 +183,7 @@ Near-term architecture corrections:
 - Configure Windows CGO/Fyne toolchain and verify the native app runs.
 - Add native UI affordances for file operations and rollback browsing while keeping the mutation policy in `nexus-app/internal/services/workspace`.
 - Keep editor tab/session and draft rules in `nexus-app/internal/services/editor` rather than in Fyne widget callbacks; Fyne editor chrome should only render and dispatch those state transitions.
-- Port Git, LLM/agent, data, artifact, and metadata services without recreating a bridge-shaped root package.
+- Port remaining assistant/agent, data, artifact, and metadata services without recreating a bridge-shaped root package.
 - Add a durable job model before wiring slow indexing, OCR, dump imports, connector pulls, or long agent runs.
 - Promote SQLite metadata repositories to primary persistence once migration/recovery tests exist.
 
@@ -296,6 +298,12 @@ Provider support starts with:
 - OpenAI-compatible
 - Ollama through its OpenAI-compatible endpoint
 - custom OpenAI-compatible base URLs
+
+Current native status:
+
+- `nexus-app/internal/services/llm` implements the OpenAI-compatible chat/completions transport, streaming SSE delta parsing, `/models` probing, Ollama `/api/ps` runtime diagnostics, and context-window/response-reserve request fields.
+- It accepts `llm.Config` and adapts from the native non-secret settings store with `ConfigFromSettings`.
+- It keeps workspace context quoted behind Nexus sentinels and escapes fence/sentinel strings from file content before model submission.
 
 Planned provider support:
 

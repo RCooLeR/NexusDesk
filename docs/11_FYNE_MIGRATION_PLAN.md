@@ -104,6 +104,7 @@ The first `nexus-app` slice includes:
 - first native rollback browser panel for safe-write and file-operation records with confirmation before apply;
 - first native workspace-tree action strip for create, copy, rename/move, and delete through the file-operation services;
 - first native non-secret settings store and provider/model settings page skeleton;
+- first native OpenAI-compatible/Ollama LLM client with chat, streaming chat, provider probing, Ollama runtime diagnostics, context-window options, response reserve, and workspace-context quoting;
 - first native task discovery and safe task-run service for npm scripts, Go tests, and Docker Compose config checks;
 - first native bottom Tasks tab for discovery, confirmed task runs, and read-only last-run stdout/stderr;
 - first native in-memory Jobs service and Jobs tab for task-run status, log tail, and cancellation requests;

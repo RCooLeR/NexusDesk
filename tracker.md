@@ -56,7 +56,7 @@ Until that toolchain is installed, use the focused test command above for the na
 
 Some tracker items are intentionally out of phase order because they depend on missing foundations:
 
-- Phase 2 LLM/agent items are still pending because the native OpenAI-compatible/Ollama client is not ported yet.
+- Phase 2 streaming/agent items are still pending because the native assistant orchestration layer is not wired to the ported LLM client yet.
 - Phase 3 AI diff summary and commit drafting are pending until the native assistant service exists.
 - Approval-backed hunk mutations are pending until native approval policy/UI is ready enough to protect destructive Git actions.
 - Durable persisted jobs and task-run artifacts are pending until the SQLite metadata store lands.
@@ -133,7 +133,7 @@ Exit criteria:
 Goal: port the LLM and agent runtime without recreating the Wails bridge problems.
 
 - [x] Add first native non-secret settings store for provider/model/context configuration.
-- [ ] Port OpenAI-compatible/Ollama client.
+- [x] Port OpenAI-compatible/Ollama client.
 - [x] Add native provider/model settings page skeleton.
 - [ ] Add streaming assistant panel using Go channels/events instead of Wails events.
 - [ ] Port context-pack builder.
@@ -233,7 +233,7 @@ Exit criteria:
 ## Next Batch
 
 1. Configure Windows CGO compiler and verify `nexus-app` runs.
-2. Port OpenAI-compatible/Ollama client using the native settings store.
+2. Wire the native assistant panel to the ported OpenAI-compatible/Ollama client with streaming updates.
 3. Add approval-backed hunk stage/unstage actions on top of parsed hunk metadata.
 4. Add durable persisted jobs and task-run artifacts.
 5. Add richer navigator context menus once the first action strip is validated in Fyne.
