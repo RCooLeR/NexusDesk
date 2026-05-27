@@ -17,6 +17,8 @@ func inferKind(relPath string) string {
 		return "document-extract"
 	case strings.Contains(normalized, "/comparisons/"):
 		return "artifact-comparison"
+	case strings.Contains(normalized, "/dashboards/"):
+		return "dashboard"
 	case strings.HasSuffix(normalized, ".md"):
 		return "markdown"
 	case strings.HasSuffix(normalized, ".csv"):

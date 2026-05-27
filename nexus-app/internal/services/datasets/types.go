@@ -60,6 +60,23 @@ type ChartPoint struct {
 	Value float64
 }
 
+type DashboardResult struct {
+	RelPath   string
+	Query     string
+	Format    string
+	Metrics   []DashboardMetric
+	Chart     ChartResult
+	SVG       string
+	Truncated bool
+	Message   string
+}
+
+type DashboardMetric struct {
+	Label  string
+	Value  string
+	Detail string
+}
+
 type SQLResult struct {
 	QueryResult
 	SQL         string

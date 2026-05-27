@@ -18,11 +18,17 @@ func (s *Store) WriteChartArtifact(report ChartArtifactReport) (Artifact, error)
 		return Artifact{}, errors.New("chart source path is required")
 	}
 	createdAt := time.Now().UTC()
+	artifactKind := "chart"
+	artifactFolder := "charts"
+	if strings.EqualFold(strings.TrimSpace(report.Mode), "dashboard") {
+		artifactKind = "dashboard"
+		artifactFolder = "dashboards"
+	}
 	title := strings.TrimSpace(report.Title)
 	if title == "" {
 		title = chartArtifactTitle(report)
 	}
-	relPath := s.relPath("charts", fmt.Sprintf("%s-%s.svg", createdAt.Format("20060102-150405-000000000"), safeName(title)))
+	relPath := s.relPath(artifactFolder, fmt.Sprintf("%s-%s.svg", createdAt.Format("20060102-150405-000000000"), safeName(title)))
 	absPath := s.absPath(relPath)
 	if err := os.MkdirAll(filepath.Dir(absPath), 0o755); err != nil {
 		return Artifact{}, err
@@ -36,7 +42,7 @@ func (s *Store) WriteChartArtifact(report ChartArtifactReport) (Artifact, error)
 		return Artifact{}, err
 	}
 	metadata := Metadata{
-		Kind:        "chart",
+		Kind:        artifactKind,
 		Title:       title,
 		RelPath:     relPath,
 		Source:      chartSourceSummary(report),
@@ -47,12 +53,12 @@ func (s *Store) WriteChartArtifact(report ChartArtifactReport) (Artifact, error)
 		return Artifact{}, err
 	}
 	return Artifact{
-		Kind:         "chart",
+		Kind:         artifactKind,
 		Title:        title,
 		RelPath:      relPath,
 		AbsPath:      absPath,
 		MetadataPath: relPath + ".json",
-		Message:      "Chart artifact created at " + relPath + ".",
+		Message:      artifactMessage(artifactKind, relPath),
 		Size:         int64(len(svg) + 1),
 		CreatedAt:    createdAt,
 		GeneratedAt:  createdAt,
@@ -62,6 +68,12 @@ func (s *Store) WriteChartArtifact(report ChartArtifactReport) (Artifact, error)
 }
 
 func chartArtifactTitle(report ChartArtifactReport) string {
+	if strings.EqualFold(strings.TrimSpace(report.Mode), "dashboard") {
+		if report.ValueColumn != "" {
+			return fmt.Sprintf("Dashboard - %s by %s", report.ValueColumn, report.CategoryColumn)
+		}
+		return fmt.Sprintf("Dashboard - rows by %s", report.CategoryColumn)
+	}
 	if report.Mode == "line" && report.ValueColumn != "" {
 		return fmt.Sprintf("Chart - %s over %s", report.ValueColumn, report.CategoryColumn)
 	}
@@ -79,6 +91,9 @@ func chartSourceSummary(report ChartArtifactReport) string {
 	if report.Format != "" {
 		parts = append(parts, "format: "+report.Format)
 	}
+	if strings.TrimSpace(report.Mode) != "" {
+		parts = append(parts, "mode: "+strings.TrimSpace(report.Mode))
+	}
 	if report.PointCount > 0 {
 		parts = append(parts, fmt.Sprintf("points: %d", report.PointCount))
 	}
@@ -86,4 +101,11 @@ func chartSourceSummary(report ChartArtifactReport) string {
 		parts = append(parts, "bounded sample")
 	}
 	return strings.Join(parts, " | ")
+}
+
+func artifactMessage(kind string, relPath string) string {
+	if kind == "dashboard" {
+		return "Dashboard artifact created at " + relPath + "."
+	}
+	return "Chart artifact created at " + relPath + "."
 }

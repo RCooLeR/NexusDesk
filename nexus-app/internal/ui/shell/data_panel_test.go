@@ -78,6 +78,31 @@ func TestFormatDatasetChartIncludesSVGAndPoints(t *testing.T) {
 	}
 }
 
+func TestFormatDatasetDashboardIncludesMetricsAndSVG(t *testing.T) {
+	output := formatDatasetDashboard(datasetsSvc.DashboardResult{
+		RelPath: "sales.csv",
+		Format:  "CSV",
+		Query:   "channel=search",
+		Metrics: []datasetsSvc.DashboardMetric{
+			{Label: "Shown rows", Value: "2", Detail: "2 matched"},
+			{Label: "Total spend", Value: "20", Detail: "channel"},
+		},
+		Chart: datasetsSvc.ChartResult{
+			Mode:           "sum",
+			CategoryColumn: "channel",
+			ValueColumn:    "spend",
+			Points:         []datasetsSvc.ChartPoint{{Label: "search", Value: 20}},
+		},
+		SVG:     `<svg></svg>`,
+		Message: "Dashboard: 2 metric(s), Bar chart: spend by channel.",
+	})
+	for _, expected := range []string{"# Dataset Dashboard", "Shown rows: 2", "Total spend: 20", "Value: spend", "<svg></svg>"} {
+		if !strings.Contains(output, expected) {
+			t.Fatalf("dashboard output missing %q:\n%s", expected, output)
+		}
+	}
+}
+
 func TestFormatDatasetSQLResultIncludesPlanAndRows(t *testing.T) {
 	output := formatDatasetSQLResult(datasetsSvc.SQLResult{
 		QueryResult: datasetsSvc.QueryResult{
@@ -137,6 +162,22 @@ func TestChartArtifactInputPreservesSourceAndSVG(t *testing.T) {
 	})
 	if input.SourcePath != "sales.csv" || input.SVG != "<svg/>" || input.PointCount != 1 {
 		t.Fatalf("unexpected chart artifact input: %#v", input)
+	}
+}
+
+func TestDashboardArtifactInputUsesDashboardMode(t *testing.T) {
+	input := dashboardArtifactInput(datasetsSvc.DashboardResult{
+		RelPath: "sales.csv",
+		Format:  "CSV",
+		Chart: datasetsSvc.ChartResult{
+			CategoryColumn: "channel",
+			ValueColumn:    "spend",
+			Points:         []datasetsSvc.ChartPoint{{Label: "search", Value: 20}},
+		},
+		SVG: "<svg/>",
+	})
+	if input.SourcePath != "sales.csv" || input.Mode != "dashboard" || input.SVG != "<svg/>" || input.PointCount != 1 {
+		t.Fatalf("unexpected dashboard artifact input: %#v", input)
 	}
 }
 

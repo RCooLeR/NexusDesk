@@ -30,8 +30,10 @@ func (v *View) newDataPanel() fyne.CanvasObject {
 	}
 	chartButton := widget.NewButtonWithIcon("Preview chart", theme.ViewFullScreenIcon(), v.previewDatasetChart)
 	exportChartButton := widget.NewButtonWithIcon("Export chart", theme.DocumentSaveIcon(), v.exportDatasetChartArtifact)
+	dashboardButton := widget.NewButtonWithIcon("Preview dashboard", theme.ColorPaletteIcon(), v.previewDatasetDashboard)
+	exportDashboardButton := widget.NewButtonWithIcon("Export dashboard", theme.DocumentSaveIcon(), v.exportDatasetDashboardArtifact)
 	historyButton := widget.NewButtonWithIcon("SQL history", theme.HistoryIcon(), v.showDatasetSQLHistory)
-	actions := container.NewHBox(profileButton, queryButton, sqlButton, chartButton, exportChartButton, historyButton)
+	actions := container.NewHBox(profileButton, queryButton, sqlButton, chartButton, exportChartButton, dashboardButton, exportDashboardButton, historyButton)
 	queryBar := container.NewBorder(nil, nil, nil, actions, v.dataQueryEntry)
 	header := container.NewVBox(v.dataProfileStatus, queryBar)
 	detail := container.NewScroll(v.dataProfileDetail)
@@ -92,6 +94,7 @@ func (v *View) runSelectedDatasetSQL(sqlText string) {
 	v.dataProfileDetail.SetText(formatDatasetSQLResult(result))
 	v.dataLastQuery = result.QueryResult
 	v.dataLastChart = datasetsSvc.ChartResult{}
+	v.dataLastDashboard = datasetsSvc.DashboardResult{}
 	v.addActivity("Ran native dataset SQL for " + result.RelPath + ".")
 }
 
@@ -116,6 +119,7 @@ func (v *View) profileSelectedDataset() {
 	v.dataProfileDetail.SetText(formatDatasetProfile(profile))
 	v.dataLastQuery = datasetsSvc.QueryResult{}
 	v.dataLastChart = datasetsSvc.ChartResult{}
+	v.dataLastDashboard = datasetsSvc.DashboardResult{}
 	v.addActivity("Profiled dataset " + profile.RelPath + ".")
 }
 
@@ -140,6 +144,7 @@ func (v *View) querySelectedDataset(query string) {
 	v.dataProfileDetail.SetText(formatDatasetQueryResult(result))
 	v.dataLastQuery = result
 	v.dataLastChart = datasetsSvc.ChartResult{}
+	v.dataLastDashboard = datasetsSvc.DashboardResult{}
 	v.addActivity("Queried dataset " + result.RelPath + ".")
 }
 
@@ -158,6 +163,24 @@ func (v *View) previewDatasetChart() {
 	v.dataProfileStatus.SetText(chart.Message)
 	v.dataProfileDetail.SetText(formatDatasetChart(chart))
 	v.addActivity("Previewed chart for " + chart.RelPath + ".")
+}
+
+func (v *View) previewDatasetDashboard() {
+	result, ok := v.ensureDatasetQueryForChart()
+	if !ok {
+		return
+	}
+	dashboard, err := datasetsSvc.BuildDashboard(result)
+	if err != nil {
+		v.dataProfileStatus.SetText("Dashboard preview failed for " + result.RelPath)
+		dialog.ShowError(err, v.window)
+		return
+	}
+	v.dataLastChart = dashboard.Chart
+	v.dataLastDashboard = dashboard
+	v.dataProfileStatus.SetText(dashboard.Message)
+	v.dataProfileDetail.SetText(formatDatasetDashboard(dashboard))
+	v.addActivity("Previewed dashboard for " + dashboard.RelPath + ".")
 }
 
 func (v *View) exportDatasetChartArtifact() {
@@ -186,6 +209,34 @@ func (v *View) exportDatasetChartArtifact() {
 	v.dataProfileStatus.SetText("Exported chart " + artifact.RelPath)
 	v.addActivity(artifact.Message)
 	v.refreshArtifactsWithQuery("kind:chart")
+}
+
+func (v *View) exportDatasetDashboardArtifact() {
+	workspace := v.state.Workspace()
+	if workspace.Root == "" {
+		v.dataProfileStatus.SetText("Open a workspace before exporting dashboard artifacts.")
+		return
+	}
+	if v.dataLastDashboard.SVG == "" {
+		v.previewDatasetDashboard()
+		if v.dataLastDashboard.SVG == "" {
+			return
+		}
+	}
+	store, err := artifactsSvc.NewStore(workspace.Root)
+	if err != nil {
+		dialog.ShowError(err, v.window)
+		return
+	}
+	artifact, err := store.WriteChartArtifact(dashboardArtifactInput(v.dataLastDashboard))
+	if err != nil {
+		dialog.ShowError(err, v.window)
+		return
+	}
+	v.persistArtifactRecord(artifact)
+	v.dataProfileStatus.SetText("Exported dashboard " + artifact.RelPath)
+	v.addActivity(artifact.Message)
+	v.refreshArtifactsWithQuery("kind:dashboard")
 }
 
 func (v *View) ensureDatasetQueryForChart() (datasetsSvc.QueryResult, bool) {
@@ -393,6 +444,49 @@ func formatDatasetChart(chart datasetsSvc.ChartResult) string {
 	return builder.String()
 }
 
+func formatDatasetDashboard(dashboard datasetsSvc.DashboardResult) string {
+	var builder strings.Builder
+	builder.WriteString("# Dataset Dashboard\n\n")
+	builder.WriteString("Path: ")
+	builder.WriteString(dashboard.RelPath)
+	builder.WriteString("\nFormat: ")
+	builder.WriteString(dashboard.Format)
+	if strings.TrimSpace(dashboard.Query) != "" {
+		builder.WriteString("\nQuery: ")
+		builder.WriteString(dashboard.Query)
+	}
+	builder.WriteString("\n")
+	if dashboard.Truncated {
+		builder.WriteString("Scope: dashboard is bounded by query and chart caps\n")
+	}
+	builder.WriteString("\nMetrics\n")
+	for _, metric := range dashboard.Metrics {
+		builder.WriteString("- ")
+		builder.WriteString(metric.Label)
+		builder.WriteString(": ")
+		builder.WriteString(metric.Value)
+		if strings.TrimSpace(metric.Detail) != "" {
+			builder.WriteString(" | ")
+			builder.WriteString(metric.Detail)
+		}
+		builder.WriteString("\n")
+	}
+	builder.WriteString("\nChart\n")
+	builder.WriteString("- Mode: ")
+	builder.WriteString(dashboard.Chart.Mode)
+	builder.WriteString("\n- Category: ")
+	builder.WriteString(dashboard.Chart.CategoryColumn)
+	if dashboard.Chart.ValueColumn != "" {
+		builder.WriteString("\n- Value: ")
+		builder.WriteString(dashboard.Chart.ValueColumn)
+	}
+	builder.WriteString(fmt.Sprintf("\n- Points: %d\n\n", len(dashboard.Chart.Points)))
+	builder.WriteString(dashboard.Message)
+	builder.WriteString("\n\nSVG\n\n")
+	builder.WriteString(dashboard.SVG)
+	return builder.String()
+}
+
 func chartArtifactInput(chart datasetsSvc.ChartResult) artifactsSvc.ChartArtifactReport {
 	return artifactsSvc.ChartArtifactReport{
 		Title:          chartArtifactTitle(chart),
@@ -408,6 +502,21 @@ func chartArtifactInput(chart datasetsSvc.ChartResult) artifactsSvc.ChartArtifac
 	}
 }
 
+func dashboardArtifactInput(dashboard datasetsSvc.DashboardResult) artifactsSvc.ChartArtifactReport {
+	return artifactsSvc.ChartArtifactReport{
+		Title:          dashboardArtifactTitle(dashboard),
+		SourcePath:     dashboard.RelPath,
+		Query:          dashboard.Query,
+		Format:         dashboard.Format,
+		Mode:           "dashboard",
+		CategoryColumn: dashboard.Chart.CategoryColumn,
+		ValueColumn:    dashboard.Chart.ValueColumn,
+		SVG:            dashboard.SVG,
+		PointCount:     len(dashboard.Chart.Points),
+		Truncated:      dashboard.Truncated,
+	}
+}
+
 func chartArtifactTitle(chart datasetsSvc.ChartResult) string {
 	if chart.Mode == "line" && chart.ValueColumn != "" {
 		return fmt.Sprintf("Chart - %s over %s", chart.ValueColumn, chart.CategoryColumn)
@@ -416,6 +525,13 @@ func chartArtifactTitle(chart datasetsSvc.ChartResult) string {
 		return fmt.Sprintf("Chart - %s by %s", chart.ValueColumn, chart.CategoryColumn)
 	}
 	return fmt.Sprintf("Chart - rows by %s", chart.CategoryColumn)
+}
+
+func dashboardArtifactTitle(dashboard datasetsSvc.DashboardResult) string {
+	if dashboard.Chart.ValueColumn != "" {
+		return fmt.Sprintf("Dashboard - %s by %s", dashboard.Chart.ValueColumn, dashboard.Chart.CategoryColumn)
+	}
+	return fmt.Sprintf("Dashboard - rows by %s", dashboard.Chart.CategoryColumn)
 }
 
 func datasetHistoryStatus(selected string, runs []metadataSvc.SQLRunRecord, dependencies []metadataSvc.DatasetDependencyRecord) string {

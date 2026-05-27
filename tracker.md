@@ -206,6 +206,7 @@ Goal: rebuild Data & Analytics as native data tooling, not a crowded web panel.
 - [ ] Add native table/grid widget strategy.
 - [x] Add chart preview/artifact generation.
 - [x] Add automatic SVG line chart previews/artifacts for ordered date or numeric series.
+- [x] Add richer dashboard SVG previews/artifacts with metrics, chart panel, and bounded-source notes.
 - [ ] Add dump import job design before any Docker/database imports.
 
 Exit criteria:
@@ -278,11 +279,11 @@ Exit criteria:
 
 ## Next Batch
 
-1. Add richer dashboard visuals after the first bar/line SVG chart renderer.
-2. Add full Parquet schema/row-group profiling behind an explicit dependency/build decision.
-3. Port the first SQL notebook model on top of the native SQL/history foundation.
-4. Migrate/import remaining Wails-era dataset SQL/dependency data from legacy SQLite metadata stores.
-5. Add native job monitor retry/open-output actions on top of the persisted job model.
+1. Add full Parquet schema/row-group profiling behind an explicit dependency/build decision.
+2. Port the first SQL notebook model on top of the native SQL/history foundation.
+3. Migrate/import remaining Wails-era dataset SQL/dependency data from legacy SQLite metadata stores.
+4. Add native job monitor retry/open-output actions on top of the persisted job model.
+5. Add Compose config validation as a read-only task/operations workflow.
 
 ## Preserved Post-Port Backlog
 
@@ -315,7 +316,7 @@ The Fyne migration must not drop product ambition, but this section is intention
 - [ ] Native table/grid strategy suitable for large result sets.
 - [x] First SVG bar chart preview/artifact generation from bounded query results.
 - [x] Line chart previews/artifacts for ordered date or numeric query results.
-- [ ] Richer dashboard visuals.
+- [x] Richer dashboard SVG visuals with KPI cards, chart panel, and dataset notes.
 
 ### Analytics Connectors
 
