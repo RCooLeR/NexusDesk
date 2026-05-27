@@ -19,13 +19,14 @@ func (v *View) newArtifactsPanel() fyne.CanvasObject {
 	search := widget.NewEntry()
 	search.SetPlaceHolder("Search artifacts by title, path, kind, source, job, or task")
 	documentReport := widget.NewButtonWithIcon("Document report", theme.DocumentCreateIcon(), v.generateDocumentSetArtifact)
+	exportComparison := widget.NewButtonWithIcon("Export compare", theme.DocumentSaveIcon(), v.exportArtifactComparison)
 	refresh := widget.NewButtonWithIcon("Refresh", theme.ViewRefreshIcon(), func() {
 		v.refreshArtifactsWithQuery(search.Text)
 	})
 	search.OnSubmitted = func(string) {
 		v.refreshArtifactsWithQuery(search.Text)
 	}
-	header := container.NewBorder(nil, nil, v.artifactStatus, container.NewHBox(documentReport, refresh), search)
+	header := container.NewBorder(nil, nil, v.artifactStatus, container.NewHBox(documentReport, exportComparison, refresh), search)
 	listScroll := container.NewScroll(v.artifactResults)
 	listScroll.SetMinSize(fyne.NewSize(260, 110))
 	sourceScroll := container.NewVScroll(v.artifactSources)
@@ -156,6 +157,7 @@ func (v *View) compareArtifact(artifact artifactsSvc.Artifact) {
 			Kind:    artifact.Kind,
 			Title:   artifactTitle(artifact),
 		}
+		v.artifactLastComparison = artifactsSvc.ArtifactComparison{}
 		v.artifactStatus.SetText("Compare base selected: " + artifact.RelPath)
 		v.artifactPreview.SetText("Select another " + artifact.Kind + " artifact to compare with:\n\n" + artifact.RelPath)
 		v.refreshArtifactSources(nil)
@@ -180,8 +182,40 @@ func (v *View) compareArtifact(artifact artifactsSvc.Artifact) {
 	}
 	v.artifactPreview.SetText(formatArtifactComparison(comparison))
 	v.refreshArtifactSources(nil)
+	v.artifactLastComparison = comparison
 	v.artifactStatus.SetText(comparison.Message)
 	v.addActivity(comparison.Message)
+}
+
+func (v *View) exportArtifactComparison() {
+	if !artifactComparisonReady(v.artifactLastComparison) {
+		v.addActivity("Compare two artifacts before exporting a comparison report.")
+		return
+	}
+	workspace := v.state.Workspace()
+	if workspace.Root == "" {
+		v.addActivity("Open a workspace before exporting artifact comparison reports.")
+		return
+	}
+	store, err := artifactsSvc.NewStore(workspace.Root)
+	if err != nil {
+		dialog.ShowError(err, v.window)
+		return
+	}
+	artifact, err := store.WriteArtifactComparisonReport(v.artifactLastComparison)
+	if err != nil {
+		dialog.ShowError(err, v.window)
+		return
+	}
+	v.artifactStatus.SetText("Exported " + artifact.RelPath)
+	v.addActivity(artifact.Message)
+	v.refreshArtifactsWithQuery("kind:artifact-comparison")
+}
+
+func artifactComparisonReady(comparison artifactsSvc.ArtifactComparison) bool {
+	return strings.TrimSpace(comparison.LeftPath) != "" &&
+		strings.TrimSpace(comparison.RightPath) != "" &&
+		strings.TrimSpace(comparison.Diff) != ""
 }
 
 func (v *View) archiveArtifact(artifact artifactsSvc.Artifact) {

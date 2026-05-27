@@ -73,3 +73,56 @@ func TestBuildArtifactDiffGuardsLineDenseInputs(t *testing.T) {
 		}
 	}
 }
+
+func TestWriteArtifactComparisonReportCreatesSearchableArtifact(t *testing.T) {
+	store, err := NewStore(t.TempDir())
+	if err != nil {
+		t.Fatal(err)
+	}
+	comparison := ArtifactComparison{
+		Kind:       "document-report",
+		LeftPath:   ".nexusdesk/artifacts/document-sets/left.md",
+		RightPath:  ".nexusdesk/artifacts/document-sets/right.md",
+		LeftTitle:  "Left",
+		RightTitle: "Right",
+		Diff:       "--- left\n+++ right\n-old\n+new\n",
+		Message:    "Compared left with right.",
+	}
+
+	artifact, err := store.WriteArtifactComparisonReport(comparison)
+	if err != nil {
+		t.Fatalf("WriteArtifactComparisonReport returned error: %v", err)
+	}
+	if artifact.Kind != "artifact-comparison" || artifact.MetadataPath == "" || len(artifact.SourcePaths) != 2 {
+		t.Fatalf("unexpected comparison artifact: %#v", artifact)
+	}
+	text, err := store.ReadArtifactText(artifact.RelPath)
+	if err != nil {
+		t.Fatalf("ReadArtifactText returned error: %v", err)
+	}
+	for _, expected := range []string{"# Artifact Comparison - Left vs Right", "```diff", "-old", "+new"} {
+		if !strings.Contains(text, expected) {
+			t.Fatalf("comparison report missing %q:\n%s", expected, text)
+		}
+	}
+	matches, err := store.ListArtifacts(ListOptions{Query: "kind:artifact-comparison"})
+	if err != nil {
+		t.Fatalf("ListArtifacts returned error: %v", err)
+	}
+	if len(matches) != 1 || matches[0].RelPath != artifact.RelPath {
+		t.Fatalf("expected searchable comparison artifact, got %#v", matches)
+	}
+}
+
+func TestWriteArtifactComparisonReportRequiresPathsAndDiff(t *testing.T) {
+	store, err := NewStore(t.TempDir())
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := store.WriteArtifactComparisonReport(ArtifactComparison{LeftPath: "left.md", Diff: "diff"}); err == nil {
+		t.Fatal("expected missing right path to be rejected")
+	}
+	if _, err := store.WriteArtifactComparisonReport(ArtifactComparison{LeftPath: "left.md", RightPath: "right.md"}); err == nil {
+		t.Fatal("expected missing diff to be rejected")
+	}
+}

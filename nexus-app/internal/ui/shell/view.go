@@ -7,6 +7,7 @@ import (
 
 	agentSvc "nexusdesk/internal/services/agent"
 	approvalsSvc "nexusdesk/internal/services/approvals"
+	artifactsSvc "nexusdesk/internal/services/artifacts"
 	assistantSvc "nexusdesk/internal/services/assistant"
 	editorSvc "nexusdesk/internal/services/editor"
 	gitSvc "nexusdesk/internal/services/git"
@@ -65,6 +66,7 @@ type View struct {
 	artifactSourceStatus   *widget.Label
 	artifactSources        *fyne.Container
 	artifactCompareLeft    artifactsCompareSelection
+	artifactLastComparison artifactsSvc.ArtifactComparison
 	chatHistoryResults     *fyne.Container
 	chatHistoryStatus      *widget.Label
 	chatHistoryDetail      *widget.Entry

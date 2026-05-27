@@ -90,3 +90,12 @@ func TestFormatArtifactComparison(t *testing.T) {
 		}
 	}
 }
+
+func TestArtifactComparisonReadyRequiresPathsAndDiff(t *testing.T) {
+	if artifactComparisonReady(artifactsSvc.ArtifactComparison{LeftPath: "a", RightPath: "b"}) {
+		t.Fatal("comparison without diff should not be exportable")
+	}
+	if !artifactComparisonReady(artifactsSvc.ArtifactComparison{LeftPath: "a", RightPath: "b", Diff: "--- a\n+++ b\n"}) {
+		t.Fatal("comparison with paths and diff should be exportable")
+	}
+}
