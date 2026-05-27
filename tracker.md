@@ -65,7 +65,7 @@ cd nexus-app
 
 Some tracker items are intentionally out of phase order because they depend on missing foundations:
 
-- Phase 2 agent items are still pending because approvals and deterministic tool dispatch are not ported into the native assistant runtime yet.
+- Phase 2 agent tool-dispatch items are still pending because approvals and deterministic tool dispatch are not ported into the native assistant runtime yet.
 - Phase 3 AI diff summary and commit drafting are pending until the native assistant service exists.
 - Destructive hunk mutations remain pending until native approval policy/UI is ready enough to protect working-tree discard/revert actions.
 - Durable persisted jobs and task-run records now have a SQLite foundation, and completed native task runs write Markdown report artifacts linked from those records.
@@ -146,7 +146,7 @@ Goal: port the LLM and agent runtime without recreating the Wails bridge problem
 - [x] Add native provider/model settings page skeleton.
 - [x] Add streaming assistant panel using Go channels/events instead of Wails events.
 - [x] Port context-pack builder.
-- [ ] Port agent runtime as an internal service, not a UI callback.
+- [x] Port agent runtime as an internal service, not a UI callback.
 - [ ] Unify registered tools and agent tools behind one dispatcher.
 - [ ] Add approval queue UI and full-access policy UI.
 - [ ] Add rollback browser for model-authored file mutations.
@@ -247,7 +247,7 @@ Exit criteria:
 2. Add assistant context-pack UI affordances for pinning the workspace root, directories, and multiple files explicitly.
 3. Add native approval queue/full-access policy persistence before destructive Git hunk discard/revert or model-authored mutations.
 4. Add native artifact browser for task reports before porting the full artifact surface.
-5. Port the agent runtime as an internal service, once approval policy persistence exists.
+5. Unify registered deterministic tools and agent-requested tools behind one dispatcher.
 
 ## Preserved Post-Port Backlog
 

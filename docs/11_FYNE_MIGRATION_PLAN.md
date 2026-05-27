@@ -107,6 +107,7 @@ The first `nexus-app` slice includes:
 - first native non-secret settings store and provider/model settings page skeleton;
 - first native OpenAI-compatible/Ollama LLM client with chat, streaming chat, provider probing, Ollama runtime diagnostics, context-window options, response reserve, and workspace-context quoting;
 - first native assistant orchestration service and assistant panel streaming path with selected-file context from previewable text, document, PDF, and table files;
+- first native agent runtime service with ReAct action parsing, built-in plan updates, injected tool execution, event emission, backend loop guard, bounded observations, and unverified mutation-claim warnings;
 - first native workspace context-pack builder for files, directories, and the workspace root with ignored-folder skips, file/depth/entry/byte caps, preview-safe text extraction, and assistant integration;
 - first native task discovery and safe task-run service for npm scripts, Go tests, and Docker Compose config checks;
 - first native bottom Tasks tab for discovery, confirmed task runs, and read-only last-run stdout/stderr;
