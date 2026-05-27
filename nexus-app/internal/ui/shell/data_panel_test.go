@@ -6,6 +6,7 @@ import (
 	"time"
 
 	datasetsSvc "nexusdesk/internal/services/datasets"
+	dbconnectorSvc "nexusdesk/internal/services/dbconnector"
 	metadataSvc "nexusdesk/internal/services/metadata"
 )
 
@@ -151,6 +152,42 @@ func TestFormatDatasetSQLResultIncludesPlanAndRows(t *testing.T) {
 	for _, expected := range []string{"# Dataset SQL", "native-dataset-sql", "Plan", "search\t20"} {
 		if !strings.Contains(output, expected) {
 			t.Fatalf("SQL output missing %q:\n%s", expected, output)
+		}
+	}
+}
+
+func TestFormatSQLiteMetadataIncludesSchemaIndexesSamplesAndRelationships(t *testing.T) {
+	output := formatSQLiteMetadata(dbconnectorSvc.SQLiteMetadata{
+		RelPath:  "data/store.sqlite",
+		Engine:   "sqlite-readonly",
+		ReadOnly: true,
+		Tables: []dbconnectorSvc.SQLiteObject{{
+			Name:     "orders",
+			Type:     "table",
+			RowCount: 2,
+			Columns: []dbconnectorSvc.SQLiteColumn{
+				{Name: "id", Type: "INTEGER", PrimaryKey: true},
+				{Name: "customer_id", Type: "INTEGER", Nullable: false},
+			},
+			Indexes: []dbconnectorSvc.SQLiteIndex{{Name: "idx_orders_customer", Columns: []string{"customer_id"}}},
+			SampleRows: [][]string{
+				{"10", "1"},
+			},
+		}},
+		Views: []dbconnectorSvc.SQLiteObject{{Name: "order_totals", Type: "view", Columns: []dbconnectorSvc.SQLiteColumn{{Name: "customer_id"}}}},
+		Relationships: []dbconnectorSvc.SQLiteRelationship{{
+			Kind:       "foreign-key",
+			FromTable:  "orders",
+			FromColumn: "customer_id",
+			ToTable:    "customers",
+			ToColumn:   "id",
+			Confidence: "high",
+			Reason:     "Declared by SQLite foreign_key_list metadata.",
+		}},
+	})
+	for _, expected := range []string{"# SQLite Workspace Connector", "Path: data/store.sqlite", "orders | table | 2 row(s)", "Index: idx_orders_customer on customer_id", "Sample: id\tcustomer_id", "orders.customer_id -> customers.id"} {
+		if !strings.Contains(output, expected) {
+			t.Fatalf("SQLite metadata output missing %q:\n%s", expected, output)
 		}
 	}
 }

@@ -531,14 +531,11 @@ The first database connector is scoped to workspace-local SQLite files.
 Current implementation:
 
 - `.sqlite`, `.sqlite3`, and `.db` files are classified as database files in the workspace tree.
-- `app/internal/dbconnector/` opens those files read-only through `modernc.org/sqlite`.
-- Only bounded `SELECT`/`WITH` queries are accepted, mutation-oriented keywords are blocked, and result rows are capped before they reach the frontend.
-- Query requests carry an explicit request ID, result limit, and timeout; the dataset service can cancel an in-flight SQLite query by request ID.
-- SQLite connector failures are passed through a redaction helper before they are recorded in SQL run metadata.
-- The connector metadata model exposes connector identity, engine, read-only state, tables, views, columns, indexes, row counts, and capped samples.
-- The Data & Analytics schema browser can select inspected SQLite tables/views, copy a safe `SELECT *` query into the editor, run an explicit capped row preview, show relationship hints from declared foreign keys and conservative `*_id` matches, ask the assistant to explain only the selected schema object, save SQLite connector queries as a separate query kind, and filter SQLite query history.
-- SQLite connector query results can become CSV artifacts or Markdown reports; artifact metadata and SQL/dependency history cite the source database path, SQL text, engine, cap, timeout, and generated artifact.
-- `InspectWorkspaceSQLite` is a user-triggered schema inspection path; folder open does not inspect database files.
+- `nexus-app/internal/services/dbconnector/` opens those files read-only through `modernc.org/sqlite` for explicit user-triggered inspection.
+- `InspectWorkspaceSQLite` validates that the selected database path stays inside the workspace, rejects symlinks and non-SQLite extensions, applies a short inspection timeout, and returns connector identity, engine, read-only state, tables, views, columns, indexes, row counts, capped samples, declared foreign keys, and conservative `*_id` relationship hints.
+- The Fyne Data & Analytics panel exposes an explicit `Inspect SQLite` action for the selected workspace database file and renders the returned schema metadata in the read-only data detail pane.
+- Folder open only classifies database files; it does not inspect schemas, execute queries, open external connections, or run connector jobs automatically.
+- Guarded SQLite `SELECT`/`WITH` execution, request-ID cancellation, saved connector queries, CSV/Markdown exports, and SQL/dependency lineage remain planned native ports.
 - Data & Analytics can use this for local inspection without introducing stored credentials or external database access.
 
 ### External SQL Connector Profiles

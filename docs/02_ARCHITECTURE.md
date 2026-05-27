@@ -50,6 +50,7 @@ The Fyne migration keeps clean seams for later:
 
 - SQLite for app state
 - DuckDB for local analytics
+- native workspace SQLite connector inspection under `nexus-app/internal/services/dbconnector`, triggered only by explicit Data & Analytics actions
 - richer document extraction and OCR
 - policy-backed approval dialogs
 - deterministic agent tool loop
@@ -376,7 +377,7 @@ Target studio ownership:
 
 - Workbench owns IDE navigation, git status/diffs, editor groups, search, problems, symbols, tests/tasks, and code patch workflows.
 - Data & Analytics owns file datasets, spreadsheets, database connectors, dump imports, temporary Docker-backed database sandboxes, schemas, query notebooks, profiling, charts, data research artifacts, and marketing/CRM analytics imports.
-- Connector metadata starts as a read-only, user-triggered inspection model under Data & Analytics and Settings. The shared schema browser can select inspected tables/views, show columns/indexes/samples when present, and render relationships; SQLite row previews still run only after an explicit user action. Workspace open may classify database files but must not inspect schemas, execute queries, or open connectors automatically.
+- Connector metadata starts as a read-only, user-triggered inspection model under Data & Analytics and Settings. The native SQLite slice can inspect workspace database tables/views, columns, indexes, row counts, capped samples, and relationship hints from an explicit `Inspect SQLite` action. SQLite row previews, arbitrary read-only SQL, saved connector queries, exports, and cancellation are still planned native work. Workspace open may classify database files but must not inspect schemas, execute queries, or open connectors automatically.
 - Analytics-specific connectors are a subdomain of Data & Analytics until they need a dedicated layout.
 - Document Studio owns document extraction, OCR, document sets, comparison, redline/comment workflows, generated reports, and generated presentations.
 - AI Assistant owns context selection, model/provider controls, tool plans, agent modes, citations, memory, and cross-surface orchestration as an always-visible layer.
@@ -419,7 +420,7 @@ audit export
 connector credential vault
 ```
 
-The current connector profile foundation stores only non-secret connection metadata in local app config. Passwords and tokens are written to protected sidecar storage and exposed to the UI as redacted credential references. Current SQLite connector calls use explicit row caps, timeouts, cancellation IDs, and redacted errors even though they do not need stored credentials. PostgreSQL, MySQL/MariaDB, SQL Server, and DuckDB profile actions resolve protected credentials only when the user explicitly tests, inspects, or queries a saved profile; the backend opens a read-only session where the engine supports it, applies statement timeouts, enforces result caps, tracks cancellable query request IDs, redacts connector errors, and rejects non-`SELECT` SQL before execution. DuckDB live execution is additionally gated by the optional CGO `duckdb` build tag. Future connector runners must follow that same credential-at-execution boundary after policy checks and explicit user-triggered connector actions.
+The preserved Wails connector profile foundation stores only non-secret connection metadata in local app config. Passwords and tokens are written to protected sidecar storage and exposed to the UI as redacted credential references. The native app currently has the first workspace SQLite schema inspector only; guarded connector query calls, request cancellation, and external profile actions are still migration work. PostgreSQL, MySQL/MariaDB, SQL Server, and DuckDB profile actions must resolve protected credentials only when the user explicitly tests, inspects, or queries a saved profile; the backend opens a read-only session where the engine supports it, applies statement timeouts, enforces result caps, tracks cancellable query request IDs, redacts connector errors, and rejects non-`SELECT` SQL before execution. DuckDB live execution is additionally gated by the optional CGO `duckdb` build tag. Future connector runners must follow that same credential-at-execution boundary after policy checks and explicit user-triggered connector actions.
 
 ### Docker Desktop Extension Future
 

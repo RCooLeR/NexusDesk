@@ -14,6 +14,7 @@ import (
 
 	artifactsSvc "nexusdesk/internal/services/artifacts"
 	datasetsSvc "nexusdesk/internal/services/datasets"
+	dbconnectorSvc "nexusdesk/internal/services/dbconnector"
 	metadataSvc "nexusdesk/internal/services/metadata"
 )
 
@@ -25,6 +26,7 @@ func (v *View) newDataPanel() fyne.CanvasObject {
 	sqlButton := widget.NewButtonWithIcon("Run SQL", theme.ComputerIcon(), func() {
 		v.runSelectedDatasetSQL(v.dataQueryEntry.Text)
 	})
+	sqliteButton := widget.NewButtonWithIcon("Inspect SQLite", theme.StorageIcon(), v.inspectSelectedSQLite)
 	v.dataQueryEntry.OnSubmitted = func(query string) {
 		v.querySelectedDataset(query)
 	}
@@ -35,12 +37,37 @@ func (v *View) newDataPanel() fyne.CanvasObject {
 	historyButton := widget.NewButtonWithIcon("SQL history", theme.HistoryIcon(), v.showDatasetSQLHistory)
 	saveNotebookButton := widget.NewButtonWithIcon("Save notebook", theme.DocumentSaveIcon(), v.saveSelectedDatasetNotebook)
 	loadNotebookButton := widget.NewButtonWithIcon("Load notebook", theme.FolderOpenIcon(), v.loadSelectedDatasetNotebook)
-	actions := container.NewHBox(profileButton, queryButton, sqlButton, saveNotebookButton, loadNotebookButton, chartButton, exportChartButton, dashboardButton, exportDashboardButton, historyButton)
+	actions := container.NewHBox(profileButton, queryButton, sqlButton, sqliteButton, saveNotebookButton, loadNotebookButton, chartButton, exportChartButton, dashboardButton, exportDashboardButton, historyButton)
 	queryBar := container.NewBorder(nil, nil, nil, actions, v.dataQueryEntry)
 	header := container.NewVBox(v.dataProfileStatus, queryBar)
 	detail := container.NewScroll(v.dataProfileDetail)
 	detail.SetMinSize(fyne.NewSize(320, 130))
 	return container.NewBorder(header, nil, nil, nil, detail)
+}
+
+func (v *View) inspectSelectedSQLite() {
+	workspace := v.state.Workspace()
+	if workspace.Root == "" {
+		v.dataProfileStatus.SetText("Open a workspace before inspecting SQLite databases.")
+		return
+	}
+	selected := selectedPathOrEmpty(v)
+	if selected == "" {
+		v.dataProfileStatus.SetText("Select a .sqlite, .sqlite3, or .db file before inspecting schema.")
+		return
+	}
+	metadata, err := v.dbconnectorService.InspectWorkspaceSQLite(workspace.Root, selected)
+	if err != nil {
+		v.dataProfileStatus.SetText("SQLite inspection failed for " + selected)
+		dialog.ShowError(err, v.window)
+		return
+	}
+	v.dataProfileStatus.SetText(metadata.Message)
+	v.dataProfileDetail.SetText(formatSQLiteMetadata(metadata))
+	v.dataLastQuery = datasetsSvc.QueryResult{}
+	v.dataLastChart = datasetsSvc.ChartResult{}
+	v.dataLastDashboard = datasetsSvc.DashboardResult{}
+	v.addActivity("Inspected SQLite database " + metadata.RelPath + ".")
 }
 
 func (v *View) saveSelectedDatasetNotebook() {
@@ -504,6 +531,101 @@ func formatDatasetSQLResult(result datasetsSvc.SQLResult) string {
 	builder.WriteString("\n")
 	builder.WriteString(formatDatasetQueryResult(result.QueryResult))
 	return builder.String()
+}
+
+func formatSQLiteMetadata(metadata dbconnectorSvc.SQLiteMetadata) string {
+	var builder strings.Builder
+	builder.WriteString("# SQLite Workspace Connector\n\n")
+	builder.WriteString("Path: ")
+	builder.WriteString(metadata.RelPath)
+	builder.WriteString("\nEngine: ")
+	builder.WriteString(metadata.Engine)
+	builder.WriteString("\nMode: ")
+	if metadata.ReadOnly {
+		builder.WriteString("read-only")
+	} else {
+		builder.WriteString("read/write")
+	}
+	builder.WriteString(fmt.Sprintf("\nTables: %d\nViews: %d\nIndexes: %d\nRelationships: %d\n", len(metadata.Tables), len(metadata.Views), len(metadata.Indexes), len(metadata.Relationships)))
+	if metadata.Message != "" {
+		builder.WriteString("\n")
+		builder.WriteString(metadata.Message)
+		builder.WriteString("\n")
+	}
+	writeSQLiteObjects(&builder, "Tables", metadata.Tables)
+	writeSQLiteObjects(&builder, "Views", metadata.Views)
+	if len(metadata.Relationships) > 0 {
+		builder.WriteString("\nRelationships\n")
+		for _, relationship := range metadata.Relationships {
+			builder.WriteString(fmt.Sprintf("- %s.%s -> %s.%s | %s | %s\n", relationship.FromTable, relationship.FromColumn, relationship.ToTable, relationship.ToColumn, relationship.Confidence, relationship.Kind))
+			if strings.TrimSpace(relationship.Reason) != "" {
+				builder.WriteString("  ")
+				builder.WriteString(relationship.Reason)
+				builder.WriteString("\n")
+			}
+		}
+	}
+	return builder.String()
+}
+
+func writeSQLiteObjects(builder *strings.Builder, title string, objects []dbconnectorSvc.SQLiteObject) {
+	builder.WriteString("\n")
+	builder.WriteString(title)
+	builder.WriteString("\n")
+	if len(objects) == 0 {
+		builder.WriteString("- None.\n")
+		return
+	}
+	for _, object := range objects {
+		builder.WriteString(fmt.Sprintf("- %s | %s | %d row(s) | %d column(s)\n", object.Name, object.Type, object.RowCount, len(object.Columns)))
+		if len(object.Columns) > 0 {
+			builder.WriteString("  Columns: ")
+			columnParts := make([]string, 0, len(object.Columns))
+			for _, column := range object.Columns {
+				part := column.Name
+				if strings.TrimSpace(column.Type) != "" {
+					part += " " + column.Type
+				}
+				if column.PrimaryKey {
+					part += " pk"
+				}
+				if !column.Nullable {
+					part += " not-null"
+				}
+				columnParts = append(columnParts, part)
+			}
+			builder.WriteString(strings.Join(columnParts, ", "))
+			builder.WriteString("\n")
+		}
+		for _, index := range object.Indexes {
+			unique := ""
+			if index.Unique {
+				unique = " unique"
+			}
+			builder.WriteString(fmt.Sprintf("  Index: %s%s", index.Name, unique))
+			if len(index.Columns) > 0 {
+				builder.WriteString(" on ")
+				builder.WriteString(strings.Join(index.Columns, ", "))
+			}
+			builder.WriteString("\n")
+		}
+		if len(object.SampleRows) > 0 {
+			headers := make([]string, 0, len(object.Columns))
+			for _, column := range object.Columns {
+				headers = append(headers, column.Name)
+			}
+			if len(headers) > 0 {
+				builder.WriteString("  Sample: ")
+				builder.WriteString(strings.Join(headers, "\t"))
+				builder.WriteString("\n")
+			}
+			for _, row := range object.SampleRows {
+				builder.WriteString("    ")
+				builder.WriteString(strings.Join(row, "\t"))
+				builder.WriteString("\n")
+			}
+		}
+	}
 }
 
 func formatDatasetChart(chart datasetsSvc.ChartResult) string {

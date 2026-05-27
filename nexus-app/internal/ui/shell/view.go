@@ -10,6 +10,7 @@ import (
 	artifactsSvc "nexusdesk/internal/services/artifacts"
 	assistantSvc "nexusdesk/internal/services/assistant"
 	datasetsSvc "nexusdesk/internal/services/datasets"
+	dbconnectorSvc "nexusdesk/internal/services/dbconnector"
 	editorSvc "nexusdesk/internal/services/editor"
 	gitSvc "nexusdesk/internal/services/git"
 	historySvc "nexusdesk/internal/services/history"
@@ -33,6 +34,7 @@ type View struct {
 	assistantService        *assistantSvc.Service
 	agentService            *agentSvc.Service
 	datasetService          *datasetsSvc.Service
+	dbconnectorService      *dbconnectorSvc.Service
 	operationsService       *operationsSvc.Service
 	metadataStore           *metadataSvc.Store
 	settingsStore           *settingsSvc.Store
@@ -152,6 +154,7 @@ func New(window fyne.Window) *View {
 	})
 	agentService := agentSvc.New(settingsStore, llmClient, toolDispatcher)
 	datasetService := datasetsSvc.New(workspaceService)
+	dbconnectorService := dbconnectorSvc.New()
 	dataProfileDetail := widget.NewMultiLineEntry()
 	dataProfileDetail.TextStyle = fyne.TextStyle{Monospace: true}
 	dataProfileDetail.Wrapping = fyne.TextWrapWord
@@ -163,30 +166,31 @@ func New(window fyne.Window) *View {
 	operationsDetail.Wrapping = fyne.TextWrapWord
 	operationsDetail.Disable()
 	view := &View{
-		window:            window,
-		state:             NewState(),
-		workspaceService:  workspaceService,
-		gitService:        gitService,
-		jobService:        jobsSvc.New(),
-		approvalService:   approvalsSvc.New(),
-		assistantService:  assistantService,
-		agentService:      agentService,
-		datasetService:    datasetService,
-		operationsService: operationsSvc.New(),
-		settingsStore:     settingsStore,
-		taskService:       taskService,
-		editorSession:     editorSession,
-		status:            widget.NewLabel("No workspace open"),
-		navigator:         container.NewStack(widget.NewLabel("Open a workspace to browse files.")),
-		editorTabs:        editorTabs,
-		openTabs:          map[string]*container.TabItem{welcome.ID: editorTabs.Items[0]},
-		tabIDs:            map[*container.TabItem]string{editorTabs.Items[0]: welcome.ID},
-		activityLog:       widget.NewRichTextFromMarkdown("Ready."),
-		activityText:      "Ready.",
-		searchResults:     container.NewVBox(widget.NewLabel("Search results will appear here.")),
-		searchStatus:      widget.NewLabel("No search yet."),
-		problemResults:    container.NewVBox(widget.NewLabel("Run a scan to inspect lightweight workspace problems.")),
-		problemStatus:     widget.NewLabel("No problem scan yet."),
+		window:             window,
+		state:              NewState(),
+		workspaceService:   workspaceService,
+		gitService:         gitService,
+		jobService:         jobsSvc.New(),
+		approvalService:    approvalsSvc.New(),
+		assistantService:   assistantService,
+		agentService:       agentService,
+		datasetService:     datasetService,
+		dbconnectorService: dbconnectorService,
+		operationsService:  operationsSvc.New(),
+		settingsStore:      settingsStore,
+		taskService:        taskService,
+		editorSession:      editorSession,
+		status:             widget.NewLabel("No workspace open"),
+		navigator:          container.NewStack(widget.NewLabel("Open a workspace to browse files.")),
+		editorTabs:         editorTabs,
+		openTabs:           map[string]*container.TabItem{welcome.ID: editorTabs.Items[0]},
+		tabIDs:             map[*container.TabItem]string{editorTabs.Items[0]: welcome.ID},
+		activityLog:        widget.NewRichTextFromMarkdown("Ready."),
+		activityText:       "Ready.",
+		searchResults:      container.NewVBox(widget.NewLabel("Search results will appear here.")),
+		searchStatus:       widget.NewLabel("No search yet."),
+		problemResults:     container.NewVBox(widget.NewLabel("Run a scan to inspect lightweight workspace problems.")),
+		problemStatus:      widget.NewLabel("No problem scan yet."),
 		dataProfileStatus: widget.NewLabel(
 			"Select a CSV, TSV, or JSON file, then profile or query it.",
 		),
