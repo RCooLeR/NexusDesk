@@ -139,7 +139,7 @@ func isDocumentExtension(extension string) bool {
 
 func isTableExtension(extension string) bool {
 	switch extension {
-	case ".csv", ".tsv":
+	case ".csv", ".tsv", ".xlsx":
 		return true
 	default:
 		return false

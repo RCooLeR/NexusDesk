@@ -31,7 +31,7 @@ func (s *Service) Extract(root string, relPath string) (ExtractedDocument, error
 	}
 	format := documentFormat(preview.RelPath)
 	if !supportedDocumentFormat(format) {
-		return ExtractedDocument{}, errors.New("document extraction currently supports Markdown, TXT, HTML, XML, DOCX, and PDF files")
+		return ExtractedDocument{}, errors.New("document extraction currently supports Markdown, TXT, HTML, XML, DOCX, XLSX, and PDF files")
 	}
 	if !previewKindMatchesFormat(format, preview.Kind) {
 		return ExtractedDocument{}, errors.New("document extraction requires a previewable text, DOCX, or PDF document")
@@ -73,6 +73,8 @@ func documentFormat(relPath string) string {
 		return "xml"
 	case ".docx":
 		return "docx"
+	case ".xlsx":
+		return "xlsx"
 	case ".pdf":
 		return "pdf"
 	default:
@@ -82,7 +84,7 @@ func documentFormat(relPath string) string {
 
 func supportedDocumentFormat(format string) bool {
 	switch format {
-	case "markdown", "txt", "html", "xml", "docx", "pdf":
+	case "markdown", "txt", "html", "xml", "docx", "xlsx", "pdf":
 		return true
 	default:
 		return false
@@ -95,6 +97,8 @@ func previewKindMatchesFormat(format string, kind domain.PreviewKind) bool {
 		return kind == domain.PreviewDoc
 	case "pdf":
 		return kind == domain.PreviewPDF
+	case "xlsx":
+		return kind == domain.PreviewTable
 	default:
 		return kind == domain.PreviewText
 	}
@@ -105,6 +109,9 @@ func previewTruncated(preview domain.FilePreview) bool {
 		return true
 	}
 	if preview.PDF != nil && preview.PDF.Truncated {
+		return true
+	}
+	if preview.Table != nil && preview.Table.Truncated {
 		return true
 	}
 	return false

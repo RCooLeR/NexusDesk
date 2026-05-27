@@ -33,7 +33,7 @@ func (s *Service) Profile(root string, relPath string) (Profile, error) {
 		return Profile{}, err
 	}
 	switch strings.ToLower(filepath.Ext(preview.RelPath)) {
-	case ".csv", ".tsv":
+	case ".csv", ".tsv", ".xlsx":
 		return s.profileTable(preview)
 	case ".json":
 		return s.profileJSON(preview)
@@ -48,11 +48,13 @@ func (s *Service) profileTable(preview domain.FilePreview) (Profile, error) {
 	}
 	return Profile{
 		RelPath:   preview.RelPath,
-		Format:    tableFormat(preview.Table.Delimiter),
+		Format:    tableFormatForPreview(preview),
 		MediaType: preview.MediaType,
 		Size:      preview.Size,
 		Rows:      len(preview.Table.Rows),
 		Columns:   profileRows(preview.Table.Headers, preview.Table.Rows),
+		Sheet:     preview.Table.Sheet,
+		Sheets:    append([]string{}, preview.Table.Sheets...),
 		Truncated: preview.Table.Truncated,
 	}, nil
 }
@@ -179,6 +181,13 @@ func tableFormat(delimiter string) string {
 		return "TSV"
 	}
 	return "CSV"
+}
+
+func tableFormatForPreview(preview domain.FilePreview) string {
+	if strings.EqualFold(filepath.Ext(preview.RelPath), ".xlsx") {
+		return "XLSX"
+	}
+	return tableFormat(preview.Table.Delimiter)
 }
 
 func jsonNotesForArray(values []any, fields []ColumnProfile) []string {

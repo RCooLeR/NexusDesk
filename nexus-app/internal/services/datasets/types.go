@@ -7,6 +7,8 @@ type Profile struct {
 	Size        int64
 	Rows        int
 	Columns     []ColumnProfile
+	Sheet       string
+	Sheets      []string
 	Truncated   bool
 	JSONProfile *JSONProfile
 }

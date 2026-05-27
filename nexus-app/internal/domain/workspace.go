@@ -51,6 +51,8 @@ type TablePreview struct {
 	Headers   []string
 	Rows      [][]string
 	Delimiter string
+	Sheet     string
+	Sheets    []string
 	Truncated bool
 }
 

@@ -116,6 +116,25 @@ func TestPreviewFileReturnsCSVTable(t *testing.T) {
 	}
 }
 
+func TestPreviewFileReturnsXLSXTable(t *testing.T) {
+	root := t.TempDir()
+	writeBytes(t, filepath.Join(root, "campaigns.xlsx"), makeXLSX(t))
+
+	preview, err := New().PreviewFile(root, "campaigns.xlsx")
+	if err != nil {
+		t.Fatalf("PreviewFile returned error: %v", err)
+	}
+	if preview.Kind != "table" || preview.Table == nil {
+		t.Fatalf("expected XLSX table preview, got %#v", preview)
+	}
+	if preview.Table.Sheet != "Campaigns" || len(preview.Table.Sheets) != 1 {
+		t.Fatalf("unexpected workbook metadata: %#v", preview.Table)
+	}
+	if preview.Table.Headers[0] != "channel" || preview.Table.Rows[0][1] != "12.5" {
+		t.Fatalf("unexpected XLSX rows: %#v", preview.Table)
+	}
+}
+
 func TestPreviewFileMarksLargeCSVTableTruncated(t *testing.T) {
 	root := t.TempDir()
 	var builder strings.Builder
@@ -199,4 +218,29 @@ func makeDOCX(t *testing.T, text string) []byte {
 		t.Fatalf("close docx zip: %v", err)
 	}
 	return output.Bytes()
+}
+
+func makeXLSX(t *testing.T) []byte {
+	t.Helper()
+	var output bytes.Buffer
+	writer := zip.NewWriter(&output)
+	writeZipEntry(t, writer, "xl/workbook.xml", `<workbook xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships"><sheets><sheet name="Campaigns" r:id="rId1"/></sheets></workbook>`)
+	writeZipEntry(t, writer, "xl/_rels/workbook.xml.rels", `<Relationships><Relationship Id="rId1" Target="worksheets/sheet1.xml"/></Relationships>`)
+	writeZipEntry(t, writer, "xl/sharedStrings.xml", `<sst><si><t>channel</t></si><si><t>spend</t></si><si><t>search</t></si><si><t>email</t></si></sst>`)
+	writeZipEntry(t, writer, "xl/worksheets/sheet1.xml", `<worksheet><sheetData><row><c r="A1" t="s"><v>0</v></c><c r="B1" t="s"><v>1</v></c></row><row><c r="A2" t="s"><v>2</v></c><c r="B2"><v>12.5</v></c></row><row><c r="A3" t="s"><v>3</v></c><c r="B3"><v>4</v></c></row></sheetData></worksheet>`)
+	if err := writer.Close(); err != nil {
+		t.Fatalf("close xlsx zip: %v", err)
+	}
+	return output.Bytes()
+}
+
+func writeZipEntry(t *testing.T, writer *zip.Writer, name string, content string) {
+	t.Helper()
+	file, err := writer.Create(name)
+	if err != nil {
+		t.Fatalf("create zip entry %s: %v", name, err)
+	}
+	if _, err := file.Write([]byte(content)); err != nil {
+		t.Fatalf("write zip entry %s: %v", name, err)
+	}
 }

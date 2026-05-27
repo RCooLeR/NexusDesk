@@ -91,6 +91,16 @@ func formatDatasetProfile(profile datasetsSvc.Profile) string {
 	builder.WriteString("\nMedia type: ")
 	builder.WriteString(profile.MediaType)
 	builder.WriteString(fmt.Sprintf("\nSize: %d bytes\nRows: %d\nColumns: %d\n", profile.Size, profile.Rows, len(profile.Columns)))
+	if len(profile.Sheets) > 0 {
+		builder.WriteString("Sheets: ")
+		builder.WriteString(strings.Join(profile.Sheets, ", "))
+		builder.WriteString("\n")
+	}
+	if profile.Sheet != "" {
+		builder.WriteString("Profiled sheet: ")
+		builder.WriteString(profile.Sheet)
+		builder.WriteString("\n")
+	}
 	if profile.Truncated {
 		builder.WriteString("Scope: preview sample is truncated by the safe preview cap\n")
 	}

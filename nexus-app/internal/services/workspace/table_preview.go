@@ -7,6 +7,7 @@ import (
 	"strings"
 
 	"nexusdesk/internal/domain"
+	"nexusdesk/internal/services/spreadsheets"
 )
 
 const (
@@ -15,6 +16,9 @@ const (
 )
 
 func decodeTable(content []byte, relPath string) (string, string, *domain.TablePreview, error) {
+	if strings.EqualFold(filepath.Ext(relPath), ".xlsx") {
+		return decodeXLSXTable(content)
+	}
 	text, encoding, err := decodeText(content)
 	if err != nil {
 		return "", "", nil, err
@@ -36,6 +40,24 @@ func decodeTable(content []byte, relPath string) (string, string, *domain.TableP
 		Truncated: truncated,
 	}
 	return text, encoding, table, nil
+}
+
+func decodeXLSXTable(content []byte) (string, string, *domain.TablePreview, error) {
+	workbook, err := spreadsheets.ParseXLSX(content, spreadsheets.DefaultOptions())
+	if err != nil {
+		return "", "", nil, err
+	}
+	sheet := firstSheetWithRows(workbook)
+	text := workbookPreviewText(workbook)
+	table := &domain.TablePreview{
+		Headers:   tableHeaders(sheet.Rows),
+		Rows:      tableRows(sheet.Rows),
+		Delimiter: "\t",
+		Sheet:     sheet.Name,
+		Sheets:    workbookSheetNames(workbook),
+		Truncated: sheet.Truncated,
+	}
+	return text, "xlsx", table, nil
 }
 
 func readTableRecords(reader *csv.Reader) ([][]string, bool, error) {
@@ -87,4 +109,42 @@ func tableDelimiter(relPath string) rune {
 		return '\t'
 	}
 	return ','
+}
+
+func firstSheetWithRows(workbook spreadsheets.Workbook) spreadsheets.Sheet {
+	for _, sheet := range workbook.Sheets {
+		if len(sheet.Rows) > 0 {
+			return sheet
+		}
+	}
+	if len(workbook.Sheets) > 0 {
+		return workbook.Sheets[0]
+	}
+	return spreadsheets.Sheet{}
+}
+
+func workbookSheetNames(workbook spreadsheets.Workbook) []string {
+	names := make([]string, 0, len(workbook.Sheets))
+	for _, sheet := range workbook.Sheets {
+		names = append(names, sheet.Name)
+	}
+	return names
+}
+
+func workbookPreviewText(workbook spreadsheets.Workbook) string {
+	var builder strings.Builder
+	builder.WriteString("Workbook sheets: ")
+	builder.WriteString(strings.Join(workbookSheetNames(workbook), ", "))
+	for _, sheet := range workbook.Sheets {
+		builder.WriteString("\n\n## ")
+		builder.WriteString(sheet.Name)
+		if sheet.Truncated {
+			builder.WriteString(" (truncated)")
+		}
+		for _, row := range sheet.Rows {
+			builder.WriteString("\n")
+			builder.WriteString(strings.Join(row, "\t"))
+		}
+	}
+	return strings.TrimSpace(builder.String())
 }

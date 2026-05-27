@@ -222,7 +222,7 @@ Goal: restore generated-output workflows with provenance and native inspection.
 - [x] Add first artifact source freshness warnings for missing or modified cited files.
 - [x] Add source fingerprints to artifact metadata so freshness detects same-timestamp content changes.
 - [x] Add first archive restore flow for generated artifacts with collision-safe restore paths.
-- [ ] Add document preview/extraction for Markdown, TXT, PDF, DOCX, XLSX, HTML/XML.
+- [x] Add document preview/extraction for Markdown, TXT, PDF, DOCX, XLSX, HTML/XML.
 - [x] Add first native document extraction slice for Markdown, TXT, HTML, and XML source files with artifact export.
 - [x] Extend native document extraction artifacts to DOCX and PDF preview text with PDF page metadata.
 - [ ] Add presentation/report generation targets after artifact lineage is stable.
@@ -269,11 +269,11 @@ Exit criteria:
 
 ## Next Batch
 
-1. Add XLSX document/table extraction after the native data query boundary is in place.
-2. Add chart preview/artifact generation for bounded native dataset query results.
-3. Add first native SQL run and dataset-dependency metadata repositories.
-4. Add approval metadata repository coverage or explicitly document the remaining approval-store split.
-5. Add the first operations artifact/runbook export from inspected Docker/Compose/env/config/log evidence.
+1. Add chart preview/artifact generation for bounded native dataset query results.
+2. Add first native SQL run and dataset-dependency metadata repositories.
+3. Add approval metadata repository coverage or explicitly document the remaining approval-store split.
+4. Add the first operations artifact/runbook export from inspected Docker/Compose/env/config/log evidence.
+5. Expand dataset profiling from the current CSV/TSV/JSON/XLSX slice to NDJSON, Parquet metadata, and logs.
 
 ## Preserved Post-Port Backlog
 
@@ -314,7 +314,8 @@ The Fyne migration must not drop product ambition, but this section is intention
 
 ### Documents Studio / Document Intelligence
 
-- [ ] Native preview and text extraction for TXT, Markdown, PDF, DOCX, XLSX, HTML, XML, images, and common office-like files.
+- [x] Native preview and text extraction for TXT, Markdown, PDF, DOCX, XLSX, HTML, and XML.
+- [ ] Native OCR/text extraction for images and broader office-like files.
 - [ ] OCR job pipeline for scanned PDFs/images.
 - [ ] Document set analysis with bounded context, source citations, summary artifacts, and lineage.
 - [ ] Report and presentation generation from document sets and data sources.

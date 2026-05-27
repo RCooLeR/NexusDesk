@@ -13,7 +13,7 @@ func (s *Service) Query(root string, relPath string, query string) (QueryResult,
 	if err != nil {
 		return QueryResult{}, err
 	}
-	columns, rows, format, sourceTruncated, err := queryableRows(preview.RelPath, preview.Text)
+	columns, rows, format, sourceTruncated, err := queryableRowsFromPreview(preview)
 	if err != nil {
 		return QueryResult{}, err
 	}

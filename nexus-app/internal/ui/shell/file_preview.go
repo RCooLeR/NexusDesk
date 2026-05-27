@@ -110,10 +110,14 @@ func documentPreviewStatus(preview domain.FilePreview) string {
 }
 
 func tablePreviewStatus(preview domain.FilePreview) string {
-	if preview.Table.Truncated {
-		return fmt.Sprintf("Showing first %d rows. Table preview is capped.", len(preview.Table.Rows))
+	prefix := ""
+	if preview.Table.Sheet != "" {
+		prefix = fmt.Sprintf("Sheet %s. ", preview.Table.Sheet)
 	}
-	return fmt.Sprintf("Showing %d rows.", len(preview.Table.Rows))
+	if preview.Table.Truncated {
+		return fmt.Sprintf("%sShowing first %d rows. Table preview is capped.", prefix, len(preview.Table.Rows))
+	}
+	return fmt.Sprintf("%sShowing %d rows.", prefix, len(preview.Table.Rows))
 }
 
 func tableCell(values []string, index int) string {

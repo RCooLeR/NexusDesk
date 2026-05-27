@@ -103,6 +103,25 @@ func TestExtractPDFPreviewTextAndPages(t *testing.T) {
 	}
 }
 
+func TestExtractXLSXPreviewText(t *testing.T) {
+	service := New(fakePreviewer{preview: domain.FilePreview{
+		RelPath:   "data/campaigns.xlsx",
+		Kind:      domain.PreviewTable,
+		Text:      "Workbook sheets: Campaigns\n\n## Campaigns\nchannel\tspend\nsearch\t12.5",
+		MediaType: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+		Size:      2048,
+		Table:     &domain.TablePreview{Sheet: "Campaigns", Headers: []string{"channel", "spend"}, Rows: [][]string{{"search", "12.5"}}},
+	}})
+
+	document, err := service.Extract("C:/repo", "data/campaigns.xlsx")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if document.Format != "xlsx" || document.Title != "Workbook sheets: Campaigns" || !strings.Contains(document.Text, "search") {
+		t.Fatalf("unexpected XLSX extraction: %#v", document)
+	}
+}
+
 func TestExtractRejectsPDFWithoutText(t *testing.T) {
 	service := New(fakePreviewer{preview: domain.FilePreview{
 		RelPath: "scanned.pdf",

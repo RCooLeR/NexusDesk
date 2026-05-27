@@ -1,6 +1,8 @@
 package datasets
 
 import (
+	"archive/zip"
+	"bytes"
 	"os"
 	"path/filepath"
 	"testing"
@@ -51,6 +53,22 @@ func TestProfileJSONProfilesArrayObjects(t *testing.T) {
 	}
 	if len(profile.Columns) != 2 || profile.Columns[0].Name != "channel" || profile.Columns[1].Type != "number" {
 		t.Fatalf("unexpected JSON columns: %#v", profile.Columns)
+	}
+}
+
+func TestProfileXLSXReturnsFirstSheetSummary(t *testing.T) {
+	root := t.TempDir()
+	writeTestBytes(t, root, "data/campaigns.xlsx", makeDatasetXLSX(t))
+
+	profile, err := New(nil).Profile(root, "data/campaigns.xlsx")
+	if err != nil {
+		t.Fatalf("Profile returned error: %v", err)
+	}
+	if profile.Format != "XLSX" || profile.Sheet != "Campaigns" || profile.Rows != 2 || len(profile.Columns) != 2 {
+		t.Fatalf("unexpected XLSX profile: %#v", profile)
+	}
+	if profile.Columns[1].Name != "spend" || profile.Columns[1].Type != "number" {
+		t.Fatalf("unexpected XLSX spend profile: %#v", profile.Columns[1])
 	}
 }
 
@@ -118,6 +136,19 @@ func TestQueryGlobalSearch(t *testing.T) {
 	}
 }
 
+func TestQueryXLSXUsesFirstSheetRows(t *testing.T) {
+	root := t.TempDir()
+	writeTestBytes(t, root, "data/campaigns.xlsx", makeDatasetXLSX(t))
+
+	result, err := New(nil).Query(root, "data/campaigns.xlsx", "channel=search")
+	if err != nil {
+		t.Fatalf("Query returned error: %v", err)
+	}
+	if result.Format != "XLSX" || result.MatchedRows != 1 || result.Rows[0][0] != "search" {
+		t.Fatalf("unexpected XLSX query result: %#v", result)
+	}
+}
+
 func writeTestFile(t *testing.T, root string, relPath string, content string) {
 	t.Helper()
 	target := filepath.Join(root, filepath.FromSlash(relPath))
@@ -126,5 +157,41 @@ func writeTestFile(t *testing.T, root string, relPath string, content string) {
 	}
 	if err := os.WriteFile(target, []byte(content), 0o644); err != nil {
 		t.Fatalf("WriteFile returned error: %v", err)
+	}
+}
+
+func writeTestBytes(t *testing.T, root string, relPath string, content []byte) {
+	t.Helper()
+	target := filepath.Join(root, filepath.FromSlash(relPath))
+	if err := os.MkdirAll(filepath.Dir(target), 0o755); err != nil {
+		t.Fatalf("MkdirAll returned error: %v", err)
+	}
+	if err := os.WriteFile(target, content, 0o644); err != nil {
+		t.Fatalf("WriteFile returned error: %v", err)
+	}
+}
+
+func makeDatasetXLSX(t *testing.T) []byte {
+	t.Helper()
+	var output bytes.Buffer
+	writer := zip.NewWriter(&output)
+	writeDatasetZipEntry(t, writer, "xl/workbook.xml", `<workbook xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships"><sheets><sheet name="Campaigns" r:id="rId1"/></sheets></workbook>`)
+	writeDatasetZipEntry(t, writer, "xl/_rels/workbook.xml.rels", `<Relationships><Relationship Id="rId1" Target="worksheets/sheet1.xml"/></Relationships>`)
+	writeDatasetZipEntry(t, writer, "xl/sharedStrings.xml", `<sst><si><t>channel</t></si><si><t>spend</t></si><si><t>search</t></si><si><t>email</t></si></sst>`)
+	writeDatasetZipEntry(t, writer, "xl/worksheets/sheet1.xml", `<worksheet><sheetData><row><c r="A1" t="s"><v>0</v></c><c r="B1" t="s"><v>1</v></c></row><row><c r="A2" t="s"><v>2</v></c><c r="B2"><v>12.5</v></c></row><row><c r="A3" t="s"><v>3</v></c><c r="B3"><v>4</v></c></row></sheetData></worksheet>`)
+	if err := writer.Close(); err != nil {
+		t.Fatalf("close xlsx zip: %v", err)
+	}
+	return output.Bytes()
+}
+
+func writeDatasetZipEntry(t *testing.T, writer *zip.Writer, name string, content string) {
+	t.Helper()
+	file, err := writer.Create(name)
+	if err != nil {
+		t.Fatalf("create zip entry %s: %v", name, err)
+	}
+	if _, err := file.Write([]byte(content)); err != nil {
+		t.Fatalf("write zip entry %s: %v", name, err)
 	}
 }

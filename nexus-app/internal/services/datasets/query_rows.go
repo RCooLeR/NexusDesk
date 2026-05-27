@@ -7,7 +7,19 @@ import (
 	"path/filepath"
 	"sort"
 	"strings"
+
+	"nexusdesk/internal/domain"
 )
+
+func queryableRowsFromPreview(preview domain.FilePreview) ([]string, [][]string, string, bool, error) {
+	if strings.EqualFold(filepath.Ext(preview.RelPath), ".xlsx") {
+		if preview.Table == nil {
+			return nil, nil, "", false, fmt.Errorf("xlsx table preview is unavailable")
+		}
+		return normalizeColumns(preview.Table.Headers), preview.Table.Rows, "XLSX", preview.Table.Truncated, nil
+	}
+	return queryableRows(preview.RelPath, preview.Text)
+}
 
 func queryableRows(relPath string, text string) ([]string, [][]string, string, bool, error) {
 	switch strings.ToLower(filepath.Ext(relPath)) {
