@@ -518,7 +518,7 @@ Current implementation:
 - `app/internal/appmeta/` writes `.nexusdesk/metadata/schema.sql`, initializes `.nexusdesk/metadata/nexusdesk.sqlite` through `modernc.org/sqlite`, and writes a manifest with schema version/hash.
 - The schema mirrors workspaces, chats, approvals, artifacts, and tool runs from the current JSON/provenance stores.
 - Fresh chats, approvals, artifacts, and tool runs write directly to SQLite once the store exists, while JSON stores remain active compatibility writers/fallbacks.
-- Native workspace open imports bounded Wails-era JSON metadata into SQLite for matching chat history, approval records, generated artifact sidecars, and tool-run logs.
+- Native workspace open imports bounded Wails-era JSON metadata into SQLite for matching chat history, approval records, generated artifact sidecars, and tool-run logs. It also detects legacy Wails SQLite `sql_runs` and `dataset_dependencies` tables, preserves them under backup names, recreates the native table shape, and imports converted SQL/dependency rows.
 - `InspectMetadataStore` returns table columns, row counts, sample rows, and dataset SQL view summaries for the workbench; the UI can select tables, filter columns, and copy row samples.
 - Metadata search returns chat, artifact, and tool-run snippets for the workbench history surface.
 - Dataset dependency and SQL run tables record saved SQL snippets, saved SQL notebooks, SQL artifacts, chart artifacts, summaries, and connector queries.

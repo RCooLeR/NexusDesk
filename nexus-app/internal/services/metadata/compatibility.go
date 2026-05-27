@@ -22,19 +22,28 @@ type CompatibilityImportOptions struct {
 }
 
 type CompatibilityImportReport struct {
-	Chats     int
-	Approvals int
-	Artifacts int
-	ToolRuns  int
-	Skipped   int
-	Message   string
+	Chats               int
+	Approvals           int
+	Artifacts           int
+	ToolRuns            int
+	SQLRuns             int
+	DatasetDependencies int
+	Skipped             int
+	Message             string
 }
 
 func (s *Store) ImportCompatibilityData(options CompatibilityImportOptions) (CompatibilityImportReport, error) {
+	report := CompatibilityImportReport{}
+	sqlRuns, dependencies, skipped, err := s.importCompatibilitySQLiteDatasets()
+	if err != nil {
+		return report, err
+	}
+	report.SQLRuns += sqlRuns
+	report.DatasetDependencies += dependencies
+	report.Skipped += skipped
 	if _, err := s.Ensure(); err != nil {
 		return CompatibilityImportReport{}, err
 	}
-	report := CompatibilityImportReport{}
 	chatCount, skipped, err := s.importCompatibilityChats(options.ChatHistoryPath)
 	if err != nil {
 		return report, err
@@ -64,12 +73,12 @@ func (s *Store) ImportCompatibilityData(options CompatibilityImportOptions) (Com
 }
 
 func (r CompatibilityImportReport) compatibilityMessage() string {
-	total := r.Chats + r.Approvals + r.Artifacts + r.ToolRuns
+	total := r.Chats + r.Approvals + r.Artifacts + r.ToolRuns + r.SQLRuns + r.DatasetDependencies
 	if total == 0 {
 		if r.Skipped > 0 {
-			return fmt.Sprintf("No Wails-era JSON metadata imported; %d malformed or unsupported item(s) skipped.", r.Skipped)
+			return fmt.Sprintf("No Wails-era metadata imported; %d malformed or unsupported item(s) skipped.", r.Skipped)
 		}
-		return "No Wails-era JSON metadata found to import."
+		return "No Wails-era metadata found to import."
 	}
 	parts := []string{}
 	if r.Chats > 0 {
@@ -84,7 +93,13 @@ func (r CompatibilityImportReport) compatibilityMessage() string {
 	if r.ToolRuns > 0 {
 		parts = append(parts, fmt.Sprintf("%d tool run", r.ToolRuns))
 	}
-	message := "Imported Wails-era JSON metadata: " + strings.Join(parts, ", ") + "."
+	if r.SQLRuns > 0 {
+		parts = append(parts, fmt.Sprintf("%d SQL run", r.SQLRuns))
+	}
+	if r.DatasetDependencies > 0 {
+		parts = append(parts, fmt.Sprintf("%d dataset dependency", r.DatasetDependencies))
+	}
+	message := "Imported Wails-era metadata: " + strings.Join(parts, ", ") + "."
 	if r.Skipped > 0 {
 		message += fmt.Sprintf(" Skipped %d malformed or unsupported item(s).", r.Skipped)
 	}

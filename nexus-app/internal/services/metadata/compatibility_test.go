@@ -1,6 +1,7 @@
 package metadata
 
 import (
+	"database/sql"
 	"encoding/json"
 	"os"
 	"path/filepath"
@@ -126,6 +127,54 @@ func TestImportCompatibilityDataIsIdempotent(t *testing.T) {
 	}
 }
 
+func TestImportCompatibilityDataMigratesLegacySQLiteDatasetTables(t *testing.T) {
+	root := t.TempDir()
+	store, err := NewStore(root)
+	if err != nil {
+		t.Fatal(err)
+	}
+	createLegacyDatasetSQLite(t, store.Path(), root)
+
+	report, err := store.ImportCompatibilityData(CompatibilityImportOptions{})
+	if err != nil {
+		t.Fatalf("ImportCompatibilityData returned error: %v", err)
+	}
+	if report.SQLRuns != 1 || report.DatasetDependencies != 1 || report.Skipped != 0 {
+		t.Fatalf("unexpected import report: %#v", report)
+	}
+	runs, err := store.ListSQLRuns(10)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(runs) != 1 || runs[0].ID != "legacy-sql-1" || runs[0].Status != "success" || runs[0].ShownRows != 5 || runs[0].ArtifactPath != ".nexusdesk/artifacts/sql/sales.md" {
+		t.Fatalf("unexpected imported SQL runs: %#v", runs)
+	}
+	dependencies, err := store.ListDatasetDependencies("data/sales.csv", 10)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(dependencies) != 1 || dependencies[0].DependentKind != "sql-snippet" || dependencies[0].Relation != "saves" || dependencies[0].Metadata["query"] == "" {
+		t.Fatalf("unexpected imported dependencies: %#v", dependencies)
+	}
+	db, err := sql.Open("sqlite", store.Path())
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer db.Close()
+	if exists, err := tableExists(db, "legacy_wails_sql_runs"); err != nil || !exists {
+		t.Fatalf("expected legacy SQL backup table, exists=%v err=%v", exists, err)
+	}
+	if exists, err := tableExists(db, "legacy_wails_dataset_dependencies"); err != nil || !exists {
+		t.Fatalf("expected legacy dependency backup table, exists=%v err=%v", exists, err)
+	}
+	if exists, err := tableExists(db, "legacy_wails_artifacts"); err != nil || !exists {
+		t.Fatalf("expected legacy artifact backup table, exists=%v err=%v", exists, err)
+	}
+	if exists, err := tableExists(db, "legacy_wails_tool_runs"); err != nil || !exists {
+		t.Fatalf("expected legacy tool-run backup table, exists=%v err=%v", exists, err)
+	}
+}
+
 func TestFindCompatibilityArtifactFileRejectsMissingArtifact(t *testing.T) {
 	sidecar := filepath.Join(t.TempDir(), "missing.meta.json")
 	if err := os.WriteFile(sidecar, []byte(`{}`), 0o644); err != nil {
@@ -146,6 +195,82 @@ func writeJSON(t *testing.T, path string, value any) {
 		t.Fatal(err)
 	}
 	if err := os.WriteFile(path, append(data, '\n'), 0o644); err != nil {
+		t.Fatal(err)
+	}
+}
+
+func createLegacyDatasetSQLite(t *testing.T, path string, root string) {
+	t.Helper()
+	if err := os.MkdirAll(filepath.Dir(path), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	db, err := sql.Open("sqlite", path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer db.Close()
+	_, err = db.Exec(`CREATE TABLE sql_runs (
+		id TEXT PRIMARY KEY,
+		workspace_root TEXT NOT NULL,
+		rel_path TEXT NOT NULL,
+		sql_text TEXT NOT NULL,
+		engine TEXT NOT NULL,
+		rows_returned INTEGER,
+		artifact TEXT,
+		status TEXT NOT NULL,
+		message TEXT,
+		created_at TEXT NOT NULL
+	);
+	CREATE TABLE dataset_dependencies (
+		id TEXT PRIMARY KEY,
+		workspace_root TEXT NOT NULL,
+		rel_path TEXT NOT NULL,
+		kind TEXT NOT NULL,
+		target TEXT,
+		query TEXT,
+		artifact TEXT,
+		created_at TEXT NOT NULL,
+		last_refresh TEXT
+	);
+	CREATE TABLE artifacts (
+		id TEXT PRIMARY KEY,
+		workspace_root TEXT NOT NULL,
+		rel_path TEXT NOT NULL,
+		kind TEXT NOT NULL,
+		title TEXT,
+		source TEXT,
+		context_rel_path TEXT,
+		metadata_json TEXT,
+		created_at TEXT NOT NULL
+	);
+	CREATE TABLE tool_runs (
+		id TEXT PRIMARY KEY,
+		workspace_root TEXT NOT NULL,
+		tool_name TEXT NOT NULL,
+		target TEXT,
+		risk TEXT NOT NULL,
+		status TEXT NOT NULL,
+		mode TEXT NOT NULL,
+		approval_id TEXT,
+		inputs_json TEXT,
+		output_summary TEXT,
+		error TEXT,
+		started_at TEXT NOT NULL,
+		completed_at TEXT,
+		duration_ms INTEGER
+	);`)
+	if err != nil {
+		t.Fatal(err)
+	}
+	created := time.Date(2026, 5, 27, 12, 0, 0, 0, time.UTC).Format(time.RFC3339)
+	if _, err := db.Exec(`INSERT INTO sql_runs (id, workspace_root, rel_path, sql_text, engine, rows_returned, artifact, status, message, created_at)
+		VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+		"legacy-sql-1", root, "data/sales.csv", "select * from dataset", "duckdb-compatible-dataset", 5, ".nexusdesk/artifacts/sql/sales.md", "completed", "ok", created); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := db.Exec(`INSERT INTO dataset_dependencies (id, workspace_root, rel_path, kind, target, query, artifact, created_at, last_refresh)
+		VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+		"legacy-dep-1", root, "data/sales.csv", "sql-snippet", "sales-query", "select * from dataset", "", created, created); err != nil {
 		t.Fatal(err)
 	}
 }
