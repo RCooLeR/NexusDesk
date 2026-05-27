@@ -1,6 +1,9 @@
 package shell
 
-import "fyne.io/fyne/v2/container"
+import (
+	"fyne.io/fyne/v2/container"
+	"fyne.io/fyne/v2/dialog"
+)
 
 func (v *View) closeSelectedTab() {
 	item := v.editorTabs.Selected()
@@ -16,7 +19,23 @@ func (v *View) requestCloseTab(item *container.TabItem) {
 		v.editorTabs.Remove(item)
 		return
 	}
-	if _, ok := v.editorSession.Close(id, false); !ok {
+	if tab, ok := v.editorSession.Tab(id); ok && tab.Dirty {
+		v.editorTabs.Select(item)
+		dialog.ShowConfirm("Discard unsaved changes?", dirtyTabCloseMessage(tab.Title), func(confirm bool) {
+			if !confirm {
+				v.addActivity("Kept modified tab " + tab.Title + " open.")
+				v.editorTabs.Select(item)
+				return
+			}
+			v.closeEditorTabItem(item, id, true)
+		}, v.window)
+		return
+	}
+	v.closeEditorTabItem(item, id, false)
+}
+
+func (v *View) closeEditorTabItem(item *container.TabItem, id string, force bool) {
+	if _, ok := v.editorSession.Close(id, force); !ok {
 		v.addActivity("Close blocked because the tab has unsaved changes.")
 		v.editorTabs.Select(item)
 		return
@@ -24,6 +43,13 @@ func (v *View) requestCloseTab(item *container.TabItem) {
 	delete(v.openTabs, id)
 	delete(v.tabIDs, item)
 	v.editorTabs.Remove(item)
+}
+
+func dirtyTabCloseMessage(tabTitle string) string {
+	if tabTitle == "" {
+		tabTitle = "this tab"
+	}
+	return "Discard unsaved changes in " + tabTitle + "?"
 }
 
 func (v *View) selectNextTab() {

@@ -304,7 +304,8 @@ The Fyne migration must not drop product ambition, but this section is intention
 - [x] Native project tree baseline with lazy loading, ignored-path controls, file status badges, secondary-click context menus, reveal/collapse controls, safe copy/move/delete/rename, and file clipboard paste through copy/move services.
 - [x] Native folder create flow with rooted validation, metadata guard, rollback removal for empty created folders, quick action, and tree context menu action.
 - [ ] IDE-grade project tree polish with richer density, better icons/badges, keyboard navigation, and broader context actions.
-- [ ] Multi-tab editor with pinned tabs, dirty state, close guards, split editor groups, breadcrumbs, outline, minimap, find, format, and go-to-definition where available.
+- [x] First native multi-tab editor state with pinned ordering, dirty markers, safe save, revert, and explicit discard confirmation when closing modified tabs.
+- [ ] Multi-tab editor polish with split editor groups, breadcrumbs, outline, minimap, find, format, and go-to-definition where available.
 - [ ] Syntax highlighting strategy for common languages, Markdown, SQL, JSON/YAML/XML, Docker/Compose, logs, and config files.
 - [ ] Markdown source/rendered toggle.
 - [ ] Safe edit preview/apply/rollback for text, code, patches, appends, encoding changes, and allowed binary writes.
