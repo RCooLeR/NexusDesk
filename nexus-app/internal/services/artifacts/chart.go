@@ -62,6 +62,9 @@ func (s *Store) WriteChartArtifact(report ChartArtifactReport) (Artifact, error)
 }
 
 func chartArtifactTitle(report ChartArtifactReport) string {
+	if report.Mode == "line" && report.ValueColumn != "" {
+		return fmt.Sprintf("Chart - %s over %s", report.ValueColumn, report.CategoryColumn)
+	}
 	if report.Mode == "sum" && report.ValueColumn != "" {
 		return fmt.Sprintf("Chart - %s by %s", report.ValueColumn, report.CategoryColumn)
 	}

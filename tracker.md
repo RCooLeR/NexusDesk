@@ -204,6 +204,7 @@ Goal: rebuild Data & Analytics as native data tooling, not a crowded web panel.
 - [ ] Port external DB profile storage and read-only query guards.
 - [ ] Add native table/grid widget strategy.
 - [x] Add chart preview/artifact generation.
+- [x] Add automatic SVG line chart previews/artifacts for ordered date or numeric series.
 - [ ] Add dump import job design before any Docker/database imports.
 
 Exit criteria:
@@ -274,10 +275,10 @@ Exit criteria:
 
 ## Next Batch
 
-1. Extend native charting beyond first SVG bar charts to line charts and richer dashboard visuals.
-2. Promote SQL run/dependency history into Data & Analytics and History navigation instead of only persisting rows.
-3. Start JSON compatibility import from Wails-era workspace metadata into native SQLite.
-4. Add Compose service topology summary from inspected Compose files.
+1. Promote SQL run/dependency history into Data & Analytics and History navigation instead of only persisting rows.
+2. Start JSON compatibility import from Wails-era workspace metadata into native SQLite.
+3. Add Compose service topology summary from inspected Compose files.
+4. Add richer dashboard visuals after the first bar/line SVG chart renderer.
 5. Add full Parquet schema/row-group profiling behind an explicit dependency/build decision.
 
 ## Preserved Post-Port Backlog
@@ -309,7 +310,8 @@ The Fyne migration must not drop product ambition, but this section is intention
 - [ ] Database dump import jobs using temporary isolated environments before any direct mutation workflows exist.
 - [ ] Native table/grid strategy suitable for large result sets.
 - [x] First SVG bar chart preview/artifact generation from bounded query results.
-- [ ] Line charts and later richer dashboard visuals.
+- [x] Line chart previews/artifacts for ordered date or numeric query results.
+- [ ] Richer dashboard visuals.
 
 ### Analytics Connectors
 

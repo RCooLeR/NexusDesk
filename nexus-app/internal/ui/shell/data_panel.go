@@ -384,6 +384,9 @@ func chartArtifactInput(chart datasetsSvc.ChartResult) artifactsSvc.ChartArtifac
 }
 
 func chartArtifactTitle(chart datasetsSvc.ChartResult) string {
+	if chart.Mode == "line" && chart.ValueColumn != "" {
+		return fmt.Sprintf("Chart - %s over %s", chart.ValueColumn, chart.CategoryColumn)
+	}
 	if chart.Mode == "sum" && chart.ValueColumn != "" {
 		return fmt.Sprintf("Chart - %s by %s", chart.ValueColumn, chart.CategoryColumn)
 	}

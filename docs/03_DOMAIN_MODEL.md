@@ -472,10 +472,10 @@ A dataset chart is a deterministic visualization artifact produced from a bounde
 
 Current implementation:
 
-- `app/internal/workspace/chart.go` builds a first CSV bar or line chart model from one category column.
-- The chart can count rows per category or sum a selected numeric column per category.
+- `nexus-app/internal/services/datasets/chart.go` builds native SVG chart models from bounded query results.
+- The chart can count rows per category, sum a selected numeric column per category, or render numeric values over ordered date/time or numeric labels as a line chart.
 - The result is capped to bounded chart points before rendering.
-- `app/internal/artifact/markdown_report.go` writes the chart as an SVG artifact under `.nexusdesk/artifacts/` with provenance metadata.
+- `nexus-app/internal/services/artifacts/chart.go` writes the chart as an SVG artifact under `.nexusdesk/artifacts/` with provenance metadata.
 
 ### Dataset Query Export
 

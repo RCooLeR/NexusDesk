@@ -77,7 +77,7 @@ The current app implements the first safe workspace slice:
 - Chat messages and context-pack previews surface stale-source warnings when their cited files change.
 - The workbench can rebuild a context preview from changed files and records that stale-context refresh in the local approval/metadata trail.
 - Data & Analytics clears visible query/chart/profile state for the active dataset when that dataset changes on disk.
-- CSV chart generation goes through `app/internal/workspace/chart.go` and returns bounded category counts or numeric sums.
+- Native chart generation goes through `nexus-app/internal/services/datasets/chart.go` and returns bounded categorical bar charts or ordered line charts from query results.
 - Chat context uses the same rooted preview boundary and sends only selected text content or a bounded pack of pinned previews.
 - Workspace open/recent/refresh/search/read/file mutation/freshness flows keep stable Wails method names on `app/app.go`, but dispatch through `app/workspace_service.go`.
 - Recent workspaces are stored in local JSON config through `app/internal/storage/recent_workspaces.go`.
