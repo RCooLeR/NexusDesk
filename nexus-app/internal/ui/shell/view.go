@@ -76,6 +76,8 @@ type View struct {
 	assistantContextList   *fyne.Container
 	assistantHistoryStatus *widget.Label
 	assistantHistoryList   *fyne.Container
+	assistantPrompt        *widget.Entry
+	assistantMode          *widget.Select
 }
 
 type artifactsCompareSelection struct {

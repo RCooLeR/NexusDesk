@@ -28,6 +28,7 @@ func (v *View) newAssistantPanel() fyne.CanvasObject {
 	prompt := widget.NewMultiLineEntry()
 	prompt.SetPlaceHolder("Ask Nexus about this workspace")
 	prompt.Wrapping = fyne.TextWrapWord
+	v.assistantPrompt = prompt
 	response := widget.NewRichTextFromMarkdown("Assistant output will stream here.")
 	v.assistantContextStatus = widget.NewLabel("")
 	v.assistantContextStatus.Wrapping = fyne.TextWrapWord
@@ -51,6 +52,7 @@ func (v *View) newAssistantPanel() fyne.CanvasObject {
 	)
 	mode := widget.NewSelect([]string{"Ask", "Agent"}, func(string) {})
 	mode.SetSelected("Ask")
+	v.assistantMode = mode
 	send := widget.NewButtonWithIcon("", theme.MailSendIcon(), nil)
 	send.OnTapped = func() {
 		v.runAssistantRequest(prompt, response, send, mode.Selected)

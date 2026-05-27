@@ -36,3 +36,16 @@ func TestCompactChatHistoryContent(t *testing.T) {
 		t.Fatalf("unexpected compact content: %q", got)
 	}
 }
+
+func TestChatHistorySeedPromptIncludesRoleAndSourceHint(t *testing.T) {
+	prompt := chatHistorySeedPrompt(metadataSvc.ChatMessageRecord{
+		Role:        "assistant",
+		Content:     "Prior answer",
+		SourcePaths: []string{"README.md"},
+	})
+	for _, want := range []string{"prior assistant message", "Original source paths are pinned", "Prior answer", "Next task:"} {
+		if !strings.Contains(prompt, want) {
+			t.Fatalf("expected prompt to contain %q:\n%s", want, prompt)
+		}
+	}
+}

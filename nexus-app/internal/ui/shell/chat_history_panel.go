@@ -54,7 +54,7 @@ func (v *View) refreshChatHistory(query string) {
 		return
 	}
 	v.chatHistoryStatus.SetText(chatHistoryStatusText(query, len(records)))
-	v.chatHistoryResults.Objects = chatHistoryRows(records, v.openChatHistoryRecord)
+	v.chatHistoryResults.Objects = chatHistoryRows(records, v.openChatHistoryRecord, v.useChatHistoryRecordForAssistant)
 	if len(records) == 0 {
 		v.chatHistoryDetail.SetText("")
 	} else {
@@ -70,7 +70,34 @@ func (v *View) openChatHistoryRecord(record metadataSvc.ChatMessageRecord) {
 	v.chatHistoryDetail.SetText(formatChatHistoryRecord(record))
 }
 
-func chatHistoryRows(records []metadataSvc.ChatMessageRecord, onOpen func(metadataSvc.ChatMessageRecord)) []fyne.CanvasObject {
+func (v *View) useChatHistoryRecordForAssistant(record metadataSvc.ChatMessageRecord) {
+	if v.assistantPrompt == nil {
+		v.addActivity("Assistant composer is not ready yet.")
+		return
+	}
+	v.assistantPrompt.SetText(chatHistorySeedPrompt(record))
+	if v.assistantMode != nil {
+		v.assistantMode.SetSelected("Agent")
+	}
+	pinned := 0
+	for _, source := range record.SourcePaths {
+		if v.state.AddAssistantContextPath(source) {
+			pinned++
+		}
+	}
+	v.refreshAssistantContextPins()
+	if pinned > 0 {
+		v.addActivity(fmt.Sprintf("Seeded Agent prompt from chat history and pinned %d source(s).", pinned))
+		return
+	}
+	v.addActivity("Seeded Agent prompt from chat history.")
+}
+
+func chatHistoryRows(
+	records []metadataSvc.ChatMessageRecord,
+	onOpen func(metadataSvc.ChatMessageRecord),
+	onUse func(metadataSvc.ChatMessageRecord),
+) []fyne.CanvasObject {
 	if len(records) == 0 {
 		return []fyne.CanvasObject{widget.NewLabel("No chat messages found.")}
 	}
@@ -87,7 +114,12 @@ func chatHistoryRows(records []metadataSvc.ChatMessageRecord, onOpen func(metada
 		open := widget.NewButtonWithIcon("", theme.VisibilityIcon(), func() {
 			onOpen(item)
 		})
-		rows = append(rows, container.NewBorder(nil, nil, open, nil, container.NewVBox(title, meta, preview)))
+		open.Importance = widget.LowImportance
+		use := widget.NewButtonWithIcon("", theme.MailForwardIcon(), func() {
+			onUse(item)
+		})
+		use.Importance = widget.LowImportance
+		rows = append(rows, container.NewBorder(nil, nil, container.NewHBox(open, use), nil, container.NewVBox(title, meta, preview)))
 	}
 	return rows
 }
@@ -146,5 +178,24 @@ func formatChatHistoryRecord(record metadataSvc.ChatMessageRecord) string {
 	}
 	builder.WriteString("\n\n")
 	builder.WriteString(strings.TrimSpace(record.Content))
+	return builder.String()
+}
+
+func chatHistorySeedPrompt(record metadataSvc.ChatMessageRecord) string {
+	role := strings.ToLower(strings.TrimSpace(record.Role))
+	if role == "" {
+		role = "message"
+	}
+	content := compactChatHistoryContent(record.Content, 4000)
+	var builder strings.Builder
+	builder.WriteString("Use this prior ")
+	builder.WriteString(role)
+	builder.WriteString(" message as context and continue from it.\n\n")
+	if len(record.SourcePaths) > 0 {
+		builder.WriteString("Original source paths are pinned in the assistant context.\n\n")
+	}
+	builder.WriteString("Prior message:\n")
+	builder.WriteString(content)
+	builder.WriteString("\n\nNext task:\n")
 	return builder.String()
 }
