@@ -313,6 +313,33 @@ func formatDatasetProfile(profile datasetsSvc.Profile) string {
 			builder.WriteString("\n")
 		}
 	}
+	if profile.Parquet != nil {
+		builder.WriteString("\nParquet\n")
+		builder.WriteString(fmt.Sprintf("- Footer metadata: %d bytes\n", profile.Parquet.FooterLength))
+		builder.WriteString(fmt.Sprintf("- Data bytes: %d\n", profile.Parquet.DataBytes))
+		if profile.Parquet.MetadataDecoded {
+			builder.WriteString(fmt.Sprintf("- Version: %d\n", profile.Parquet.Version))
+			if strings.TrimSpace(profile.Parquet.CreatedBy) != "" {
+				builder.WriteString("- Created by: ")
+				builder.WriteString(profile.Parquet.CreatedBy)
+				builder.WriteString("\n")
+			}
+			builder.WriteString(fmt.Sprintf("- Schema columns: %d\n", len(profile.Parquet.SchemaColumns)))
+			builder.WriteString(fmt.Sprintf("- Row groups: %d\n", len(profile.Parquet.RowGroups)))
+			for _, rowGroup := range profile.Parquet.RowGroups {
+				builder.WriteString(fmt.Sprintf("  - row group %d: rows %d | columns %d | bytes %d compressed / %d uncompressed\n",
+					rowGroup.Index,
+					rowGroup.Rows,
+					rowGroup.Columns,
+					rowGroup.TotalCompressedSize,
+					rowGroup.TotalUncompressedSize,
+				))
+			}
+		}
+		if profile.Parquet.Truncated {
+			builder.WriteString("- Footer decode skipped by native metadata cap\n")
+		}
+	}
 	if len(profile.Columns) == 0 {
 		builder.WriteString("\nNo tabular fields were found.\n")
 		return builder.String()

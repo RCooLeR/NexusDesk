@@ -33,6 +33,36 @@ func TestProfileStatusMarksTruncatedSample(t *testing.T) {
 	}
 }
 
+func TestFormatDatasetProfileIncludesParquetFooterDetails(t *testing.T) {
+	output := formatDatasetProfile(datasetsSvc.Profile{
+		RelPath: "events.parquet",
+		Format:  "PARQUET",
+		Size:    256,
+		Rows:    3,
+		Columns: []datasetsSvc.ColumnProfile{{Name: "id", Type: "int64", NonEmpty: 3}},
+		Parquet: &datasetsSvc.ParquetProfile{
+			Version:         1,
+			CreatedBy:       "writer",
+			FooterLength:    128,
+			DataBytes:       120,
+			MetadataDecoded: true,
+			SchemaColumns:   []datasetsSvc.ParquetColumn{{Path: "id", Type: "INT64"}},
+			RowGroups: []datasetsSvc.ParquetRowGroup{{
+				Index:                 1,
+				Rows:                  3,
+				Columns:               1,
+				TotalCompressedSize:   40,
+				TotalUncompressedSize: 80,
+			}},
+		},
+	})
+	for _, expected := range []string{"Parquet", "Footer metadata: 128 bytes", "Schema columns: 1", "row group 1: rows 3", "- id | int64"} {
+		if !strings.Contains(output, expected) {
+			t.Fatalf("Parquet profile output missing %q:\n%s", expected, output)
+		}
+	}
+}
+
 func TestFormatDatasetQueryResultIncludesRows(t *testing.T) {
 	output := formatDatasetQueryResult(datasetsSvc.QueryResult{
 		RelPath:     "sales.csv",

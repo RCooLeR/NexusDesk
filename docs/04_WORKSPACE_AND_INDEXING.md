@@ -174,7 +174,7 @@ Current implementation:
 - previews UTF-8 text/code within a 64 KB default cap
 - decodes UTF-8 with BOM, UTF-16 LE/BE with or without BOM, and Windows-1251 Cyrillic text previews
 - parses CSV files into bounded table previews with lightweight column profiles from a larger capped CSV sample
-- profiles native datasets for CSV, TSV, JSON, NDJSON/JSONL, first-sheet XLSX rows, log lines, and lightweight Parquet footer metadata
+- profiles native datasets for CSV, TSV, JSON, NDJSON/JSONL, first-sheet XLSX rows, log lines, and bounded Parquet footer schema/row-group metadata
 - renders common image files as capped inline data URLs
 - renders PDF files as capped inline data URLs and extracts simple embedded text by page when available
 - extracts basic DOCX body text from `word/document.xml`
@@ -234,7 +234,7 @@ For Excel and CSV:
 - sample rows
 - render a bounded CSV table preview
 - infer column types, missing values, and sample values from bounded CSV/TSV/JSON/NDJSON/XLSX/log data
-- inspect Parquet file size and footer metadata length without loading row groups
+- inspect Parquet file size, footer metadata length, schema columns, and row-group byte/row summaries without reading column values
 - query CSV, TSV, JSON, NDJSON, XLSX, and log rows with bounded search, `column=value`, comparison, order, and limit filters
 - expand profiling beyond the current capped sample with richer dataset profiles
 - optionally load tables into DuckDB

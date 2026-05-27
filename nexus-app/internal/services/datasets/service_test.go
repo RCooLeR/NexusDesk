@@ -90,7 +90,7 @@ func TestProfileLogDetectsLevels(t *testing.T) {
 
 func TestProfileParquetReadsFooterMetadata(t *testing.T) {
 	root := t.TempDir()
-	writeTestBytes(t, root, "data/sample.parquet", makeParquetStub(12))
+	writeTestBytes(t, root, "data/sample.parquet", makeParquetStub(8))
 
 	profile, err := New(nil).Profile(root, "data/sample.parquet")
 	if err != nil {
@@ -98,6 +98,28 @@ func TestProfileParquetReadsFooterMetadata(t *testing.T) {
 	}
 	if profile.Format != "PARQUET" || profile.Size == 0 || len(profile.Notes) == 0 {
 		t.Fatalf("unexpected parquet profile: %#v", profile)
+	}
+}
+
+func TestProfileParquetDecodesSchemaAndRowGroups(t *testing.T) {
+	root := t.TempDir()
+	writeTestBytes(t, root, "data/sample.parquet", makeParquetProfileStub(t))
+
+	profile, err := New(nil).Profile(root, "data/sample.parquet")
+	if err != nil {
+		t.Fatalf("Profile returned error: %v", err)
+	}
+	if profile.Format != "PARQUET" || profile.Rows != 3 || len(profile.Columns) != 2 || profile.Parquet == nil || !profile.Parquet.MetadataDecoded {
+		t.Fatalf("unexpected parquet profile: %#v", profile)
+	}
+	if profile.Columns[0].Name != "id" || profile.Columns[0].Type != "int64" || profile.Columns[1].Name != "spend" || profile.Columns[1].Type != "double" {
+		t.Fatalf("unexpected parquet columns: %#v", profile.Columns)
+	}
+	if len(profile.Parquet.RowGroups) != 1 || profile.Parquet.RowGroups[0].Rows != 3 || profile.Parquet.RowGroups[0].Columns != 2 {
+		t.Fatalf("unexpected parquet row groups: %#v", profile.Parquet.RowGroups)
+	}
+	if profile.Parquet.RowGroups[0].ColumnChunks[0].Path != "id" || profile.Parquet.RowGroups[0].ColumnChunks[0].Codec != "SNAPPY" {
+		t.Fatalf("unexpected parquet column chunks: %#v", profile.Parquet.RowGroups[0].ColumnChunks)
 	}
 }
 
@@ -272,4 +294,150 @@ func makeParquetStub(footerLength uint32) []byte {
 	content = append(content, byte(footerLength), byte(footerLength>>8), byte(footerLength>>16), byte(footerLength>>24))
 	content = append(content, []byte("PAR1")...)
 	return content
+}
+
+func makeParquetProfileStub(t *testing.T) []byte {
+	t.Helper()
+	footer := testCompactStruct(
+		testCompactFieldI32(1, 1),
+		testCompactFieldList(2, testCompactStructType, testCompactConcat(
+			testCompactStruct(
+				testCompactFieldString(4, "schema"),
+				testCompactFieldI32(5, 2),
+			),
+			testCompactStruct(
+				testCompactFieldI32(1, 2),
+				testCompactFieldI32(3, 0),
+				testCompactFieldString(4, "id"),
+			),
+			testCompactStruct(
+				testCompactFieldI32(1, 5),
+				testCompactFieldI32(3, 1),
+				testCompactFieldString(4, "spend"),
+			),
+		), 3),
+		testCompactFieldI64(3, 3),
+		testCompactFieldList(4, testCompactStructType, testCompactConcat(
+			testCompactStruct(
+				testCompactFieldList(1, testCompactStructType, testCompactConcat(
+					testCompactStruct(testCompactFieldStruct(3, testCompactStruct(
+						testCompactFieldI32(1, 2),
+						testCompactFieldStringList(3, []string{"id"}),
+						testCompactFieldI32(4, 1),
+						testCompactFieldI64(5, 3),
+						testCompactFieldI64(6, 80),
+						testCompactFieldI64(7, 40),
+					))),
+					testCompactStruct(testCompactFieldStruct(3, testCompactStruct(
+						testCompactFieldI32(1, 5),
+						testCompactFieldStringList(3, []string{"spend"}),
+						testCompactFieldI32(4, 0),
+						testCompactFieldI64(5, 3),
+						testCompactFieldI64(6, 96),
+						testCompactFieldI64(7, 48),
+					))),
+				), 2),
+				testCompactFieldI64(2, 176),
+				testCompactFieldI64(3, 3),
+				testCompactFieldI64(6, 88),
+			),
+		), 1),
+		testCompactFieldString(6, "nexus-test-writer"),
+	)
+	content := append([]byte("PAR1"), []byte("data")...)
+	content = append(content, footer...)
+	footerLength := uint32(len(footer))
+	content = append(content, byte(footerLength), byte(footerLength>>8), byte(footerLength>>16), byte(footerLength>>24))
+	content = append(content, []byte("PAR1")...)
+	return content
+}
+
+const (
+	testCompactI32Type    byte = 5
+	testCompactI64Type    byte = 6
+	testCompactBinaryType byte = 8
+	testCompactListType   byte = 9
+	testCompactStructType byte = 12
+)
+
+func testCompactStruct(fields ...[]byte) []byte {
+	output := []byte{}
+	for _, field := range fields {
+		output = append(output, field...)
+	}
+	return append(output, 0)
+}
+
+func testCompactConcat(items ...[]byte) []byte {
+	output := []byte{}
+	for _, item := range items {
+		output = append(output, item...)
+	}
+	return output
+}
+
+func testCompactFieldI32(fieldID int, value int64) []byte {
+	return append(testCompactFieldHeader(fieldID, testCompactI32Type), testCompactZigZag(value)...)
+}
+
+func testCompactFieldI64(fieldID int, value int64) []byte {
+	return append(testCompactFieldHeader(fieldID, testCompactI64Type), testCompactZigZag(value)...)
+}
+
+func testCompactFieldString(fieldID int, value string) []byte {
+	output := testCompactFieldHeader(fieldID, testCompactBinaryType)
+	output = append(output, testCompactVarint(uint64(len(value)))...)
+	output = append(output, []byte(value)...)
+	return output
+}
+
+func testCompactFieldStringList(fieldID int, values []string) []byte {
+	items := []byte{}
+	for _, value := range values {
+		items = append(items, testCompactVarint(uint64(len(value)))...)
+		items = append(items, []byte(value)...)
+	}
+	return testCompactFieldList(fieldID, testCompactBinaryType, items, len(values))
+}
+
+func testCompactFieldStruct(fieldID int, value []byte) []byte {
+	return append(testCompactFieldHeader(fieldID, testCompactStructType), value...)
+}
+
+func testCompactFieldList(fieldID int, elementType byte, items []byte, explicitSize ...int) []byte {
+	size := len(items)
+	if len(explicitSize) > 0 {
+		size = explicitSize[0]
+	}
+	output := testCompactFieldHeader(fieldID, testCompactListType)
+	if size < 15 {
+		output = append(output, byte(size<<4)|elementType)
+	} else {
+		output = append(output, 0xf0|elementType)
+		output = append(output, testCompactVarint(uint64(size))...)
+	}
+	output = append(output, items...)
+	return output
+}
+
+func testCompactFieldHeader(fieldID int, fieldType byte) []byte {
+	output := []byte{fieldType}
+	output = append(output, testCompactZigZag(int64(fieldID))...)
+	return output
+}
+
+func testCompactZigZag(value int64) []byte {
+	return testCompactVarint(uint64(value<<1) ^ uint64(value>>63))
+}
+
+func testCompactVarint(value uint64) []byte {
+	output := []byte{}
+	for {
+		if value&^0x7f == 0 {
+			output = append(output, byte(value))
+			return output
+		}
+		output = append(output, byte(value&0x7f)|0x80)
+		value >>= 7
+	}
 }

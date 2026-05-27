@@ -14,6 +14,7 @@ type Profile struct {
 	Truncated   bool
 	Notes       []string
 	JSONProfile *JSONProfile
+	Parquet     *ParquetProfile
 }
 
 type ColumnProfile struct {
@@ -28,6 +29,46 @@ type JSONProfile struct {
 	TopLevel string
 	Count    int
 	Notes    []string
+}
+
+type ParquetProfile struct {
+	Version         int
+	CreatedBy       string
+	FooterLength    int64
+	DataBytes       int64
+	SchemaColumns   []ParquetColumn
+	RowGroups       []ParquetRowGroup
+	MetadataDecoded bool
+	Truncated       bool
+}
+
+type ParquetColumn struct {
+	Path           string
+	Type           string
+	RepetitionType string
+	ConvertedType  string
+	TypeLength     int
+	Precision      int
+	Scale          int
+}
+
+type ParquetRowGroup struct {
+	Index                 int
+	Rows                  int64
+	Columns               int
+	TotalByteSize         int64
+	TotalCompressedSize   int64
+	TotalUncompressedSize int64
+	ColumnChunks          []ParquetColumnChunk
+}
+
+type ParquetColumnChunk struct {
+	Path             string
+	Type             string
+	Codec            string
+	Values           int64
+	CompressedSize   int64
+	UncompressedSize int64
 }
 
 type QueryResult struct {

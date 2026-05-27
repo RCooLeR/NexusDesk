@@ -196,6 +196,7 @@ Goal: rebuild Data & Analytics as native data tooling, not a crowded web panel.
 - [x] Port dataset profiling for CSV, TSV, JSON, NDJSON, XLSX, Parquet metadata, and logs.
 - [x] Add first native sample-based data profiling slice for selected CSV, TSV, and JSON files.
 - [x] Expand native profiling to NDJSON/JSONL, log line datasets, and lightweight Parquet footer metadata.
+- [x] Add native bounded Parquet schema and row-group footer profiling without adding a heavy reader dependency.
 - [x] Port first bounded row query/filter/order service for selected CSV, TSV, and JSON files.
 - [x] Extend bounded row query/filter/order service to NDJSON/JSONL and log line datasets.
 - [x] Add first SELECT-only native dataset SQL run over the selected dataset with persisted run/dependency metadata.
@@ -279,11 +280,11 @@ Exit criteria:
 
 ## Next Batch
 
-1. Add full Parquet schema/row-group profiling behind an explicit dependency/build decision.
-2. Port the first SQL notebook model on top of the native SQL/history foundation.
-3. Migrate/import remaining Wails-era dataset SQL/dependency data from legacy SQLite metadata stores.
-4. Add native job monitor retry/open-output actions on top of the persisted job model.
-5. Add Compose config validation as a read-only task/operations workflow.
+1. Port the first SQL notebook model on top of the native SQL/history foundation.
+2. Migrate/import remaining Wails-era dataset SQL/dependency data from legacy SQLite metadata stores.
+3. Add native job monitor retry/open-output actions on top of the persisted job model.
+4. Add Compose config validation as a read-only task/operations workflow.
+5. Add SQLite workspace connector browser on the native service/UI foundation.
 
 ## Preserved Post-Port Backlog
 
@@ -304,6 +305,7 @@ The Fyne migration must not drop product ambition, but this section is intention
 ### Data & Analytics Studio
 
 - [x] Dataset profiling for CSV, TSV, JSON, NDJSON, XLSX, Parquet metadata, and logs.
+- [x] Bounded native Parquet footer decoding for schema columns and row-group summaries without scanning values.
 - [x] Bounded filter/query/order/limit workflows for table-like CSV, TSV, JSON, NDJSON, XLSX, and log files.
 - [x] First SELECT-only native SQL run over the selected dataset with one predicate, order, limit, projection, execution plan, and metadata persistence.
 - [x] SQL run and dataset dependency history surfaced in Data & Analytics plus unified History.
