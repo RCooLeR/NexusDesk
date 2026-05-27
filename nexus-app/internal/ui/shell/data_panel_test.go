@@ -326,6 +326,23 @@ func TestNotebookCellsFromEditorParsesSQLAndChartCells(t *testing.T) {
 	}
 }
 
+func TestAppendNotebookCellTemplateAddsSQLAndChartBlocks(t *testing.T) {
+	sqlText := appendNotebookCellTemplate("", "cell")
+	if !strings.Contains(sqlText, "-- cell: Query 1") || !strings.Contains(sqlText, "select * from dataset limit 50") {
+		t.Fatalf("unexpected SQL cell template:\n%s", sqlText)
+	}
+	chartText := appendNotebookCellTemplate(sqlText, "chart")
+	for _, expected := range []string{"-- cell: Query 1", "-- chart: Chart 2", "select * from dataset limit 50"} {
+		if !strings.Contains(chartText, expected) {
+			t.Fatalf("chart template output missing %q:\n%s", expected, chartText)
+		}
+	}
+	cells := notebookCellsFromEditor(chartText)
+	if len(cells) != 2 || cells[0].Kind != "sql" || cells[1].Kind != "chart" {
+		t.Fatalf("templates did not parse into notebook cells: %#v", cells)
+	}
+}
+
 func TestFormatNotebookForEditorRoundTripsCellDirectives(t *testing.T) {
 	output := formatNotebookForEditor(datasetsSvc.Notebook{Cells: []datasetsSvc.NotebookCell{
 		{ID: "cell-1", Kind: "sql", Label: "Top spend", SQL: "select * from dataset limit 5"},

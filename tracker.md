@@ -206,6 +206,7 @@ Goal: rebuild Data & Analytics as native data tooling, not a crowded web panel.
 - [x] Add first native SQL notebook run Markdown artifact export with per-cell SQL, rows, plans, chart SVG, metadata, and source lineage.
 - [x] Add first native SQL history reuse/rerun actions for selected dataset or SQLite sources.
 - [x] Add first native Data panel result tabs for notebook summary, rows, plan, and charts.
+- [x] Add first native visual notebook controls for inserting SQL and chart cell templates.
 - [x] Port first SQLite workspace connector browser with read-only schema, index, relationship, row-count, and capped-sample inspection.
 - [ ] Port external DB profile storage and read-only query guards.
 - [ ] Add native table/grid widget strategy.
@@ -284,7 +285,7 @@ Exit criteria:
 
 ## Next Batch
 
-1. Continue native SQL notebooks with visual cell controls and richer explain output.
+1. Continue native SQL notebooks with richer explain output and fuller cell management.
 2. Port AI diff summary and commit drafting through the native assistant service.
 3. Route long indexing, OCR, dump imports, connector pulls, report generation, and long agent runs through jobs.
 4. Add dump import job design before any Docker/database imports.
@@ -319,7 +320,8 @@ The Fyne migration must not drop product ambition, but this section is intention
 - [x] First native SQL notebook run Markdown artifact export with cell SQL, tabular results, logical plans, chart SVG snippets, searchable artifact metadata, and source lineage.
 - [x] First native SQL history reuse/rerun actions for selected dataset or SQLite sources.
 - [x] First native Data panel result tabs for notebook summary, rows, plan, and charts.
-- [ ] Full SQL notebook shell with visual cell controls and richer explain output.
+- [x] First native visual notebook controls for inserting SQL and chart cell templates without memorizing directives.
+- [ ] Full SQL notebook shell with richer explain output, cell selection/reorder/delete controls, and notebook-level result navigation.
 - [x] First SQLite workspace database browser with schema, views, indexes, row counts, capped samples, and relationship hints.
 - [x] First SQLite connector query preview with SELECT/WITH guard, single-statement validation, visible default row cap/timeout, SQL run metadata, dependency lineage, and read-only result rendering.
 - [ ] SQLite connector query cancellation, saved queries, CSV/Markdown exports, and richer lineage actions.

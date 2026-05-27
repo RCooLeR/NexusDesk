@@ -38,13 +38,19 @@ func (v *View) newDataPanel() fyne.CanvasObject {
 	dashboardButton := widget.NewButtonWithIcon("Preview dashboard", theme.ColorPaletteIcon(), v.previewDatasetDashboard)
 	exportDashboardButton := widget.NewButtonWithIcon("Export dashboard", theme.DocumentSaveIcon(), v.exportDatasetDashboardArtifact)
 	historyButton := widget.NewButtonWithIcon("SQL history", theme.HistoryIcon(), v.showDatasetSQLHistory)
+	addSQLCellButton := widget.NewButtonWithIcon("Add SQL cell", theme.ContentAddIcon(), func() {
+		v.insertNotebookCellTemplate("cell")
+	})
+	addChartCellButton := widget.NewButtonWithIcon("Add chart cell", theme.ContentAddIcon(), func() {
+		v.insertNotebookCellTemplate("chart")
+	})
 	saveNotebookButton := widget.NewButtonWithIcon("Save notebook", theme.DocumentSaveIcon(), v.saveSelectedDatasetNotebook)
 	loadNotebookButton := widget.NewButtonWithIcon("Load notebook", theme.FolderOpenIcon(), v.loadSelectedDatasetNotebook)
 	runNotebookButton := widget.NewButtonWithIcon("Run notebook", theme.MediaPlayIcon(), v.runLatestDatasetNotebook)
 	exportNotebookButton := widget.NewButtonWithIcon("Export notebook", theme.DocumentSaveIcon(), v.exportDatasetNotebookArtifact)
 	reuseSQLButton := widget.NewButtonWithIcon("Use latest SQL", theme.ContentPasteIcon(), v.reuseLatestDatasetSQLRun)
 	rerunSQLButton := widget.NewButtonWithIcon("Rerun latest SQL", theme.MediaReplayIcon(), v.rerunLatestDatasetSQLRun)
-	actions := container.NewHBox(profileButton, queryButton, sqlButton, sqliteButton, sqliteQueryButton, saveNotebookButton, loadNotebookButton, runNotebookButton, exportNotebookButton, chartButton, exportChartButton, dashboardButton, exportDashboardButton, historyButton, reuseSQLButton, rerunSQLButton)
+	actions := container.NewHBox(profileButton, queryButton, sqlButton, sqliteButton, sqliteQueryButton, addSQLCellButton, addChartCellButton, saveNotebookButton, loadNotebookButton, runNotebookButton, exportNotebookButton, chartButton, exportChartButton, dashboardButton, exportDashboardButton, historyButton, reuseSQLButton, rerunSQLButton)
 	queryBar := container.NewBorder(nil, nil, nil, actions, v.dataQueryEntry)
 	header := container.NewVBox(v.dataProfileStatus, queryBar)
 	summary := container.NewScroll(v.dataProfileDetail)
@@ -93,6 +99,16 @@ func (v *View) setDataNotebookRunTabs(result datasetsSvc.NotebookRunResult) {
 	if v.dataResultTabs != nil && len(v.dataResultTabs.Items) > 0 {
 		v.dataResultTabs.Select(v.dataResultTabs.Items[0])
 	}
+}
+
+func (v *View) insertNotebookCellTemplate(kind string) {
+	updated := appendNotebookCellTemplate(v.dataQueryEntry.Text, kind)
+	v.dataQueryEntry.SetText(updated)
+	if kind == "chart" {
+		v.dataProfileStatus.SetText("Added chart notebook cell template.")
+		return
+	}
+	v.dataProfileStatus.SetText("Added SQL notebook cell template.")
 }
 
 func (v *View) runSelectedSQLiteQuery(sqlText string) {
@@ -1506,6 +1522,22 @@ func notebookCellsFromEditor(value string) []datasetsSvc.NotebookCell {
 	}
 	flush()
 	return cells
+}
+
+func appendNotebookCellTemplate(current string, kind string) string {
+	kind = strings.ToLower(strings.TrimSpace(kind))
+	directive := "cell"
+	labelPrefix := "Query"
+	if kind == "chart" {
+		directive = "chart"
+		labelPrefix = "Chart"
+	}
+	index := len(notebookCellsFromEditor(current)) + 1
+	block := fmt.Sprintf("-- %s: %s %d\nselect * from dataset limit 50", directive, labelPrefix, index)
+	if strings.TrimSpace(current) == "" {
+		return block
+	}
+	return strings.TrimRight(current, "\r\n") + "\n\n" + block
 }
 
 func notebookDirective(line string, kind string) (string, bool) {
