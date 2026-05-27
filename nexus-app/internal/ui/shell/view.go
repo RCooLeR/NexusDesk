@@ -49,6 +49,7 @@ type View struct {
 	gitDiffStatus          *widget.Label
 	gitDiffMode            gitDiffMode
 	gitLastDiff            gitSvc.FileDiff
+	gitFileBadges          map[string]string
 	gitHunkStatus          *widget.Label
 	gitActiveHunk          int
 	taskResults            *fyne.Container
@@ -150,6 +151,7 @@ func New(window fyne.Window) *View {
 		gitDiffText:      gitDiffText,
 		gitDiffStatus:    widget.NewLabel("Select a changed file to load a read-only diff."),
 		gitDiffMode:      gitDiffModeUnified,
+		gitFileBadges:    map[string]string{},
 		gitHunkStatus:    widget.NewLabel("No hunk selected."),
 		taskResults:      container.NewVBox(widget.NewLabel("Discover workspace tasks to run tests, scripts, or Compose checks.")),
 		taskStatus:       widget.NewLabel("No tasks discovered."),

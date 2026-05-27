@@ -21,9 +21,10 @@ type treeStore struct {
 	loaded         map[string]bool
 	nodes          map[string]domain.WorkspaceNode
 	summaries      map[string]domain.ScanSummary
+	badges         map[string]string
 }
 
-func newTreeStore(workspace domain.Workspace, service *workspaceSvc.Service) *treeStore {
+func newTreeStore(workspace domain.Workspace, service *workspaceSvc.Service, badges map[string]string) *treeStore {
 	store := &treeStore{
 		root:     workspace.Root,
 		service:  service,
@@ -34,6 +35,7 @@ func newTreeStore(workspace domain.Workspace, service *workspaceSvc.Service) *tr
 		summaries: map[string]domain.ScanSummary{
 			"": workspace.Summary,
 		},
+		badges: cloneStringMap(badges),
 	}
 	store.setChildren("", workspace.Tree)
 	return store
@@ -88,6 +90,10 @@ func (s *treeStore) summary(parentID string) domain.ScanSummary {
 	return s.summaries[parentID]
 }
 
+func (s *treeStore) badge(relPath string) string {
+	return s.badges[relPath]
+}
+
 func (s *treeStore) branchPathForSelection(selected string) []string {
 	selected = strings.Trim(selected, "/")
 	if selected == "" {
@@ -110,10 +116,11 @@ func (s *treeStore) branchPathForSelection(selected string) []string {
 func newWorkspaceTree(
 	state *State,
 	service *workspaceSvc.Service,
+	badges map[string]string,
 	onSelected func(domain.WorkspaceNode),
 	onContext func(domain.WorkspaceNode, *fyne.PointEvent),
 ) (*widget.Tree, *treeStore) {
-	store := newTreeStore(state.Workspace(), service)
+	store := newTreeStore(state.Workspace(), service, badges)
 	tree := widget.NewTree(
 		func(uid widget.TreeNodeID) []widget.TreeNodeID {
 			if uid == "" {
@@ -134,7 +141,7 @@ func newWorkspaceTree(
 				return
 			}
 			row := object.(*workspaceTreeRow)
-			row.setNode(node)
+			row.setNode(node, store.badge(node.RelPath))
 		},
 	)
 	tree.OnSelected = func(uid widget.TreeNodeID) {
@@ -177,7 +184,7 @@ func newWorkspaceTreeRow(onSecondary func(domain.WorkspaceNode, *fyne.PointEvent
 	return row
 }
 
-func (r *workspaceTreeRow) setNode(node domain.WorkspaceNode) {
+func (r *workspaceTreeRow) setNode(node domain.WorkspaceNode, badge string) {
 	r.node = node
 	if node.Kind == domain.NodeDirectory {
 		r.icon.SetResource(theme.FolderIcon())
@@ -188,11 +195,25 @@ func (r *workspaceTreeRow) setNode(node domain.WorkspaceNode) {
 	if node.Ignored {
 		r.badge.SetText("ignored")
 		r.badge.Show()
+	} else if strings.TrimSpace(badge) != "" {
+		r.badge.SetText(badge)
+		r.badge.Show()
 	} else {
 		r.badge.SetText("")
 		r.badge.Hide()
 	}
 	r.Refresh()
+}
+
+func cloneStringMap(values map[string]string) map[string]string {
+	if len(values) == 0 {
+		return map[string]string{}
+	}
+	cloned := make(map[string]string, len(values))
+	for key, value := range values {
+		cloned[key] = value
+	}
+	return cloned
 }
 
 func (r *workspaceTreeRow) CreateRenderer() fyne.WidgetRenderer {

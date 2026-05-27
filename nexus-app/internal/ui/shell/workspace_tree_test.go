@@ -12,7 +12,7 @@ func TestTreeStoreBranchPathForSelection(t *testing.T) {
 		Tree: []domain.WorkspaceNode{
 			{ID: "docs", RelPath: "docs", Name: "docs", Kind: domain.NodeDirectory},
 		},
-	}, workspaceSvc.New())
+	}, workspaceSvc.New(), nil)
 	store.setChildren("docs", []domain.WorkspaceNode{
 		{ID: "docs/guides", ParentID: "docs", RelPath: "docs/guides", Name: "guides", Kind: domain.NodeDirectory},
 		{ID: "docs/readme.md", ParentID: "docs", RelPath: "docs/readme.md", Name: "readme.md", Kind: domain.NodeFile},

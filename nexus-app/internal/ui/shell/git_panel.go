@@ -75,10 +75,18 @@ func (v *View) refreshGitStatus() {
 		dialog.ShowError(err, v.window)
 		return
 	}
+	v.applyGitStatus(status)
+	v.addActivity(status.Message)
+}
+
+func (v *View) applyGitStatus(status gitSvc.Status) {
 	v.gitStatus.SetText(gitStatusLabel(status))
 	v.gitResults.Objects = v.gitRows(status)
 	v.gitResults.Refresh()
-	v.addActivity(status.Message)
+	v.gitFileBadges = gitWorkspaceBadges(status)
+	if v.state.Workspace().Root != "" {
+		v.refreshNavigator()
+	}
 }
 
 func (v *View) openGitDiff(path string) {
@@ -146,9 +154,7 @@ func (v *View) applyGitFileAction(action gitSvc.FileAction) {
 		dialog.ShowError(err, v.window)
 		return
 	}
-	v.gitStatus.SetText(gitStatusLabel(result.Status))
-	v.gitResults.Objects = v.gitRows(result.Status)
-	v.gitResults.Refresh()
+	v.applyGitStatus(result.Status)
 	v.addActivity(result.Message)
 	v.openGitDiff(result.Path)
 }
@@ -192,9 +198,7 @@ func (v *View) applyGitHunkAction(target gitHunkTarget, action gitSvc.HunkAction
 		v.addActivity(result.Message)
 	}
 	if result.Status.Available {
-		v.gitStatus.SetText(gitStatusLabel(result.Status))
-		v.gitResults.Objects = v.gitRows(result.Status)
-		v.gitResults.Refresh()
+		v.applyGitStatus(result.Status)
 	}
 	v.openGitDiff(result.Path)
 }

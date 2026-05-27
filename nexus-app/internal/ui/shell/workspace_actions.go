@@ -39,6 +39,7 @@ func (v *View) openWorkspace(root string) {
 		return
 	}
 	v.state.SetWorkspace(workspace)
+	v.gitFileBadges = map[string]string{}
 	if store, err := metadataSvc.NewStore(workspace.Root); err == nil {
 		if status, err := store.Ensure(); err == nil {
 			v.metadataStore = store
@@ -62,12 +63,16 @@ func (v *View) openWorkspace(root string) {
 		v.refreshAgentAudit()
 		v.addActivity("Metadata store unavailable: " + err.Error())
 	}
-	v.navigator.Objects = []fyne.CanvasObject{v.newWorkspaceNavigator()}
-	v.navigator.Refresh()
+	v.refreshNavigator()
 	v.refreshAssistantContextPins()
 	v.status.SetText(fmt.Sprintf("%s: %d indexed, %d ignored, %d unreadable", workspace.Name, workspace.Summary.Included, workspace.Summary.Ignored, workspace.Summary.Unreadable))
 	v.addActivity("Opened workspace " + workspace.Root)
 	v.refreshApprovals()
+}
+
+func (v *View) refreshNavigator() {
+	v.navigator.Objects = []fyne.CanvasObject{v.newWorkspaceNavigator()}
+	v.navigator.Refresh()
 }
 
 func (v *View) openWorkspaceNode(node domain.WorkspaceNode) {

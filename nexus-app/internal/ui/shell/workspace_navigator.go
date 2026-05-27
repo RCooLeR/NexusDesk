@@ -33,7 +33,7 @@ func (v *View) newWorkspaceNavigator() fyne.CanvasObject {
 		widget.NewButtonWithIcon("", theme.DocumentCreateIcon(), v.promptRenameFile),
 		widget.NewButtonWithIcon("", theme.DeleteIcon(), v.confirmDeleteFile),
 	)
-	tree, store := newWorkspaceTree(v.state, v.workspaceService, func(node domain.WorkspaceNode) {
+	tree, store := newWorkspaceTree(v.state, v.workspaceService, v.gitFileBadges, func(node domain.WorkspaceNode) {
 		summary.SetText(navigatorSelectionSummary(node.RelPath))
 		v.openWorkspaceNode(node)
 	}, func(node domain.WorkspaceNode, event *fyne.PointEvent) {

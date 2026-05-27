@@ -172,6 +172,7 @@ Goal: make Workbench credible as an IDE-like surface.
 - [x] Add first native Git status service under `nexus-app/internal/services/git`.
 - [x] Add manual-only Git refresh panel.
 - [x] Add changed-file tree grouped by directories.
+- [x] Add first Workbench project-tree Git status badges from the last manual Git refresh.
 - [x] Add first read-only Git file diff service and unified diff panel.
 - [x] Add unified/split/diff-only diff views.
 - [x] Add confirmed file-level staged/unstaged controls.
@@ -257,11 +258,11 @@ Exit criteria:
 
 ## Next Batch
 
-1. Add first Workbench file-status badges from Git status once manual Git refresh has run.
-2. Add first chat-to-agent/context action so a prior answer can seed a follow-up prompt.
-3. Add first document-set artifact actions for opening cited source files from lineage.
-4. Add compare-result artifact export once the read-only comparison flow stabilizes.
-5. Add first document preview/extraction service slice for Markdown/TXT/HTML/XML artifacts.
+1. Add first chat-to-agent/context action so a prior answer can seed a follow-up prompt.
+2. Add first document-set artifact actions for opening cited source files from lineage.
+3. Add compare-result artifact export once the read-only comparison flow stabilizes.
+4. Add first document preview/extraction service slice for Markdown/TXT/HTML/XML artifacts.
+5. Add first native data profiling slice for CSV/TSV/JSON files.
 
 ## Preserved Post-Port Backlog
 
