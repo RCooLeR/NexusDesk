@@ -153,6 +153,7 @@ Goal: port the LLM and agent runtime without recreating the Wails bridge problem
 - [x] Add persisted native chat history and reload recent workspace turns into Ask mode.
 - [x] Add first native chat search/history bottom panel backed by SQLite chat metadata.
 - [x] Add first chat-history-to-Agent seed action with source path context pinning.
+- [x] Add first unified native history navigation across chat, artifacts, jobs, and agent audit records.
 - [x] Port agent runtime as an internal service, not a UI callback.
 - [x] Unify registered tools and agent tools behind one dispatcher.
 - [x] Add approval queue UI and full-access policy UI.
@@ -263,11 +264,11 @@ Exit criteria:
 
 ## Next Batch
 
-1. Add first native metadata/history navigation from chat, artifacts, jobs, and agent audit records.
-2. Add artifact source freshness checks so reports can warn when cited files moved or changed.
-3. Add artifact restore flow for archived generated outputs.
-4. Extend native document extraction to PDF/DOCX once extraction metadata and jobs are ready.
-5. Add bounded row query/filter/order service for profiled CSV/TSV/JSON datasets.
+1. Add artifact source freshness checks so reports can warn when cited files moved or changed.
+2. Add artifact restore flow for archived generated outputs.
+3. Extend native document extraction to PDF/DOCX once extraction metadata and jobs are ready.
+4. Add bounded row query/filter/order service for profiled CSV/TSV/JSON datasets.
+5. Add first native persisted artifact repository rows so artifacts are visible in SQLite metadata history, not only filesystem scans.
 
 ## Preserved Post-Port Backlog
 

@@ -49,11 +49,13 @@ func (v *View) openWorkspace(root string) {
 			v.loadAssistantChatHistory()
 			v.refreshChatHistory("")
 			v.refreshAgentAudit()
+			v.refreshHistory("", "")
 		} else {
 			v.metadataStore = nil
 			v.loadAssistantChatHistory()
 			v.refreshChatHistory("")
 			v.refreshAgentAudit()
+			v.refreshHistory("", "")
 			v.addActivity("Metadata store unavailable: " + err.Error())
 		}
 	} else {
@@ -61,6 +63,7 @@ func (v *View) openWorkspace(root string) {
 		v.loadAssistantChatHistory()
 		v.refreshChatHistory("")
 		v.refreshAgentAudit()
+		v.refreshHistory("", "")
 		v.addActivity("Metadata store unavailable: " + err.Error())
 	}
 	v.refreshNavigator()

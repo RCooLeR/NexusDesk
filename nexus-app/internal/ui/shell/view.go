@@ -12,6 +12,7 @@ import (
 	datasetsSvc "nexusdesk/internal/services/datasets"
 	editorSvc "nexusdesk/internal/services/editor"
 	gitSvc "nexusdesk/internal/services/git"
+	historySvc "nexusdesk/internal/services/history"
 	jobsSvc "nexusdesk/internal/services/jobs"
 	llmSvc "nexusdesk/internal/services/llm"
 	metadataSvc "nexusdesk/internal/services/metadata"
@@ -74,6 +75,9 @@ type View struct {
 	chatHistoryResults     *fyne.Container
 	chatHistoryStatus      *widget.Label
 	chatHistoryDetail      *widget.Entry
+	historyResults         *fyne.Container
+	historyStatus          *widget.Label
+	historyDetail          *widget.Entry
 	agentAuditResults      *fyne.Container
 	agentAuditStatus       *widget.Label
 	agentAuditDetail       *widget.Entry
@@ -118,6 +122,10 @@ func New(window fyne.Window) *View {
 	chatHistoryDetail.TextStyle = fyne.TextStyle{Monospace: true}
 	chatHistoryDetail.Wrapping = fyne.TextWrapWord
 	chatHistoryDetail.Disable()
+	historyDetail := widget.NewMultiLineEntry()
+	historyDetail.TextStyle = fyne.TextStyle{Monospace: true}
+	historyDetail.Wrapping = fyne.TextWrapWord
+	historyDetail.Disable()
 	agentAuditDetail := widget.NewMultiLineEntry()
 	agentAuditDetail.TextStyle = fyne.TextStyle{Monospace: true}
 	agentAuditDetail.Wrapping = fyne.TextWrapWord
@@ -192,6 +200,11 @@ func New(window fyne.Window) *View {
 		),
 		chatHistoryStatus: widget.NewLabel("Chat history has not been loaded."),
 		chatHistoryDetail: chatHistoryDetail,
+		historyResults: container.NewVBox(
+			widget.NewLabel("Open a workspace to inspect unified history."),
+		),
+		historyStatus: widget.NewLabel("History has not been loaded."),
+		historyDetail: historyDetail,
 		agentAuditResults: container.NewVBox(
 			widget.NewLabel("Open a workspace to inspect persisted agent runs."),
 		),
@@ -209,4 +222,16 @@ func (v *View) Canvas() fyne.CanvasObject {
 	rail := v.newRail()
 	workbench := container.NewBorder(v.newToolbar(), v.newBottomPanel(), v.navigator, v.newAssistantPanel(), v.editorTabs)
 	return container.NewBorder(nil, v.status, rail, nil, workbench)
+}
+
+func (v *View) historyService() (*historySvc.Service, error) {
+	workspace := v.state.Workspace()
+	if workspace.Root == "" || v.metadataStore == nil {
+		return historySvc.New(v.metadataStore, nil), nil
+	}
+	artifactStore, err := artifactsSvc.NewStore(workspace.Root)
+	if err != nil {
+		return nil, err
+	}
+	return historySvc.New(v.metadataStore, artifactStore), nil
 }
