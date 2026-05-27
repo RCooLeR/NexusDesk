@@ -38,6 +38,7 @@ func (s *Service) Run(ctx context.Context, request Request, observe Observer) (R
 		return Result{}, err
 	}
 	config := llm.ConfigFromSettings(settings)
+	tools := s.toolDescriptors()
 	state := runState{plan: []PlanStep{{Step: "Understand the request", Status: "in_progress"}}}
 	s.emit(observe, request, Event{Type: "start", Message: "Agent started.", Plan: state.plan})
 
@@ -47,7 +48,7 @@ func (s *Service) Run(ctx context.Context, request Request, observe Observer) (R
 		}
 		s.emit(observe, request, Event{Type: "model_request", Iteration: iteration, Message: "Asking model for the next step.", Plan: state.plan})
 		result, err := s.client.Chat(ctx, config, llm.ChatRequest{
-			Prompt:         runtimePrompt(request, state),
+			Prompt:         runtimePrompt(request, state, tools),
 			Conversation:   request.Conversation,
 			ContextRelPath: request.ContextRelPath,
 			ContextContent: request.ContextContent,
@@ -88,6 +89,15 @@ func (s *Service) Run(ctx context.Context, request Request, observe Observer) (R
 		}
 		state.appendHistory("Observation", observation)
 	}
+}
+
+func (s *Service) toolDescriptors() []ToolDescriptor {
+	describer, ok := s.executor.(ToolDescriber)
+	if !ok {
+		return nil
+	}
+	descriptors := describer.ToolDescriptors()
+	return append([]ToolDescriptor{}, descriptors...)
 }
 
 func (s *Service) executeTool(ctx context.Context, request Request, call ToolCall, iteration int, observe Observer) ToolResult {

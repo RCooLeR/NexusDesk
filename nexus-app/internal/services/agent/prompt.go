@@ -15,12 +15,30 @@ func systemPrompt() string {
 	}, "\n")
 }
 
-func runtimePrompt(request Request, state runState) string {
+func runtimePrompt(request Request, state runState, tools []ToolDescriptor) string {
 	var builder strings.Builder
 	builder.WriteString(systemPrompt())
 	builder.WriteString("\n\nAvailable built-in tool:\n")
 	builder.WriteString("- update_plan: Replace visible plan steps. Risk=low Inputs=steps.\n")
-	builder.WriteString("\nAdditional deterministic tools are provided by the native tool executor. If a needed tool is unavailable or approval is missing, explain the limitation in the final answer.\n")
+	if len(tools) > 0 {
+		builder.WriteString("\nRegistered deterministic tools:\n")
+		for _, tool := range tools {
+			builder.WriteString("- ")
+			builder.WriteString(tool.Name)
+			builder.WriteString(": ")
+			builder.WriteString(tool.Description)
+			builder.WriteString(" Risk=")
+			builder.WriteString(tool.Risk)
+			if tool.Inputs != "" {
+				builder.WriteString(" Inputs=")
+				builder.WriteString(tool.Inputs)
+			}
+			builder.WriteString("\n")
+		}
+	} else {
+		builder.WriteString("\nNo deterministic tools are registered for this run.\n")
+	}
+	builder.WriteString("\nIf a needed tool is unavailable or approval is missing, explain the limitation in the final answer.\n")
 	builder.WriteString("\nOutput format:\n")
 	builder.WriteString("Thought: ...\nAction: tool_name({\"key\":\"value\"})\n")
 	builder.WriteString("or\nFinal Answer: ...\n")

@@ -68,6 +68,19 @@ Action: read_context({"relPath":"README.md"})`,
 	}
 }
 
+func TestRunPromptIncludesRegisteredToolDescriptors(t *testing.T) {
+	model := &fakeChatClient{messages: []string{`Final Answer: Done.`}}
+	service := New(fakeSettingsStore{}, model, fakeDescribingExecutor{})
+	_, err := service.Run(context.Background(), Request{Prompt: "Use tools"}, nil)
+	if err != nil {
+		t.Fatalf("Run returned error: %v", err)
+	}
+	if !strings.Contains(model.prompts[0], "Registered deterministic tools") ||
+		!strings.Contains(model.prompts[0], "read_context") {
+		t.Fatalf("prompt missing descriptors:\n%s", model.prompts[0])
+	}
+}
+
 func TestRunHandlesUpdatePlanWithoutExecutor(t *testing.T) {
 	model := &fakeChatClient{messages: []string{
 		`Action: update_plan({"steps":[{"step":"Inspect","status":"completed"},{"step":"Answer","status":"in_progress"}]})`,
@@ -119,4 +132,14 @@ func (c *fakeChatClient) Chat(ctx context.Context, config llm.Config, request ll
 	message := c.messages[0]
 	c.messages = c.messages[1:]
 	return llm.ChatResult{Message: message, Model: config.Model}, nil
+}
+
+type fakeDescribingExecutor struct{}
+
+func (fakeDescribingExecutor) ExecuteTool(ctx context.Context, call ToolCall, request Request) (ToolResult, error) {
+	return ToolResult{}, nil
+}
+
+func (fakeDescribingExecutor) ToolDescriptors() []ToolDescriptor {
+	return []ToolDescriptor{{Name: "read_context", Description: "Read context", Risk: "low", Inputs: "relPath"}}
 }

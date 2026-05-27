@@ -20,6 +20,10 @@ type ToolExecutor interface {
 	ExecuteTool(ctx context.Context, call ToolCall, request Request) (ToolResult, error)
 }
 
+type ToolDescriber interface {
+	ToolDescriptors() []ToolDescriptor
+}
+
 type ToolExecutorFunc func(ctx context.Context, call ToolCall, request Request) (ToolResult, error)
 
 func (fn ToolExecutorFunc) ExecuteTool(ctx context.Context, call ToolCall, request Request) (ToolResult, error) {
@@ -29,6 +33,13 @@ func (fn ToolExecutorFunc) ExecuteTool(ctx context.Context, call ToolCall, reque
 type PlanStep struct {
 	Step   string `json:"step"`
 	Status string `json:"status"`
+}
+
+type ToolDescriptor struct {
+	Name        string `json:"name"`
+	Description string `json:"description"`
+	Risk        string `json:"risk"`
+	Inputs      string `json:"inputs"`
 }
 
 type ToolCall struct {

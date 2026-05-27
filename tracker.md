@@ -147,7 +147,7 @@ Goal: port the LLM and agent runtime without recreating the Wails bridge problem
 - [x] Add streaming assistant panel using Go channels/events instead of Wails events.
 - [x] Port context-pack builder.
 - [x] Port agent runtime as an internal service, not a UI callback.
-- [ ] Unify registered tools and agent tools behind one dispatcher.
+- [x] Unify registered tools and agent tools behind one dispatcher.
 - [ ] Add approval queue UI and full-access policy UI.
 - [ ] Add rollback browser for model-authored file mutations.
 - [ ] Add live activity tail with final-answer replacement behavior.
@@ -243,11 +243,11 @@ Exit criteria:
 
 ## Next Batch
 
-1. Add richer navigator context menus once the first action strip is validated in Fyne.
-2. Add assistant context-pack UI affordances for pinning the workspace root, directories, and multiple files explicitly.
-3. Add native approval queue/full-access policy persistence before destructive Git hunk discard/revert or model-authored mutations.
-4. Add native artifact browser for task reports before porting the full artifact surface.
-5. Unify registered deterministic tools and agent-requested tools behind one dispatcher.
+1. Add native approval queue/full-access policy persistence before destructive Git hunk discard/revert or model-authored mutations.
+2. Add rollback browser for model-authored file mutations.
+3. Add live activity tail with final-answer replacement behavior for native agent runs.
+4. Add richer navigator context menus once the first action strip is validated in Fyne.
+5. Add assistant context-pack UI affordances for pinning the workspace root, directories, and multiple files explicitly.
 
 ## Preserved Post-Port Backlog
 
