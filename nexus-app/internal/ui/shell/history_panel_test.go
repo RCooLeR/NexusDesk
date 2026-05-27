@@ -12,6 +12,7 @@ func TestHistoryKindFromLabel(t *testing.T) {
 	cases := map[string]historySvc.Kind{
 		"All":       "",
 		"Chat":      historySvc.KindChat,
+		"Data":      historySvc.KindData,
 		"Artifacts": historySvc.KindArtifact,
 		"Jobs":      historySvc.KindJob,
 		"Agent":     historySvc.KindAgent,

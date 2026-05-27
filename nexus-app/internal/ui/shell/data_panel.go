@@ -2,6 +2,7 @@ package shell
 
 import (
 	"fmt"
+	"sort"
 	"strings"
 	"time"
 
@@ -29,12 +30,36 @@ func (v *View) newDataPanel() fyne.CanvasObject {
 	}
 	chartButton := widget.NewButtonWithIcon("Preview chart", theme.ViewFullScreenIcon(), v.previewDatasetChart)
 	exportChartButton := widget.NewButtonWithIcon("Export chart", theme.DocumentSaveIcon(), v.exportDatasetChartArtifact)
-	actions := container.NewHBox(profileButton, queryButton, sqlButton, chartButton, exportChartButton)
+	historyButton := widget.NewButtonWithIcon("SQL history", theme.HistoryIcon(), v.showDatasetSQLHistory)
+	actions := container.NewHBox(profileButton, queryButton, sqlButton, chartButton, exportChartButton, historyButton)
 	queryBar := container.NewBorder(nil, nil, nil, actions, v.dataQueryEntry)
 	header := container.NewVBox(v.dataProfileStatus, queryBar)
 	detail := container.NewScroll(v.dataProfileDetail)
 	detail.SetMinSize(fyne.NewSize(320, 130))
 	return container.NewBorder(header, nil, nil, nil, detail)
+}
+
+func (v *View) showDatasetSQLHistory() {
+	if v.metadataStore == nil {
+		v.dataProfileStatus.SetText("Open a workspace before inspecting dataset SQL history.")
+		return
+	}
+	selected := selectedPathOrEmpty(v)
+	runs, err := v.metadataStore.ListSQLRuns(50)
+	if err != nil {
+		v.dataProfileStatus.SetText("SQL history unavailable.")
+		dialog.ShowError(err, v.window)
+		return
+	}
+	dependencies, err := v.metadataStore.ListDatasetDependencies(selected, 50)
+	if err != nil {
+		v.dataProfileStatus.SetText("Dataset dependency history unavailable.")
+		dialog.ShowError(err, v.window)
+		return
+	}
+	v.dataProfileStatus.SetText(datasetHistoryStatus(selected, runs, dependencies))
+	v.dataProfileDetail.SetText(formatDatasetHistory(selected, runs, dependencies))
+	v.addActivity("Loaded dataset SQL history.")
 }
 
 func (v *View) runSelectedDatasetSQL(sqlText string) {
@@ -391,6 +416,86 @@ func chartArtifactTitle(chart datasetsSvc.ChartResult) string {
 		return fmt.Sprintf("Chart - %s by %s", chart.ValueColumn, chart.CategoryColumn)
 	}
 	return fmt.Sprintf("Chart - rows by %s", chart.CategoryColumn)
+}
+
+func datasetHistoryStatus(selected string, runs []metadataSvc.SQLRunRecord, dependencies []metadataSvc.DatasetDependencyRecord) string {
+	if strings.TrimSpace(selected) != "" {
+		count := 0
+		for _, run := range runs {
+			if run.RelPath == selected {
+				count++
+			}
+		}
+		return fmt.Sprintf("%s: %d SQL run(s), %d dependency record(s).", selected, count, len(dependencies))
+	}
+	return fmt.Sprintf("Dataset history: %d recent SQL run(s), %d dependency record(s).", len(runs), len(dependencies))
+}
+
+func formatDatasetHistory(selected string, runs []metadataSvc.SQLRunRecord, dependencies []metadataSvc.DatasetDependencyRecord) string {
+	var builder strings.Builder
+	builder.WriteString("# Dataset SQL History\n\n")
+	if strings.TrimSpace(selected) != "" {
+		builder.WriteString("Selected dataset: ")
+		builder.WriteString(selected)
+		builder.WriteString("\n\n")
+	}
+	builder.WriteString("Recent SQL runs\n")
+	runCount := 0
+	for _, run := range runs {
+		if strings.TrimSpace(selected) != "" && run.RelPath != selected {
+			continue
+		}
+		runCount++
+		builder.WriteString(fmt.Sprintf("- %s | %s | %s | shown %d/%d | %d ms\n", formatDataTime(run.CompletedAt), run.RelPath, firstNonEmptyString(run.Status, "unknown"), run.ShownRows, run.MatchedRows, run.DurationMs))
+		builder.WriteString("  SQL: ")
+		builder.WriteString(compactDataLine(run.SQL, 180))
+		builder.WriteString("\n")
+		if strings.TrimSpace(firstNonEmptyString(run.Message, run.Error)) != "" {
+			builder.WriteString("  Message: ")
+			builder.WriteString(compactDataLine(firstNonEmptyString(run.Message, run.Error), 180))
+			builder.WriteString("\n")
+		}
+	}
+	if runCount == 0 {
+		builder.WriteString("- No SQL runs found.\n")
+	}
+	builder.WriteString("\nDataset dependencies\n")
+	if len(dependencies) == 0 {
+		builder.WriteString("- No dependency records found.\n")
+		return builder.String()
+	}
+	for _, dependency := range dependencies {
+		builder.WriteString(fmt.Sprintf("- %s | %s %s %s:%s\n", formatDataTime(dependency.UpdatedAt), dependency.SourcePath, firstNonEmptyString(dependency.Relation, "links"), dependency.DependentKind, dependency.DependentRef))
+		if len(dependency.Metadata) > 0 {
+			parts := make([]string, 0, len(dependency.Metadata))
+			for key, value := range dependency.Metadata {
+				parts = append(parts, key+"="+value)
+			}
+			sort.Strings(parts)
+			builder.WriteString("  Metadata: ")
+			builder.WriteString(strings.Join(parts, ", "))
+			builder.WriteString("\n")
+		}
+	}
+	return builder.String()
+}
+
+func formatDataTime(value time.Time) string {
+	if value.IsZero() {
+		return "unknown time"
+	}
+	return value.Local().Format("2006-01-02 15:04")
+}
+
+func compactDataLine(value string, limit int) string {
+	value = strings.Join(strings.Fields(value), " ")
+	if len(value) <= limit {
+		return value
+	}
+	if limit <= 3 {
+		return value[:limit]
+	}
+	return value[:limit-3] + "..."
 }
 
 func sqlRunRecord(result datasetsSvc.SQLResult, relPath string, sqlText string, runErr error) metadataSvc.SQLRunRecord {

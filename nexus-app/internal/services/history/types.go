@@ -9,6 +9,7 @@ const (
 	KindArtifact Kind = "artifact"
 	KindJob      Kind = "job"
 	KindAgent    Kind = "agent"
+	KindData     Kind = "data"
 )
 
 type Item struct {

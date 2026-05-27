@@ -199,6 +199,7 @@ Goal: rebuild Data & Analytics as native data tooling, not a crowded web panel.
 - [x] Port first bounded row query/filter/order service for selected CSV, TSV, and JSON files.
 - [x] Extend bounded row query/filter/order service to NDJSON/JSONL and log line datasets.
 - [x] Add first SELECT-only native dataset SQL run over the selected dataset with persisted run/dependency metadata.
+- [x] Promote SQL run/dependency history into the Data panel and unified History navigation.
 - [ ] Port SQL notebook model.
 - [ ] Port SQLite workspace connector.
 - [ ] Port external DB profile storage and read-only query guards.
@@ -275,11 +276,11 @@ Exit criteria:
 
 ## Next Batch
 
-1. Promote SQL run/dependency history into Data & Analytics and History navigation instead of only persisting rows.
-2. Start JSON compatibility import from Wails-era workspace metadata into native SQLite.
-3. Add Compose service topology summary from inspected Compose files.
-4. Add richer dashboard visuals after the first bar/line SVG chart renderer.
-5. Add full Parquet schema/row-group profiling behind an explicit dependency/build decision.
+1. Start JSON compatibility import from Wails-era workspace metadata into native SQLite.
+2. Add Compose service topology summary from inspected Compose files.
+3. Add richer dashboard visuals after the first bar/line SVG chart renderer.
+4. Add full Parquet schema/row-group profiling behind an explicit dependency/build decision.
+5. Port the first SQL notebook model on top of the native SQL/history foundation.
 
 ## Preserved Post-Port Backlog
 
@@ -302,6 +303,7 @@ The Fyne migration must not drop product ambition, but this section is intention
 - [x] Dataset profiling for CSV, TSV, JSON, NDJSON, XLSX, Parquet metadata, and logs.
 - [x] Bounded filter/query/order/limit workflows for table-like CSV, TSV, JSON, NDJSON, XLSX, and log files.
 - [x] First SELECT-only native SQL run over the selected dataset with one predicate, order, limit, projection, execution plan, and metadata persistence.
+- [x] SQL run and dataset dependency history surfaced in Data & Analytics plus unified History.
 - [ ] DuckDB-capable SQL over datasets when the optional CGO-backed build is available.
 - [ ] SQL notebooks with multiple cells, saved notebooks, run history, reuse/rerun, explain output, and artifact export.
 - [ ] SQLite workspace database browser with schema, views, indexes, samples, row caps, query cancellation, saved queries, CSV/Markdown exports, and lineage.

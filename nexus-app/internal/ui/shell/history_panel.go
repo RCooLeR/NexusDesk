@@ -18,8 +18,8 @@ const historySearchLimit = 100
 
 func (v *View) newHistoryPanel() fyne.CanvasObject {
 	query := widget.NewEntry()
-	query.SetPlaceHolder("Search chat, artifacts, jobs, and agent runs")
-	kind := widget.NewSelect([]string{"All", "Chat", "Artifacts", "Jobs", "Agent"}, func(string) {})
+	query.SetPlaceHolder("Search chat, data, artifacts, jobs, and agent runs")
+	kind := widget.NewSelect([]string{"All", "Chat", "Data", "Artifacts", "Jobs", "Agent"}, func(string) {})
 	kind.SetSelected("All")
 	refresh := widget.NewButtonWithIcon("Refresh", theme.ViewRefreshIcon(), func() {
 		v.refreshHistory(query.Text, historyKindFromLabel(kind.Selected))
@@ -95,6 +95,11 @@ func (v *View) openHistoryItem(item historySvc.Item) {
 	case historySvc.KindAgent:
 		v.historyDetail.SetText(formatHistoryItem(item))
 		v.openHistoryAgentRun(item.Ref)
+	case historySvc.KindData:
+		v.historyDetail.SetText(formatHistoryItem(item))
+		v.dataProfileStatus.SetText("Opened data history item " + item.Ref + ".")
+		v.dataProfileDetail.SetText(strings.TrimSpace(item.Detail))
+		v.addActivity("Opened data history item " + item.Ref + ".")
 	default:
 		v.historyDetail.SetText(formatHistoryItem(item))
 	}
@@ -185,6 +190,8 @@ func historyKindFromLabel(label string) historySvc.Kind {
 		return historySvc.KindJob
 	case "agent":
 		return historySvc.KindAgent
+	case "data":
+		return historySvc.KindData
 	default:
 		return ""
 	}

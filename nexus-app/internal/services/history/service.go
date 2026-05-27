@@ -47,6 +47,13 @@ func (s *Service) List(options Options) ([]Item, error) {
 			}
 			items = append(items, agentItems...)
 		}
+		if wants(options.Kind, KindData) {
+			dataItems, err := s.dataItems(options.Query, limit)
+			if err != nil {
+				return nil, err
+			}
+			items = append(items, dataItems...)
+		}
 		if wants(options.Kind, KindArtifact) {
 			artifactItems, err := s.metadataArtifactItems(options.Query, limit)
 			if err != nil {
@@ -76,6 +83,31 @@ func (s *Service) List(options Options) ([]Item, error) {
 	})
 	if len(items) > limit {
 		items = items[:limit]
+	}
+	return items, nil
+}
+
+func (s *Service) dataItems(query string, limit int) ([]Item, error) {
+	runs, err := s.metadata.ListSQLRuns(limit)
+	if err != nil {
+		return nil, err
+	}
+	dependencies, err := s.metadata.ListDatasetDependencies("", limit)
+	if err != nil {
+		return nil, err
+	}
+	items := make([]Item, 0, len(runs)+len(dependencies))
+	for _, run := range runs {
+		item := sqlRunItem(run)
+		if matches(item, query) {
+			items = append(items, item)
+		}
+	}
+	for _, dependency := range dependencies {
+		item := datasetDependencyItem(dependency)
+		if matches(item, query) {
+			items = append(items, item)
+		}
 	}
 	return items, nil
 }
@@ -206,6 +238,31 @@ func jobItem(job jobsSvc.Job) Item {
 	}
 }
 
+func sqlRunItem(record metadataSvc.SQLRunRecord) Item {
+	status := firstNonEmpty(record.Status, "unknown")
+	return Item{
+		Kind:        KindData,
+		Ref:         record.ID,
+		Title:       "SQL run - " + status,
+		Summary:     fmt.Sprintf("%s - %s - %d/%d rows shown", record.RelPath, firstNonEmpty(record.Engine, "native-dataset-sql"), record.ShownRows, record.MatchedRows),
+		Detail:      sqlRunDetail(record),
+		When:        firstTime(record.CompletedAt, record.StartedAt),
+		SourcePaths: []string{record.RelPath},
+	}
+}
+
+func datasetDependencyItem(record metadataSvc.DatasetDependencyRecord) Item {
+	return Item{
+		Kind:        KindData,
+		Ref:         record.ID,
+		Title:       "Dataset dependency - " + firstNonEmpty(record.DependentKind, "unknown"),
+		Summary:     fmt.Sprintf("%s %s %s:%s", record.SourcePath, firstNonEmpty(record.Relation, "links"), record.DependentKind, record.DependentRef),
+		Detail:      datasetDependencyDetail(record),
+		When:        firstTime(record.UpdatedAt, record.CreatedAt),
+		SourcePaths: []string{record.SourcePath},
+	}
+}
+
 func chatDetail(record metadataSvc.ChatMessageRecord) string {
 	var builder strings.Builder
 	writeLine(&builder, "Kind", "chat")
@@ -217,6 +274,48 @@ func chatDetail(record metadataSvc.ChatMessageRecord) string {
 	}
 	builder.WriteString("\n")
 	builder.WriteString(strings.TrimSpace(record.Content))
+	return builder.String()
+}
+
+func sqlRunDetail(record metadataSvc.SQLRunRecord) string {
+	var builder strings.Builder
+	writeLine(&builder, "Kind", "data/sql-run")
+	writeLine(&builder, "ID", record.ID)
+	writeLine(&builder, "Dataset", record.RelPath)
+	writeLine(&builder, "Engine", record.Engine)
+	writeLine(&builder, "Status", record.Status)
+	writeLine(&builder, "Rows", fmt.Sprintf("loaded %d, matched %d, shown %d", record.RowCount, record.MatchedRows, record.ShownRows))
+	writeLine(&builder, "Duration", fmt.Sprintf("%d ms", record.DurationMs))
+	writeLine(&builder, "Started", formatTime(record.StartedAt))
+	writeLine(&builder, "Completed", formatTime(record.CompletedAt))
+	writeLine(&builder, "Message", firstNonEmpty(record.Message, record.Error))
+	writeLine(&builder, "Artifact", record.ArtifactPath)
+	builder.WriteString("\nSQL\n")
+	builder.WriteString(strings.TrimSpace(record.SQL))
+	return builder.String()
+}
+
+func datasetDependencyDetail(record metadataSvc.DatasetDependencyRecord) string {
+	var builder strings.Builder
+	writeLine(&builder, "Kind", "data/dependency")
+	writeLine(&builder, "ID", record.ID)
+	writeLine(&builder, "Source", record.SourcePath)
+	writeLine(&builder, "Dependent kind", record.DependentKind)
+	writeLine(&builder, "Dependent ref", record.DependentRef)
+	writeLine(&builder, "Relation", record.Relation)
+	writeLine(&builder, "Created", formatTime(record.CreatedAt))
+	writeLine(&builder, "Updated", formatTime(record.UpdatedAt))
+	if len(record.Metadata) > 0 {
+		builder.WriteString("\nMetadata\n")
+		keys := make([]string, 0, len(record.Metadata))
+		for key := range record.Metadata {
+			keys = append(keys, key)
+		}
+		sort.Strings(keys)
+		for _, key := range keys {
+			writeLine(&builder, key, record.Metadata[key])
+		}
+	}
 	return builder.String()
 }
 

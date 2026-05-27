@@ -6,6 +6,7 @@ import (
 	"time"
 
 	datasetsSvc "nexusdesk/internal/services/datasets"
+	metadataSvc "nexusdesk/internal/services/metadata"
 )
 
 func TestFormatDatasetProfileIncludesColumnsAndJSONNotes(t *testing.T) {
@@ -104,6 +105,24 @@ func TestSQLRunRecordCapturesFailure(t *testing.T) {
 	record := sqlRunRecord(datasetsSvc.SQLResult{StartedAt: started}, "sales.csv", "delete from dataset", errForTest("blocked"))
 	if record.Status != "failed" || record.Error != "blocked" || record.RelPath != "sales.csv" {
 		t.Fatalf("unexpected failed SQL record: %#v", record)
+	}
+}
+
+func TestFormatDatasetHistoryFiltersSelectedRunsAndListsDependencies(t *testing.T) {
+	when := time.Date(2026, 5, 27, 12, 0, 0, 0, time.UTC)
+	output := formatDatasetHistory("data/sales.csv", []metadataSvc.SQLRunRecord{
+		{RelPath: "data/sales.csv", SQL: "select channel from dataset", Status: "success", MatchedRows: 2, ShownRows: 2, CompletedAt: when, DurationMs: 4},
+		{RelPath: "data/other.csv", SQL: "select * from dataset", Status: "success", MatchedRows: 1, ShownRows: 1, CompletedAt: when, DurationMs: 3},
+	}, []metadataSvc.DatasetDependencyRecord{
+		{SourcePath: "data/sales.csv", DependentKind: "sql-run", DependentRef: "sql-1", Relation: "reads", Metadata: map[string]string{"engine": "native"}, UpdatedAt: when},
+	})
+	for _, expected := range []string{"# Dataset SQL History", "Selected dataset: data/sales.csv", "select channel from dataset", "data/sales.csv reads sql-run:sql-1", "Metadata: engine=native"} {
+		if !strings.Contains(output, expected) {
+			t.Fatalf("dataset history missing %q:\n%s", expected, output)
+		}
+	}
+	if strings.Contains(output, "data/other.csv") {
+		t.Fatalf("selected dataset history included another dataset:\n%s", output)
 	}
 }
 
