@@ -5,9 +5,11 @@ import (
 	"fyne.io/fyne/v2/container"
 	"fyne.io/fyne/v2/widget"
 
+	assistantSvc "nexusdesk/internal/services/assistant"
 	editorSvc "nexusdesk/internal/services/editor"
 	gitSvc "nexusdesk/internal/services/git"
 	jobsSvc "nexusdesk/internal/services/jobs"
+	llmSvc "nexusdesk/internal/services/llm"
 	settingsSvc "nexusdesk/internal/services/settings"
 	tasksSvc "nexusdesk/internal/services/tasks"
 	workspaceSvc "nexusdesk/internal/services/workspace"
@@ -19,6 +21,7 @@ type View struct {
 	workspaceService *workspaceSvc.Service
 	gitService       *gitSvc.Service
 	jobService       *jobsSvc.Service
+	assistantService *assistantSvc.Service
 	settingsStore    *settingsSvc.Store
 	taskService      *tasksSvc.Service
 	editorSession    *editorSvc.Session
@@ -66,12 +69,15 @@ func New(window fyne.Window) *View {
 	taskOutput.TextStyle = fyne.TextStyle{Monospace: true}
 	taskOutput.Wrapping = fyne.TextWrapOff
 	taskOutput.Disable()
+	workspaceService := workspaceSvc.New()
+	assistantService := assistantSvc.New(settingsStore, workspaceService, llmSvc.NewClient())
 	view := &View{
 		window:           window,
 		state:            NewState(),
-		workspaceService: workspaceSvc.New(),
+		workspaceService: workspaceService,
 		gitService:       gitSvc.New(),
 		jobService:       jobsSvc.New(),
+		assistantService: assistantService,
 		settingsStore:    settingsStore,
 		taskService:      tasksSvc.New(),
 		editorSession:    editorSession,

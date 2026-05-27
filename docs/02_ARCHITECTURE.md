@@ -141,7 +141,7 @@ Workspace tree actions call the same service boundary: the Fyne navigator action
 
 Native settings are split into `nexus-app/internal/services/settings` for non-secret provider/model/context persistence and `nexus-app/internal/ui/shell` for the Settings tab. Secret storage and access-policy persistence remain separate future work.
 
-Native LLM transport is service-owned: `nexus-app/internal/services/llm` owns OpenAI-compatible chat, streaming chat, provider model probes, Ollama runtime probes, context-window options, response reserve, and workspace-context sentinel escaping. Fyne UI and future agents should call this package through a small assistant/orchestration service rather than embedding HTTP/provider details in widgets.
+Native LLM transport is service-owned: `nexus-app/internal/services/llm` owns OpenAI-compatible chat, streaming chat, provider model probes, Ollama runtime probes, context-window options, response reserve, and workspace-context sentinel escaping. The Fyne assistant panel calls it through `nexus-app/internal/services/assistant`, which owns the first assistant request orchestration and selected-file context attachment so widgets do not embed HTTP/provider details.
 
 ### 2. Frontend
 
@@ -304,6 +304,7 @@ Current native status:
 - `nexus-app/internal/services/llm` implements the OpenAI-compatible chat/completions transport, streaming SSE delta parsing, `/models` probing, Ollama `/api/ps` runtime diagnostics, and context-window/response-reserve request fields.
 - It accepts `llm.Config` and adapts from the native non-secret settings store with `ConfigFromSettings`.
 - It keeps workspace context quoted behind Nexus sentinels and escapes fence/sentinel strings from file content before model submission.
+- `nexus-app/internal/services/assistant` wraps the LLM client for the Fyne assistant panel, streams deltas, and attaches bounded selected-file context from previewable workspace files.
 
 Planned provider support:
 

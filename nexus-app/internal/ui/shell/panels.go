@@ -40,21 +40,6 @@ func (v *View) newToolbar() fyne.CanvasObject {
 	return container.NewBorder(nil, nil, container.NewHBox(openButton, refreshButton), searchButton, searchEntry)
 }
 
-func (v *View) newAssistantPanel() fyne.CanvasObject {
-	prompt := widget.NewMultiLineEntry()
-	prompt.SetPlaceHolder("Ask Nexus about this workspace")
-	prompt.Wrapping = fyne.TextWrapWord
-	response := widget.NewRichTextFromMarkdown("Assistant output will stream here once the LLM service is ported.")
-	mode := widget.NewSelect([]string{"Ask", "Agent"}, func(string) {})
-	mode.SetSelected("Ask")
-	send := widget.NewButtonWithIcon("", theme.MailSendIcon(), func() {
-		v.addActivity("Assistant request queued for future LLM port.")
-	})
-	composer := container.NewBorder(nil, nil, mode, send, prompt)
-	card := widget.NewCard("Assistant", "Local-first context and tool mediation", container.NewBorder(nil, composer, nil, nil, response))
-	return container.NewPadded(card)
-}
-
 func (v *View) newBottomPanel() fyne.CanvasObject {
 	activity := container.NewScroll(v.activityLog)
 	activity.SetMinSize(fyne.NewSize(200, 110))
