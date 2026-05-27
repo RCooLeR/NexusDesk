@@ -17,6 +17,7 @@ This is a breaking migration, not an incremental UI refresh.
 ## Current Review
 
 Latest full project review: `docs/12_PROJECT_REVIEW.md`.
+Production-readiness gates: `docs/13_PRODUCTION_READINESS.md`.
 
 Summary:
 
@@ -25,6 +26,13 @@ Summary:
 - The biggest risk is UI and orchestration complexity accumulating in `internal/ui/shell`; future UI work should keep extracting focused panels, controllers, and service-owned behavior.
 - The highest-priority unfinished work is migration parity, not new top-level studios: editor quality, external database profiles, durable job routing for slow workflows, connector/dump jobs, assistant maturity, and native UI polish.
 - `app-wails/` should remain as reference until native parity is good enough for daily use.
+
+Production direction:
+
+- Gate 1 is Native Parity Beta: editor parity, external DB profiles, protected secrets, assistant quality, Wails-only inventory, and native UI cleanup.
+- Gate 2 is Safety And Reliability Beta: durable jobs, metadata recovery/export, diagnostics, audit coverage, and failure recovery.
+- Gate 3 is Packaging And Platform Beta: repeatable signed Windows builds, CI, visual/manual smoke, platform support matrix, and release hygiene.
+- Gate 4 is Private Beta: onboarding, issue-report bundles, safe-agent docs, and user feedback loop.
 
 ## Repository State
 
@@ -301,12 +309,51 @@ Exit criteria:
 
 ## Next Batch
 
-1. Finish native editor/UI parity: syntax highlighting plan, find/replace, split editor groups, breadcrumbs/outline/minimap strategy, and less cramped native panels.
-2. Port external database profile storage and guarded read-only query workflows from Wails reference into native services and Settings/Data UI.
-3. Route long indexing, OCR, dump imports, connector pulls, report generation, and long agent runs through durable jobs.
-4. Add dump import job design before any Docker/database import execution.
-5. Add richer connector lineage actions for SQLite and future external profiles: open source, dependent artifacts, stale-output rebuild, and history jumps.
-6. Keep cleaning Wails-era documentation wording so active docs clearly describe `nexus-app/` behavior and mark `app-wails/` as reference history.
+1. Create a Wails-only feature inventory and mark each item `port`, `replace`, `drop`, or `later`.
+2. Finish native editor/UI parity: syntax highlighting plan, find/replace, split editor groups or equivalent layout decision, breadcrumbs/outline/minimap strategy, and less cramped native panels.
+3. Design and implement native protected secret storage on Windows first, with explicit unsupported-platform behavior.
+4. Port external database profile storage and guarded read-only query workflows from Wails reference into native services and Settings/Data UI.
+5. Route long indexing, OCR, dump imports, connector pulls, report generation, and long agent runs through durable jobs.
+6. Add dump import job design before any Docker/database import execution.
+7. Add first Diagnostics plan/surface for provider status, metadata health, job failures, and GPU/model runtime.
+8. Keep cleaning Wails-era documentation wording so active docs clearly describe `nexus-app/` behavior and mark `app-wails/` as reference history.
+
+## Production Readiness Checklist
+
+### Gate 1: Native Parity Beta
+
+- [ ] Wails-only feature inventory with `port` / `replace` / `drop` / `later` decisions.
+- [ ] IDE-grade editor baseline: syntax highlighting, find/replace, encoding controls, and split/breadcrumb/outline strategy.
+- [ ] Native external database profiles for PostgreSQL, MySQL/MariaDB, SQL Server, and DuckDB with read-only guards.
+- [ ] Native protected secret storage for Windows; explicit refusal/fallback behavior for unsupported platforms.
+- [ ] Assistant quality parity: weak-evidence warnings, retry/compare, richer citations, memory/profile plan, and model diagnostics.
+- [ ] Native UI cleanup pass across Workbench, Data, Artifacts, Settings, assistant, and bottom panels.
+
+### Gate 2: Safety And Reliability Beta
+
+- [ ] Durable job routing for OCR, dump imports, connector pulls, long indexing, report generation, and long agent runs.
+- [ ] Metadata recovery/export path for `.nexusdesk/metadata`.
+- [ ] Backup/export flow for local-first workspace state.
+- [ ] Diagnostics panel for provider status, metadata health, job history, app logs, GPU/model runtime, and recent failures.
+- [ ] Audit coverage for connector jobs, OCR, dump imports, Docker mutations, shell tools, and future high-risk operations.
+- [ ] Failure tests for folder open, malformed files, corrupt metadata, missing providers, and canceled long work.
+
+### Gate 3: Packaging And Platform Beta
+
+- [ ] Repeatable Windows build pipeline with icon, version metadata, installer/update plan, and code-signing path.
+- [ ] CI for tests, formatting/static checks, and build smoke.
+- [ ] Windows visual/manual smoke checklist for every main surface.
+- [ ] Linux/macOS build investigation and explicit support matrix.
+- [ ] Antivirus false-positive mitigation notes and release-build hygiene.
+- [ ] App data path and uninstall/cleanup documentation.
+
+### Gate 4: Private Beta
+
+- [ ] Onboarding flow for workspace open, model setup, permissions, and local data policy.
+- [ ] First-run diagnostics for missing model endpoint, missing toolchain, and unavailable provider.
+- [ ] Redacted issue-report bundle that excludes workspace contents unless explicitly included.
+- [ ] User docs for safe agent use, approvals, rollbacks, local data, and connector credentials.
+- [ ] Beta feedback loop and release notes.
 
 ## Preserved Post-Port Backlog
 

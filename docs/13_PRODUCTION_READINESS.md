@@ -1,0 +1,140 @@
+# Production Readiness Plan
+
+Date: 2026-05-27
+
+This document defines what Nexus Augentic Studio still needs before it can be treated as a production desktop application. `tracker.md` remains the task-level execution source of truth; this document is the release-readiness map.
+
+## Current State
+
+The active product is `nexus-app/`, the Fyne-native application. `app-wails/` is preserved as a reference implementation until native parity is complete enough for daily development.
+
+Approximate migration status:
+
+- Native foundation and core services: mostly complete.
+- Wails-era useful workflow parity: roughly 70-75% migrated.
+- Production polish, packaging, cross-platform confidence, and advanced connector/editor features: still incomplete.
+
+The app can already:
+
+- open and browse real workspaces;
+- preview common files and documents;
+- safely edit text/code with rollback records;
+- search paths/text and scan lightweight problems;
+- inspect Git status/diffs and stage files or hunks through explicit actions;
+- discover and run bounded project tasks;
+- profile/query local datasets and workspace SQLite files;
+- create chart, dashboard, notebook, document, operations, task, and comparison artifacts;
+- run Ask and Agent modes against configured OpenAI-compatible or Ollama endpoints;
+- persist chat, artifact, job, SQL, approval, and agent/tool audit metadata.
+
+## Production Definition
+
+Production-ready means:
+
+1. A non-developer can install and run the app without local source/build knowledge.
+2. Opening any normal folder is fast, bounded, and cannot start external tools or model calls.
+3. File mutations, database access, Docker/system actions, and agent tools are permissioned, auditable, and reversible where practical.
+4. The UI feels like a coherent IDE/data-studio product, not a collection of debug panels.
+5. Data loss paths are covered by tests or explicit non-goals.
+6. Crashes, hangs, provider failures, and corrupt metadata are visible and recoverable.
+7. The preserved Wails app is no longer needed for day-to-day use.
+
+## Release Gates
+
+### Gate 1: Native Parity Beta
+
+Goal: make `nexus-app/` the only app developers need during normal work.
+
+Required:
+
+- IDE-grade editor baseline: syntax highlighting strategy, reliable find/replace, split groups or equivalent layout decision, breadcrumbs/outline strategy, and file encoding controls.
+- External database profile parity: PostgreSQL, MySQL/MariaDB, SQL Server, and DuckDB file/profile read-only query flows with cancellation, caps, redacted errors, and history.
+- Native protected secret storage for Windows first, with clear refusal/fallback policy for macOS/Linux until supported.
+- Assistant quality parity: weak-evidence warnings, retry/compare, richer citations, source freshness in chat, memory/profile migration plan, and clearer model diagnostics.
+- Complete Wails-only feature inventory and explicit keep/drop/replace decisions.
+- Native UI cleanup pass for Workbench, Data, Artifacts, Settings, assistant, and bottom panels.
+
+Exit criteria:
+
+- All normal development flows use `nexus-app`.
+- `app-wails` is frozen as reference and no longer receives feature work.
+- Full native test suite passes on Windows.
+
+### Gate 2: Safety And Reliability Beta
+
+Goal: prove local-first safety and slow-work reliability.
+
+Required:
+
+- Durable job routing for OCR, dump imports, connector pulls, long indexing, report generation, and long agent runs.
+- Metadata recovery/export path for `.nexusdesk/metadata`.
+- Backup/export flow for local-first workspace state.
+- Diagnostics panel for app logs, provider status, metadata health, job history, GPU/model runtime, and recent failures.
+- Audit coverage for connector jobs, OCR, dump imports, Docker mutations, shell tools, and future high-risk operations.
+- Crash/hang checks for folder open, malformed files, corrupt metadata, missing providers, and canceled long work.
+
+Exit criteria:
+
+- Slow work is cancelable, inspectable, retryable, and never blocks folder open.
+- Users can understand what failed and recover or export local state.
+
+### Gate 3: Packaging And Platform Beta
+
+Goal: produce repeatable signed builds.
+
+Required:
+
+- Repeatable Windows build pipeline with app icon, version metadata, installer/update plan, and code-signing path.
+- CI for `go test ./...`, formatting, static checks, and build smoke.
+- Windows visual/manual smoke checklist for every main surface.
+- Linux/macOS build investigation and explicit support matrix.
+- Antivirus false-positive mitigation notes and release-build hygiene.
+- App data path documentation and cleanup/uninstall behavior.
+
+Exit criteria:
+
+- A clean machine can install, launch, open a workspace, run the smoke checklist, and uninstall without source tree access.
+
+### Gate 4: Private Beta
+
+Goal: put the app in front of real users while preserving trust.
+
+Required:
+
+- Onboarding flow for workspace open, model setup, permissions, and local data policy.
+- First-run diagnostics for missing model endpoint, missing compiler/build toolchain, and unavailable provider.
+- Issue-report bundle that redacts secrets and excludes workspace contents unless explicitly included.
+- Documentation for safe agent use, approvals, rollbacks, local data, and connector credentials.
+- Beta feedback loop and release notes.
+
+Exit criteria:
+
+- Private users can complete Workbench, Data, Artifact, and Assistant workflows without developer guidance.
+
+## Must Not Ship Before
+
+- Native protected secret storage or explicit refusal behavior is implemented.
+- Wails-only connector/profile behavior is either ported or explicitly dropped.
+- The agent cannot silently claim file/database/system changes without auditable tool records.
+- Long-running jobs cannot freeze folder open or block the main UI.
+- Destructive operations lack approval, audit, and rollback/mitigation where practical.
+- Packaging lacks a repeatable build and versioned release process.
+
+## Immediate Production-Oriented Next Batch
+
+1. Create a Wails-only feature inventory and mark each item `port`, `replace`, `drop`, or `later`.
+2. Start editor parity: syntax highlighting decision and find/replace behavior.
+3. Start native protected secret storage design and Windows implementation.
+4. Port external database profile model and guarded read-only query service into `nexus-app`.
+5. Define the durable job contract for OCR, dump imports, connector pulls, report generation, and long agent runs.
+6. Add a Diagnostics surface plan and first metadata/provider health checks.
+
+## Documentation Rule
+
+Every production-readiness item must be reflected in exactly one of:
+
+- `tracker.md` for task execution;
+- `docs/13_PRODUCTION_READINESS.md` for release gates;
+- a focused design doc when implementation needs detailed architecture.
+
+Avoid duplicating long checklists across multiple docs. Link back to this file instead.
