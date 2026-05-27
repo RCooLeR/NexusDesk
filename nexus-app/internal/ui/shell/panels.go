@@ -19,7 +19,7 @@ func (v *View) newRail() fyne.CanvasObject {
 		v.addActivity("Workbench selected.")
 	})
 	dataButton := widget.NewButtonWithIcon("", theme.StorageIcon(), func() {
-		v.addPlaceholderTab("Data & Analytics", "Database, CSV, Excel, and analysis workflows will live here.")
+		v.addActivity("Data & Analytics selected. Use the bottom Data tab to profile the selected dataset.")
 	})
 	artifactsButton := widget.NewButtonWithIcon("", theme.DocumentIcon(), func() {
 		v.addPlaceholderTab("Artifacts", "Generated reports, exports, lineage, and comparisons will live here.")
@@ -45,6 +45,7 @@ func (v *View) newBottomPanel() fyne.CanvasObject {
 	activity.SetMinSize(fyne.NewSize(200, 110))
 	tabs := container.NewAppTabs(
 		container.NewTabItemWithIcon("Activity", theme.HistoryIcon(), activity),
+		container.NewTabItemWithIcon("Data", theme.StorageIcon(), v.newDataPanel()),
 		container.NewTabItemWithIcon("Search", theme.SearchIcon(), v.newSearchPanel()),
 		container.NewTabItemWithIcon("Problems", theme.WarningIcon(), v.newProblemsPanel()),
 		container.NewTabItemWithIcon("Git", theme.ContentCopyIcon(), v.newGitPanel()),

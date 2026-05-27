@@ -193,6 +193,7 @@ Exit criteria:
 Goal: rebuild Data & Analytics as native data tooling, not a crowded web panel.
 
 - [ ] Port dataset profiling for CSV, TSV, JSON, NDJSON, XLSX, Parquet metadata, and logs.
+- [x] Add first native sample-based data profiling slice for selected CSV, TSV, and JSON files.
 - [ ] Port bounded row query/filter/order service.
 - [ ] Port SQL notebook model.
 - [ ] Port SQLite workspace connector.
@@ -262,11 +263,11 @@ Exit criteria:
 
 ## Next Batch
 
-1. Add first native data profiling slice for CSV/TSV/JSON files.
-2. Add first native metadata/history navigation from chat, artifacts, jobs, and agent audit records.
-3. Add artifact source freshness checks so reports can warn when cited files moved or changed.
-4. Add artifact restore flow for archived generated outputs.
-5. Extend native document extraction to PDF/DOCX once extraction metadata and jobs are ready.
+1. Add first native metadata/history navigation from chat, artifacts, jobs, and agent audit records.
+2. Add artifact source freshness checks so reports can warn when cited files moved or changed.
+3. Add artifact restore flow for archived generated outputs.
+4. Extend native document extraction to PDF/DOCX once extraction metadata and jobs are ready.
+5. Add bounded row query/filter/order service for profiled CSV/TSV/JSON datasets.
 
 ## Preserved Post-Port Backlog
 

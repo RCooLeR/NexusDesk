@@ -9,6 +9,7 @@ import (
 	approvalsSvc "nexusdesk/internal/services/approvals"
 	artifactsSvc "nexusdesk/internal/services/artifacts"
 	assistantSvc "nexusdesk/internal/services/assistant"
+	datasetsSvc "nexusdesk/internal/services/datasets"
 	editorSvc "nexusdesk/internal/services/editor"
 	gitSvc "nexusdesk/internal/services/git"
 	jobsSvc "nexusdesk/internal/services/jobs"
@@ -29,6 +30,7 @@ type View struct {
 	approvalService        *approvalsSvc.Service
 	assistantService       *assistantSvc.Service
 	agentService           *agentSvc.Service
+	datasetService         *datasetsSvc.Service
 	metadataStore          *metadataSvc.Store
 	settingsStore          *settingsSvc.Store
 	taskService            *tasksSvc.Service
@@ -44,6 +46,8 @@ type View struct {
 	searchStatus           *widget.Label
 	problemResults         *fyne.Container
 	problemStatus          *widget.Label
+	dataProfileStatus      *widget.Label
+	dataProfileDetail      *widget.Entry
 	gitResults             *fyne.Container
 	gitStatus              *widget.Label
 	gitDiffText            *widget.Entry
@@ -129,6 +133,11 @@ func New(window fyne.Window) *View {
 		Tasks:     taskService,
 	})
 	agentService := agentSvc.New(settingsStore, llmClient, toolDispatcher)
+	datasetService := datasetsSvc.New(workspaceService)
+	dataProfileDetail := widget.NewMultiLineEntry()
+	dataProfileDetail.TextStyle = fyne.TextStyle{Monospace: true}
+	dataProfileDetail.Wrapping = fyne.TextWrapWord
+	dataProfileDetail.Disable()
 	view := &View{
 		window:           window,
 		state:            NewState(),
@@ -138,6 +147,7 @@ func New(window fyne.Window) *View {
 		approvalService:  approvalsSvc.New(),
 		assistantService: assistantService,
 		agentService:     agentService,
+		datasetService:   datasetService,
 		settingsStore:    settingsStore,
 		taskService:      taskService,
 		editorSession:    editorSession,
@@ -152,23 +162,27 @@ func New(window fyne.Window) *View {
 		searchStatus:     widget.NewLabel("No search yet."),
 		problemResults:   container.NewVBox(widget.NewLabel("Run a scan to inspect lightweight workspace problems.")),
 		problemStatus:    widget.NewLabel("No problem scan yet."),
-		gitResults:       container.NewVBox(widget.NewLabel("Press Refresh git to inspect repository status.")),
-		gitStatus:        widget.NewLabel("Git status has not been loaded."),
-		gitDiffText:      gitDiffText,
-		gitDiffStatus:    widget.NewLabel("Select a changed file to load a read-only diff."),
-		gitDiffMode:      gitDiffModeUnified,
-		gitFileBadges:    map[string]string{},
-		gitHunkStatus:    widget.NewLabel("No hunk selected."),
-		taskResults:      container.NewVBox(widget.NewLabel("Discover workspace tasks to run tests, scripts, or Compose checks.")),
-		taskStatus:       widget.NewLabel("No tasks discovered."),
-		taskOutput:       taskOutput,
-		jobResults:       container.NewVBox(widget.NewLabel("Run a task to create a job record.")),
-		jobStatus:        widget.NewLabel("No jobs yet."),
-		rollbackResults:  container.NewVBox(widget.NewLabel("Refresh rollback records to inspect undo points.")),
-		rollbackStatus:   widget.NewLabel("Rollback records have not been loaded."),
-		artifactResults:  container.NewVBox(widget.NewLabel("Refresh artifacts to inspect generated task reports.")),
-		artifactStatus:   widget.NewLabel("Artifacts have not been loaded."),
-		artifactPreview:  artifactPreview,
+		dataProfileStatus: widget.NewLabel(
+			"Select a CSV, TSV, or JSON file, then profile it.",
+		),
+		dataProfileDetail: dataProfileDetail,
+		gitResults:        container.NewVBox(widget.NewLabel("Press Refresh git to inspect repository status.")),
+		gitStatus:         widget.NewLabel("Git status has not been loaded."),
+		gitDiffText:       gitDiffText,
+		gitDiffStatus:     widget.NewLabel("Select a changed file to load a read-only diff."),
+		gitDiffMode:       gitDiffModeUnified,
+		gitFileBadges:     map[string]string{},
+		gitHunkStatus:     widget.NewLabel("No hunk selected."),
+		taskResults:       container.NewVBox(widget.NewLabel("Discover workspace tasks to run tests, scripts, or Compose checks.")),
+		taskStatus:        widget.NewLabel("No tasks discovered."),
+		taskOutput:        taskOutput,
+		jobResults:        container.NewVBox(widget.NewLabel("Run a task to create a job record.")),
+		jobStatus:         widget.NewLabel("No jobs yet."),
+		rollbackResults:   container.NewVBox(widget.NewLabel("Refresh rollback records to inspect undo points.")),
+		rollbackStatus:    widget.NewLabel("Rollback records have not been loaded."),
+		artifactResults:   container.NewVBox(widget.NewLabel("Refresh artifacts to inspect generated task reports.")),
+		artifactStatus:    widget.NewLabel("Artifacts have not been loaded."),
+		artifactPreview:   artifactPreview,
 		artifactSourceStatus: widget.NewLabel(
 			"Artifact sources have not been loaded.",
 		),
