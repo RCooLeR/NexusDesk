@@ -220,6 +220,7 @@ Goal: restore generated-output workflows with provenance and native inspection.
 - [x] Add first document-set artifact source actions for opening and pinning cited source files.
 - [x] Add first artifact comparison report export with searchable metadata and source lineage.
 - [x] Add first artifact source freshness warnings for missing or modified cited files.
+- [x] Add first archive restore flow for generated artifacts with collision-safe restore paths.
 - [ ] Add document preview/extraction for Markdown, TXT, PDF, DOCX, XLSX, HTML/XML.
 - [x] Add first native document extraction slice for Markdown, TXT, HTML, and XML source files with artifact export.
 - [ ] Add presentation/report generation targets after artifact lineage is stable.
@@ -265,11 +266,11 @@ Exit criteria:
 
 ## Next Batch
 
-1. Add artifact restore flow for archived generated outputs.
-2. Extend native document extraction to PDF/DOCX once extraction metadata and jobs are ready.
-3. Add bounded row query/filter/order service for profiled CSV/TSV/JSON datasets.
-4. Add first native persisted artifact repository rows so artifacts are visible in SQLite metadata history, not only filesystem scans.
-5. Add stronger artifact source fingerprints so freshness can detect same-timestamp content changes.
+1. Extend native document extraction to PDF/DOCX once extraction metadata and jobs are ready.
+2. Add bounded row query/filter/order service for profiled CSV/TSV/JSON datasets.
+3. Add first native persisted artifact repository rows so artifacts are visible in SQLite metadata history, not only filesystem scans.
+4. Add stronger artifact source fingerprints so freshness can detect same-timestamp content changes.
+5. Add read-only operations scanners for Dockerfiles, Compose, env/config, and logs.
 
 ## Preserved Post-Port Backlog
 

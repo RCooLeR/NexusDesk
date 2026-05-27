@@ -22,13 +22,18 @@ func (v *View) newArtifactsPanel() fyne.CanvasObject {
 	documentReport := widget.NewButtonWithIcon("Document report", theme.DocumentCreateIcon(), v.generateDocumentSetArtifact)
 	documentExtract := widget.NewButtonWithIcon("Extract doc", theme.FileTextIcon(), v.generateDocumentExtractionArtifact)
 	exportComparison := widget.NewButtonWithIcon("Export compare", theme.DocumentSaveIcon(), v.exportArtifactComparison)
+	showArchived := widget.NewCheck("Show archived", func(include bool) {
+		v.artifactIncludeArchived = include
+		v.refreshArtifactsWithQuery(search.Text)
+	})
+	showArchived.SetChecked(v.artifactIncludeArchived)
 	refresh := widget.NewButtonWithIcon("Refresh", theme.ViewRefreshIcon(), func() {
 		v.refreshArtifactsWithQuery(search.Text)
 	})
 	search.OnSubmitted = func(string) {
 		v.refreshArtifactsWithQuery(search.Text)
 	}
-	header := container.NewBorder(nil, nil, v.artifactStatus, container.NewHBox(documentReport, documentExtract, exportComparison, refresh), search)
+	header := container.NewBorder(nil, nil, v.artifactStatus, container.NewHBox(documentReport, documentExtract, exportComparison, showArchived, refresh), search)
 	listScroll := container.NewScroll(v.artifactResults)
 	listScroll.SetMinSize(fyne.NewSize(260, 110))
 	sourceScroll := container.NewVScroll(v.artifactSources)
@@ -136,7 +141,7 @@ func (v *View) refreshArtifactsWithQuery(query string) {
 		dialog.ShowError(err, v.window)
 		return
 	}
-	artifacts, err := store.ListArtifacts(artifactsSvc.ListOptions{Query: query})
+	artifacts, err := store.ListArtifacts(artifactsSvc.ListOptions{Query: query, IncludeArchived: v.artifactIncludeArchived})
 	if err != nil {
 		dialog.ShowError(err, v.window)
 		return
@@ -146,7 +151,7 @@ func (v *View) refreshArtifactsWithQuery(query string) {
 		status += " matching " + strings.TrimSpace(query)
 	}
 	v.artifactStatus.SetText(status)
-	v.artifactResults.Objects = artifactRows(artifacts, v.previewArtifact, v.pinArtifactForAssistantContext, v.compareArtifact, v.archiveArtifact, v.deleteArtifact)
+	v.artifactResults.Objects = artifactRows(artifacts, v.previewArtifact, v.pinArtifactForAssistantContext, v.compareArtifact, v.archiveArtifact, v.restoreArtifact, v.deleteArtifact)
 	v.artifactResults.Refresh()
 	v.addActivity(fmt.Sprintf("Loaded %d artifact(s).", len(artifacts)))
 }
@@ -281,6 +286,28 @@ func (v *View) archiveArtifact(artifact artifactsSvc.Artifact) {
 	}, v.window)
 }
 
+func (v *View) restoreArtifact(artifact artifactsSvc.Artifact) {
+	dialog.ShowConfirm("Restore artifact", "Restore "+artifact.RelPath+"?", func(confirm bool) {
+		if !confirm {
+			return
+		}
+		store, err := artifactsSvc.NewStore(v.state.Workspace().Root)
+		if err != nil {
+			dialog.ShowError(err, v.window)
+			return
+		}
+		restored, err := store.RestoreArtifact(artifact.RelPath)
+		if err != nil {
+			dialog.ShowError(err, v.window)
+			return
+		}
+		v.artifactPreview.SetText("")
+		v.refreshArtifactSources(nil)
+		v.addActivity("Restored artifact to " + restored.RelPath + ".")
+		v.refreshArtifactsWithQuery(restored.RelPath)
+	}, v.window)
+}
+
 func (v *View) deleteArtifact(artifact artifactsSvc.Artifact) {
 	dialog.ShowConfirm("Delete artifact", "Permanently delete "+artifact.RelPath+"?", func(confirm bool) {
 		if !confirm {
@@ -357,6 +384,7 @@ func artifactRows(
 	onContext func(artifactsSvc.Artifact),
 	onCompare func(artifactsSvc.Artifact),
 	onArchive func(artifactsSvc.Artifact),
+	onRestore func(artifactsSvc.Artifact),
 	onDelete func(artifactsSvc.Artifact),
 ) []fyne.CanvasObject {
 	if len(artifacts) == 0 {
@@ -381,6 +409,15 @@ func artifactRows(
 			onArchive(artifact)
 		})
 		archive.Importance = widget.LowImportance
+		restore := widget.NewButtonWithIcon("", theme.ContentUndoIcon(), func() {
+			onRestore(artifact)
+		})
+		restore.Importance = widget.LowImportance
+		if artifact.Archived {
+			archive.Disable()
+		} else {
+			restore.Disable()
+		}
 		deleteButton := widget.NewButtonWithIcon("", theme.DeleteIcon(), func() {
 			onDelete(artifact)
 		})
@@ -390,7 +427,7 @@ func artifactRows(
 		title.Truncation = fyne.TextTruncateEllipsis
 		meta := widget.NewLabel(artifactMeta(artifact))
 		meta.Truncation = fyne.TextTruncateEllipsis
-		actions := container.NewHBox(preview, context, compare, archive, deleteButton)
+		actions := container.NewHBox(preview, context, compare, archive, restore, deleteButton)
 		rows = append(rows, container.NewBorder(nil, nil, actions, nil, container.NewVBox(title, meta)))
 	}
 	return rows
