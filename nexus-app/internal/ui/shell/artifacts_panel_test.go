@@ -31,6 +31,15 @@ func TestArtifactTitleFallsBackToFilename(t *testing.T) {
 	}
 }
 
+func TestDocumentSetArtifactTitle(t *testing.T) {
+	if got := documentSetArtifactTitle(""); got != "Project Document Set Report" {
+		t.Fatalf("unexpected empty document title: %q", got)
+	}
+	if got := documentSetArtifactTitle("docs"); got != "Document Set Report - docs" {
+		t.Fatalf("unexpected selected document title: %q", got)
+	}
+}
+
 func TestArtifactLineageTextIncludesNodesAndEdges(t *testing.T) {
 	text := artifactLineageText(artifactsSvc.Lineage{
 		Nodes: []artifactsSvc.LineageNode{{Kind: "artifact", Label: "report.md"}},

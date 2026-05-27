@@ -39,6 +39,15 @@ type TaskRunReport struct {
 	DurationMs  int64
 }
 
+type DocumentSetReport struct {
+	Title       string
+	Roots       []string
+	SourcePaths []string
+	Content     string
+	Truncated   bool
+	GeneratedBy string
+}
+
 type ListOptions struct {
 	Query           string
 	IncludeArchived bool

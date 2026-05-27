@@ -12,24 +12,71 @@ import (
 	"fyne.io/fyne/v2/widget"
 
 	artifactsSvc "nexusdesk/internal/services/artifacts"
+	workspaceSvc "nexusdesk/internal/services/workspace"
 )
 
 func (v *View) newArtifactsPanel() fyne.CanvasObject {
 	search := widget.NewEntry()
 	search.SetPlaceHolder("Search artifacts by title, path, kind, source, job, or task")
+	documentReport := widget.NewButtonWithIcon("Document report", theme.DocumentCreateIcon(), v.generateDocumentSetArtifact)
 	refresh := widget.NewButtonWithIcon("Refresh", theme.ViewRefreshIcon(), func() {
 		v.refreshArtifactsWithQuery(search.Text)
 	})
 	search.OnSubmitted = func(string) {
 		v.refreshArtifactsWithQuery(search.Text)
 	}
-	header := container.NewBorder(nil, nil, v.artifactStatus, refresh, search)
+	header := container.NewBorder(nil, nil, v.artifactStatus, container.NewHBox(documentReport, refresh), search)
 	listScroll := container.NewScroll(v.artifactResults)
 	listScroll.SetMinSize(fyne.NewSize(260, 110))
 	preview := container.NewBorder(widget.NewLabel("Artifact preview and lineage"), nil, nil, nil, v.artifactPreview)
 	split := container.NewVSplit(listScroll, preview)
 	split.Offset = 0.42
 	return container.NewBorder(header, nil, nil, nil, split)
+}
+
+func (v *View) generateDocumentSetArtifact() {
+	workspace := v.state.Workspace()
+	if workspace.Root == "" {
+		v.addActivity("Open a workspace before generating a document report.")
+		return
+	}
+	root := selectedPathOrEmpty(v)
+	if strings.TrimSpace(root) == "" {
+		root = "."
+	}
+	pack, err := v.workspaceService.BuildContextPack(workspace.Root, []string{root}, workspaceSvc.ContextPackOptions{
+		ContextCollectOptions: workspaceSvc.ContextCollectOptions{
+			MaxFiles:   24,
+			MaxEntries: 1200,
+			MaxDepth:   8,
+		},
+		MaxBytes: 128 * 1024,
+	})
+	if err != nil {
+		dialog.ShowError(err, v.window)
+		return
+	}
+	store, err := artifactsSvc.NewStore(workspace.Root)
+	if err != nil {
+		dialog.ShowError(err, v.window)
+		return
+	}
+	artifact, err := store.WriteDocumentSetReport(artifactsSvc.DocumentSetReport{
+		Title:       documentSetArtifactTitle(root),
+		Roots:       []string{root},
+		SourcePaths: pack.SourcePaths,
+		Content:     pack.Content,
+		Truncated:   pack.Truncated,
+		GeneratedBy: "Nexus native Workbench",
+	})
+	if err != nil {
+		dialog.ShowError(err, v.window)
+		return
+	}
+	v.artifactPreview.SetText("")
+	v.artifactStatus.SetText("Created " + artifact.RelPath)
+	v.addActivity(artifact.Message)
+	v.refreshArtifactsWithQuery("kind:document-report")
 }
 
 func (v *View) refreshArtifacts() {
@@ -169,6 +216,14 @@ func artifactTitle(artifact artifactsSvc.Artifact) string {
 		return artifact.Title
 	}
 	return filepath.Base(artifact.RelPath)
+}
+
+func documentSetArtifactTitle(root string) string {
+	root = strings.TrimSpace(root)
+	if root == "" || root == "." {
+		return "Project Document Set Report"
+	}
+	return "Document Set Report - " + root
 }
 
 func artifactMeta(artifact artifactsSvc.Artifact) string {
