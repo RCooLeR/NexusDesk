@@ -37,6 +37,7 @@ func (v *View) persistAgentRun(jobID string, request agentSvc.Request, result ag
 		}
 	}
 	v.addActivity("Persisted agent audit for " + request.ID + ".")
+	v.refreshAgentAudit()
 }
 
 func agentPlanForMetadata(plan []agentSvc.PlanStep) []metadataSvc.AgentPlanStep {

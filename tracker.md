@@ -65,7 +65,7 @@ cd nexus-app
 
 Some tracker items are intentionally out of phase order because they depend on missing foundations:
 
-- Phase 2 is functionally wired for first native Ask and Agent modes; persistence/audit depth is still pending.
+- Phase 2 is functionally wired for first native Ask and Agent modes; deeper agent tool coverage is still pending.
 - Phase 3 AI diff summary and commit drafting are pending until the native assistant service exists.
 - Destructive hunk mutations remain pending until native approval policy is integrated into those specific Git actions.
 - Durable persisted jobs and task-run records now have a SQLite foundation, and completed native task runs write Markdown report artifacts linked from those records.
@@ -156,6 +156,7 @@ Goal: port the LLM and agent runtime without recreating the Wails bridge problem
 - [x] Add rollback browser for model-authored file mutations.
 - [x] Add live activity tail with final-answer replacement behavior.
 - [x] Add durable job and SQLite tool-run audit persistence for native agent runs.
+- [x] Add native audit/history UI for persisted agent runs and tool runs.
 - [x] Add agent-safe write/append tools gated by full-project access and rollback snapshots.
 
 Exit criteria:
@@ -251,11 +252,11 @@ Exit criteria:
 
 ## Next Batch
 
-1. Add native audit/history UI for persisted agent runs and tool runs.
-2. Add agent-safe copy/move/delete and patch tools gated by full-project access and rollback snapshots.
-3. Add first project-tree reveal/collapse controls and ignored-path visibility affordances.
-4. Add first native chat search/history panel after artifact metadata search exists.
-5. Port first document-set artifact writer after artifact lineage metadata stabilizes.
+1. Add agent-safe copy/move/delete and patch tools gated by full-project access and rollback snapshots.
+2. Add first project-tree reveal/collapse controls and ignored-path visibility affordances.
+3. Add first native chat search/history panel after artifact metadata search exists.
+4. Port first document-set artifact writer after artifact lineage metadata stabilizes.
+5. Add first artifact compare surface for same-kind generated outputs.
 
 ## Preserved Post-Port Backlog
 

@@ -61,6 +61,9 @@ type View struct {
 	artifactResults        *fyne.Container
 	artifactStatus         *widget.Label
 	artifactPreview        *widget.Entry
+	agentAuditResults      *fyne.Container
+	agentAuditStatus       *widget.Label
+	agentAuditDetail       *widget.Entry
 	approvalResults        *fyne.Container
 	approvalStatus         *widget.Label
 	accessStatus           *widget.Label
@@ -90,6 +93,10 @@ func New(window fyne.Window) *View {
 	artifactPreview.TextStyle = fyne.TextStyle{Monospace: true}
 	artifactPreview.Wrapping = fyne.TextWrapWord
 	artifactPreview.Disable()
+	agentAuditDetail := widget.NewMultiLineEntry()
+	agentAuditDetail.TextStyle = fyne.TextStyle{Monospace: true}
+	agentAuditDetail.Wrapping = fyne.TextWrapWord
+	agentAuditDetail.Disable()
 	workspaceService := workspaceSvc.New()
 	llmClient := llmSvc.NewClient()
 	assistantService := assistantSvc.New(settingsStore, workspaceService, llmClient)
@@ -140,6 +147,11 @@ func New(window fyne.Window) *View {
 		artifactResults:  container.NewVBox(widget.NewLabel("Refresh artifacts to inspect generated task reports.")),
 		artifactStatus:   widget.NewLabel("Artifacts have not been loaded."),
 		artifactPreview:  artifactPreview,
+		agentAuditResults: container.NewVBox(
+			widget.NewLabel("Open a workspace to inspect persisted agent runs."),
+		),
+		agentAuditStatus: widget.NewLabel("Agent audit has not been loaded."),
+		agentAuditDetail: agentAuditDetail,
 		approvalResults:  container.NewVBox(widget.NewLabel("Open a workspace to inspect approval records.")),
 		approvalStatus:   widget.NewLabel("Approval records have not been loaded."),
 		accessStatus:     widget.NewLabel("Full project access: inactive"),

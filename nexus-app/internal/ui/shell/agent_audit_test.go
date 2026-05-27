@@ -3,6 +3,7 @@ package shell
 import (
 	"strings"
 	"testing"
+	"time"
 
 	agentSvc "nexusdesk/internal/services/agent"
 	metadataSvc "nexusdesk/internal/services/metadata"
@@ -15,6 +16,46 @@ func TestAgentJobLabelCompactsLongPrompt(t *testing.T) {
 	}
 	if got := agentJobLabel("   "); got != "Agent run" {
 		t.Fatalf("unexpected empty label: %q", got)
+	}
+}
+
+func TestFormatAgentAuditDetailIncludesRunAndToolData(t *testing.T) {
+	started := time.Date(2026, 5, 27, 12, 0, 0, 0, time.UTC)
+	text := formatAgentAuditDetail(metadataSvc.AgentRunRecord{
+		ID:         "agent-1",
+		JobID:      "job-1",
+		Prompt:     "Review project",
+		Status:     "success",
+		Message:    "Done",
+		Iterations: 2,
+		Plan:       []metadataSvc.AgentPlanStep{{Step: "Inspect", Status: "completed"}},
+		StartedAt:  started,
+		DurationMs: 1200,
+	}, []metadataSvc.ToolRunRecord{{
+		Sequence:    1,
+		ToolName:    "read_context",
+		Risk:        "low",
+		Args:        map[string]string{"relPath": "README.md"},
+		Observation: "ok",
+	}})
+	for _, expected := range []string{"Agent Run", "agent-1", "Review project", "Tool Runs", "#1 read_context", "relPath=README.md"} {
+		if !strings.Contains(text, expected) {
+			t.Fatalf("audit detail missing %q:\n%s", expected, text)
+		}
+	}
+}
+
+func TestAgentAuditRowsReturnEmptyState(t *testing.T) {
+	rows := agentAuditRows(nil, func(metadataSvc.AgentRunRecord) {})
+	if len(rows) != 1 {
+		t.Fatalf("expected one empty-state row, got %d", len(rows))
+	}
+}
+
+func TestFormatAuditArgsSortsKeys(t *testing.T) {
+	text := formatAuditArgs(map[string]string{"z": "last", "a": "first"})
+	if text != "a=first, z=last" {
+		t.Fatalf("unexpected sorted args: %q", text)
 	}
 }
 

@@ -46,14 +46,17 @@ func (v *View) openWorkspace(root string) {
 			v.addActivity(status.Message)
 			v.refreshJobs()
 			v.loadAssistantChatHistory()
+			v.refreshAgentAudit()
 		} else {
 			v.metadataStore = nil
 			v.loadAssistantChatHistory()
+			v.refreshAgentAudit()
 			v.addActivity("Metadata store unavailable: " + err.Error())
 		}
 	} else {
 		v.metadataStore = nil
 		v.loadAssistantChatHistory()
+		v.refreshAgentAudit()
 		v.addActivity("Metadata store unavailable: " + err.Error())
 	}
 	v.navigator.Objects = []fyne.CanvasObject{v.newWorkspaceNavigator()}
