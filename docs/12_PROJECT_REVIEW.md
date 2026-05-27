@@ -10,6 +10,10 @@ The product direction still makes sense. Nexus Augentic Studio should stay a nat
 
 The new app is no longer a thin skeleton. `nexus-app/` now has real native services for workspace navigation, previews, safe file mutation, editor tabs, search, problems, Git, tasks, jobs, approvals, LLM chat, agent tooling, metadata, artifacts, datasets, SQLite inspection, document extraction, operations scanning, and history. The most important remaining work is not to invent new studios yet; it is to finish parity and make the native UI feel like a serious IDE-class product.
 
+Approximate Wails-to-Fyne migration status: 70-75% of useful Wails-era backend/workflow capability has been migrated. The remaining gap is concentrated in IDE-grade editor behavior, external database profiles, native secret storage, assistant quality controls, slow-work job routing, production packaging, and UI polish.
+
+The production release path is tracked in `docs/13_PRODUCTION_READINESS.md`.
+
 ## Architecture Health
 
 Healthy areas:
@@ -69,8 +73,10 @@ Do not add new top-level studios yet. Keep the primary product surfaces as Workb
 
 The next batches should stay migration-first:
 
-1. Finish native editor parity and UI structure.
-2. Port native external database profile storage/query workflows.
-3. Route remaining slow workflows through durable jobs.
-4. Add dump import design and first safe job scaffold before any database mutation/import execution.
-5. Continue documentation cleanup while keeping tracker checkboxes honest.
+1. Create a Wails-only feature inventory and mark each item `port`, `replace`, `drop`, or `later`.
+2. Finish native editor parity and UI structure.
+3. Port native external database profile storage/query workflows.
+4. Add native protected secret storage, Windows first.
+5. Route remaining slow workflows through durable jobs.
+6. Add dump import design and first safe job scaffold before any database mutation/import execution.
+7. Add diagnostics and release-readiness checks before private beta.
