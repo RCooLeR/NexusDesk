@@ -71,27 +71,27 @@ func TestArtifactLineageTextIncludesNodesAndEdges(t *testing.T) {
 	}
 }
 
-func TestArtifactSourcePathsPreferMetadataSources(t *testing.T) {
-	sources := artifactSourcePaths(
-		artifactsSvc.Artifact{SourcePaths: []string{"docs/a.md", "docs/a.md", "docs/b.md"}},
-		artifactsSvc.Lineage{Nodes: []artifactsSvc.LineageNode{{Kind: "source", Label: "fallback.md"}}},
-	)
-	if len(sources) != 2 || sources[0] != "docs/a.md" || sources[1] != "docs/b.md" {
-		t.Fatalf("unexpected source paths: %#v", sources)
+func TestArtifactFreshnessTextIncludesChangedSources(t *testing.T) {
+	text := artifactFreshnessText(artifactsSvc.SourceFreshness{
+		Message: "Artifact may be stale: 1 changed source.",
+		Sources: []artifactsSvc.SourceFreshnessStatus{
+			{RelPath: "docs/a.md", Exists: true, Changed: true, Message: "Source changed after artifact generation."},
+		},
+	})
+	for _, expected := range []string{"Source Freshness", "Artifact may be stale", "docs/a.md (changed"} {
+		if !strings.Contains(text, expected) {
+			t.Fatalf("freshness text missing %q:\n%s", expected, text)
+		}
 	}
 }
 
-func TestArtifactSourcePathsFallsBackToLineage(t *testing.T) {
-	sources := artifactSourcePaths(
-		artifactsSvc.Artifact{},
-		artifactsSvc.Lineage{Nodes: []artifactsSvc.LineageNode{
-			{Kind: "artifact", Label: "report.md"},
-			{Kind: "source", Label: "docs/a.md"},
-			{Kind: "source", Label: "docs/a.md"},
-		}},
-	)
-	if len(sources) != 1 || sources[0] != "docs/a.md" {
-		t.Fatalf("unexpected lineage source paths: %#v", sources)
+func TestArtifactSourceStatusTextSummarizesProblems(t *testing.T) {
+	status := artifactSourceStatusText([]artifactsSvc.SourceFreshnessStatus{
+		{RelPath: "docs/a.md", Exists: true, Changed: true},
+		{RelPath: "docs/missing.md"},
+	})
+	if status != "Sources: 2 cited, 1 changed, 1 missing." {
+		t.Fatalf("unexpected source status: %q", status)
 	}
 }
 

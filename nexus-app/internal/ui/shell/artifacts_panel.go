@@ -171,8 +171,13 @@ func (v *View) previewArtifact(artifact artifactsSvc.Artifact) {
 		dialog.ShowError(err, v.window)
 		return
 	}
-	v.artifactPreview.SetText(artifactLineageText(lineage) + "\n\n---\n\n" + text)
-	v.refreshArtifactSources(artifactSourcePaths(artifact, lineage))
+	freshness, err := store.SourceFreshness(artifact.RelPath)
+	if err != nil {
+		dialog.ShowError(err, v.window)
+		return
+	}
+	v.artifactPreview.SetText(artifactLineageText(lineage) + "\n\n" + artifactFreshnessText(freshness) + "\n\n---\n\n" + text)
+	v.refreshArtifactSources(freshness.Sources)
 	v.artifactStatus.SetText("Previewing " + artifact.RelPath)
 	v.addActivity("Previewed artifact " + artifact.RelPath + ".")
 }
@@ -297,7 +302,7 @@ func (v *View) deleteArtifact(artifact artifactsSvc.Artifact) {
 	}, v.window)
 }
 
-func (v *View) refreshArtifactSources(sources []string) {
+func (v *View) refreshArtifactSources(sources []artifactsSvc.SourceFreshnessStatus) {
 	if v.artifactSources == nil || v.artifactSourceStatus == nil {
 		return
 	}
@@ -308,17 +313,20 @@ func (v *View) refreshArtifactSources(sources []string) {
 		v.artifactSources.Refresh()
 		return
 	}
-	v.artifactSourceStatus.SetText(fmt.Sprintf("Sources: %d cited file(s).", len(sources)))
-	for _, source := range sources {
-		source := source
-		label := widget.NewLabel(source)
+	v.artifactSourceStatus.SetText(artifactSourceStatusText(sources))
+	for _, sourceStatus := range sources {
+		sourceStatus := sourceStatus
+		label := widget.NewLabel(artifactSourceLabel(sourceStatus))
 		label.Truncation = fyne.TextTruncateEllipsis
 		open := widget.NewButtonWithIcon("", theme.FileIcon(), func() {
-			v.openArtifactSource(source)
+			v.openArtifactSource(sourceStatus.RelPath)
 		})
 		open.Importance = widget.LowImportance
+		if !sourceStatus.Exists {
+			open.Disable()
+		}
 		pin := widget.NewButtonWithIcon("", theme.MailAttachmentIcon(), func() {
-			v.pinAssistantContextPath(source)
+			v.pinAssistantContextPath(sourceStatus.RelPath)
 		})
 		pin.Importance = widget.LowImportance
 		v.artifactSources.Add(container.NewBorder(nil, nil, container.NewHBox(open, pin), nil, label))
@@ -463,32 +471,57 @@ func artifactLineageText(lineage artifactsSvc.Lineage) string {
 	return builder.String()
 }
 
-func artifactSourcePaths(artifact artifactsSvc.Artifact, lineage artifactsSvc.Lineage) []string {
-	seen := map[string]bool{}
-	sources := make([]string, 0, len(artifact.SourcePaths))
-	for _, source := range artifact.SourcePaths {
-		source = strings.TrimSpace(source)
-		if source == "" || seen[source] {
-			continue
-		}
-		seen[source] = true
-		sources = append(sources, source)
+func artifactFreshnessText(freshness artifactsSvc.SourceFreshness) string {
+	var builder strings.Builder
+	builder.WriteString("Source Freshness\n")
+	builder.WriteString("- ")
+	builder.WriteString(freshness.Message)
+	builder.WriteString("\n")
+	for _, source := range freshness.Sources {
+		builder.WriteString("- ")
+		builder.WriteString(artifactSourceLabel(source))
+		builder.WriteString("\n")
 	}
-	if len(sources) > 0 {
-		return sources
-	}
-	for _, node := range lineage.Nodes {
-		if node.Kind != "source" {
-			continue
+	return builder.String()
+}
+
+func artifactSourceStatusText(sources []artifactsSvc.SourceFreshnessStatus) string {
+	changed := 0
+	missing := 0
+	unknown := 0
+	for _, source := range sources {
+		if source.Changed {
+			changed++
 		}
-		source := strings.TrimSpace(node.Label)
-		if source == "" || seen[source] {
-			continue
+		if source.Unknown {
+			unknown++
+		} else if !source.Exists {
+			missing++
 		}
-		seen[source] = true
-		sources = append(sources, source)
 	}
-	return sources
+	if changed > 0 || missing > 0 {
+		return fmt.Sprintf("Sources: %d cited, %d changed, %d missing.", len(sources), changed, missing)
+	}
+	if unknown > 0 {
+		return fmt.Sprintf("Sources: %d cited, %d unchecked.", len(sources), unknown)
+	}
+	return fmt.Sprintf("Sources: %d cited and current.", len(sources))
+}
+
+func artifactSourceLabel(source artifactsSvc.SourceFreshnessStatus) string {
+	status := "current"
+	switch {
+	case source.Changed:
+		status = "changed"
+	case !source.Exists:
+		status = "missing"
+	case source.Unknown:
+		status = "unchecked"
+	}
+	if source.Message != "" {
+		return fmt.Sprintf("%s (%s: %s)", source.RelPath, status, source.Message)
+	}
+	return fmt.Sprintf("%s (%s)", source.RelPath, status)
 }
 
 func formatArtifactComparison(comparison artifactsSvc.ArtifactComparison) string {

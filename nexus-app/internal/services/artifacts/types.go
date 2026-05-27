@@ -104,3 +104,23 @@ type ArtifactComparison struct {
 	Same       bool
 	Message    string
 }
+
+type SourceFreshness struct {
+	ArtifactRelPath string
+	GeneratedAt     time.Time
+	Sources         []SourceFreshnessStatus
+	ChangedCount    int
+	MissingCount    int
+	UnknownCount    int
+	Stale           bool
+	Message         string
+}
+
+type SourceFreshnessStatus struct {
+	RelPath    string
+	Exists     bool
+	Changed    bool
+	Unknown    bool
+	ModifiedAt time.Time
+	Message    string
+}
