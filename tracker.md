@@ -154,6 +154,7 @@ Goal: port the LLM and agent runtime without recreating the Wails bridge problem
 - [x] Add rollback browser for model-authored file mutations.
 - [x] Add live activity tail with final-answer replacement behavior.
 - [x] Add durable job and SQLite tool-run audit persistence for native agent runs.
+- [x] Add agent-safe write/append tools gated by full-project access and rollback snapshots.
 
 Exit criteria:
 
@@ -246,11 +247,11 @@ Exit criteria:
 
 ## Next Batch
 
-1. Add agent-safe write/append tools gated by full-project access and rollback snapshots.
-2. Replace the selected-item navigator action menu with true tree-row secondary-click menus if the Fyne widget pass remains lightweight.
-3. Add persisted chat history after the native assistant context-pack controls settle.
-4. Expand the native artifact browser from task reports to metadata, search, archive/delete, and lineage.
-5. Add native audit/history UI for persisted agent runs and tool runs.
+1. Replace the selected-item navigator action menu with true tree-row secondary-click menus if the Fyne widget pass remains lightweight.
+2. Add persisted chat history after the native assistant context-pack controls settle.
+3. Expand the native artifact browser from task reports to metadata, search, archive/delete, and lineage.
+4. Add native audit/history UI for persisted agent runs and tool runs.
+5. Add agent-safe copy/move/delete and patch tools gated by full-project access and rollback snapshots.
 
 ## Preserved Post-Port Backlog
 

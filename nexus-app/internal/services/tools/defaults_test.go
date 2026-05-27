@@ -69,6 +69,66 @@ func TestRunTaskRequiresApproval(t *testing.T) {
 	}
 }
 
+func TestDefaultDispatcherWriteToolsRequireApprovalAndCreateRollback(t *testing.T) {
+	root := t.TempDir()
+	workspace := workspaceSvc.New()
+	dispatcher := NewDefaultDispatcher(Dependencies{Workspace: workspace})
+	call := agent.ToolCall{Name: "write_file", Args: map[string]string{"relPath": "docs/report.md", "content": "# Report\n"}}
+
+	blocked, err := dispatcher.ExecuteTool(context.Background(), call, agent.Request{WorkspaceRoot: root})
+	if err == nil || !strings.Contains(blocked.Observation, "approval") {
+		t.Fatalf("expected approval block, got result=%#v err=%v", blocked, err)
+	}
+
+	written, err := dispatcher.ExecuteTool(context.Background(), call, agent.Request{WorkspaceRoot: root, ApproveWrites: true})
+	if err != nil {
+		t.Fatalf("write_file returned error: %v", err)
+	}
+	if !written.Mutated || !strings.Contains(written.Observation, "Rollback:") || !strings.Contains(written.Observation, "docs/report.md") {
+		t.Fatalf("unexpected write result: %#v", written)
+	}
+	data, err := os.ReadFile(filepath.Join(root, "docs", "report.md"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if string(data) != "# Report\n" {
+		t.Fatalf("unexpected written content: %q", data)
+	}
+	rollbacks, err := workspace.ListRollbacks(root)
+	if err != nil {
+		t.Fatalf("ListRollbacks returned error: %v", err)
+	}
+	if len(rollbacks) != 1 {
+		t.Fatalf("expected rollback record, got %#v", rollbacks)
+	}
+}
+
+func TestDefaultDispatcherAppendToolUsesSafeAppend(t *testing.T) {
+	root := t.TempDir()
+	if err := os.MkdirAll(filepath.Join(root, "docs"), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(root, "docs", "notes.txt"), []byte("one\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	dispatcher := NewDefaultDispatcher(Dependencies{Workspace: workspaceSvc.New()})
+
+	appended, err := dispatcher.ExecuteTool(context.Background(), agent.ToolCall{Name: "append_file", Args: map[string]string{"relPath": "docs/notes.txt", "content": "two\n"}}, agent.Request{WorkspaceRoot: root, ApproveWrites: true})
+	if err != nil {
+		t.Fatalf("append_file returned error: %v", err)
+	}
+	if !appended.Mutated || !strings.Contains(appended.Observation, "Append applied") {
+		t.Fatalf("unexpected append result: %#v", appended)
+	}
+	data, err := os.ReadFile(filepath.Join(root, "docs", "notes.txt"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if string(data) != "one\ntwo\n" {
+		t.Fatalf("unexpected appended content: %q", data)
+	}
+}
+
 func TestDefaultDispatcherRollbackTools(t *testing.T) {
 	root := t.TempDir()
 	workspace := workspaceSvc.New()

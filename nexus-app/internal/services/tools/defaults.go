@@ -38,6 +38,8 @@ func NewDefaultDispatcher(deps Dependencies) *Dispatcher {
 		Tool{Descriptor: agent.ToolDescriptor{Name: "read_git_diff", Description: "Read a bounded staged/unstaged diff for one changed file.", Risk: "low", Inputs: "relPath"}, Handler: handlers.readGitDiff},
 		Tool{Descriptor: agent.ToolDescriptor{Name: "list_tasks", Description: "List safe discovered workspace tasks.", Risk: "low", Inputs: ""}, Handler: handlers.listTasks},
 		Tool{Descriptor: agent.ToolDescriptor{Name: "run_task", Description: "Run a discovered safe workspace task when shell approval is granted.", Risk: "high", Inputs: "taskId"}, Handler: handlers.runTask},
+		Tool{Descriptor: agent.ToolDescriptor{Name: "write_file", Description: "Create or replace a text/code file inside the workspace through safe write validation and rollback.", Risk: "high", Inputs: "relPath, content, encoding(optional)"}, Handler: handlers.writeFile},
+		Tool{Descriptor: agent.ToolDescriptor{Name: "append_file", Description: "Append text to a workspace file through safe append validation and rollback.", Risk: "high", Inputs: "relPath, content, encoding(optional)"}, Handler: handlers.appendFile},
 		Tool{Descriptor: agent.ToolDescriptor{Name: "list_rollbacks", Description: "List rollback snapshots for approved workspace file mutations.", Risk: "low", Inputs: ""}, Handler: handlers.listRollbacks},
 		Tool{Descriptor: agent.ToolDescriptor{Name: "rollback_file_mutation", Description: "Restore or remove files from one rollback snapshot when write approval is granted.", Risk: "high", Inputs: "id"}, Handler: handlers.rollbackFileMutation},
 	)
@@ -212,6 +214,78 @@ func (h defaultHandlers) runTask(ctx context.Context, call agent.ToolCall, reque
 	}, nil
 }
 
+func (h defaultHandlers) writeFile(ctx context.Context, call agent.ToolCall, request agent.Request) (agent.ToolResult, error) {
+	if !request.ApproveWrites {
+		err := errors.New("approval is required before writing workspace files")
+		return agent.ToolResult{Name: call.Name, Args: call.Args, Risk: "high", Observation: err.Error(), Error: err.Error()}, err
+	}
+	root, err := workspaceRoot(request)
+	if err != nil {
+		return toolError(call, "high", err), err
+	}
+	relPath := firstArg(call, "relPath", "path")
+	if relPath == "" {
+		err := errors.New("relPath is required")
+		return toolError(call, "high", err), err
+	}
+	content, ok := call.Args["content"]
+	if !ok {
+		err := errors.New("content is required")
+		return toolError(call, "high", err), err
+	}
+	proposal, err := h.deps.Workspace.ApplyFileWrite(root, workspacesvc.FileWriteRequest{
+		RelPath:  relPath,
+		Content:  content,
+		Encoding: call.Args["encoding"],
+	})
+	if err != nil {
+		return toolError(call, "high", err), err
+	}
+	return agent.ToolResult{
+		Name:        call.Name,
+		Args:        call.Args,
+		Risk:        "high",
+		Observation: fileWriteObservation(proposal),
+		Mutated:     true,
+	}, nil
+}
+
+func (h defaultHandlers) appendFile(ctx context.Context, call agent.ToolCall, request agent.Request) (agent.ToolResult, error) {
+	if !request.ApproveWrites {
+		err := errors.New("approval is required before appending workspace files")
+		return agent.ToolResult{Name: call.Name, Args: call.Args, Risk: "high", Observation: err.Error(), Error: err.Error()}, err
+	}
+	root, err := workspaceRoot(request)
+	if err != nil {
+		return toolError(call, "high", err), err
+	}
+	relPath := firstArg(call, "relPath", "path")
+	if relPath == "" {
+		err := errors.New("relPath is required")
+		return toolError(call, "high", err), err
+	}
+	content, ok := call.Args["content"]
+	if !ok {
+		err := errors.New("content is required")
+		return toolError(call, "high", err), err
+	}
+	proposal, err := h.deps.Workspace.ApplyFileAppend(root, workspacesvc.FileWriteRequest{
+		RelPath:  relPath,
+		Content:  content,
+		Encoding: call.Args["encoding"],
+	})
+	if err != nil {
+		return toolError(call, "high", err), err
+	}
+	return agent.ToolResult{
+		Name:        call.Name,
+		Args:        call.Args,
+		Risk:        "high",
+		Observation: fileWriteObservation(proposal),
+		Mutated:     true,
+	}, nil
+}
+
 func (h defaultHandlers) listRollbacks(ctx context.Context, call agent.ToolCall, request agent.Request) (agent.ToolResult, error) {
 	root, err := workspaceRoot(request)
 	if err != nil {
@@ -252,4 +326,18 @@ func (h defaultHandlers) rollbackFileMutation(ctx context.Context, call agent.To
 		"Removed: " + strings.Join(result.Removed, ", "),
 	}
 	return agent.ToolResult{Name: call.Name, Args: call.Args, Risk: "high", Observation: strings.Join(lines, "\n"), Mutated: true}, nil
+}
+
+func fileWriteObservation(proposal workspacesvc.FileWriteProposal) string {
+	lines := []string{
+		proposal.Message,
+		"Path: " + proposal.RelPath,
+		"Action: " + proposal.Action,
+		"Encoding: " + proposal.Encoding,
+		"Rollback: " + proposal.RollbackID,
+	}
+	if proposal.Diff != "" {
+		lines = append(lines, "Diff:\n"+proposal.Diff)
+	}
+	return strings.Join(lines, "\n")
 }
