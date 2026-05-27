@@ -16,10 +16,13 @@ import (
 	jobsSvc "nexusdesk/internal/services/jobs"
 	llmSvc "nexusdesk/internal/services/llm"
 	metadataSvc "nexusdesk/internal/services/metadata"
+	settingsSvc "nexusdesk/internal/services/settings"
+	workspaceSvc "nexusdesk/internal/services/workspace"
 )
 
 const assistantConversationLimit = 24
 const assistantHistoryPreviewLimit = 6
+const defaultAgentContextMaxBytes = 96 * 1024
 
 func (v *View) newAssistantPanel() fyne.CanvasObject {
 	prompt := widget.NewMultiLineEntry()
@@ -75,7 +78,7 @@ func (v *View) runAssistantRequest(prompt *widget.Entry, response *widget.RichTe
 		Prompt:        text,
 		WorkspaceRoot: workspace.Root,
 		SelectedPath:  v.state.SelectedPath(),
-		ContextPaths:  v.state.AssistantContextPaths(),
+		ContextPaths:  assistantContextPathsForRequest(v.state.AssistantContextPaths(), ""),
 		Conversation:  v.state.AssistantConversation(),
 	}
 	startedAt := time.Now().UTC()
@@ -290,6 +293,7 @@ func (v *View) runAgentRequest(text string, response *widget.RichText, send *wid
 		ApproveWrites: v.approvalService.HasFullProjectAccess(workspace.Root),
 		ApproveShell:  false,
 	}
+	v.attachAgentContext(&request)
 	job, ctx := v.jobService.Start("agent", agentJobLabel(text))
 	v.jobService.AppendLog(job.ID, "Prompt: "+agentJobLabel(text))
 	send.Disable()
@@ -331,6 +335,63 @@ func (v *View) runAgentRequest(text string, response *widget.RichText, send *wid
 			v.refreshJobs()
 		})
 	}()
+}
+
+func (v *View) attachAgentContext(request *agentSvc.Request) {
+	contextPaths := assistantContextPathsForRequest(v.state.AssistantContextPaths(), v.state.SelectedPath())
+	if strings.TrimSpace(request.WorkspaceRoot) == "" || len(contextPaths) == 0 {
+		return
+	}
+	pack, err := v.workspaceService.BuildContextPack(request.WorkspaceRoot, contextPaths, workspaceSvc.ContextPackOptions{
+		MaxBytes: agentContextBudgetBytes(v.settingsStore),
+	})
+	if err != nil {
+		v.addActivity("Agent context was not included: " + err.Error())
+		return
+	}
+	request.ContextRelPath = pack.Label
+	request.ContextContent = pack.Content
+	request.SourcePaths = append([]string{}, pack.SourcePaths...)
+	v.addActivity("Attached agent context " + pack.Label + ".")
+	if pack.Truncated {
+		v.addActivity("Agent context pack was capped to fit the model budget.")
+	}
+}
+
+func assistantContextPathsForRequest(pinned []string, selected string) []string {
+	seen := map[string]bool{}
+	paths := make([]string, 0, len(pinned)+1)
+	for _, relPath := range pinned {
+		relPath = strings.TrimSpace(relPath)
+		if relPath == "" || seen[relPath] {
+			continue
+		}
+		seen[relPath] = true
+		paths = append(paths, relPath)
+	}
+	selected = strings.TrimSpace(selected)
+	if len(paths) == 0 && selected != "" {
+		paths = append(paths, selected)
+	}
+	return paths
+}
+
+func agentContextBudgetBytes(store interface {
+	Load() (settingsSvc.Settings, error)
+}) int {
+	if store == nil {
+		return defaultAgentContextMaxBytes
+	}
+	settings, err := store.Load()
+	if err != nil {
+		return defaultAgentContextMaxBytes
+	}
+	config := llmSvc.ConfigFromSettings(settings)
+	budgetTokens := config.ContextTokens - config.ResponseReserveTokens
+	if budgetTokens <= 0 {
+		return 4
+	}
+	return budgetTokens * 4
 }
 
 func agentJobLabel(prompt string) string {

@@ -46,6 +46,23 @@ func TestCollectContextFilesSupportsWorkspaceRoot(t *testing.T) {
 	}
 }
 
+func TestBuildContextPackAllowsExplicitArtifactContext(t *testing.T) {
+	root := t.TempDir()
+	writeWorkspaceTestFile(t, root, ".nexusdesk/artifacts/task-runs/report.md", "# Task Report\n\nDone.\n")
+
+	pack, err := New().BuildContextPack(root, []string{".nexusdesk/artifacts/task-runs/report.md"}, ContextPackOptions{MaxBytes: 4096})
+	if err != nil {
+		t.Fatalf("BuildContextPack returned error: %v", err)
+	}
+
+	if len(pack.SourcePaths) != 1 || pack.SourcePaths[0] != ".nexusdesk/artifacts/task-runs/report.md" {
+		t.Fatalf("unexpected artifact source paths: %#v", pack.SourcePaths)
+	}
+	if !strings.Contains(pack.Content, "Workspace context: .nexusdesk/artifacts/task-runs/report.md") || !strings.Contains(pack.Content, "Done.") {
+		t.Fatalf("missing artifact context content: %q", pack.Content)
+	}
+}
+
 func TestPreviewContextPackSummarizesExpandedFiles(t *testing.T) {
 	root := t.TempDir()
 	writeWorkspaceTestFile(t, root, "docs/a.md", "a")

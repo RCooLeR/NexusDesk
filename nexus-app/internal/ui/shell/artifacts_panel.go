@@ -105,7 +105,7 @@ func (v *View) refreshArtifactsWithQuery(query string) {
 		status += " matching " + strings.TrimSpace(query)
 	}
 	v.artifactStatus.SetText(status)
-	v.artifactResults.Objects = artifactRows(artifacts, v.previewArtifact, v.compareArtifact, v.archiveArtifact, v.deleteArtifact)
+	v.artifactResults.Objects = artifactRows(artifacts, v.previewArtifact, v.pinArtifactForAssistantContext, v.compareArtifact, v.archiveArtifact, v.deleteArtifact)
 	v.artifactResults.Refresh()
 	v.addActivity(fmt.Sprintf("Loaded %d artifact(s).", len(artifacts)))
 }
@@ -133,6 +133,15 @@ func (v *View) previewArtifact(artifact artifactsSvc.Artifact) {
 	v.artifactPreview.SetText(artifactLineageText(lineage) + "\n\n---\n\n" + text)
 	v.artifactStatus.SetText("Previewing " + artifact.RelPath)
 	v.addActivity("Previewed artifact " + artifact.RelPath + ".")
+}
+
+func (v *View) pinArtifactForAssistantContext(artifact artifactsSvc.Artifact) {
+	if artifact.RelPath == "" {
+		v.addActivity("Artifact has no workspace-relative path to pin.")
+		return
+	}
+	v.pinAssistantContextPath(artifact.RelPath)
+	v.artifactStatus.SetText("Pinned artifact context: " + artifact.RelPath)
 }
 
 func (v *View) compareArtifact(artifact artifactsSvc.Artifact) {
@@ -212,6 +221,7 @@ func (v *View) deleteArtifact(artifact artifactsSvc.Artifact) {
 func artifactRows(
 	artifacts []artifactsSvc.Artifact,
 	onPreview func(artifactsSvc.Artifact),
+	onContext func(artifactsSvc.Artifact),
 	onCompare func(artifactsSvc.Artifact),
 	onArchive func(artifactsSvc.Artifact),
 	onDelete func(artifactsSvc.Artifact),
@@ -226,6 +236,10 @@ func artifactRows(
 			onPreview(artifact)
 		})
 		preview.Importance = widget.LowImportance
+		context := widget.NewButtonWithIcon("", theme.MailAttachmentIcon(), func() {
+			onContext(artifact)
+		})
+		context.Importance = widget.LowImportance
 		compare := widget.NewButtonWithIcon("", theme.ContentCopyIcon(), func() {
 			onCompare(artifact)
 		})
@@ -243,7 +257,7 @@ func artifactRows(
 		title.Truncation = fyne.TextTruncateEllipsis
 		meta := widget.NewLabel(artifactMeta(artifact))
 		meta.Truncation = fyne.TextTruncateEllipsis
-		actions := container.NewHBox(preview, compare, archive, deleteButton)
+		actions := container.NewHBox(preview, context, compare, archive, deleteButton)
 		rows = append(rows, container.NewBorder(nil, nil, actions, nil, container.NewVBox(title, meta)))
 	}
 	return rows

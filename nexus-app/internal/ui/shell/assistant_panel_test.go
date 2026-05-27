@@ -8,6 +8,7 @@ import (
 	agentSvc "nexusdesk/internal/services/agent"
 	llmSvc "nexusdesk/internal/services/llm"
 	metadataSvc "nexusdesk/internal/services/metadata"
+	settingsSvc "nexusdesk/internal/services/settings"
 )
 
 func TestAgentActivityTailKeepsLastTwoMessages(t *testing.T) {
@@ -61,4 +62,33 @@ func TestChatTurnPreviewCompactsLongContent(t *testing.T) {
 	if !strings.HasPrefix(preview, "Assistant: ") || len(preview) > 105 {
 		t.Fatalf("unexpected preview: %q", preview)
 	}
+}
+
+func TestAssistantContextPathsForRequestPrefersPins(t *testing.T) {
+	paths := assistantContextPathsForRequest([]string{" README.md ", "docs", "README.md"}, "selected.go")
+	if len(paths) != 2 || paths[0] != "README.md" || paths[1] != "docs" {
+		t.Fatalf("unexpected pinned paths: %#v", paths)
+	}
+}
+
+func TestAssistantContextPathsForRequestFallsBackToSelected(t *testing.T) {
+	paths := assistantContextPathsForRequest(nil, "selected.go")
+	if len(paths) != 1 || paths[0] != "selected.go" {
+		t.Fatalf("unexpected selected fallback: %#v", paths)
+	}
+}
+
+func TestAgentContextBudgetBytesUsesModelBudget(t *testing.T) {
+	store := shellSettingsStore{settings: settingsSvc.Settings{ContextTokens: 1000, ResponseReserveTokens: 250}}
+	if got := agentContextBudgetBytes(store); got != 3000 {
+		t.Fatalf("unexpected budget bytes: %d", got)
+	}
+}
+
+type shellSettingsStore struct {
+	settings settingsSvc.Settings
+}
+
+func (s shellSettingsStore) Load() (settingsSvc.Settings, error) {
+	return s.settings, nil
 }
