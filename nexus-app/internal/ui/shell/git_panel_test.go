@@ -122,3 +122,37 @@ func TestGitHunkTargetsPreserveStagedThenUnstagedOrder(t *testing.T) {
 		t.Fatalf("unexpected unstaged target: %#v", targets[1])
 	}
 }
+
+func TestGitAIPromptsIncludeDiffAndPath(t *testing.T) {
+	diff := gitSvc.FileDiff{
+		Path:         "src/app.go",
+		UnstagedDiff: "diff --git a/src/app.go b/src/app.go\n@@ -1 +1 @@\n-old\n+new\n",
+	}
+	summaryPrompt := gitSummaryPrompt(diff)
+	commitPrompt := gitCommitDraftPrompt(diff)
+	for _, prompt := range []string{summaryPrompt, commitPrompt} {
+		if !strings.Contains(prompt, "Path: src/app.go") || !strings.Contains(prompt, "+new") {
+			t.Fatalf("prompt did not include selected diff context:\n%s", prompt)
+		}
+	}
+	if !strings.Contains(summaryPrompt, "risk") {
+		t.Fatalf("summary prompt should ask for risk review: %q", summaryPrompt)
+	}
+	if !strings.Contains(commitPrompt, "commit message") {
+		t.Fatalf("commit prompt should ask for a commit message: %q", commitPrompt)
+	}
+}
+
+func TestGitAIDiffBlockTruncatesLargeDiff(t *testing.T) {
+	diff := gitSvc.FileDiff{
+		Path:         "large.txt",
+		UnstagedDiff: strings.Repeat("+changed\n", maxGitAIDiffChars),
+	}
+	block := gitAIDiffBlock(diff)
+	if len(block) > maxGitAIDiffChars+2000 {
+		t.Fatalf("expected bounded AI diff block, got %d characters", len(block))
+	}
+	if !strings.Contains(block, "truncated") {
+		t.Fatalf("expected truncation warning, got:\n%s", block)
+	}
+}

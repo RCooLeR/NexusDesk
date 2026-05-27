@@ -104,6 +104,7 @@ Goal: preserve the old app, establish the native shell, and make the new archite
 - [x] Stamp the Windows executable icon resource during native builds.
 - [x] Add native main menu: File, Edit, View, Navigate, Tools, Help.
 - [x] Add keyboard shortcut registry for common IDE actions.
+- [x] Add first resizable native shell layout with a labeled product rail, resizable assistant/sidebar split, resizable bottom workbench split, and grouped Data actions.
 
 Exit criteria:
 
@@ -182,7 +183,7 @@ Goal: make Workbench credible as an IDE-like surface.
 - [x] Add confirmed file-level staged/unstaged controls.
 - [x] Add parsed hunk metadata and read-only hunk navigation.
 - [x] Add hunk selection and approval-backed hunk stage/unstage actions.
-- [ ] Add AI diff summary and commit draft once assistant service exists.
+- [x] Add selected-file AI diff summary and commit draft through the native assistant service.
 - [x] Add task discovery and safe task-run service.
 - [x] Add first native task discovery/run panel.
 - [x] Add native activity/job log for task output.
@@ -288,10 +289,10 @@ Exit criteria:
 ## Next Batch
 
 1. Continue native SQL notebooks with richer explain output and fuller cell management.
-2. Port AI diff summary and commit drafting through the native assistant service.
-3. Route long indexing, OCR, dump imports, connector pulls, report generation, and long agent runs through jobs.
-4. Add dump import job design before any Docker/database imports.
-5. Add SQLite connector cancellation, saved queries, and CSV/Markdown exports on top of the guarded query preview.
+2. Route long indexing, OCR, dump imports, connector pulls, report generation, and long agent runs through jobs.
+3. Add dump import job design before any Docker/database imports.
+4. Add SQLite connector cancellation, saved queries, and CSV/Markdown exports on top of the guarded query preview.
+5. Continue native UI parity by replacing remaining cramped Wails-era workflow strips with structured native tabs, dialogs, and split panes.
 
 ## Preserved Post-Port Backlog
 

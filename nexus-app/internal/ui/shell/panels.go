@@ -14,18 +14,18 @@ import (
 func (v *View) newRail() fyne.CanvasObject {
 	logo := canvas.NewImageFromResource(brand.HorizontalLogo())
 	logo.FillMode = canvas.ImageFillContain
-	logo.SetMinSize(fyne.NewSize(112, 34))
-	workspaceButton := widget.NewButtonWithIcon("", theme.HomeIcon(), func() {
+	logo.SetMinSize(fyne.NewSize(128, 38))
+	workspaceButton := widget.NewButtonWithIcon("Workbench", theme.HomeIcon(), func() {
 		v.addActivity("Workbench selected.")
 	})
-	dataButton := widget.NewButtonWithIcon("", theme.StorageIcon(), func() {
+	dataButton := widget.NewButtonWithIcon("Data", theme.StorageIcon(), func() {
 		v.addActivity("Data & Analytics selected. Use the bottom Data tab to profile the selected dataset.")
 	})
-	artifactsButton := widget.NewButtonWithIcon("", theme.DocumentIcon(), func() {
+	artifactsButton := widget.NewButtonWithIcon("Artifacts", theme.DocumentIcon(), func() {
 		v.addPlaceholderTab("Artifacts", "Generated reports, exports, lineage, and comparisons will live here.")
 	})
-	settingsButton := widget.NewButtonWithIcon("", theme.SettingsIcon(), v.openSettingsTab)
-	return container.NewVBox(logo, widget.NewSeparator(), workspaceButton, dataButton, artifactsButton, layout.NewSpacer(), settingsButton)
+	settingsButton := widget.NewButtonWithIcon("Settings", theme.SettingsIcon(), v.openSettingsTab)
+	return container.NewPadded(container.NewVBox(logo, widget.NewSeparator(), workspaceButton, dataButton, artifactsButton, layout.NewSpacer(), settingsButton))
 }
 
 func (v *View) newToolbar() fyne.CanvasObject {
@@ -42,7 +42,7 @@ func (v *View) newToolbar() fyne.CanvasObject {
 
 func (v *View) newBottomPanel() fyne.CanvasObject {
 	activity := container.NewScroll(v.activityLog)
-	activity.SetMinSize(fyne.NewSize(200, 110))
+	activity.SetMinSize(fyne.NewSize(200, 90))
 	tabs := container.NewAppTabs(
 		container.NewTabItemWithIcon("Activity", theme.HistoryIcon(), activity),
 		container.NewTabItemWithIcon("Data", theme.StorageIcon(), v.newDataPanel()),

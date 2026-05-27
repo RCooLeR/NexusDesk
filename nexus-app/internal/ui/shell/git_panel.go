@@ -51,6 +51,8 @@ func (v *View) newGitPanel() fyne.CanvasObject {
 	unstageHunk := widget.NewButtonWithIcon("Unstage hunk", theme.ContentRemoveIcon(), func() {
 		v.confirmGitHunkAction(gitSvc.HunkActionUnstage)
 	})
+	summarize := widget.NewButtonWithIcon("AI summary", theme.InfoIcon(), v.summarizeSelectedGitDiff)
+	draftCommit := widget.NewButtonWithIcon("Draft commit", theme.MailComposeIcon(), v.draftSelectedGitCommitMessage)
 	prevHunk := widget.NewButtonWithIcon("", theme.NavigateBackIcon(), func() {
 		v.moveGitHunk(-1)
 	})
@@ -60,7 +62,7 @@ func (v *View) newGitPanel() fyne.CanvasObject {
 	})
 	nextHunk.Importance = widget.LowImportance
 	hunkNav := container.NewHBox(prevHunk, v.gitHunkStatus, nextHunk)
-	actions := container.NewHBox(stage, unstage, stageHunk, unstageHunk, diffMode)
+	actions := container.NewHBox(stage, unstage, stageHunk, unstageHunk, summarize, draftCommit, diffMode)
 	diffHeader := container.NewBorder(nil, nil, hunkNav, actions, v.gitDiffStatus)
 	diff := container.NewBorder(diffHeader, nil, nil, nil, v.gitDiffText)
 	split := container.NewVSplit(scroll, diff)

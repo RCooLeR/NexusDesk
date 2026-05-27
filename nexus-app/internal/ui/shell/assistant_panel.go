@@ -28,6 +28,7 @@ func (v *View) newAssistantPanel() fyne.CanvasObject {
 	prompt := widget.NewMultiLineEntry()
 	prompt.SetPlaceHolder("Ask Nexus about this workspace")
 	prompt.Wrapping = fyne.TextWrapWord
+	prompt.SetMinRowsVisible(3)
 	v.assistantPrompt = prompt
 	response := widget.NewRichTextFromMarkdown("Assistant output will stream here.")
 	v.assistantContextStatus = widget.NewLabel("")
@@ -58,6 +59,7 @@ func (v *View) newAssistantPanel() fyne.CanvasObject {
 		v.runAssistantRequest(prompt, response, send, mode.Selected)
 	}
 	composer := container.NewBorder(nil, nil, mode, send, prompt)
+	composer = container.NewPadded(composer)
 	sidebar := container.NewVBox(contextBar, widget.NewSeparator(), historyBar)
 	card := widget.NewCard("Assistant", "Local-first context and tool mediation", container.NewBorder(sidebar, composer, nil, nil, response))
 	v.refreshAssistantContextPins()

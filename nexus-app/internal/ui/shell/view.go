@@ -177,6 +177,7 @@ func New(window fyne.Window) *View {
 	dataChartDetail.Wrapping = fyne.TextWrapWord
 	dataChartDetail.Disable()
 	dataQueryEntry := widget.NewMultiLineEntry()
+	dataQueryEntry.SetMinRowsVisible(2)
 	dataQueryEntry.SetPlaceHolder("Search/filter, SQL, or notebook cells. Use -- cell: Label and -- chart: Label to save multiple cells.")
 	operationsDetail := widget.NewMultiLineEntry()
 	operationsDetail.TextStyle = fyne.TextStyle{Monospace: true}
@@ -265,7 +266,11 @@ func New(window fyne.Window) *View {
 
 func (v *View) Canvas() fyne.CanvasObject {
 	rail := v.newRail()
-	workbench := container.NewBorder(v.newToolbar(), v.newBottomPanel(), v.navigator, v.newAssistantPanel(), v.editorTabs)
+	mainSplit := container.NewHSplit(v.editorTabs, v.newAssistantPanel())
+	mainSplit.SetOffset(0.82)
+	workbenchTop := container.NewBorder(v.newToolbar(), nil, v.navigator, nil, mainSplit)
+	workbench := container.NewVSplit(workbenchTop, v.newBottomPanel())
+	workbench.SetOffset(0.68)
 	return container.NewBorder(nil, v.status, rail, nil, workbench)
 }
 

@@ -50,9 +50,15 @@ func (v *View) newDataPanel() fyne.CanvasObject {
 	exportNotebookButton := widget.NewButtonWithIcon("Export notebook", theme.DocumentSaveIcon(), v.exportDatasetNotebookArtifact)
 	reuseSQLButton := widget.NewButtonWithIcon("Use latest SQL", theme.ContentPasteIcon(), v.reuseLatestDatasetSQLRun)
 	rerunSQLButton := widget.NewButtonWithIcon("Rerun latest SQL", theme.MediaReplayIcon(), v.rerunLatestDatasetSQLRun)
-	actions := container.NewHBox(profileButton, queryButton, sqlButton, sqliteButton, sqliteQueryButton, addSQLCellButton, addChartCellButton, saveNotebookButton, loadNotebookButton, runNotebookButton, exportNotebookButton, chartButton, exportChartButton, dashboardButton, exportDashboardButton, historyButton, reuseSQLButton, rerunSQLButton)
-	queryBar := container.NewBorder(nil, nil, nil, actions, v.dataQueryEntry)
-	header := container.NewVBox(v.dataProfileStatus, queryBar)
+	actions := container.NewAppTabs(
+		container.NewTabItem("Source", dataActionStrip(profileButton, queryButton, sqlButton, sqliteButton, sqliteQueryButton)),
+		container.NewTabItem("Notebook", dataActionStrip(addSQLCellButton, addChartCellButton, saveNotebookButton, loadNotebookButton, runNotebookButton, exportNotebookButton)),
+		container.NewTabItem("Visuals", dataActionStrip(chartButton, exportChartButton, dashboardButton, exportDashboardButton)),
+		container.NewTabItem("History", dataActionStrip(historyButton, reuseSQLButton, rerunSQLButton)),
+	)
+	actions.SetTabLocation(container.TabLocationTop)
+	queryBar := container.NewBorder(nil, nil, nil, nil, v.dataQueryEntry)
+	header := container.NewVBox(v.dataProfileStatus, queryBar, actions)
 	summary := container.NewScroll(v.dataProfileDetail)
 	rows := container.NewScroll(v.dataRowsDetail)
 	plan := container.NewScroll(v.dataPlanDetail)
@@ -67,6 +73,13 @@ func (v *View) newDataPanel() fyne.CanvasObject {
 		container.NewTabItem("Charts", charts),
 	)
 	return container.NewBorder(header, nil, nil, nil, v.dataResultTabs)
+}
+
+func dataActionStrip(actions ...fyne.CanvasObject) fyne.CanvasObject {
+	row := container.NewHBox(actions...)
+	scroll := container.NewHScroll(row)
+	scroll.SetMinSize(fyne.NewSize(320, 44))
+	return scroll
 }
 
 func (v *View) setDataSummary(summary string) {
