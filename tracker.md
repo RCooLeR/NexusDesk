@@ -193,9 +193,11 @@ Exit criteria:
 
 Goal: rebuild Data & Analytics as native data tooling, not a crowded web panel.
 
-- [ ] Port dataset profiling for CSV, TSV, JSON, NDJSON, XLSX, Parquet metadata, and logs.
+- [x] Port dataset profiling for CSV, TSV, JSON, NDJSON, XLSX, Parquet metadata, and logs.
 - [x] Add first native sample-based data profiling slice for selected CSV, TSV, and JSON files.
+- [x] Expand native profiling to NDJSON/JSONL, log line datasets, and lightweight Parquet footer metadata.
 - [x] Port first bounded row query/filter/order service for selected CSV, TSV, and JSON files.
+- [x] Extend bounded row query/filter/order service to NDJSON/JSONL and log line datasets.
 - [x] Add first SELECT-only native dataset SQL run over the selected dataset with persisted run/dependency metadata.
 - [ ] Port SQL notebook model.
 - [ ] Port SQLite workspace connector.
@@ -272,11 +274,11 @@ Exit criteria:
 
 ## Next Batch
 
-1. Expand dataset profiling from the current CSV/TSV/JSON/XLSX slice to NDJSON, Parquet metadata, and logs.
-2. Extend native charting beyond first SVG bar charts to line charts and richer dashboard visuals.
-3. Promote SQL run/dependency history into Data & Analytics and History navigation instead of only persisting rows.
-4. Start JSON compatibility import from Wails-era workspace metadata into native SQLite.
-5. Add Compose service topology summary from inspected Compose files.
+1. Extend native charting beyond first SVG bar charts to line charts and richer dashboard visuals.
+2. Promote SQL run/dependency history into Data & Analytics and History navigation instead of only persisting rows.
+3. Start JSON compatibility import from Wails-era workspace metadata into native SQLite.
+4. Add Compose service topology summary from inspected Compose files.
+5. Add full Parquet schema/row-group profiling behind an explicit dependency/build decision.
 
 ## Preserved Post-Port Backlog
 
@@ -296,8 +298,8 @@ The Fyne migration must not drop product ambition, but this section is intention
 
 ### Data & Analytics Studio
 
-- [ ] Dataset profiling for CSV, TSV, JSON, NDJSON, XLSX, Parquet metadata, logs, and database exports.
-- [ ] Bounded filter/query/order/limit workflows for table-like files.
+- [x] Dataset profiling for CSV, TSV, JSON, NDJSON, XLSX, Parquet metadata, and logs.
+- [x] Bounded filter/query/order/limit workflows for table-like CSV, TSV, JSON, NDJSON, XLSX, and log files.
 - [x] First SELECT-only native SQL run over the selected dataset with one predicate, order, limit, projection, execution plan, and metadata persistence.
 - [ ] DuckDB-capable SQL over datasets when the optional CGO-backed build is available.
 - [ ] SQL notebooks with multiple cells, saved notebooks, run history, reuse/rerun, explain output, and artifact export.

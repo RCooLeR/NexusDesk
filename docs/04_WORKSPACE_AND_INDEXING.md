@@ -174,7 +174,7 @@ Current implementation:
 - previews UTF-8 text/code within a 64 KB default cap
 - decodes UTF-8 with BOM, UTF-16 LE/BE with or without BOM, and Windows-1251 Cyrillic text previews
 - parses CSV files into bounded table previews with lightweight column profiles from a larger capped CSV sample
-- persists first dataset profiles for CSV files and XLSX workbook sheet metadata under `.nexusdesk/datasets/`
+- profiles native datasets for CSV, TSV, JSON, NDJSON/JSONL, first-sheet XLSX rows, log lines, and lightweight Parquet footer metadata
 - renders common image files as capped inline data URLs
 - renders PDF files as capped inline data URLs and extracts simple embedded text by page when available
 - extracts basic DOCX body text from `word/document.xml`
@@ -233,9 +233,9 @@ For Excel and CSV:
 - count rows and columns
 - sample rows
 - render a bounded CSV table preview
-- infer column types, missing values, distinct counts, and numeric ranges from a larger capped CSV sample
-- persist CSV profiles and XLSX sheet metadata in the workspace
-- query CSV rows with a bounded search or `column=value` filter
+- infer column types, missing values, and sample values from bounded CSV/TSV/JSON/NDJSON/XLSX/log data
+- inspect Parquet file size and footer metadata length without loading row groups
+- query CSV, TSV, JSON, NDJSON, XLSX, and log rows with bounded search, `column=value`, comparison, order, and limit filters
 - expand profiling beyond the current capped sample with richer dataset profiles
 - optionally load tables into DuckDB
 - never send whole large workbooks directly to the LLM

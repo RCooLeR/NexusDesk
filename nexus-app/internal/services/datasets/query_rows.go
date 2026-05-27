@@ -32,8 +32,14 @@ func queryableRows(relPath string, text string) ([]string, [][]string, string, b
 	case ".json":
 		columns, rows, err := parseJSONRows(text)
 		return columns, rows, "JSON", false, err
+	case ".ndjson", ".jsonl":
+		columns, rows, _, err := parseNDJSONRows(text)
+		return columns, rows, "NDJSON", false, err
+	case ".log":
+		columns, rows := parseLogRows(text)
+		return columns, rows, "LOG", false, nil
 	default:
-		return nil, nil, "", false, fmt.Errorf("dataset query supports CSV, TSV, and JSON files, not %q", filepath.Ext(relPath))
+		return nil, nil, "", false, fmt.Errorf("dataset query supports CSV, TSV, JSON, NDJSON, XLSX, and LOG files, not %q", filepath.Ext(relPath))
 	}
 }
 

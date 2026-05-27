@@ -28,6 +28,10 @@ func New(workspace *workspaceSvc.Service) *Service {
 }
 
 func (s *Service) Profile(root string, relPath string) (Profile, error) {
+	switch strings.ToLower(filepath.Ext(relPath)) {
+	case ".parquet":
+		return profileParquet(root, relPath)
+	}
 	preview, err := s.workspace.PreviewFile(root, relPath)
 	if err != nil {
 		return Profile{}, err
@@ -37,6 +41,10 @@ func (s *Service) Profile(root string, relPath string) (Profile, error) {
 		return s.profileTable(preview)
 	case ".json":
 		return s.profileJSON(preview)
+	case ".ndjson", ".jsonl":
+		return profileNDJSON(preview.RelPath, preview.Text, preview.MediaType, preview.Size)
+	case ".log":
+		return profileLog(preview.RelPath, preview.Text, preview.MediaType, preview.Size), nil
 	default:
 		return Profile{}, fmt.Errorf("unsupported dataset type %q", filepath.Ext(preview.RelPath))
 	}

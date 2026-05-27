@@ -12,6 +12,7 @@ type Profile struct {
 	Sheet       string
 	Sheets      []string
 	Truncated   bool
+	Notes       []string
 	JSONProfile *JSONProfile
 }
 

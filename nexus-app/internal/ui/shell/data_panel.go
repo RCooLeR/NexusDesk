@@ -45,7 +45,7 @@ func (v *View) runSelectedDatasetSQL(sqlText string) {
 	}
 	selected := selectedPathOrEmpty(v)
 	if selected == "" {
-		v.dataProfileStatus.SetText("Select a CSV, TSV, JSON, or XLSX file first.")
+		v.dataProfileStatus.SetText("Select a CSV, TSV, JSON, NDJSON, XLSX, or log file first.")
 		return
 	}
 	result, err := v.datasetService.QuerySQL(workspace.Root, selected, sqlText)
@@ -78,7 +78,7 @@ func (v *View) profileSelectedDataset() {
 	}
 	selected := selectedPathOrEmpty(v)
 	if selected == "" {
-		v.dataProfileStatus.SetText("Select a CSV, TSV, or JSON file first.")
+		v.dataProfileStatus.SetText("Select a CSV, TSV, JSON, NDJSON, XLSX, Parquet, or log file first.")
 		return
 	}
 	profile, err := v.datasetService.Profile(workspace.Root, selected)
@@ -102,7 +102,7 @@ func (v *View) querySelectedDataset(query string) {
 	}
 	selected := selectedPathOrEmpty(v)
 	if selected == "" {
-		v.dataProfileStatus.SetText("Select a CSV, TSV, or JSON file first.")
+		v.dataProfileStatus.SetText("Select a CSV, TSV, JSON, NDJSON, XLSX, or log file first.")
 		return
 	}
 	result, err := v.datasetService.Query(workspace.Root, selected, query)
@@ -217,6 +217,14 @@ func formatDatasetProfile(profile datasetsSvc.Profile) string {
 	}
 	if profile.Truncated {
 		builder.WriteString("Scope: preview sample is truncated by the safe preview cap\n")
+	}
+	if len(profile.Notes) > 0 {
+		builder.WriteString("\nNotes\n")
+		for _, note := range profile.Notes {
+			builder.WriteString("- ")
+			builder.WriteString(note)
+			builder.WriteString("\n")
+		}
 	}
 	if profile.JSONProfile != nil {
 		builder.WriteString("\nJSON\n")

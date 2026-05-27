@@ -56,6 +56,51 @@ func TestProfileJSONProfilesArrayObjects(t *testing.T) {
 	}
 }
 
+func TestProfileNDJSONProfilesLineObjects(t *testing.T) {
+	root := t.TempDir()
+	writeTestFile(t, root, "events.ndjson", "{\"channel\":\"search\",\"spend\":12.5}\n{\"channel\":\"email\",\"spend\":4}\n")
+
+	profile, err := New(nil).Profile(root, "events.ndjson")
+	if err != nil {
+		t.Fatalf("Profile returned error: %v", err)
+	}
+	if profile.Format != "NDJSON" || profile.JSONProfile == nil || profile.Rows != 2 || len(profile.Columns) != 2 {
+		t.Fatalf("unexpected NDJSON profile: %#v", profile)
+	}
+	if profile.Columns[1].Name != "spend" || profile.Columns[1].Type != "number" {
+		t.Fatalf("unexpected NDJSON spend profile: %#v", profile.Columns)
+	}
+}
+
+func TestProfileLogDetectsLevels(t *testing.T) {
+	root := t.TempDir()
+	writeTestFile(t, root, "app.log", "2026-05-27 INFO booted\n2026-05-27 ERROR failed\n")
+
+	profile, err := New(nil).Profile(root, "app.log")
+	if err != nil {
+		t.Fatalf("Profile returned error: %v", err)
+	}
+	if profile.Format != "LOG" || profile.Rows != 2 || len(profile.Columns) != 3 {
+		t.Fatalf("unexpected log profile: %#v", profile)
+	}
+	if profile.Columns[1].Name != "level" || len(profile.Notes) == 0 {
+		t.Fatalf("expected log level notes: %#v", profile)
+	}
+}
+
+func TestProfileParquetReadsFooterMetadata(t *testing.T) {
+	root := t.TempDir()
+	writeTestBytes(t, root, "data/sample.parquet", makeParquetStub(12))
+
+	profile, err := New(nil).Profile(root, "data/sample.parquet")
+	if err != nil {
+		t.Fatalf("Profile returned error: %v", err)
+	}
+	if profile.Format != "PARQUET" || profile.Size == 0 || len(profile.Notes) == 0 {
+		t.Fatalf("unexpected parquet profile: %#v", profile)
+	}
+}
+
 func TestProfileXLSXReturnsFirstSheetSummary(t *testing.T) {
 	root := t.TempDir()
 	writeTestBytes(t, root, "data/campaigns.xlsx", makeDatasetXLSX(t))
@@ -120,6 +165,32 @@ func TestQueryJSONArrayObjects(t *testing.T) {
 	}
 	if result.Format != "JSON" || result.MatchedRows != 1 || result.Rows[0][0] != "search" {
 		t.Fatalf("unexpected JSON query result: %#v", result)
+	}
+}
+
+func TestQueryNDJSONObjects(t *testing.T) {
+	root := t.TempDir()
+	writeTestFile(t, root, "events.jsonl", "{\"channel\":\"search\",\"spend\":12.5}\n{\"channel\":\"email\",\"spend\":4}\n")
+
+	result, err := New(nil).Query(root, "events.jsonl", "spend>5")
+	if err != nil {
+		t.Fatalf("Query returned error: %v", err)
+	}
+	if result.Format != "NDJSON" || result.MatchedRows != 1 || result.Rows[0][0] != "search" {
+		t.Fatalf("unexpected NDJSON query result: %#v", result)
+	}
+}
+
+func TestQueryLogRows(t *testing.T) {
+	root := t.TempDir()
+	writeTestFile(t, root, "app.log", "INFO ready\nERROR failed\n")
+
+	result, err := New(nil).Query(root, "app.log", "level=error")
+	if err != nil {
+		t.Fatalf("Query returned error: %v", err)
+	}
+	if result.Format != "LOG" || result.MatchedRows != 1 || result.Rows[0][1] != "error" {
+		t.Fatalf("unexpected log query result: %#v", result)
 	}
 }
 
@@ -194,4 +265,11 @@ func writeDatasetZipEntry(t *testing.T, writer *zip.Writer, name string, content
 	if _, err := file.Write([]byte(content)); err != nil {
 		t.Fatalf("write zip entry %s: %v", name, err)
 	}
+}
+
+func makeParquetStub(footerLength uint32) []byte {
+	content := []byte("PAR1stub-footer")
+	content = append(content, byte(footerLength), byte(footerLength>>8), byte(footerLength>>16), byte(footerLength>>24))
+	content = append(content, []byte("PAR1")...)
+	return content
 }
