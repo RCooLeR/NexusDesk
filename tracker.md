@@ -151,6 +151,7 @@ Goal: port the LLM and agent runtime without recreating the Wails bridge problem
 - [x] Port context-pack builder.
 - [x] Add assistant context-pack UI affordances for pinning the workspace root, directories, and multiple files explicitly.
 - [x] Add persisted native chat history and reload recent workspace turns into Ask mode.
+- [x] Add first native chat search/history bottom panel backed by SQLite chat metadata.
 - [x] Port agent runtime as an internal service, not a UI callback.
 - [x] Unify registered tools and agent tools behind one dispatcher.
 - [x] Add approval queue UI and full-access policy UI.
@@ -253,11 +254,11 @@ Exit criteria:
 
 ## Next Batch
 
-1. Add first native chat search/history panel after artifact metadata search exists.
-2. Port first document-set artifact writer after artifact lineage metadata stabilizes.
-3. Add first artifact compare surface for same-kind generated outputs.
-4. Add first native artifact-to-agent context affordance so generated outputs can be cited in follow-up prompts.
-5. Add first Workbench file-status badges from Git status once manual Git refresh has run.
+1. Port first document-set artifact writer after artifact lineage metadata stabilizes.
+2. Add first artifact compare surface for same-kind generated outputs.
+3. Add first native artifact-to-agent context affordance so generated outputs can be cited in follow-up prompts.
+4. Add first Workbench file-status badges from Git status once manual Git refresh has run.
+5. Add first chat-to-agent/context action so a prior answer can seed a follow-up prompt.
 
 ## Preserved Post-Port Backlog
 

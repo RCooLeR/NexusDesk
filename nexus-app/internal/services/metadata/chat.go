@@ -72,19 +72,60 @@ func (s *Store) ListChatMessages(limit int) ([]ChatMessageRecord, error) {
 		return nil, err
 	}
 	defer rows.Close()
-	records := []ChatMessageRecord{}
-	for rows.Next() {
-		var record ChatMessageRecord
-		var sourcePathsJSON string
-		var created string
-		if err := rows.Scan(&record.ID, &record.Role, &record.Content, &record.Model, &sourcePathsJSON, &created); err != nil {
+	return scanChatMessages(rows)
+}
+
+func (s *Store) SearchChatMessages(query string, limit int) ([]ChatMessageRecord, error) {
+	query = strings.TrimSpace(query)
+	if limit <= 0 || limit > 200 {
+		limit = 80
+	}
+	db, err := s.open()
+	if err != nil {
+		return nil, err
+	}
+	defer db.Close()
+	if query == "" {
+		rows, err := db.Query(
+			`SELECT id, role, content, model, source_paths_json, created_at
+			 FROM chat_messages
+			 WHERE workspace_root = ?
+			 ORDER BY created_at DESC, id DESC
+			 LIMIT ?`,
+			s.root,
+			limit,
+		)
+		if err != nil {
 			return nil, err
 		}
-		_ = json.Unmarshal([]byte(sourcePathsJSON), &record.SourcePaths)
-		record.CreatedAt = parseTime(created)
-		records = append(records, record)
+		defer rows.Close()
+		return scanChatMessages(rows)
 	}
-	return records, rows.Err()
+	like := "%" + strings.ToLower(query) + "%"
+	rows, err := db.Query(
+		`SELECT id, role, content, model, source_paths_json, created_at
+		 FROM chat_messages
+		 WHERE workspace_root = ?
+		   AND (
+		       lower(role) LIKE ?
+		       OR lower(content) LIKE ?
+		       OR lower(model) LIKE ?
+		       OR lower(source_paths_json) LIKE ?
+		   )
+		 ORDER BY created_at DESC, id DESC
+		 LIMIT ?`,
+		s.root,
+		like,
+		like,
+		like,
+		like,
+		limit,
+	)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	return scanChatMessages(rows)
 }
 
 func (s *Store) NormalizeChatMessageRecord(record ChatMessageRecord) ChatMessageRecord {
@@ -103,4 +144,26 @@ func normalizeChatRole(role string) string {
 	default:
 		return ""
 	}
+}
+
+type chatRows interface {
+	Next() bool
+	Scan(dest ...any) error
+	Err() error
+}
+
+func scanChatMessages(rows chatRows) ([]ChatMessageRecord, error) {
+	records := []ChatMessageRecord{}
+	for rows.Next() {
+		var record ChatMessageRecord
+		var sourcePathsJSON string
+		var created string
+		if err := rows.Scan(&record.ID, &record.Role, &record.Content, &record.Model, &sourcePathsJSON, &created); err != nil {
+			return nil, err
+		}
+		_ = json.Unmarshal([]byte(sourcePathsJSON), &record.SourcePaths)
+		record.CreatedAt = parseTime(created)
+		records = append(records, record)
+	}
+	return records, rows.Err()
 }

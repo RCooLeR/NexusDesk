@@ -116,6 +116,22 @@ func TestSaveAndListChatMessages(t *testing.T) {
 	if len(messages) != 2 || messages[0].Role != "user" || messages[1].Model == "" || len(messages[1].SourcePaths) != 1 {
 		t.Fatalf("unexpected chat messages: %#v", messages)
 	}
+
+	found, err := store.SearchChatMessages("native app", 10)
+	if err != nil {
+		t.Fatalf("SearchChatMessages returned error: %v", err)
+	}
+	if len(found) != 1 || found[0].Role != "assistant" {
+		t.Fatalf("unexpected chat search results: %#v", found)
+	}
+
+	recent, err := store.SearchChatMessages("", 10)
+	if err != nil {
+		t.Fatalf("SearchChatMessages recent returned error: %v", err)
+	}
+	if len(recent) != 2 || recent[0].Role != "assistant" {
+		t.Fatalf("expected newest message first, got %#v", recent)
+	}
 }
 
 func TestSaveAndListAgentRunsAndToolRuns(t *testing.T) {

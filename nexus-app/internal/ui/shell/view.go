@@ -61,6 +61,9 @@ type View struct {
 	artifactResults        *fyne.Container
 	artifactStatus         *widget.Label
 	artifactPreview        *widget.Entry
+	chatHistoryResults     *fyne.Container
+	chatHistoryStatus      *widget.Label
+	chatHistoryDetail      *widget.Entry
 	agentAuditResults      *fyne.Container
 	agentAuditStatus       *widget.Label
 	agentAuditDetail       *widget.Entry
@@ -93,6 +96,10 @@ func New(window fyne.Window) *View {
 	artifactPreview.TextStyle = fyne.TextStyle{Monospace: true}
 	artifactPreview.Wrapping = fyne.TextWrapWord
 	artifactPreview.Disable()
+	chatHistoryDetail := widget.NewMultiLineEntry()
+	chatHistoryDetail.TextStyle = fyne.TextStyle{Monospace: true}
+	chatHistoryDetail.Wrapping = fyne.TextWrapWord
+	chatHistoryDetail.Disable()
 	agentAuditDetail := widget.NewMultiLineEntry()
 	agentAuditDetail.TextStyle = fyne.TextStyle{Monospace: true}
 	agentAuditDetail.Wrapping = fyne.TextWrapWord
@@ -147,6 +154,11 @@ func New(window fyne.Window) *View {
 		artifactResults:  container.NewVBox(widget.NewLabel("Refresh artifacts to inspect generated task reports.")),
 		artifactStatus:   widget.NewLabel("Artifacts have not been loaded."),
 		artifactPreview:  artifactPreview,
+		chatHistoryResults: container.NewVBox(
+			widget.NewLabel("Open a workspace to search persisted chat messages."),
+		),
+		chatHistoryStatus: widget.NewLabel("Chat history has not been loaded."),
+		chatHistoryDetail: chatHistoryDetail,
 		agentAuditResults: container.NewVBox(
 			widget.NewLabel("Open a workspace to inspect persisted agent runs."),
 		),

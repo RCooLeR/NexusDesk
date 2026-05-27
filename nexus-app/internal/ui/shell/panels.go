@@ -50,6 +50,7 @@ func (v *View) newBottomPanel() fyne.CanvasObject {
 		container.NewTabItemWithIcon("Git", theme.ContentCopyIcon(), v.newGitPanel()),
 		container.NewTabItemWithIcon("Tasks", theme.MediaPlayIcon(), v.newTasksPanel()),
 		container.NewTabItemWithIcon("Jobs", theme.ListIcon(), v.newJobsPanel()),
+		container.NewTabItemWithIcon("Chat", theme.MailComposeIcon(), v.newChatHistoryPanel()),
 		container.NewTabItemWithIcon("Agent Audit", theme.InfoIcon(), v.newAgentAuditPanel()),
 		container.NewTabItemWithIcon("Artifacts", theme.DocumentIcon(), v.newArtifactsPanel()),
 		container.NewTabItemWithIcon("Rollbacks", theme.ContentUndoIcon(), v.newRollbackPanel()),

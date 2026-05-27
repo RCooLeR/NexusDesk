@@ -46,16 +46,19 @@ func (v *View) openWorkspace(root string) {
 			v.addActivity(status.Message)
 			v.refreshJobs()
 			v.loadAssistantChatHistory()
+			v.refreshChatHistory("")
 			v.refreshAgentAudit()
 		} else {
 			v.metadataStore = nil
 			v.loadAssistantChatHistory()
+			v.refreshChatHistory("")
 			v.refreshAgentAudit()
 			v.addActivity("Metadata store unavailable: " + err.Error())
 		}
 	} else {
 		v.metadataStore = nil
 		v.loadAssistantChatHistory()
+		v.refreshChatHistory("")
 		v.refreshAgentAudit()
 		v.addActivity("Metadata store unavailable: " + err.Error())
 	}
