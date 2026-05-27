@@ -49,6 +49,7 @@ type View struct {
 	problemStatus           *widget.Label
 	dataProfileStatus       *widget.Label
 	dataProfileDetail       *widget.Entry
+	dataQueryEntry          *widget.Entry
 	gitResults              *fyne.Container
 	gitStatus               *widget.Label
 	gitDiffText             *widget.Entry
@@ -147,6 +148,8 @@ func New(window fyne.Window) *View {
 	dataProfileDetail.TextStyle = fyne.TextStyle{Monospace: true}
 	dataProfileDetail.Wrapping = fyne.TextWrapWord
 	dataProfileDetail.Disable()
+	dataQueryEntry := widget.NewEntry()
+	dataQueryEntry.SetPlaceHolder("Search, e.g. channel=paid order by spend desc limit 20")
 	view := &View{
 		window:           window,
 		state:            NewState(),
@@ -172,9 +175,10 @@ func New(window fyne.Window) *View {
 		problemResults:   container.NewVBox(widget.NewLabel("Run a scan to inspect lightweight workspace problems.")),
 		problemStatus:    widget.NewLabel("No problem scan yet."),
 		dataProfileStatus: widget.NewLabel(
-			"Select a CSV, TSV, or JSON file, then profile it.",
+			"Select a CSV, TSV, or JSON file, then profile or query it.",
 		),
 		dataProfileDetail: dataProfileDetail,
+		dataQueryEntry:    dataQueryEntry,
 		gitResults:        container.NewVBox(widget.NewLabel("Press Refresh git to inspect repository status.")),
 		gitStatus:         widget.NewLabel("Git status has not been loaded."),
 		gitDiffText:       gitDiffText,

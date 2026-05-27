@@ -30,3 +30,29 @@ func TestProfileStatusMarksTruncatedSample(t *testing.T) {
 		t.Fatalf("unexpected profile status: %q", status)
 	}
 }
+
+func TestFormatDatasetQueryResultIncludesRows(t *testing.T) {
+	output := formatDatasetQueryResult(datasetsSvc.QueryResult{
+		RelPath:     "sales.csv",
+		Format:      "CSV",
+		Query:       "channel=search",
+		Columns:     []string{"channel", "spend"},
+		Rows:        [][]string{{"search", "20"}},
+		TotalRows:   4,
+		MatchedRows: 2,
+		Truncated:   true,
+		Message:     "2 matching rows from sales.csv; showing 1.",
+	})
+	for _, expected := range []string{"# Dataset Query", "Query: channel=search", "Matched rows: 2", "channel\tspend", "search\t20", "Scope: result is bounded"} {
+		if !strings.Contains(output, expected) {
+			t.Fatalf("query output missing %q:\n%s", expected, output)
+		}
+	}
+}
+
+func TestQueryStatusMarksBoundedResults(t *testing.T) {
+	status := queryStatus(datasetsSvc.QueryResult{RelPath: "sales.csv", Format: "CSV", Rows: [][]string{{"a"}}, MatchedRows: 10, Truncated: true})
+	if !strings.Contains(status, "CSV bounded query") || !strings.Contains(status, "1/10 rows shown") {
+		t.Fatalf("unexpected query status: %q", status)
+	}
+}

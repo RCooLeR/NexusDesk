@@ -195,7 +195,7 @@ Goal: rebuild Data & Analytics as native data tooling, not a crowded web panel.
 
 - [ ] Port dataset profiling for CSV, TSV, JSON, NDJSON, XLSX, Parquet metadata, and logs.
 - [x] Add first native sample-based data profiling slice for selected CSV, TSV, and JSON files.
-- [ ] Port bounded row query/filter/order service.
+- [x] Port first bounded row query/filter/order service for selected CSV, TSV, and JSON files.
 - [ ] Port SQL notebook model.
 - [ ] Port SQLite workspace connector.
 - [ ] Port external DB profile storage and read-only query guards.
@@ -267,11 +267,11 @@ Exit criteria:
 
 ## Next Batch
 
-1. Add bounded row query/filter/order service for profiled CSV/TSV/JSON datasets.
-2. Add first native persisted artifact repository rows so artifacts are visible in SQLite metadata history, not only filesystem scans.
-3. Add stronger artifact source fingerprints so freshness can detect same-timestamp content changes.
-4. Add read-only operations scanners for Dockerfiles, Compose, env/config, and logs.
-5. Add XLSX document/table extraction after the native data query boundary is in place.
+1. Add first native persisted artifact repository rows so artifacts are visible in SQLite metadata history, not only filesystem scans.
+2. Add stronger artifact source fingerprints so freshness can detect same-timestamp content changes.
+3. Add read-only operations scanners for Dockerfiles, Compose, env/config, and logs.
+4. Add XLSX document/table extraction after the native data query boundary is in place.
+5. Add chart preview/artifact generation for bounded native dataset query results.
 
 ## Preserved Post-Port Backlog
 

@@ -63,6 +63,61 @@ func TestProfileRejectsUnsupportedFile(t *testing.T) {
 	}
 }
 
+func TestQueryCSVFiltersOrdersAndLimitsRows(t *testing.T) {
+	root := t.TempDir()
+	writeTestFile(t, root, "sales.csv", "channel,spend\nsearch,12.5\nemail,4\nsearch,20\nsocial,8\n")
+
+	result, err := New(nil).Query(root, "sales.csv", "channel=search order by spend desc limit 1")
+	if err != nil {
+		t.Fatalf("Query returned error: %v", err)
+	}
+	if result.Format != "CSV" || result.TotalRows != 4 || result.MatchedRows != 2 || len(result.Rows) != 1 {
+		t.Fatalf("unexpected query summary: %#v", result)
+	}
+	if result.Rows[0][0] != "search" || result.Rows[0][1] != "20" {
+		t.Fatalf("expected highest search spend first, got %#v", result.Rows)
+	}
+}
+
+func TestQueryTSVSupportsNumericComparisons(t *testing.T) {
+	root := t.TempDir()
+	writeTestFile(t, root, "metrics.tsv", "name\tcount\nsmall\t2\nlarge\t10\n")
+
+	result, err := New(nil).Query(root, "metrics.tsv", "count>=10")
+	if err != nil {
+		t.Fatalf("Query returned error: %v", err)
+	}
+	if result.Format != "TSV" || result.MatchedRows != 1 || result.Rows[0][0] != "large" {
+		t.Fatalf("unexpected TSV query result: %#v", result)
+	}
+}
+
+func TestQueryJSONArrayObjects(t *testing.T) {
+	root := t.TempDir()
+	writeTestFile(t, root, "events.json", `[{"channel":"search","spend":12.5},{"channel":"email","spend":4}]`)
+
+	result, err := New(nil).Query(root, "events.json", "spend>5")
+	if err != nil {
+		t.Fatalf("Query returned error: %v", err)
+	}
+	if result.Format != "JSON" || result.MatchedRows != 1 || result.Rows[0][0] != "search" {
+		t.Fatalf("unexpected JSON query result: %#v", result)
+	}
+}
+
+func TestQueryGlobalSearch(t *testing.T) {
+	root := t.TempDir()
+	writeTestFile(t, root, "people.csv", "name,role\nAda,engineer\nGrace,admiral\n")
+
+	result, err := New(nil).Query(root, "people.csv", "adm")
+	if err != nil {
+		t.Fatalf("Query returned error: %v", err)
+	}
+	if result.MatchedRows != 1 || result.Rows[0][0] != "Grace" {
+		t.Fatalf("unexpected global search result: %#v", result)
+	}
+}
+
 func writeTestFile(t *testing.T, root string, relPath string, content string) {
 	t.Helper()
 	target := filepath.Join(root, filepath.FromSlash(relPath))

@@ -24,3 +24,15 @@ type JSONProfile struct {
 	Count    int
 	Notes    []string
 }
+
+type QueryResult struct {
+	RelPath     string
+	Query       string
+	Format      string
+	Columns     []string
+	Rows        [][]string
+	TotalRows   int
+	MatchedRows int
+	Truncated   bool
+	Message     string
+}
