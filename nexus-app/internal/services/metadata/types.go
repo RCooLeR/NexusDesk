@@ -32,3 +32,38 @@ type TaskRunRecord struct {
 	CompletedAt  time.Time
 	DurationMs   int64
 }
+
+type AgentPlanStep struct {
+	Step   string `json:"step"`
+	Status string `json:"status"`
+}
+
+type AgentRunRecord struct {
+	ID          string
+	JobID       string
+	Prompt      string
+	Status      string
+	Message     string
+	Iterations  int
+	StopReason  string
+	Plan        []AgentPlanStep
+	SourcePaths []string
+	StartedAt   time.Time
+	CompletedAt time.Time
+	DurationMs  int64
+}
+
+type ToolRunRecord struct {
+	ID          string
+	AgentRunID  string
+	JobID       string
+	Sequence    int
+	ToolName    string
+	Risk        string
+	Mutated     bool
+	Args        map[string]string
+	Observation string
+	Error       string
+	StartedAt   time.Time
+	CompletedAt time.Time
+}

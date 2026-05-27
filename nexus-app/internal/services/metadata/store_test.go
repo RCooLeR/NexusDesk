@@ -19,7 +19,7 @@ func TestEnsureCreatesSQLiteStoreAndManifest(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Ensure returned error: %v", err)
 	}
-	if status.SchemaVersion != 2 || status.SchemaHash == "" {
+	if status.SchemaVersion != 3 || status.SchemaHash == "" {
 		t.Fatalf("unexpected status: %#v", status)
 	}
 	if _, err := os.Stat(status.Path); err != nil {
@@ -28,7 +28,7 @@ func TestEnsureCreatesSQLiteStoreAndManifest(t *testing.T) {
 	if _, err := os.Stat(status.SchemaPath); err != nil {
 		t.Fatalf("expected schema file: %v", err)
 	}
-	if len(status.Tables) < 3 {
+	if len(status.Tables) < 5 {
 		t.Fatalf("expected core tables, got %#v", status.Tables)
 	}
 }
@@ -87,6 +87,55 @@ func TestSaveAndListTaskRuns(t *testing.T) {
 	}
 	if len(runs) != 1 || runs[0].TaskID != "go-test-root" || runs[0].Stdout != "ok\n" || runs[0].ArtifactPath == "" {
 		t.Fatalf("unexpected task runs: %#v", runs)
+	}
+}
+
+func TestSaveAndListAgentRunsAndToolRuns(t *testing.T) {
+	store := mustStore(t)
+	started := time.Date(2026, 5, 27, 12, 0, 0, 0, time.UTC)
+	agentRun := AgentRunRecord{
+		JobID:       "job-0002",
+		Prompt:      "Review project",
+		Status:      "success",
+		Message:     "Done",
+		Iterations:  2,
+		Plan:        []AgentPlanStep{{Step: "Inspect", Status: "completed"}},
+		SourcePaths: []string{"README.md"},
+		StartedAt:   started,
+		CompletedAt: started.Add(2 * time.Second),
+		DurationMs:  2000,
+	}
+	agentRun = store.NormalizeAgentRunRecord(agentRun)
+	if err := store.SaveAgentRun(agentRun); err != nil {
+		t.Fatalf("SaveAgentRun returned error: %v", err)
+	}
+	if err := store.SaveToolRun(ToolRunRecord{
+		AgentRunID:  agentRun.ID,
+		JobID:       agentRun.JobID,
+		Sequence:    1,
+		ToolName:    "read_context",
+		Risk:        "low",
+		Args:        map[string]string{"relPath": "README.md"},
+		Observation: "README content",
+		StartedAt:   started,
+		CompletedAt: started.Add(time.Second),
+	}); err != nil {
+		t.Fatalf("SaveToolRun returned error: %v", err)
+	}
+
+	runs, err := store.ListAgentRuns(10)
+	if err != nil {
+		t.Fatalf("ListAgentRuns returned error: %v", err)
+	}
+	if len(runs) != 1 || runs[0].Prompt != "Review project" || len(runs[0].Plan) != 1 || len(runs[0].SourcePaths) != 1 {
+		t.Fatalf("unexpected agent runs: %#v", runs)
+	}
+	tools, err := store.ListToolRuns(agentRun.ID)
+	if err != nil {
+		t.Fatalf("ListToolRuns returned error: %v", err)
+	}
+	if len(tools) != 1 || tools[0].ToolName != "read_context" || tools[0].Args["relPath"] != "README.md" {
+		t.Fatalf("unexpected tool runs: %#v", tools)
 	}
 }
 

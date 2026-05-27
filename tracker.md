@@ -153,6 +153,7 @@ Goal: port the LLM and agent runtime without recreating the Wails bridge problem
 - [x] Add approval queue UI and full-access policy UI.
 - [x] Add rollback browser for model-authored file mutations.
 - [x] Add live activity tail with final-answer replacement behavior.
+- [x] Add durable job and SQLite tool-run audit persistence for native agent runs.
 
 Exit criteria:
 
@@ -219,7 +220,7 @@ Goal: make slow and durable workflows reliable.
 - [x] Add SQLite primary metadata store in `nexus-app`.
 - [x] Add durable SQLite repository for native jobs and task-run records.
 - [x] Add task-run Markdown artifacts linked from persisted task-run records.
-- [ ] Add repositories for chats, approvals, artifacts, tool runs, jobs, SQL runs, and dataset dependencies.
+- [ ] Add repositories for chats, approvals, artifacts, SQL runs, and dataset dependencies.
 - [ ] Migrate/import relevant `.nexusdesk` data from Wails-era workspaces.
 - [ ] Route long indexing, OCR, dump imports, connector pulls, report generation, and long agent runs through jobs.
 - [ ] Add native job monitor with cancel/retry/open-output actions.
@@ -245,11 +246,11 @@ Exit criteria:
 
 ## Next Batch
 
-1. Add job/tool-run audit persistence for native agent runs.
-2. Add agent-safe write/append tools gated by full-project access and rollback snapshots.
-3. Replace the selected-item navigator action menu with true tree-row secondary-click menus if the Fyne widget pass remains lightweight.
-4. Add persisted chat history after the native assistant context-pack controls settle.
-5. Expand the native artifact browser from task reports to metadata, search, archive/delete, and lineage.
+1. Add agent-safe write/append tools gated by full-project access and rollback snapshots.
+2. Replace the selected-item navigator action menu with true tree-row secondary-click menus if the Fyne widget pass remains lightweight.
+3. Add persisted chat history after the native assistant context-pack controls settle.
+4. Expand the native artifact browser from task reports to metadata, search, archive/delete, and lineage.
+5. Add native audit/history UI for persisted agent runs and tool runs.
 
 ## Preserved Post-Port Backlog
 

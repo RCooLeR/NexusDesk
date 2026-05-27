@@ -13,6 +13,7 @@ import (
 
 	agentSvc "nexusdesk/internal/services/agent"
 	assistantSvc "nexusdesk/internal/services/assistant"
+	jobsSvc "nexusdesk/internal/services/jobs"
 )
 
 func (v *View) newAssistantPanel() fyne.CanvasObject {
@@ -176,12 +177,15 @@ func (v *View) runAgentRequest(text string, response *widget.RichText, send *wid
 		ApproveWrites: v.approvalService.HasFullProjectAccess(workspace.Root),
 		ApproveShell:  false,
 	}
+	job, ctx := v.jobService.Start("agent", agentJobLabel(text))
+	v.jobService.AppendLog(job.ID, "Prompt: "+agentJobLabel(text))
 	send.Disable()
 	response.ParseMarkdown("Agent starting...")
-	v.addActivity("Agent request started.")
+	v.addActivity("Agent request started as " + job.ID + ".")
+	v.refreshJobs()
 	go func() {
 		tail := agentActivityTail{}
-		result, err := v.agentService.Run(context.Background(), request, func(event agentSvc.Event) {
+		result, err := v.agentService.Run(ctx, request, func(event agentSvc.Event) {
 			line := agentEventLine(event)
 			if line == "" {
 				return
@@ -191,6 +195,8 @@ func (v *View) runAgentRequest(text string, response *widget.RichText, send *wid
 			fyne.Do(func() {
 				response.ParseMarkdown(current)
 				v.addActivity(line)
+				v.jobService.AppendLog(job.ID, line)
+				v.refreshJobs()
 			})
 		})
 		fyne.Do(func() {
@@ -199,12 +205,31 @@ func (v *View) runAgentRequest(text string, response *widget.RichText, send *wid
 				message := "Agent request failed: " + err.Error()
 				response.ParseMarkdown(message)
 				v.addActivity(message)
+				v.jobService.Finish(job.ID, jobsSvc.StatusFailed, message, err)
+				v.persistAgentRun(job.ID, request, result, "failed", message, job.StartedAt)
+				v.refreshJobs()
 				return
 			}
 			response.ParseMarkdown(agentFinalMarkdown(result))
-			v.addActivity(fmt.Sprintf("Agent response completed after %d iteration(s).", result.Iterations))
+			message := fmt.Sprintf("Agent response completed after %d iteration(s).", result.Iterations)
+			v.addActivity(message)
+			v.jobService.Finish(job.ID, jobsSvc.StatusSuccess, message, nil)
+			v.persistAgentRun(job.ID, request, result, "success", result.Message, job.StartedAt)
+			v.refreshJobs()
 		})
 	}()
+}
+
+func agentJobLabel(prompt string) string {
+	prompt = strings.TrimSpace(prompt)
+	if prompt == "" {
+		return "Agent run"
+	}
+	prompt = strings.Join(strings.Fields(prompt), " ")
+	if len(prompt) > 80 {
+		return prompt[:77] + "..."
+	}
+	return prompt
 }
 
 type agentActivityTail struct {
