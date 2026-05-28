@@ -12,11 +12,44 @@ if ([string]::IsNullOrWhiteSpace($MsysRoot)) {
     $MsysRoot = 'C:\msys64'
 }
 
-$ucrtBin = Join-Path $MsysRoot 'ucrt64\bin'
-$usrBin = Join-Path $MsysRoot 'usr\bin'
+$candidateRoots = @()
+if (-not [string]::IsNullOrWhiteSpace($MsysRoot)) {
+    $candidateRoots += $MsysRoot
+}
+if (-not [string]::IsNullOrWhiteSpace($env:MSYS2_LOCATION)) {
+    $candidateRoots += $env:MSYS2_LOCATION
+}
+if (-not [string]::IsNullOrWhiteSpace($env:RUNNER_TEMP)) {
+    $candidateRoots += (Join-Path $env:RUNNER_TEMP 'msys64')
+}
+$candidateRoots += 'C:\msys64'
 
-if (-not (Test-Path (Join-Path $ucrtBin 'gcc.exe'))) {
-    throw "MSYS2 UCRT64 gcc.exe was not found at $ucrtBin. Install MSYS2 and mingw-w64-ucrt-x86_64-gcc."
+$gcc = $null
+$ucrtBin = $null
+$usrBin = $null
+foreach ($root in ($candidateRoots | Where-Object { -not [string]::IsNullOrWhiteSpace($_) } | Select-Object -Unique)) {
+    $candidateUcrtBin = Join-Path $root 'ucrt64\bin'
+    $candidateGcc = Join-Path $candidateUcrtBin 'gcc.exe'
+    if (Test-Path $candidateGcc) {
+        $gcc = $candidateGcc
+        $ucrtBin = $candidateUcrtBin
+        $usrBin = Join-Path $root 'usr\bin'
+        break
+    }
+}
+if ($null -eq $gcc) {
+    $pathGcc = Get-Command gcc.exe -ErrorAction SilentlyContinue
+    if ($pathGcc) {
+        $gcc = $pathGcc.Source
+        $ucrtBin = Split-Path -Parent $gcc
+        $root = Split-Path -Parent (Split-Path -Parent $ucrtBin)
+        $usrBin = Join-Path $root 'usr\bin'
+    }
+}
+
+if ($null -eq $gcc) {
+    $searched = ($candidateRoots | Where-Object { -not [string]::IsNullOrWhiteSpace($_) } | Select-Object -Unique) -join ', '
+    throw "MSYS2 UCRT64 gcc.exe was not found. Searched roots: $searched. In GitHub Actions, pass MSYS2_ROOT from msys2/setup-msys2's msys2-location output; locally, install MSYS2 and mingw-w64-ucrt-x86_64-gcc."
 }
 
 $env:PATH = "$ucrtBin;$usrBin;$env:PATH"

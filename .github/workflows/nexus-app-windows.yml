@@ -1,4 +1,4 @@
-name: Nexus App Windows CI
+name: Nexus App Native CI
 
 on:
   push:
@@ -15,9 +15,22 @@ on:
       - "tracker.md"
 
 jobs:
-  windows-native:
-    name: Windows native Fyne smoke
-    runs-on: windows-latest
+  native:
+    name: ${{ matrix.name }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - name: Windows native Fyne smoke
+            os: windows-latest
+            platform: windows
+          - name: macOS native Fyne smoke
+            os: macos-latest
+            platform: macos
+          - name: Linux native Fyne smoke
+            os: ubuntu-latest
+            platform: linux
 
     steps:
       - name: Checkout
@@ -29,7 +42,15 @@ jobs:
           go-version-file: nexus-app/go.mod
           cache-dependency-path: nexus-app/go.sum
 
+      - name: Install Linux Fyne build dependencies
+        if: matrix.platform == 'linux'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends gcc pkg-config libgl1-mesa-dev xorg-dev
+
       - name: Set up MSYS2 UCRT64 compiler
+        if: matrix.platform == 'windows'
+        id: msys2
         uses: msys2/setup-msys2@v2
         with:
           msystem: UCRT64
@@ -37,5 +58,13 @@ jobs:
           install: mingw-w64-ucrt-x86_64-gcc
 
       - name: Run native Windows CI checks
+        if: matrix.platform == 'windows'
         shell: pwsh
+        env:
+          MSYS2_ROOT: ${{ steps.msys2.outputs.msys2-location }}
         run: .\nexus-app\scripts\ci-windows.ps1
+
+      - name: Run native Unix CI checks
+        if: matrix.platform != 'windows'
+        shell: bash
+        run: bash nexus-app/scripts/ci-unix.sh
