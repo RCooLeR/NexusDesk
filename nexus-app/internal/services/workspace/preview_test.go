@@ -73,6 +73,19 @@ func TestPreviewFileReadsWindows1251Text(t *testing.T) {
 	}
 }
 
+func TestPreviewFileReadsWindows1252Text(t *testing.T) {
+	root := t.TempDir()
+	writeBytes(t, filepath.Join(root, "notes.txt"), []byte{'c', 'a', 'f', 0xe9})
+
+	preview, err := New().PreviewFile(root, "notes.txt")
+	if err != nil {
+		t.Fatalf("PreviewFile returned error: %v", err)
+	}
+	if preview.Text != "café" || preview.Encoding != encodingWindows1252 {
+		t.Fatalf("unexpected Windows-1252 preview: %#v", preview)
+	}
+}
+
 func TestPreviewFileRejectsTraversal(t *testing.T) {
 	root := t.TempDir()
 	if _, err := New().PreviewFile(root, "../secrets.txt"); err == nil {

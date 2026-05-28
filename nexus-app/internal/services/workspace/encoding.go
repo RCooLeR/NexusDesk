@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"encoding/binary"
 	"errors"
+	"unicode"
 	"unicode/utf16"
 	"unicode/utf8"
 
@@ -16,6 +17,7 @@ const (
 	encodingUTF16LE     = "utf-16-le"
 	encodingUTF16BE     = "utf-16-be"
 	encodingWindows1251 = "windows-1251"
+	encodingWindows1252 = "windows-1252"
 )
 
 func decodeText(content []byte) (string, string, error) {
@@ -37,12 +39,71 @@ func decodeText(content []byte) (string, string, error) {
 		text, err := decodeUTF16(content, binary.BigEndian)
 		return text, encodingUTF16BE, err
 	default:
-		decoded, err := charmap.Windows1251.NewDecoder().Bytes(content)
-		if err != nil {
-			return "", "", err
-		}
-		return string(decoded), encodingWindows1251, nil
+		return decodeLegacyText(content)
 	}
+}
+
+func decodeLegacyText(content []byte) (string, string, error) {
+	type legacyCandidate struct {
+		name string
+		text string
+	}
+	candidates := []legacyCandidate{}
+	for _, candidate := range []struct {
+		name    string
+		decoder *charmap.Charmap
+	}{
+		{name: encodingWindows1251, decoder: charmap.Windows1251},
+		{name: encodingWindows1252, decoder: charmap.Windows1252},
+	} {
+		decoded, err := candidate.decoder.NewDecoder().Bytes(content)
+		if err != nil {
+			continue
+		}
+		candidates = append(candidates, legacyCandidate{name: candidate.name, text: string(decoded)})
+	}
+	if len(candidates) == 0 {
+		return "", "", errors.New("file text encoding is unsupported")
+	}
+	best := candidates[0]
+	bestScore := legacyTextScore(best.text, best.name)
+	for _, candidate := range candidates[1:] {
+		score := legacyTextScore(candidate.text, candidate.name)
+		if score > bestScore {
+			best = candidate
+			bestScore = score
+		}
+	}
+	return best.text, best.name, nil
+}
+
+func legacyTextScore(text string, encoding string) int {
+	score := 0
+	cyrillic := 0
+	latin := 0
+	for _, r := range text {
+		switch {
+		case r == '\uFFFD':
+			score -= 20
+		case unicode.IsControl(r) && r != '\n' && r != '\r' && r != '\t':
+			score -= 10
+		case unicode.In(r, unicode.Cyrillic):
+			cyrillic++
+			score += 4
+		case unicode.In(r, unicode.Latin):
+			latin++
+			score += 2
+		case unicode.IsPrint(r):
+			score++
+		}
+	}
+	if cyrillic >= 2 && encoding == encodingWindows1251 {
+		score += cyrillic * 4
+	}
+	if cyrillic == 0 && latin > 0 && encoding == encodingWindows1252 {
+		score += latin
+	}
+	return score
 }
 
 func decodeUTF16(content []byte, order binary.ByteOrder) (string, error) {

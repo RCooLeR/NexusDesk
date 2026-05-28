@@ -170,6 +170,30 @@ func TestApplyFileWritePreservesRequestedUTF16LEEncoding(t *testing.T) {
 	}
 }
 
+func TestApplyFileWritePreservesRequestedWindows1252Encoding(t *testing.T) {
+	root := t.TempDir()
+
+	proposal, err := New().ApplyFileWrite(root, FileWriteRequest{
+		RelPath:  "docs/notes.txt",
+		Content:  "café",
+		Encoding: "windows-1252",
+	})
+	if err != nil {
+		t.Fatalf("ApplyFileWrite returned error: %v", err)
+	}
+	if proposal.Encoding != encodingWindows1252 {
+		t.Fatalf("expected windows-1252 proposal encoding, got %q", proposal.Encoding)
+	}
+
+	content, err := os.ReadFile(filepath.Join(root, "docs", "notes.txt"))
+	if err != nil {
+		t.Fatalf("ReadFile failed: %v", err)
+	}
+	if string(content) != "caf\xe9" {
+		t.Fatalf("expected windows-1252 bytes, got %#v", content)
+	}
+}
+
 func TestPreviewFileWriteRejectsUnsafeTargets(t *testing.T) {
 	root := t.TempDir()
 	service := New()

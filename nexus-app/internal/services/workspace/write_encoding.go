@@ -27,6 +27,12 @@ func encodeWriteContent(content string, requestedEncoding string) ([]byte, strin
 			return nil, "", errors.New("content cannot be encoded as windows-1251")
 		}
 		return encoded, encoding, nil
+	case encodingWindows1252:
+		encoded, err := charmap.Windows1252.NewEncoder().Bytes([]byte(content))
+		if err != nil {
+			return nil, "", errors.New("content cannot be encoded as windows-1252")
+		}
+		return encoded, encoding, nil
 	default:
 		return nil, "", fmt.Errorf("unsupported write encoding %q", requestedEncoding)
 	}
@@ -45,6 +51,8 @@ func normalizeWriteEncoding(value string) string {
 		return encodingUTF16BE
 	case "cp1251", "windows1251", encodingWindows1251:
 		return encodingWindows1251
+	case "cp1252", "windows1252", encodingWindows1252:
+		return encodingWindows1252
 	default:
 		return encoding
 	}

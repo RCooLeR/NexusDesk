@@ -538,7 +538,7 @@ The Fyne migration must not drop product ambition, but this section is intention
 - [ ] Add per-call agent approval modal for high-risk mutation tools instead of only ambient full-project approval.
 - [x] Extend file preview to truncated text preview over cap and only reject truly non-previewable binaries.
 - [x] Align preview/context candidate detection across extensions and filename basenames via a shared policy table.
-- [ ] Improve encoding fallback from hardcoded Windows-1251 for unsupported text encodings.
+- [x] Improve encoding fallback from hardcoded Windows-1251 for unsupported text encodings.
 - [x] Avoid full-history replay in approval persistence; persist only the new record and serialize repository writes safely.
 - [x] Add single-file-open entrypoint (file picker/quick-open) in addition to folder open flow.
 - [ ] Consolidate bottom-panel navigation to reduce tab discoverability and density issues.
