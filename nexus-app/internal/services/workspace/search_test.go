@@ -3,6 +3,7 @@ package workspace
 import (
 	"path/filepath"
 	"testing"
+	"strings"
 )
 
 func TestSearchFindsPathAndContentMatches(t *testing.T) {
@@ -67,6 +68,67 @@ func TestSearchHonorsMaxResults(t *testing.T) {
 	}
 	if len(results) != 2 {
 		t.Fatalf("expected capped results, got %#v", results)
+	}
+}
+
+func TestSearchReturnsMultipleContentMatchesPerFile(t *testing.T) {
+	root := t.TempDir()
+	writeFile(t, filepath.Join(root, "notes.txt"), "needle first\nneedle second\nno match\nneedle third\n")
+
+	results, err := New().Search(root, "needle", SearchOptions{})
+	if err != nil {
+		t.Fatalf("Search returned error: %v", err)
+	}
+	var contentMatches int
+	lines := map[int]bool{}
+	for _, result := range results {
+		if result.RelPath == "notes.txt" && result.MatchType == "content" {
+			contentMatches++
+			lines[result.Line] = true
+		}
+	}
+	if contentMatches != 3 {
+		t.Fatalf("expected three content matches in one file, got %d (%#v)", contentMatches, results)
+	}
+	for _, line := range []int{1, 2, 4} {
+		if !lines[line] {
+			t.Fatalf("expected content match on line %d, got %#v", line, results)
+		}
+	}
+}
+
+func TestSearchCapsContentMatchesPerFile(t *testing.T) {
+	root := t.TempDir()
+	content := ""
+	for index := 0; index < defaultSearchPerFileMax+5; index++ {
+		content += "needle line\n"
+	}
+	writeFile(t, filepath.Join(root, "many.txt"), content)
+
+	results, err := New().Search(root, "needle", SearchOptions{})
+	if err != nil {
+		t.Fatalf("Search returned error: %v", err)
+	}
+	var contentMatches int
+	for _, result := range results {
+		if result.RelPath == "many.txt" && result.MatchType == "content" {
+			contentMatches++
+		}
+	}
+	if contentMatches != defaultSearchPerFileMax {
+		t.Fatalf("expected per-file cap %d, got %d", defaultSearchPerFileMax, contentMatches)
+	}
+}
+
+func TestTrimSearchSnippetCentersMatchOnLongLines(t *testing.T) {
+	line := strings.Repeat("a", 90) + "target" + strings.Repeat("b", 90)
+	matchStart := strings.Index(line, "target")
+	got := trimSearchSnippet(line, matchStart)
+	if !strings.Contains(got, "target") {
+		t.Fatalf("expected snippet to include match, got %q", got)
+	}
+	if !strings.HasPrefix(got, "...") || !strings.HasSuffix(got, "...") {
+		t.Fatalf("expected abbreviated boundaries for long line, got %q", got)
 	}
 }
 

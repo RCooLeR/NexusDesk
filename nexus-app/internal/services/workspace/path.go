@@ -31,6 +31,8 @@ func cleanRel(relPath string) (string, error) {
 	relPath = strings.Trim(relPath, `"'`)
 	relPath = filepath.ToSlash(relPath)
 	relPath = strings.TrimPrefix(relPath, "/")
+	relPath = filepath.Clean(relPath)
+	relPath = filepath.ToSlash(relPath)
 	if relPath == "." {
 		return "", nil
 	}
@@ -59,14 +61,73 @@ func resolveFile(root string, relPath string) (string, string, os.FileInfo, erro
 	if !isInside(absRoot, target) {
 		return "", "", nil, errors.New("workspace path must stay inside the root")
 	}
-	info, err := os.Stat(target)
+	if _, err := os.Lstat(filepath.Join(absRoot, filepath.FromSlash(cleanRelPath))); err != nil {
+		return "", "", nil, err
+	}
+	resolvedTarget, err := ensureResolvedReadPathInsideRoot(absRoot, target)
+	if err != nil {
+		return "", "", nil, err
+	}
+	info, err := os.Stat(resolvedTarget)
 	if err != nil {
 		return "", "", nil, err
 	}
 	if info.IsDir() {
 		return "", "", nil, errors.New("workspace path must be a file")
 	}
-	return target, cleanRelPath, info, nil
+	return resolvedTarget, cleanRelPath, info, nil
+}
+
+func resolveDirectory(root string, relPath string) (string, string, error) {
+	absRoot, err := cleanRoot(root)
+	if err != nil {
+		return "", "", err
+	}
+	cleanRelPath, err := cleanRel(relPath)
+	if err != nil {
+		return "", "", err
+	}
+	target := filepath.Join(absRoot, filepath.FromSlash(cleanRelPath))
+	if _, err := os.Lstat(target); err != nil {
+		return "", "", err
+	}
+	resolvedTarget, err := ensureResolvedReadPathInsideRoot(absRoot, target)
+	if err != nil {
+		return "", "", err
+	}
+	info, err := os.Stat(resolvedTarget)
+	if err != nil {
+		return "", "", err
+	}
+	if !info.IsDir() {
+		return "", "", errors.New("workspace path must be a directory")
+	}
+	return resolvedTarget, cleanRelPath, nil
+}
+
+func ensureResolvedReadPathInsideRoot(absRoot string, absTarget string) (string, error) {
+	if absTarget == "" {
+		return "", errors.New("workspace file path is required")
+	}
+	evaluatedRoot, err := filepath.EvalSymlinks(absRoot)
+	if err != nil {
+		return "", err
+	}
+	targetInfo, err := os.Lstat(absTarget)
+	if err != nil {
+		return "", err
+	}
+	if targetInfo.Mode()&os.ModeSymlink != 0 {
+		return "", errors.New("workspace path cannot be a symlink")
+	}
+	resolvedTarget, err := filepath.EvalSymlinks(absTarget)
+	if err != nil {
+		return "", err
+	}
+	if !isInside(evaluatedRoot, resolvedTarget) {
+		return "", errors.New("workspace path must stay inside the root")
+	}
+	return resolvedTarget, nil
 }
 
 func isInside(root string, target string) bool {

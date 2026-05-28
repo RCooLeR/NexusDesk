@@ -16,23 +16,37 @@ func (v *View) mainMenu() *fyne.MainMenu {
 	refresh := menuItem("Refresh Workspace", shortcutRefreshWorkspace(), v.refreshWorkspace)
 	closeTab := menuItem("Close Tab", shortcutCloseTab(), v.closeSelectedTab)
 	settings := menuItem("Settings", shortcutSettings(), v.openSettingsTab)
+	copySelection := menuItem("Copy", shortcutCopy(), v.copySelection)
+	saveDraft := menuItem("Save Draft", shortcutSaveDraft(), v.saveActiveEditorDraft)
+	revertDraft := menuItem("Revert Draft", shortcutRevertDraft(), v.revertActiveEditorDraft)
+	findReplace := menuItem("Find / Replace", shortcutFindReplace(), v.openFindReplaceDialog)
 	about := fyne.NewMenuItemWithIcon("About Nexus", theme.InfoIcon(), v.showAbout)
 
 	return fyne.NewMainMenu(
 		fyne.NewMenu("File", openWorkspace, refresh, fyne.NewMenuItemSeparator(), closeTab),
 		fyne.NewMenu("Edit",
-			disabledMenuItem("Save Draft"),
-			disabledMenuItem("Revert Draft"),
+			copySelection,
 			fyne.NewMenuItemSeparator(),
-			disabledMenuItem("Find"),
+			saveDraft,
+			revertDraft,
+			fyne.NewMenuItemSeparator(),
+			findReplace,
 		),
 		fyne.NewMenu("View",
 			fyne.NewMenuItem("Workbench", func() { v.addActivity("Workbench selected.") }),
 			fyne.NewMenuItem("Data & Analytics", func() {
-				v.addPlaceholderTab("Data & Analytics", "Database, CSV, Excel, and analysis workflows will live here.")
+				if !v.selectBottomTab("Data") {
+					v.addActivity("Data panel is unavailable.")
+					return
+				}
+				v.addActivity("Data & Analytics selected.")
 			}),
 			fyne.NewMenuItem("Artifacts", func() {
-				v.addPlaceholderTab("Artifacts", "Generated reports, exports, lineage, and comparisons will live here.")
+				if !v.selectBottomTab("Artifacts") {
+					v.addActivity("Artifacts panel is unavailable.")
+					return
+				}
+				v.addActivity("Artifacts selected.")
 			}),
 			settings,
 		),

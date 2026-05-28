@@ -58,8 +58,21 @@ func TestPreviewFileRejectsOversizedFiles(t *testing.T) {
 	root := t.TempDir()
 	writeFile(t, filepath.Join(root, "large.txt"), strings.Repeat("x", 8))
 	service := &Service{entryLimit: 10, previewByteLimit: 4}
-	if _, err := service.PreviewFile(root, "large.txt"); err == nil {
-		t.Fatal("expected large file preview to be rejected")
+	preview, err := service.PreviewFile(root, "large.txt")
+	if err != nil {
+		t.Fatalf("preview failed: %v", err)
+	}
+	if preview.Kind != "text" || preview.Text != "xxxx" {
+		t.Fatalf("expected truncated text preview, got kind=%s text=%q", preview.Kind, preview.Text)
+	}
+}
+
+func TestPreviewFileRejectsOversizedBinaryFiles(t *testing.T) {
+	root := t.TempDir()
+	writeBytes(t, filepath.Join(root, "large.bin"), []byte{0x00, 0x01, 0x02, 0x03, 0x00, 0x01, 0x02, 0x03})
+	service := &Service{entryLimit: 10, previewByteLimit: 4}
+	if _, err := service.PreviewFile(root, "large.bin"); err == nil {
+		t.Fatal("expected oversized binary file preview to be rejected")
 	}
 }
 

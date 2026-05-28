@@ -1,6 +1,7 @@
 package shell
 
 import (
+	"context"
 	"strings"
 	"testing"
 
@@ -58,5 +59,26 @@ func TestOperationsRunbookArtifactInputPreservesEvidence(t *testing.T) {
 		if !strings.Contains(input.Content, want) {
 			t.Fatalf("runbook content missing %q:\n%s", want, input.Content)
 		}
+	}
+}
+
+func TestOperationsJobLabels(t *testing.T) {
+	if got := operationsScanJobLabel(); got != "Operations scan" {
+		t.Fatalf("unexpected scan label: %q", got)
+	}
+	if got := operationsInspectJobLabel("docker-compose.yml"); got != "Operations inspect (docker-compose.yml)" {
+		t.Fatalf("unexpected inspect label: %q", got)
+	}
+	if got := operationsRunbookJobLabel("compose.yml"); got != "Operations runbook export (compose.yml)" {
+		t.Fatalf("unexpected runbook label: %q", got)
+	}
+}
+
+func TestIsOperationsJobCanceled(t *testing.T) {
+	if !isOperationsJobCanceled(context.Canceled) {
+		t.Fatal("expected context.Canceled to be treated as canceled job")
+	}
+	if !isOperationsJobCanceled(context.DeadlineExceeded) {
+		t.Fatal("expected context.DeadlineExceeded to be treated as canceled job")
 	}
 }

@@ -1,6 +1,7 @@
 package datasets
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"path/filepath"
@@ -15,12 +16,25 @@ const nativeDatasetSQLEngine = "native-dataset-sql"
 var blockedSQLPattern = regexp.MustCompile(`(?i)\b(insert|update|delete|drop|alter|create|truncate|replace|merge|attach|detach|vacuum|pragma)\b`)
 
 func (s *Service) QuerySQL(root string, relPath string, sqlText string) (SQLResult, error) {
+	return s.QuerySQLContext(context.Background(), root, relPath, sqlText)
+}
+
+func (s *Service) QuerySQLContext(ctx context.Context, root string, relPath string, sqlText string) (SQLResult, error) {
+	if ctx == nil {
+		ctx = context.Background()
+	}
+	if err := checkContext(ctx); err != nil {
+		return SQLResult{}, err
+	}
 	started := time.Now().UTC()
 	parsed, err := parseDatasetSQL(sqlText, relPath)
 	if err != nil {
 		return SQLResult{}, err
 	}
-	result, err := s.Query(root, relPath, parsed.FilterQuery())
+	if err := checkContext(ctx); err != nil {
+		return SQLResult{}, err
+	}
+	result, err := s.QueryContext(ctx, root, relPath, parsed.FilterQuery())
 	if err != nil {
 		return SQLResult{}, err
 	}
@@ -29,6 +43,9 @@ func (s *Service) QuerySQL(root string, relPath string, sqlText string) (SQLResu
 		if err != nil {
 			return SQLResult{}, err
 		}
+	}
+	if err := checkContext(ctx); err != nil {
+		return SQLResult{}, err
 	}
 	completed := time.Now().UTC()
 	return SQLResult{

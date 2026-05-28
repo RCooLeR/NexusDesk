@@ -7,7 +7,6 @@ func (s *Store) SaveAgentRun(record AgentRunRecord) error {
 	if err != nil {
 		return err
 	}
-	defer db.Close()
 	record = s.NormalizeAgentRunRecord(record)
 	planJSON, _ := json.Marshal(record.Plan)
 	sourcePathsJSON, _ := json.Marshal(record.SourcePaths)
@@ -46,7 +45,6 @@ func (s *Store) SaveToolRun(record ToolRunRecord) error {
 	if err != nil {
 		return err
 	}
-	defer db.Close()
 	record = s.NormalizeToolRunRecord(record)
 	argsJSON, _ := json.Marshal(record.Args)
 	_, err = db.Exec(
@@ -85,7 +83,6 @@ func (s *Store) ListAgentRuns(limit int) ([]AgentRunRecord, error) {
 	if err != nil {
 		return nil, err
 	}
-	defer db.Close()
 	rows, err := db.Query(
 		`SELECT id, job_id, prompt, status, message, iterations, stop_reason, plan_json, source_paths_json, started_at, completed_at, duration_ms
 		 FROM agent_runs WHERE workspace_root = ? ORDER BY started_at DESC, id DESC LIMIT ?`,
@@ -120,7 +117,6 @@ func (s *Store) ListToolRuns(agentRunID string) ([]ToolRunRecord, error) {
 	if err != nil {
 		return nil, err
 	}
-	defer db.Close()
 	rows, err := db.Query(
 		`SELECT id, agent_run_id, job_id, sequence, tool_name, risk, mutated, args_json, observation, error, started_at, completed_at
 		 FROM tool_runs WHERE workspace_root = ? AND agent_run_id = ? ORDER BY sequence ASC, started_at ASC, id ASC`,

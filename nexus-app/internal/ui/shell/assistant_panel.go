@@ -54,11 +54,13 @@ func (v *View) newAssistantPanel() fyne.CanvasObject {
 	mode := widget.NewSelect([]string{"Ask", "Agent"}, func(string) {})
 	mode.SetSelected("Ask")
 	v.assistantMode = mode
+	agentTaskApproval := widget.NewCheck("Allow task tool this run", nil)
+	v.assistantRunTaskApproval = agentTaskApproval
 	send := widget.NewButtonWithIcon("", theme.MailSendIcon(), nil)
 	send.OnTapped = func() {
 		v.runAssistantRequest(prompt, response, send, mode.Selected)
 	}
-	composer := container.NewBorder(nil, nil, mode, send, prompt)
+	composer := container.NewBorder(nil, nil, container.NewVBox(mode, agentTaskApproval), send, prompt)
 	composer = container.NewPadded(composer)
 	sidebar := container.NewVBox(contextBar, widget.NewSeparator(), historyBar)
 	card := widget.NewCard("Assistant", "Local-first context and tool mediation", container.NewBorder(sidebar, composer, nil, nil, response))
@@ -295,7 +297,7 @@ func (v *View) runAgentRequest(text string, response *widget.RichText, send *wid
 		Prompt:        text,
 		WorkspaceRoot: workspace.Root,
 		ApproveWrites: v.approvalService.HasFullProjectAccess(workspace.Root),
-		ApproveShell:  false,
+		ApproveShell:  v.assistantRunTaskApprovalChecked(),
 	}
 	v.attachAgentContext(&request)
 	job, ctx := v.jobService.Start("agent", agentJobLabel(text))
@@ -322,6 +324,9 @@ func (v *View) runAgentRequest(text string, response *widget.RichText, send *wid
 		})
 		fyne.Do(func() {
 			defer send.Enable()
+			if v.assistantRunTaskApproval != nil && !v.approvalService.HasFullProjectAccess(workspace.Root) {
+				v.assistantRunTaskApproval.SetChecked(false)
+			}
 			if err != nil {
 				message := "Agent request failed: " + err.Error()
 				response.ParseMarkdown(message)
@@ -339,6 +344,13 @@ func (v *View) runAgentRequest(text string, response *widget.RichText, send *wid
 			v.refreshJobs()
 		})
 	}()
+}
+
+func (v *View) assistantRunTaskApprovalChecked() bool {
+	if v.assistantRunTaskApproval == nil {
+		return false
+	}
+	return v.assistantRunTaskApproval.Checked || v.approvalService.HasFullProjectAccess(v.state.Workspace().Root)
 }
 
 func (v *View) attachAgentContext(request *agentSvc.Request) {
@@ -393,7 +405,7 @@ func agentContextBudgetBytes(store interface {
 	config := llmSvc.ConfigFromSettings(settings)
 	budgetTokens := config.ContextTokens - config.ResponseReserveTokens
 	if budgetTokens <= 0 {
-		return 4
+		return defaultAgentContextMaxBytes / 4
 	}
 	return budgetTokens * 4
 }

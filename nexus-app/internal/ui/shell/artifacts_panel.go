@@ -1,6 +1,8 @@
 package shell
 
 import (
+	"context"
+	"errors"
 	"fmt"
 	"path/filepath"
 	"strings"
@@ -13,8 +15,14 @@ import (
 
 	artifactsSvc "nexusdesk/internal/services/artifacts"
 	documentsSvc "nexusdesk/internal/services/documents"
+	jobsSvc "nexusdesk/internal/services/jobs"
 	metadataSvc "nexusdesk/internal/services/metadata"
 	workspaceSvc "nexusdesk/internal/services/workspace"
+)
+
+const (
+	artifactJobKindDocumentReport  = "artifact-document-report"
+	artifactJobKindDocumentExtract = "artifact-document-extract"
 )
 
 func (v *View) newArtifactsPanel() fyne.CanvasObject {
@@ -56,7 +64,26 @@ func (v *View) generateDocumentSetArtifact() {
 	if strings.TrimSpace(root) == "" {
 		root = "."
 	}
-	pack, err := v.workspaceService.BuildContextPack(workspace.Root, []string{root}, workspaceSvc.ContextPackOptions{
+	jobLabel := documentSetArtifactJobLabel(root)
+	job, ctx := v.jobService.Start(artifactJobKindDocumentReport, jobLabel)
+	v.jobService.AppendLog(job.ID, "Root: "+root)
+	v.artifactStatus.SetText("Running " + jobLabel + " as " + job.ID + ".")
+	v.addActivity("Started " + job.ID + ": " + jobLabel + ".")
+	v.refreshJobs()
+	workspaceRoot := workspace.Root
+	go func() {
+		artifact, err := v.buildDocumentSetArtifact(ctx, workspaceRoot, root)
+		fyne.Do(func() {
+			v.finishDocumentSetArtifactJob(job.ID, artifact, err)
+		})
+	}()
+}
+
+func (v *View) buildDocumentSetArtifact(ctx context.Context, workspaceRoot string, root string) (artifactsSvc.Artifact, error) {
+	if err := ctx.Err(); err != nil {
+		return artifactsSvc.Artifact{}, err
+	}
+	pack, err := v.workspaceService.BuildContextPack(workspaceRoot, []string{root}, workspaceSvc.ContextPackOptions{
 		ContextCollectOptions: workspaceSvc.ContextCollectOptions{
 			MaxFiles:   24,
 			MaxEntries: 1200,
@@ -65,13 +92,14 @@ func (v *View) generateDocumentSetArtifact() {
 		MaxBytes: 128 * 1024,
 	})
 	if err != nil {
-		dialog.ShowError(err, v.window)
-		return
+		return artifactsSvc.Artifact{}, err
 	}
-	store, err := artifactsSvc.NewStore(workspace.Root)
+	if err := ctx.Err(); err != nil {
+		return artifactsSvc.Artifact{}, err
+	}
+	store, err := artifactsSvc.NewStore(workspaceRoot)
 	if err != nil {
-		dialog.ShowError(err, v.window)
-		return
+		return artifactsSvc.Artifact{}, err
 	}
 	artifact, err := store.WriteDocumentSetReport(artifactsSvc.DocumentSetReport{
 		Title:       documentSetArtifactTitle(root),
@@ -82,15 +110,38 @@ func (v *View) generateDocumentSetArtifact() {
 		GeneratedBy: "Nexus native Workbench",
 	})
 	if err != nil {
-		dialog.ShowError(err, v.window)
+		return artifactsSvc.Artifact{}, err
+	}
+	if err := ctx.Err(); err != nil {
+		return artifactsSvc.Artifact{}, err
+	}
+	return artifact, nil
+}
+
+func (v *View) finishDocumentSetArtifactJob(jobID string, artifact artifactsSvc.Artifact, err error) {
+	if err != nil {
+		if errors.Is(err, context.Canceled) {
+			v.jobService.Finish(jobID, jobsSvc.StatusCanceled, "Document report canceled.", nil)
+			v.artifactStatus.SetText("Document report canceled.")
+			v.addActivity("Document report canceled for " + jobID + ".")
+		} else {
+			v.jobService.Finish(jobID, jobsSvc.StatusFailed, "Document report failed.", err)
+			v.artifactStatus.SetText("Document report failed.")
+			dialog.ShowError(err, v.window)
+		}
+		v.refreshJobs()
 		return
 	}
+	artifact.JobID = jobID
+	v.jobService.AppendLog(jobID, "Artifact: "+artifact.RelPath)
+	v.jobService.Finish(jobID, jobsSvc.StatusSuccess, "Created "+artifact.RelPath+".", nil)
 	v.artifactPreview.SetText("")
 	v.refreshArtifactSources(nil)
 	v.artifactStatus.SetText("Created " + artifact.RelPath)
 	v.addActivity(artifact.Message)
 	v.persistArtifactRecord(artifact)
 	v.refreshArtifactsWithQuery("kind:document-report")
+	v.refreshJobs()
 }
 
 func (v *View) generateDocumentExtractionArtifact() {
@@ -104,28 +155,71 @@ func (v *View) generateDocumentExtractionArtifact() {
 		v.addActivity("Select a Markdown, TXT, HTML, XML, DOCX, or PDF file before extracting a document.")
 		return
 	}
-	extractor := documentsSvc.New(v.workspaceService)
-	document, err := extractor.Extract(workspace.Root, source)
-	if err != nil {
-		dialog.ShowError(err, v.window)
-		return
+	jobLabel := documentExtractionArtifactJobLabel(source)
+	job, ctx := v.jobService.Start(artifactJobKindDocumentExtract, jobLabel)
+	v.jobService.AppendLog(job.ID, "Source: "+source)
+	v.artifactStatus.SetText("Running " + jobLabel + " as " + job.ID + ".")
+	v.addActivity("Started " + job.ID + ": " + jobLabel + ".")
+	v.refreshJobs()
+	workspaceRoot := workspace.Root
+	go func() {
+		artifact, err := v.buildDocumentExtractionArtifact(ctx, workspaceRoot, source)
+		fyne.Do(func() {
+			v.finishDocumentExtractionArtifactJob(job.ID, artifact, err)
+		})
+	}()
+}
+
+func (v *View) buildDocumentExtractionArtifact(ctx context.Context, workspaceRoot string, source string) (artifactsSvc.Artifact, error) {
+	if err := ctx.Err(); err != nil {
+		return artifactsSvc.Artifact{}, err
 	}
-	store, err := artifactsSvc.NewStore(workspace.Root)
+	extractor := documentsSvc.New(v.workspaceService)
+	document, err := extractor.Extract(workspaceRoot, source)
 	if err != nil {
-		dialog.ShowError(err, v.window)
-		return
+		return artifactsSvc.Artifact{}, err
+	}
+	if err := ctx.Err(); err != nil {
+		return artifactsSvc.Artifact{}, err
+	}
+	store, err := artifactsSvc.NewStore(workspaceRoot)
+	if err != nil {
+		return artifactsSvc.Artifact{}, err
 	}
 	artifact, err := store.WriteDocumentExtractionReport(documentExtractionArtifactInput(document))
 	if err != nil {
-		dialog.ShowError(err, v.window)
+		return artifactsSvc.Artifact{}, err
+	}
+	if err := ctx.Err(); err != nil {
+		return artifactsSvc.Artifact{}, err
+	}
+	return artifact, nil
+}
+
+func (v *View) finishDocumentExtractionArtifactJob(jobID string, artifact artifactsSvc.Artifact, err error) {
+	if err != nil {
+		if errors.Is(err, context.Canceled) {
+			v.jobService.Finish(jobID, jobsSvc.StatusCanceled, "Document extraction canceled.", nil)
+			v.artifactStatus.SetText("Document extraction canceled.")
+			v.addActivity("Document extraction canceled for " + jobID + ".")
+		} else {
+			v.jobService.Finish(jobID, jobsSvc.StatusFailed, "Document extraction failed.", err)
+			v.artifactStatus.SetText("Document extraction failed.")
+			dialog.ShowError(err, v.window)
+		}
+		v.refreshJobs()
 		return
 	}
+	artifact.JobID = jobID
+	v.jobService.AppendLog(jobID, "Artifact: "+artifact.RelPath)
+	v.jobService.Finish(jobID, jobsSvc.StatusSuccess, "Created "+artifact.RelPath+".", nil)
 	v.artifactPreview.SetText("")
 	v.refreshArtifactSources(nil)
 	v.artifactStatus.SetText("Created " + artifact.RelPath)
 	v.addActivity(artifact.Message)
 	v.persistArtifactRecord(artifact)
 	v.refreshArtifactsWithQuery("kind:document-extract")
+	v.refreshJobs()
 }
 
 func (v *View) refreshArtifacts() {
@@ -480,6 +574,22 @@ func documentSetArtifactTitle(root string) string {
 		return "Project Document Set Report"
 	}
 	return "Document Set Report - " + root
+}
+
+func documentSetArtifactJobLabel(root string) string {
+	root = strings.TrimSpace(root)
+	if root == "" || root == "." {
+		return "Document report (project)"
+	}
+	return "Document report (" + root + ")"
+}
+
+func documentExtractionArtifactJobLabel(source string) string {
+	source = strings.TrimSpace(source)
+	if source == "" {
+		return "Document extraction"
+	}
+	return "Document extraction (" + source + ")"
 }
 
 func documentExtractionArtifactInput(document documentsSvc.ExtractedDocument) artifactsSvc.DocumentExtractionReport {

@@ -42,6 +42,8 @@ func (v *View) closeEditorTabItem(item *container.TabItem, id string, force bool
 	}
 	delete(v.openTabs, id)
 	delete(v.tabIDs, item)
+	delete(v.editorPreviews, id)
+	v.removeTextEditor(id)
 	v.editorTabs.Remove(item)
 }
 

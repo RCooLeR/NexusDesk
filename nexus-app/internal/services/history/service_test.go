@@ -16,6 +16,7 @@ func TestListMergesWorkspaceHistorySources(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
+	t.Cleanup(func() { _ = metadataStore.Close() })
 	if _, err := metadataStore.Ensure(); err != nil {
 		t.Fatal(err)
 	}
@@ -102,6 +103,7 @@ func TestListIncludesSQLRunsAndDependenciesAsDataHistory(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
+	t.Cleanup(func() { _ = metadataStore.Close() })
 	if _, err := metadataStore.Ensure(); err != nil {
 		t.Fatal(err)
 	}
@@ -157,6 +159,7 @@ func TestListFiltersByKindAndQuery(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
+	t.Cleanup(func() { _ = metadataStore.Close() })
 	if _, err := metadataStore.Ensure(); err != nil {
 		t.Fatal(err)
 	}

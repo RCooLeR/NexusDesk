@@ -1,6 +1,7 @@
 package shell
 
 import (
+	"context"
 	"strings"
 	"testing"
 	"time"
@@ -248,11 +249,27 @@ func TestSQLiteSQLRunRecordCapturesFailure(t *testing.T) {
 	}
 }
 
+func TestSQLiteSQLRunRecordCapturesCanceledStatus(t *testing.T) {
+	started := time.Date(2026, 5, 27, 12, 0, 0, 0, time.UTC)
+	record := sqliteSQLRunRecord(dbconnectorSvc.SQLiteQueryResult{}, "data/store.sqlite", "select * from orders", started, context.Canceled)
+	if record.Status != "canceled" || record.Error == "" {
+		t.Fatalf("expected canceled SQLite SQL record, got %#v", record)
+	}
+}
+
 func TestSQLRunRecordCapturesFailure(t *testing.T) {
 	started := time.Date(2026, 5, 27, 12, 0, 0, 0, time.UTC)
 	record := sqlRunRecord(datasetsSvc.SQLResult{StartedAt: started}, "sales.csv", "delete from dataset", errForTest("blocked"))
 	if record.Status != "failed" || record.Error != "blocked" || record.RelPath != "sales.csv" {
 		t.Fatalf("unexpected failed SQL record: %#v", record)
+	}
+}
+
+func TestSQLRunRecordCapturesCanceledStatus(t *testing.T) {
+	started := time.Date(2026, 5, 27, 12, 0, 0, 0, time.UTC)
+	record := sqlRunRecord(datasetsSvc.SQLResult{StartedAt: started}, "sales.csv", "select * from dataset", context.Canceled)
+	if record.Status != "canceled" || record.Error == "" || record.RelPath != "sales.csv" {
+		t.Fatalf("expected canceled SQL record: %#v", record)
 	}
 }
 
@@ -292,6 +309,17 @@ func TestLatestReusableSQLRunFiltersSelectedSource(t *testing.T) {
 	}
 }
 
+func TestSQLHistorySourcesIncludesDatasetAndConnectorFallback(t *testing.T) {
+	sources := sqlHistorySources("data/sales.csv", "warehouse")
+	if len(sources) != 2 || sources[0] != "data/sales.csv" || sources[1] != "connector:warehouse" {
+		t.Fatalf("unexpected source ordering: %#v", sources)
+	}
+	connectorOnly := sqlHistorySources("", "warehouse")
+	if len(connectorOnly) != 1 || connectorOnly[0] != "connector:warehouse" {
+		t.Fatalf("unexpected connector-only sources: %#v", connectorOnly)
+	}
+}
+
 func TestFormatSQLRunReuseIncludesRunnableSQL(t *testing.T) {
 	output := formatSQLRunReuse("Loaded latest SQL for editing", metadataSvc.SQLRunRecord{
 		RelPath:     "data/sales.csv",
@@ -319,6 +347,21 @@ func TestIsSQLiteRunUsesEngineOrPath(t *testing.T) {
 	}
 	if isSQLiteRun(metadataSvc.SQLRunRecord{Engine: "native-dataset-sql", RelPath: "data/sales.csv"}) {
 		t.Fatal("did not expect CSV run to be detected as sqlite")
+	}
+}
+
+func TestConnectorRunDetectionParsesSourcePath(t *testing.T) {
+	if !isConnectorRun(metadataSvc.SQLRunRecord{RelPath: "connector:warehouse"}) {
+		t.Fatal("expected connector run to be detected")
+	}
+	if got := connectorProfileIDFromSourcePath("connector:warehouse"); got != "warehouse" {
+		t.Fatalf("unexpected connector id: %q", got)
+	}
+	if isConnectorRun(metadataSvc.SQLRunRecord{RelPath: "data/sales.csv"}) {
+		t.Fatal("did not expect dataset run to be detected as connector run")
+	}
+	if got := connectorProfileIDFromSourcePath("data/sales.csv"); got != "" {
+		t.Fatalf("expected empty connector id, got %q", got)
 	}
 }
 

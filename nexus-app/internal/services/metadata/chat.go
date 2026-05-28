@@ -23,7 +23,6 @@ func (s *Store) SaveChatMessage(record ChatMessageRecord) error {
 	if err != nil {
 		return err
 	}
-	defer db.Close()
 	record = s.NormalizeChatMessageRecord(record)
 	sourcePathsJSON, _ := json.Marshal(record.SourcePaths)
 	_, err = db.Exec(
@@ -54,7 +53,6 @@ func (s *Store) ListChatMessages(limit int) ([]ChatMessageRecord, error) {
 	if err != nil {
 		return nil, err
 	}
-	defer db.Close()
 	rows, err := db.Query(
 		`SELECT id, role, content, model, source_paths_json, created_at
 		 FROM (
@@ -84,7 +82,6 @@ func (s *Store) SearchChatMessages(query string, limit int) ([]ChatMessageRecord
 	if err != nil {
 		return nil, err
 	}
-	defer db.Close()
 	if query == "" {
 		rows, err := db.Query(
 			`SELECT id, role, content, model, source_paths_json, created_at

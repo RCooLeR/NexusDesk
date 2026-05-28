@@ -228,12 +228,17 @@ Goal: rebuild Data & Analytics as native data tooling, not a crowded web panel.
 - [x] Add first native SQL notebook execution slice with multiline cell directives, SQL/chart cells, per-cell results, isolated failures, and SQL run lineage.
 - [x] Add first native SQL notebook run Markdown artifact export with per-cell SQL, rows, plans, chart SVG, metadata, and source lineage.
 - [x] Add first native SQL history reuse/rerun actions for selected dataset or SQLite sources.
+- [x] Extend native SQL history reuse/rerun actions with connector-source fallback and connector rerun routing by profile id.
 - [x] Add first native Data panel result tabs for notebook summary, rows, plan, and charts.
 - [x] Add first native visual notebook controls for inserting SQL and chart cell templates.
 - [x] Port first SQLite workspace connector browser with read-only schema, index, relationship, row-count, and capped-sample inspection.
 - [x] Add native SQLite connector saved query snippets plus CSV and Markdown query-result artifacts with lineage metadata.
-- [ ] Port external DB profile storage and read-only query guards.
-- [ ] Add native table/grid widget strategy.
+- [x] Port external DB profile storage and read-only query guards.
+- [x] Add first native external connector profile workflows in Data panel: list/save/delete profiles, read-only SQL validation, profile test, profile inspection, run query, and query cancellation for PostgreSQL, MySQL/MariaDB, SQL Server, and file-based SQLite profiles.
+- [x] Persist native external connector query runs into SQL history metadata with connector lineage dependencies.
+- [x] Enforce workspace-scoped external connector profile filtering in native Data UI while retaining optional global profiles.
+- [x] Add DuckDB profile test/query/inspection code paths with explicit driver-enabled-build guard and clear unsupported-build errors.
+- [x] Add first native table/grid widget strategy for query-result rows in Data panel (dataset, SQLite, connector).
 - [x] Add chart preview/artifact generation.
 - [x] Add automatic SVG line chart previews/artifacts for ordered date or numeric series.
 - [x] Add richer dashboard SVG previews/artifacts with metrics, chart panel, and bounded-source notes.
@@ -312,10 +317,10 @@ Exit criteria:
 1. Create a Wails-only feature inventory and mark each item `port`, `replace`, `drop`, or `later`.
 2. Finish native editor/UI parity: syntax highlighting plan, find/replace, split editor groups or equivalent layout decision, breadcrumbs/outline/minimap strategy, and less cramped native panels.
 3. Design and implement native protected secret storage on Windows first, with explicit unsupported-platform behavior.
-4. Port external database profile storage and guarded read-only query workflows from Wails reference into native services and Settings/Data UI.
+4. Add live read-only execution, inspection, and cancellation flows for external connector profiles after the native profile store and SQL guard baseline.
 5. Route long indexing, OCR, dump imports, connector pulls, report generation, and long agent runs through durable jobs.
 6. Add dump import job design before any Docker/database import execution.
-7. Add first Diagnostics plan/surface for provider status, metadata health, job failures, and GPU/model runtime.
+7. Continue Diagnostics hardening with deeper provider-specific runtime/GPU checks and guided remediation workflows.
 8. Keep cleaning Wails-era documentation wording so active docs clearly describe `nexus-app/` behavior and mark `app-wails/` as reference history.
 
 ## Production Readiness Checklist
@@ -332,9 +337,9 @@ Exit criteria:
 ### Gate 2: Safety And Reliability Beta
 
 - [ ] Durable job routing for OCR, dump imports, connector pulls, long indexing, report generation, and long agent runs.
-- [ ] Metadata recovery/export path for `.nexusdesk/metadata`.
-- [ ] Backup/export flow for local-first workspace state.
-- [ ] Diagnostics panel for provider status, metadata health, job history, app logs, GPU/model runtime, and recent failures.
+- [x] Metadata recovery/export path for `.nexusdesk/metadata`.
+- [x] Backup/export flow for local-first workspace state.
+- [x] Diagnostics panel for provider status, metadata health, job history, app logs, GPU/model runtime, and recent failures.
 - [ ] Audit coverage for connector jobs, OCR, dump imports, Docker mutations, shell tools, and future high-risk operations.
 - [ ] Failure tests for folder open, malformed files, corrupt metadata, missing providers, and canceled long work.
 
@@ -365,11 +370,13 @@ The Fyne migration must not drop product ambition, but this section is intention
 - [x] Native folder create flow with rooted validation, metadata guard, rollback removal for empty created folders, quick action, and tree context menu action.
 - [ ] IDE-grade project tree polish with richer density, better icons/badges, keyboard navigation, and broader context actions.
 - [x] First native multi-tab editor state with pinned ordering, dirty markers, safe save, revert, and explicit discard confirmation when closing modified tabs.
+- [x] First native text-editor find/replace flow with Edit menu actions, keyboard shortcuts, next-match navigation, and replace-next/replace-all actions.
 - [ ] Multi-tab editor polish with split editor groups, breadcrumbs, outline, minimap, find, format, and go-to-definition where available.
 - [ ] Syntax highlighting strategy for common languages, Markdown, SQL, JSON/YAML/XML, Docker/Compose, logs, and config files.
 - [x] Markdown source/rendered toggle.
 - [x] Safe edit preview/apply/rollback for text, code, patches, appends, encoding-aware writes, and agent-safe mutation tools.
 - [x] Workspace search over paths, previewable text, artifacts, chat history, and lightweight regex content matches.
+- [x] Expand workspace search to return multiple content matches per file with bounded per-file caps.
 - [x] Problems panel for TODO/FIXME/HACK/BUG markers, merge conflicts, and JSON errors.
 - [ ] Problems panel language diagnostics beyond lightweight local scans.
 - [x] Git status, branch, changed-file tree, staged/unstaged groups, file diff, split/unified/diff-only views, hunk actions, AI diff summary, and commit draft.
@@ -397,10 +404,24 @@ The Fyne migration must not drop product ambition, but this section is intention
 - [x] SQLite connector saved queries plus CSV/Markdown result exports.
 - [x] SQLite connector query cancellation from the native Data panel using context-aware read-only query execution.
 - [ ] Richer SQLite connector lineage actions for opening sources, viewing dependent artifacts, and rebuilding stale outputs.
-- [ ] External database profiles for PostgreSQL, MySQL/MariaDB, SQL Server, DuckDB files, and future engines with protected credentials.
-- [ ] Read-only SQL guard with strong comment/string handling, mutation blocking, caps, timeouts, cancellation, and redacted errors.
+- [ ] External database profiles for PostgreSQL, MySQL/MariaDB, SQL Server, DuckDB files, and future engines with protected credentials plus live native execution paths.
+- [x] Read-only SQL guard with comment/string-aware parsing, single-statement enforcement, and mutation/export blocking across live external connector execution.
+- [x] Add connector runtime error redaction baseline for DSN/URL/query-string/JSON password fields before UI display.
+- [x] Continue SQL guard hardening with engine-specific allowlist tuning.
+- [x] Expand connector runtime error sanitization coverage for token/api-key/auth-header edge cases.
 - [ ] Database dump import jobs using temporary isolated environments before any direct mutation workflows exist.
-- [ ] Native table/grid strategy suitable for large result sets.
+- [x] Add first grid copy affordances in Data panel (copy selected cell/row as clipboard text/TSV).
+- [x] Add Data-grid keyboard/menu copy command (`Ctrl/Cmd+C` + Edit menu) scoped to active Data tab selection.
+- [x] Add Data-grid keyboard navigation shortcuts (`Alt+Arrow`) with clamped selection and auto-scroll in the Rows tab.
+- [x] Remove nested Rows-tab scroll wrapping, keep header row sticky, and add `Alt+PgUp/PgDn` step navigation for larger result sets.
+- [x] Add Data-grid boundary navigation shortcuts (`Alt+Home/End`, `Alt+Shift+Home/End`) for fast row/column jumps in large tables.
+- [x] Tune grid column-width estimation with bounded full-span row sampling so large-result tail values influence width without scanning all rows.
+- [x] Add adaptive dense-grid render policy (truncation, column-cap tightening, separator hiding) plus explicit sampled-row hint in Data status.
+- [x] Add adaptive width-sampling budgets and max-width early-exit so very large/wide result sets reduce column-estimation work.
+- [x] Reuse a single Data rows table across result refreshes and apply only changed column widths to reduce redraw churn.
+- [x] Add ultra-wide header-width mode and dense-result shallow row caching to reduce width-estimation and deep-copy overhead on very large grids.
+- [x] Avoid duplicate row-sampling work and skip redundant container-object swaps/unselect calls during repeated Data-grid refreshes.
+- [x] Expand native table/grid strategy with richer keyboard nav and larger-result virtualization tuning.
 - [x] First SVG bar chart preview/artifact generation from bounded query results.
 - [x] Line chart previews/artifacts for ordered date or numeric query results.
 - [x] Richer dashboard SVG visuals with KPI cards, chart panel, and dataset notes.
@@ -426,6 +447,7 @@ The Fyne migration must not drop product ambition, but this section is intention
 
 - [ ] Provider settings for Ollama/OpenAI-compatible endpoints, curated local model catalog, runtime context-window detection, response reserve, GPU diagnostics, and provider probes.
 - [x] Native provider settings for Ollama/OpenAI-compatible endpoints, provider probes, context-window options, response reserve, and Ollama runtime diagnostics.
+- [x] Add API key input/persistence in native settings and propagate bearer auth into OpenAI-compatible chat/probe config.
 - [ ] Curated native local model catalog, deeper GPU diagnostics, and automatic loaded-model context-window tuning.
 - [x] Streaming chat with selected files/directories/project context, token-budgeted history, persisted turns, and source-path context.
 - [ ] Weak-evidence warnings, retries, answer comparison, richer citations, and assistant memory/profile parity in native UI.
@@ -464,7 +486,7 @@ The Fyne migration must not drop product ambition, but this section is intention
 - [ ] OS-protected secrets on Windows, macOS Keychain, and Linux Secret Service/libsecret.
 - [x] Append-only/persisted audit records for approvals, native agent/tool runs, file changes with rollback records, tasks, jobs, SQL runs, and artifacts.
 - [ ] Extend audit coverage to future connector sync jobs, OCR, dump imports, shell, and Docker mutations.
-- [ ] Export/backup flows for local-first data.
+- [x] Export/backup flows for local-first data.
 
 ### Jobs, Persistence, And Observability
 
@@ -473,8 +495,30 @@ The Fyne migration must not drop product ambition, but this section is intention
 - [x] JSON compatibility import from Wails-era workspaces for chat history, approvals, artifact sidecars, and tool-run logs.
 - [x] Legacy Wails SQLite dataset SQL run and dataset dependency import into native SQLite metadata.
 - [x] First durable job monitor with progress log tail, cancellation, retry from persisted task runs, and task-report output opening.
-- [ ] Folder open remains cheap: no Git, Docker, OCR, connector pulls, dump imports, model calls, shell commands, or deep indexing.
-- [ ] Diagnostics panel for app logs, provider status, GPU/model status, metadata health, and job history.
+- [x] First Diagnostics surface for provider probe/runtime status, metadata health, and recent persisted job/task/SQL/agent failure snapshots.
+- [x] Diagnostics quick actions and recommended-remediation hints for provider/settings, metadata health, and recent failure triage.
+- [x] Route native document-report and document-extraction artifact generation through durable jobs with persisted job records and job-output opening.
+- [x] Route external connector query execution through durable jobs with cancellation, job logs, and Jobs-panel output fallback for non-task job types.
+- [x] Route external connector test/inspect flows through durable jobs with cancellable context propagation and Jobs-panel output fallback.
+- [x] Persist external connector test/inspect job lineage into dataset dependency metadata for audit/history coverage.
+- [x] Add shell-level regression tests for connector test/inspect lineage persistence, including canceled-path metadata.
+- [x] Classify canceled dataset/SQLite/connector SQL runs as `canceled` (not `failed`) in persisted metadata, with regression tests.
+- [x] Route operations scan/inspect/runbook export through durable jobs with cancellable context-aware service methods and consistent job output handling.
+- [x] Route dataset profile/query/SQL actions through durable jobs with consistent cancel/status/output behavior in Data and Jobs panels.
+- [x] Route SQL notebook run/export flows through durable jobs with cancellable context propagation and artifact/job linkage.
+- [x] Route chart/dashboard preview+export and SQLite query artifact export through durable jobs with cancellation support and artifact/job linkage.
+- [x] Add context-aware dataset service methods for profile/query/SQL so job cancellation propagates cleanly.
+- [x] Add context-aware dataset notebook execution methods so cancellation propagates across notebook cell runs.
+- [x] Add native metadata backup export (zipped `.nexusdesk/metadata` bundle) with Diagnostics quick action.
+- [x] Add automatic corrupt-metadata recovery on workspace open (archive malformed SQLite DB, recreate clean store) with regression tests.
+- [x] Move Wails-era compatibility metadata import off the workspace-open critical path (async with completion stamp) to keep folder open responsive.
+- [x] Route async compatibility metadata import through durable jobs for visibility, status, and audit continuity.
+- [x] Skip compatibility-import job scheduling after completion stamp exists to keep repeated workspace opens lightweight.
+- [x] Deduplicate in-flight compatibility imports per workspace to prevent duplicate background import jobs on rapid reopen/refresh.
+- [x] Harden compatibility import stamp handling: atomic writes + malformed-stamp quarantine fallback so startup never stalls on bad marker JSON.
+- [x] Add context-aware compatibility import execution and route workspace import jobs through cancellable metadata-import context.
+- [x] Folder open remains cheap: no Git, Docker, OCR, connector pulls, dump imports, model calls, shell commands, or deep indexing.
+- [x] Diagnostics panel for app logs, provider status, GPU/model status, metadata health, and job history.
 
 ### Extensibility And Community
 
@@ -483,3 +527,46 @@ The Fyne migration must not drop product ambition, but this section is intention
 - [ ] Plugin/MCP strategy after native core tools are stable.
 - [ ] Stable service interfaces for community-contributed connectors and document parsers.
 - [ ] CI matrix for Windows first, then Linux/macOS once platform secrets and Fyne builds are ready.
+
+## Claude Findings Integration
+
+- [x] Add API key to native settings and propagate `Authorization: Bearer` config into OpenAI-compatible chat/probe flows.
+- [x] Unblock agent `run_task` execution path by allowing shell-task approval when requested by agent flow.
+- [x] Mirror write-path symlink protections for all read paths (`PreviewFile`, context-pack, search) by rechecking resolved real paths.
+- [x] Rework metadata store hot path so `Store` opens DB once and runs `Ensure` outside hot loops.
+- [ ] Replace fixed model dropdown with a configurable/free-form model selector and in-panel probe-driven model validation.
+- [ ] Add per-call agent approval modal for high-risk mutation tools instead of only ambient full-project approval.
+- [x] Extend file preview to truncated text preview over cap and only reject truly non-previewable binaries.
+- [ ] Align preview/context candidate detection across extensions and filename basenames via a shared policy table.
+- [ ] Improve encoding fallback from hardcoded Windows-1251 for unsupported text encodings.
+- [ ] Avoid full-history replay in approval persistence; persist only the new record and serialize repository writes safely.
+- [ ] Add single-file-open entrypoint (file picker/quick-open) in addition to folder open flow.
+- [ ] Consolidate bottom-panel navigation to reduce tab discoverability and density issues.
+- [ ] Split `internal/ui/shell/data_panel.go` into smaller UI responsibility files.
+- [ ] Ensure `ApplyFileAppend` failure path cleans rollback snapshots cleanly and checks close errors.
+- [ ] Surface directory-entry truncation in navigator UI when entry cap clips folder contents.
+- [ ] Verify explicit discard confirmation path on dirty-tab close and add regression coverage.
+- [ ] Replace full-tree refresh on file operations with targeted tree node refresh helpers.
+- [ ] Implement hunk-windowed unified diffs with optional large-file elision.
+- [ ] Add guardrails for empty role/action string formatting in agent/activity path rendering.
+- [ ] Add settings-level LLM connection test action with model count and warning reporting.
+- [ ] Surface persistence failures from repository writes in activity/diagnostics.
+- [ ] Cancel streaming LLM response handlers promptly when request context is canceled.
+- [ ] Make provider configuration explicit and extensible beyond built-in options with protocol flags.
+- [x] Clamp agent context budget fallback to safe non-trivial defaults when settings become misconfigured.
+- [ ] Scope global shortcuts so native editor copy remains reliable.
+- [x] Improve search snippets to center on match location for long lines.
+- [x] Normalize `cleanRel` output using `filepath.Clean` after traversal checks.
+- [x] Cap `activityText` and `activityLines` growth so activity rendering remains bounded.
+- [ ] Expand append target safety sampling and encoding checks for UTF-16 and sparse/edge-case encodings.
+- [ ] Update welcome flow with immediate open action from startup screen.
+- [ ] Remove migration wording from About dialog and align with release messaging.
+- [ ] Define and document non-Windows CI/build support matrix and execution plan.
+- [ ] Revisit default LLM model strategy to avoid hard-coded defaults that rarely match local setups.
+- [ ] Replace locale-bound mutation-claim heuristics with mutation-observation-driven verification.
+- [ ] Expand safe task execution whitelist beyond current npm/go/compose-only support.
+- [ ] Replace shell string execution for discovered tasks with argument-based process invocation.
+- [x] Avoid schema file rewrite on every metadata `Ensure` invocation.
+- [ ] Separate Ask vs Agent system prompt behavior for clearer model role control.
+- [ ] Add quick-open keyboard workflow (e.g., Ctrl+P) for direct file navigation.
+- [ ] Close welcome tab on first workspace open or repurpose into workspace-aware home surface.

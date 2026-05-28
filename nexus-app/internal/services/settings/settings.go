@@ -4,6 +4,7 @@ type Settings struct {
 	Provider              string
 	BaseURL               string
 	Model                 string
+	APIKey                string
 	ContextTokens         int
 	ResponseReserveTokens int
 }

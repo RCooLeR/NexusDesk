@@ -1,6 +1,7 @@
 package metadata
 
 import (
+	"context"
 	"database/sql"
 	"errors"
 	"os"
@@ -31,10 +32,16 @@ type compatibilityDatasetDependency struct {
 	LastRefresh string
 }
 
-func (s *Store) importCompatibilitySQLiteDatasets() (int, int, int, error) {
+func (s *Store) importCompatibilitySQLiteDatasets(ctx context.Context) (int, int, int, error) {
+	if err := compatibilityContextErr(ctx); err != nil {
+		return 0, 0, 0, err
+	}
 	if _, err := os.Stat(s.path); errors.Is(err, os.ErrNotExist) {
 		return 0, 0, 0, nil
 	} else if err != nil {
+		return 0, 0, 0, err
+	}
+	if err := s.closeCachedDB(); err != nil {
 		return 0, 0, 0, err
 	}
 	db, err := sql.Open("sqlite", s.path)
@@ -59,6 +66,10 @@ func (s *Store) importCompatibilitySQLiteDatasets() (int, int, int, error) {
 		db.Close()
 		return 0, 0, sqlSkipped + dependencySkipped, nil
 	}
+	if err := compatibilityContextErr(ctx); err != nil {
+		db.Close()
+		return 0, 0, sqlSkipped + dependencySkipped, err
+	}
 	if sqlLegacy {
 		if err := renameCompatibilityTable(db, "sql_runs", "legacy_wails_sql_runs"); err != nil {
 			db.Close()
@@ -78,7 +89,12 @@ func (s *Store) importCompatibilitySQLiteDatasets() (int, int, int, error) {
 	importedSQL := 0
 	importedDependencies := 0
 	skipped := sqlSkipped + dependencySkipped
-	for _, item := range sqlRuns {
+	for index, item := range sqlRuns {
+		if index%64 == 0 {
+			if err := compatibilityContextErr(ctx); err != nil {
+				return importedSQL, importedDependencies, skipped, err
+			}
+		}
 		record := s.compatibilitySQLRunRecord(item)
 		if err := s.SaveSQLRun(record); err != nil {
 			skipped++
@@ -86,7 +102,12 @@ func (s *Store) importCompatibilitySQLiteDatasets() (int, int, int, error) {
 		}
 		importedSQL++
 	}
-	for _, item := range dependencies {
+	for index, item := range dependencies {
+		if index%64 == 0 {
+			if err := compatibilityContextErr(ctx); err != nil {
+				return importedSQL, importedDependencies, skipped, err
+			}
+		}
 		record := s.compatibilityDatasetDependencyRecord(item)
 		if record.SourcePath == "" || record.DependentRef == "" {
 			skipped++

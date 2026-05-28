@@ -12,7 +12,6 @@ func (s *Store) SaveJob(job jobssvc.Job) error {
 	if err != nil {
 		return err
 	}
-	defer db.Close()
 	logTail, _ := json.Marshal(job.LogTail)
 	_, err = db.Exec(
 		`INSERT INTO jobs (id, workspace_root, kind, label, status, message, error, log_tail_json, started_at, completed_at)
@@ -44,7 +43,6 @@ func (s *Store) ListJobs() ([]jobssvc.Job, error) {
 	if err != nil {
 		return nil, err
 	}
-	defer db.Close()
 	rows, err := db.Query(
 		`SELECT id, kind, label, status, message, error, log_tail_json, started_at, completed_at
 		 FROM jobs WHERE workspace_root = ? ORDER BY started_at DESC, id DESC LIMIT 200`,
@@ -78,7 +76,6 @@ func (s *Store) SaveTaskRun(record TaskRunRecord) error {
 	if err != nil {
 		return err
 	}
-	defer db.Close()
 	record = s.NormalizeTaskRunRecord(record)
 	_, err = db.Exec(
 		`INSERT INTO task_runs (id, workspace_root, job_id, task_id, kind, label, command, cwd, source, status, exit_code, stdout, stderr, message, artifact_path, started_at, completed_at, duration_ms)
@@ -122,7 +119,6 @@ func (s *Store) ListTaskRuns(limit int) ([]TaskRunRecord, error) {
 	if err != nil {
 		return nil, err
 	}
-	defer db.Close()
 	rows, err := db.Query(
 		`SELECT id, job_id, task_id, kind, label, command, cwd, source, status, exit_code, stdout, stderr, message, artifact_path, started_at, completed_at, duration_ms
 		 FROM task_runs WHERE workspace_root = ? ORDER BY started_at DESC, id DESC LIMIT ?`,
@@ -171,7 +167,6 @@ func (s *Store) LatestTaskRunForJob(jobID string) (TaskRunRecord, bool, error) {
 	if err != nil {
 		return TaskRunRecord{}, false, err
 	}
-	defer db.Close()
 	row := db.QueryRow(
 		`SELECT id, job_id, task_id, kind, label, command, cwd, source, status, exit_code, stdout, stderr, message, artifact_path, started_at, completed_at, duration_ms
 		 FROM task_runs WHERE workspace_root = ? AND job_id = ? ORDER BY started_at DESC, id DESC LIMIT 1`,

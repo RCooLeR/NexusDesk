@@ -1,6 +1,7 @@
 package datasets
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"strings"
@@ -8,6 +9,16 @@ import (
 )
 
 func (s *Service) RunNotebook(root string, notebook Notebook) (NotebookRunResult, error) {
+	return s.RunNotebookContext(context.Background(), root, notebook)
+}
+
+func (s *Service) RunNotebookContext(ctx context.Context, root string, notebook Notebook) (NotebookRunResult, error) {
+	if ctx == nil {
+		ctx = context.Background()
+	}
+	if err := checkContext(ctx); err != nil {
+		return NotebookRunResult{}, err
+	}
 	if strings.TrimSpace(notebook.RelPath) == "" {
 		return NotebookRunResult{}, errors.New("notebook source dataset is required")
 	}
@@ -22,10 +33,13 @@ func (s *Service) RunNotebook(root string, notebook Notebook) (NotebookRunResult
 	executed := 0
 	failed := 0
 	for _, cell := range notebook.Cells {
+		if err := checkContext(ctx); err != nil {
+			return NotebookRunResult{}, err
+		}
 		if cell.Kind != "sql" && cell.Kind != "chart" {
 			continue
 		}
-		run := s.runNotebookCell(root, notebook.RelPath, cell)
+		run := s.runNotebookCellContext(ctx, root, notebook.RelPath, cell)
 		if run.SQL != "" || run.Kind == "chart" {
 			executed++
 		}
@@ -45,6 +59,13 @@ func (s *Service) RunNotebook(root string, notebook Notebook) (NotebookRunResult
 }
 
 func (s *Service) runNotebookCell(root string, relPath string, cell NotebookCell) NotebookCellRun {
+	return s.runNotebookCellContext(context.Background(), root, relPath, cell)
+}
+
+func (s *Service) runNotebookCellContext(ctx context.Context, root string, relPath string, cell NotebookCell) NotebookCellRun {
+	if ctx == nil {
+		ctx = context.Background()
+	}
 	started := time.Now().UTC()
 	run := NotebookCellRun{
 		CellID:    cell.ID,
@@ -59,7 +80,13 @@ func (s *Service) runNotebookCell(root string, relPath string, cell NotebookCell
 		run.DurationMs = run.CompletedAt.Sub(started).Milliseconds()
 		return run
 	}
-	sqlResult, err := s.QuerySQL(root, relPath, run.SQL)
+	if err := checkContext(ctx); err != nil {
+		run.Error = err.Error()
+		run.CompletedAt = time.Now().UTC()
+		run.DurationMs = run.CompletedAt.Sub(started).Milliseconds()
+		return run
+	}
+	sqlResult, err := s.QuerySQLContext(ctx, root, relPath, run.SQL)
 	if err != nil {
 		run.Error = err.Error()
 		run.CompletedAt = time.Now().UTC()
@@ -74,6 +101,9 @@ func (s *Service) runNotebookCell(root string, relPath string, cell NotebookCell
 		} else {
 			run.ChartResult = chart
 		}
+	}
+	if err := checkContext(ctx); err != nil {
+		run.Error = err.Error()
 	}
 	run.CompletedAt = time.Now().UTC()
 	run.DurationMs = run.CompletedAt.Sub(started).Milliseconds()

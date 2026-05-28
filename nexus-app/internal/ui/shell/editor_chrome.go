@@ -13,12 +13,13 @@ import (
 )
 
 func (v *View) newEditorPanel(tab editorSvc.Tab, preview domain.FilePreview) fyne.CanvasObject {
+	v.editorPreviews[tab.ID] = preview
 	content := newFilePreview(preview)
 	path := widget.NewLabel(preview.RelPath)
 	path.TextStyle = fyne.TextStyle{Monospace: true}
 	state := widget.NewLabel(editorStateText(tab))
 	save := widget.NewButtonWithIcon("", theme.DocumentSaveIcon(), func() {
-		v.saveEditorDraft(tab.ID, preview)
+		v.saveEditorDraft(tab.ID)
 	})
 	save.Importance = widget.MediumImportance
 	setSaveEnabled(save, tab.Dirty)
@@ -36,12 +37,14 @@ func (v *View) newEditorPanel(tab editorSvc.Tab, preview domain.FilePreview) fyn
 			setSaveEnabled(save, next.Dirty)
 			v.updateEditorTabState(next)
 		})
+	} else {
+		v.removeTextEditor(tab.ID)
 	}
 	tools := container.NewHBox(pin, save, state)
 	return container.NewBorder(container.NewBorder(nil, nil, path, tools), nil, nil, nil, content)
 }
 
-func (v *View) saveEditorDraft(tabID string, preview domain.FilePreview) {
+func (v *View) saveEditorDraft(tabID string) {
 	workspace := v.state.Workspace()
 	if workspace.Root == "" {
 		v.addActivity("Open a workspace before saving.")
@@ -54,6 +57,11 @@ func (v *View) saveEditorDraft(tabID string, preview domain.FilePreview) {
 	}
 	if !tab.Dirty {
 		v.addActivity("No draft changes to save.")
+		return
+	}
+	preview, ok := v.editorPreviews[tab.ID]
+	if !ok {
+		v.addActivity("Could not resolve editor preview for saving " + tab.Title + ".")
 		return
 	}
 	proposal, err := v.workspaceService.ApplyFileWrite(workspace.Root, workspaceSvc.FileWriteRequest{
@@ -73,11 +81,44 @@ func (v *View) saveEditorDraft(tabID string, preview domain.FilePreview) {
 	preview.Text = next.SourceText
 	preview.Size = int64(proposal.Size)
 	preview.Encoding = proposal.Encoding
+	v.editorPreviews[next.ID] = preview
 	if item := v.openTabs[next.ID]; item != nil {
 		item.Content = v.newEditorPanel(next, preview)
 	}
 	v.updateEditorTabState(next)
 	v.addActivity(proposal.Message)
+}
+
+func (v *View) saveActiveEditorDraft() {
+	tabID, _, ok := v.activeTextEditor()
+	if !ok {
+		v.addActivity("Select a text editor tab before saving.")
+		return
+	}
+	v.saveEditorDraft(tabID)
+}
+
+func (v *View) revertEditorDraft(tabID string) {
+	next, ok := v.editorSession.RevertDraft(tabID)
+	if !ok {
+		return
+	}
+	editor, ok := v.textEditor(tabID)
+	if !ok {
+		return
+	}
+	editor.source.SetText(next.DraftText)
+	editor.applyTabState(next)
+	v.updateEditorTabState(next)
+}
+
+func (v *View) revertActiveEditorDraft() {
+	tabID, _, ok := v.activeTextEditor()
+	if !ok {
+		v.addActivity("Select a text editor tab before reverting.")
+		return
+	}
+	v.revertEditorDraft(tabID)
 }
 
 func setSaveEnabled(button *widget.Button, enabled bool) {

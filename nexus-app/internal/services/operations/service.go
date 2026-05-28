@@ -1,6 +1,7 @@
 package operations
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"os"
@@ -24,12 +25,29 @@ func New() *Service {
 }
 
 func (s *Service) Scan(root string) (ScanResult, error) {
+	return s.ScanContext(context.Background(), root)
+}
+
+func (s *Service) ScanContext(ctx context.Context, root string) (ScanResult, error) {
+	if ctx == nil {
+		ctx = context.Background()
+	}
+	select {
+	case <-ctx.Done():
+		return ScanResult{}, ctx.Err()
+	default:
+	}
 	absRoot, err := cleanRoot(root)
 	if err != nil {
 		return ScanResult{}, err
 	}
 	result := ScanResult{Files: []File{}}
 	err = filepath.WalkDir(absRoot, func(path string, entry os.DirEntry, walkErr error) error {
+		select {
+		case <-ctx.Done():
+			return ctx.Err()
+		default:
+		}
 		if walkErr != nil {
 			result.Summary.Unreadable++
 			if entry != nil && entry.IsDir() {
@@ -91,6 +109,18 @@ func (s *Service) Scan(root string) (ScanResult, error) {
 }
 
 func (s *Service) Inspect(root string, relPath string) (Inspection, error) {
+	return s.InspectContext(context.Background(), root, relPath)
+}
+
+func (s *Service) InspectContext(ctx context.Context, root string, relPath string) (Inspection, error) {
+	if ctx == nil {
+		ctx = context.Background()
+	}
+	select {
+	case <-ctx.Done():
+		return Inspection{}, ctx.Err()
+	default:
+	}
 	_, cleanRelPath, target, info, err := resolveFile(root, relPath)
 	if err != nil {
 		return Inspection{}, err
@@ -104,9 +134,19 @@ func (s *Service) Inspect(root string, relPath string) (Inspection, error) {
 	if info.Size() > readLimit {
 		truncated = true
 	}
+	select {
+	case <-ctx.Done():
+		return Inspection{}, ctx.Err()
+	default:
+	}
 	content, err := readBounded(target, readLimit)
 	if err != nil {
 		return Inspection{}, err
+	}
+	select {
+	case <-ctx.Done():
+		return Inspection{}, ctx.Err()
+	default:
 	}
 	text := string(content)
 	warnings := []string{"Read-only inspection only. Nexus did not run Docker, shell, or service commands."}

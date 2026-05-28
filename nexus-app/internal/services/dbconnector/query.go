@@ -3,7 +3,6 @@ package dbconnector
 import (
 	"context"
 	"database/sql"
-	"errors"
 	"fmt"
 	"path/filepath"
 	"strings"
@@ -117,25 +116,9 @@ func NormalizeSQLiteQueryRequest(request SQLiteQueryRequest) SQLiteQueryRequest 
 }
 
 func normalizeReadOnlySQLiteQuery(query string) (string, error) {
-	query = strings.TrimSpace(query)
-	if query == "" {
-		return "", errors.New("enter a read-only SELECT query")
-	}
-	if err := validateSingleStatement(query); err != nil {
-		return "", err
-	}
-	for strings.HasSuffix(query, ";") {
-		query = strings.TrimSpace(strings.TrimSuffix(query, ";"))
-	}
-	if query == "" {
-		return "", errors.New("enter a read-only SELECT query")
-	}
-	tokens := tokenizeSQL(query)
-	if len(tokens) == 0 || (tokens[0] != "select" && tokens[0] != "with") {
-		return "", errors.New("workspace SQLite connector only supports read-only SELECT queries")
-	}
-	if containsBlockedSQL(query) {
-		return "", errors.New("workspace SQLite connector blocks mutating SQL")
-	}
-	return query, nil
+	return normalizeReadOnlySQL(query,
+		"workspace SQLite connector only supports read-only SELECT queries",
+		"workspace SQLite connector blocks mutating SQL",
+		"sqlite",
+	)
 }

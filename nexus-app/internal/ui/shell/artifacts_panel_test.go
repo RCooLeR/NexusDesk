@@ -41,6 +41,21 @@ func TestDocumentSetArtifactTitle(t *testing.T) {
 	}
 }
 
+func TestDocumentArtifactJobLabels(t *testing.T) {
+	if got := documentSetArtifactJobLabel(""); got != "Document report (project)" {
+		t.Fatalf("unexpected empty document report job label: %q", got)
+	}
+	if got := documentSetArtifactJobLabel("docs"); got != "Document report (docs)" {
+		t.Fatalf("unexpected document report job label: %q", got)
+	}
+	if got := documentExtractionArtifactJobLabel(""); got != "Document extraction" {
+		t.Fatalf("unexpected empty extraction job label: %q", got)
+	}
+	if got := documentExtractionArtifactJobLabel("docs/a.md"); got != "Document extraction (docs/a.md)" {
+		t.Fatalf("unexpected extraction job label: %q", got)
+	}
+}
+
 func TestDocumentExtractionArtifactInputMapsDocumentFields(t *testing.T) {
 	input := documentExtractionArtifactInput(documentsSvc.ExtractedDocument{
 		Title:     "Guide",

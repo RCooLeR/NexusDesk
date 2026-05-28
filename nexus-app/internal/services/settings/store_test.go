@@ -23,6 +23,7 @@ func TestStoreSavesAndLoadsSettings(t *testing.T) {
 		Provider:              "openai-compatible",
 		BaseURL:               "http://localhost:1234/v1",
 		Model:                 "mistral-small:24b",
+		APIKey:                "test-api-key",
 		ContextTokens:         8192,
 		ResponseReserveTokens: 1024,
 	}
@@ -43,5 +44,12 @@ func TestStoreNormalizesInvalidTokenReserve(t *testing.T) {
 	settings := normalized(Settings{ContextTokens: 1000, ResponseReserveTokens: 1000})
 	if settings.ResponseReserveTokens != 250 {
 		t.Fatalf("expected reserve to be reduced, got %#v", settings)
+	}
+}
+
+func TestStoreNormalizesAPIKeyWhitespace(t *testing.T) {
+	settings := normalized(Settings{APIKey: "  abc123  "})
+	if settings.APIKey != "abc123" {
+		t.Fatalf("expected trimmed API key, got %#v", settings)
 	}
 }

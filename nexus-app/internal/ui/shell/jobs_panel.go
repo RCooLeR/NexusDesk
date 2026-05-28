@@ -3,6 +3,7 @@ package shell
 import (
 	"fmt"
 	"strings"
+	"time"
 
 	"fyne.io/fyne/v2"
 	"fyne.io/fyne/v2/container"
@@ -26,7 +27,7 @@ func (v *View) newJobsPanel() fyne.CanvasObject {
 func (v *View) refreshJobs() {
 	jobs := v.jobService.List()
 	v.jobStatus.SetText(fmt.Sprintf("%d job(s)", len(jobs)))
-	v.jobResults.Objects = jobRows(jobs, v.cancelJob, v.confirmRetryJob, v.openJobOutput, v.taskRunsByJob())
+	v.jobResults.Objects = jobRows(jobs, v.cancelJob, v.confirmRetryJob, v.openJobOutput, v.taskRunsByJob(), v.artifactOutputsByJob())
 	v.jobResults.Refresh()
 }
 
@@ -69,7 +70,18 @@ func (v *View) confirmRetryJob(id string) {
 func (v *View) openJobOutput(id string) {
 	record, ok := v.latestTaskRunForJob(id)
 	if !ok {
-		v.jobStatus.SetText("No persisted task output found for " + id + ".")
+		if artifact, hasArtifact := v.latestArtifactOutputForJob(id); hasArtifact {
+			if v.openArtifactOutputByPath(artifact.RelPath, "Opened artifact output "+artifact.RelPath+".") {
+				return
+			}
+		}
+		if job, hasJob := v.jobService.Get(id); hasJob {
+			v.taskOutput.SetText(formatJobRecord(job))
+			v.taskStatus.SetText("Opened job output for " + id + ".")
+			v.addActivity("Opened job output for " + id + ".")
+			return
+		}
+		v.jobStatus.SetText("No persisted output found for " + id + ".")
 		return
 	}
 	if strings.TrimSpace(record.ArtifactPath) != "" && v.openTaskRunArtifactOutput(record) {
@@ -81,6 +93,13 @@ func (v *View) openJobOutput(id string) {
 }
 
 func (v *View) openTaskRunArtifactOutput(record metadataSvc.TaskRunRecord) bool {
+	if strings.TrimSpace(record.ArtifactPath) == "" {
+		return false
+	}
+	return v.openArtifactOutputByPath(record.ArtifactPath, "Opened task report artifact "+record.ArtifactPath+".")
+}
+
+func (v *View) openArtifactOutputByPath(relPath string, activity string) bool {
 	workspace := v.state.Workspace()
 	if workspace.Root == "" {
 		return false
@@ -90,21 +109,23 @@ func (v *View) openTaskRunArtifactOutput(record metadataSvc.TaskRunRecord) bool 
 		dialog.ShowError(err, v.window)
 		return false
 	}
-	artifacts, err := store.ListArtifacts(artifactsSvc.ListOptions{Query: record.ArtifactPath, IncludeArchived: true})
+	artifacts, err := store.ListArtifacts(artifactsSvc.ListOptions{Query: relPath, IncludeArchived: true})
 	if err != nil {
 		dialog.ShowError(err, v.window)
 		return false
 	}
 	for _, artifact := range artifacts {
-		if artifact.RelPath != record.ArtifactPath {
+		if artifact.RelPath != relPath {
 			continue
 		}
 		v.previewArtifact(artifact)
 		if preview, err := v.workspaceService.PreviewFile(workspace.Root, artifact.RelPath); err == nil {
 			v.openPreviewTab(preview)
 		}
-		v.refreshArtifactsWithQuery(record.ArtifactPath)
-		v.addActivity("Opened task report artifact " + record.ArtifactPath + ".")
+		v.refreshArtifactsWithQuery(relPath)
+		if strings.TrimSpace(activity) != "" {
+			v.addActivity(activity)
+		}
 		return true
 	}
 	return false
@@ -143,7 +164,55 @@ func (v *View) taskRunsByJob() map[string]metadataSvc.TaskRunRecord {
 	return out
 }
 
-func jobRows(jobs []jobsSvc.Job, onCancel func(string), onRetry func(string), onOpenOutput func(string), taskRuns map[string]metadataSvc.TaskRunRecord) []fyne.CanvasObject {
+func (v *View) artifactOutputsByJob() map[string]metadataSvc.ArtifactRecord {
+	out := map[string]metadataSvc.ArtifactRecord{}
+	if v.metadataStore == nil {
+		return out
+	}
+	artifacts, err := v.metadataStore.ListArtifacts("", true, 400)
+	if err != nil {
+		v.addActivity("Could not read artifact records: " + err.Error())
+		return out
+	}
+	for _, artifact := range artifacts {
+		jobID := strings.TrimSpace(artifact.JobID)
+		if jobID == "" || strings.TrimSpace(artifact.RelPath) == "" {
+			continue
+		}
+		if existing, ok := out[jobID]; !ok || artifactRecordSortTime(artifact).After(artifactRecordSortTime(existing)) {
+			out[jobID] = artifact
+		}
+	}
+	return out
+}
+
+func (v *View) latestArtifactOutputForJob(jobID string) (metadataSvc.ArtifactRecord, bool) {
+	artifacts := v.artifactOutputsByJob()
+	record, ok := artifacts[strings.TrimSpace(jobID)]
+	return record, ok
+}
+
+func artifactRecordSortTime(record metadataSvc.ArtifactRecord) time.Time {
+	if !record.GeneratedAt.IsZero() {
+		return record.GeneratedAt
+	}
+	if !record.CreatedAt.IsZero() {
+		return record.CreatedAt
+	}
+	if !record.UpdatedAt.IsZero() {
+		return record.UpdatedAt
+	}
+	return time.Time{}
+}
+
+func jobRows(
+	jobs []jobsSvc.Job,
+	onCancel func(string),
+	onRetry func(string),
+	onOpenOutput func(string),
+	taskRuns map[string]metadataSvc.TaskRunRecord,
+	artifactOutputs map[string]metadataSvc.ArtifactRecord,
+) []fyne.CanvasObject {
 	if len(jobs) == 0 {
 		return []fyne.CanvasObject{widget.NewLabel("No jobs yet.")}
 	}
@@ -166,10 +235,11 @@ func jobRows(jobs []jobsSvc.Job, onCancel func(string), onRetry func(string), on
 		})
 		output.Importance = widget.LowImportance
 		taskRun, hasTaskRun := taskRuns[job.ID]
+		_, hasArtifactOutput := artifactOutputs[job.ID]
 		if job.Status == jobsSvc.StatusRunning || !hasTaskRun || strings.TrimSpace(taskRun.TaskID) == "" {
 			retry.Disable()
 		}
-		if !hasTaskRun || !taskRunHasOutput(taskRun) {
+		if (!hasTaskRun || !taskRunHasOutput(taskRun)) && !hasArtifactOutput && !jobHasOutput(job) {
 			output.Disable()
 		}
 		title := widget.NewLabel(fmt.Sprintf("%s - %s", job.ID, job.Label))
@@ -205,6 +275,52 @@ func taskRunHasOutput(record metadataSvc.TaskRunRecord) bool {
 		strings.TrimSpace(record.Stdout) != "" ||
 		strings.TrimSpace(record.Stderr) != "" ||
 		strings.TrimSpace(record.Message) != ""
+}
+
+func jobHasOutput(job jobsSvc.Job) bool {
+	return strings.TrimSpace(job.Message) != "" || strings.TrimSpace(job.Error) != "" || len(job.LogTail) > 0
+}
+
+func formatJobRecord(job jobsSvc.Job) string {
+	var builder strings.Builder
+	builder.WriteString(firstNonEmptyString(strings.TrimSpace(job.Message), "Job output"))
+	builder.WriteString("\n")
+	builder.WriteString("Status: ")
+	builder.WriteString(strings.TrimSpace(string(job.Status)))
+	builder.WriteString("\nKind: ")
+	builder.WriteString(strings.TrimSpace(job.Kind))
+	builder.WriteString("\nLabel: ")
+	builder.WriteString(strings.TrimSpace(job.Label))
+	if !job.StartedAt.IsZero() {
+		builder.WriteString("\nStarted: ")
+		builder.WriteString(job.StartedAt.Local().Format("2006-01-02 15:04:05"))
+	}
+	if !job.CompletedAt.IsZero() {
+		builder.WriteString("\nCompleted: ")
+		builder.WriteString(job.CompletedAt.Local().Format("2006-01-02 15:04:05"))
+		builder.WriteString("\nDuration: ")
+		builder.WriteString(job.CompletedAt.Sub(job.StartedAt).String())
+	}
+	if strings.TrimSpace(job.Error) != "" {
+		builder.WriteString("\n\nError\n")
+		builder.WriteString(job.Error)
+		if !strings.HasSuffix(job.Error, "\n") {
+			builder.WriteString("\n")
+		}
+	}
+	if len(job.LogTail) > 0 {
+		builder.WriteString("\nLog tail\n")
+		for _, line := range job.LogTail {
+			line = strings.TrimSpace(line)
+			if line == "" {
+				continue
+			}
+			builder.WriteString("- ")
+			builder.WriteString(line)
+			builder.WriteString("\n")
+		}
+	}
+	return builder.String()
 }
 
 func formatTaskRunRecord(record metadataSvc.TaskRunRecord) string {

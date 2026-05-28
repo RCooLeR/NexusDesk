@@ -39,6 +39,8 @@ func (v *View) newSettingsPanel() fyne.CanvasObject {
 	baseURL.SetText(current.BaseURL)
 	model := widget.NewSelect(settingsSvc.ModelOptions(), nil)
 	model.SetSelected(current.Model)
+	apiKey := widget.NewPasswordEntry()
+	apiKey.SetText(current.APIKey)
 	contextTokens := widget.NewEntry()
 	contextTokens.SetText(strconv.Itoa(current.ContextTokens))
 	responseReserve := widget.NewEntry()
@@ -49,11 +51,12 @@ func (v *View) newSettingsPanel() fyne.CanvasObject {
 			widget.NewFormItem("Provider", provider),
 			widget.NewFormItem("Base URL", baseURL),
 			widget.NewFormItem("Model", model),
+			widget.NewFormItem("API key", apiKey),
 			widget.NewFormItem("Context tokens", contextTokens),
 			widget.NewFormItem("Response reserve", responseReserve),
 		},
 		OnSubmit: func() {
-			next, err := settingsFromForm(provider.Selected, baseURL.Text, model.Selected, contextTokens.Text, responseReserve.Text)
+			next, err := settingsFromForm(provider.Selected, baseURL.Text, model.Selected, apiKey.Text, contextTokens.Text, responseReserve.Text)
 			if err != nil {
 				dialog.ShowError(err, v.window)
 				return
@@ -69,7 +72,7 @@ func (v *View) newSettingsPanel() fyne.CanvasObject {
 	return container.NewPadded(container.NewBorder(widget.NewLabel("LLM Provider Settings"), nil, nil, nil, form))
 }
 
-func settingsFromForm(provider string, baseURL string, model string, contextTokensValue string, responseReserveValue string) (settingsSvc.Settings, error) {
+func settingsFromForm(provider string, baseURL string, model string, apiKey string, contextTokensValue string, responseReserveValue string) (settingsSvc.Settings, error) {
 	contextTokens, err := strconv.Atoi(contextTokensValue)
 	if err != nil {
 		return settingsSvc.Settings{}, err
@@ -82,6 +85,7 @@ func settingsFromForm(provider string, baseURL string, model string, contextToke
 		Provider:              provider,
 		BaseURL:               baseURL,
 		Model:                 model,
+		APIKey:                apiKey,
 		ContextTokens:         contextTokens,
 		ResponseReserveTokens: responseReserve,
 	}, nil

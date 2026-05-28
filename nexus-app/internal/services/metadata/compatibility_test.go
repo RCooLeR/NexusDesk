@@ -1,8 +1,10 @@
 package metadata
 
 import (
+	"context"
 	"database/sql"
 	"encoding/json"
+	"errors"
 	"os"
 	"path/filepath"
 	"strings"
@@ -16,6 +18,7 @@ func TestImportCompatibilityDataImportsWailsJSONStores(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
+	t.Cleanup(func() { _ = store.Close() })
 	if _, err := store.Ensure(); err != nil {
 		t.Fatal(err)
 	}
@@ -109,6 +112,7 @@ func TestImportCompatibilityDataIsIdempotent(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
+	t.Cleanup(func() { _ = store.Close() })
 	approvalPath := filepath.Join(root, ".nexusdesk", "approvals", "log.json")
 	writeJSON(t, approvalPath, []compatibilityApprovalRecord{
 		{ID: "approval-1", Action: "file.write", Risk: "high", Decision: "applied", CreatedAt: time.Now().UTC().Format(time.RFC3339Nano)},
@@ -127,12 +131,123 @@ func TestImportCompatibilityDataIsIdempotent(t *testing.T) {
 	}
 }
 
+func TestImportCompatibilityDataWritesCompletionStampAndSkipsSubsequentRuns(t *testing.T) {
+	root := t.TempDir()
+	store, err := NewStore(root)
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() { _ = store.Close() })
+	approvalPath := filepath.Join(root, ".nexusdesk", "approvals", "log.json")
+	writeJSON(t, approvalPath, []compatibilityApprovalRecord{
+		{ID: "approval-1", Action: "file.write", Risk: "high", Decision: "applied", CreatedAt: time.Now().UTC().Format(time.RFC3339Nano)},
+	})
+	first, err := store.ImportCompatibilityData(CompatibilityImportOptions{})
+	if err != nil {
+		t.Fatalf("first import returned error: %v", err)
+	}
+	if first.Approvals != 1 {
+		t.Fatalf("expected one imported approval, got %#v", first)
+	}
+	if _, err := os.Stat(store.compatibilityImportStampPath()); err != nil {
+		t.Fatalf("expected compatibility import stamp file to exist: %v", err)
+	}
+	second, err := store.ImportCompatibilityData(CompatibilityImportOptions{})
+	if err != nil {
+		t.Fatalf("second import returned error: %v", err)
+	}
+	if second.Approvals != 0 || !strings.Contains(strings.ToLower(second.Message), "already completed") {
+		t.Fatalf("expected second import to be skipped, got %#v", second)
+	}
+	forced, err := store.ImportCompatibilityData(CompatibilityImportOptions{Force: true})
+	if err != nil {
+		t.Fatalf("forced import returned error: %v", err)
+	}
+	if forced.Approvals != 1 {
+		t.Fatalf("expected forced import to run again, got %#v", forced)
+	}
+}
+
+func TestCompatibilityImportPendingReflectsCompletionStamp(t *testing.T) {
+	root := t.TempDir()
+	store, err := NewStore(root)
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() { _ = store.Close() })
+	pending, err := store.CompatibilityImportPending()
+	if err != nil {
+		t.Fatalf("CompatibilityImportPending returned error: %v", err)
+	}
+	if !pending {
+		t.Fatal("expected compatibility import to be pending before first import")
+	}
+	if _, err := store.ImportCompatibilityData(CompatibilityImportOptions{}); err != nil {
+		t.Fatalf("ImportCompatibilityData returned error: %v", err)
+	}
+	pending, err = store.CompatibilityImportPending()
+	if err != nil {
+		t.Fatalf("CompatibilityImportPending returned error after import: %v", err)
+	}
+	if pending {
+		t.Fatal("expected compatibility import to be complete after stamp is written")
+	}
+}
+
+func TestCompatibilityImportPendingQuarantinesMalformedStamp(t *testing.T) {
+	root := t.TempDir()
+	store, err := NewStore(root)
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() { _ = store.Close() })
+	stampPath := store.compatibilityImportStampPath()
+	if err := os.MkdirAll(filepath.Dir(stampPath), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(stampPath, []byte("{ malformed-json "), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	pending, err := store.CompatibilityImportPending()
+	if err != nil {
+		t.Fatalf("CompatibilityImportPending returned error: %v", err)
+	}
+	if !pending {
+		t.Fatal("expected malformed stamp to be treated as pending import")
+	}
+	if _, err := os.Stat(stampPath); !os.IsNotExist(err) {
+		t.Fatalf("expected malformed stamp to be moved away, stat err=%v", err)
+	}
+	matches, err := filepath.Glob(stampPath + ".corrupt.*")
+	if err != nil {
+		t.Fatalf("glob failed: %v", err)
+	}
+	if len(matches) == 0 {
+		t.Fatal("expected quarantined malformed stamp file")
+	}
+}
+
+func TestImportCompatibilityDataContextReturnsCanceled(t *testing.T) {
+	root := t.TempDir()
+	store, err := NewStore(root)
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() { _ = store.Close() })
+	ctx, cancel := context.WithCancel(context.Background())
+	cancel()
+	if _, err := store.ImportCompatibilityDataContext(ctx, CompatibilityImportOptions{}); !errors.Is(err, context.Canceled) {
+		t.Fatalf("expected context canceled error, got %v", err)
+	}
+}
+
 func TestImportCompatibilityDataMigratesLegacySQLiteDatasetTables(t *testing.T) {
 	root := t.TempDir()
 	store, err := NewStore(root)
 	if err != nil {
 		t.Fatal(err)
 	}
+	t.Cleanup(func() { _ = store.Close() })
 	createLegacyDatasetSQLite(t, store.Path(), root)
 
 	report, err := store.ImportCompatibilityData(CompatibilityImportOptions{})

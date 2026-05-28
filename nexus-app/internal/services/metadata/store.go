@@ -10,6 +10,7 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+	"sync"
 	"time"
 
 	_ "modernc.org/sqlite"
@@ -18,8 +19,12 @@ import (
 const metadataDirRelPath = ".nexusdesk/metadata"
 
 type Store struct {
-	root string
-	path string
+	root    string
+	path    string
+	mu      sync.Mutex
+	db      *sql.DB
+	status  Status
+	ensured bool
 }
 
 func NewStore(root string) (*Store, error) {
@@ -34,23 +39,69 @@ func NewStore(root string) (*Store, error) {
 }
 
 func (s *Store) Ensure() (Status, error) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	return s.ensureLocked()
+}
+
+func (s *Store) ensureLocked() (Status, error) {
+	if s.ensured {
+		return s.status, nil
+	}
 	if err := os.MkdirAll(filepath.Dir(s.path), 0o755); err != nil {
 		return Status{}, err
 	}
 	schemaPath := filepath.Join(filepath.Dir(s.path), "schema.sql")
-	if err := os.WriteFile(schemaPath, []byte(schemaSQL), 0o644); err != nil {
+	if err := writeFileIfChanged(schemaPath, []byte(schemaSQL), 0o644); err != nil {
 		return Status{}, err
 	}
-	db, err := sql.Open("sqlite", s.path)
+	message := "SQLite metadata store is active."
+	tables, err := s.ensureSQLiteSchemaLocked()
 	if err != nil {
+		if !isMetadataCorruptionError(err) {
+			return Status{}, err
+		}
+		if err := s.closeLocked(); err != nil {
+			return Status{}, err
+		}
+		archivedPath, archiveErr := s.archiveCorruptMetadataStore()
+		if archiveErr != nil {
+			return Status{}, fmt.Errorf("metadata store is corrupted (%v) and archival failed: %w", err, archiveErr)
+		}
+		tables, err = s.ensureSQLiteSchemaLocked()
+		if err != nil {
+			return Status{}, err
+		}
+		message = "SQLite metadata store is active. Recovered corrupt metadata database to " + archivedPath + "."
+	}
+	now := time.Now().UTC()
+	status := Status{
+		Path:          s.path,
+		SchemaPath:    schemaPath,
+		SchemaVersion: schemaVersion,
+		SchemaHash:    schemaHash(),
+		Tables:        tables,
+		Message:       message,
+		UpdatedAt:     now,
+	}
+	if err := s.writeManifest(status); err != nil {
 		return Status{}, err
 	}
-	defer db.Close()
+	s.status = status
+	s.ensured = true
+	return status, nil
+}
+
+func (s *Store) ensureSQLiteSchemaLocked() ([]string, error) {
+	db, err := s.databaseLocked()
+	if err != nil {
+		return nil, err
+	}
 	if _, err := db.Exec(schemaSQL); err != nil {
-		return Status{}, err
+		return nil, err
 	}
 	if err := ensureColumn(db, "task_runs", "artifact_path", "TEXT"); err != nil {
-		return Status{}, err
+		return nil, err
 	}
 	now := time.Now().UTC()
 	if _, err := db.Exec(
@@ -59,25 +110,51 @@ func (s *Store) Ensure() (Status, error) {
 		 ON CONFLICT(root) DO UPDATE SET name = excluded.name, opened_at = excluded.opened_at`,
 		hashID(s.root), s.root, filepath.Base(s.root), formatTime(now),
 	); err != nil {
-		return Status{}, err
+		return nil, err
 	}
 	tables, err := listTables(db)
 	if err != nil {
-		return Status{}, err
+		return nil, err
 	}
-	status := Status{
-		Path:          s.path,
-		SchemaPath:    schemaPath,
-		SchemaVersion: schemaVersion,
-		SchemaHash:    schemaHash(),
-		Tables:        tables,
-		Message:       "SQLite metadata store is active.",
-		UpdatedAt:     now,
+	return tables, nil
+}
+
+func isMetadataCorruptionError(err error) bool {
+	if err == nil {
+		return false
 	}
-	if err := s.writeManifest(status); err != nil {
-		return Status{}, err
+	message := strings.ToLower(err.Error())
+	return strings.Contains(message, "not a database") ||
+		strings.Contains(message, "database disk image is malformed") ||
+		strings.Contains(message, "malformed")
+}
+
+func (s *Store) archiveCorruptMetadataStore() (string, error) {
+	recoveryDir := filepath.Join(filepath.Dir(s.path), "recovery")
+	if err := os.MkdirAll(recoveryDir, 0o755); err != nil {
+		return "", err
 	}
-	return status, nil
+	stamp := time.Now().UTC().Format("20060102-150405")
+	archivedPrimary := ""
+	for _, sourcePath := range []string{s.path, s.path + "-wal", s.path + "-shm"} {
+		if _, err := os.Stat(sourcePath); os.IsNotExist(err) {
+			continue
+		} else if err != nil {
+			return "", err
+		}
+		base := filepath.Base(sourcePath)
+		target := filepath.Join(recoveryDir, base+"."+stamp+".corrupt")
+		if err := os.Rename(sourcePath, target); err != nil {
+			return "", err
+		}
+		if archivedPrimary == "" {
+			archivedPrimary = target
+		}
+	}
+	if archivedPrimary == "" {
+		return "", errors.New("corrupt metadata archival found no database files")
+	}
+	return archivedPrimary, nil
 }
 
 func (s *Store) NormalizeTaskRunRecord(record TaskRunRecord) TaskRunRecord {
@@ -91,11 +168,53 @@ func (s *Store) Path() string {
 	return s.path
 }
 
+func (s *Store) Root() string {
+	return s.root
+}
+
+func (s *Store) Close() error {
+	return s.closeCachedDB()
+}
+
 func (s *Store) open() (*sql.DB, error) {
-	if _, err := s.Ensure(); err != nil {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	if _, err := s.ensureLocked(); err != nil {
 		return nil, err
 	}
-	return sql.Open("sqlite", s.path)
+	return s.databaseLocked()
+}
+
+func (s *Store) databaseLocked() (*sql.DB, error) {
+	if s.db != nil {
+		return s.db, nil
+	}
+	db, err := sql.Open("sqlite", s.path)
+	if err != nil {
+		return nil, err
+	}
+	s.db = db
+	return db, nil
+}
+
+func (s *Store) closeCachedDB() error {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	return s.closeLocked()
+}
+
+func (s *Store) closeLocked() error {
+	var err error
+	if s.db == nil {
+		s.ensured = false
+		s.status = Status{}
+		return nil
+	}
+	err = s.db.Close()
+	s.db = nil
+	s.ensured = false
+	s.status = Status{}
+	return err
 }
 
 func (s *Store) writeManifest(status Status) error {
@@ -138,6 +257,17 @@ func listTables(db *sql.DB) ([]string, error) {
 		tables = append(tables, table)
 	}
 	return tables, rows.Err()
+}
+
+func writeFileIfChanged(path string, content []byte, perm os.FileMode) error {
+	existing, err := os.ReadFile(path)
+	if err == nil && string(existing) == string(content) {
+		return nil
+	}
+	if err != nil && !os.IsNotExist(err) {
+		return err
+	}
+	return os.WriteFile(path, content, perm)
 }
 
 func ensureColumn(db *sql.DB, table string, column string, definition string) error {

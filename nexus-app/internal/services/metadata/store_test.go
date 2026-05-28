@@ -1,9 +1,11 @@
 package metadata
 
 import (
+	"archive/zip"
 	"database/sql"
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 	"time"
 
@@ -15,6 +17,7 @@ func TestEnsureCreatesSQLiteStoreAndManifest(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
+	t.Cleanup(func() { _ = store.Close() })
 	status, err := store.Ensure()
 	if err != nil {
 		t.Fatalf("Ensure returned error: %v", err)
@@ -30,6 +33,37 @@ func TestEnsureCreatesSQLiteStoreAndManifest(t *testing.T) {
 	}
 	if len(status.Tables) < 5 {
 		t.Fatalf("expected core tables, got %#v", status.Tables)
+	}
+}
+
+func TestStoreReusesOpenDatabaseAfterEnsure(t *testing.T) {
+	store := mustStore(t)
+	first, err := store.open()
+	if err != nil {
+		t.Fatalf("first open returned error: %v", err)
+	}
+	second, err := store.open()
+	if err != nil {
+		t.Fatalf("second open returned error: %v", err)
+	}
+	if first != second {
+		t.Fatal("expected metadata store to reuse the opened database handle")
+	}
+	schemaPath := filepath.Join(filepath.Dir(store.Path()), "schema.sql")
+	before, err := os.Stat(schemaPath)
+	if err != nil {
+		t.Fatalf("stat schema before Ensure failed: %v", err)
+	}
+	time.Sleep(10 * time.Millisecond)
+	if _, err := store.Ensure(); err != nil {
+		t.Fatalf("Ensure returned error: %v", err)
+	}
+	after, err := os.Stat(schemaPath)
+	if err != nil {
+		t.Fatalf("stat schema after Ensure failed: %v", err)
+	}
+	if !before.ModTime().Equal(after.ModTime()) {
+		t.Fatal("expected cached Ensure to leave schema file untouched")
 	}
 }
 
@@ -356,6 +390,7 @@ func TestEnsureMigratesTaskRunsArtifactPathColumn(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
+	t.Cleanup(func() { _ = store.Close() })
 	if _, err := store.Ensure(); err != nil {
 		t.Fatalf("Ensure migration returned error: %v", err)
 	}
@@ -374,12 +409,161 @@ func TestEnsureMigratesTaskRunsArtifactPathColumn(t *testing.T) {
 	}
 }
 
+func TestEnsureRecoversCorruptSQLiteStore(t *testing.T) {
+	root := t.TempDir()
+	store, err := NewStore(root)
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() { _ = store.Close() })
+	if err := os.MkdirAll(filepath.Dir(store.Path()), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(store.Path(), []byte("not-a-sqlite-database"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	status, err := store.Ensure()
+	if err != nil {
+		t.Fatalf("Ensure returned error: %v", err)
+	}
+	if !strings.Contains(strings.ToLower(status.Message), "recovered corrupt metadata database") {
+		t.Fatalf("expected recovery message, got %q", status.Message)
+	}
+	recoveryDir := filepath.Join(filepath.Dir(store.Path()), "recovery")
+	entries, err := os.ReadDir(recoveryDir)
+	if err != nil {
+		t.Fatalf("expected recovery directory to exist: %v", err)
+	}
+	if len(entries) == 0 {
+		t.Fatal("expected archived corrupt metadata file")
+	}
+	if _, err := os.Stat(store.Path()); err != nil {
+		t.Fatalf("expected recreated sqlite store to exist: %v", err)
+	}
+}
+
+func TestExportBackupCreatesZipBundle(t *testing.T) {
+	store := mustStore(t)
+	if err := store.SaveJob(jobssvc.Job{
+		ID:        "job-backup-1",
+		Kind:      "task",
+		Label:     "backup",
+		Status:    jobssvc.StatusSuccess,
+		Message:   "ok",
+		StartedAt: time.Now().UTC(),
+	}); err != nil {
+		t.Fatalf("SaveJob returned error: %v", err)
+	}
+	backup, err := store.ExportBackup()
+	if err != nil {
+		t.Fatalf("ExportBackup returned error: %v", err)
+	}
+	if backup.Path == "" || backup.SizeBytes <= 0 {
+		t.Fatalf("unexpected backup result: %#v", backup)
+	}
+	if _, err := os.Stat(backup.Path); err != nil {
+		t.Fatalf("expected backup zip file to exist: %v", err)
+	}
+	archive, err := zip.OpenReader(backup.Path)
+	if err != nil {
+		t.Fatalf("OpenReader failed: %v", err)
+	}
+	defer archive.Close()
+	names := make([]string, 0, len(archive.File))
+	for _, file := range archive.File {
+		names = append(names, strings.TrimSpace(file.Name))
+	}
+	required := []string{"nexusdesk.sqlite", "schema.sql", "sqlite-manifest.json", "backup-summary.json"}
+	for _, name := range required {
+		if !containsStringCaseInsensitive(names, name) {
+			t.Fatalf("backup zip missing %q in %#v", name, names)
+		}
+	}
+}
+
+func TestExportWorkspaceStateBackupCreatesZipBundle(t *testing.T) {
+	store := mustStore(t)
+	workspaceRoot := filepath.Dir(filepath.Dir(filepath.Dir(store.Path())))
+	artifactPath := filepath.Join(workspaceRoot, filepath.FromSlash(".nexusdesk/artifacts/task-runs/report.md"))
+	if err := os.MkdirAll(filepath.Dir(artifactPath), 0o755); err != nil {
+		t.Fatalf("MkdirAll failed: %v", err)
+	}
+	if err := os.WriteFile(artifactPath, []byte("# Task report\n"), 0o644); err != nil {
+		t.Fatalf("WriteFile artifact failed: %v", err)
+	}
+
+	configDir := filepath.Join(t.TempDir(), "config")
+	if err := os.MkdirAll(configDir, 0o755); err != nil {
+		t.Fatalf("MkdirAll config failed: %v", err)
+	}
+	settingsPath := filepath.Join(configDir, "settings.json")
+	profilesPath := filepath.Join(configDir, "connector-profiles.json")
+	secretsPath := profilesPath + ".secrets"
+	if err := os.WriteFile(settingsPath, []byte(`{"provider":"ollama"}`), 0o600); err != nil {
+		t.Fatalf("WriteFile settings failed: %v", err)
+	}
+	if err := os.WriteFile(profilesPath, []byte(`[]`), 0o600); err != nil {
+		t.Fatalf("WriteFile profiles failed: %v", err)
+	}
+	if err := os.WriteFile(secretsPath, []byte(`{"id":"encrypted"}`), 0o600); err != nil {
+		t.Fatalf("WriteFile secrets failed: %v", err)
+	}
+
+	backup, err := store.ExportWorkspaceStateBackup(WorkspaceStateBackupOptions{
+		SettingsPath:          settingsPath,
+		ConnectorProfilesPath: profilesPath,
+	})
+	if err != nil {
+		t.Fatalf("ExportWorkspaceStateBackup returned error: %v", err)
+	}
+	if backup.Path == "" || backup.SizeBytes <= 0 {
+		t.Fatalf("unexpected workspace state backup result: %#v", backup)
+	}
+	if _, err := os.Stat(backup.Path); err != nil {
+		t.Fatalf("expected workspace state backup zip file to exist: %v", err)
+	}
+	archive, err := zip.OpenReader(backup.Path)
+	if err != nil {
+		t.Fatalf("OpenReader failed: %v", err)
+	}
+	defer archive.Close()
+	names := make([]string, 0, len(archive.File))
+	for _, file := range archive.File {
+		names = append(names, strings.TrimSpace(file.Name))
+	}
+	required := []string{
+		".nexusdesk/metadata/nexusdesk.sqlite",
+		".nexusdesk/metadata/schema.sql",
+		".nexusdesk/metadata/sqlite-manifest.json",
+		".nexusdesk/artifacts/task-runs/report.md",
+		"app-config/settings.json",
+		"app-config/connector-profiles.json",
+		"app-config/connector-profiles.secrets.json",
+		"workspace-state-summary.json",
+	}
+	for _, name := range required {
+		if !containsStringCaseInsensitive(names, name) {
+			t.Fatalf("workspace state backup zip missing %q in %#v", name, names)
+		}
+	}
+}
+
+func containsStringCaseInsensitive(values []string, candidate string) bool {
+	for _, value := range values {
+		if strings.EqualFold(strings.TrimSpace(value), strings.TrimSpace(candidate)) {
+			return true
+		}
+	}
+	return false
+}
+
 func mustStore(t *testing.T) *Store {
 	t.Helper()
 	store, err := NewStore(t.TempDir())
 	if err != nil {
 		t.Fatal(err)
 	}
+	t.Cleanup(func() { _ = store.Close() })
 	if _, err := store.Ensure(); err != nil {
 		t.Fatal(err)
 	}

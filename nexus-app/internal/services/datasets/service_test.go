@@ -3,6 +3,8 @@ package datasets
 import (
 	"archive/zip"
 	"bytes"
+	"context"
+	"errors"
 	"os"
 	"path/filepath"
 	"testing"
@@ -239,6 +241,37 @@ func TestQueryXLSXUsesFirstSheetRows(t *testing.T) {
 	}
 	if result.Format != "XLSX" || result.MatchedRows != 1 || result.Rows[0][0] != "search" {
 		t.Fatalf("unexpected XLSX query result: %#v", result)
+	}
+}
+
+func TestProfileContextReturnsCanceled(t *testing.T) {
+	service := New(nil)
+	ctx, cancel := context.WithCancel(context.Background())
+	cancel()
+	if _, err := service.ProfileContext(ctx, t.TempDir(), "people.csv"); !errors.Is(err, context.Canceled) {
+		t.Fatalf("expected canceled context error, got %v", err)
+	}
+}
+
+func TestQueryContextReturnsCanceled(t *testing.T) {
+	root := t.TempDir()
+	writeTestFile(t, root, "sales.csv", "channel,spend\nsearch,12.5\n")
+	service := New(nil)
+	ctx, cancel := context.WithCancel(context.Background())
+	cancel()
+	if _, err := service.QueryContext(ctx, root, "sales.csv", "channel=search"); !errors.Is(err, context.Canceled) {
+		t.Fatalf("expected canceled context error, got %v", err)
+	}
+}
+
+func TestQuerySQLContextReturnsCanceled(t *testing.T) {
+	root := t.TempDir()
+	writeTestFile(t, root, "sales.csv", "channel,spend\nsearch,12.5\n")
+	service := New(nil)
+	ctx, cancel := context.WithCancel(context.Background())
+	cancel()
+	if _, err := service.QuerySQLContext(ctx, root, "sales.csv", "select * from dataset"); !errors.Is(err, context.Canceled) {
+		t.Fatalf("expected canceled context error, got %v", err)
 	}
 }
 

@@ -7,6 +7,8 @@ import (
 	"net/http/httptest"
 	"strings"
 	"testing"
+
+	settingssvc "nexusdesk/internal/services/settings"
 )
 
 func TestChatPostsOpenAICompatibleRequest(t *testing.T) {
@@ -167,6 +169,18 @@ func TestProviderErrorDetailIsRedacted(t *testing.T) {
 	detail := providerErrorDetail([]byte(`{"error":{"message":"Authorization Bearer sk-secret failed"}}`))
 	if strings.Contains(detail, "sk-secret") || strings.Contains(detail, "Bearer sk-") {
 		t.Fatalf("error detail was not redacted: %q", detail)
+	}
+}
+
+func TestConfigFromSettingsIncludesAPIKey(t *testing.T) {
+	config := ConfigFromSettings(settingssvc.Settings{
+		Provider: "openai-compatible",
+		BaseURL:  "http://localhost:1234/v1",
+		Model:    "test-model",
+		APIKey:   "secret",
+	})
+	if config.APIKey != "secret" {
+		t.Fatalf("expected API key to propagate, got %#v", config)
 	}
 }
 

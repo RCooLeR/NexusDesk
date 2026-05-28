@@ -19,10 +19,18 @@ func (v *View) newRail() fyne.CanvasObject {
 		v.addActivity("Workbench selected.")
 	})
 	dataButton := widget.NewButtonWithIcon("Data", theme.StorageIcon(), func() {
-		v.addActivity("Data & Analytics selected. Use the bottom Data tab to profile the selected dataset.")
+		if !v.selectBottomTab("Data") {
+			v.addActivity("Data panel is unavailable.")
+			return
+		}
+		v.addActivity("Data & Analytics selected.")
 	})
 	artifactsButton := widget.NewButtonWithIcon("Artifacts", theme.DocumentIcon(), func() {
-		v.addPlaceholderTab("Artifacts", "Generated reports, exports, lineage, and comparisons will live here.")
+		if !v.selectBottomTab("Artifacts") {
+			v.addActivity("Artifacts panel is unavailable.")
+			return
+		}
+		v.addActivity("Artifacts selected.")
 	})
 	settingsButton := widget.NewButtonWithIcon("Settings", theme.SettingsIcon(), v.openSettingsTab)
 	return container.NewPadded(container.NewVBox(logo, widget.NewSeparator(), workspaceButton, dataButton, artifactsButton, layout.NewSpacer(), settingsButton))
@@ -55,10 +63,12 @@ func (v *View) newBottomPanel() fyne.CanvasObject {
 		container.NewTabItemWithIcon("History", theme.InfoIcon(), v.newHistoryPanel()),
 		container.NewTabItemWithIcon("Chat", theme.MailComposeIcon(), v.newChatHistoryPanel()),
 		container.NewTabItemWithIcon("Agent Audit", theme.InfoIcon(), v.newAgentAuditPanel()),
+		container.NewTabItemWithIcon("Diagnostics", theme.VisibilityIcon(), v.newDiagnosticsPanel()),
 		container.NewTabItemWithIcon("Artifacts", theme.DocumentIcon(), v.newArtifactsPanel()),
 		container.NewTabItemWithIcon("Rollbacks", theme.ContentUndoIcon(), v.newRollbackPanel()),
 		container.NewTabItemWithIcon("Approvals", theme.ConfirmIcon(), v.newApprovalsPanel()),
 	)
 	tabs.SetTabLocation(container.TabLocationTop)
+	v.bottomTabs = tabs
 	return tabs
 }

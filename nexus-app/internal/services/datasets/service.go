@@ -1,6 +1,7 @@
 package datasets
 
 import (
+	"context"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -28,12 +29,32 @@ func New(workspace *workspaceSvc.Service) *Service {
 }
 
 func (s *Service) Profile(root string, relPath string) (Profile, error) {
+	return s.ProfileContext(context.Background(), root, relPath)
+}
+
+func (s *Service) ProfileContext(ctx context.Context, root string, relPath string) (Profile, error) {
+	if ctx == nil {
+		ctx = context.Background()
+	}
+	if err := checkContext(ctx); err != nil {
+		return Profile{}, err
+	}
 	switch strings.ToLower(filepath.Ext(relPath)) {
 	case ".parquet":
-		return profileParquet(root, relPath)
+		profile, err := profileParquet(root, relPath)
+		if err != nil {
+			return Profile{}, err
+		}
+		if err := checkContext(ctx); err != nil {
+			return Profile{}, err
+		}
+		return profile, nil
 	}
 	preview, err := s.workspace.PreviewFile(root, relPath)
 	if err != nil {
+		return Profile{}, err
+	}
+	if err := checkContext(ctx); err != nil {
 		return Profile{}, err
 	}
 	switch strings.ToLower(filepath.Ext(preview.RelPath)) {

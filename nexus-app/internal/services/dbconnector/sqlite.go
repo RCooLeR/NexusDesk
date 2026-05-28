@@ -351,5 +351,5 @@ func connectorError(err error) error {
 	if errors.Is(err, context.DeadlineExceeded) {
 		return fmt.Errorf("connector query timed out")
 	}
-	return fmt.Errorf("%s", err.Error())
+	return fmt.Errorf("%s", sanitizeConnectorErrorMessage(err.Error()))
 }

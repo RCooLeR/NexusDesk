@@ -1,7 +1,6 @@
 package workspace
 
 import (
-	"errors"
 	"os"
 	"path/filepath"
 	"sort"
@@ -59,29 +58,6 @@ func (s *Service) nodesFromEntries(parentID string, entries []os.DirEntry, optio
 		}
 	}
 	return result
-}
-
-func resolveDirectory(root string, relPath string) (string, string, error) {
-	absRoot, err := cleanRoot(root)
-	if err != nil {
-		return "", "", err
-	}
-	cleanRelPath, err := cleanRel(relPath)
-	if err != nil {
-		return "", "", err
-	}
-	target := filepath.Join(absRoot, filepath.FromSlash(cleanRelPath))
-	if !isInside(absRoot, target) {
-		return "", "", errors.New("workspace path must stay inside the root")
-	}
-	info, err := os.Stat(target)
-	if err != nil {
-		return "", "", err
-	}
-	if !info.IsDir() {
-		return "", "", errors.New("workspace path must be a directory")
-	}
-	return target, cleanRelPath, nil
 }
 
 func nodeFromEntry(parentID string, entry os.DirEntry, options ListOptions, summary *domain.ScanSummary) (domain.WorkspaceNode, bool) {

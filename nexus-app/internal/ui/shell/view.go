@@ -7,6 +7,7 @@ import (
 	"fyne.io/fyne/v2/container"
 	"fyne.io/fyne/v2/widget"
 
+	"nexusdesk/internal/domain"
 	agentSvc "nexusdesk/internal/services/agent"
 	approvalsSvc "nexusdesk/internal/services/approvals"
 	artifactsSvc "nexusdesk/internal/services/artifacts"
@@ -37,6 +38,7 @@ type View struct {
 	agentService            *agentSvc.Service
 	datasetService          *datasetsSvc.Service
 	dbconnectorService      *dbconnectorSvc.Service
+	connectorProfileStore   *dbconnectorSvc.ConnectorProfileStore
 	operationsService       *operationsSvc.Service
 	metadataStore           *metadataSvc.Store
 	settingsStore           *settingsSvc.Store
@@ -45,11 +47,15 @@ type View struct {
 	status                  *widget.Label
 	navigator               *fyne.Container
 	editorTabs              *container.DocTabs
+	bottomTabs              *container.AppTabs
 	openTabs                map[string]*container.TabItem
 	tabIDs                  map[*container.TabItem]string
+	editorPreviews          map[string]domain.FilePreview
+	textEditors             map[string]*textEditorBinding
 	navigatorClipboard      navigatorClipboard
 	activityLog             *widget.RichText
 	activityText            string
+	activityLines           []string
 	searchResults           *fyne.Container
 	searchStatus            *widget.Label
 	problemResults          *fyne.Container
@@ -57,22 +63,39 @@ type View struct {
 	dataProfileStatus       *widget.Label
 	dataProfileDetail       *widget.Entry
 	dataRowsDetail          *widget.Entry
+	dataRowsContainer       *fyne.Container
+	dataRowsTable           *widget.Table
+	dataRowsColumnWidths    []float32
+	dataRowsRenderPolicy    dataGridRenderPolicy
+	dataRowsColumns         []string
+	dataRowsValues          [][]string
+	dataRowsSelectedRow     int
+	dataRowsSelectedCol     int
 	dataPlanDetail          *widget.Entry
 	dataChartDetail         *widget.Entry
 	dataResultTabs          *container.AppTabs
 	dataQueryEntry          *widget.Entry
 	dataLastQuery           datasetsSvc.QueryResult
 	dataLastSQLiteQuery     dbconnectorSvc.SQLiteQueryResult
+	dataLastConnectorQuery  dbconnectorSvc.ConnectorQueryResult
 	dataLastChart           datasetsSvc.ChartResult
 	dataLastDashboard       datasetsSvc.DashboardResult
 	dataLastNotebookRun     datasetsSvc.NotebookRunResult
 	dataSQLiteQueryMu       sync.Mutex
 	dataSQLiteCancel        func()
 	dataSQLiteQueryID       string
+	dataConnectorQueryMu    sync.Mutex
+	dataConnectorCancel     func()
+	dataConnectorQueryID    string
 	dataNotebookLabel       *widget.Entry
 	dataNotebookCellSelect  *widget.Select
 	dataNotebookCellIndex   int
 	dataActiveNotebookID    string
+	dataConnectorProfileID  string
+	dataConnectorProfile    *widget.Select
+	dataConnectorOptions    map[string]string
+	compatibilityImportMu   sync.Mutex
+	compatibilityImportByWS map[string]bool
 	operationsResults       *fyne.Container
 	operationsStatus        *widget.Label
 	operationsDetail        *widget.Entry
@@ -109,6 +132,8 @@ type View struct {
 	agentAuditResults       *fyne.Container
 	agentAuditStatus        *widget.Label
 	agentAuditDetail        *widget.Entry
+	diagnosticsStatus       *widget.Label
+	diagnosticsDetail       *widget.Entry
 	approvalResults         *fyne.Container
 	approvalStatus          *widget.Label
 	accessStatus            *widget.Label
@@ -118,6 +143,8 @@ type View struct {
 	assistantHistoryList    *fyne.Container
 	assistantPrompt         *widget.Entry
 	assistantMode           *widget.Select
+	assistantRunTaskApproval *widget.Check
+	diagnosticsProber       diagnosticsProber
 }
 
 type artifactsCompareSelection struct {
@@ -158,6 +185,10 @@ func New(window fyne.Window) *View {
 	agentAuditDetail.TextStyle = fyne.TextStyle{Monospace: true}
 	agentAuditDetail.Wrapping = fyne.TextWrapWord
 	agentAuditDetail.Disable()
+	diagnosticsDetail := widget.NewMultiLineEntry()
+	diagnosticsDetail.TextStyle = fyne.TextStyle{Monospace: true}
+	diagnosticsDetail.Wrapping = fyne.TextWrapWord
+	diagnosticsDetail.Disable()
 	workspaceService := workspaceSvc.New()
 	llmClient := llmSvc.NewClient()
 	assistantService := assistantSvc.New(settingsStore, workspaceService, llmClient)
@@ -171,6 +202,10 @@ func New(window fyne.Window) *View {
 	agentService := agentSvc.New(settingsStore, llmClient, toolDispatcher)
 	datasetService := datasetsSvc.New(workspaceService)
 	dbconnectorService := dbconnectorSvc.New()
+	connectorProfileStore, err := dbconnectorSvc.NewDefaultConnectorProfileStore()
+	if err != nil {
+		connectorProfileStore = dbconnectorSvc.NewConnectorProfileStore("nexus-connector-profiles.json")
+	}
 	dataProfileDetail := widget.NewMultiLineEntry()
 	dataProfileDetail.TextStyle = fyne.TextStyle{Monospace: true}
 	dataProfileDetail.Wrapping = fyne.TextWrapWord
@@ -195,59 +230,67 @@ func New(window fyne.Window) *View {
 	operationsDetail.Wrapping = fyne.TextWrapWord
 	operationsDetail.Disable()
 	view := &View{
-		window:             window,
-		state:              NewState(),
-		workspaceService:   workspaceService,
-		gitService:         gitService,
-		jobService:         jobsSvc.New(),
-		approvalService:    approvalsSvc.New(),
-		assistantService:   assistantService,
-		agentService:       agentService,
-		datasetService:     datasetService,
-		dbconnectorService: dbconnectorService,
-		operationsService:  operationsSvc.New(),
-		settingsStore:      settingsStore,
-		taskService:        taskService,
-		editorSession:      editorSession,
-		status:             widget.NewLabel("No workspace open"),
-		navigator:          container.NewStack(widget.NewLabel("Open a workspace to browse files.")),
-		editorTabs:         editorTabs,
-		openTabs:           map[string]*container.TabItem{welcome.ID: editorTabs.Items[0]},
-		tabIDs:             map[*container.TabItem]string{editorTabs.Items[0]: welcome.ID},
-		activityLog:        widget.NewRichTextFromMarkdown("Ready."),
-		activityText:       "Ready.",
-		searchResults:      container.NewVBox(widget.NewLabel("Search results will appear here.")),
-		searchStatus:       widget.NewLabel("No search yet."),
-		problemResults:     container.NewVBox(widget.NewLabel("Run a scan to inspect lightweight workspace problems.")),
-		problemStatus:      widget.NewLabel("No problem scan yet."),
+		window:                window,
+		state:                 NewState(),
+		workspaceService:      workspaceService,
+		gitService:            gitService,
+		jobService:            jobsSvc.New(),
+		approvalService:       approvalsSvc.New(),
+		assistantService:      assistantService,
+		agentService:          agentService,
+		datasetService:        datasetService,
+		dbconnectorService:    dbconnectorService,
+		connectorProfileStore: connectorProfileStore,
+		operationsService:     operationsSvc.New(),
+		settingsStore:         settingsStore,
+		taskService:           taskService,
+		editorSession:         editorSession,
+		status:                widget.NewLabel("No workspace open"),
+		navigator:             container.NewStack(widget.NewLabel("Open a workspace to browse files.")),
+		editorTabs:            editorTabs,
+		openTabs:              map[string]*container.TabItem{welcome.ID: editorTabs.Items[0]},
+		tabIDs:                map[*container.TabItem]string{editorTabs.Items[0]: welcome.ID},
+		editorPreviews:        map[string]domain.FilePreview{},
+		textEditors:           map[string]*textEditorBinding{},
+		activityLog:           widget.NewRichTextFromMarkdown("Ready."),
+		activityText:          "Ready.",
+		activityLines:         []string{"Ready."},
+		searchResults:         container.NewVBox(widget.NewLabel("Search results will appear here.")),
+		searchStatus:          widget.NewLabel("No search yet."),
+		problemResults:        container.NewVBox(widget.NewLabel("Run a scan to inspect lightweight workspace problems.")),
+		problemStatus:         widget.NewLabel("No problem scan yet."),
 		dataProfileStatus: widget.NewLabel(
 			"Select a CSV, TSV, or JSON file, then profile or query it.",
 		),
-		dataProfileDetail: dataProfileDetail,
-		dataRowsDetail:    dataRowsDetail,
-		dataPlanDetail:    dataPlanDetail,
-		dataChartDetail:   dataChartDetail,
-		dataQueryEntry:    dataQueryEntry,
-		operationsResults: container.NewVBox(widget.NewLabel("Scan the workspace to inspect Docker, Compose, env, config, script, and log files.")),
-		operationsStatus:  widget.NewLabel("Operations scan has not been run."),
-		operationsDetail:  operationsDetail,
-		gitResults:        container.NewVBox(widget.NewLabel("Press Refresh git to inspect repository status.")),
-		gitStatus:         widget.NewLabel("Git status has not been loaded."),
-		gitDiffText:       gitDiffText,
-		gitDiffStatus:     widget.NewLabel("Select a changed file to load a read-only diff."),
-		gitDiffMode:       gitDiffModeUnified,
-		gitFileBadges:     map[string]string{},
-		gitHunkStatus:     widget.NewLabel("No hunk selected."),
-		taskResults:       container.NewVBox(widget.NewLabel("Discover workspace tasks to run tests, scripts, or Compose checks.")),
-		taskStatus:        widget.NewLabel("No tasks discovered."),
-		taskOutput:        taskOutput,
-		jobResults:        container.NewVBox(widget.NewLabel("Run a task to create a job record.")),
-		jobStatus:         widget.NewLabel("No jobs yet."),
-		rollbackResults:   container.NewVBox(widget.NewLabel("Refresh rollback records to inspect undo points.")),
-		rollbackStatus:    widget.NewLabel("Rollback records have not been loaded."),
-		artifactResults:   container.NewVBox(widget.NewLabel("Refresh artifacts to inspect generated task reports.")),
-		artifactStatus:    widget.NewLabel("Artifacts have not been loaded."),
-		artifactPreview:   artifactPreview,
+		dataProfileDetail:       dataProfileDetail,
+		dataRowsDetail:          dataRowsDetail,
+		dataRowsSelectedRow:     -1,
+		dataRowsSelectedCol:     -1,
+		dataPlanDetail:          dataPlanDetail,
+		dataChartDetail:         dataChartDetail,
+		dataQueryEntry:          dataQueryEntry,
+		operationsResults:       container.NewVBox(widget.NewLabel("Scan the workspace to inspect Docker, Compose, env, config, script, and log files.")),
+		operationsStatus:        widget.NewLabel("Operations scan has not been run."),
+		operationsDetail:        operationsDetail,
+		dataConnectorOptions:    map[string]string{},
+		compatibilityImportByWS: map[string]bool{},
+		gitResults:              container.NewVBox(widget.NewLabel("Press Refresh git to inspect repository status.")),
+		gitStatus:               widget.NewLabel("Git status has not been loaded."),
+		gitDiffText:             gitDiffText,
+		gitDiffStatus:           widget.NewLabel("Select a changed file to load a read-only diff."),
+		gitDiffMode:             gitDiffModeUnified,
+		gitFileBadges:           map[string]string{},
+		gitHunkStatus:           widget.NewLabel("No hunk selected."),
+		taskResults:             container.NewVBox(widget.NewLabel("Discover workspace tasks to run tests, scripts, or Compose checks.")),
+		taskStatus:              widget.NewLabel("No tasks discovered."),
+		taskOutput:              taskOutput,
+		jobResults:              container.NewVBox(widget.NewLabel("Run a task to create a job record.")),
+		jobStatus:               widget.NewLabel("No jobs yet."),
+		rollbackResults:         container.NewVBox(widget.NewLabel("Refresh rollback records to inspect undo points.")),
+		rollbackStatus:          widget.NewLabel("Rollback records have not been loaded."),
+		artifactResults:         container.NewVBox(widget.NewLabel("Refresh artifacts to inspect generated task reports.")),
+		artifactStatus:          widget.NewLabel("Artifacts have not been loaded."),
+		artifactPreview:         artifactPreview,
 		artifactSourceStatus: widget.NewLabel(
 			"Artifact sources have not been loaded.",
 		),
@@ -267,9 +310,14 @@ func New(window fyne.Window) *View {
 		),
 		agentAuditStatus: widget.NewLabel("Agent audit has not been loaded."),
 		agentAuditDetail: agentAuditDetail,
-		approvalResults:  container.NewVBox(widget.NewLabel("Open a workspace to inspect approval records.")),
-		approvalStatus:   widget.NewLabel("Approval records have not been loaded."),
-		accessStatus:     widget.NewLabel("Full project access: inactive"),
+		diagnosticsStatus: widget.NewLabel(
+			"Open a workspace to run diagnostics.",
+		),
+		diagnosticsDetail: diagnosticsDetail,
+		approvalResults:   container.NewVBox(widget.NewLabel("Open a workspace to inspect approval records.")),
+		approvalStatus:    widget.NewLabel("Approval records have not been loaded."),
+		accessStatus:      widget.NewLabel("Full project access: inactive"),
+		diagnosticsProber: llmClient,
 	}
 	view.configureEditorTabs()
 	return view

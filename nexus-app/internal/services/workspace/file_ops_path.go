@@ -1,7 +1,6 @@
 package workspace
 
 import (
-	"errors"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -27,8 +26,8 @@ func resolveExistingFile(root string, relPath string, action string) (string, st
 	if err != nil {
 		return "", "", nil, err
 	}
-	if !isInside(absRoot, absTarget) {
-		return "", "", nil, errors.New("workspace path must stay inside the root")
+	if _, err := ensureResolvedReadPathInsideRoot(absRoot, absTarget); err != nil {
+		return "", "", nil, err
 	}
 	info, err := os.Lstat(absTarget)
 	if os.IsNotExist(err) {
@@ -81,8 +80,8 @@ func resolveNewDirectoryTarget(root string, relPath string, action string) (stri
 	if err != nil {
 		return "", "", "", err
 	}
-	if !isInside(absRoot, absTarget) {
-		return "", "", "", errors.New("workspace path must stay inside the root")
+	if err := ensureWriteParentInsideRoot(absRoot, absTarget); err != nil {
+		return "", "", "", err
 	}
 	if _, err := os.Lstat(absTarget); err == nil {
 		return "", "", "", fmt.Errorf("%s target already exists", action)

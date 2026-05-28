@@ -19,7 +19,6 @@ func (s *Store) SaveArtifact(record ArtifactRecord) error {
 	if err != nil {
 		return err
 	}
-	defer db.Close()
 	sourcePathsJSON, _ := json.Marshal(record.SourcePaths)
 	_, err = db.Exec(
 		`INSERT INTO artifacts (id, workspace_root, kind, title, rel_path, metadata_path, size, job_id, task_id, source, source_paths_json, archived, created_at, generated_at, updated_at)
@@ -65,7 +64,6 @@ func (s *Store) DeleteArtifact(relPath string) error {
 	if err != nil {
 		return err
 	}
-	defer db.Close()
 	_, err = db.Exec(`DELETE FROM artifacts WHERE workspace_root = ? AND rel_path = ?`, s.root, relPath)
 	return err
 }
@@ -78,7 +76,6 @@ func (s *Store) ListArtifacts(query string, includeArchived bool, limit int) ([]
 	if err != nil {
 		return nil, err
 	}
-	defer db.Close()
 	records := []ArtifactRecord{}
 	if strings.TrimSpace(query) == "" {
 		rows, err := db.Query(

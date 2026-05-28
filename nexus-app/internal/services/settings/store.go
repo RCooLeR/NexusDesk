@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"os"
 	"path/filepath"
+	"strings"
 )
 
 type Store struct {
@@ -20,6 +21,13 @@ func NewStore() (*Store, error) {
 
 func NewFileStore(path string) *Store {
 	return &Store{path: path}
+}
+
+func (s *Store) Path() string {
+	if s == nil {
+		return ""
+	}
+	return s.path
 }
 
 func (s *Store) Load() (Settings, error) {
@@ -51,6 +59,7 @@ func (s *Store) Save(settings Settings) error {
 
 func normalized(settings Settings) Settings {
 	defaults := Defaults()
+	settings.APIKey = strings.TrimSpace(settings.APIKey)
 	if settings.Provider == "" {
 		settings.Provider = defaults.Provider
 	}

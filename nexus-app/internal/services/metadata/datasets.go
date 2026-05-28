@@ -19,7 +19,6 @@ func (s *Store) SaveSQLRun(record SQLRunRecord) error {
 	if err != nil {
 		return err
 	}
-	defer db.Close()
 	_, err = db.Exec(
 		`INSERT INTO sql_runs (id, workspace_root, rel_path, sql_text, engine, status, row_count, matched_rows, shown_rows, message, error, artifact_path, started_at, completed_at, duration_ms)
 		 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
@@ -60,7 +59,6 @@ func (s *Store) ListSQLRuns(limit int) ([]SQLRunRecord, error) {
 	if err != nil {
 		return nil, err
 	}
-	defer db.Close()
 	rows, err := db.Query(
 		`SELECT id, rel_path, sql_text, engine, status, row_count, matched_rows, shown_rows, message, error, artifact_path, started_at, completed_at, duration_ms
 		 FROM sql_runs WHERE workspace_root = ? ORDER BY started_at DESC, id DESC LIMIT ?`,
@@ -116,7 +114,6 @@ func (s *Store) SaveDatasetDependency(record DatasetDependencyRecord) error {
 	if err != nil {
 		return err
 	}
-	defer db.Close()
 	metadataJSON, _ := json.Marshal(record.Metadata)
 	_, err = db.Exec(
 		`INSERT INTO dataset_dependencies (id, workspace_root, source_path, dependent_kind, dependent_ref, relation, metadata_json, created_at, updated_at)
@@ -145,7 +142,6 @@ func (s *Store) ListDatasetDependencies(sourcePath string, limit int) ([]Dataset
 	if err != nil {
 		return nil, err
 	}
-	defer db.Close()
 	query := `SELECT id, source_path, dependent_kind, dependent_ref, relation, metadata_json, created_at, updated_at
 		FROM dataset_dependencies WHERE workspace_root = ?`
 	args := []any{s.root}

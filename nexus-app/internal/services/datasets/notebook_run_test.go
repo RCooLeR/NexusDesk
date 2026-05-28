@@ -1,6 +1,8 @@
 package datasets
 
 import (
+	"context"
+	"errors"
 	"strings"
 	"testing"
 )
@@ -52,5 +54,22 @@ func TestRunNotebookKeepsCellFailuresIsolated(t *testing.T) {
 	}
 	if !strings.Contains(result.Message, "1 failure") {
 		t.Fatalf("expected failure summary, got %q", result.Message)
+	}
+}
+
+func TestRunNotebookContextReturnsCanceled(t *testing.T) {
+	root := t.TempDir()
+	writeTestFile(t, root, "sales.csv", "channel,spend\nsearch,12\n")
+	ctx, cancel := context.WithCancel(context.Background())
+	cancel()
+	_, err := New(nil).RunNotebookContext(ctx, root, Notebook{
+		RelPath: "sales.csv",
+		Label:   "Sales Notebook",
+		Cells: []NotebookCell{
+			{ID: "top", Kind: "sql", Label: "Top spend", SQL: "select * from dataset"},
+		},
+	})
+	if !errors.Is(err, context.Canceled) {
+		t.Fatalf("expected canceled context error, got %v", err)
 	}
 }

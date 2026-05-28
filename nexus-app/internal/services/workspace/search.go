@@ -11,6 +11,7 @@ import (
 const (
 	defaultSearchMaxResults = 100
 	defaultSearchMaxDepth   = 20
+	defaultSearchPerFileMax = 10
 	searchPreviewMaxBytes   = 64 * 1024
 	searchSnippetMaxRunes   = 160
 )
@@ -90,7 +91,8 @@ func (s *Service) Search(root string, query string, options SearchOptions) ([]Se
 			return nil
 		}
 		if !entry.IsDir() {
-			results = append(results, searchService.searchFileContent(absRoot, relPath, matcher)...)
+			remaining := maxResults - len(results)
+			results = append(results, searchService.searchFileContent(absRoot, relPath, matcher, remaining)...)
 		}
 		return nil
 	})
@@ -110,27 +112,35 @@ func (s *Service) Search(root string, query string, options SearchOptions) ([]Se
 	return results, nil
 }
 
-func (s *Service) searchFileContent(root string, relPath string, matcher searchMatcher) []SearchResult {
+func (s *Service) searchFileContent(root string, relPath string, matcher searchMatcher, maxResults int) []SearchResult {
+	if maxResults <= 0 {
+		return nil
+	}
 	preview, err := s.PreviewFile(root, relPath)
 	if err != nil || strings.TrimSpace(preview.Text) == "" {
 		return nil
 	}
 	lines := strings.Split(preview.Text, "\n")
+	results := make([]SearchResult, 0, min(maxResults, defaultSearchPerFileMax))
 	for index, line := range lines {
-		if !matcher.matches(line) {
+		matchStart, isMatch := matcher.match(line)
+		if !isMatch {
 			continue
 		}
-		return []SearchResult{{
+		results = append(results, SearchResult{
 			RelPath:   preview.RelPath,
 			Name:      preview.Name,
 			Kind:      string(preview.Kind),
 			MediaType: preview.MediaType,
 			MatchType: matcher.matchType("content"),
 			Line:      index + 1,
-			Snippet:   trimSearchSnippet(line),
-		}}
+			Snippet:   trimSearchSnippet(line, matchStart),
+		})
+		if len(results) >= maxResults || len(results) >= defaultSearchPerFileMax {
+			break
+		}
 	}
-	return nil
+	return results
 }
 
 type searchMatcher struct {
@@ -151,10 +161,20 @@ func newSearchMatcher(query string, regexMode bool) (searchMatcher, error) {
 }
 
 func (m searchMatcher) matches(value string) bool {
+	_, ok := m.match(value)
+	return ok
+}
+
+func (m searchMatcher) match(value string) (int, bool) {
 	if m.regex {
-		return m.pattern.MatchString(value)
+		index := m.pattern.FindStringIndex(value)
+		if index == nil {
+			return 0, false
+		}
+		return index[0], true
 	}
-	return strings.Contains(strings.ToLower(value), m.lowerQuery)
+	index := strings.Index(strings.ToLower(value), m.lowerQuery)
+	return index, index >= 0
 }
 
 func (m searchMatcher) matchType(base string) string {
@@ -164,13 +184,46 @@ func (m searchMatcher) matchType(base string) string {
 	return base
 }
 
-func trimSearchSnippet(value string) string {
+func trimSearchSnippet(value string, matchStart int) string {
 	value = strings.Join(strings.Fields(value), " ")
 	runes := []rune(value)
 	if len(runes) <= searchSnippetMaxRunes {
 		return value
 	}
-	return string(runes[:searchSnippetMaxRunes-3]) + "..."
+	if matchStart < 0 || matchStart >= len(value) {
+		matchStart = len(value) / 2
+	}
+	matchRune := 0
+	for byteIndex := range value {
+		if byteIndex < matchStart {
+			matchRune++
+		} else {
+			break
+		}
+	}
+	windowHalf := (searchSnippetMaxRunes - 3) / 2
+	start := matchRune - windowHalf
+	if start < 0 {
+		start = 0
+	}
+	end := start + (searchSnippetMaxRunes - 3)
+	if end > len(runes) {
+		end = len(runes)
+	}
+	if end-start < (searchSnippetMaxRunes - 3) {
+		start = end - (searchSnippetMaxRunes - 3)
+		if start < 0 {
+			start = 0
+		}
+	}
+	snippet := string(runes[start:end])
+	if start > 0 {
+		snippet = "..." + snippet
+	}
+	if end < len(runes) {
+		snippet += "..."
+	}
+	return snippet
 }
 
 func shouldSkipSearchPath(relPath string, entry fs.DirEntry) bool {

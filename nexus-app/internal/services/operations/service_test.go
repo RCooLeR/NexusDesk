@@ -1,6 +1,7 @@
 package operations
 
 import (
+	"context"
 	"os"
 	"path/filepath"
 	"strings"
@@ -69,6 +70,25 @@ func TestInspectRejectsTraversal(t *testing.T) {
 	root := t.TempDir()
 	if _, err := New().Inspect(root, "../Dockerfile"); err == nil {
 		t.Fatal("expected traversal rejection")
+	}
+}
+
+func TestScanContextCanceled(t *testing.T) {
+	root := t.TempDir()
+	ctx, cancel := context.WithCancel(context.Background())
+	cancel()
+	if _, err := New().ScanContext(ctx, root); err == nil {
+		t.Fatal("expected canceled context to fail scan")
+	}
+}
+
+func TestInspectContextCanceled(t *testing.T) {
+	root := t.TempDir()
+	writeFile(t, root, "Dockerfile", "FROM alpine\n")
+	ctx, cancel := context.WithCancel(context.Background())
+	cancel()
+	if _, err := New().InspectContext(ctx, root, "Dockerfile"); err == nil {
+		t.Fatal("expected canceled context to fail inspect")
 	}
 }
 

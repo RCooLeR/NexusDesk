@@ -168,7 +168,7 @@ func jsonProblem(preview domain.FilePreview) WorkspaceProblem {
 }
 
 func problemFromLine(preview domain.FilePreview, severity string, source string, message string, lineNumber int, line string) WorkspaceProblem {
-	snippet := trimSearchSnippet(line)
+	snippet := trimSearchSnippet(line, 0)
 	if snippet != "" {
 		message += ": " + snippet
 	}

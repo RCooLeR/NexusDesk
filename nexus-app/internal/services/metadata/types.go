@@ -13,6 +13,25 @@ type Status struct {
 	UpdatedAt     time.Time
 }
 
+type BackupResult struct {
+	Path      string
+	Files     []string
+	SizeBytes int64
+	CreatedAt time.Time
+}
+
+type WorkspaceStateBackupOptions struct {
+	SettingsPath          string
+	ConnectorProfilesPath string
+}
+
+type WorkspaceStateBackupResult struct {
+	Path      string
+	Files     []string
+	SizeBytes int64
+	CreatedAt time.Time
+}
+
 type TaskRunRecord struct {
 	ID           string
 	JobID        string

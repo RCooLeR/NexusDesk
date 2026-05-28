@@ -278,15 +278,16 @@ func contextPathIsDirectory(absRoot string, relPath string) (bool, error) {
 	if relPath != "." {
 		target = filepath.Join(absRoot, filepath.FromSlash(relPath))
 	}
-	if !isInside(absRoot, target) {
-		return false, errors.New("workspace context path must stay inside the workspace")
-	}
-	info, err := os.Lstat(target)
+	resolvedTarget, err := ensureResolvedReadPathInsideRoot(absRoot, target)
 	if err != nil {
 		return false, err
 	}
-	if info.Mode()&os.ModeSymlink != 0 {
-		return false, errors.New("workspace context cannot follow symlinks")
+	if relPath == "." {
+		return true, nil
+	}
+	info, err := os.Stat(resolvedTarget)
+	if err != nil {
+		return false, err
 	}
 	return info.IsDir(), nil
 }

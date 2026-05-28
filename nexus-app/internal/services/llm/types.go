@@ -86,6 +86,7 @@ func ConfigFromSettings(settings settingssvc.Settings) Config {
 		Provider:              settings.Provider,
 		BaseURL:               settings.BaseURL,
 		Model:                 settings.Model,
+		APIKey:                settings.APIKey,
 		ContextTokens:         settings.ContextTokens,
 		ResponseReserveTokens: settings.ResponseReserveTokens,
 	}

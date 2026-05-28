@@ -21,7 +21,6 @@ func (s *Store) SaveApprovalRecord(record ApprovalRecord) error {
 	if err != nil {
 		return err
 	}
-	defer db.Close()
 	_, err = db.Exec(
 		`INSERT INTO approval_records (id, workspace_root, action, target, risk, decision, message, created_at)
 		 VALUES (?, ?, ?, ?, ?, ?, ?, ?)
@@ -52,7 +51,6 @@ func (s *Store) ListApprovalRecords(limit int) ([]ApprovalRecord, error) {
 	if err != nil {
 		return nil, err
 	}
-	defer db.Close()
 	rows, err := db.Query(
 		`SELECT id, action, target, risk, decision, message, created_at
 		 FROM approval_records WHERE workspace_root = ? ORDER BY created_at DESC, id DESC LIMIT ?`,

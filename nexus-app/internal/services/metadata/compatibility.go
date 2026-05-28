@@ -1,6 +1,7 @@
 package metadata
 
 import (
+	"context"
 	"crypto/sha256"
 	"encoding/hex"
 	"encoding/json"
@@ -19,6 +20,7 @@ const compatibilityAgentRunID = "compatibility-json-tool-runs"
 type CompatibilityImportOptions struct {
 	ChatHistoryPath string
 	ArtifactLimit   int
+	Force           bool
 }
 
 type CompatibilityImportReport struct {
@@ -33,43 +35,150 @@ type CompatibilityImportReport struct {
 }
 
 func (s *Store) ImportCompatibilityData(options CompatibilityImportOptions) (CompatibilityImportReport, error) {
+	return s.ImportCompatibilityDataContext(context.Background(), options)
+}
+
+func (s *Store) ImportCompatibilityDataContext(ctx context.Context, options CompatibilityImportOptions) (CompatibilityImportReport, error) {
+	if ctx == nil {
+		ctx = context.Background()
+	}
+	if err := compatibilityContextErr(ctx); err != nil {
+		return CompatibilityImportReport{}, err
+	}
 	report := CompatibilityImportReport{}
-	sqlRuns, dependencies, skipped, err := s.importCompatibilitySQLiteDatasets()
+	if !options.Force {
+		if alreadyImported, err := s.compatibilityImportAlreadyCompleted(); err == nil && alreadyImported {
+			report.Message = "Compatibility metadata import already completed for this workspace."
+			return report, nil
+		}
+	}
+	sqlRuns, dependencies, skipped, err := s.importCompatibilitySQLiteDatasets(ctx)
 	if err != nil {
 		return report, err
 	}
 	report.SQLRuns += sqlRuns
 	report.DatasetDependencies += dependencies
 	report.Skipped += skipped
+	if err := compatibilityContextErr(ctx); err != nil {
+		return report, err
+	}
 	if _, err := s.Ensure(); err != nil {
 		return CompatibilityImportReport{}, err
 	}
-	chatCount, skipped, err := s.importCompatibilityChats(options.ChatHistoryPath)
+	chatCount, skipped, err := s.importCompatibilityChats(ctx, options.ChatHistoryPath)
 	if err != nil {
 		return report, err
 	}
 	report.Chats += chatCount
 	report.Skipped += skipped
-	count, skipped, err := s.importCompatibilityApprovals()
+	if err := compatibilityContextErr(ctx); err != nil {
+		return report, err
+	}
+	count, skipped, err := s.importCompatibilityApprovals(ctx)
 	if err != nil {
 		return report, err
 	}
 	report.Approvals += count
 	report.Skipped += skipped
-	count, skipped, err = s.importCompatibilityArtifacts(options.ArtifactLimit)
+	if err := compatibilityContextErr(ctx); err != nil {
+		return report, err
+	}
+	count, skipped, err = s.importCompatibilityArtifacts(ctx, options.ArtifactLimit)
 	if err != nil {
 		return report, err
 	}
 	report.Artifacts += count
 	report.Skipped += skipped
-	count, skipped, err = s.importCompatibilityToolRuns()
+	if err := compatibilityContextErr(ctx); err != nil {
+		return report, err
+	}
+	count, skipped, err = s.importCompatibilityToolRuns(ctx)
 	if err != nil {
 		return report, err
 	}
 	report.ToolRuns += count
 	report.Skipped += skipped
 	report.Message = report.compatibilityMessage()
+	if err := s.markCompatibilityImportCompleted(report); err != nil {
+		report.Message += " (compatibility import marker write failed: " + err.Error() + ")"
+	}
 	return report, nil
+}
+
+func compatibilityContextErr(ctx context.Context) error {
+	select {
+	case <-ctx.Done():
+		return ctx.Err()
+	default:
+		return nil
+	}
+}
+
+type compatibilityImportStamp struct {
+	ImportedAt string                    `json:"importedAt"`
+	Report     CompatibilityImportReport `json:"report"`
+}
+
+func (s *Store) CompatibilityImportPending() (bool, error) {
+	done, err := s.compatibilityImportAlreadyCompleted()
+	if err != nil {
+		return true, err
+	}
+	return !done, nil
+}
+
+func (s *Store) compatibilityImportStampPath() string {
+	return filepath.Join(filepath.Dir(s.path), "compatibility-import.json")
+}
+
+func (s *Store) compatibilityImportAlreadyCompleted() (bool, error) {
+	path := s.compatibilityImportStampPath()
+	data, err := os.ReadFile(path)
+	if os.IsNotExist(err) {
+		return false, nil
+	}
+	if err != nil {
+		return false, err
+	}
+	if len(strings.TrimSpace(string(data))) == 0 {
+		return false, nil
+	}
+	stamp := compatibilityImportStamp{}
+	if err := json.Unmarshal(data, &stamp); err != nil {
+		if quarantineErr := s.quarantineCompatibilityImportStamp(path); quarantineErr != nil {
+			return false, quarantineErr
+		}
+		return false, nil
+	}
+	return true, nil
+}
+
+func (s *Store) markCompatibilityImportCompleted(report CompatibilityImportReport) error {
+	path := s.compatibilityImportStampPath()
+	if err := os.MkdirAll(filepath.Dir(path), 0o755); err != nil {
+		return err
+	}
+	payload := compatibilityImportStamp{
+		ImportedAt: formatTime(time.Now().UTC()),
+		Report:     report,
+	}
+	data, err := json.MarshalIndent(payload, "", "  ")
+	if err != nil {
+		return err
+	}
+	tempPath := path + ".tmp." + fmt.Sprintf("%d", time.Now().UTC().UnixNano())
+	if err := os.WriteFile(tempPath, append(data, '\n'), 0o644); err != nil {
+		return err
+	}
+	return os.Rename(tempPath, path)
+}
+
+func (s *Store) quarantineCompatibilityImportStamp(path string) error {
+	target := path + ".corrupt." + fmt.Sprintf("%d", time.Now().UTC().UnixNano())
+	if err := os.Rename(path, target); err != nil {
+		return err
+	}
+	return nil
 }
 
 func (r CompatibilityImportReport) compatibilityMessage() string {
@@ -151,7 +260,10 @@ type compatibilityToolRunRecord struct {
 	DurationMs    int64             `json:"durationMs"`
 }
 
-func (s *Store) importCompatibilityChats(path string) (int, int, error) {
+func (s *Store) importCompatibilityChats(ctx context.Context, path string) (int, int, error) {
+	if err := compatibilityContextErr(ctx); err != nil {
+		return 0, 0, err
+	}
 	path = firstNonEmptyString(path, defaultCompatibilityChatHistoryPath())
 	if strings.TrimSpace(path) == "" {
 		return 0, 0, nil
@@ -170,7 +282,12 @@ func (s *Store) importCompatibilityChats(path string) (int, int, error) {
 	messages := records[compatibilityWorkspaceHistoryKey(s.root)]
 	imported := 0
 	skipped := 0
-	for _, message := range messages {
+	for index, message := range messages {
+		if index%64 == 0 {
+			if err := compatibilityContextErr(ctx); err != nil {
+				return imported, skipped, err
+			}
+		}
 		sourcePaths := cleanCompatibilityPaths(append(message.SourcePaths, message.ContextRelPath))
 		record := ChatMessageRecord{
 			Role:        message.Role,
@@ -187,7 +304,10 @@ func (s *Store) importCompatibilityChats(path string) (int, int, error) {
 	return imported, skipped, nil
 }
 
-func (s *Store) importCompatibilityApprovals() (int, int, error) {
+func (s *Store) importCompatibilityApprovals(ctx context.Context) (int, int, error) {
+	if err := compatibilityContextErr(ctx); err != nil {
+		return 0, 0, err
+	}
 	path := filepath.Join(s.root, ".nexusdesk", "approvals", "log.json")
 	data, err := os.ReadFile(path)
 	if os.IsNotExist(err) {
@@ -202,7 +322,12 @@ func (s *Store) importCompatibilityApprovals() (int, int, error) {
 	}
 	imported := 0
 	skipped := 0
-	for _, item := range items {
+	for index, item := range items {
+		if index%64 == 0 {
+			if err := compatibilityContextErr(ctx); err != nil {
+				return imported, skipped, err
+			}
+		}
 		record := ApprovalRecord{
 			ID:        strings.TrimSpace(item.ID),
 			Action:    item.Action,
@@ -221,7 +346,10 @@ func (s *Store) importCompatibilityApprovals() (int, int, error) {
 	return imported, skipped, nil
 }
 
-func (s *Store) importCompatibilityArtifacts(limit int) (int, int, error) {
+func (s *Store) importCompatibilityArtifacts(ctx context.Context, limit int) (int, int, error) {
+	if err := compatibilityContextErr(ctx); err != nil {
+		return 0, 0, err
+	}
 	if limit <= 0 || limit > defaultCompatibilityArtifactLimit {
 		limit = defaultCompatibilityArtifactLimit
 	}
@@ -235,6 +363,9 @@ func (s *Store) importCompatibilityArtifacts(limit int) (int, int, error) {
 	}
 	sidecars := []string{}
 	err := filepath.WalkDir(artifactRoot, func(path string, entry os.DirEntry, walkErr error) error {
+		if err := compatibilityContextErr(ctx); err != nil {
+			return err
+		}
 		if walkErr != nil {
 			return nil
 		}
@@ -247,12 +378,20 @@ func (s *Store) importCompatibilityArtifacts(limit int) (int, int, error) {
 		return nil
 	})
 	if err != nil {
+		if errors.Is(err, context.Canceled) || errors.Is(err, context.DeadlineExceeded) {
+			return 0, 0, err
+		}
 		return 0, 0, err
 	}
 	sort.Strings(sidecars)
 	imported := 0
 	skipped := 0
 	for index, sidecar := range sidecars {
+		if index%64 == 0 {
+			if err := compatibilityContextErr(ctx); err != nil {
+				return imported, skipped, err
+			}
+		}
 		if imported >= limit {
 			skipped += len(sidecars) - index
 			break
@@ -341,7 +480,10 @@ func findCompatibilityArtifactFile(sidecarPath string) (string, error) {
 	return "", errors.New("artifact file for sidecar not found")
 }
 
-func (s *Store) importCompatibilityToolRuns() (int, int, error) {
+func (s *Store) importCompatibilityToolRuns(ctx context.Context) (int, int, error) {
+	if err := compatibilityContextErr(ctx); err != nil {
+		return 0, 0, err
+	}
 	path := filepath.Join(s.root, ".nexusdesk", "tool-runs", "log.json")
 	data, err := os.ReadFile(path)
 	if os.IsNotExist(err) {
@@ -372,6 +514,11 @@ func (s *Store) importCompatibilityToolRuns() (int, int, error) {
 	imported := 0
 	skipped := 0
 	for index, item := range items {
+		if index%64 == 0 {
+			if err := compatibilityContextErr(ctx); err != nil {
+				return imported, skipped, err
+			}
+		}
 		record := ToolRunRecord{
 			ID:         strings.TrimSpace(item.ID),
 			AgentRunID: compatibilityAgentRunID,

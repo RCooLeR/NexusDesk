@@ -3,6 +3,7 @@ package workspace
 import (
 	"bytes"
 	"errors"
+	"io"
 	"mime"
 	"os"
 	"path/filepath"
@@ -40,14 +41,34 @@ func (s *Service) PreviewFile(root string, relPath string) (domain.FilePreview, 
 	if err != nil {
 		return domain.FilePreview{}, err
 	}
-	if info.Size() > s.previewByteLimit {
-		return domain.FilePreview{}, errors.New("file is too large for inline preview")
+
+	sampleLimit := int64(4096)
+	if s.previewByteLimit > 0 && s.previewByteLimit < sampleLimit {
+		sampleLimit = s.previewByteLimit
 	}
-	content, err := os.ReadFile(target)
+	sample, err := readFilePrefix(target, sampleLimit)
 	if err != nil {
 		return domain.FilePreview{}, err
 	}
+	isOversized := s.previewByteLimit > 0 && info.Size() > s.previewByteLimit
+
+	content := sample
 	kind := previewKind(cleanRelPath, content)
+	if kind == domain.PreviewBinary && isOversized {
+		return domain.FilePreview{}, errors.New("file is too large for inline preview")
+	}
+	if kind != domain.PreviewText && isOversized {
+		content, err = os.ReadFile(target)
+		if err != nil {
+			return domain.FilePreview{}, err
+		}
+	}
+	if kind == domain.PreviewText && isOversized {
+		content, err = readFilePrefix(target, s.previewByteLimit)
+		if err != nil {
+			return domain.FilePreview{}, err
+		}
+	}
 	preview := domain.FilePreview{
 		RelPath:   cleanRelPath,
 		Name:      filepath.Base(cleanRelPath),
@@ -95,6 +116,22 @@ func (s *Service) PreviewFile(root string, relPath string) (domain.FilePreview, 
 	preview.Text = text
 	preview.Encoding = encoding
 	return preview, nil
+}
+
+func readFilePrefix(path string, limit int64) ([]byte, error) {
+	if limit <= 0 {
+		return os.ReadFile(path)
+	}
+	file, err := os.Open(path)
+	if err != nil {
+		return nil, err
+	}
+	defer file.Close()
+	content, err := io.ReadAll(io.LimitReader(file, limit))
+	if err != nil {
+		return nil, err
+	}
+	return content, nil
 }
 
 func previewKind(relPath string, content []byte) domain.PreviewKind {
