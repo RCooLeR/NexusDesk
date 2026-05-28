@@ -272,7 +272,7 @@ Goal: restore generated-output workflows with provenance and native inspection.
 - [x] Add document preview/extraction for Markdown, TXT, PDF, DOCX, XLSX, HTML/XML.
 - [x] Add first native document extraction slice for Markdown, TXT, HTML, and XML source files with artifact export.
 - [x] Extend native document extraction artifacts to DOCX and PDF preview text with PDF page metadata.
-- [ ] Add presentation/report generation targets after artifact lineage is stable.
+- [x] Add first native presentation outline artifact target from generated reports/chat/runbook artifacts with source lineage.
 - [x] Add read-only operations scanners for Dockerfiles, Compose, env/config/logs.
 - [x] Add Compose service topology summary from inspected Compose files.
 - [x] Add first operations runbook artifact export from inspected Docker/Compose/env/config/log evidence.
@@ -502,7 +502,8 @@ The Fyne migration must not drop product ambition, but this section is intention
 ### Artifacts And Provenance
 
 - [x] Markdown, CSV, SVG/chart, SQL result, task report, notebook report, document report, scan report, operations runbook, comparison, chat-answer, and extracted-document artifacts.
-- [ ] Presentation and richer generated document artifacts in native UI.
+- [x] First native presentation outline artifacts in the Artifacts UI with source provenance.
+- [ ] Richer generated document artifacts and packaged presentation exports in native UI.
 - [x] Provenance sidecars with source files, query IDs, generated timestamps, metadata rows, and freshness fingerprints for explicit artifact writes.
 - [ ] Complete chat/tool-run provenance coverage for every generated output type.
 - [x] Artifact browser with search, metadata, preview, compare, archive, delete, restore, and open-source navigation.
@@ -512,7 +513,8 @@ The Fyne migration must not drop product ambition, but this section is intention
 - [x] Expand artifact regeneration beyond dataset/query/chart/notebook/SQLite baseline with document-report, scan-report, document-extract, operations-runbook, and artifact-comparison rebuild actions.
 - [x] Add approval-gated agent artifact regeneration for supported native rebuildable artifacts.
 - [x] Add saved chat-answer refresh regeneration from persisted prompt/model/source/citation/evidence metadata without requiring a new model call.
-- [ ] Expand artifact regeneration to future artifact kinds such as generated presentations.
+- [x] Expand artifact regeneration to generated presentation outline artifacts.
+- [ ] Expand artifact regeneration to future packaged presentation and richer document artifact kinds.
 
 ### Operations Studio
 

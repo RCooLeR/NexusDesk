@@ -199,6 +199,16 @@ func TestArtifactCanRegenerateSupportedKinds(t *testing.T) {
 			want:     false,
 		},
 		{
+			name:     "presentation outline with source artifact",
+			artifact: artifactsSvc.Artifact{Kind: "presentation-outline", SourcePaths: []string{".nexusdesk/artifacts/document-sets/report.md"}},
+			want:     true,
+		},
+		{
+			name:     "presentation outline without source artifact",
+			artifact: artifactsSvc.Artifact{Kind: "presentation-outline", SourcePaths: []string{"docs/report.md"}},
+			want:     false,
+		},
+		{
 			name:     "archived scan report",
 			artifact: artifactsSvc.Artifact{Kind: "scan-report", Archived: true},
 			want:     false,
@@ -213,6 +223,47 @@ func TestArtifactCanRegenerateSupportedKinds(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			if got := artifactCanRegenerate(tc.artifact); got != tc.want {
 				t.Fatalf("artifactCanRegenerate() = %t, want %t", got, tc.want)
+			}
+		})
+	}
+}
+
+func TestArtifactCanGeneratePresentationOutlineForReportArtifacts(t *testing.T) {
+	cases := []struct {
+		name     string
+		artifact artifactsSvc.Artifact
+		want     bool
+	}{
+		{
+			name:     "document report",
+			artifact: artifactsSvc.Artifact{Kind: "document-report", RelPath: ".nexusdesk/artifacts/document-sets/report.md"},
+			want:     true,
+		},
+		{
+			name:     "chat answer",
+			artifact: artifactsSvc.Artifact{Kind: "chat-answer", RelPath: ".nexusdesk/artifacts/chat-answers/answer.md"},
+			want:     true,
+		},
+		{
+			name:     "presentation outline cannot outline itself",
+			artifact: artifactsSvc.Artifact{Kind: "presentation-outline", RelPath: ".nexusdesk/artifacts/presentations/slides.md"},
+			want:     false,
+		},
+		{
+			name:     "dataset csv not report-like",
+			artifact: artifactsSvc.Artifact{Kind: "dataset-query-csv", RelPath: ".nexusdesk/artifacts/dataset-queries/query.csv"},
+			want:     false,
+		},
+		{
+			name:     "archived report",
+			artifact: artifactsSvc.Artifact{Kind: "document-report", RelPath: ".nexusdesk/artifacts/document-sets/report.md", Archived: true},
+			want:     false,
+		},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			if got := artifactCanGeneratePresentationOutline(tc.artifact); got != tc.want {
+				t.Fatalf("artifactCanGeneratePresentationOutline() = %t, want %t", got, tc.want)
 			}
 		})
 	}
@@ -321,6 +372,74 @@ func TestBuildArtifactComparisonReportRegeneratesFromSourceArtifacts(t *testing.
 		if !strings.Contains(text, expected) {
 			t.Fatalf("comparison report missing %q:\n%s", expected, text)
 		}
+	}
+}
+
+func TestBuildPresentationOutlineArtifactUsesSourceArtifactMetadata(t *testing.T) {
+	root := t.TempDir()
+	store, err := artifactsSvc.NewStore(root)
+	if err != nil {
+		t.Fatalf("NewStore() error = %v", err)
+	}
+	source, err := store.WriteDocumentSetReport(artifactsSvc.DocumentSetReport{
+		Title:       "Architecture Notes",
+		Roots:       []string{"docs"},
+		SourcePaths: []string{"docs/a.md"},
+		Content:     "## Goals\n\n- Keep shell native\n- Preserve lineage\n",
+	})
+	if err != nil {
+		t.Fatalf("WriteDocumentSetReport() error = %v", err)
+	}
+	created, err := buildPresentationOutlineArtifact(context.Background(), root, source)
+	if err != nil {
+		t.Fatalf("buildPresentationOutlineArtifact() error = %v", err)
+	}
+	if created.Kind != "presentation-outline" || len(created.SourcePaths) != 2 || created.SourcePaths[0] != source.RelPath {
+		t.Fatalf("unexpected presentation artifact: %#v", created)
+	}
+	text, err := store.ReadArtifactText(created.RelPath)
+	if err != nil {
+		t.Fatalf("ReadArtifactText() error = %v", err)
+	}
+	for _, expected := range []string{"# Presentation Outline - Architecture Notes", "Source artifact:** " + source.RelPath, "### Slide 1: Architecture Notes", "Keep shell native"} {
+		if !strings.Contains(text, expected) {
+			t.Fatalf("presentation outline missing %q:\n%s", expected, text)
+		}
+	}
+}
+
+func TestBuildPresentationOutlineRefreshArtifactRegeneratesFromSource(t *testing.T) {
+	root := t.TempDir()
+	store, err := artifactsSvc.NewStore(root)
+	if err != nil {
+		t.Fatalf("NewStore() error = %v", err)
+	}
+	source, err := store.WriteDocumentSetReport(artifactsSvc.DocumentSetReport{
+		Title:       "Architecture Notes",
+		Roots:       []string{"docs"},
+		SourcePaths: []string{"docs/a.md"},
+		Content:     "## Goals\n\n- Keep shell native\n",
+	})
+	if err != nil {
+		t.Fatalf("WriteDocumentSetReport() error = %v", err)
+	}
+	outline, err := buildPresentationOutlineArtifact(context.Background(), root, source)
+	if err != nil {
+		t.Fatalf("buildPresentationOutlineArtifact() error = %v", err)
+	}
+	rebuilt, err := buildPresentationOutlineRefreshArtifact(context.Background(), root, outline)
+	if err != nil {
+		t.Fatalf("buildPresentationOutlineRefreshArtifact() error = %v", err)
+	}
+	if rebuilt.Kind != "presentation-outline" || rebuilt.RelPath == outline.RelPath {
+		t.Fatalf("unexpected rebuilt presentation outline: %#v", rebuilt)
+	}
+	text, err := store.ReadArtifactText(rebuilt.RelPath)
+	if err != nil {
+		t.Fatalf("ReadArtifactText() error = %v", err)
+	}
+	if !strings.Contains(text, source.RelPath) || !strings.Contains(text, "Keep shell native") {
+		t.Fatalf("rebuilt outline lost source linkage/content:\n%s", text)
 	}
 }
 

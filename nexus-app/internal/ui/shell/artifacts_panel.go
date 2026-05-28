@@ -25,6 +25,7 @@ const (
 	artifactJobKindDocumentReport  = "artifact-document-report"
 	artifactJobKindDocumentExtract = "artifact-document-extract"
 	artifactJobKindScanReport      = "artifact-scan-report"
+	artifactJobKindPresentation    = "artifact-presentation"
 	artifactJobKindRegenerate      = "artifact-regenerate"
 )
 
@@ -338,7 +339,7 @@ func (v *View) refreshArtifactsWithQuery(query string) {
 		status += " matching " + strings.TrimSpace(query)
 	}
 	v.artifactStatus.SetText(status)
-	v.artifactResults.Objects = artifactRows(artifacts, v.previewArtifact, v.pinArtifactForAssistantContext, v.compareArtifact, v.regenerateArtifact, v.archiveArtifact, v.restoreArtifact, v.deleteArtifact)
+	v.artifactResults.Objects = artifactRows(artifacts, v.previewArtifact, v.pinArtifactForAssistantContext, v.compareArtifact, v.generatePresentationOutlineFromArtifact, v.regenerateArtifact, v.archiveArtifact, v.restoreArtifact, v.deleteArtifact)
 	v.artifactResults.Refresh()
 	v.persistArtifactRecords(artifacts)
 	v.addActivity(fmt.Sprintf("Loaded %d artifact(s).", len(artifacts)))
@@ -421,6 +422,121 @@ func (v *View) compareArtifact(artifact artifactsSvc.Artifact) {
 	v.addActivity(comparison.Message)
 }
 
+func (v *View) generatePresentationOutlineFromArtifact(artifact artifactsSvc.Artifact) {
+	workspace := v.state.Workspace()
+	if workspace.Root == "" {
+		v.addActivity("Open a workspace before generating presentation outlines.")
+		return
+	}
+	if !artifactCanGeneratePresentationOutline(artifact) {
+		v.artifactStatus.SetText("Presentation outline is not available for " + artifact.Kind + ".")
+		v.addActivity("Select a report-like artifact before generating a presentation outline.")
+		return
+	}
+	jobLabel := presentationOutlineJobLabel(artifact)
+	job, ctx := v.jobService.Start(artifactJobKindPresentation, jobLabel)
+	v.jobService.AppendLog(job.ID, "Source artifact: "+artifact.RelPath)
+	v.jobService.AppendLog(job.ID, "Source kind: "+artifact.Kind)
+	v.artifactStatus.SetText("Generating presentation outline from " + artifact.RelPath + " as " + job.ID + ".")
+	v.addActivity("Started " + job.ID + ": " + jobLabel + ".")
+	v.refreshJobs()
+	root := workspace.Root
+	go func() {
+		created, err := buildPresentationOutlineArtifact(ctx, root, artifact)
+		fyne.Do(func() {
+			v.finishPresentationOutlineJob(job.ID, artifact, created, err)
+		})
+	}()
+}
+
+func buildPresentationOutlineArtifact(ctx context.Context, workspaceRoot string, source artifactsSvc.Artifact) (artifactsSvc.Artifact, error) {
+	if err := ctx.Err(); err != nil {
+		return artifactsSvc.Artifact{}, err
+	}
+	store, err := artifactsSvc.NewStore(workspaceRoot)
+	if err != nil {
+		return artifactsSvc.Artifact{}, err
+	}
+	text, err := store.ReadArtifactText(source.RelPath)
+	if err != nil {
+		return artifactsSvc.Artifact{}, err
+	}
+	metadata, err := store.ReadArtifactMetadata(source.RelPath)
+	if err == nil {
+		source.Title = firstNonEmpty(metadata.Title, source.Title)
+		source.Kind = firstNonEmpty(metadata.Kind, source.Kind)
+		source.SourcePaths = append([]string{}, metadata.SourcePaths...)
+	}
+	if err := ctx.Err(); err != nil {
+		return artifactsSvc.Artifact{}, err
+	}
+	report := artifactsSvc.BuildPresentationOutlineReport(
+		"",
+		source.RelPath,
+		artifactTitle(source),
+		source.Kind,
+		text,
+		source.SourcePaths,
+	)
+	created, err := store.WritePresentationOutlineReport(report)
+	if err != nil {
+		return artifactsSvc.Artifact{}, err
+	}
+	if err := ctx.Err(); err != nil {
+		return artifactsSvc.Artifact{}, err
+	}
+	return created, nil
+}
+
+func buildPresentationOutlineRefreshArtifact(ctx context.Context, workspaceRoot string, artifact artifactsSvc.Artifact) (artifactsSvc.Artifact, error) {
+	source, ok := artifactRegenerationSource(artifact)
+	if !ok {
+		return artifactsSvc.Artifact{}, fmt.Errorf("presentation outline artifact %s has no source artifact metadata", artifact.RelPath)
+	}
+	store, err := artifactsSvc.NewStore(workspaceRoot)
+	if err != nil {
+		return artifactsSvc.Artifact{}, err
+	}
+	metadata, err := store.ReadArtifactMetadata(source)
+	if err != nil {
+		return artifactsSvc.Artifact{}, err
+	}
+	sourceArtifact := artifactsSvc.Artifact{
+		Kind:        metadata.Kind,
+		Title:       metadata.Title,
+		RelPath:     source,
+		Source:      metadata.Source,
+		SourcePaths: append([]string{}, metadata.SourcePaths...),
+	}
+	return buildPresentationOutlineArtifact(ctx, workspaceRoot, sourceArtifact)
+}
+
+func (v *View) finishPresentationOutlineJob(jobID string, source artifactsSvc.Artifact, created artifactsSvc.Artifact, err error) {
+	if err != nil {
+		if errors.Is(err, context.Canceled) {
+			v.jobService.Finish(jobID, jobsSvc.StatusCanceled, "Presentation outline generation canceled.", nil)
+			v.artifactStatus.SetText("Presentation outline generation canceled.")
+			v.addActivity("Canceled presentation outline generation for " + source.RelPath + ".")
+		} else {
+			v.jobService.Finish(jobID, jobsSvc.StatusFailed, "Presentation outline generation failed.", err)
+			v.artifactStatus.SetText("Presentation outline generation failed for " + source.RelPath)
+			dialog.ShowError(err, v.window)
+		}
+		v.refreshJobs()
+		return
+	}
+	created.JobID = jobID
+	v.jobService.AppendLog(jobID, "Artifact: "+created.RelPath)
+	v.jobService.Finish(jobID, jobsSvc.StatusSuccess, "Created "+created.RelPath+".", nil)
+	v.artifactPreview.SetText("")
+	v.refreshArtifactSources(nil)
+	v.artifactStatus.SetText("Created " + created.RelPath)
+	v.addActivity("Generated presentation outline from " + source.RelPath + " at " + created.RelPath + ".")
+	v.persistArtifactRecord(created)
+	v.refreshArtifactsWithQuery("kind:presentation-outline")
+	v.refreshJobs()
+}
+
 func (v *View) regenerateArtifact(artifact artifactsSvc.Artifact) {
 	workspace := v.state.Workspace()
 	if workspace.Root == "" {
@@ -479,6 +595,8 @@ func (v *View) buildRegeneratedArtifact(ctx context.Context, workspaceRoot strin
 		return buildArtifactComparisonReport(ctx, workspaceRoot, left, right)
 	case "chat-answer":
 		return buildChatAnswerRefreshArtifact(ctx, workspaceRoot, artifact)
+	case "presentation-outline":
+		return buildPresentationOutlineRefreshArtifact(ctx, workspaceRoot, artifact)
 	default:
 		return artifactsSvc.Artifact{}, fmt.Errorf("artifact kind %q cannot be regenerated yet", artifact.Kind)
 	}
@@ -813,6 +931,7 @@ func artifactRows(
 	onPreview func(artifactsSvc.Artifact),
 	onContext func(artifactsSvc.Artifact),
 	onCompare func(artifactsSvc.Artifact),
+	onPresentation func(artifactsSvc.Artifact),
 	onRegenerate func(artifactsSvc.Artifact),
 	onArchive func(artifactsSvc.Artifact),
 	onRestore func(artifactsSvc.Artifact),
@@ -836,6 +955,10 @@ func artifactRows(
 			onCompare(artifact)
 		})
 		compare.Importance = widget.LowImportance
+		presentation := widget.NewButtonWithIcon("", theme.DocumentCreateIcon(), func() {
+			onPresentation(artifact)
+		})
+		presentation.Importance = widget.LowImportance
 		regenerate := widget.NewButtonWithIcon("", theme.MediaReplayIcon(), func() {
 			onRegenerate(artifact)
 		})
@@ -857,6 +980,9 @@ func artifactRows(
 		if !artifactCanRegenerate(artifact) {
 			regenerate.Disable()
 		}
+		if !artifactCanGeneratePresentationOutline(artifact) {
+			presentation.Disable()
+		}
 		deleteButton := widget.NewButtonWithIcon("", theme.DeleteIcon(), func() {
 			onDelete(artifact)
 		})
@@ -866,10 +992,22 @@ func artifactRows(
 		title.Truncation = fyne.TextTruncateEllipsis
 		meta := widget.NewLabel(artifactMeta(artifact))
 		meta.Truncation = fyne.TextTruncateEllipsis
-		actions := container.NewHBox(preview, context, compare, regenerate, archive, restore, deleteButton)
+		actions := container.NewHBox(preview, context, compare, presentation, regenerate, archive, restore, deleteButton)
 		rows = append(rows, container.NewBorder(nil, nil, actions, nil, container.NewVBox(title, meta)))
 	}
 	return rows
+}
+
+func artifactCanGeneratePresentationOutline(artifact artifactsSvc.Artifact) bool {
+	if artifact.Archived || strings.TrimSpace(artifact.RelPath) == "" {
+		return false
+	}
+	switch strings.TrimSpace(artifact.Kind) {
+	case "document-report", "document-extract", "operations-runbook", "artifact-comparison", "chat-answer", "scan-report", "sql-notebook-run":
+		return true
+	default:
+		return false
+	}
 }
 
 func artifactCanRegenerate(artifact artifactsSvc.Artifact) bool {
@@ -893,6 +1031,9 @@ func artifactCanRegenerate(artifact artifactsSvc.Artifact) bool {
 		return ok
 	case "chat-answer":
 		return strings.TrimSpace(artifact.RelPath) != "" && strings.TrimSpace(artifact.MetadataPath) != ""
+	case "presentation-outline":
+		source, ok := artifactRegenerationSource(artifact)
+		return ok && strings.HasPrefix(source, ".nexusdesk/artifacts/")
 	default:
 		return false
 	}
@@ -973,6 +1114,14 @@ func artifactRegenerationJobLabel(artifact artifactsSvc.Artifact) string {
 		title = artifact.Kind
 	}
 	return "Regenerate artifact (" + title + ")"
+}
+
+func presentationOutlineJobLabel(artifact artifactsSvc.Artifact) string {
+	title := artifactTitle(artifact)
+	if strings.TrimSpace(title) == "" {
+		title = artifact.Kind
+	}
+	return "Presentation outline (" + title + ")"
 }
 
 func artifactTitle(artifact artifactsSvc.Artifact) string {

@@ -223,6 +223,17 @@ type ChatAnswerReport struct {
 	EvidenceSummary        string
 }
 
+type PresentationOutlineReport struct {
+	Title       string
+	SourcePath  string
+	SourceTitle string
+	SourceKind  string
+	SourcePaths []string
+	Content     string
+	SlideCount  int
+	GeneratedBy string
+}
+
 type OperationsServiceSummary struct {
 	Name      string
 	Image     string
