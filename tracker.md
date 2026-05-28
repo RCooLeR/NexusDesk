@@ -387,6 +387,7 @@ The Fyne migration must not drop product ambition, but this section is intention
 - [x] Native format-document parity slice with deterministic Go and JSON draft formatting from the Fyne editor.
 - [x] Native split editor parity slice with Wails-derived secondary tab resolution and Fyne read-only secondary preview selection.
 - [x] Native symbol navigation parity slice with a searchable Fyne go-to-symbol dialog backed by the Wails-derived outline rules.
+- [x] Native command palette baseline with searchable workbench/editor/navigation actions and `Ctrl/Cmd+Shift+P`.
 - [x] Native broader-format parity slice with safe Markdown/config/SQL/Dockerfile/text plus recognized code/markup whitespace formatting and JSON workspace formatting.
 - [x] Native minimap replacement slice with a jumpable Fyne Document Map for symbols, TODO/FIXME/HACK/BUG markers, merge conflicts, and long-file anchors.
 - [x] Native local go-to-definition parity slice with cursor-symbol resolution against the Wails-derived outline rules.

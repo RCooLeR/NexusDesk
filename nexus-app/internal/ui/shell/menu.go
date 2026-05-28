@@ -59,7 +59,7 @@ func (v *View) mainMenu() *fyne.MainMenu {
 		),
 		fyne.NewMenu("Tools",
 			fyne.NewMenuItem("Refresh Activity", func() { v.activityLog.Refresh() }),
-			disabledMenuItem("Command Palette"),
+			menuItem("Command Palette", shortcutCommandPalette(), v.openCommandPaletteDialog),
 		),
 		fyne.NewMenu("Help", about),
 	)
@@ -68,12 +68,6 @@ func (v *View) mainMenu() *fyne.MainMenu {
 func menuItem(label string, shortcut fyne.Shortcut, action func()) *fyne.MenuItem {
 	item := fyne.NewMenuItem(label, action)
 	item.Shortcut = shortcut
-	return item
-}
-
-func disabledMenuItem(label string) *fyne.MenuItem {
-	item := fyne.NewMenuItem(label, nil)
-	item.Disabled = true
 	return item
 }
 
