@@ -53,6 +53,20 @@ func (v *View) openFindReplaceDialog() {
 	caseSensitive := widget.NewCheck("Case sensitive", nil)
 	status := widget.NewLabel("Enter search text.")
 	status.Wrapping = fyne.TextWrapWord
+	refreshMatchCount := func() {
+		activeEditor, exists := v.textEditor(tabID)
+		if !exists {
+			status.SetText("Editor tab is no longer available.")
+			return
+		}
+		query := strings.TrimSpace(findEntry.Text)
+		if query == "" {
+			status.SetText("Enter search text.")
+			return
+		}
+		count := editorCountFindMatches(activeEditor.source.Text, query, caseSensitive.Checked)
+		status.SetText(fmt.Sprintf("%d match(es).", count))
+	}
 	findNext := func() {
 		activeEditor, exists := v.textEditor(tabID)
 		if !exists {
@@ -124,7 +138,9 @@ func (v *View) openFindReplaceDialog() {
 		editorSetCursorOffset(activeEditor.source, nextText, 0)
 		status.SetText(fmt.Sprintf("Replaced %d match(es).", count))
 	}
+	findEntry.OnChanged = func(string) { refreshMatchCount() }
 	findEntry.OnSubmitted = func(string) { findNext() }
+	caseSensitive.OnChanged = func(bool) { refreshMatchCount() }
 	replaceEntry.OnSubmitted = func(string) { replaceNext() }
 	content := container.NewVBox(
 		widget.NewForm(
@@ -209,6 +225,25 @@ func editorReplaceAll(text string, query string, replacement string, caseSensiti
 		return text, 0
 	}
 	return builder.String(), replaced
+}
+
+func editorCountFindMatches(text string, query string, caseSensitive bool) int {
+	if query == "" || text == "" {
+		return 0
+	}
+	count := 0
+	offset := 0
+	for {
+		index := editorFindNextOffset(text, query, offset, caseSensitive)
+		if index < 0 {
+			return count
+		}
+		count++
+		offset = index + len(query)
+		if offset > len(text) {
+			return count
+		}
+	}
 }
 
 func editorCursorToOffset(text string, row int, column int) int {

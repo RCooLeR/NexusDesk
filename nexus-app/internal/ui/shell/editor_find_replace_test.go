@@ -38,6 +38,18 @@ func TestEditorReplaceAllCaseInsensitive(t *testing.T) {
 	}
 }
 
+func TestEditorCountFindMatches(t *testing.T) {
+	if got := editorCountFindMatches("Beta beta BETA", "beta", false); got != 3 {
+		t.Fatalf("expected 3 case-insensitive matches, got %d", got)
+	}
+	if got := editorCountFindMatches("Beta beta BETA", "beta", true); got != 1 {
+		t.Fatalf("expected 1 case-sensitive match, got %d", got)
+	}
+	if got := editorCountFindMatches("aaaa", "aa", true); got != 2 {
+		t.Fatalf("expected non-overlapping match count, got %d", got)
+	}
+}
+
 func TestEditorCursorOffsetRoundTrip(t *testing.T) {
 	text := "alpha\nzeta\nomega"
 	offset := editorCursorToOffset(text, 1, 2)
