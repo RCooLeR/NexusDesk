@@ -50,7 +50,10 @@ func runDiscovered(parent context.Context, root string, taskID string) (RunResul
 	started := time.Now().UTC()
 	ctx, cancel := context.WithTimeout(parent, runTimeout)
 	defer cancel()
-	command := taskExecCommand(ctx, selected.Command)
+	command, err := runnableTaskCommand(ctx, selected)
+	if err != nil {
+		return RunResult{}, err
+	}
 	command.Dir = cwd
 	hideTaskCommandWindow(command)
 	var stdout bytes.Buffer
@@ -105,21 +108,44 @@ func findTask(tasks []Task, taskID string) (Task, bool) {
 }
 
 func validateRunnableTask(task Task) error {
+	_, err := runnableTaskArgs(task)
+	return err
+}
+
+func runnableTaskCommand(ctx context.Context, task Task) (*exec.Cmd, error) {
+	args, err := runnableTaskArgs(task)
+	if err != nil {
+		return nil, err
+	}
+	return taskExecCommand(ctx, args[0], args[1:]...), nil
+}
+
+func runnableTaskArgs(task Task) ([]string, error) {
 	switch task.Kind {
 	case "npm-script":
-		if strings.HasPrefix(task.Command, "npm run ") {
-			return nil
+		script := strings.TrimSpace(strings.TrimPrefix(task.Command, "npm run "))
+		if script != "" && strings.HasPrefix(task.Command, "npm run ") && isSafeNpmScriptName(script) {
+			return []string{"npm", "run", script}, nil
 		}
 	case "go-test":
-		if strings.HasPrefix(task.Command, "go test ") {
-			return nil
+		parts := strings.Fields(task.Command)
+		if len(parts) == 3 && parts[0] == "go" && parts[1] == "test" && strings.HasPrefix(parts[2], "./") {
+			return []string{"go", "test", parts[2]}, nil
 		}
 	case "compose":
-		if strings.HasPrefix(task.Command, "docker compose -f ") && strings.HasSuffix(task.Command, " config") {
-			return nil
+		fileName := filepath.Base(filepath.FromSlash(task.Source))
+		if isComposeFile(fileName) && strings.TrimSpace(task.Command) == "docker compose -f "+quotePath(fileName)+" config" {
+			return []string{"docker", "compose", "-f", fileName, "config"}, nil
 		}
 	}
-	return fmt.Errorf("task %q is not runnable by the safe task runner", task.Label)
+	return nil, fmt.Errorf("task %q is not runnable by the safe task runner", task.Label)
+}
+
+func isSafeNpmScriptName(script string) bool {
+	if script == "" || strings.ContainsAny(script, " \t\r\n;&|`$<>\"'\\") {
+		return false
+	}
+	return true
 }
 
 type limitWriter struct {

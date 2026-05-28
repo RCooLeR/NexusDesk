@@ -7,8 +7,8 @@ import (
 	"os/exec"
 )
 
-func taskExecCommand(ctx context.Context, command string) *exec.Cmd {
-	return exec.CommandContext(ctx, "sh", "-c", command)
+func taskExecCommand(ctx context.Context, name string, args ...string) *exec.Cmd {
+	return exec.CommandContext(ctx, name, args...)
 }
 
 func hideTaskCommandWindow(command *exec.Cmd) {}

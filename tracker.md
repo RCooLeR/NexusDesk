@@ -565,7 +565,7 @@ The Fyne migration must not drop product ambition, but this section is intention
 - [x] Revisit default LLM model strategy to avoid hard-coded defaults that rarely match local setups.
 - [ ] Replace locale-bound mutation-claim heuristics with mutation-observation-driven verification.
 - [ ] Expand safe task execution whitelist beyond current npm/go/compose-only support.
-- [ ] Replace shell string execution for discovered tasks with argument-based process invocation.
+- [x] Replace shell string execution for discovered tasks with argument-based process invocation.
 - [x] Avoid schema file rewrite on every metadata `Ensure` invocation.
 - [x] Separate Ask vs Agent system prompt behavior for clearer model role control.
 - [x] Add quick-open keyboard workflow (e.g., Ctrl+P) for direct file navigation.

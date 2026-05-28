@@ -5,6 +5,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"strings"
 	"testing"
 )
 
@@ -151,7 +152,7 @@ func TestValidateRunnableTask(t *testing.T) {
 	for _, task := range []Task{
 		{Kind: "npm-script", Command: "npm run build", Label: "npm run build"},
 		{Kind: "go-test", Command: "go test ./...", Label: "go test ./..."},
-		{Kind: "compose", Command: "docker compose -f compose.yml config", Label: "docker compose config"},
+		{Kind: "compose", Command: "docker compose -f compose.yml config", Source: "compose.yml", Label: "docker compose config"},
 	} {
 		if err := validateRunnableTask(task); err != nil {
 			t.Fatalf("expected %s to be runnable: %v", task.Command, err)
@@ -159,6 +160,41 @@ func TestValidateRunnableTask(t *testing.T) {
 	}
 	if err := validateRunnableTask(Task{Kind: "shell", Command: "rm -rf .", Label: "bad"}); err == nil {
 		t.Fatal("expected unsafe task to be rejected")
+	}
+}
+
+func TestRunnableTaskArgsAvoidShellExecution(t *testing.T) {
+	cases := []struct {
+		task Task
+		want []string
+	}{
+		{
+			task: Task{Kind: "npm-script", Command: "npm run build", Label: "npm run build"},
+			want: []string{"npm", "run", "build"},
+		},
+		{
+			task: Task{Kind: "go-test", Command: "go test ./internal/widget", Label: "go test ./internal/widget"},
+			want: []string{"go", "test", "./internal/widget"},
+		},
+		{
+			task: Task{Kind: "compose", Command: "docker compose -f compose.yml config", Source: "ops/compose.yml", Label: "docker compose config"},
+			want: []string{"docker", "compose", "-f", "compose.yml", "config"},
+		},
+	}
+	for _, tt := range cases {
+		got, err := runnableTaskArgs(tt.task)
+		if err != nil {
+			t.Fatalf("runnableTaskArgs(%#v) returned error: %v", tt.task, err)
+		}
+		if strings.Join(got, "\x00") != strings.Join(tt.want, "\x00") {
+			t.Fatalf("unexpected args: got %#v want %#v", got, tt.want)
+		}
+	}
+	if _, err := runnableTaskArgs(Task{Kind: "npm-script", Command: "npm run build && rm -rf .", Label: "bad"}); err == nil {
+		t.Fatal("expected unsafe npm shell payload to be rejected")
+	}
+	if _, err := runnableTaskArgs(Task{Kind: "compose", Command: "docker compose -f compose.yml config && rm -rf .", Source: "ops/compose.yml", Label: "bad"}); err == nil {
+		t.Fatal("expected unsafe compose shell payload to be rejected")
 	}
 }
 

@@ -8,8 +8,8 @@ import (
 	"syscall"
 )
 
-func taskExecCommand(ctx context.Context, command string) *exec.Cmd {
-	return exec.CommandContext(ctx, "cmd", "/C", command)
+func taskExecCommand(ctx context.Context, name string, args ...string) *exec.Cmd {
+	return exec.CommandContext(ctx, name, args...)
 }
 
 func hideTaskCommandWindow(command *exec.Cmd) {
