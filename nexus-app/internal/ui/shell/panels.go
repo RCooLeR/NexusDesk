@@ -52,23 +52,37 @@ func (v *View) newBottomPanel() fyne.CanvasObject {
 	activity := container.NewScroll(v.activityLog)
 	activity.SetMinSize(fyne.NewSize(200, 90))
 	tabs := container.NewAppTabs(
-		container.NewTabItemWithIcon("Activity", theme.HistoryIcon(), activity),
-		container.NewTabItemWithIcon("Data", theme.StorageIcon(), v.newDataPanel()),
-		container.NewTabItemWithIcon("Operations", theme.ComputerIcon(), v.newOperationsPanel()),
-		container.NewTabItemWithIcon("Search", theme.SearchIcon(), v.newSearchPanel()),
-		container.NewTabItemWithIcon("Problems", theme.WarningIcon(), v.newProblemsPanel()),
-		container.NewTabItemWithIcon("Git", theme.ContentCopyIcon(), v.newGitPanel()),
-		container.NewTabItemWithIcon("Tasks", theme.MediaPlayIcon(), v.newTasksPanel()),
-		container.NewTabItemWithIcon("Jobs", theme.ListIcon(), v.newJobsPanel()),
-		container.NewTabItemWithIcon("History", theme.InfoIcon(), v.newHistoryPanel()),
-		container.NewTabItemWithIcon("Chat", theme.MailComposeIcon(), v.newChatHistoryPanel()),
-		container.NewTabItemWithIcon("Agent Audit", theme.InfoIcon(), v.newAgentAuditPanel()),
-		container.NewTabItemWithIcon("Diagnostics", theme.VisibilityIcon(), v.newDiagnosticsPanel()),
-		container.NewTabItemWithIcon("Artifacts", theme.DocumentIcon(), v.newArtifactsPanel()),
-		container.NewTabItemWithIcon("Rollbacks", theme.ContentUndoIcon(), v.newRollbackPanel()),
-		container.NewTabItemWithIcon("Approvals", theme.ConfirmIcon(), v.newApprovalsPanel()),
+		bottomTabGroup("Workbench", theme.HomeIcon(),
+			container.NewTabItemWithIcon("Activity", theme.HistoryIcon(), activity),
+			container.NewTabItemWithIcon("Search", theme.SearchIcon(), v.newSearchPanel()),
+			container.NewTabItemWithIcon("Problems", theme.WarningIcon(), v.newProblemsPanel()),
+			container.NewTabItemWithIcon("Git", theme.ContentCopyIcon(), v.newGitPanel()),
+			container.NewTabItemWithIcon("Tasks", theme.MediaPlayIcon(), v.newTasksPanel()),
+			container.NewTabItemWithIcon("Jobs", theme.ListIcon(), v.newJobsPanel()),
+			container.NewTabItemWithIcon("Rollbacks", theme.ContentUndoIcon(), v.newRollbackPanel()),
+		),
+		bottomTabGroup("Data Studio", theme.StorageIcon(),
+			container.NewTabItemWithIcon("Data", theme.StorageIcon(), v.newDataPanel()),
+			container.NewTabItemWithIcon("Operations", theme.ComputerIcon(), v.newOperationsPanel()),
+			container.NewTabItemWithIcon("Artifacts", theme.DocumentIcon(), v.newArtifactsPanel()),
+		),
+		bottomTabGroup("Knowledge", theme.InfoIcon(),
+			container.NewTabItemWithIcon("History", theme.InfoIcon(), v.newHistoryPanel()),
+			container.NewTabItemWithIcon("Chat", theme.MailComposeIcon(), v.newChatHistoryPanel()),
+			container.NewTabItemWithIcon("Agent Audit", theme.InfoIcon(), v.newAgentAuditPanel()),
+		),
+		bottomTabGroup("System", theme.VisibilityIcon(),
+			container.NewTabItemWithIcon("Diagnostics", theme.VisibilityIcon(), v.newDiagnosticsPanel()),
+			container.NewTabItemWithIcon("Approvals", theme.ConfirmIcon(), v.newApprovalsPanel()),
+		),
 	)
 	tabs.SetTabLocation(container.TabLocationTop)
 	v.bottomTabs = tabs
 	return tabs
+}
+
+func bottomTabGroup(title string, icon fyne.Resource, items ...*container.TabItem) *container.TabItem {
+	tabs := container.NewAppTabs(items...)
+	tabs.SetTabLocation(container.TabLocationTop)
+	return container.NewTabItemWithIcon(title, icon, tabs)
 }

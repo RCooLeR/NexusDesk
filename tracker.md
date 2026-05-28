@@ -541,7 +541,7 @@ The Fyne migration must not drop product ambition, but this section is intention
 - [x] Improve encoding fallback from hardcoded Windows-1251 for unsupported text encodings.
 - [x] Avoid full-history replay in approval persistence; persist only the new record and serialize repository writes safely.
 - [x] Add single-file-open entrypoint (file picker/quick-open) in addition to folder open flow.
-- [ ] Consolidate bottom-panel navigation to reduce tab discoverability and density issues.
+- [x] Consolidate bottom-panel navigation to reduce tab discoverability and density issues.
 - [ ] Split `internal/ui/shell/data_panel.go` into smaller UI responsibility files.
 - [x] Ensure `ApplyFileAppend` failure path cleans rollback snapshots cleanly and checks close errors.
 - [x] Surface directory-entry truncation in navigator UI when entry cap clips folder contents.
