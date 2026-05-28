@@ -46,6 +46,24 @@ func TestCollectContextFilesSupportsWorkspaceRoot(t *testing.T) {
 	}
 }
 
+func TestCollectContextFilesUsesSharedTextPolicy(t *testing.T) {
+	root := t.TempDir()
+	writeWorkspaceTestFile(t, root, "Dockerfile", "FROM scratch\n")
+	writeWorkspaceTestFile(t, root, ".gitignore", "bin/\n")
+	writeWorkspaceTestFile(t, root, "ui/App.vue", "<template>Hello</template>\n")
+	writeWorkspaceTestFile(t, root, "ui/style.scss", "$color: red;\n")
+
+	collection, err := New().CollectContextFiles(root, []string{"."}, ContextCollectOptions{MaxFiles: 10})
+	if err != nil {
+		t.Fatalf("CollectContextFiles returned error: %v", err)
+	}
+
+	assertContextFile(t, collection, "Dockerfile")
+	assertContextFile(t, collection, ".gitignore")
+	assertContextFile(t, collection, "ui/App.vue")
+	assertContextFile(t, collection, "ui/style.scss")
+}
+
 func TestBuildContextPackAllowsExplicitArtifactContext(t *testing.T) {
 	root := t.TempDir()
 	writeWorkspaceTestFile(t, root, ".nexusdesk/artifacts/task-runs/report.md", "# Task Report\n\nDone.\n")

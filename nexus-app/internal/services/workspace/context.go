@@ -306,14 +306,11 @@ func appendContextFile(collection *ContextCollection, seen map[string]bool, file
 
 func isContextCandidate(relPath string) bool {
 	ext := strings.ToLower(filepath.Ext(relPath))
-	if ext == "" {
+	if isTextLikePath(relPath) || ext == "" {
 		return true
 	}
 	switch ext {
-	case ".c", ".conf", ".cpp", ".cs", ".css", ".csv", ".docx", ".env", ".go", ".h", ".hpp",
-		".html", ".ini", ".java", ".js", ".json", ".jsonl", ".jsx", ".log", ".md", ".ndjson",
-		".pdf", ".php", ".ps1", ".py", ".rb", ".rs", ".rtf", ".sh", ".sql", ".toml", ".ts",
-		".tsx", ".tsv", ".txt", ".xml", ".yaml", ".yml":
+	case ".csv", ".docx", ".pdf", ".tsv", ".xlsx":
 		return true
 	default:
 		return false

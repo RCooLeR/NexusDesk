@@ -13,29 +13,6 @@ import (
 	"nexusdesk/internal/domain"
 )
 
-var textExtensions = map[string]struct{}{
-	".css":        {},
-	".go":         {},
-	".html":       {},
-	".js":         {},
-	".json":       {},
-	".jsx":        {},
-	".log":        {},
-	".md":         {},
-	".ps1":        {},
-	".py":         {},
-	".rs":         {},
-	".sql":        {},
-	".toml":       {},
-	".ts":         {},
-	".tsx":        {},
-	".txt":        {},
-	".xml":        {},
-	".yaml":       {},
-	".yml":        {},
-	".dockerfile": {},
-}
-
 func (s *Service) PreviewFile(root string, relPath string) (domain.FilePreview, error) {
 	target, cleanRelPath, info, err := resolveFile(root, relPath)
 	if err != nil {
@@ -148,7 +125,7 @@ func previewKind(relPath string, content []byte) domain.PreviewKind {
 	if isDocumentExtension(extension) {
 		return domain.PreviewDoc
 	}
-	if _, ok := textExtensions[extension]; ok {
+	if isTextLikePath(relPath) {
 		if looksBinary(content) && !looksLikeUTF16LE(content) && !looksLikeUTF16BE(content) {
 			return domain.PreviewBinary
 		}

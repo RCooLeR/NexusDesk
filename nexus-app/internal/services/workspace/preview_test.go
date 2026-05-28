@@ -21,6 +21,32 @@ func TestPreviewFileReadsUTF8Text(t *testing.T) {
 	}
 }
 
+func TestPreviewFileUsesSharedTextPolicyForBasenames(t *testing.T) {
+	root := t.TempDir()
+	writeFile(t, filepath.Join(root, "Dockerfile"), "FROM scratch\n")
+
+	preview, err := New().PreviewFile(root, "Dockerfile")
+	if err != nil {
+		t.Fatalf("PreviewFile returned error: %v", err)
+	}
+	if preview.Kind != "text" || preview.Text != "FROM scratch\n" {
+		t.Fatalf("expected Dockerfile text preview, got %#v", preview)
+	}
+}
+
+func TestPreviewFileUsesSharedTextPolicyForModernExtensions(t *testing.T) {
+	root := t.TempDir()
+	writeFile(t, filepath.Join(root, "src", "App.vue"), "<template>Hello</template>\n")
+
+	preview, err := New().PreviewFile(root, "src/App.vue")
+	if err != nil {
+		t.Fatalf("PreviewFile returned error: %v", err)
+	}
+	if preview.Kind != "text" || !strings.Contains(preview.Text, "template") {
+		t.Fatalf("expected Vue text preview, got %#v", preview)
+	}
+}
+
 func TestPreviewFileReadsUTF16LEText(t *testing.T) {
 	root := t.TempDir()
 	writeBytes(t, filepath.Join(root, "notes.txt"), []byte{0xff, 0xfe, 'H', 0, 'i', 0})
