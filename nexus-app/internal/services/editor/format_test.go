@@ -26,8 +26,41 @@ func TestFormatDocumentFormatsJSON(t *testing.T) {
 	}
 }
 
+func TestFormatDocumentFormatsMarkdownWhitespace(t *testing.T) {
+	result, err := FormatDocument("README.md", "# Title\r\nKeep hard break   \r\nTrim tab\t\r\n\r\n")
+	if err != nil {
+		t.Fatalf("FormatDocument returned error: %v", err)
+	}
+	want := "# Title\nKeep hard break  \nTrim tab\n"
+	if !result.Changed || result.Content != want {
+		t.Fatalf("unexpected Markdown formatting:\n%q", result.Content)
+	}
+}
+
+func TestFormatDocumentFormatsConfigWhitespace(t *testing.T) {
+	result, err := FormatDocument("compose.yaml", "services:  \r\n  app:\t\r\n    image: nexus  \r\n\r\n")
+	if err != nil {
+		t.Fatalf("FormatDocument returned error: %v", err)
+	}
+	want := "services:\n  app:\n    image: nexus\n"
+	if !result.Changed || result.Content != want {
+		t.Fatalf("unexpected YAML formatting:\n%q", result.Content)
+	}
+}
+
+func TestFormatDocumentFormatsDockerfileByName(t *testing.T) {
+	result, err := FormatDocument("Dockerfile.dev", "FROM alpine  \r\nRUN echo hi\t\r\n")
+	if err != nil {
+		t.Fatalf("FormatDocument returned error: %v", err)
+	}
+	want := "FROM alpine\nRUN echo hi\n"
+	if !result.Changed || result.Content != want {
+		t.Fatalf("unexpected Dockerfile formatting:\n%q", result.Content)
+	}
+}
+
 func TestFormatDocumentReportsUnsupportedExtensions(t *testing.T) {
-	if _, err := FormatDocument("README.md", "# Title\n"); err == nil || !strings.Contains(err.Error(), "not available") {
+	if _, err := FormatDocument("script.py", "print('hi')\n"); err == nil || !strings.Contains(err.Error(), "not available") {
 		t.Fatalf("expected unsupported format error, got %v", err)
 	}
 }
