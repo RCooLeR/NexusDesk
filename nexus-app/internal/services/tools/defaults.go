@@ -36,6 +36,8 @@ func NewDefaultDispatcher(deps Dependencies) *Dispatcher {
 		Tool{Descriptor: agent.ToolDescriptor{Name: "read_problems", Description: "Run lightweight TODO/FIXME/HACK/BUG, merge-conflict, and JSON diagnostics.", Risk: "low", Inputs: "maxResults(optional)"}, Handler: handlers.readProblems},
 		Tool{Descriptor: agent.ToolDescriptor{Name: "read_git_status", Description: "Read manual Git status for the active workspace.", Risk: "low", Inputs: ""}, Handler: handlers.readGitStatus},
 		Tool{Descriptor: agent.ToolDescriptor{Name: "read_git_diff", Description: "Read a bounded staged/unstaged diff for one changed file.", Risk: "low", Inputs: "relPath"}, Handler: handlers.readGitDiff},
+		Tool{Descriptor: agent.ToolDescriptor{Name: "read_git_history", Description: "Read bounded Git commit history for the repository or one file.", Risk: "low", Inputs: "relPath(optional), limit(optional)"}, Handler: handlers.readGitHistory},
+		Tool{Descriptor: agent.ToolDescriptor{Name: "read_git_blame", Description: "Read bounded Git blame lines for one file.", Risk: "low", Inputs: "relPath, startLine(optional), endLine(optional)"}, Handler: handlers.readGitBlame},
 		Tool{Descriptor: agent.ToolDescriptor{Name: "list_tasks", Description: "List safe discovered workspace tasks.", Risk: "low", Inputs: ""}, Handler: handlers.listTasks},
 		Tool{Descriptor: agent.ToolDescriptor{Name: "run_task", Description: "Run a discovered safe workspace task when shell approval is granted.", Risk: "high", Inputs: "taskId"}, Handler: handlers.runTask},
 		Tool{Descriptor: agent.ToolDescriptor{Name: "write_file", Description: "Create or replace a text/code file inside the workspace through safe write validation and rollback.", Risk: "high", Inputs: "relPath, content, encoding(optional)"}, Handler: handlers.writeFile},
@@ -173,6 +175,76 @@ func (h defaultHandlers) readGitDiff(ctx context.Context, call agent.ToolCall, r
 		observation += "\nUnstaged diff:\n" + diff.UnstagedDiff
 	}
 	return toolOK(call, "low", observation), nil
+}
+
+func (h defaultHandlers) readGitHistory(ctx context.Context, call agent.ToolCall, request agent.Request) (agent.ToolResult, error) {
+	root, err := workspaceRoot(request)
+	if err != nil {
+		return toolError(call, "low", err), err
+	}
+	result, err := h.deps.Git.History(root, firstArg(call, "relPath", "path", "target"), intArg(call, "limit", gitsvc.DefaultHistoryLimit))
+	if err != nil {
+		return toolError(call, "low", err), err
+	}
+	return toolOK(call, "low", formatGitHistoryObservation(result)), nil
+}
+
+func (h defaultHandlers) readGitBlame(ctx context.Context, call agent.ToolCall, request agent.Request) (agent.ToolResult, error) {
+	root, err := workspaceRoot(request)
+	if err != nil {
+		return toolError(call, "low", err), err
+	}
+	relPath := firstArg(call, "relPath", "path", "target")
+	if relPath == "" {
+		err := errors.New("relPath is required")
+		return toolError(call, "low", err), err
+	}
+	result, err := h.deps.Git.Blame(root, relPath, intArg(call, "startLine", 1), intArg(call, "endLine", gitsvc.DefaultHistoryLimit))
+	if err != nil {
+		return toolError(call, "low", err), err
+	}
+	return toolOK(call, "low", formatGitBlameObservation(result)), nil
+}
+
+func formatGitHistoryObservation(result gitsvc.HistoryResult) string {
+	if !result.Available {
+		return result.Message
+	}
+	label := "repository"
+	if result.Path != "" {
+		label = result.Path
+	}
+	lines := []string{
+		result.Message,
+		fmt.Sprintf("History target: %s limit=%d", label, result.Limit),
+	}
+	for _, entry := range result.Entries {
+		lines = append(lines, fmt.Sprintf("- %s %s %s <%s> %s", entry.ShortHash, entry.Date, entry.Author, entry.Email, entry.Subject))
+	}
+	if result.Truncated {
+		lines = append(lines, "History output was truncated.")
+	}
+	return strings.Join(lines, "\n")
+}
+
+func formatGitBlameObservation(result gitsvc.BlameResult) string {
+	if !result.Available {
+		return result.Message
+	}
+	lines := []string{result.Message}
+	if result.StartLine > 0 {
+		lines = append(lines, fmt.Sprintf("Requested lines: %d-%d", result.StartLine, result.EndLine))
+	}
+	for _, line := range result.Lines {
+		lines = append(lines, fmt.Sprintf("%d %s %s %s | %s", line.Line, line.ShortHash, line.Author, line.Date, line.Content))
+		if line.Summary != "" {
+			lines = append(lines, "  summary: "+line.Summary)
+		}
+	}
+	if result.Truncated {
+		lines = append(lines, "Blame output was truncated.")
+	}
+	return strings.Join(lines, "\n")
 }
 
 func (h defaultHandlers) listTasks(ctx context.Context, call agent.ToolCall, request agent.Request) (agent.ToolResult, error) {

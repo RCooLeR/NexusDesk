@@ -3,6 +3,7 @@ package tools
 import (
 	"context"
 	"os"
+	"os/exec"
 	"path/filepath"
 	"strings"
 	"testing"
@@ -61,11 +62,54 @@ func TestDefaultDispatcherContextAndProblemsTools(t *testing.T) {
 	}
 }
 
+func TestDefaultDispatcherGitHistoryAndBlameTools(t *testing.T) {
+	if _, err := exec.LookPath("git"); err != nil {
+		t.Skip("git executable is not available")
+	}
+	root := t.TempDir()
+	runToolTestGit(t, root, "init")
+	runToolTestGit(t, root, "config", "user.email", "test@example.com")
+	runToolTestGit(t, root, "config", "user.name", "Test User")
+	if err := os.WriteFile(filepath.Join(root, "notes.txt"), []byte("line one\nline two\n"), 0o644); err != nil {
+		t.Fatalf("write notes file: %v", err)
+	}
+	runToolTestGit(t, root, "add", "notes.txt")
+	runToolTestGit(t, root, "commit", "-m", "initial notes")
+
+	dispatcher := NewDefaultDispatcher(Dependencies{Workspace: workspaceSvc.New()})
+	request := agent.Request{WorkspaceRoot: root}
+	history, err := dispatcher.ExecuteTool(context.Background(), agent.ToolCall{Name: "read_git_history", Args: map[string]string{"relPath": "notes.txt"}}, request)
+	if err != nil {
+		t.Fatalf("read_git_history returned error: %v", err)
+	}
+	if !strings.Contains(history.Observation, "initial notes") || !strings.Contains(history.Observation, "History target: notes.txt") {
+		t.Fatalf("unexpected history observation:\n%s", history.Observation)
+	}
+
+	blame, err := dispatcher.ExecuteTool(context.Background(), agent.ToolCall{Name: "read_git_blame", Args: map[string]string{"relPath": "notes.txt", "startLine": "2", "endLine": "2"}}, request)
+	if err != nil {
+		t.Fatalf("read_git_blame returned error: %v", err)
+	}
+	if !strings.Contains(blame.Observation, "line two") || !strings.Contains(blame.Observation, "Requested lines: 2-2") {
+		t.Fatalf("unexpected blame observation:\n%s", blame.Observation)
+	}
+}
+
 func TestRunTaskRequiresApproval(t *testing.T) {
 	dispatcher := NewDefaultDispatcher(Dependencies{Workspace: workspaceSvc.New()})
 	result, err := dispatcher.ExecuteTool(context.Background(), agent.ToolCall{Name: "run_task", Args: map[string]string{"taskId": "go-test-root"}}, agent.Request{WorkspaceRoot: t.TempDir()})
 	if err == nil || result.Risk != "high" || !strings.Contains(result.Observation, "approval") {
 		t.Fatalf("expected approval error, got result=%#v err=%v", result, err)
+	}
+}
+
+func runToolTestGit(t *testing.T, root string, args ...string) {
+	t.Helper()
+	command := exec.Command("git", args...)
+	command.Dir = root
+	output, err := command.CombinedOutput()
+	if err != nil {
+		t.Fatalf("git %v failed: %v\n%s", args, err, output)
 	}
 }
 

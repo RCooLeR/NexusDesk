@@ -381,7 +381,8 @@ The Fyne migration must not drop product ambition, but this section is intention
 - [ ] Problems panel language diagnostics beyond lightweight local scans.
 - [x] Git status, branch, changed-file tree, staged/unstaged groups, file diff, split/unified/diff-only views, hunk actions, AI diff summary, and commit draft.
 - [x] Port native read-only Git history and blame service/UI from Wails.
-- [ ] Git history/blame agent context tools, broader AI review, test suggestions, PR draft, and destructive revert/discard actions.
+- [x] Port native read-only Git history/blame agent context tools from Wails.
+- [ ] Broader AI review, test suggestions, PR draft, and destructive revert/discard actions.
 - [x] Task discovery and approved task runs for npm, Go, Python pytest, Cargo, and Docker Compose validation.
 
 ### Data & Analytics Studio
@@ -456,7 +457,8 @@ The Fyne migration must not drop product ambition, but this section is intention
 - [x] Agent runtime with plan updates, bounded observations, model-driven tool calls, no frontend iteration cap, emergency backend loop guard, and final-answer fallback behavior.
 - [x] Unified tool registry and dispatcher for deterministic tools and model-requested tools.
 - [x] Agent tools for read context, workspace search, problems, Git status/diff, tasks, artifacts, datasets, SQLite, documents, operations files, safe writes, patches, copy/move/delete, and rollback.
-- [ ] Agent tools for Git history/blame, richer artifact lineage actions, web fetch, and approved shell.
+- [x] Agent tools for read-only Git history/blame.
+- [ ] Agent tools for richer artifact lineage actions, web fetch, and approved shell.
 - [x] Live activity tail that shows compact model/tool progress while preserving persisted agent audit history.
 
 ### Artifacts And Provenance
