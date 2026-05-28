@@ -62,6 +62,21 @@ func TestCommandPaletteStatusText(t *testing.T) {
 	}
 }
 
+func TestCommandPaletteIncludesSafeAgentGuide(t *testing.T) {
+	view := &View{state: NewState()}
+	commands := view.commandPaletteActions()
+	for _, command := range commands {
+		if command.ID != "help.safe_agent" {
+			continue
+		}
+		if command.Title != "Safe Agent Guide" || command.Group != "Help" || command.Run == nil {
+			t.Fatalf("unexpected safe-agent command: %#v", command)
+		}
+		return
+	}
+	t.Fatalf("missing safe-agent command in %#v", commands)
+}
+
 func TestCommandPaletteTitleMarksUnavailableCommands(t *testing.T) {
 	title := commandPaletteTitle(commandPaletteAction{
 		Title:    "Refresh Workspace",

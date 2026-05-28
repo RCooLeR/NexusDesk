@@ -21,6 +21,7 @@ Production-readiness gates: `docs/13_PRODUCTION_READINESS.md`.
 Wails feature inventory and retirement blockers: `docs/15_WAILS_FEATURE_INVENTORY.md`.
 Native editor parity decision: `docs/16_EDITOR_PARITY_STRATEGY.md`.
 End-to-end production master plan and JetBrains-like UI target: `docs/17_END_TO_END_PRODUCTION_PLAN.md`.
+Safe agent user guide: `docs/18_SAFE_AGENT_USER_GUIDE.md`.
 
 Summary:
 
@@ -28,7 +29,7 @@ Summary:
 - Current estimate: Fyne-native migration is roughly 98% complete, Wails useful-code parity is roughly 97%, Native Parity Beta readiness is roughly 96%, and overall production readiness is roughly 94%.
 - The architecture is healthy: thin executable root, framework-free domain/services, Fyne-only UI packages, explicit approvals, safe workspace mutation boundaries, manual Git/Docker actions, durable metadata, and local-first safety rules.
 - The biggest remaining architectural risk is UI/orchestration complexity in `internal/ui/shell`; future UI work should keep extracting focused panels, controllers, and service-owned behavior.
-- The highest-priority unfinished work is migration and production readiness, not new top-level studios: applying durable slow-job routing to the remaining slow workflows, richer DOCX/PPTX template variants and cross-suite smoke beyond current native export/theme/validation baselines, deeper assistant retrieval quality beyond deterministic source coverage, signed packaging/installer validation, safe-agent user docs, and native UI polish.
+- The highest-priority unfinished work is migration and production readiness, not new top-level studios: applying durable slow-job routing to the remaining slow workflows, richer DOCX/PPTX template variants and cross-suite smoke beyond current native export/theme/validation baselines, deeper assistant retrieval quality beyond deterministic source coverage, signed packaging/installer validation, beta feedback/release notes, and native UI polish.
 - Final UI direction is a professional JetBrains-like native workbench: top menu/toolbar, left project/tool rail, central tabbed editor, right integrated assistant, grouped bottom tool windows, compact dark theme, strong keyboard workflows, DataGrip-style data surfaces, and trust-building settings/diagnostics.
 - `app-wails/` should remain as reference until the remaining native parity blockers are completed or explicitly moved out of Native Parity Beta.
 
@@ -37,7 +38,7 @@ Production direction:
 - Gate 1 is Native Parity Beta: editor parity, external DB profiles, protected secrets, assistant quality, Wails-only inventory, and native UI cleanup.
 - Gate 2 is Safety And Reliability Beta: durable jobs, metadata recovery/export, diagnostics, audit coverage, and failure recovery.
 - Gate 3 is Packaging And Platform Beta: repeatable signed Windows builds, CI, visual/manual smoke, platform support matrix, and release hygiene.
-- Gate 4 is Private Beta: onboarding/readiness, issue-report bundles, safe-agent docs, and user feedback loop.
+- Gate 4 is Private Beta: onboarding/readiness, issue-report bundles, safe-agent guidance, and user feedback loop.
 
 Immediate execution order:
 
@@ -47,13 +48,14 @@ Immediate execution order:
 - Keep the documented native editor parity strategy visible in Language Actions and continue post-beta LSP/inline-styling spikes without blocking Native Parity Beta.
 - Polish richer generated document/deck exports beyond native DOCX/PPTX baselines, including template variants, cross-suite compatibility smoke, and richer visual design.
 - Build signed release packaging and installer/update validation.
-- Continue the focused UI polish pass on empty states, settings, diagnostics, and workflow hierarchy now that the first Home readiness/onboarding cockpit exists.
+- Continue the focused UI polish pass on empty states, settings, diagnostics, and workflow hierarchy now that the first Home readiness/onboarding cockpit and Safe Agent Guide exist.
 
 ## Repository State
 
 - [x] `app-wails/` preserves the existing Wails application and all current migration source code.
 - [x] `nexus-app/` is the new Fyne-native application root.
 - [x] `docs/17_END_TO_END_PRODUCTION_PLAN.md` documents the full end-to-end production plan, Claude findings integration, and JetBrains-like UI target.
+- [x] `docs/18_SAFE_AGENT_USER_GUIDE.md` documents safe agent use, approvals, rollbacks, local data, connector credentials, jobs, diagnostics, and issue-report expectations.
 - [x] `nexus-app/main.go` is the only executable root file.
 - [x] `nexus-app/go.mod` owns the new Fyne dependency graph.
 - [x] `nexus-app/internal/app/` owns desktop lifecycle and window setup.
@@ -397,7 +399,7 @@ Exit criteria:
 - [x] Onboarding flow for workspace open, model setup, permissions, and local data policy.
 - [x] First-run diagnostics for missing model endpoint, missing toolchain, and unavailable provider.
 - [x] Redacted issue-report bundle that excludes workspace contents unless explicitly included.
-- [ ] User docs for safe agent use, approvals, rollbacks, local data, and connector credentials.
+- [x] User docs for safe agent use, approvals, rollbacks, local data, and connector credentials.
 - [ ] Beta feedback loop and release notes.
 
 ## Preserved Post-Port Backlog

@@ -175,6 +175,13 @@ func (v *View) commandPaletteActions() []commandPaletteAction {
 			Shortcut: "Ctrl+,",
 			Run:      v.openSettingsTab,
 		},
+		{
+			ID:     "help.safe_agent",
+			Title:  "Safe Agent Guide",
+			Detail: "Open user guidance for approvals, rollbacks, local data, credentials, connectors, and jobs.",
+			Group:  "Help",
+			Run:    v.openSafeAgentGuideTab,
+		},
 		v.bottomPanelCommand("view.search", "Search", "Open workspace path and content search results.", "Workbench"),
 		v.bottomPanelCommand("view.problems", "Problems", "Open syntax and workspace diagnostics.", "Workbench"),
 		v.bottomPanelCommand("view.git", "Git", "Open status, diff, history, blame, and hunk actions.", "Workbench"),
