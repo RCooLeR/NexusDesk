@@ -268,6 +268,17 @@ type PresentationPackageReport struct {
 	GeneratedBy string
 }
 
+type PresentationDeckReport struct {
+	Title       string
+	SourcePath  string
+	SourceTitle string
+	SourceKind  string
+	SourcePaths []string
+	Outline     string
+	SlideCount  int
+	GeneratedBy string
+}
+
 type OperationsServiceSummary struct {
 	Name      string
 	Image     string

@@ -555,6 +555,10 @@ func (v *View) generatePresentationOutlineFromArtifact(artifact artifactsSvc.Art
 		v.addActivity("Open a workspace before generating presentation artifacts.")
 		return
 	}
+	if artifactCanGeneratePresentationDeck(artifact) {
+		v.generatePresentationDeckFromPackage(artifact)
+		return
+	}
 	if artifactCanGeneratePresentationPackage(artifact) {
 		v.generatePresentationPackageFromOutline(artifact)
 		return
@@ -592,6 +596,22 @@ func (v *View) generatePresentationPackageFromOutline(artifact artifactsSvc.Arti
 		created, err := buildPresentationPackageArtifact(ctx, root, artifact)
 		fyne.Do(func() {
 			v.finishPresentationPackageJob(job.ID, artifact, created, err)
+		})
+	}()
+}
+
+func (v *View) generatePresentationDeckFromPackage(artifact artifactsSvc.Artifact) {
+	jobLabel := presentationDeckJobLabel(artifact)
+	job, ctx := v.jobService.Start(jobsSvc.KindPackagedExport, jobLabel)
+	v.jobService.AppendLog(job.ID, "Source package: "+artifact.RelPath)
+	v.artifactStatus.SetText("Exporting PPTX from " + artifact.RelPath + " as " + job.ID + ".")
+	v.addActivity("Started " + job.ID + ": " + jobLabel + ".")
+	v.refreshJobs()
+	root := v.state.Workspace().Root
+	go func() {
+		created, err := buildPresentationDeckFromPackageArtifact(ctx, root, artifact)
+		fyne.Do(func() {
+			v.finishPresentationDeckJob(job.ID, artifact, created, err)
 		})
 	}()
 }
@@ -674,6 +694,72 @@ func buildPresentationPackageArtifact(ctx context.Context, workspaceRoot string,
 	return created, nil
 }
 
+func buildPresentationDeckArtifact(ctx context.Context, workspaceRoot string, source artifactsSvc.Artifact) (artifactsSvc.Artifact, error) {
+	if err := ctx.Err(); err != nil {
+		return artifactsSvc.Artifact{}, err
+	}
+	store, err := artifactsSvc.NewStore(workspaceRoot)
+	if err != nil {
+		return artifactsSvc.Artifact{}, err
+	}
+	text, err := store.ReadArtifactText(source.RelPath)
+	if err != nil {
+		return artifactsSvc.Artifact{}, err
+	}
+	metadata, err := store.ReadArtifactMetadata(source.RelPath)
+	if err == nil {
+		source.Title = firstNonEmpty(metadata.Title, source.Title)
+		source.Kind = firstNonEmpty(metadata.Kind, source.Kind)
+		source.SourcePaths = append([]string{}, metadata.SourcePaths...)
+	}
+	if err := ctx.Err(); err != nil {
+		return artifactsSvc.Artifact{}, err
+	}
+	report := artifactsSvc.BuildPresentationDeckReport(
+		"",
+		source.RelPath,
+		artifactTitle(source),
+		source.Kind,
+		text,
+		source.SourcePaths,
+	)
+	created, err := store.WritePresentationDeckReport(report)
+	if err != nil {
+		return artifactsSvc.Artifact{}, err
+	}
+	if err := ctx.Err(); err != nil {
+		return artifactsSvc.Artifact{}, err
+	}
+	return created, nil
+}
+
+func buildPresentationDeckFromPackageArtifact(ctx context.Context, workspaceRoot string, artifact artifactsSvc.Artifact) (artifactsSvc.Artifact, error) {
+	store, err := artifactsSvc.NewStore(workspaceRoot)
+	if err != nil {
+		return artifactsSvc.Artifact{}, err
+	}
+	metadata, err := store.ReadArtifactMetadata(artifact.RelPath)
+	if err != nil {
+		return artifactsSvc.Artifact{}, err
+	}
+	outline := strings.TrimSpace(metadata.Source)
+	if outline == "" {
+		return artifactsSvc.Artifact{}, fmt.Errorf("presentation package artifact %s has no source outline metadata", artifact.RelPath)
+	}
+	outlineMetadata, err := store.ReadArtifactMetadata(outline)
+	if err != nil {
+		return artifactsSvc.Artifact{}, err
+	}
+	sourceArtifact := artifactsSvc.Artifact{
+		Kind:        outlineMetadata.Kind,
+		Title:       outlineMetadata.Title,
+		RelPath:     outline,
+		Source:      outlineMetadata.Source,
+		SourcePaths: append([]string{}, outlineMetadata.SourcePaths...),
+	}
+	return buildPresentationDeckArtifact(ctx, workspaceRoot, sourceArtifact)
+}
+
 func buildPresentationOutlineRefreshArtifact(ctx context.Context, workspaceRoot string, artifact artifactsSvc.Artifact) (artifactsSvc.Artifact, error) {
 	source, ok := artifactRegenerationSource(artifact)
 	if !ok {
@@ -718,6 +804,29 @@ func buildPresentationPackageRefreshArtifact(ctx context.Context, workspaceRoot 
 		SourcePaths: append([]string{}, metadata.SourcePaths...),
 	}
 	return buildPresentationPackageArtifact(ctx, workspaceRoot, sourceArtifact)
+}
+
+func buildPresentationDeckRefreshArtifact(ctx context.Context, workspaceRoot string, artifact artifactsSvc.Artifact) (artifactsSvc.Artifact, error) {
+	source, ok := artifactRegenerationSource(artifact)
+	if !ok {
+		return artifactsSvc.Artifact{}, fmt.Errorf("presentation deck artifact %s has no source outline metadata", artifact.RelPath)
+	}
+	store, err := artifactsSvc.NewStore(workspaceRoot)
+	if err != nil {
+		return artifactsSvc.Artifact{}, err
+	}
+	metadata, err := store.ReadArtifactMetadata(source)
+	if err != nil {
+		return artifactsSvc.Artifact{}, err
+	}
+	sourceArtifact := artifactsSvc.Artifact{
+		Kind:        metadata.Kind,
+		Title:       metadata.Title,
+		RelPath:     source,
+		Source:      metadata.Source,
+		SourcePaths: append([]string{}, metadata.SourcePaths...),
+	}
+	return buildPresentationDeckArtifact(ctx, workspaceRoot, sourceArtifact)
 }
 
 func buildDocumentBriefRefreshArtifact(ctx context.Context, workspaceRoot string, artifact artifactsSvc.Artifact) (artifactsSvc.Artifact, error) {
@@ -870,6 +979,32 @@ func (v *View) finishPresentationPackageJob(jobID string, source artifactsSvc.Ar
 	v.refreshJobs()
 }
 
+func (v *View) finishPresentationDeckJob(jobID string, source artifactsSvc.Artifact, created artifactsSvc.Artifact, err error) {
+	if err != nil {
+		if errors.Is(err, context.Canceled) {
+			v.jobService.Finish(jobID, jobsSvc.StatusCanceled, "Presentation deck export canceled.", nil)
+			v.artifactStatus.SetText("Presentation deck export canceled.")
+			v.addActivity("Canceled presentation deck export for " + source.RelPath + ".")
+		} else {
+			v.jobService.Finish(jobID, jobsSvc.StatusFailed, "Presentation deck export failed.", err)
+			v.artifactStatus.SetText("Presentation deck export failed for " + source.RelPath)
+			dialog.ShowError(err, v.window)
+		}
+		v.refreshJobs()
+		return
+	}
+	created.JobID = jobID
+	v.jobService.AppendLog(jobID, "Artifact: "+created.RelPath)
+	v.jobService.Finish(jobID, jobsSvc.StatusSuccess, "Created "+created.RelPath+".", nil)
+	v.artifactPreview.SetText("")
+	v.refreshArtifactSources(nil)
+	v.artifactStatus.SetText("Created " + created.RelPath)
+	v.addActivity("Exported presentation package " + source.RelPath + " to " + created.RelPath + ".")
+	v.persistArtifactRecord(created)
+	v.refreshArtifactsWithQuery("kind:presentation-deck")
+	v.refreshJobs()
+}
+
 func (v *View) regenerateArtifact(artifact artifactsSvc.Artifact) {
 	workspace := v.state.Workspace()
 	if workspace.Root == "" {
@@ -936,6 +1071,8 @@ func (v *View) buildRegeneratedArtifact(ctx context.Context, workspaceRoot strin
 		return buildPresentationOutlineRefreshArtifact(ctx, workspaceRoot, artifact)
 	case "presentation-package":
 		return buildPresentationPackageRefreshArtifact(ctx, workspaceRoot, artifact)
+	case "presentation-deck":
+		return buildPresentationDeckRefreshArtifact(ctx, workspaceRoot, artifact)
 	default:
 		return artifactsSvc.Artifact{}, fmt.Errorf("artifact kind %q cannot be regenerated yet", artifact.Kind)
 	}
@@ -1387,8 +1524,14 @@ func artifactCanGeneratePresentationPackage(artifact artifactsSvc.Artifact) bool
 		strings.TrimSpace(artifact.Kind) == "presentation-outline"
 }
 
+func artifactCanGeneratePresentationDeck(artifact artifactsSvc.Artifact) bool {
+	return !artifact.Archived &&
+		strings.TrimSpace(artifact.RelPath) != "" &&
+		strings.TrimSpace(artifact.Kind) == "presentation-package"
+}
+
 func artifactCanGeneratePresentationArtifact(artifact artifactsSvc.Artifact) bool {
-	return artifactCanGeneratePresentationOutline(artifact) || artifactCanGeneratePresentationPackage(artifact)
+	return artifactCanGeneratePresentationOutline(artifact) || artifactCanGeneratePresentationPackage(artifact) || artifactCanGeneratePresentationDeck(artifact)
 }
 
 func artifactCanRegenerate(artifact artifactsSvc.Artifact) bool {
@@ -1422,6 +1565,9 @@ func artifactCanRegenerate(artifact artifactsSvc.Artifact) bool {
 		source, ok := artifactRegenerationSource(artifact)
 		return ok && strings.HasPrefix(source, ".nexusdesk/artifacts/")
 	case "presentation-package":
+		source, ok := artifactRegenerationSource(artifact)
+		return ok && strings.HasPrefix(source, ".nexusdesk/artifacts/presentations/")
+	case "presentation-deck":
 		source, ok := artifactRegenerationSource(artifact)
 		return ok && strings.HasPrefix(source, ".nexusdesk/artifacts/presentations/")
 	default:
@@ -1536,6 +1682,14 @@ func presentationPackageJobLabel(artifact artifactsSvc.Artifact) string {
 		title = artifact.Kind
 	}
 	return "Presentation package (" + title + ")"
+}
+
+func presentationDeckJobLabel(artifact artifactsSvc.Artifact) string {
+	title := artifactTitle(artifact)
+	if strings.TrimSpace(title) == "" {
+		title = artifact.Kind
+	}
+	return "Presentation PPTX deck (" + title + ")"
 }
 
 func artifactTitle(artifact artifactsSvc.Artifact) string {
@@ -1782,6 +1936,30 @@ func artifactPreviewText(store *artifactsSvc.Store, artifact artifactsSvc.Artifa
 			}
 		}
 		builder.WriteString("\nOpen the DOCX artifact from the artifact path to inspect the generated document.")
+		return builder.String(), nil
+	}
+	if strings.TrimSpace(artifact.Kind) == "presentation-deck" {
+		metadata, err := store.ReadArtifactMetadata(artifact.RelPath)
+		if err != nil {
+			return "", err
+		}
+		var builder strings.Builder
+		builder.WriteString("# ")
+		builder.WriteString(firstNonEmpty(metadata.Title, artifactTitle(artifact)))
+		builder.WriteString("\n\n")
+		builder.WriteString("PPTX presentation deck export\n\n")
+		writeArtifactComparisonKV(&builder, "Artifact", artifact.RelPath)
+		writeArtifactComparisonKV(&builder, "Format", firstNonEmpty(metadata.ExportFormat, "pptx"))
+		writeArtifactComparisonKV(&builder, "Source outline", metadata.Source)
+		if len(metadata.PackageFiles) > 0 {
+			builder.WriteString("\n## Package Files\n\n")
+			for _, file := range metadata.PackageFiles {
+				builder.WriteString("- ")
+				builder.WriteString(file)
+				builder.WriteString("\n")
+			}
+		}
+		builder.WriteString("\nOpen the PPTX artifact from the artifact path to inspect the generated deck.")
 		return builder.String(), nil
 	}
 	if strings.TrimSpace(artifact.Kind) != "presentation-package" {

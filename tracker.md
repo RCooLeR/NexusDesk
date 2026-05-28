@@ -24,10 +24,10 @@ Native editor parity decision: `docs/16_EDITOR_PARITY_STRATEGY.md`.
 Summary:
 
 - The Fyne migration remains the correct direction and `nexus-app/` is the active product.
-- Current estimate: Fyne-native migration is roughly 97-98% complete, Wails useful-code parity is roughly 96-97%, Native Parity Beta readiness is roughly 94-95%, and overall production readiness is roughly 89-90%.
+- Current estimate: Fyne-native migration is roughly 98% complete, Wails useful-code parity is roughly 97%, Native Parity Beta readiness is roughly 95%, and overall production readiness is roughly 90%.
 - The architecture is healthy: thin executable root, framework-free domain/services, Fyne-only UI packages, explicit approvals, safe workspace mutation boundaries, manual Git/Docker actions, durable metadata, and local-first safety rules.
 - The biggest remaining architectural risk is UI/orchestration complexity in `internal/ui/shell`; future UI work should keep extracting focused panels, controllers, and service-owned behavior.
-- The highest-priority unfinished work is migration and production readiness, not new top-level studios: applying durable slow-job routing to the remaining slow workflows, richer DOCX/PPTX exports beyond current native export baselines, deeper assistant retrieval quality beyond deterministic source coverage, packaging, onboarding, and native UI polish.
+- The highest-priority unfinished work is migration and production readiness, not new top-level studios: applying durable slow-job routing to the remaining slow workflows, richer DOCX/PPTX export polish beyond current native export baselines, deeper assistant retrieval quality beyond deterministic source coverage, packaging, onboarding, and native UI polish.
 - `app-wails/` should remain as reference until the remaining native parity blockers are completed or explicitly moved out of Native Parity Beta.
 
 Production direction:
@@ -42,7 +42,7 @@ Immediate execution order:
 - Validate macOS Keychain and Linux Secret Service/libsecret behavior during platform packaging smoke.
 - Apply the durable slow-job contract to OCR, dump imports, connector pulls, long indexing, report generation, and long agent runs as those workflows are implemented.
 - Keep the documented native editor parity strategy visible in Language Actions and continue post-beta LSP/inline-styling spikes without blocking Native Parity Beta.
-- Expand richer generated document artifacts beyond native document briefs/DOCX exports and move packaged presentation exports from the native zip package baseline toward full deck/PPTX outputs.
+- Polish richer generated document/deck exports beyond native DOCX/PPTX baselines, including templates, theme control, and release-grade output validation.
 - Build signed release packaging and installer/update validation.
 - Run a focused UI polish pass on onboarding, empty states, settings, diagnostics, and workflow hierarchy.
 
@@ -290,6 +290,7 @@ Goal: restore generated-output workflows with provenance and native inspection.
 - [x] Add first native packaged presentation zip export from presentation-outline artifacts with manifest, slide JSON/Markdown, README, source lineage, preview metadata, UI job routing, and agent/UI regeneration.
 - [x] Add first native document brief artifact target from report-like artifacts with source lineage, Artifacts-panel job routing, and agent/UI regeneration.
 - [x] Add first native DOCX document export artifact target from document briefs with OpenXML package output, preview metadata, source lineage, Artifacts-panel job routing, and agent/UI regeneration.
+- [x] Add first native PPTX presentation deck export target from packaged presentation artifacts with OpenXML package output, preview metadata, source lineage, Artifacts-panel job routing, and agent/UI regeneration.
 - [x] Add read-only operations scanners for Dockerfiles, Compose, env/config/logs.
 - [x] Add Compose service topology summary from inspected Compose files.
 - [x] Add first operations runbook artifact export from inspected Docker/Compose/env/config/log evidence.
@@ -526,9 +527,10 @@ The Fyne migration must not drop product ambition, but this section is intention
 - [x] Markdown, CSV, SVG/chart, SQL result, task report, notebook report, document report, document brief, DOCX document export, scan report, operations runbook, comparison, chat-answer, and extracted-document artifacts.
 - [x] First native presentation outline artifacts in the Artifacts UI with source provenance.
 - [x] First native packaged presentation zip exports in the Artifacts UI from presentation outlines, with manifest/package-file metadata and package preview text.
+- [x] First native PPTX deck exports in the Artifacts UI from packaged presentation artifacts, with package-file metadata and package preview text.
 - [x] First richer generated document brief artifacts in the Artifacts UI with source provenance.
 - [x] First native DOCX document exports in the Artifacts UI from document briefs, with OpenXML package output, package-file metadata, and package preview text.
-- [ ] Richer DOCX document templates and full deck/PPTX-style presentation exports in native UI.
+- [ ] Richer DOCX/PPTX templates, theme control, and release-grade output validation in native UI.
 - [x] Provenance sidecars with source files, query IDs, generated timestamps, metadata rows, and freshness fingerprints for explicit artifact writes.
 - [x] Chat-answer artifacts include prompt/model/context/source/citation/unverified-citation/snippet/evidence and structured cited/uncited source coverage metadata.
 - [ ] Complete tool-run provenance coverage for every generated output type beyond chat-answer artifacts.
@@ -543,6 +545,7 @@ The Fyne migration must not drop product ambition, but this section is intention
 - [x] Expand artifact regeneration to packaged presentation exports in both the Artifacts UI and approval-gated agent tool.
 - [x] Expand artifact regeneration to first native document brief artifacts in both the Artifacts UI and approval-gated agent tool.
 - [x] Expand artifact regeneration to first native DOCX document exports in both the Artifacts UI and approval-gated agent tool.
+- [x] Expand artifact regeneration to first native PPTX presentation deck exports in both the Artifacts UI and approval-gated agent tool.
 - [ ] Expand artifact regeneration to future richer DOCX/PPTX export variants beyond the native export baselines.
 
 ### Operations Studio
