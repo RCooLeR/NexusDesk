@@ -15,6 +15,7 @@ import (
 	jobsSvc "nexusdesk/internal/services/jobs"
 	llmSvc "nexusdesk/internal/services/llm"
 	metadataSvc "nexusdesk/internal/services/metadata"
+	perfSvc "nexusdesk/internal/services/perf"
 	settingsSvc "nexusdesk/internal/services/settings"
 	startupSvc "nexusdesk/internal/services/startup"
 )
@@ -25,6 +26,7 @@ const (
 	diagnosticsActivityTailLimit   = 24
 	diagnosticsRuntimeModelLimit   = 6
 	diagnosticsCompactMessageLimit = 180
+	diagnosticsPerformanceLimit    = 12
 )
 
 type diagnosticsSnapshot struct {
@@ -49,6 +51,7 @@ type diagnosticsSnapshot struct {
 	RecentAgentFailures     int
 	RecentArtifacts         int
 	StartupRecovery         startupSvc.Status
+	PerformanceTimings      []perfSvc.TimingRecord
 	RuntimeSummary          []string
 	RecentJobFailures       []string
 	RecentTaskFailuresList  []string
@@ -200,13 +203,19 @@ func (v *View) refreshDiagnostics() {
 
 func (v *View) collectDiagnosticsSnapshot(root string, activityTail []string) diagnosticsSnapshot {
 	snapshot := diagnosticsSnapshot{
-		CollectedAt:     time.Now().UTC(),
-		WorkspaceRoot:   root,
-		ActivityTail:    append([]string(nil), activityTail...),
-		StartupRecovery: v.startupStatus,
+		CollectedAt:        time.Now().UTC(),
+		WorkspaceRoot:      root,
+		ActivityTail:       append([]string(nil), activityTail...),
+		StartupRecovery:    v.startupStatus,
+		PerformanceTimings: v.performanceTimings(diagnosticsPerformanceLimit),
 	}
 	if snapshot.StartupRecovery.PreviousUnclean {
 		snapshot.Warnings = append(snapshot.Warnings, snapshot.StartupRecovery.Message)
+	}
+	for _, timing := range snapshot.PerformanceTimings {
+		if !timing.WithinBudget {
+			snapshot.Warnings = append(snapshot.Warnings, performanceTimingWarning(timing))
+		}
 	}
 	inMemoryJobs := v.jobService.List()
 	snapshot.InMemoryJobs = len(inMemoryJobs)
@@ -446,6 +455,17 @@ func formatDiagnosticsSnapshot(snapshot diagnosticsSnapshot) string {
 		builder.WriteString("\n")
 	}
 
+	builder.WriteString("\n## Performance Timings\n")
+	if len(snapshot.PerformanceTimings) == 0 {
+		builder.WriteString("No startup or folder-open timings captured yet.\n")
+	} else {
+		for _, timing := range snapshot.PerformanceTimings {
+			builder.WriteString("- ")
+			builder.WriteString(formatPerformanceTiming(timing))
+			builder.WriteString("\n")
+		}
+	}
+
 	builder.WriteString("\n## Metadata\n")
 	if snapshot.MetadataError != "" {
 		builder.WriteString("Status: warning - ")
@@ -670,6 +690,9 @@ func diagnosticsRecommendedActions(snapshot diagnosticsSnapshot) []string {
 	}
 	if snapshot.StartupRecovery.PreviousUnclean {
 		actions = append(actions, "Review Startup Recovery, Jobs, Agent Audit, and metadata health before repeating any long workflow from the previous session.")
+	}
+	if hasOverBudgetPerformanceTiming(snapshot.PerformanceTimings) {
+		actions = append(actions, "Review Performance Timings for slow startup or folder-open work before scaling to larger repositories.")
 	}
 	if len(snapshot.ActivityTail) == 0 {
 		actions = append(actions, "Trigger one small task and rerun diagnostics to populate runtime activity context.")

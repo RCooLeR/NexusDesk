@@ -652,6 +652,7 @@ The Fyne migration must not drop product ambition, but this section is intention
 - [x] Consolidate bottom-panel navigation to reduce tab discoverability and density issues.
 - [x] Split `internal/ui/shell/data_panel.go` into smaller UI responsibility files.
 - [x] Add performance profiling harness for shell redraw, activity log, data grid, large search, and large artifacts.
+- [x] Add startup, workspace metadata, and folder-open performance timings to Diagnostics with over-budget warnings and remediation guidance.
 - [x] Ensure `ApplyFileAppend` failure path cleans rollback snapshots cleanly and checks close errors.
 - [x] Surface directory-entry truncation in navigator UI when entry cap clips folder contents.
 - [x] Verify explicit discard confirmation path on dirty-tab close and add regression coverage.

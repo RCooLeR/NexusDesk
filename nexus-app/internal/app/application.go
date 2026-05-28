@@ -14,6 +14,7 @@ import (
 )
 
 func Run() {
+	started := time.Now().UTC()
 	startupStore, startupStatus := beginStartupSession()
 	if startupStore != nil {
 		defer func() { _ = startupStore.MarkClean(startupStatus.CurrentID, time.Time{}) }()
@@ -30,6 +31,7 @@ func Run() {
 	view := shell.NewWithStartupStatus(window, startupStatus)
 	view.InstallWindowActions()
 	window.SetContent(view.Canvas())
+	view.RecordStartupReady(started, "native shell content is ready")
 	window.ShowAndRun()
 }
 

@@ -5,6 +5,7 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+	"time"
 
 	"fyne.io/fyne/v2"
 	"fyne.io/fyne/v2/dialog"
@@ -12,6 +13,7 @@ import (
 	"nexusdesk/internal/domain"
 	jobsSvc "nexusdesk/internal/services/jobs"
 	metadataSvc "nexusdesk/internal/services/metadata"
+	perfSvc "nexusdesk/internal/services/perf"
 )
 
 func (v *View) openWorkspaceDialog() {
@@ -81,19 +83,24 @@ func (v *View) openSingleFile(path string) {
 }
 
 func (v *View) openWorkspace(root string) {
+	openedAt := time.Now().UTC()
 	workspace, err := v.workspaceService.Open(root)
 	if err != nil {
+		v.recordPerformanceTiming(perfSvc.TimingWorkspaceOpen, openedAt, perfSvc.WorkspaceOpenBudget, "failed: "+err.Error())
 		dialog.ShowError(err, v.window)
 		return
 	}
 	v.state.SetWorkspace(workspace)
 	v.gitFileBadges = map[string]string{}
+	metadataStarted := time.Now().UTC()
+	metadataDetail := "metadata store unavailable"
 	store, err := v.metadataStoreForWorkspace(workspace.Root)
 	if err == nil {
 		if status, err := store.Ensure(); err == nil {
 			v.metadataStore = store
 			v.approvalService.SetRepository(newApprovalMetadataRepository(store))
 			v.jobService.SetRepository(store, true)
+			metadataDetail = status.Message
 			v.addActivity(status.Message)
 			v.runWorkspaceOpenAction(workspaceOpenActionJobsRefresh, v.refreshJobs)
 			v.runWorkspaceOpenAction(workspaceOpenActionChatHistoryRefresh, func() {
@@ -110,6 +117,7 @@ func (v *View) openWorkspace(root string) {
 		} else {
 			v.metadataStore = nil
 			v.approvalService.SetRepository(nil)
+			metadataDetail = "metadata ensure failed: " + err.Error()
 			v.runWorkspaceOpenAction(workspaceOpenActionChatHistoryRefresh, func() {
 				v.loadAssistantChatHistory()
 				v.refreshChatHistory("")
@@ -123,6 +131,7 @@ func (v *View) openWorkspace(root string) {
 	} else {
 		v.metadataStore = nil
 		v.approvalService.SetRepository(nil)
+		metadataDetail = "metadata store unavailable: " + err.Error()
 		v.runWorkspaceOpenAction(workspaceOpenActionChatHistoryRefresh, func() {
 			v.loadAssistantChatHistory()
 			v.refreshChatHistory("")
@@ -133,6 +142,7 @@ func (v *View) openWorkspace(root string) {
 		})
 		v.addActivity("Metadata store unavailable: " + err.Error())
 	}
+	v.recordPerformanceTiming(perfSvc.TimingWorkspaceMetadata, metadataStarted, perfSvc.WorkspaceMetadataBudget, metadataDetail)
 	v.runWorkspaceOpenAction(workspaceOpenActionNavigatorRefresh, v.refreshNavigator)
 	v.runWorkspaceOpenAction(workspaceOpenActionAssistantPinsRefresh, v.refreshAssistantContextPins)
 	v.status.SetText(fmt.Sprintf("%s: %d indexed, %d ignored, %d unreadable", workspace.Name, workspace.Summary.Included, workspace.Summary.Ignored, workspace.Summary.Unreadable))
@@ -140,6 +150,13 @@ func (v *View) openWorkspace(root string) {
 	v.recordRecentWorkspace(workspace.Root)
 	v.closeWelcomeTabs()
 	v.runWorkspaceOpenAction(workspaceOpenActionApprovalsRefresh, v.refreshApprovals)
+	v.recordPerformanceTiming(perfSvc.TimingWorkspaceOpen, openedAt, perfSvc.WorkspaceOpenBudget, fmt.Sprintf(
+		"%s: %d indexed, %d ignored, %d unreadable",
+		workspace.Name,
+		workspace.Summary.Included,
+		workspace.Summary.Ignored,
+		workspace.Summary.Unreadable,
+	))
 }
 
 func (v *View) metadataStoreForWorkspace(root string) (*metadataSvc.Store, error) {

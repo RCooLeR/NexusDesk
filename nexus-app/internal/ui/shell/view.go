@@ -21,6 +21,7 @@ import (
 	llmSvc "nexusdesk/internal/services/llm"
 	metadataSvc "nexusdesk/internal/services/metadata"
 	operationsSvc "nexusdesk/internal/services/operations"
+	perfSvc "nexusdesk/internal/services/perf"
 	recentWorkspacesSvc "nexusdesk/internal/services/recentworkspaces"
 	settingsSvc "nexusdesk/internal/services/settings"
 	startupSvc "nexusdesk/internal/services/startup"
@@ -160,6 +161,7 @@ type View struct {
 	assistantLastResult      assistantSvc.Result
 	diagnosticsProber        diagnosticsProber
 	startupStatus            startupSvc.Status
+	performanceRecorder      *perfSvc.Recorder
 }
 
 type artifactsCompareSelection struct {
@@ -345,12 +347,13 @@ func NewWithStartupStatus(window fyne.Window, startupStatus startupSvc.Status) *
 		diagnosticsStatus: widget.NewLabel(
 			"Open a workspace to run diagnostics.",
 		),
-		diagnosticsDetail: diagnosticsDetail,
-		approvalResults:   container.NewVBox(widget.NewLabel("Open a workspace to inspect approval records.")),
-		approvalStatus:    widget.NewLabel("Approval records have not been loaded."),
-		accessStatus:      widget.NewLabel("Full project access: inactive"),
-		diagnosticsProber: llmClient,
-		startupStatus:     startupStatus,
+		diagnosticsDetail:   diagnosticsDetail,
+		approvalResults:     container.NewVBox(widget.NewLabel("Open a workspace to inspect approval records.")),
+		approvalStatus:      widget.NewLabel("Approval records have not been loaded."),
+		accessStatus:        widget.NewLabel("Full project access: inactive"),
+		diagnosticsProber:   llmClient,
+		startupStatus:       startupStatus,
+		performanceRecorder: perfSvc.NewRecorder(64),
 	}
 	welcomeItem.Content = view.newWelcomePanel()
 	view.configureEditorTabs()

@@ -14,7 +14,7 @@ The quick profile exercises representative hot paths:
 - large search: creates a synthetic workspace and runs bounded path/content search;
 - large artifacts: creates generated artifact records and lists them through the artifact browser service.
 
-This is not a replacement for manual UI profiling. It is a deterministic service-level smoke harness that catches obvious scaling regressions before they become desktop-window issues.
+This is not a replacement for manual UI profiling. It is a deterministic service-level smoke harness that catches obvious scaling regressions before they become desktop-window issues. Runtime startup and folder-open timing is now also captured by the native shell and exposed in Diagnostics so private-beta users can report slow launch/open behavior without attaching a debugger.
 
 ## How To Run
 
@@ -53,6 +53,16 @@ Remove generated binaries such as `nexus-app/nexusdesk.exe` after build validati
 - It honors canceled contexts.
 - It reports scenario duration, item counts, budget, pass/fail flag, and detail text.
 
+## Runtime Diagnostics Timings
+
+The Fyne shell records lightweight timing events through the framework-free `internal/services/perf.Recorder`:
+
+- `startup-ready`: app process start through native shell content readiness;
+- `workspace-metadata-open`: metadata store creation/ensure during folder open;
+- `workspace-open`: full bounded folder-open orchestration through initial UI refresh scheduling.
+
+Diagnostics shows the most recent timing records in `Performance Timings`, marks over-budget records in `Warnings`, and adds a guided recommended action when startup or folder-open work exceeds the current budget. This keeps the production rule visible: opening a folder must stay cheap and must not trigger external tools, model calls, connector pulls, dump imports, Docker, OCR, or deep indexing.
+
 ## Current Budgets
 
 The first budgets are generous smoke thresholds, not release SLAs:
@@ -62,12 +72,15 @@ The first budgets are generous smoke thresholds, not release SLAs:
 - data grid model: 300 ms;
 - large search: 600 ms;
 - large artifacts: 900 ms.
+- startup-ready: 2 s;
+- workspace-open: 2 s;
+- workspace-metadata-open: 750 ms.
 
 These should be tightened only after baseline data is collected on representative Windows, macOS, and Linux machines.
 
 ## Production Follow-Ups
 
-- Add startup and folder-open timing logs to Diagnostics.
+- Tighten startup and folder-open timing budgets after baseline data is collected across Windows, macOS, and Linux.
 - Add manual UI profiling recipes for shell redraw, tab switching, Data grid scrolling, artifact browsing, and Diagnostics export.
 - Add large workspace, large CSV/query/grid, long chat/agent session, and large artifact directory fixtures to release-candidate smoke.
 - Capture memory snapshots during private-beta release candidates.

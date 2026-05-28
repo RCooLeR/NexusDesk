@@ -97,7 +97,7 @@ The Fyne migration is correct because the desired product is native, local-first
 - `app-wails/`: reference implementation only until explicit freeze/archive decision.
 - Detailed package ownership is captured in `docs/23_INTERNAL_PACKAGE_OWNERSHIP.md` and exposed in-product through Help and the command palette.
 - Contributor setup, coding standards, validation expectations, and ADR process are captured in `docs/24_CONTRIBUTOR_SETUP_AND_STANDARDS.md` and exposed in-product through Help and the command palette.
-- The first framework-free performance profiling harness is documented in `docs/25_PERFORMANCE_PROFILING_HARNESS.md` and implemented under `nexus-app/internal/services/perf`.
+- The framework-free performance profiling harness and live startup/folder-open Diagnostics timing records are documented in `docs/25_PERFORMANCE_PROFILING_HARNESS.md` and implemented under `nexus-app/internal/services/perf`.
 
 ### 3.2 Non-Negotiable Architecture Rules
 
@@ -639,6 +639,7 @@ The checklist below is intentionally large. `tracker.md` should keep task-level 
 - [x] Add crash/hang detector or startup recovery notes.
 - [x] Add search index metadata and recovery/export.
 - [x] Add job history retention controls and cleanup policy.
+- [x] Add startup/folder-open performance timings to Diagnostics with over-budget warnings.
 
 ### 7.10 P1: Packaging, CI, Release
 
@@ -685,8 +686,8 @@ Performance work to add:
 - [x] Large CSV/query/grid fixture baseline through `internal/services/perf`.
 - [ ] Long chat/agent session fixture.
 - [x] Large artifact directory fixture baseline through `internal/services/perf`.
-- Startup/folder-open timing logs in diagnostics.
-- Memory snapshot or profiling recipe for release candidates.
+- [x] Startup/folder-open timing logs in diagnostics.
+- [ ] Memory snapshot or profiling recipe for release candidates.
 
 ## 9. Validation Strategy
 

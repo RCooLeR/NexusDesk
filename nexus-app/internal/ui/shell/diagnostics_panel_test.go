@@ -12,6 +12,7 @@ import (
 
 	llmSvc "nexusdesk/internal/services/llm"
 	metadataSvc "nexusdesk/internal/services/metadata"
+	perfSvc "nexusdesk/internal/services/perf"
 	settingsSvc "nexusdesk/internal/services/settings"
 	startupSvc "nexusdesk/internal/services/startup"
 )
@@ -78,6 +79,15 @@ func TestFormatDiagnosticsSnapshotIncludesCoreSections(t *testing.T) {
 		StartupRecovery: startupSvc.Status{
 			Path: "C:/Users/example/AppData/Roaming/NexusDesk/startup-session.json",
 		},
+		PerformanceTimings: []perfSvc.TimingRecord{
+			{
+				Name:         perfSvc.TimingStartupReady,
+				Duration:     600 * time.Millisecond,
+				Budget:       perfSvc.StartupReadyBudget,
+				Detail:       "native shell content is ready",
+				WithinBudget: true,
+			},
+		},
 		RecommendedActions: []string{
 			"Open Jobs and Agent Audit tabs to inspect recent failures and retry safe workloads.",
 		},
@@ -90,6 +100,8 @@ func TestFormatDiagnosticsSnapshotIncludesCoreSections(t *testing.T) {
 		"## Provider Runtime",
 		"## Startup Recovery",
 		"Status: ok - clean-exit markers are active.",
+		"## Performance Timings",
+		"startup-ready: 600ms",
 		"## Metadata",
 		"Status: ok",
 		"## Jobs",
@@ -172,6 +184,43 @@ func TestDiagnosticsRecommendedActionsIncludesStartupRecovery(t *testing.T) {
 	joined := strings.Join(actions, "\n")
 	if !strings.Contains(joined, "Review Startup Recovery") {
 		t.Fatalf("expected startup recovery action, got:\n%s", joined)
+	}
+}
+
+func TestDiagnosticsRecommendedActionsIncludesSlowPerformanceTiming(t *testing.T) {
+	actions := diagnosticsRecommendedActions(diagnosticsSnapshot{
+		PerformanceTimings: []perfSvc.TimingRecord{
+			{
+				Name:         perfSvc.TimingWorkspaceOpen,
+				Duration:     3 * time.Second,
+				Budget:       perfSvc.WorkspaceOpenBudget,
+				WithinBudget: false,
+			},
+		},
+	})
+	joined := strings.Join(actions, "\n")
+	if !strings.Contains(joined, "Review Performance Timings") {
+		t.Fatalf("expected performance action, got:\n%s", joined)
+	}
+}
+
+func TestCollectDiagnosticsSnapshotIncludesPerformanceTimings(t *testing.T) {
+	app := fynetest.NewTempApp(t)
+	window := app.NewWindow("diagnostics-performance")
+	defer window.Close()
+	view := New(window)
+	view.metadataStore = nil
+	started := time.Now().Add(-3 * time.Second)
+	view.recordPerformanceTiming(perfSvc.TimingWorkspaceOpen, started, time.Millisecond, "opened large workspace")
+
+	snapshot := view.collectDiagnosticsSnapshot("E:/workspace", nil)
+
+	if len(snapshot.PerformanceTimings) != 1 {
+		t.Fatalf("expected performance timing in snapshot, got %#v", snapshot.PerformanceTimings)
+	}
+	joinedWarnings := strings.Join(snapshot.Warnings, "\n")
+	if !strings.Contains(joinedWarnings, "Performance timing over budget") {
+		t.Fatalf("expected performance warning in warnings: %v", snapshot.Warnings)
 	}
 }
 
