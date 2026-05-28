@@ -15,8 +15,9 @@ This inventory records the explicit `port`, `replace`, `drop`, or `later` decisi
 ## Summary
 
 - Most core backend workflows have native equivalents: workspace open/browse, safe file mutation, rollback records, search/problems, Git status/diff/hunk staging, task runs, artifacts, metadata, datasets, SQLite, external connector profile flows, settings, approvals, diagnostics, chat history, and agent audit.
-- The remaining parity blockers are concentrated in editor maturity, future artifact regeneration coverage, and deeper assistant retrieval evidence.
+- The remaining parity blockers are concentrated in editor maturity, richer generated document/packaged presentation outputs, packaging/runtime validation, and deeper assistant retrieval evidence.
 - React/Wails shell code should not be embedded wholesale. Monaco-specific editor behavior should be replaced by a native editor strategy unless a future spike proves an embedded editor can be shipped cleanly without reviving the Wails/webview architecture.
+- Current estimate: 96-97% of useful Wails-era capability has native coverage, with the remaining 3-4% mostly in high-polish editor, evidence, export, and platform-hardening areas rather than core app scaffolding.
 
 ## Inventory
 
@@ -33,8 +34,8 @@ This inventory records the explicit `port`, `replace`, `drop`, or `later` decisi
 | Artifact lineage graph import/export and agent context | `GetArtifactLineage`, `ExportArtifactLineageJSON`, `ImportArtifactLineageJSON`, Wails `read_artifact_lineage` | Native workspace lineage graph export/import UI and read-only agent lineage tool are implemented | `ported` | Continue graph polish only |
 | Artifact dependency rebuild/regeneration | `RebuildDatasetDependency` | Native can regenerate dataset summary, dataset query CSV, dataset SQL report, chart, dashboard, SQL notebook run, SQLite query CSV/Markdown artifacts, document reports, workspace scan reports, document-extraction artifacts, operations runbooks, artifact comparison reports, saved chat-answer refresh artifacts, and presentation-outline artifacts from dependency/source metadata | `ported` baseline | Continue broader regeneration coverage for future packaged presentation and richer document artifact kinds |
 | Dataset profiling, SQL, notebooks, charts, dashboards, SQLite query artifacts | `dataset_service.go`, `DataStudioPanel.tsx`, `DataOperationsPanel.tsx` | Native Data panel covers profiles, query/SQL, notebook run/export, chart/dashboard artifacts, SQLite saved queries, history, and lineage | `ported` | Continue notebook/editor UX and dump import design |
-| External database profiles and read-only query flows | `internal/dbconnector/*`, `ConnectorProfilesCard.tsx` | Native profile list/save/delete/test/inspect/query/cancel/history exists for PostgreSQL, MySQL/MariaDB, SQL Server, SQLite, and DuckDB guarded builds with protected Windows credential sidecars | `ported` for functional parity | macOS Keychain and Linux Secret Service remain future platform work |
-| Protected secret storage | `app-wails/internal/storage/secret_windows.go`, connector sidecar handling | Native settings API keys and connector credentials use DPAPI-protected sidecars on Windows, redacted display values, and explicit unsupported-platform refusal elsewhere | `ported` Windows baseline | Add macOS Keychain and Linux Secret Service/libsecret before claiming full cross-platform secret support |
+| External database profiles and read-only query flows | `internal/dbconnector/*`, `ConnectorProfilesCard.tsx` | Native profile list/save/delete/test/inspect/query/cancel/history exists for PostgreSQL, MySQL/MariaDB, SQL Server, SQLite, and DuckDB guarded builds with protected credential sidecars | `ported` for functional parity | Continue connector sync/job work separately |
+| Protected secret storage | `app-wails/internal/storage/secret_windows.go`, connector sidecar handling | Native settings API keys and connector credentials use OS-protected sidecars: Windows DPAPI, macOS Keychain, Linux Secret Service/libsecret via `secret-tool`, redacted display values, and explicit unsupported-platform refusal elsewhere | `ported` | Continue packaging/runtime dependency validation for macOS/Linux |
 | LLM settings, provider probe, model catalog, runtime diagnostics | `LLMSettingsCard.tsx`, `llmModelCatalog.ts`, `internal/llm/probe.go` | Native settings include provider/protocol/model/protected API key, connection test, model count, runtime diagnostics, the Wails curated model catalog with context/reserve sizing, and loaded-model runtime context tuning | `ported` with follow-up | Deeper GPU/runtime hints remain backlog |
 | Assistant chat, streaming, context pack, citations, chat persistence | `AskLLM*`, `PreviewChatContextPack`, `ChatMessageContent.tsx` | Native Ask/Agent, streaming, bounded context, context-path persistence, Wails-compatible context-to-source fallback parsing, source/model footer diagnostics, line-aware citation refs in answer footers and saved chat-answer artifacts, unverified/out-of-context citation diagnostics, cited/uncited source coverage diagnostics, bounded citation snippets in saved answer metadata, weak-evidence warning, evidence-quality classification, stale-source chat-history warning, persisted chat/history, and diagnostics exist | `ported` baseline | Continue polishing deeper retrieval evidence |
 | Assistant prompt profiles and memory | `internal/storage/assistant_profile.go`, `AgentPanel.tsx` | Native Fyne loads/saves the Wails-compatible assistant profile store, applies active prompt profiles to Ask requests, and exposes memory/profile controls | `ported` baseline | Add profile editing beyond default profiles if needed |
@@ -52,10 +53,10 @@ This inventory records the explicit `port`, `replace`, `drop`, or `later` decisi
 
 ## Native Parity Blockers From This Inventory
 
-1. Finish the editor parity strategy: editable-widget inline syntax styling and future LSP/deeper cross-file language choices.
+1. Finish the editor parity strategy: editable-widget inline syntax styling or an explicit beta replacement decision for the native syntax mirror/document-map strategy, plus future LSP/deeper cross-file language choices.
 2. Continue assistant quality polish: deeper retrieval evidence beyond deterministic source/citation/evidence diagnostics.
 3. Expand artifact generation beyond the current presentation-outline baseline into richer generated documents and packaged presentation exports.
-4. Add macOS Keychain and Linux Secret Service/libsecret support after the Windows secret-storage baseline.
+4. Keep final UI polish tied to parity and production readiness: onboarding, empty states, settings, diagnostics, and workflow hierarchy.
 
 ## Retirement Decision
 

@@ -30,6 +30,7 @@ Nexus Augentic Studio is not only a chatbot. It should feel like a serious IDE-s
 - [Current Project Review](docs/12_PROJECT_REVIEW.md)
 - [Production Readiness Plan](docs/13_PRODUCTION_READINESS.md)
 - [Platform Support Matrix](docs/14_PLATFORM_SUPPORT.md)
+- [Wails Feature Inventory](docs/15_WAILS_FEATURE_INVENTORY.md)
 - [Implementation Tracker](tracker.md)
 
 ## Current Project Layout
@@ -90,7 +91,16 @@ App creates artifacts such as reports, charts, files, or configs
 
 ## Current Focus
 
-The active application is `nexus-app/`. The preserved Wails app remains a reference, but new development should finish Fyne parity first, then continue with new features. The current review is in `docs/12_PROJECT_REVIEW.md`, the production release path is in `docs/13_PRODUCTION_READINESS.md`, and the execution source of truth is `tracker.md`.
+The active application is `nexus-app/`. The preserved Wails app remains a reference, but new development should finish Fyne parity first, then continue with new features. The current review is in `docs/12_PROJECT_REVIEW.md`, the production release path is in `docs/13_PRODUCTION_READINESS.md`, the Wails retirement/parity inventory is in `docs/15_WAILS_FEATURE_INVENTORY.md`, and the execution source of truth is `tracker.md`.
+
+Current planning estimate:
+
+- Fyne-native migration is roughly 96-97% complete by useful Wails-era functionality.
+- Wails useful-code parity is roughly 94-96% complete.
+- Native Parity Beta readiness is roughly 90-93% complete.
+- Overall production readiness is roughly 86% complete.
+
+The remaining work is concentrated in final editor strategy, durable routing for slow workflows, richer generated document/presentation exports, assistant evidence quality, signed packaging, onboarding, platform smoke, and UI polish.
 
 ## First Stable Focus
 

@@ -178,12 +178,14 @@ Current implementation note: `nexus-app/internal/ui/shell` is the active native 
 
 ### Current Architecture Review
 
-Review status as of 2026-05-27:
+Review status as of 2026-05-28:
 
 - The product shape is still sound: a small primary rail for Workbench, Data & Analytics, Artifacts, and Settings, with the AI assistant always visible.
-- The Fyne app is now the active implementation, not a placeholder shell. `nexus-app/internal/services/` contains real workspace, editor, Git, data, artifact, metadata, LLM, agent, task, job, operations, approval, history, document, and connector slices.
+- The Fyne app is now the active implementation, not a placeholder shell. `nexus-app/internal/services/` contains real workspace, editor, Git, data, artifact, metadata, LLM, assistant, agent, task, job, operations, approval, history, document, and connector slices.
+- Current planning estimate: the useful Wails-to-Fyne migration is roughly 96-97% complete, with remaining blockers concentrated in editor strategy, richer generated outputs, durable slow jobs, packaging, onboarding, platform smoke, and polish.
 - The Wails backend still has useful reference implementations for some Monaco-era editor workflows and mature shell behavior. Those should be ported capability-by-capability rather than copied as large bridge files.
 - The React frontend has good workflow references, but it should not dictate the new native structure. Fyne UI should be rebuilt around native panels, menus, dialogs, tabs, jobs, and approval surfaces.
+- Service/domain packages should remain framework-free. Fyne imports belong in `internal/app`, `internal/ui`, UI tests, and theme/brand presentation code.
 - Git work is correctly manual on folder open, so opening a workspace should not launch external Git commands or desktop command windows.
 - Native agent file mutations now go through the same safe workspace mutation and rollback services as manual writes.
 - Slow or external future work, especially OCR, dump imports, connector pulls, deeper indexing, report generation, and long agent runs, must go through the durable job model before it is attached to UI events.
@@ -191,10 +193,10 @@ Review status as of 2026-05-27:
 Near-term architecture corrections:
 
 - Continue extracting focused native UI state as `internal/ui/shell` grows; do not let it become the new bridge-shaped monolith.
-- Finish native editor quality without pushing language rules into widgets.
-- Port external database profiles and connector credential flows into native services and settings/data surfaces.
-- Route additional slow workflows through the durable job model now that task jobs support cancellation, retry from persisted records, and output artifacts.
-- Keep `app-wails/` until native parity is good enough for day-to-day use.
+- Finish native editor quality without pushing language rules into widgets, and explicitly decide the beta strategy for editable inline styling versus companion syntax/document-map surfaces.
+- Validate cross-platform secret backends during packaging/platform smoke.
+- Route OCR, dump imports, connector pulls, long indexing, report generation, and long agent runs through the durable job model.
+- Keep `app-wails/` until native parity blockers in `docs/15_WAILS_FEATURE_INVENTORY.md` are completed or deliberately moved out of Native Parity Beta.
 
 ### 3. Workspace Manager
 

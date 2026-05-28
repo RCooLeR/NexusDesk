@@ -1,6 +1,6 @@
 //go:build windows
 
-package settings
+package protectedsecret
 
 import (
 	"errors"
@@ -21,7 +21,8 @@ type dataBlob struct {
 	pbData *byte
 }
 
-func protectSecret(data []byte) ([]byte, error) {
+func Protect(purpose string, data []byte) ([]byte, error) {
+	_ = purpose
 	in := bytesToBlob(data)
 	var out dataBlob
 	result, _, callErr := procCryptProtectData.Call(
@@ -40,7 +41,7 @@ func protectSecret(data []byte) ([]byte, error) {
 	return blobToBytes(out), nil
 }
 
-func unprotectSecret(data []byte) ([]byte, error) {
+func Unprotect(data []byte) ([]byte, error) {
 	in := bytesToBlob(data)
 	var out dataBlob
 	result, _, callErr := procCryptUnprotectData.Call(
@@ -57,6 +58,15 @@ func unprotectSecret(data []byte) ([]byte, error) {
 	}
 	defer procLocalFree.Call(uintptr(unsafe.Pointer(out.pbData)))
 	return blobToBytes(out), nil
+}
+
+func Delete(data []byte) error {
+	_ = data
+	return nil
+}
+
+func Available() bool {
+	return true
 }
 
 func bytesToBlob(data []byte) dataBlob {

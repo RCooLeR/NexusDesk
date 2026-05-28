@@ -145,7 +145,7 @@ func (v *View) newSettingsPanel() fyne.CanvasObject {
 		}()
 	}
 	actions := container.NewHBox(testConnection)
-	secretNote := widget.NewLabel("API keys are stored in protected OS storage on Windows and displayed redacted after save.")
+	secretNote := widget.NewLabel("API keys are stored in protected OS storage where available (Windows DPAPI, macOS Keychain, Linux Secret Service) and displayed redacted after save.")
 	secretNote.Wrapping = fyne.TextWrapWord
 	return container.NewPadded(container.NewBorder(
 		widget.NewLabel("LLM Provider Settings"),

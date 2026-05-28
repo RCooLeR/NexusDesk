@@ -2,6 +2,7 @@ package dbconnector
 
 import (
 	"encoding/json"
+	"nexusdesk/internal/services/protectedsecret"
 	"os"
 	"path/filepath"
 	"runtime"
@@ -317,7 +318,10 @@ func readRawConnectorProfiles(t *testing.T, path string) []ConnectorProfile {
 
 func requireProtectedConnectorSecretStorage(t *testing.T) {
 	t.Helper()
-	if runtime.GOOS != "windows" {
-		t.Skip("protected secret sidecar storage is only implemented on Windows until Keychain/libsecret support lands")
+	if runtime.GOOS != "windows" && os.Getenv("NEXUSDESK_RUN_OS_SECRET_TESTS") != "1" {
+		t.Skip("set NEXUSDESK_RUN_OS_SECRET_TESTS=1 to exercise the real OS secret backend on " + runtime.GOOS)
+	}
+	if !protectedsecret.Available() {
+		t.Skip("protected connector secret storage backend is unavailable on " + runtime.GOOS)
 	}
 }

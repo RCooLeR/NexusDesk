@@ -244,32 +244,54 @@ func (s *ConnectorProfileStore) credentialsPath() string {
 }
 
 func (s *ConnectorProfileStore) readCredentialSecret(id string) (string, error) {
-	secrets, err := s.readCredentialSecrets()
+	encoded, err := s.readEncodedCredentialSecrets()
 	if err != nil {
 		return "", err
 	}
-	return secrets[id], nil
+	value := strings.TrimSpace(encoded[id])
+	if value == "" {
+		return "", nil
+	}
+	protected, err := base64.StdEncoding.DecodeString(value)
+	if err != nil {
+		return "", err
+	}
+	plain, err := unprotectSecret(protected)
+	if err != nil {
+		return "", err
+	}
+	return string(plain), nil
 }
 
 func (s *ConnectorProfileStore) writeCredentialSecret(id string, secret string) error {
-	secrets, err := s.readCredentialSecrets()
+	encoded, err := s.readEncodedCredentialSecrets()
 	if err != nil {
 		return err
 	}
-	secrets[id] = secret
-	return s.writeCredentialSecrets(secrets)
+	protected, err := protectSecret([]byte(secret))
+	if err != nil {
+		return err
+	}
+	if err := deleteEncodedCredentialSecret(encoded[id]); err != nil {
+		return err
+	}
+	encoded[id] = base64.StdEncoding.EncodeToString(protected)
+	return s.writeEncodedCredentialSecrets(encoded)
 }
 
 func (s *ConnectorProfileStore) deleteCredentialSecret(id string) error {
-	secrets, err := s.readCredentialSecrets()
+	encoded, err := s.readEncodedCredentialSecrets()
 	if err != nil {
 		return err
 	}
-	delete(secrets, id)
-	return s.writeCredentialSecrets(secrets)
+	if err := deleteEncodedCredentialSecret(encoded[id]); err != nil {
+		return err
+	}
+	delete(encoded, id)
+	return s.writeEncodedCredentialSecrets(encoded)
 }
 
-func (s *ConnectorProfileStore) readCredentialSecrets() (map[string]string, error) {
+func (s *ConnectorProfileStore) readEncodedCredentialSecrets() (map[string]string, error) {
 	data, err := os.ReadFile(s.credentialsPath())
 	if os.IsNotExist(err) {
 		return map[string]string{}, nil
@@ -281,48 +303,46 @@ func (s *ConnectorProfileStore) readCredentialSecrets() (map[string]string, erro
 	if err := json.Unmarshal(data, &encoded); err != nil {
 		return nil, err
 	}
-	secrets := map[string]string{}
-	for id, value := range encoded {
-		protected, err := base64.StdEncoding.DecodeString(strings.TrimSpace(value))
-		if err != nil {
-			return nil, err
-		}
-		plain, err := unprotectSecret(protected)
-		if err != nil {
-			return nil, err
-		}
-		secrets[id] = string(plain)
-	}
-	return secrets, nil
+	return encoded, nil
 }
 
-func (s *ConnectorProfileStore) writeCredentialSecrets(secrets map[string]string) error {
+func (s *ConnectorProfileStore) writeEncodedCredentialSecrets(encoded map[string]string) error {
 	if err := os.MkdirAll(filepath.Dir(s.credentialsPath()), 0o755); err != nil {
 		return err
 	}
-	encoded := map[string]string{}
-	for id, secret := range secrets {
-		if strings.TrimSpace(secret) == "" {
+	cleaned := map[string]string{}
+	for id, value := range encoded {
+		id = strings.TrimSpace(id)
+		value = strings.TrimSpace(value)
+		if id == "" || value == "" {
 			continue
 		}
-		protected, err := protectSecret([]byte(secret))
-		if err != nil {
-			return err
-		}
-		encoded[id] = base64.StdEncoding.EncodeToString(protected)
+		cleaned[id] = value
 	}
-	if len(encoded) == 0 {
+	if len(cleaned) == 0 {
 		err := os.Remove(s.credentialsPath())
 		if os.IsNotExist(err) {
 			return nil
 		}
 		return err
 	}
-	data, err := json.MarshalIndent(encoded, "", "  ")
+	data, err := json.MarshalIndent(cleaned, "", "  ")
 	if err != nil {
 		return err
 	}
 	return os.WriteFile(s.credentialsPath(), append(data, '\n'), 0o600)
+}
+
+func deleteEncodedCredentialSecret(value string) error {
+	value = strings.TrimSpace(value)
+	if value == "" {
+		return nil
+	}
+	protected, err := base64.StdEncoding.DecodeString(value)
+	if err != nil {
+		return err
+	}
+	return deleteProtectedSecret(protected)
 }
 
 func (s *ConnectorProfileStore) redactedProfile(profile ConnectorProfile) ConnectorProfile {

@@ -1,82 +1,225 @@
 # Project Review
 
-Date: 2026-05-27
+Date: 2026-05-28
 
-This review records the current state after the Wails-to-Fyne migration work. It is intentionally blunt: `app-wails/` remains valuable as a reference, but the active product is `nexus-app/`.
+This review records the current state of Nexus Augentic Studio after the latest Fyne migration and production-readiness work. It is intentionally explicit: `nexus-app/` is the active product, while `app-wails/` remains the reference implementation until remaining native parity blockers are either completed or deliberately moved out of Native Parity Beta.
 
 ## Executive Summary
 
-The product direction still makes sense. Nexus Augentic Studio should stay a native local-first IDE/data/document/operations workbench with an always-visible AI assistant, not a chatbot with side panels. The Fyne migration is the right architectural move because it removes the Wails bridge, generated frontend bindings, and webview lifecycle problems that caused blank or gray windows.
+Nexus Augentic Studio is now much closer to a production-grade native desktop studio than to a migration prototype. The Wails-to-Fyne move remains the right architectural decision: the active app is a local-first IDE/data/document/operations workbench with an always-visible assistant, not a web dashboard wrapped in a desktop shell.
 
-The new app is no longer a thin skeleton. `nexus-app/` now has real native services for workspace navigation, previews, safe file mutation, editor tabs, search, problems, Git, tasks, jobs, approvals, LLM chat, agent tooling, metadata, artifacts, datasets, SQLite inspection, document extraction, operations scanning, and history. The most important remaining work is not to invent new studios yet; it is to finish parity and make the native UI feel like a serious IDE-class product.
+Approximate current status:
 
-Approximate Wails-to-Fyne migration status: 93% of useful Wails-era backend/workflow capability has been migrated. The remaining gap is concentrated in IDE-grade editor behavior, deeper retrieval evidence, future artifact regeneration coverage, slow-work job routing, production packaging, and UI polish.
+- Fyne-native migration: 96-97% complete by useful Wails-era functionality.
+- Wails useful-code parity: 94-96% complete.
+- Native Parity Beta readiness: 90-93% complete.
+- Overall production readiness: about 86% complete.
+- Distribution/packaging readiness: about 65-70% complete.
 
-The production release path is tracked in `docs/13_PRODUCTION_READINESS.md`.
+The remaining work is concentrated in final editor parity, richer generated document/presentation outputs, deeper assistant evidence quality, durable routing for slow workflows, signed packaging, onboarding, platform smoke, and final UI polish.
 
 ## Architecture Health
 
+The architecture is healthy and production-oriented.
+
 Healthy areas:
 
-- Root structure is clean: the active module keeps executable code under `nexus-app/internal/`.
-- UI-independent behavior mostly lives in `internal/services/*`; Fyne widgets live under `internal/ui/*`.
-- Workspace open is still cheap by design. Git, Docker, OCR, connector pulls, model calls, dump imports, and shell commands are explicit user actions.
-- Safe file operations, safe writes, rollback records, approvals, and agent mutation tools share service boundaries instead of duplicating filesystem rules in widgets.
-- Data and artifact services are split by use case and covered by focused tests.
-- The native app has a real SQLite metadata layer, compatibility importers, and history surfaces rather than relying only on JSON sidecars.
+- `nexus-app/main.go` is thin and delegates lifecycle to `internal/app`.
+- `internal/domain` contains framework-free domain models.
+- `internal/services` contains UI-independent application behavior.
+- `internal/ui` owns Fyne widgets, layouts, dialogs, and theme code.
+- Fyne imports are contained to app/UI/theme/test areas rather than leaking into service/domain packages.
+- Workspace open remains bounded and cheap by design.
+- Git, Docker, OCR, connector pulls, dump imports, model calls, shell commands, and deep indexing remain explicit user/job actions.
+- File mutations, rollback records, approvals, and agent tools share service-owned safety rules.
+- SQLite metadata is a first-class foundation for chats, approvals, jobs, artifacts, SQL, dataset dependencies, agent runs, and tool runs.
+- Compatibility import from Wails-era metadata exists and has been moved off the workspace-open critical path.
 
 Risks to watch:
 
-- `internal/ui/shell` is split into many files, which is good, but it still carries a lot of orchestration state. Future UI work should extract smaller controllers/models before adding deeper editor, connector, and assistant behavior.
-- Several preserved Wails docs still describe active behavior using `app/internal` and React/Wails terms. They must be treated as reference-history until rewritten.
-- The native editor is functional but not yet IDE-grade. Native outline, searchable go-to-symbol, local go-to-definition with bounded workspace fallback, bounded cursor-symbol references search, jumpable Document Map, first lightweight Syntax tab, read-only highlighted syntax preview, Problems syntax diagnostics for JSON/Go/YAML/TOML, breadcrumbs, explicit save encoding controls, deterministic Go/JSON format actions, safe Markdown/config/SQL/Dockerfile/text plus recognized code/markup whitespace formatting, Wails-style secondary split preview selection, and live find match counts have started, while active-editor inline syntax styling and future LSP/deeper cross-file language actions still need deliberate follow-through.
-- External database profile flows and Windows credential vault behavior have native parity baselines; connector sync jobs are still future work.
-- Long-running work is only partially routed through durable jobs. OCR, dump imports, connector pulls, report generation, indexing, and long agent runs must not be wired directly to UI callbacks.
+- `internal/ui/shell` is modularized into many files, but it still carries substantial orchestration complexity.
+- Future UI work should continue extracting focused controllers, panel state, and service-owned behavior before adding new large workflows.
+- The native editor is strong for a Fyne baseline, but not yet Monaco/LSP-grade.
+- Product breadth is high, so final polish now depends on cohesive workflows, onboarding, and confidence-building diagnostics rather than simply adding more panels.
 
-## Native Capability Snapshot
+## Current Native Capability Snapshot
 
-Implemented in `nexus-app/`:
+The active `nexus-app/` can already do the following.
 
-- Native Fyne shell with brand icon/logo, menu, shortcuts, resizable assistant/sidebar and bottom workbench panes.
-- Workspace tree with lazy loading, ignored-path controls, file operations, context menus, and Git badges from manual refresh.
-- File previews for text/code, Markdown, images, CSV/TSV, DOCX, PDF text, XLSX-derived rows, and binary metadata.
-- Editor tab lifecycle with pinned ordering, dirty markers, safe save, revert, and explicit discard confirmation for modified tabs.
-- Search and Problems panels using bounded preview-safe reads, including local syntax diagnostics for common code/config files.
-- Git status/diff panel with directory-grouped changes, unified/split/diff-only views, hunk navigation, file-level stage/unstage, and hunk stage/unstage.
-- Task discovery/run jobs for npm, Go tests, Python pytest, Cargo tests, and Docker Compose config validation.
-- Data profiling/query/SQL/notebooks for CSV, TSV, JSON, NDJSON, XLSX, logs, Parquet metadata, and SQLite files.
-- Chart/dashboard SVG preview and artifact generation.
-- Artifact browser with metadata, lineage, comparison, archive/delete/restore, source freshness, context pinning, job-routed workspace scan reports, and regeneration for document-report, scan, document-extraction, operations-runbook, and artifact-comparison artifacts.
-- Document extraction/report artifacts for Markdown, TXT, HTML, XML, DOCX, XLSX, and PDF preview text.
-- Operations inspection for Dockerfiles, Compose, env/config/script/log files, Compose topology, safe config validation, and runbook artifacts.
-- Settings, LLM transport, streaming Ask mode, Agent mode, deterministic tools including approval-gated artifact regeneration, approval queue, full-project access policy, rollback browser, history, audit, source/model answer diagnostics, evidence-quality labels, line-aware citation refs, saved citation snippets, and durable metadata.
+Workspace and shell:
 
-## Main Gaps
+- Launch as a Fyne-native desktop app.
+- Open local workspaces through native dialogs.
+- Maintain recent workspaces.
+- Render a lazy workspace tree with ignored-path handling and entry caps.
+- Reveal, refresh, collapse, and context-act on project tree nodes.
+- Keep folder open fast and safe by avoiding automatic expensive external work.
 
-Priority migration gaps:
+Workbench and editor:
 
-1. Native editor quality: active-editor inline syntax styling and future LSP/deeper cross-file language-aware navigation.
-2. Native editor-adjacent artifact regeneration and source quality: future presentation/chat-answer regeneration coverage and deeper retrieval/source evidence UX.
-3. Job routing for slow workflows: long indexing, OCR, dump imports, connector pulls, report generation, and long agent runs.
-4. Connector and dump workflows: temporary isolated database sandboxes, import lifecycle, storage limits, and read-only analysis.
-5. Assistant maturity: model context accounting, runtime diagnostics, source-citation quality, and broader tool coverage.
-6. UI polish: reduce crowded action strips, use structured tabs/dialogs/split panes, improve density, align with JetBrains-class workbench expectations, and add native visual checks.
-7. Documentation cleanup: continue separating active Fyne behavior from preserved Wails history.
+- Preview text, code, Markdown, images, CSV/TSV, DOCX, PDF text, XLSX-derived content, and binary metadata.
+- Safely edit text/code through draft state, dirty markers, pinned tabs, close guards, save, revert, rollback, and explicit discard confirmation.
+- Create, delete, copy, move, and rename files/folders through rooted validated services.
+- Use quick open and command palette keyboard workflows.
+- Use breadcrumbs, split preview, source/rendered Markdown, find/replace, and formatting actions.
+- Detect languages using Wails-derived rules.
+- Show bounded token analysis and a native syntax mirror/Highlight tab.
+- Show cursor-aware active-line/token/symbol status.
+- Show live unsaved-draft diagnostics for markers, merge conflicts, JSON, Go, YAML, TOML, and XML.
+- Show outline, go-to-symbol, local definition, bounded workspace definition fallback, references search, and document map surfaces.
 
-## Review Decision
+Search and problems:
 
-Do not retire `app-wails/` yet. It still contains reference implementations for React/Monaco editor behavior and several mature Wails-era workflows.
+- Search workspace paths and file contents with snippets.
+- Scan TODO/FIXME/HACK/BUG markers, merge conflicts, and saved-file syntax diagnostics.
+- Surface diagnostics in a bottom Problems panel.
 
-Do not add new top-level studios yet. Keep the primary product surfaces as Workbench, Data & Analytics, Artifacts, and Settings with Assistant always visible. Documents, Operations, and analytics connectors should grow as capability domains inside those surfaces until they earn deeper native screens.
+Assistant and agent:
 
-## Next Engineering Direction
+- Configure OpenAI-compatible, Ollama, and custom endpoint providers.
+- Store OS-protected API keys and connector credentials.
+- Probe providers, count models, and show runtime diagnostics.
+- Stream Ask and Agent responses using native Go services.
+- Use selected workspace, directory, file, and artifact context.
+- Persist chat history and provide chat search/history navigation.
+- Seed Agent runs from prior chat context.
+- Use assistant memory and prompt profiles.
+- Retry, compare, and save answers as artifacts.
+- Persist source/model/footer diagnostics, line-aware citation refs, citation snippets, unverified/out-of-context citation warnings, cited/uncited coverage, evidence labels, and stale-source warnings.
+- Run agent plans and deterministic tools with approval, audit, rollback, and final-answer fallback.
 
-The next batches should stay migration-first:
+Git and IDE operations:
 
-1. Keep closing the Wails-only feature inventory instead of adding new top-level studios.
-2. Finish native editor parity and UI structure.
-3. Add deeper assistant retrieval evidence and future presentation/chat-answer regeneration coverage.
-4. Add macOS Keychain and Linux Secret Service/libsecret after the Windows protected-secret baseline.
-5. Route remaining slow workflows through durable jobs.
-6. Add dump import design and first safe job scaffold before any database mutation/import execution.
-7. Add diagnostics and release-readiness checks before private beta.
+- Manually refresh Git status.
+- Show project-tree Git badges.
+- Render grouped changed files.
+- Show unified, split, and diff-only diff views.
+- Navigate hunks with large-file elision and hunk windowing.
+- Stage/unstage files and hunks through explicit approval paths.
+- Generate AI diff summaries and commit drafts.
+- Show read-only Git history and blame.
+
+Tasks and jobs:
+
+- Discover safe project tasks.
+- Run whitelisted tasks through jobs.
+- Capture logs, status, cancellation, retry, and task-report artifacts.
+- Persist jobs/task runs in SQLite metadata.
+
+Data and analytics:
+
+- Profile CSV, TSV, JSON, NDJSON, XLSX, Parquet metadata, and logs.
+- Query/filter/order/limit bounded local datasets.
+- Run SELECT-only dataset SQL with persisted run/dependency metadata.
+- Use SQL notebooks with SQL/chart cells, directive parsing, save/load, run/export, result tabs, and artifact generation.
+- Browse workspace SQLite databases with schema, views, indexes, relationships, row counts, samples, saved queries, and exports.
+- Manage external DB profiles for PostgreSQL, MySQL/MariaDB, SQL Server, SQLite, and DuckDB guarded builds.
+- Run read-only external connector tests, inspections, queries, cancellation, history, redaction, and credential sidecars.
+- Generate chart/dashboard SVG previews and artifacts.
+
+Artifacts and provenance:
+
+- Browse, search, preview, archive, delete, restore, compare, and inspect generated artifacts.
+- Track source lineage, source fingerprints, freshness warnings, and metadata sidecars.
+- Export/import artifact lineage graph JSON.
+- Pin artifacts into assistant/agent context.
+- Regenerate dataset summary, dataset query, SQL report, chart, dashboard, SQL notebook, SQLite query, document report, workspace scan, document extraction, operations runbook, comparison, chat-answer refresh, and presentation-outline artifacts.
+
+Documents and operations:
+
+- Extract and preview TXT, Markdown, PDF, DOCX, XLSX, HTML, and XML style documents.
+- Generate document extraction/report artifacts.
+- Inspect Dockerfiles, Compose, env/config/script/log evidence.
+- Summarize Compose topology.
+- Validate Compose config through explicit safe jobs.
+- Export operations runbook artifacts.
+
+Diagnostics, safety, and persistence:
+
+- Persist local metadata in SQLite.
+- Import Wails-era chat, approval, artifact, tool-run, SQL, and dependency metadata.
+- Recover corrupt metadata on workspace open.
+- Export metadata backups and workspace state backups.
+- Show diagnostics for providers, metadata health, jobs, tasks, SQL, agent failures, and runtime state.
+- Queue approvals and expose full-project access status.
+- Enforce path-root, traversal, symlink, ignored-state, and `.nexusdesk` protections.
+- Record rollback snapshots for practical file mutations.
+
+Build and CI:
+
+- Build native Windows app through Fyne/CGO helper scripts.
+- Stamp Windows executable icon resources.
+- Validate build metadata through ldflags.
+- Run cross-platform CI smoke for Windows, macOS, and Linux formatting, tests, static analysis, and Fyne build smoke.
+- Track platform support in `docs/14_PLATFORM_SUPPORT.md`.
+
+## Remaining Planned Functionality
+
+Native parity and editor:
+
+- Finish editable-widget inline syntax styling or deliberately accept the companion syntax mirror as the beta strategy.
+- Decide the future LSP/deeper cross-file language action strategy.
+- Continue go-to-definition, references, minimap/document-map, and formatting depth.
+
+Assistant/source quality:
+
+- Improve retrieval evidence beyond deterministic citation/source diagnostics.
+- Add stronger source diagnostics for weak, stale, partial, or uncited context.
+- Improve provenance consistency for all generated outputs.
+
+Artifacts and generated outputs:
+
+- Expand richer generated document artifacts.
+- Add packaged presentation exports beyond the presentation-outline baseline.
+- Extend regeneration coverage to those future output kinds.
+
+Documents and OCR:
+
+- Add OCR for images and scanned PDFs.
+- Route OCR through durable cancelable jobs.
+- Add broader document-set analysis with citations and comparison/version workflows.
+
+Data and connectors:
+
+- Design database dump import jobs using isolated temporary environments.
+- Add connector sync jobs with cancellation, retry, credential handling, redaction, audit, and history.
+- Add Google Analytics, ads-platform, CRM/contact-platform, and cross-source analysis workflows when the connector job model is ready.
+
+Operations:
+
+- Keep Docker/system mutation workflows blocked until approval, audit, rollback/mitigation, and durable jobs are mature enough.
+- Preserve strict separation between read-only inspection and mutating operations.
+
+Security/platform:
+
+- Validate macOS Keychain and Linux Secret Service/libsecret behavior in platform packaging smoke.
+- Extend audit coverage to future connector sync, OCR, dump import, shell, and Docker mutation flows.
+
+Reliability and jobs:
+
+- Route OCR, dump imports, connector pulls, long indexing, long report generation, and long agent runs through durable jobs.
+- Add crash/hang checks and issue-report bundles.
+- Expand search index metadata and recovery/export flows.
+
+Packaging and beta:
+
+- Add signed Windows installer/release flow.
+- Harden macOS and Linux packaging.
+- Validate install/update/uninstall behavior.
+- Add onboarding for workspace open, model setup, permissions, and local data policy.
+- Add private beta release notes and feedback loop.
+
+## Current Review Decision
+
+`app-wails/` should not be retired yet. It remains useful for final editor behavior comparison, historical Wails workflows, and explicit parity decisions.
+
+The active product path should remain migration-first and production-first. Avoid adding new top-level studios until Workbench, Data & Analytics, Artifacts, Settings, Assistant, diagnostics, and packaging feel coherent and reliable.
+
+## Recommended Next Engineering Order
+
+1. Define and implement the durable slow-job contract for OCR, dump imports, connector pulls, long indexing, long reports, and long agent runs.
+2. Finalize the native editor parity strategy and explicitly document what counts for Native Parity Beta.
+3. Expand richer document/presentation export workflows.
+4. Build signed release packaging and installer/update validation.
+5. Validate macOS Keychain and Linux Secret Service/libsecret behavior in platform packaging smoke.
+6. Run a focused UI polish pass on onboarding, empty states, settings, diagnostics, and workflow hierarchy.

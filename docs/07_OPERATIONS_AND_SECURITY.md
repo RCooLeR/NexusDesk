@@ -65,7 +65,7 @@ Rules:
 - mark suspected secret files as restricted
 - require confirmation before sending sensitive content to remote models
 
-Secret storage has a native Windows baseline. LLM provider API keys and connector credentials are written to DPAPI-protected sidecar files, while public settings/profile files retain only redacted values or credential references. Non-Windows builds explicitly refuse to save protected secrets until macOS Keychain and Linux Secret Service/libsecret backends are implemented.
+Secret storage has native OS-backed coverage for the primary desktop targets. LLM provider API keys and connector credentials are written to protected sidecar references: Windows uses DPAPI-protected blobs, macOS stores values in Keychain through the `security` tool, and Linux stores values through Secret Service/libsecret via `secret-tool`. Public settings/profile files retain only redacted values or credential references, and unsupported platforms explicitly refuse secret saves.
 
 ## File System Security
 

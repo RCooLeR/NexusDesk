@@ -1,6 +1,6 @@
 # Production Readiness Plan
 
-Date: 2026-05-27
+Date: 2026-05-28
 
 This document defines what Nexus Augentic Studio still needs before it can be treated as a production desktop application. `tracker.md` remains the task-level execution source of truth; this document is the release-readiness map.
 
@@ -10,9 +10,12 @@ The active product is `nexus-app/`, the Fyne-native application. `app-wails/` is
 
 Approximate migration status:
 
-- Native foundation and core services: mostly complete.
-- Wails-era useful workflow parity: roughly 94-95% migrated.
-- Production polish, packaging, cross-platform confidence, and advanced connector/editor features: still incomplete.
+- Native foundation and core services: complete enough for sustained native development.
+- Fyne-native migration: roughly 96-97% complete by useful Wails-era functionality.
+- Wails-era useful workflow parity: roughly 94-96% complete.
+- Native Parity Beta readiness: roughly 90-93% complete.
+- Overall production readiness: roughly 86% complete.
+- Distribution and packaging readiness: roughly 65-70% complete.
 
 The app can already:
 
@@ -20,9 +23,11 @@ The app can already:
 - preview common files and documents;
 - safely edit text/code with rollback records;
 - search paths/text and scan lightweight problems;
+- use quick-open, command palette, breadcrumbs, split preview, find/replace, formatting, outline, document map, go-to-symbol, local definition, bounded workspace definition fallback, references search, syntax mirror, cursor-aware token/symbol status, and live draft diagnostics;
 - inspect Git status/diffs and stage files or hunks through explicit actions;
 - discover and run bounded project tasks;
 - profile/query local datasets and workspace SQLite files;
+- manage read-only external database profiles for PostgreSQL, MySQL/MariaDB, SQL Server, SQLite, and DuckDB guarded builds with cancellation, redaction, history, and OS-protected credential sidecars;
 - create chart, dashboard, notebook, document, workspace scan, operations, task, chat-answer, comparison, and presentation-outline artifacts, with dependency/source rebuild coverage for dataset summary, query, SQL, chart, dashboard, SQL notebook, SQLite query, document-report, scan-report, document-extraction, operations-runbook, artifact-comparison, chat-answer refresh, and presentation-outline outputs;
 - run Ask and Agent modes against configured OpenAI-compatible or Ollama endpoints;
 - let approved agent runs regenerate supported native artifacts from saved source/dependency metadata;
@@ -52,10 +57,18 @@ Required:
 
 - IDE-grade editor baseline: first native lightweight syntax strategy, read-only highlighted syntax preview with cursor-aware active-line/token/symbol status, language-action readiness for formatting/highlighting/draft-diagnostics/outline/definition/reference/LSP status, live unsaved-draft diagnostics for markers/merge conflicts/JSON/Go/YAML/TOML/XML, Problems syntax diagnostics for saved JSON/Go/YAML/TOML/XML files, bounded workspace go-to-definition fallback and references search, command palette baseline, future editable-widget inline styling and LSP/cross-file language-action decisions, and continued outline/go-to-symbol/local-definition/document-map/breadcrumb/split/find/format polish.
 - External database profile parity: PostgreSQL, MySQL/MariaDB, SQL Server, and DuckDB file/profile read-only query flows with cancellation, caps, redacted errors, and history.
-- Native protected secret storage for Windows first is implemented for provider API keys and connector credentials; macOS/Linux keychain backends remain before full cross-platform secret support.
+- Native protected secret storage is implemented for provider API keys and connector credentials with Windows DPAPI, macOS Keychain, Linux Secret Service/libsecret via `secret-tool`, and explicit refusal on unsupported platforms.
 - Assistant quality parity: native Fyne now has weak-evidence warnings, retry/compare, Wails-compatible memory/profile storage, stale-source chat history warnings, Wails-compatible context-to-source fallback parsing, source/model footer diagnostics, line-aware citation refs, explicit unverified/out-of-context citation diagnostics, cited/uncited source coverage diagnostics, bounded citation snippets in saved answer artifacts, deterministic evidence-quality labels, curated model context sizing, loaded-model runtime context tuning, and save-latest-answer artifacts.
 - Complete Wails-only feature inventory and explicit keep/drop/replace decisions.
 - Native UI cleanup pass for Workbench, Data, Artifacts, Settings, assistant, and bottom panels.
+
+Remaining blockers:
+
+- Editable-widget inline syntax styling or a documented decision that the native syntax mirror/document-map strategy is the beta replacement.
+- Future LSP/deeper cross-file language actions.
+- Deeper assistant retrieval evidence beyond deterministic citation/source diagnostics.
+- Richer generated document artifacts and packaged presentation exports beyond the presentation-outline baseline.
+- Final UI polish for onboarding, empty states, settings, diagnostics, and workflow hierarchy.
 
 Exit criteria:
 
@@ -125,11 +138,12 @@ Exit criteria:
 
 ## Immediate Production-Oriented Next Batch
 
-1. Close the remaining Wails inventory parity blockers: editor maturity, deeper retrieval evidence, and richer generated document/packaged presentation outputs beyond the first presentation-outline baseline.
-2. Continue editor parity: editable-widget inline syntax styling and future LSP/deeper cross-file language-action behavior.
-3. Plan macOS Keychain and Linux Secret Service/libsecret after the Windows protected-secret baseline.
-4. Define the durable job contract for OCR, dump imports, connector pulls, report generation, and long agent runs.
-5. Continue diagnostics hardening with deeper provider/runtime checks and guided remediation.
+1. Define and implement the durable slow-job contract for OCR, dump imports, connector pulls, long indexing, report generation, and long agent runs.
+2. Finalize the native editor parity strategy and explicitly document what counts for Native Parity Beta.
+3. Expand richer generated document artifacts and packaged presentation exports.
+4. Build signed release packaging and installer/update validation.
+5. Run a focused UI polish pass on onboarding, empty states, settings, diagnostics, and workflow hierarchy.
+6. Validate macOS Keychain/Linux Secret Service behavior in platform packaging smoke runs.
 
 ## Documentation Rule
 

@@ -70,7 +70,16 @@ Rules:
 
 ## Current Baseline
 
-The latest reviewed `nexus-app` baseline includes the original shell slice plus substantial native parity. See `docs/12_PROJECT_REVIEW.md` for the dated review and `docs/13_PRODUCTION_READINESS.md` for release gates. Current implemented areas include:
+The latest reviewed `nexus-app` baseline includes the original shell slice plus substantial native parity. See `docs/12_PROJECT_REVIEW.md` for the dated review, `docs/13_PRODUCTION_READINESS.md` for release gates, and `docs/15_WAILS_FEATURE_INVENTORY.md` for explicit Wails retirement blockers.
+
+Current estimate:
+
+- Fyne-native migration: roughly 96-97% complete by useful Wails-era functionality.
+- Wails useful-code parity: roughly 94-96% complete.
+- Native Parity Beta readiness: roughly 90-93% complete.
+- Overall production readiness: roughly 86% complete.
+
+Current implemented areas include:
 
 - native app lifecycle;
 - branded dark theme foundation;
@@ -121,9 +130,20 @@ The latest reviewed `nexus-app` baseline includes the original shell slice plus 
 - native editor dirty close confirmations, pinned ordering, safe save, and rollback-backed writes;
 - native Search, Problems, Git, Tasks, Jobs, Operations, Data, History, Agent Audit, Artifacts, Rollbacks, Approvals, and Settings panels;
 - native data profiling/query/SQL/notebooks/charts for CSV, TSV, JSON, NDJSON, XLSX, logs, Parquet metadata, and workspace SQLite;
+- native read-only external database profile flows for PostgreSQL, MySQL/MariaDB, SQL Server, SQLite, and DuckDB guarded builds;
 - native artifact browsing, metadata search, archive/delete/restore, comparison, source freshness, document extraction, operations runbooks, and notebook/SQLite/chart/dashboard artifacts;
+- native presentation-outline artifact generation and regeneration from supported report-like artifacts;
 - native Ask/Agent modes with LLM streaming, deterministic tool dispatch, approval-gated safe mutations, compact activity tail, and persisted audit records;
 - framework-free workspace domain model.
+
+Remaining migration blockers:
+
+- Editable-widget inline syntax styling or a documented beta replacement decision for the native syntax mirror/document-map strategy.
+- Future LSP/deeper cross-file language action strategy.
+- Deeper assistant retrieval evidence beyond current deterministic source/citation/evidence diagnostics.
+- Richer generated document artifacts and packaged presentation exports.
+- Platform packaging/runtime validation for macOS Keychain and Linux Secret Service/libsecret support.
+- Durable job routing for OCR, dump imports, connector pulls, long indexing, long report generation, and long agent runs.
 
 Full execution now works on the current workstation when the MSYS2 UCRT64 compiler path is configured. `nexus-app/scripts/dev-env.ps1` prepends `C:\msys64\ucrt64\bin` and `C:\msys64\usr\bin`, sets `CGO_ENABLED=1`, can run tests, builds, or the desktop app, and calls `build-windows-icon.ps1` during Windows builds so `build\nexusdesk.exe` has the approved executable icon resource. `CGO_ENABLED=0 go build .` still fails because Fyne's OpenGL binding requires CGO-backed files.
 

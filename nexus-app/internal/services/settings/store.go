@@ -187,6 +187,9 @@ func (s *Store) writeAPIKeySecret(apiKey string) error {
 	if err != nil {
 		return err
 	}
+	if err := s.deleteAPIKeySecret(); err != nil {
+		return err
+	}
 	if err := os.MkdirAll(filepath.Dir(s.apiKeySecretPath()), 0o755); err != nil {
 		return err
 	}
@@ -195,6 +198,16 @@ func (s *Store) writeAPIKeySecret(apiKey string) error {
 }
 
 func (s *Store) deleteAPIKeySecret() error {
+	data, readErr := os.ReadFile(s.apiKeySecretPath())
+	if readErr == nil {
+		if protected, err := base64.StdEncoding.DecodeString(strings.TrimSpace(string(data))); err == nil {
+			if err := deleteProtectedSecret(protected); err != nil {
+				return err
+			}
+		}
+	} else if !os.IsNotExist(readErr) {
+		return readErr
+	}
 	err := os.Remove(s.apiKeySecretPath())
 	if os.IsNotExist(err) {
 		return nil

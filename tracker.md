@@ -18,14 +18,16 @@ This is a breaking migration, not an incremental UI refresh.
 
 Latest full project review: `docs/12_PROJECT_REVIEW.md`.
 Production-readiness gates: `docs/13_PRODUCTION_READINESS.md`.
+Wails feature inventory and retirement blockers: `docs/15_WAILS_FEATURE_INVENTORY.md`.
 
 Summary:
 
-- The Fyne migration remains the correct direction and `nexus-app/` is now the active product.
-- The architecture is still healthy: root-thin module, framework-free services, Fyne-only UI packages, explicit approvals, safe workspace mutation boundaries, manual Git/Docker actions, and SQLite metadata.
-- The biggest risk is UI and orchestration complexity accumulating in `internal/ui/shell`; future UI work should keep extracting focused panels, controllers, and service-owned behavior.
-- The highest-priority unfinished work is migration parity, not new top-level studios: editor quality, external database profiles, durable job routing for slow workflows, connector/dump jobs, assistant maturity, and native UI polish.
-- `app-wails/` should remain as reference until native parity is good enough for daily use.
+- The Fyne migration remains the correct direction and `nexus-app/` is the active product.
+- Current estimate: Fyne-native migration is roughly 96-97% complete, Wails useful-code parity is roughly 94-96%, Native Parity Beta readiness is roughly 90-93%, and overall production readiness is roughly 86%.
+- The architecture is healthy: thin executable root, framework-free domain/services, Fyne-only UI packages, explicit approvals, safe workspace mutation boundaries, manual Git/Docker actions, durable metadata, and local-first safety rules.
+- The biggest remaining architectural risk is UI/orchestration complexity in `internal/ui/shell`; future UI work should keep extracting focused panels, controllers, and service-owned behavior.
+- The highest-priority unfinished work is migration and production readiness, not new top-level studios: final editor strategy, durable slow-job routing, richer document/presentation exports, deeper assistant evidence quality, packaging, onboarding, and native UI polish.
+- `app-wails/` should remain as reference until the remaining native parity blockers are completed or explicitly moved out of Native Parity Beta.
 
 Production direction:
 
@@ -33,6 +35,15 @@ Production direction:
 - Gate 2 is Safety And Reliability Beta: durable jobs, metadata recovery/export, diagnostics, audit coverage, and failure recovery.
 - Gate 3 is Packaging And Platform Beta: repeatable signed Windows builds, CI, visual/manual smoke, platform support matrix, and release hygiene.
 - Gate 4 is Private Beta: onboarding, issue-report bundles, safe-agent docs, and user feedback loop.
+
+Immediate execution order:
+
+- Validate macOS Keychain and Linux Secret Service/libsecret behavior during platform packaging smoke.
+- Define and implement the durable slow-job contract for OCR, dump imports, connector pulls, long indexing, report generation, and long agent runs.
+- Finalize the native editor parity strategy and document the Native Parity Beta acceptance bar.
+- Expand richer generated document artifacts and packaged presentation exports.
+- Build signed release packaging and installer/update validation.
+- Run a focused UI polish pass on onboarding, empty states, settings, diagnostics, and workflow hierarchy.
 
 ## Repository State
 
@@ -324,7 +335,7 @@ Exit criteria:
 
 1. Use the Wails inventory to close remaining Native Parity blockers: editor maturity, deeper retrieval evidence, and future generated-presentation regeneration.
 2. Finish native editor/UI parity: richer inline syntax styling, future LSP/deeper cross-file language actions, and less cramped native panels.
-3. Extend protected secret storage beyond the Windows baseline with macOS Keychain and Linux Secret Service/libsecret when those platforms move toward release support.
+3. Continue platform validation for protected secret storage now that Windows DPAPI, macOS Keychain, and Linux Secret Service/libsecret command-backed backends exist.
 4. Add durable job routing for long indexing, OCR, dump imports, connector pulls, report generation, and long agent runs.
 5. Add dump import job design before any Docker/database import execution.
 6. Continue Diagnostics hardening with deeper provider-specific runtime/GPU checks and guided remediation workflows.
@@ -337,7 +348,7 @@ Exit criteria:
 - [x] Wails-only feature inventory with `port` / `replace` / `drop` / `later` decisions.
 - [ ] IDE-grade editor baseline: native highlighted syntax preview is available; active-editor inline styling and future LSP/deeper cross-file language actions remain.
 - [ ] Native external database profiles for PostgreSQL, MySQL/MariaDB, SQL Server, and DuckDB with read-only guards.
-- [x] Native protected secret storage for Windows; explicit refusal/fallback behavior for unsupported platforms.
+- [x] Native protected secret storage for Windows DPAPI, macOS Keychain, and Linux Secret Service/libsecret, with explicit refusal on unsupported platforms.
 - [x] Assistant quality parity: line-aware citation refs beyond file-level sources in native answer footers and saved chat-answer artifacts.
 - [x] Assistant Wails parity slice: profile/memory store, active prompt profile injection, weak-evidence warning, retry/compare, and save-latest-answer `chat-answer` artifacts.
 - [x] Assistant stale-source parity slice: chat context paths persist in native metadata and chat history warns when cited sources changed or disappeared.
@@ -533,7 +544,7 @@ The Fyne migration must not drop product ambition, but this section is intention
 - [x] Full-access project policy with clear scope, expiration, and visible status.
 - [x] Path-root enforcement, traversal protection, ignored-state protection, and `.nexusdesk` protection across native workspace/file mutation services.
 - [x] Rollback snapshots for approved native workspace mutations where practical.
-- [ ] OS-protected secrets on Windows, macOS Keychain, and Linux Secret Service/libsecret.
+- [x] OS-protected secrets on Windows, macOS Keychain, and Linux Secret Service/libsecret.
 - [x] Append-only/persisted audit records for approvals, native agent/tool runs, file changes with rollback records, tasks, jobs, SQL runs, and artifacts.
 - [ ] Extend audit coverage to future connector sync jobs, OCR, dump imports, shell, and Docker mutations.
 - [x] Export/backup flows for local-first data.

@@ -1,6 +1,7 @@
 package settings
 
 import (
+	"nexusdesk/internal/services/protectedsecret"
 	"os"
 	"path/filepath"
 	"runtime"
@@ -105,8 +106,8 @@ func TestStorePreservesRedactedAPIKeyOnSave(t *testing.T) {
 }
 
 func TestStoreRejectsAPIKeyWhenProtectedStorageUnsupported(t *testing.T) {
-	if runtime.GOOS == "windows" {
-		t.Skip("unsupported-platform refusal is covered by the non-Windows build")
+	if protectedsecret.Available() {
+		t.Skip("unsupported-platform refusal requires a platform without protected secret storage")
 	}
 	store := NewFileStore(filepath.Join(t.TempDir(), "settings.json"))
 	err := store.Save(Settings{BaseURL: "https://api.example.test/v1", APIKey: "secret"})
@@ -124,8 +125,11 @@ func TestStoreNormalizesInvalidTokenReserve(t *testing.T) {
 
 func requireProtectedSettingsSecretStorage(t *testing.T) {
 	t.Helper()
-	if runtime.GOOS != "windows" {
-		t.Skip("protected settings secret sidecar storage is only implemented on Windows until Keychain/libsecret support lands")
+	if runtime.GOOS != "windows" && os.Getenv("NEXUSDESK_RUN_OS_SECRET_TESTS") != "1" {
+		t.Skip("set NEXUSDESK_RUN_OS_SECRET_TESTS=1 to exercise the real OS secret backend on " + runtime.GOOS)
+	}
+	if !protectedsecret.Available() {
+		t.Skip("protected settings secret storage backend is unavailable on " + runtime.GOOS)
 	}
 }
 

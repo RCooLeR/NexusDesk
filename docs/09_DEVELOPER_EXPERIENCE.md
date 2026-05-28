@@ -92,7 +92,7 @@ The native app uses workspace-local `.nexusdesk/` state:
 - `.nexusdesk/datasets/` for saved dataset queries and SQL notebooks.
 - JSON sidecars remain for compatibility imports and for human-readable artifact metadata.
 
-Secret storage is not yet native parity. Treat Wails-era DPAPI behavior as reference until a Fyne-native protected-secret service is implemented.
+Secret storage is now a shared native service. Provider API keys and connector credentials use Windows DPAPI, macOS Keychain through `security`, or Linux Secret Service/libsecret through `secret-tool`; unsupported platforms must refuse secret saves rather than writing raw credentials.
 
 ## Native Feature Boundaries
 
