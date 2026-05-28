@@ -337,14 +337,48 @@ func TestAssistantModelRouteOptionsIncludeGlobalFallbackAndRoutes(t *testing.T) 
 		},
 	}}
 	options := assistantModelRouteOptions(store)
-	if len(options) != 2 || options[0] != assistantGlobalModelRouteLabel || options[1] != "Main coding model" {
+	if len(options) != 3 || options[0] != assistantAutoModelRouteLabel || options[1] != assistantGlobalModelRouteLabel || options[2] != "Main coding model" {
 		t.Fatalf("unexpected route options: %#v", options)
 	}
 	if got := assistantModelRouteIDFromOption("Main coding model", store.settings.ModelRoutes); got != settingsSvc.RouteMainCoding {
 		t.Fatalf("expected route id lookup, got %q", got)
 	}
+	if got := assistantModelRouteIDFromOption(assistantAutoModelRouteLabel, store.settings.ModelRoutes); got != "" {
+		t.Fatalf("expected auto route option to defer inference, got %q", got)
+	}
 	if got := assistantModelRouteIDFromOption(assistantGlobalModelRouteLabel, store.settings.ModelRoutes); got != "" {
 		t.Fatalf("expected global fallback to return empty route id, got %q", got)
+	}
+}
+
+func TestInferAssistantModelRouteIDUsesPinnedContextFirst(t *testing.T) {
+	got := inferAssistantModelRouteID("Summarize this screenshot", []string{"data/sales.csv"}, "mockup.png")
+	if got != settingsSvc.RouteCSVExcelScripts {
+		t.Fatalf("expected pinned data context to win, got %q", got)
+	}
+}
+
+func TestInferAssistantModelRouteIDCoversDataDocumentVisionAndCode(t *testing.T) {
+	cases := []struct {
+		name     string
+		prompt   string
+		selected string
+		want     string
+	}{
+		{name: "vision file", selected: "screens/home.png", want: settingsSvc.RouteVisionScreenshot},
+		{name: "spreadsheet file", selected: "exports/sales.xlsx", want: settingsSvc.RouteCSVExcelScripts},
+		{name: "sql file", selected: "queries/report.sql", want: settingsSvc.RouteSQL},
+		{name: "document file", selected: "docs/report.pdf", want: settingsSvc.RouteResearchSummaries},
+		{name: "go file", selected: "internal/app/main.go", want: settingsSvc.RouteGoBackend},
+		{name: "prompt fallback", prompt: "Explain this PostgreSQL query", want: settingsSvc.RouteSQL},
+		{name: "no signal", prompt: "Hello", want: ""},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			if got := inferAssistantModelRouteID(tc.prompt, nil, tc.selected); got != tc.want {
+				t.Fatalf("expected %q, got %q", tc.want, got)
+			}
+		})
 	}
 }
 

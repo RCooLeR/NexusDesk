@@ -3,6 +3,7 @@ package shell
 import (
 	"context"
 	"fmt"
+	"path/filepath"
 	"regexp"
 	"strconv"
 	"strings"
@@ -83,7 +84,7 @@ func (v *View) newAssistantPanel() fyne.CanvasObject {
 		saveProfile,
 	)
 	modelRoute := widget.NewSelect(assistantModelRouteOptions(v.settingsStore), nil)
-	modelRoute.SetSelected(assistantGlobalModelRouteLabel)
+	modelRoute.SetSelected(assistantAutoModelRouteLabel)
 	v.assistantModelRoute = modelRoute
 	mode := widget.NewSelect([]string{"Ask", "Agent"}, func(string) {})
 	mode.SetSelected("Ask")
@@ -131,7 +132,7 @@ func (v *View) runAssistantRequest(prompt *widget.Entry, response *widget.RichTe
 		SelectedPath:  v.state.SelectedPath(),
 		ContextPaths:  assistantContextPathsForRequest(v.state.AssistantContextPaths(), ""),
 		Conversation:  v.state.AssistantConversation(),
-		ModelRouteID:  v.selectedAssistantModelRouteID(),
+		ModelRouteID:  v.selectedAssistantModelRouteID(text),
 	}
 	startedAt := time.Now().UTC()
 	send.Disable()
@@ -173,21 +174,26 @@ func (v *View) runAssistantRequest(prompt *widget.Entry, response *widget.RichTe
 	}()
 }
 
+const assistantAutoModelRouteLabel = "Auto by selected context"
 const assistantGlobalModelRouteLabel = "Global model fallback"
 
-func (v *View) selectedAssistantModelRouteID() string {
+func (v *View) selectedAssistantModelRouteID(prompt string) string {
 	if v == nil || v.assistantModelRoute == nil {
 		return ""
 	}
 	routes := assistantModelRoutesForStore(v.settingsStore)
-	return assistantModelRouteIDFromOption(v.assistantModelRoute.Selected, routes)
+	option := strings.TrimSpace(v.assistantModelRoute.Selected)
+	if option == assistantAutoModelRouteLabel {
+		return inferAssistantModelRouteID(prompt, v.state.AssistantContextPaths(), v.state.SelectedPath())
+	}
+	return assistantModelRouteIDFromOption(option, routes)
 }
 
 func assistantModelRouteOptions(store interface {
 	LoadForDisplay() (settingsSvc.Settings, error)
 }) []string {
 	routes := assistantModelRoutesForStore(store)
-	options := []string{assistantGlobalModelRouteLabel}
+	options := []string{assistantAutoModelRouteLabel, assistantGlobalModelRouteLabel}
 	for _, route := range routes {
 		options = append(options, route.Label)
 	}
@@ -209,7 +215,7 @@ func assistantModelRoutesForStore(store interface {
 
 func assistantModelRouteIDFromOption(option string, routes []settingsSvc.ModelRoute) string {
 	option = strings.TrimSpace(option)
-	if option == "" || option == assistantGlobalModelRouteLabel {
+	if option == "" || option == assistantAutoModelRouteLabel || option == assistantGlobalModelRouteLabel {
 		return ""
 	}
 	for _, route := range routes {
@@ -218,6 +224,104 @@ func assistantModelRouteIDFromOption(option string, routes []settingsSvc.ModelRo
 		}
 	}
 	return ""
+}
+
+func inferAssistantModelRouteID(prompt string, pinned []string, selected string) string {
+	for _, candidate := range assistantRouteContextCandidates(pinned, selected) {
+		if routeID := routeIDForAssistantPath(candidate); routeID != "" {
+			return routeID
+		}
+	}
+	return routeIDForAssistantPrompt(prompt)
+}
+
+func assistantRouteContextCandidates(pinned []string, selected string) []string {
+	seen := map[string]bool{}
+	candidates := make([]string, 0, len(pinned)+1)
+	for _, relPath := range pinned {
+		relPath = strings.TrimSpace(relPath)
+		if relPath == "" || seen[relPath] {
+			continue
+		}
+		seen[relPath] = true
+		candidates = append(candidates, relPath)
+	}
+	selected = strings.TrimSpace(selected)
+	if selected != "" && !seen[selected] {
+		candidates = append(candidates, selected)
+	}
+	return candidates
+}
+
+func routeIDForAssistantPath(relPath string) string {
+	normalized := strings.ToLower(filepath.ToSlash(strings.TrimSpace(relPath)))
+	ext := strings.ToLower(filepath.Ext(normalized))
+	switch ext {
+	case ".png", ".jpg", ".jpeg", ".gif", ".bmp", ".webp", ".svg":
+		return settingsSvc.RouteVisionScreenshot
+	case ".csv", ".tsv", ".xlsx", ".xls":
+		return settingsSvc.RouteCSVExcelScripts
+	case ".sql", ".sqlite", ".sqlite3", ".db", ".duckdb":
+		return settingsSvc.RouteSQL
+	case ".cypher", ".cql":
+		return settingsSvc.RouteNeo4jCypher
+	case ".go":
+		return settingsSvc.RouteGoBackend
+	case ".js", ".jsx", ".ts", ".tsx", ".mjs", ".cjs":
+		return settingsSvc.RouteReactTypeScript
+	case ".py", ".ipynb":
+		return settingsSvc.RoutePythonCoding
+	case ".php", ".blade.php":
+		return settingsSvc.RoutePHPLaravel
+	case ".md", ".markdown", ".txt", ".pdf", ".docx", ".html", ".htm", ".xml", ".rtf", ".odt":
+		return settingsSvc.RouteResearchSummaries
+	case ".json", ".jsonl", ".ndjson", ".parquet", ".log":
+		if strings.Contains(normalized, "/data/") || strings.Contains(normalized, "/datasets/") {
+			return settingsSvc.RouteCSVExcelScripts
+		}
+		return settingsSvc.RouteAnalytics
+	default:
+		if strings.Contains(normalized, "/data/") || strings.Contains(normalized, "/datasets/") || strings.Contains(normalized, "/analytics/") {
+			return settingsSvc.RouteAnalytics
+		}
+	}
+	return ""
+}
+
+func routeIDForAssistantPrompt(prompt string) string {
+	normalized := strings.ToLower(strings.TrimSpace(prompt))
+	switch {
+	case assistantContainsAny(normalized, "screenshot", "image", "vision", "picture", "photo", "ui reference"):
+		return settingsSvc.RouteVisionScreenshot
+	case assistantContainsAny(normalized, "postgres", "mysql", "sqlite", "sql server", "duckdb", "query", "database"):
+		return settingsSvc.RouteSQL
+	case assistantContainsAny(normalized, "neo4j", "cypher"):
+		return settingsSvc.RouteNeo4jCypher
+	case assistantContainsAny(normalized, "csv", "excel", "xlsx", "spreadsheet"):
+		return settingsSvc.RouteCSVExcelScripts
+	case assistantContainsAny(normalized, "analytics", "dashboard", "kpi", "metric"):
+		return settingsSvc.RouteAnalytics
+	case assistantContainsAny(normalized, "research", "summarize", "summary", "document", "report"):
+		return settingsSvc.RouteResearchSummaries
+	case assistantContainsAny(normalized, "golang", " go ", "go backend"):
+		return settingsSvc.RouteGoBackend
+	case assistantContainsAny(normalized, "react", "typescript", "javascript", "frontend"):
+		return settingsSvc.RouteReactTypeScript
+	case assistantContainsAny(normalized, "python"):
+		return settingsSvc.RoutePythonCoding
+	case assistantContainsAny(normalized, "php", "laravel"):
+		return settingsSvc.RoutePHPLaravel
+	}
+	return ""
+}
+
+func assistantContainsAny(value string, needles ...string) bool {
+	for _, needle := range needles {
+		if strings.Contains(value, needle) {
+			return true
+		}
+	}
+	return false
 }
 
 func (v *View) loadAssistantProfile() {
@@ -935,7 +1039,7 @@ func (v *View) runAgentRequest(text string, response *widget.RichText, send *wid
 		ID:            fmt.Sprintf("agent-%d", time.Now().UTC().UnixNano()),
 		Prompt:        text,
 		WorkspaceRoot: workspace.Root,
-		ModelRouteID:  v.selectedAssistantModelRouteID(),
+		ModelRouteID:  v.selectedAssistantModelRouteID(text),
 		ApproveWrites: v.approvalService.HasFullProjectAccess(workspace.Root),
 		ApproveShell:  v.assistantRunTaskApprovalChecked(),
 		ApproveTool:   v.confirmAgentToolApproval,

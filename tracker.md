@@ -525,7 +525,8 @@ The Fyne migration must not drop product ambition, but this section is intention
 - [x] Add Ask-mode model-route selector with global fallback and assistant-service route metadata.
 - [x] Wire task-aware model route resolution into Git AI diff summary/commit drafting with assistant-service fallback warnings and saved `chat-answer` route metadata.
 - [x] Wire task-aware model route resolution into Agent mode with selected-route context budgeting, fallback warnings, final-response route metadata, and persisted agent-audit model provenance.
-- [ ] Wire task-aware model route resolution into Data, document, and vision/screenshot workflows with fallback warnings and persisted route metadata.
+- [x] Add assistant/agent auto-routing by selected context so data, SQL, document, image/screenshot, and code contexts select the matching task-aware model route before falling back to global.
+- [ ] Wire task-aware model route resolution into future dedicated Data, document, and vision/screenshot model workflows with fallback warnings and persisted route metadata.
 - [ ] Deeper GPU diagnostics.
 - [x] Streaming chat with selected files/directories/project context, token-budgeted history, persisted turns, and source-path context.
 - [x] Native assistant source/model diagnostics parity slice: Wails-compatible context-label source fallback parsing, source/model/context answer footer, and effective source persistence for saved answer artifacts.
