@@ -23,7 +23,7 @@ Wails feature inventory and retirement blockers: `docs/15_WAILS_FEATURE_INVENTOR
 Summary:
 
 - The Fyne migration remains the correct direction and `nexus-app/` is the active product.
-- Current estimate: Fyne-native migration is roughly 96-97% complete, Wails useful-code parity is roughly 94-96%, Native Parity Beta readiness is roughly 90-93%, and overall production readiness is roughly 86%.
+- Current estimate: Fyne-native migration is roughly 96-97% complete, Wails useful-code parity is roughly 94-96%, Native Parity Beta readiness is roughly 90-93%, and overall production readiness is roughly 87%.
 - The architecture is healthy: thin executable root, framework-free domain/services, Fyne-only UI packages, explicit approvals, safe workspace mutation boundaries, manual Git/Docker actions, durable metadata, and local-first safety rules.
 - The biggest remaining architectural risk is UI/orchestration complexity in `internal/ui/shell`; future UI work should keep extracting focused panels, controllers, and service-owned behavior.
 - The highest-priority unfinished work is migration and production readiness, not new top-level studios: final editor strategy, durable slow-job routing, richer document/presentation exports, deeper assistant evidence quality, packaging, onboarding, and native UI polish.
@@ -39,7 +39,7 @@ Production direction:
 Immediate execution order:
 
 - Validate macOS Keychain and Linux Secret Service/libsecret behavior during platform packaging smoke.
-- Define and implement the durable slow-job contract for OCR, dump imports, connector pulls, long indexing, report generation, and long agent runs.
+- Apply the durable slow-job contract to OCR, dump imports, connector pulls, long indexing, report generation, and long agent runs as those workflows are implemented.
 - Finalize the native editor parity strategy and document the Native Parity Beta acceptance bar.
 - Expand richer generated document artifacts and packaged presentation exports.
 - Build signed release packaging and installer/update validation.
@@ -300,6 +300,7 @@ Exit criteria:
 Goal: make slow and durable workflows reliable.
 
 - [x] Define first in-memory job model: id, kind, status, log tail, cancel, timestamps, and task output status.
+- [x] Define durable slow-workflow contract for OCR, dump imports, connector pulls, long indexing, report generation, long agent runs, and packaged exports, including explicit-start and no-workspace-open guardrails.
 - [x] Add SQLite primary metadata store in `nexus-app`.
 - [x] Add durable SQLite repository for native jobs and task-run records.
 - [x] Add task-run Markdown artifacts linked from persisted task-run records.
@@ -309,7 +310,7 @@ Goal: make slow and durable workflows reliable.
 - [x] Add approval metadata repository coverage with JSON compatibility fallback.
 - [x] Import Wails-era JSON chat, approval, artifact sidecar, and tool-run metadata into native SQLite on workspace open.
 - [x] Migrate/import remaining Wails-era dataset SQL/dependency data from legacy SQLite metadata stores.
-- [ ] Route long indexing, OCR, dump imports, connector pulls, report generation, and long agent runs through jobs.
+- [ ] Apply durable job routing to concrete long indexing, OCR, dump import, connector pull, report generation, and long agent run implementations.
 - [x] Add native job monitor with cancel/retry/open-output actions.
 
 Exit criteria:
@@ -336,7 +337,7 @@ Exit criteria:
 1. Use the Wails inventory to close remaining Native Parity blockers: editor maturity, deeper retrieval evidence, and future generated-presentation regeneration.
 2. Finish native editor/UI parity: richer inline syntax styling, future LSP/deeper cross-file language actions, and less cramped native panels.
 3. Continue platform validation for protected secret storage now that Windows DPAPI, macOS Keychain, and Linux Secret Service/libsecret command-backed backends exist.
-4. Add durable job routing for long indexing, OCR, dump imports, connector pulls, report generation, and long agent runs.
+4. Apply the durable slow-workflow contract to concrete long indexing, OCR, dump imports, connector pulls, report generation, and long agent run implementations.
 5. Add dump import job design before any Docker/database import execution.
 6. Continue Diagnostics hardening with deeper provider-specific runtime/GPU checks and guided remediation workflows.
 7. Keep cleaning Wails-era documentation wording so active docs clearly describe `nexus-app/` behavior and mark `app-wails/` as reference history.
@@ -358,7 +359,8 @@ Exit criteria:
 
 ### Gate 2: Safety And Reliability Beta
 
-- [ ] Durable job routing for OCR, dump imports, connector pulls, long indexing, report generation, and long agent runs.
+- [x] Durable slow-workflow contract for OCR, dump imports, connector pulls, long indexing, report generation, long agent runs, and packaged exports.
+- [ ] Concrete durable job routing for OCR, dump imports, connector pulls, long indexing, report generation, and long agent runs as those workflows are implemented.
 - [x] Metadata recovery/export path for `.nexusdesk/metadata`.
 - [x] Backup/export flow for local-first workspace state.
 - [x] Diagnostics panel for provider status, metadata health, job history, app logs, GPU/model runtime, and recent failures.
@@ -556,6 +558,7 @@ The Fyne migration must not drop product ambition, but this section is intention
 - [x] JSON compatibility import from Wails-era workspaces for chat history, approvals, artifact sidecars, and tool-run logs.
 - [x] Legacy Wails SQLite dataset SQL run and dataset dependency import into native SQLite metadata.
 - [x] First durable job monitor with progress log tail, cancellation, retry from persisted task runs, and task-report output opening.
+- [x] Shared slow-workflow job contract with explicit-user-start enforcement and workspace-open prohibition for OCR, dump imports, connector pulls, long indexing, report generation, long agent runs, and packaged exports.
 - [x] First Diagnostics surface for provider probe/runtime status, metadata health, and recent persisted job/task/SQL/agent failure snapshots.
 - [x] Diagnostics quick actions and recommended-remediation hints for provider/settings, metadata health, and recent failure triage.
 - [x] Route native document-report and document-extraction artifact generation through durable jobs with persisted job records and job-output opening.

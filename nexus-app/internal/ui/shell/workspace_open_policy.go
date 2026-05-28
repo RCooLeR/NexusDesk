@@ -1,5 +1,7 @@
 package shell
 
+import jobsSvc "nexusdesk/internal/services/jobs"
+
 type workspaceOpenActionKind string
 
 const (
@@ -14,6 +16,9 @@ const (
 )
 
 func isWorkspaceOpenActionAllowed(kind workspaceOpenActionKind) bool {
+	if jobsSvc.ProhibitedOnWorkspaceOpen(string(kind)) {
+		return false
+	}
 	switch kind {
 	case workspaceOpenActionJobsRefresh,
 		workspaceOpenActionChatHistoryRefresh,

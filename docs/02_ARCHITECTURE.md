@@ -188,14 +188,14 @@ Review status as of 2026-05-28:
 - Service/domain packages should remain framework-free. Fyne imports belong in `internal/app`, `internal/ui`, UI tests, and theme/brand presentation code.
 - Git work is correctly manual on folder open, so opening a workspace should not launch external Git commands or desktop command windows.
 - Native agent file mutations now go through the same safe workspace mutation and rollback services as manual writes.
-- Slow or external future work, especially OCR, dump imports, connector pulls, deeper indexing, report generation, and long agent runs, must go through the durable job model before it is attached to UI events.
+- Slow or external future work, especially OCR, dump imports, connector pulls, deeper indexing, report generation, packaged exports, and long agent runs, must go through the shared durable slow-workflow job contract before it is attached to UI events.
 
 Near-term architecture corrections:
 
 - Continue extracting focused native UI state as `internal/ui/shell` grows; do not let it become the new bridge-shaped monolith.
 - Finish native editor quality without pushing language rules into widgets, and explicitly decide the beta strategy for editable inline styling versus companion syntax/document-map surfaces.
 - Validate cross-platform secret backends during packaging/platform smoke.
-- Route OCR, dump imports, connector pulls, long indexing, report generation, and long agent runs through the durable job model.
+- Apply the shared durable slow-workflow contract when OCR, dump imports, connector pulls, long indexing, report generation, packaged exports, and long agent runs are implemented.
 - Keep `app-wails/` until native parity blockers in `docs/15_WAILS_FEATURE_INVENTORY.md` are completed or deliberately moved out of Native Parity Beta.
 
 ### 3. Workspace Manager

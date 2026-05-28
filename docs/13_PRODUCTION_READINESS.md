@@ -14,7 +14,7 @@ Approximate migration status:
 - Fyne-native migration: roughly 96-97% complete by useful Wails-era functionality.
 - Wails-era useful workflow parity: roughly 94-96% complete.
 - Native Parity Beta readiness: roughly 90-93% complete.
-- Overall production readiness: roughly 86% complete.
+- Overall production readiness: roughly 87% complete.
 - Distribution and packaging readiness: roughly 65-70% complete.
 
 The app can already:
@@ -82,7 +82,8 @@ Goal: prove local-first safety and slow-work reliability.
 
 Required:
 
-- Durable job routing for OCR, dump imports, connector pulls, long indexing, report generation, and long agent runs.
+- Shared durable slow-workflow contract for OCR, dump imports, connector pulls, long indexing, report generation, long agent runs, and packaged exports.
+- Concrete durable job routing for each slow workflow as it is implemented.
 - Metadata recovery/export path for `.nexusdesk/metadata`.
 - Backup/export flow for local-first workspace state.
 - Diagnostics panel for app logs, provider status, metadata health, job history, GPU/model runtime, and recent failures.
@@ -138,7 +139,7 @@ Exit criteria:
 
 ## Immediate Production-Oriented Next Batch
 
-1. Define and implement the durable slow-job contract for OCR, dump imports, connector pulls, long indexing, report generation, and long agent runs.
+1. Apply the durable slow-workflow contract to concrete OCR, dump import, connector pull, long indexing, report generation, and long agent run implementations.
 2. Finalize the native editor parity strategy and explicitly document what counts for Native Parity Beta.
 3. Expand richer generated document artifacts and packaged presentation exports.
 4. Build signed release packaging and installer/update validation.

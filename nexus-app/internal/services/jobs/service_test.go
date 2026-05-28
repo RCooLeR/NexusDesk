@@ -81,6 +81,50 @@ func TestServiceLoadsPersistedJobsAndContinuesIDs(t *testing.T) {
 	}
 }
 
+func TestSlowWorkflowSpecsRequireDurableExplicitStarts(t *testing.T) {
+	specs := SlowWorkflowSpecs()
+	if len(specs) == 0 {
+		t.Fatal("expected slow workflow specs")
+	}
+	for _, spec := range specs {
+		if !spec.RequiresDurableJob || !spec.ProhibitedOnWorkspaceOpen || !spec.RequiresExplicitStart || !spec.Cancellable {
+			t.Fatalf("slow workflow spec is missing production guardrails: %#v", spec)
+		}
+		if err := ValidateWorkflowStart(spec.Kind, StartOptions{}); err == nil {
+			t.Fatalf("expected implicit %s start to be rejected", spec.Kind)
+		}
+		if err := ValidateWorkflowStart(spec.Kind, StartOptions{ExplicitUserStart: true}); err != nil {
+			t.Fatalf("expected explicit %s start to be accepted: %v", spec.Kind, err)
+		}
+		if !RequiresDurableJob(spec.Kind) || !ProhibitedOnWorkspaceOpen(spec.Kind) {
+			t.Fatalf("expected helpers to recognize %s", spec.Kind)
+		}
+	}
+}
+
+func TestStartWorkflowEnforcesExplicitUserStart(t *testing.T) {
+	service := New()
+	if _, _, err := service.StartWorkflow(KindOCRExtraction, "OCR", StartOptions{}); err == nil {
+		t.Fatal("expected implicit OCR workflow to be rejected")
+	}
+	job, _, err := service.StartWorkflow(KindOCRExtraction, "OCR", StartOptions{ExplicitUserStart: true})
+	if err != nil {
+		t.Fatalf("expected explicit OCR workflow to start: %v", err)
+	}
+	if job.Kind != KindOCRExtraction || job.Status != StatusRunning {
+		t.Fatalf("unexpected workflow job: %#v", job)
+	}
+}
+
+func TestUnknownWorkflowKindKeepsCompatibility(t *testing.T) {
+	if err := ValidateWorkflowStart("custom-short-job", StartOptions{}); err != nil {
+		t.Fatalf("unknown job kinds should remain compatible: %v", err)
+	}
+	if RequiresDurableJob("custom-short-job") || ProhibitedOnWorkspaceOpen("custom-short-job") {
+		t.Fatal("unknown job kind should not be classified as a slow workflow")
+	}
+}
+
 type fakeJobRepository struct {
 	listed []Job
 	saved  []Job

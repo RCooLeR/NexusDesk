@@ -98,7 +98,7 @@ Current planning estimate:
 - Fyne-native migration is roughly 96-97% complete by useful Wails-era functionality.
 - Wails useful-code parity is roughly 94-96% complete.
 - Native Parity Beta readiness is roughly 90-93% complete.
-- Overall production readiness is roughly 86% complete.
+- Overall production readiness is roughly 87% complete.
 
 The remaining work is concentrated in final editor strategy, durable routing for slow workflows, richer generated document/presentation exports, assistant evidence quality, signed packaging, onboarding, platform smoke, and UI polish.
 

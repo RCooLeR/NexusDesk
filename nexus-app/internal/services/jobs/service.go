@@ -50,6 +50,7 @@ func (s *Service) SetRepository(repo Repository, load bool) {
 func (s *Service) Start(kind string, label string) (Job, context.Context) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
+	kind = NormalizeKind(kind)
 	s.nextID++
 	ctx, cancel := context.WithCancel(context.Background())
 	job := Job{
@@ -64,6 +65,14 @@ func (s *Service) Start(kind string, label string) (Job, context.Context) {
 	s.cancels[job.ID] = cancel
 	s.persistLocked(job)
 	return job, ctx
+}
+
+func (s *Service) StartWorkflow(kind string, label string, options StartOptions) (Job, context.Context, error) {
+	if err := ValidateWorkflowStart(kind, options); err != nil {
+		return Job{}, nil, err
+	}
+	job, ctx := s.Start(kind, label)
+	return job, ctx, nil
 }
 
 func (s *Service) AppendLog(id string, line string) {

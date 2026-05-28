@@ -77,7 +77,7 @@ Current estimate:
 - Fyne-native migration: roughly 96-97% complete by useful Wails-era functionality.
 - Wails useful-code parity: roughly 94-96% complete.
 - Native Parity Beta readiness: roughly 90-93% complete.
-- Overall production readiness: roughly 86% complete.
+- Overall production readiness: roughly 87% complete.
 
 Current implemented areas include:
 
@@ -143,7 +143,7 @@ Remaining migration blockers:
 - Deeper assistant retrieval evidence beyond current deterministic source/citation/evidence diagnostics.
 - Richer generated document artifacts and packaged presentation exports.
 - Platform packaging/runtime validation for macOS Keychain and Linux Secret Service/libsecret support.
-- Durable job routing for OCR, dump imports, connector pulls, long indexing, long report generation, and long agent runs.
+- Apply the shared durable slow-workflow contract to OCR, dump imports, connector pulls, long indexing, long report generation, packaged exports, and long agent runs as those workflows are implemented.
 
 Full execution now works on the current workstation when the MSYS2 UCRT64 compiler path is configured. `nexus-app/scripts/dev-env.ps1` prepends `C:\msys64\ucrt64\bin` and `C:\msys64\usr\bin`, sets `CGO_ENABLED=1`, can run tests, builds, or the desktop app, and calls `build-windows-icon.ps1` during Windows builds so `build\nexusdesk.exe` has the approved executable icon resource. `CGO_ENABLED=0 go build .` still fails because Fyne's OpenGL binding requires CGO-backed files.
 

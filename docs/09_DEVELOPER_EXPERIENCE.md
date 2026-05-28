@@ -148,5 +148,5 @@ See `docs/12_PROJECT_REVIEW.md` for the latest full project review and `docs/13_
 - finish Fyne parity before adding new top-level studios;
 - keep extracting `internal/ui/shell` state as workflows grow;
 - port external database profiles and credential handling carefully;
-- route OCR, dump imports, connector pulls, report generation, deeper indexing, and long agent runs through jobs;
+- route OCR, dump imports, connector pulls, report generation, deeper indexing, packaged exports, and long agent runs through the shared slow-workflow job contract;
 - keep `app-wails/` until native parity is enough for day-to-day use.

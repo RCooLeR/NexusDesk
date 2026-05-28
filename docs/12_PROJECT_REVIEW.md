@@ -13,7 +13,7 @@ Approximate current status:
 - Fyne-native migration: 96-97% complete by useful Wails-era functionality.
 - Wails useful-code parity: 94-96% complete.
 - Native Parity Beta readiness: 90-93% complete.
-- Overall production readiness: about 86% complete.
+- Overall production readiness: about 87% complete.
 - Distribution/packaging readiness: about 65-70% complete.
 
 The remaining work is concentrated in final editor parity, richer generated document/presentation outputs, deeper assistant evidence quality, durable routing for slow workflows, signed packaging, onboarding, platform smoke, and final UI polish.
@@ -197,7 +197,7 @@ Security/platform:
 
 Reliability and jobs:
 
-- Route OCR, dump imports, connector pulls, long indexing, long report generation, and long agent runs through durable jobs.
+- Apply the shared durable slow-workflow contract to OCR, dump imports, connector pulls, long indexing, long report generation, packaged exports, and long agent runs.
 - Add crash/hang checks and issue-report bundles.
 - Expand search index metadata and recovery/export flows.
 
@@ -217,7 +217,7 @@ The active product path should remain migration-first and production-first. Avoi
 
 ## Recommended Next Engineering Order
 
-1. Define and implement the durable slow-job contract for OCR, dump imports, connector pulls, long indexing, long reports, and long agent runs.
+1. Apply the durable slow-workflow contract to concrete OCR, dump import, connector pull, long indexing, long report, and long agent run implementations.
 2. Finalize the native editor parity strategy and explicitly document what counts for Native Parity Beta.
 3. Expand richer document/presentation export workflows.
 4. Build signed release packaging and installer/update validation.
