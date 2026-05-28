@@ -7,6 +7,8 @@ import (
 	"testing"
 
 	fynetest "fyne.io/fyne/v2/test"
+
+	recentWorkspacesSvc "nexusdesk/internal/services/recentworkspaces"
 )
 
 func TestCompatibilityImportJobLabel(t *testing.T) {
@@ -43,6 +45,7 @@ func TestOpenWorkspaceHandlesMetadataStoreUnavailable(t *testing.T) {
 	window := app.NewWindow("workspace-open-test")
 	defer window.Close()
 	view := New(window)
+	view.recentWorkspaceStore = recentWorkspacesSvc.NewFileStore(filepath.Join(t.TempDir(), "recent.json"))
 	t.Cleanup(func() {
 		if view.metadataStore != nil {
 			_ = view.metadataStore.Close()
@@ -75,6 +78,7 @@ func TestOpenWorkspaceLoadsMetadataStoreWhenAvailable(t *testing.T) {
 	window := app.NewWindow("workspace-open-success")
 	defer window.Close()
 	view := New(window)
+	view.recentWorkspaceStore = recentWorkspacesSvc.NewFileStore(filepath.Join(t.TempDir(), "recent.json"))
 	t.Cleanup(func() {
 		if view.metadataStore != nil {
 			_ = view.metadataStore.Close()
@@ -96,6 +100,13 @@ func TestOpenWorkspaceLoadsMetadataStoreWhenAvailable(t *testing.T) {
 	if !containsActivityLine(view.recentActivityLines(20), "Opened workspace "+root) {
 		t.Fatalf("expected workspace-open activity message, got %#v", view.recentActivityLines(20))
 	}
+	recent, err := view.recentWorkspaceStore.List()
+	if err != nil {
+		t.Fatalf("List recent workspaces failed: %v", err)
+	}
+	if len(recent) != 1 || recent[0].Path != root {
+		t.Fatalf("expected workspace to be recorded as recent, got %#v", recent)
+	}
 	for _, tab := range view.editorSession.Tabs() {
 		if tab.Kind == "welcome" {
 			t.Fatalf("expected welcome tab to close after workspace open, got %#v", view.editorSession.Tabs())
@@ -113,6 +124,7 @@ func TestOpenSingleFileOpensParentWorkspaceAndPreview(t *testing.T) {
 	window := app.NewWindow("single-file-open")
 	defer window.Close()
 	view := New(window)
+	view.recentWorkspaceStore = recentWorkspacesSvc.NewFileStore(filepath.Join(t.TempDir(), "recent.json"))
 	t.Cleanup(func() {
 		if view.metadataStore != nil {
 			_ = view.metadataStore.Close()

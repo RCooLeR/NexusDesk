@@ -124,7 +124,7 @@ Exit criteria:
 
 ## Immediate Production-Oriented Next Batch
 
-1. Close the Wails inventory parity blockers: recent workspaces, editor maturity, protected secrets, assistant profile/memory UX, Git history/blame, lineage import/export, and optional web fetch.
+1. Close the Wails inventory parity blockers: editor maturity, protected secrets, assistant profile/memory UX, Git history/blame, lineage import/export, and optional web fetch.
 2. Start editor parity: syntax highlighting decision and find/replace behavior.
 3. Start native protected secret storage design and Windows implementation.
 4. Define the durable job contract for OCR, dump imports, connector pulls, report generation, and long agent runs.

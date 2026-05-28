@@ -21,6 +21,7 @@ import (
 	llmSvc "nexusdesk/internal/services/llm"
 	metadataSvc "nexusdesk/internal/services/metadata"
 	operationsSvc "nexusdesk/internal/services/operations"
+	recentWorkspacesSvc "nexusdesk/internal/services/recentworkspaces"
 	settingsSvc "nexusdesk/internal/services/settings"
 	tasksSvc "nexusdesk/internal/services/tasks"
 	toolsSvc "nexusdesk/internal/services/tools"
@@ -41,6 +42,7 @@ type View struct {
 	connectorProfileStore    *dbconnectorSvc.ConnectorProfileStore
 	operationsService        *operationsSvc.Service
 	metadataStore            *metadataSvc.Store
+	recentWorkspaceStore     *recentWorkspacesSvc.Store
 	settingsStore            *settingsSvc.Store
 	taskService              *tasksSvc.Service
 	editorSession            *editorSvc.Session
@@ -160,10 +162,15 @@ func New(window fyne.Window) *View {
 	editorSession := editorSvc.NewSession()
 	welcome := editorSession.OpenWelcome("Welcome")
 	var view *View
-	editorTabs := newEditorTabs(welcome.Title, func() { view.openWorkspaceDialog() }, func() { view.openFileDialog() })
+	welcomeItem := container.NewTabItem(welcome.Title, widget.NewLabel("Loading home..."))
+	editorTabs := newEditorTabs(welcomeItem)
 	settingsStore, err := settingsSvc.NewStore()
 	if err != nil {
 		settingsStore = settingsSvc.NewFileStore("nexus-settings.json")
+	}
+	recentWorkspaceStore, err := recentWorkspacesSvc.NewStore()
+	if err != nil {
+		recentWorkspaceStore = recentWorkspacesSvc.NewFileStore("nexus-recent-workspaces.json")
 	}
 	gitDiffText := widget.NewMultiLineEntry()
 	gitDiffText.TextStyle = fyne.TextStyle{Monospace: true}
@@ -247,6 +254,7 @@ func New(window fyne.Window) *View {
 		connectorProfileStore: connectorProfileStore,
 		operationsService:     operationsSvc.New(),
 		settingsStore:         settingsStore,
+		recentWorkspaceStore:  recentWorkspaceStore,
 		taskService:           taskService,
 		editorSession:         editorSession,
 		status:                widget.NewLabel("No workspace open"),
@@ -323,6 +331,7 @@ func New(window fyne.Window) *View {
 		accessStatus:      widget.NewLabel("Full project access: inactive"),
 		diagnosticsProber: llmClient,
 	}
+	welcomeItem.Content = view.newWelcomePanel()
 	view.configureEditorTabs()
 	return view
 }

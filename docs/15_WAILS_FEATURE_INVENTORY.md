@@ -24,7 +24,7 @@ This inventory records the explicit `port`, `replace`, `drop`, or `later` decisi
 | --- | --- | --- | --- | --- |
 | Wails app lifecycle, bridge bindings, React routing, Vite build, generated frontend assets | `app-wails/main.go`, `app-wails/wails.json`, `app-wails/frontend/` | Native lifecycle lives in `nexus-app/internal/app`; Fyne shell is active | `drop` | Keep `app-wails/` as reference until freeze, then remove only after explicit approval |
 | Workspace open, refresh, preview, search, problems, file write/copy/move/delete, rollback | `app-wails/app.go`, `app-wails/internal/workspace/*` | Native services and shell panels exist with symlink, binary, encoding, and rollback hardening | `ported` | Continue production hardening only |
-| Recent workspace management | `app-wails/internal/storage/recent_workspaces.go`, startup state UI | Native opens workspaces/files but lacks full recent-workspace management UI | `port` | Add recent workspace list, remove/clear actions, and startup home integration |
+| Recent workspace management | `app-wails/internal/storage/recent_workspaces.go`, startup state UI | Native Home tab records opened workspaces and supports open/remove/clear recent entries | `ported` | Continue onboarding polish only |
 | Monaco syntax highlighting, language workers, minimap/editor outline UX | `MonacoFileEditor.tsx`, `MonacoCodePreview.tsx`, `editorOutline.ts`, frontend `dist/assets/*Mode*` | Native text editor supports editing, preview, dirty-close safety, quick-open, and find/replace; IDE-grade language UX remains incomplete | `replace` | Define Fyne-native syntax/breadcrumb/outline strategy; embed only after a focused spike proves packaging and accessibility |
 | Command palette and quick-open | `CommandPalette.tsx`, `QuickOpenPalette.tsx` | Native quick-open keyboard workflow exists; command palette depth is not fully replicated | `ported` for quick-open, `later` for broader command palette | Keep quick-open native; revisit full command palette after editor/navigation polish |
 | Git status, file diff, file/hunk stage and unstage | `app-wails/app_git.go`, `GitDiffPanel.tsx` | Native Git panel supports status, diff, hunk-windowing, file/hunk actions, and AI summary | `ported` | Continue destructive action policy separately |
@@ -51,13 +51,12 @@ This inventory records the explicit `port`, `replace`, `drop`, or `later` decisi
 
 ## Native Parity Blockers From This Inventory
 
-1. Add recent workspace management in native onboarding/home.
-2. Finish the editor parity strategy: syntax highlighting, breadcrumbs/outline, encoding controls, split/editor layout decision.
-3. Implement native protected secret storage on Windows with explicit unsupported-platform behavior.
-4. Add assistant prompt profiles/memory plus retry/compare/save-answer UX.
-5. Port read-only Git history/blame into the native Git panel and agent context tools.
-6. Add artifact lineage import/export and regeneration workflows.
-7. Add approval-gated agent web fetch if still desired for parity.
+1. Finish the editor parity strategy: syntax highlighting, breadcrumbs/outline, encoding controls, split/editor layout decision.
+2. Implement native protected secret storage on Windows with explicit unsupported-platform behavior.
+3. Add assistant prompt profiles/memory plus retry/compare/save-answer UX.
+4. Port read-only Git history/blame into the native Git panel and agent context tools.
+5. Add artifact lineage import/export and regeneration workflows.
+6. Add approval-gated agent web fetch if still desired for parity.
 
 ## Retirement Decision
 

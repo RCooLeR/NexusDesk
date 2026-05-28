@@ -16,7 +16,8 @@ func (v *View) newRail() fyne.CanvasObject {
 	logo.FillMode = canvas.ImageFillContain
 	logo.SetMinSize(fyne.NewSize(128, 38))
 	workspaceButton := widget.NewButtonWithIcon("Workbench", theme.HomeIcon(), func() {
-		v.addActivity("Workbench selected.")
+		v.openHomeTab()
+		v.addActivity("Home selected.")
 	})
 	dataButton := widget.NewButtonWithIcon("Data", theme.StorageIcon(), func() {
 		if !v.selectBottomTab("Data") {

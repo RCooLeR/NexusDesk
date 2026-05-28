@@ -137,6 +137,7 @@ Exit criteria:
 Goal: recreate the useful local project workbench without Wails or React.
 
 - [x] Add folder open flow using native Fyne dialog.
+- [x] Add native recent-workspace persistence with Home tab open/remove/clear actions.
 - [x] Render first workspace tree from the service scan.
 - [x] Add lazy child loading for large workspace trees.
 - [x] Add first native file preview service with rooted text preview, UTF-8/UTF-8 BOM/UTF-16/Windows-1251 decoding, binary detection, traversal protection, and size cap.
@@ -314,7 +315,7 @@ Exit criteria:
 
 ## Next Batch
 
-1. Use the Wails inventory to close remaining Native Parity blockers: recent workspaces, editor maturity, protected secrets, assistant profile/memory UX, Git history/blame, lineage import/export, and optional web fetch.
+1. Use the Wails inventory to close remaining Native Parity blockers: editor maturity, protected secrets, assistant profile/memory UX, Git history/blame, lineage import/export, and optional web fetch.
 2. Finish native editor/UI parity: syntax highlighting plan, find/replace, split editor groups or equivalent layout decision, breadcrumbs/outline/minimap strategy, and less cramped native panels.
 3. Design and implement native protected secret storage on Windows first, with explicit unsupported-platform behavior.
 4. Add durable job routing for long indexing, OCR, dump imports, connector pulls, report generation, and long agent runs.
