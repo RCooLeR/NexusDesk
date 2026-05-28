@@ -88,3 +88,36 @@ func TestPinnedTabsStayBeforeUnpinnedTabs(t *testing.T) {
 		t.Fatalf("expected pinned tab before unpinned tab, got %#v", tabs)
 	}
 }
+
+func TestResolveSecondaryFileTabUsesPreferredNonActiveTab(t *testing.T) {
+	session := NewSession()
+	session.OpenFile("a.go", "a.go")
+	session.OpenFile("b.go", "b.go")
+	session.OpenFile("c.go", "c.go")
+
+	tab, ok := session.ResolveSecondaryFileTab("a.go", "c.go")
+	if !ok || tab.RelPath != "c.go" {
+		t.Fatalf("expected preferred secondary tab c.go, got %#v ok=%v", tab, ok)
+	}
+}
+
+func TestResolveSecondaryFileTabFallsBackToFirstNonActiveTab(t *testing.T) {
+	session := NewSession()
+	session.OpenWelcome("Home")
+	session.OpenFile("a.go", "a.go")
+	session.OpenFile("b.go", "b.go")
+
+	tab, ok := session.ResolveSecondaryFileTab("a.go", "missing.go")
+	if !ok || tab.RelPath != "b.go" {
+		t.Fatalf("expected first non-active file tab b.go, got %#v ok=%v", tab, ok)
+	}
+}
+
+func TestResolveSecondaryFileTabRejectsActiveOnly(t *testing.T) {
+	session := NewSession()
+	session.OpenFile("a.go", "a.go")
+
+	if tab, ok := session.ResolveSecondaryFileTab("a.go", "a.go"); ok {
+		t.Fatalf("expected no secondary tab when active is the only file, got %#v", tab)
+	}
+}

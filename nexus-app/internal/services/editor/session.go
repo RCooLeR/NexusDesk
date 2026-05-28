@@ -1,6 +1,9 @@
 package editor
 
-import "strconv"
+import (
+	"strconv"
+	"strings"
+)
 
 type Session struct {
 	tabs     []Tab
@@ -28,6 +31,24 @@ func (s *Session) Tab(id string) (Tab, bool) {
 		return Tab{}, false
 	}
 	return s.tabs[index], true
+}
+
+func (s *Session) ResolveSecondaryFileTab(activeRelPath string, preferredRelPath string) (Tab, bool) {
+	activeRelPath = cleanTabRelPath(activeRelPath)
+	preferredRelPath = cleanTabRelPath(preferredRelPath)
+	if preferredRelPath != "" && preferredRelPath != activeRelPath {
+		for _, tab := range s.tabs {
+			if tab.Kind == KindFile && cleanTabRelPath(tab.RelPath) == preferredRelPath {
+				return tab, true
+			}
+		}
+	}
+	for _, tab := range s.tabs {
+		if tab.Kind == KindFile && cleanTabRelPath(tab.RelPath) != activeRelPath {
+			return tab, true
+		}
+	}
+	return Tab{}, false
 }
 
 func (s *Session) OpenWelcome(title string) Tab {
@@ -158,4 +179,8 @@ func (s *Session) reorderPinned() {
 		}
 	}
 	s.tabs = ordered
+}
+
+func cleanTabRelPath(value string) string {
+	return strings.TrimSpace(value)
 }

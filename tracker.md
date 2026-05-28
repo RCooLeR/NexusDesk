@@ -316,7 +316,7 @@ Exit criteria:
 ## Next Batch
 
 1. Use the Wails inventory to close remaining Native Parity blockers: editor maturity, richer assistant/source quality, and broader artifact regeneration.
-2. Finish native editor/UI parity: syntax highlighting plan, richer find/replace, split editor groups or equivalent layout decision, minimap strategy, and less cramped native panels.
+2. Finish native editor/UI parity: syntax highlighting plan, richer find/replace, minimap strategy, and less cramped native panels.
 3. Extend protected secret storage beyond the Windows baseline with macOS Keychain and Linux Secret Service/libsecret when those platforms move toward release support.
 4. Add durable job routing for long indexing, OCR, dump imports, connector pulls, report generation, and long agent runs.
 5. Add dump import job design before any Docker/database import execution.
@@ -328,7 +328,7 @@ Exit criteria:
 ### Gate 1: Native Parity Beta
 
 - [x] Wails-only feature inventory with `port` / `replace` / `drop` / `later` decisions.
-- [ ] IDE-grade editor baseline: syntax highlighting, richer find/replace, broader formatting, and split/minimap strategy.
+- [ ] IDE-grade editor baseline: syntax highlighting, richer find/replace, broader formatting, and minimap strategy.
 - [ ] Native external database profiles for PostgreSQL, MySQL/MariaDB, SQL Server, and DuckDB with read-only guards.
 - [x] Native protected secret storage for Windows; explicit refusal/fallback behavior for unsupported platforms.
 - [ ] Assistant quality parity: finer-grained citations beyond file-level sources.
@@ -376,7 +376,8 @@ The Fyne migration must not drop product ambition, but this section is intention
 - [x] Native editor outline parity slice with Wails-derived symbol rules for Markdown, Go, JavaScript/TypeScript, CSS, JSON, and YAML plus Fyne cursor navigation.
 - [x] Native editor breadcrumb and save-encoding parity slice with Wails-derived breadcrumb rules, clickable Fyne breadcrumb navigation, and explicit UTF-8/UTF-16/Windows encoding selection for safe writes.
 - [x] Native format-document parity slice with deterministic Go and JSON draft formatting from the Fyne editor.
-- [ ] Multi-tab editor polish with split editor groups, minimap, richer find, broader format coverage, and go-to-definition where available.
+- [x] Native split editor parity slice with Wails-derived secondary tab resolution and Fyne read-only secondary preview selection.
+- [ ] Multi-tab editor polish with minimap, richer find, broader format coverage, and go-to-definition where available.
 - [ ] Syntax highlighting strategy for common languages, Markdown, SQL, JSON/YAML/XML, Docker/Compose, logs, and config files.
 - [x] Markdown source/rendered toggle.
 - [x] Safe edit preview/apply/rollback for text, code, patches, appends, encoding-aware writes, and agent-safe mutation tools.

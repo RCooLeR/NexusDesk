@@ -58,6 +58,8 @@ type View struct {
 	tabIDs                   map[*container.TabItem]string
 	editorPreviews           map[string]domain.FilePreview
 	textEditors              map[string]*textEditorBinding
+	editorSplitEnabled       bool
+	editorSecondaryRelPath   string
 	navigatorClipboard       navigatorClipboard
 	activityLog              *widget.RichText
 	activityText             string

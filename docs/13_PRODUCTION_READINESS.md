@@ -49,7 +49,7 @@ Reference: [Wails Feature Inventory](15_WAILS_FEATURE_INVENTORY.md) records the 
 
 Required:
 
-- IDE-grade editor baseline: syntax highlighting strategy, reliable find/replace, split groups or equivalent layout decision, broader format coverage, and continued outline/breadcrumb polish.
+- IDE-grade editor baseline: syntax highlighting strategy, reliable find/replace, broader format coverage, minimap/language-action decisions, and continued outline/breadcrumb/split polish.
 - External database profile parity: PostgreSQL, MySQL/MariaDB, SQL Server, and DuckDB file/profile read-only query flows with cancellation, caps, redacted errors, and history.
 - Native protected secret storage for Windows first is implemented for provider API keys and connector credentials; macOS/Linux keychain backends remain before full cross-platform secret support.
 - Assistant quality parity: native Fyne now has weak-evidence warnings, retry/compare, Wails-compatible memory/profile storage, stale-source chat history warnings, Wails-compatible context-to-source fallback parsing, source/model footer diagnostics, curated model context sizing, loaded-model runtime context tuning, and save-latest-answer artifacts; finer-grained citations remain.

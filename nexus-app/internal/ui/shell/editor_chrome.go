@@ -2,6 +2,7 @@ package shell
 
 import (
 	"path"
+	"path/filepath"
 
 	"fyne.io/fyne/v2"
 	"fyne.io/fyne/v2/container"
@@ -40,8 +41,94 @@ func (v *View) newEditorPanel(tab editorSvc.Tab, preview domain.FilePreview) fyn
 	} else {
 		v.removeTextEditor(tab.ID)
 	}
-	tools := container.NewHBox(pin, save, state)
+	split := widget.NewButtonWithIcon("", theme.ViewFullScreenIcon(), func() {
+		v.editorSplitEnabled = !v.editorSplitEnabled
+		v.refreshEditorTabPanel(tab.ID)
+	})
+	split.Importance = widget.LowImportance
+	if v.editorSplitEnabled {
+		content = v.newSplitEditorContent(tab, content)
+	}
+	tools := container.NewHBox(pin, split, save, state)
 	return container.NewBorder(container.NewBorder(nil, nil, v.newEditorBreadcrumbs(tab.RelPath), tools), nil, nil, nil, content)
+}
+
+func (v *View) newSplitEditorContent(active editorSvc.Tab, primary fyne.CanvasObject) fyne.CanvasObject {
+	secondaryTab, ok := v.editorSession.ResolveSecondaryFileTab(active.RelPath, v.editorSecondaryRelPath)
+	if !ok {
+		empty := widget.NewLabel("Open another file tab to use split editor.")
+		empty.Wrapping = fyne.TextWrapWord
+		split := container.NewHSplit(primary, container.NewPadded(empty))
+		split.SetOffset(0.66)
+		return split
+	}
+	v.editorSecondaryRelPath = secondaryTab.RelPath
+	secondary := v.newSecondaryEditorPanel(active.RelPath, secondaryTab)
+	split := container.NewHSplit(primary, secondary)
+	split.SetOffset(0.66)
+	return split
+}
+
+func (v *View) newSecondaryEditorPanel(activeRelPath string, secondaryTab editorSvc.Tab) fyne.CanvasObject {
+	options := v.secondaryEditorOptions(activeRelPath)
+	selectSecondary := widget.NewSelect(options, nil)
+	selectSecondary.PlaceHolder = "Secondary tab"
+	selectSecondary.SetSelected(secondaryTab.RelPath)
+	selectSecondary.OnChanged = func(relPath string) {
+		v.editorSecondaryRelPath = relPath
+		v.refreshActiveEditorTabPanel()
+	}
+	preview, ok := v.editorPreviews[secondaryTab.ID]
+	if !ok {
+		preview = domain.FilePreview{
+			RelPath: secondaryTab.RelPath,
+			Name:    filepath.Base(secondaryTab.RelPath),
+			Kind:    domain.PreviewText,
+			Text:    secondaryTab.DraftText,
+		}
+	}
+	if secondaryTab.Kind == editorSvc.KindFile {
+		preview.Text = secondaryTab.DraftText
+	}
+	title := widget.NewLabel("Secondary")
+	title.TextStyle = fyne.TextStyle{Bold: true}
+	header := container.NewBorder(nil, nil, title, nil, selectSecondary)
+	return container.NewBorder(header, nil, nil, nil, newFilePreview(preview))
+}
+
+func (v *View) secondaryEditorOptions(activeRelPath string) []string {
+	options := []string{}
+	for _, tab := range v.editorSession.Tabs() {
+		if tab.Kind != editorSvc.KindFile || tab.RelPath == activeRelPath {
+			continue
+		}
+		options = append(options, tab.RelPath)
+	}
+	return options
+}
+
+func (v *View) refreshActiveEditorTabPanel() {
+	if item := v.editorTabs.Selected(); item != nil {
+		if id := v.tabIDs[item]; id != "" {
+			v.refreshEditorTabPanel(id)
+		}
+	}
+}
+
+func (v *View) refreshEditorTabPanel(tabID string) {
+	tab, ok := v.editorSession.Tab(tabID)
+	if !ok || tab.Kind != editorSvc.KindFile {
+		return
+	}
+	preview, ok := v.editorPreviews[tab.ID]
+	if !ok {
+		return
+	}
+	if item := v.openTabs[tab.ID]; item != nil {
+		item.Content = v.newEditorPanel(tab, preview)
+		item.Content.Refresh()
+		v.editorTabs.Refresh()
+	}
 }
 
 func (v *View) newEditorBreadcrumbs(relPath string) fyne.CanvasObject {
