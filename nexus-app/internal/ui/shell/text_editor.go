@@ -29,6 +29,8 @@ type textEditorBinding struct {
 	syntaxPreview   *widget.Label
 	languageActions *widget.Label
 	syntaxGrid      *widget.TextGrid
+	syntaxText      string
+	syntaxAnalysis  editorSvc.SyntaxAnalysis
 	relPath         string
 	sourceEncoding  string
 	saveEncoding    string
@@ -117,6 +119,9 @@ func (v *View) newTextEditor(tab editorSvc.Tab, preview domain.FilePreview, onSt
 			binding.setSyntax(next.DraftText)
 			onState(next, binding.encodingDirty())
 		}
+	}
+	source.OnCursorChanged = func() {
+		binding.updateSyntaxCursor()
 	}
 	revert := widget.NewButtonWithIcon("Revert draft", theme.ContentUndoIcon(), func() {
 		v.revertEditorDraft(tab.ID)
@@ -305,14 +310,30 @@ func (b *textEditorBinding) setSyntax(text string) {
 		return
 	}
 	analysis := editorSvc.AnalyzeSyntax(b.relPath, text)
-	b.syntaxStatus.SetText(syntaxStatusText(analysis))
+	b.syntaxText = text
+	b.syntaxAnalysis = analysis
+	context := editorSvc.SyntaxContextFromAnalysis(text, analysis, b.source.CursorRow, b.source.CursorColumn)
+	b.syntaxStatus.SetText(syntaxStatusTextWithCursor(analysis, context))
 	if b.languageActions != nil {
 		b.languageActions.SetText(formatLanguageActionPlan(editorSvc.BuildLanguageActionPlan(b.relPath, text)))
 		b.languageActions.Refresh()
 	}
 	b.syntaxPreview.SetText(formatSyntaxAnalysis(analysis))
 	b.syntaxPreview.Refresh()
-	applySyntaxHighlightGrid(b.syntaxGrid, text, analysis)
+	applySyntaxHighlightGridWithCursor(b.syntaxGrid, text, analysis, b.source.CursorRow)
+}
+
+func (b *textEditorBinding) updateSyntaxCursor() {
+	if b == nil || b.source == nil || b.syntaxStatus == nil || b.syntaxGrid == nil {
+		return
+	}
+	text := b.syntaxText
+	if text == "" {
+		text = b.source.Text
+	}
+	context := editorSvc.SyntaxContextFromAnalysis(text, b.syntaxAnalysis, b.source.CursorRow, b.source.CursorColumn)
+	b.syntaxStatus.SetText(syntaxStatusTextWithCursor(b.syntaxAnalysis, context))
+	applySyntaxHighlightGridWithCursor(b.syntaxGrid, text, b.syntaxAnalysis, b.source.CursorRow)
 }
 
 func outlineItemText(item editorSvc.OutlineItem) string {
@@ -372,6 +393,10 @@ func (v *View) resolveWorkspaceDefinition(currentRelPath string, currentContent 
 }
 
 func syntaxStatusText(analysis editorSvc.SyntaxAnalysis) string {
+	return syntaxStatusTextWithCursor(analysis, editorSvc.SyntaxCursorContext{})
+}
+
+func syntaxStatusTextWithCursor(analysis editorSvc.SyntaxAnalysis, context editorSvc.SyntaxCursorContext) string {
 	language := strings.TrimSpace(analysis.Language.Label)
 	if language == "" {
 		language = "Plain text"
@@ -383,10 +408,16 @@ func syntaxStatusText(analysis editorSvc.SyntaxAnalysis) string {
 	if analysis.Language.FutureLSP {
 		strategy += "; LSP candidate"
 	}
+	base := ""
 	if analysis.Truncated {
-		return fmt.Sprintf("Syntax: %s via %s. Showing first %d token(s); analysis capped for responsiveness.", language, strategy, len(analysis.Tokens))
+		base = fmt.Sprintf("Syntax: %s via %s. Showing first %d token(s); analysis capped for responsiveness.", language, strategy, len(analysis.Tokens))
+	} else {
+		base = fmt.Sprintf("Syntax: %s via %s. %d token(s) across %d line(s).", language, strategy, len(analysis.Tokens), analysis.LineCount)
 	}
-	return fmt.Sprintf("Syntax: %s via %s. %d token(s) across %d line(s).", language, strategy, len(analysis.Tokens), analysis.LineCount)
+	if strings.TrimSpace(context.Message) == "" {
+		return base
+	}
+	return base + " " + context.Message
 }
 
 func formatSyntaxAnalysis(analysis editorSvc.SyntaxAnalysis) string {

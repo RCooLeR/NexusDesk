@@ -35,6 +35,20 @@ func TestSyntaxHighlightGridKeepsPlainTextUnstyled(t *testing.T) {
 	}
 }
 
+func TestSyntaxHighlightGridMarksActiveCursorLine(t *testing.T) {
+	grid := newSyntaxHighlightGrid("main.go", "package main\nfunc main() {}\n")
+	analysis := editorSvc.AnalyzeSyntax("main.go", "package main\nfunc main() {}\n")
+
+	applySyntaxHighlightGridWithCursor(grid, "package main\nfunc main() {}\n", analysis, 1)
+
+	if grid.Row(1).Style != syntaxStyleForKind("active-line") {
+		t.Fatalf("expected active line row style, got %#v", grid.Row(1).Style)
+	}
+	if grid.Row(1).Cells[0].Style != syntaxStyleForKind("keyword") {
+		t.Fatalf("expected token style to remain after active row style, got %#v", grid.Row(1).Cells[0].Style)
+	}
+}
+
 func TestNormalizeSyntaxHighlightTextUsesLF(t *testing.T) {
 	if got := normalizeSyntaxHighlightText("a\r\nb"); got != "a\nb" {
 		t.Fatalf("unexpected normalized text: %q", got)

@@ -61,6 +61,18 @@ func TestSyntaxStatusAndAnalysisText(t *testing.T) {
 	}
 }
 
+func TestSyntaxStatusTextWithCursorIncludesActiveToken(t *testing.T) {
+	content := "package main\nfunc main() { println(\"hi\") }\n"
+	analysis := editorSvc.AnalyzeSyntax("main.go", content)
+	context := editorSvc.SyntaxContextFromAnalysis(content, analysis, 1, 23)
+
+	status := syntaxStatusTextWithCursor(analysis, context)
+
+	if !containsAll(status, []string{"Syntax: Go", "Cursor: L2:C24", "string token", "symbol hi"}) {
+		t.Fatalf("unexpected cursor-aware syntax status: %q", status)
+	}
+}
+
 func containsAll(value string, parts []string) bool {
 	for _, part := range parts {
 		if !strings.Contains(value, part) {

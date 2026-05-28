@@ -50,7 +50,7 @@ Reference: [Wails Feature Inventory](15_WAILS_FEATURE_INVENTORY.md) records the 
 
 Required:
 
-- IDE-grade editor baseline: first native lightweight syntax strategy, read-only highlighted syntax preview, language-action readiness for formatting/highlighting/outline/definition/reference/LSP status, Problems syntax diagnostics for JSON/Go/YAML/TOML/XML, bounded workspace go-to-definition fallback and references search, command palette baseline, future active-editor inline styling and LSP/cross-file language-action decisions, and continued outline/go-to-symbol/local-definition/document-map/breadcrumb/split/find/format polish.
+- IDE-grade editor baseline: first native lightweight syntax strategy, read-only highlighted syntax preview with cursor-aware active-line/token/symbol status, language-action readiness for formatting/highlighting/outline/definition/reference/LSP status, Problems syntax diagnostics for JSON/Go/YAML/TOML/XML, bounded workspace go-to-definition fallback and references search, command palette baseline, future editable-widget inline styling and LSP/cross-file language-action decisions, and continued outline/go-to-symbol/local-definition/document-map/breadcrumb/split/find/format polish.
 - External database profile parity: PostgreSQL, MySQL/MariaDB, SQL Server, and DuckDB file/profile read-only query flows with cancellation, caps, redacted errors, and history.
 - Native protected secret storage for Windows first is implemented for provider API keys and connector credentials; macOS/Linux keychain backends remain before full cross-platform secret support.
 - Assistant quality parity: native Fyne now has weak-evidence warnings, retry/compare, Wails-compatible memory/profile storage, stale-source chat history warnings, Wails-compatible context-to-source fallback parsing, source/model footer diagnostics, line-aware citation refs, explicit unverified/out-of-context citation diagnostics, cited/uncited source coverage diagnostics, bounded citation snippets in saved answer artifacts, deterministic evidence-quality labels, curated model context sizing, loaded-model runtime context tuning, and save-latest-answer artifacts.
@@ -126,7 +126,7 @@ Exit criteria:
 ## Immediate Production-Oriented Next Batch
 
 1. Close the remaining Wails inventory parity blockers: editor maturity, deeper retrieval evidence, and richer generated document/packaged presentation outputs beyond the first presentation-outline baseline.
-2. Continue editor parity: active-editor inline syntax styling and future LSP/deeper cross-file language-action behavior.
+2. Continue editor parity: editable-widget inline syntax styling and future LSP/deeper cross-file language-action behavior.
 3. Plan macOS Keychain and Linux Secret Service/libsecret after the Windows protected-secret baseline.
 4. Define the durable job contract for OCR, dump imports, connector pulls, report generation, and long agent runs.
 5. Continue diagnostics hardening with deeper provider/runtime checks and guided remediation.

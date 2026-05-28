@@ -11,6 +11,9 @@ import (
 )
 
 var syntaxHighlightStyles = map[string]widget.TextGridStyle{
+	"active-line": &widget.CustomTextGridStyle{
+		BGColor: color.NRGBA{R: 0xe0, G: 0xec, B: 0xff, A: 0xff},
+	},
 	"comment": &widget.CustomTextGridStyle{
 		TextStyle: fyne.TextStyle{Italic: true},
 		FGColor:   color.NRGBA{R: 0x64, G: 0x74, B: 0x8b, A: 0xff},
@@ -37,10 +40,17 @@ func newSyntaxHighlightGrid(relPath string, text string) *widget.TextGrid {
 }
 
 func applySyntaxHighlightGrid(grid *widget.TextGrid, text string, analysis editorSvc.SyntaxAnalysis) {
+	applySyntaxHighlightGridWithCursor(grid, text, analysis, -1)
+}
+
+func applySyntaxHighlightGridWithCursor(grid *widget.TextGrid, text string, analysis editorSvc.SyntaxAnalysis, cursorRow int) {
 	if grid == nil {
 		return
 	}
 	grid.SetText(normalizeSyntaxHighlightText(text))
+	if cursorRow >= 0 && cursorRow < len(grid.Rows) {
+		grid.SetRowStyle(cursorRow, syntaxStyleForKind("active-line"))
+	}
 	for _, token := range analysis.Tokens {
 		style := syntaxStyleForKind(token.Kind)
 		if style == nil || token.Line <= 0 || token.StartColumn < 0 || token.EndColumn <= token.StartColumn {
