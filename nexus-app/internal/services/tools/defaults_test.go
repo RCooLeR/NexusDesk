@@ -292,6 +292,45 @@ func TestRegenerateArtifactComparisonTool(t *testing.T) {
 	}
 }
 
+func TestRegenerateArtifactPresentationPackageTool(t *testing.T) {
+	root := t.TempDir()
+	store, err := artifactsSvc.NewStore(root)
+	if err != nil {
+		t.Fatal(err)
+	}
+	outline, err := store.WritePresentationOutlineReport(artifactsSvc.PresentationOutlineReport{
+		Title:       "Presentation Outline - Architecture Notes",
+		SourcePath:  ".nexusdesk/artifacts/document-sets/report.md",
+		SourceTitle: "Architecture Notes",
+		SourceKind:  "document-report",
+		SourcePaths: []string{"docs/a.md"},
+		Content:     "### Slide 1: Goals\n\n- Keep shell native\n",
+		SlideCount:  1,
+	})
+	if err != nil {
+		t.Fatalf("WritePresentationOutlineReport returned error: %v", err)
+	}
+	original, err := store.WritePresentationPackageReport(artifactsSvc.BuildPresentationPackageReport("", outline.RelPath, outline.Title, outline.Kind, "### Slide 1: Old\n\n- Old content\n", outline.SourcePaths))
+	if err != nil {
+		t.Fatalf("WritePresentationPackageReport returned error: %v", err)
+	}
+	dispatcher := NewDefaultDispatcher(Dependencies{Workspace: workspaceSvc.New()})
+	result, err := dispatcher.ExecuteTool(context.Background(), agent.ToolCall{Name: "regenerate_artifact", Args: map[string]string{"relPath": original.RelPath}}, agent.Request{WorkspaceRoot: root, ApproveWrites: true})
+	if err != nil {
+		t.Fatalf("regenerate_artifact returned error: %v", err)
+	}
+	if !result.Mutated || !strings.Contains(result.Observation, "Regenerated presentation-package artifact") || !strings.Contains(result.Observation, outline.RelPath) {
+		t.Fatalf("unexpected presentation package regeneration result: %#v", result)
+	}
+	matches, err := store.ListArtifacts(artifactsSvc.ListOptions{Query: "kind:presentation-package"})
+	if err != nil {
+		t.Fatalf("ListArtifacts returned error: %v", err)
+	}
+	if len(matches) != 2 {
+		t.Fatalf("expected original and regenerated presentation packages, got %d", len(matches))
+	}
+}
+
 func TestDefaultDispatcherWebFetchRequiresApproval(t *testing.T) {
 	server := httptest.NewServer(http.HandlerFunc(func(response http.ResponseWriter, request *http.Request) {
 		response.Header().Set("Content-Type", "text/plain")

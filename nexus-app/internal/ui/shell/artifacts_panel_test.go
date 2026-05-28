@@ -204,6 +204,11 @@ func TestArtifactCanRegenerateSupportedKinds(t *testing.T) {
 			want:     true,
 		},
 		{
+			name:     "presentation package with source outline",
+			artifact: artifactsSvc.Artifact{Kind: "presentation-package", SourcePaths: []string{".nexusdesk/artifacts/presentations/slides.md"}},
+			want:     true,
+		},
+		{
 			name:     "presentation outline without source artifact",
 			artifact: artifactsSvc.Artifact{Kind: "presentation-outline", SourcePaths: []string{"docs/report.md"}},
 			want:     false,
@@ -266,6 +271,18 @@ func TestArtifactCanGeneratePresentationOutlineForReportArtifacts(t *testing.T) 
 				t.Fatalf("artifactCanGeneratePresentationOutline() = %t, want %t", got, tc.want)
 			}
 		})
+	}
+}
+
+func TestArtifactCanGeneratePresentationArtifactIncludesPackages(t *testing.T) {
+	if !artifactCanGeneratePresentationArtifact(artifactsSvc.Artifact{Kind: "document-report", RelPath: ".nexusdesk/artifacts/document-sets/report.md"}) {
+		t.Fatal("document reports should generate presentation outlines")
+	}
+	if !artifactCanGeneratePresentationArtifact(artifactsSvc.Artifact{Kind: "presentation-outline", RelPath: ".nexusdesk/artifacts/presentations/slides.md"}) {
+		t.Fatal("presentation outlines should generate presentation packages")
+	}
+	if artifactCanGeneratePresentationArtifact(artifactsSvc.Artifact{Kind: "presentation-package", RelPath: ".nexusdesk/artifacts/presentation-packages/deck.zip"}) {
+		t.Fatal("presentation packages should not recursively generate packages")
 	}
 }
 
@@ -440,6 +457,82 @@ func TestBuildPresentationOutlineRefreshArtifactRegeneratesFromSource(t *testing
 	}
 	if !strings.Contains(text, source.RelPath) || !strings.Contains(text, "Keep shell native") {
 		t.Fatalf("rebuilt outline lost source linkage/content:\n%s", text)
+	}
+}
+
+func TestBuildPresentationPackageArtifactUsesOutlineMetadata(t *testing.T) {
+	root := t.TempDir()
+	store, err := artifactsSvc.NewStore(root)
+	if err != nil {
+		t.Fatalf("NewStore() error = %v", err)
+	}
+	source, err := store.WriteDocumentSetReport(artifactsSvc.DocumentSetReport{
+		Title:       "Architecture Notes",
+		Roots:       []string{"docs"},
+		SourcePaths: []string{"docs/a.md"},
+		Content:     "## Goals\n\n- Keep shell native\n",
+	})
+	if err != nil {
+		t.Fatalf("WriteDocumentSetReport() error = %v", err)
+	}
+	outline, err := buildPresentationOutlineArtifact(context.Background(), root, source)
+	if err != nil {
+		t.Fatalf("buildPresentationOutlineArtifact() error = %v", err)
+	}
+	created, err := buildPresentationPackageArtifact(context.Background(), root, outline)
+	if err != nil {
+		t.Fatalf("buildPresentationPackageArtifact() error = %v", err)
+	}
+	if created.Kind != "presentation-package" || len(created.SourcePaths) != 3 || created.SourcePaths[0] != outline.RelPath {
+		t.Fatalf("unexpected package artifact: %#v", created)
+	}
+	metadata, err := store.ReadArtifactMetadata(created.RelPath)
+	if err != nil {
+		t.Fatalf("ReadArtifactMetadata() error = %v", err)
+	}
+	if metadata.ExportFormat != "zip" || len(metadata.PackageFiles) == 0 || metadata.Source != outline.RelPath {
+		t.Fatalf("unexpected package metadata: %#v", metadata)
+	}
+	preview, err := artifactPreviewText(store, created)
+	if err != nil {
+		t.Fatalf("artifactPreviewText() error = %v", err)
+	}
+	if !strings.Contains(preview, "Packaged presentation export") || !strings.Contains(preview, "slides.json") {
+		t.Fatalf("package preview missing details:\n%s", preview)
+	}
+}
+
+func TestBuildPresentationPackageRefreshArtifactRegeneratesFromOutline(t *testing.T) {
+	root := t.TempDir()
+	store, err := artifactsSvc.NewStore(root)
+	if err != nil {
+		t.Fatalf("NewStore() error = %v", err)
+	}
+	outline, err := store.WritePresentationOutlineReport(artifactsSvc.PresentationOutlineReport{
+		Title:       "Presentation Outline - Architecture Notes",
+		SourcePath:  ".nexusdesk/artifacts/document-sets/report.md",
+		SourceTitle: "Architecture Notes",
+		SourceKind:  "document-report",
+		SourcePaths: []string{"docs/a.md"},
+		Content:     "### Slide 1: Goals\n\n- Keep shell native\n",
+		SlideCount:  1,
+	})
+	if err != nil {
+		t.Fatalf("WritePresentationOutlineReport() error = %v", err)
+	}
+	pkg, err := buildPresentationPackageArtifact(context.Background(), root, outline)
+	if err != nil {
+		t.Fatalf("buildPresentationPackageArtifact() error = %v", err)
+	}
+	rebuilt, err := buildPresentationPackageRefreshArtifact(context.Background(), root, pkg)
+	if err != nil {
+		t.Fatalf("buildPresentationPackageRefreshArtifact() error = %v", err)
+	}
+	if rebuilt.Kind != "presentation-package" || rebuilt.RelPath == pkg.RelPath {
+		t.Fatalf("unexpected rebuilt package: %#v", rebuilt)
+	}
+	if len(rebuilt.SourcePaths) == 0 || rebuilt.SourcePaths[0] != outline.RelPath {
+		t.Fatalf("rebuilt package lost outline source: %#v", rebuilt.SourcePaths)
 	}
 }
 

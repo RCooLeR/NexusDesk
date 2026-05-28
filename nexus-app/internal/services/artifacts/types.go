@@ -234,6 +234,17 @@ type PresentationOutlineReport struct {
 	GeneratedBy string
 }
 
+type PresentationPackageReport struct {
+	Title       string
+	SourcePath  string
+	SourceTitle string
+	SourceKind  string
+	SourcePaths []string
+	Outline     string
+	SlideCount  int
+	GeneratedBy string
+}
+
 type OperationsServiceSummary struct {
 	Name      string
 	Image     string
@@ -276,6 +287,8 @@ type Metadata struct {
 	EvidenceQuality        string              `json:"evidenceQuality,omitempty"`
 	EvidenceSummary        string              `json:"evidenceSummary,omitempty"`
 	SourceFingerprints     []SourceFingerprint `json:"sourceFingerprints,omitempty"`
+	ExportFormat           string              `json:"exportFormat,omitempty"`
+	PackageFiles           []string            `json:"packageFiles,omitempty"`
 	GeneratedAt            time.Time           `json:"generatedAt"`
 }
 

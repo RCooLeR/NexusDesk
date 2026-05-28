@@ -171,7 +171,7 @@ func markdownHeadingTitle(line string) (string, bool) {
 	if title == "" {
 		return "", false
 	}
-	return presentationTrimBullet(title), true
+	return presentationTrimBullet(presentationTrimSlideTitle(title)), true
 }
 
 func presentationBulletText(line string) string {
@@ -285,6 +285,23 @@ func presentationTrimBullet(value string) string {
 		return value
 	}
 	return strings.TrimSpace(value[:presentationMaxBulletLength-1]) + "..."
+}
+
+func presentationTrimSlideTitle(value string) string {
+	lower := strings.ToLower(strings.TrimSpace(value))
+	if !strings.HasPrefix(lower, "slide ") {
+		return value
+	}
+	colon := strings.Index(value, ":")
+	if colon == -1 {
+		return value
+	}
+	prefix := strings.TrimSpace(value[:colon])
+	parts := strings.Fields(prefix)
+	if len(parts) != 2 || strings.ToLower(parts[0]) != "slide" || numberedListIndex(parts[1]+". ") == 0 {
+		return value
+	}
+	return strings.TrimSpace(value[colon+1:])
 }
 
 func countPresentationSlides(content string) int {

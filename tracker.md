@@ -23,10 +23,10 @@ Wails feature inventory and retirement blockers: `docs/15_WAILS_FEATURE_INVENTOR
 Summary:
 
 - The Fyne migration remains the correct direction and `nexus-app/` is the active product.
-- Current estimate: Fyne-native migration is roughly 96-97% complete, Wails useful-code parity is roughly 94-96%, Native Parity Beta readiness is roughly 90-93%, and overall production readiness is roughly 87%.
+- Current estimate: Fyne-native migration is roughly 96-97% complete, Wails useful-code parity is roughly 95-96%, Native Parity Beta readiness is roughly 91-94%, and overall production readiness is roughly 88%.
 - The architecture is healthy: thin executable root, framework-free domain/services, Fyne-only UI packages, explicit approvals, safe workspace mutation boundaries, manual Git/Docker actions, durable metadata, and local-first safety rules.
 - The biggest remaining architectural risk is UI/orchestration complexity in `internal/ui/shell`; future UI work should keep extracting focused panels, controllers, and service-owned behavior.
-- The highest-priority unfinished work is migration and production readiness, not new top-level studios: final editor strategy, durable slow-job routing, richer document/presentation exports, deeper assistant evidence quality, packaging, onboarding, and native UI polish.
+- The highest-priority unfinished work is migration and production readiness, not new top-level studios: final editor strategy, applying durable slow-job routing to the remaining slow workflows, richer document/PPTX exports, deeper assistant evidence quality, packaging, onboarding, and native UI polish.
 - `app-wails/` should remain as reference until the remaining native parity blockers are completed or explicitly moved out of Native Parity Beta.
 
 Production direction:
@@ -41,7 +41,7 @@ Immediate execution order:
 - Validate macOS Keychain and Linux Secret Service/libsecret behavior during platform packaging smoke.
 - Apply the durable slow-job contract to OCR, dump imports, connector pulls, long indexing, report generation, and long agent runs as those workflows are implemented.
 - Finalize the native editor parity strategy and document the Native Parity Beta acceptance bar.
-- Expand richer generated document artifacts and packaged presentation exports.
+- Expand richer generated document artifacts and move packaged presentation exports from the native zip package baseline toward full deck/PPTX outputs.
 - Build signed release packaging and installer/update validation.
 - Run a focused UI polish pass on onboarding, empty states, settings, diagnostics, and workflow hierarchy.
 
@@ -286,6 +286,7 @@ Goal: restore generated-output workflows with provenance and native inspection.
 - [x] Add first native document extraction slice for Markdown, TXT, HTML, and XML source files with artifact export.
 - [x] Extend native document extraction artifacts to DOCX and PDF preview text with PDF page metadata.
 - [x] Add first native presentation outline artifact target from generated reports/chat/runbook artifacts with source lineage.
+- [x] Add first native packaged presentation zip export from presentation-outline artifacts with manifest, slide JSON/Markdown, README, source lineage, preview metadata, UI job routing, and agent/UI regeneration.
 - [x] Add read-only operations scanners for Dockerfiles, Compose, env/config/logs.
 - [x] Add Compose service topology summary from inspected Compose files.
 - [x] Add first operations runbook artifact export from inspected Docker/Compose/env/config/log evidence.
@@ -518,7 +519,8 @@ The Fyne migration must not drop product ambition, but this section is intention
 
 - [x] Markdown, CSV, SVG/chart, SQL result, task report, notebook report, document report, scan report, operations runbook, comparison, chat-answer, and extracted-document artifacts.
 - [x] First native presentation outline artifacts in the Artifacts UI with source provenance.
-- [ ] Richer generated document artifacts and packaged presentation exports in native UI.
+- [x] First native packaged presentation zip exports in the Artifacts UI from presentation outlines, with manifest/package-file metadata and package preview text.
+- [ ] Richer generated document artifacts and full deck/PPTX-style presentation exports in native UI.
 - [x] Provenance sidecars with source files, query IDs, generated timestamps, metadata rows, and freshness fingerprints for explicit artifact writes.
 - [ ] Complete chat/tool-run provenance coverage for every generated output type.
 - [x] Artifact browser with search, metadata, preview, compare, archive, delete, restore, and open-source navigation.
@@ -529,7 +531,8 @@ The Fyne migration must not drop product ambition, but this section is intention
 - [x] Add approval-gated agent artifact regeneration for supported native rebuildable artifacts.
 - [x] Add saved chat-answer refresh regeneration from persisted prompt/model/source/citation/evidence metadata without requiring a new model call.
 - [x] Expand artifact regeneration to generated presentation outline artifacts.
-- [ ] Expand artifact regeneration to future packaged presentation and richer document artifact kinds.
+- [x] Expand artifact regeneration to packaged presentation exports in both the Artifacts UI and approval-gated agent tool.
+- [ ] Expand artifact regeneration to richer document artifact kinds beyond the packaged presentation baseline.
 
 ### Operations Studio
 
