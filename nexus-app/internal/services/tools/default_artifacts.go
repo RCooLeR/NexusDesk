@@ -142,6 +142,12 @@ func (h defaultHandlers) rebuildArtifact(ctx context.Context, root string, store
 			return artifactsSvc.Artifact{}, fmt.Errorf("presentation outline artifact %s has no source artifact metadata", original.RelPath)
 		}
 		return rebuildPresentationOutlineArtifact(ctx, store, source)
+	case "document-brief":
+		source, ok := artifactRegenerationSource(original)
+		if !ok {
+			return artifactsSvc.Artifact{}, fmt.Errorf("document brief artifact %s has no source artifact metadata", original.RelPath)
+		}
+		return rebuildDocumentBriefArtifact(ctx, store, source)
 	case "presentation-package":
 		source, ok := artifactRegenerationSource(original)
 		if !ok {
@@ -169,6 +175,31 @@ func rebuildPresentationOutlineArtifact(ctx context.Context, store *artifactsSvc
 		return artifactsSvc.Artifact{}, err
 	}
 	return store.WritePresentationOutlineReport(artifactsSvc.BuildPresentationOutlineReport(
+		"",
+		source,
+		metadata.Title,
+		metadata.Kind,
+		text,
+		metadata.SourcePaths,
+	))
+}
+
+func rebuildDocumentBriefArtifact(ctx context.Context, store *artifactsSvc.Store, source string) (artifactsSvc.Artifact, error) {
+	if err := ctx.Err(); err != nil {
+		return artifactsSvc.Artifact{}, err
+	}
+	metadata, err := store.ReadArtifactMetadata(source)
+	if err != nil {
+		return artifactsSvc.Artifact{}, err
+	}
+	text, err := store.ReadArtifactText(source)
+	if err != nil {
+		return artifactsSvc.Artifact{}, err
+	}
+	if err := ctx.Err(); err != nil {
+		return artifactsSvc.Artifact{}, err
+	}
+	return store.WriteDocumentBriefReport(artifactsSvc.BuildDocumentBriefReport(
 		"",
 		source,
 		metadata.Title,

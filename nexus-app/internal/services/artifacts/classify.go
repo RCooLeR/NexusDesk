@@ -13,6 +13,8 @@ func inferKind(relPath string) string {
 		return "task-report"
 	case strings.Contains(normalized, "/document-sets/"):
 		return "document-report"
+	case strings.Contains(normalized, "/document-briefs/"):
+		return "document-brief"
 	case strings.Contains(normalized, "/document-extracts/"):
 		return "document-extract"
 	case strings.Contains(normalized, "/comparisons/"):

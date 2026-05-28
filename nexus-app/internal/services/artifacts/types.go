@@ -49,6 +49,17 @@ type DocumentSetReport struct {
 	GeneratedBy string
 }
 
+type DocumentBriefReport struct {
+	Title        string
+	SourcePath   string
+	SourceTitle  string
+	SourceKind   string
+	SourcePaths  []string
+	Content      string
+	SectionCount int
+	GeneratedBy  string
+}
+
 type DocumentExtractionReport struct {
 	Title     string
 	RelPath   string

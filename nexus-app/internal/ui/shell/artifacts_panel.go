@@ -24,6 +24,7 @@ import (
 const (
 	artifactJobKindDocumentReport  = "artifact-document-report"
 	artifactJobKindDocumentExtract = "artifact-document-extract"
+	artifactJobKindDocumentBrief   = "artifact-document-brief"
 	artifactJobKindScanReport      = "artifact-scan-report"
 	artifactJobKindPresentation    = "artifact-presentation"
 	artifactJobKindRegenerate      = "artifact-regenerate"
@@ -339,7 +340,7 @@ func (v *View) refreshArtifactsWithQuery(query string) {
 		status += " matching " + strings.TrimSpace(query)
 	}
 	v.artifactStatus.SetText(status)
-	v.artifactResults.Objects = artifactRows(artifacts, v.previewArtifact, v.pinArtifactForAssistantContext, v.compareArtifact, v.generatePresentationOutlineFromArtifact, v.regenerateArtifact, v.archiveArtifact, v.restoreArtifact, v.deleteArtifact)
+	v.artifactResults.Objects = artifactRows(artifacts, v.previewArtifact, v.pinArtifactForAssistantContext, v.compareArtifact, v.generateDocumentBriefFromArtifact, v.generatePresentationOutlineFromArtifact, v.regenerateArtifact, v.archiveArtifact, v.restoreArtifact, v.deleteArtifact)
 	v.artifactResults.Refresh()
 	v.persistArtifactRecords(artifacts)
 	v.addActivity(fmt.Sprintf("Loaded %d artifact(s).", len(artifacts)))
@@ -420,6 +421,72 @@ func (v *View) compareArtifact(artifact artifactsSvc.Artifact) {
 	v.artifactLastComparison = comparison
 	v.artifactStatus.SetText(comparison.Message)
 	v.addActivity(comparison.Message)
+}
+
+func (v *View) generateDocumentBriefFromArtifact(artifact artifactsSvc.Artifact) {
+	workspace := v.state.Workspace()
+	if workspace.Root == "" {
+		v.addActivity("Open a workspace before generating document briefs.")
+		return
+	}
+	if !artifactCanGenerateDocumentBrief(artifact) {
+		v.artifactStatus.SetText("Document brief is not available for " + artifact.Kind + ".")
+		v.addActivity("Select a report-like artifact before generating a document brief.")
+		return
+	}
+	jobLabel := documentBriefJobLabel(artifact)
+	job, ctx := v.jobService.Start(artifactJobKindDocumentBrief, jobLabel)
+	v.jobService.AppendLog(job.ID, "Source artifact: "+artifact.RelPath)
+	v.jobService.AppendLog(job.ID, "Source kind: "+artifact.Kind)
+	v.artifactStatus.SetText("Generating document brief from " + artifact.RelPath + " as " + job.ID + ".")
+	v.addActivity("Started " + job.ID + ": " + jobLabel + ".")
+	v.refreshJobs()
+	root := workspace.Root
+	go func() {
+		created, err := buildDocumentBriefArtifact(ctx, root, artifact)
+		fyne.Do(func() {
+			v.finishDocumentBriefJob(job.ID, artifact, created, err)
+		})
+	}()
+}
+
+func buildDocumentBriefArtifact(ctx context.Context, workspaceRoot string, source artifactsSvc.Artifact) (artifactsSvc.Artifact, error) {
+	if err := ctx.Err(); err != nil {
+		return artifactsSvc.Artifact{}, err
+	}
+	store, err := artifactsSvc.NewStore(workspaceRoot)
+	if err != nil {
+		return artifactsSvc.Artifact{}, err
+	}
+	text, err := store.ReadArtifactText(source.RelPath)
+	if err != nil {
+		return artifactsSvc.Artifact{}, err
+	}
+	metadata, err := store.ReadArtifactMetadata(source.RelPath)
+	if err == nil {
+		source.Title = firstNonEmpty(metadata.Title, source.Title)
+		source.Kind = firstNonEmpty(metadata.Kind, source.Kind)
+		source.SourcePaths = append([]string{}, metadata.SourcePaths...)
+	}
+	if err := ctx.Err(); err != nil {
+		return artifactsSvc.Artifact{}, err
+	}
+	report := artifactsSvc.BuildDocumentBriefReport(
+		"",
+		source.RelPath,
+		artifactTitle(source),
+		source.Kind,
+		text,
+		source.SourcePaths,
+	)
+	created, err := store.WriteDocumentBriefReport(report)
+	if err != nil {
+		return artifactsSvc.Artifact{}, err
+	}
+	if err := ctx.Err(); err != nil {
+		return artifactsSvc.Artifact{}, err
+	}
+	return created, nil
 }
 
 func (v *View) generatePresentationOutlineFromArtifact(artifact artifactsSvc.Artifact) {
@@ -593,6 +660,55 @@ func buildPresentationPackageRefreshArtifact(ctx context.Context, workspaceRoot 
 	return buildPresentationPackageArtifact(ctx, workspaceRoot, sourceArtifact)
 }
 
+func buildDocumentBriefRefreshArtifact(ctx context.Context, workspaceRoot string, artifact artifactsSvc.Artifact) (artifactsSvc.Artifact, error) {
+	source, ok := artifactRegenerationSource(artifact)
+	if !ok {
+		return artifactsSvc.Artifact{}, fmt.Errorf("document brief artifact %s has no source artifact metadata", artifact.RelPath)
+	}
+	store, err := artifactsSvc.NewStore(workspaceRoot)
+	if err != nil {
+		return artifactsSvc.Artifact{}, err
+	}
+	metadata, err := store.ReadArtifactMetadata(source)
+	if err != nil {
+		return artifactsSvc.Artifact{}, err
+	}
+	sourceArtifact := artifactsSvc.Artifact{
+		Kind:        metadata.Kind,
+		Title:       metadata.Title,
+		RelPath:     source,
+		Source:      metadata.Source,
+		SourcePaths: append([]string{}, metadata.SourcePaths...),
+	}
+	return buildDocumentBriefArtifact(ctx, workspaceRoot, sourceArtifact)
+}
+
+func (v *View) finishDocumentBriefJob(jobID string, source artifactsSvc.Artifact, created artifactsSvc.Artifact, err error) {
+	if err != nil {
+		if errors.Is(err, context.Canceled) {
+			v.jobService.Finish(jobID, jobsSvc.StatusCanceled, "Document brief generation canceled.", nil)
+			v.artifactStatus.SetText("Document brief generation canceled.")
+			v.addActivity("Canceled document brief generation for " + source.RelPath + ".")
+		} else {
+			v.jobService.Finish(jobID, jobsSvc.StatusFailed, "Document brief generation failed.", err)
+			v.artifactStatus.SetText("Document brief generation failed for " + source.RelPath)
+			dialog.ShowError(err, v.window)
+		}
+		v.refreshJobs()
+		return
+	}
+	created.JobID = jobID
+	v.jobService.AppendLog(jobID, "Artifact: "+created.RelPath)
+	v.jobService.Finish(jobID, jobsSvc.StatusSuccess, "Created "+created.RelPath+".", nil)
+	v.artifactPreview.SetText("")
+	v.refreshArtifactSources(nil)
+	v.artifactStatus.SetText("Created " + created.RelPath)
+	v.addActivity("Generated document brief from " + source.RelPath + " at " + created.RelPath + ".")
+	v.persistArtifactRecord(created)
+	v.refreshArtifactsWithQuery("kind:document-brief")
+	v.refreshJobs()
+}
+
 func (v *View) finishPresentationOutlineJob(jobID string, source artifactsSvc.Artifact, created artifactsSvc.Artifact, err error) {
 	if err != nil {
 		if errors.Is(err, context.Canceled) {
@@ -703,6 +819,8 @@ func (v *View) buildRegeneratedArtifact(ctx context.Context, workspaceRoot strin
 		return buildArtifactComparisonReport(ctx, workspaceRoot, left, right)
 	case "chat-answer":
 		return buildChatAnswerRefreshArtifact(ctx, workspaceRoot, artifact)
+	case "document-brief":
+		return buildDocumentBriefRefreshArtifact(ctx, workspaceRoot, artifact)
 	case "presentation-outline":
 		return buildPresentationOutlineRefreshArtifact(ctx, workspaceRoot, artifact)
 	case "presentation-package":
@@ -1043,6 +1161,7 @@ func artifactRows(
 	onPreview func(artifactsSvc.Artifact),
 	onContext func(artifactsSvc.Artifact),
 	onCompare func(artifactsSvc.Artifact),
+	onDocumentBrief func(artifactsSvc.Artifact),
 	onPresentation func(artifactsSvc.Artifact),
 	onRegenerate func(artifactsSvc.Artifact),
 	onArchive func(artifactsSvc.Artifact),
@@ -1067,6 +1186,10 @@ func artifactRows(
 			onCompare(artifact)
 		})
 		compare.Importance = widget.LowImportance
+		documentBrief := widget.NewButtonWithIcon("", theme.FileTextIcon(), func() {
+			onDocumentBrief(artifact)
+		})
+		documentBrief.Importance = widget.LowImportance
 		presentation := widget.NewButtonWithIcon("", theme.DocumentCreateIcon(), func() {
 			onPresentation(artifact)
 		})
@@ -1092,6 +1215,9 @@ func artifactRows(
 		if !artifactCanRegenerate(artifact) {
 			regenerate.Disable()
 		}
+		if !artifactCanGenerateDocumentBrief(artifact) {
+			documentBrief.Disable()
+		}
 		if !artifactCanGeneratePresentationArtifact(artifact) {
 			presentation.Disable()
 		}
@@ -1104,10 +1230,22 @@ func artifactRows(
 		title.Truncation = fyne.TextTruncateEllipsis
 		meta := widget.NewLabel(artifactMeta(artifact))
 		meta.Truncation = fyne.TextTruncateEllipsis
-		actions := container.NewHBox(preview, context, compare, presentation, regenerate, archive, restore, deleteButton)
+		actions := container.NewHBox(preview, context, compare, documentBrief, presentation, regenerate, archive, restore, deleteButton)
 		rows = append(rows, container.NewBorder(nil, nil, actions, nil, container.NewVBox(title, meta)))
 	}
 	return rows
+}
+
+func artifactCanGenerateDocumentBrief(artifact artifactsSvc.Artifact) bool {
+	if artifact.Archived || strings.TrimSpace(artifact.RelPath) == "" {
+		return false
+	}
+	switch strings.TrimSpace(artifact.Kind) {
+	case "document-report", "document-extract", "operations-runbook", "artifact-comparison", "chat-answer", "scan-report", "sql-notebook-run", "presentation-outline":
+		return true
+	default:
+		return false
+	}
 }
 
 func artifactCanGeneratePresentationOutline(artifact artifactsSvc.Artifact) bool {
@@ -1153,6 +1291,9 @@ func artifactCanRegenerate(artifact artifactsSvc.Artifact) bool {
 		return ok
 	case "chat-answer":
 		return strings.TrimSpace(artifact.RelPath) != "" && strings.TrimSpace(artifact.MetadataPath) != ""
+	case "document-brief":
+		source, ok := artifactRegenerationSource(artifact)
+		return ok && strings.HasPrefix(source, ".nexusdesk/artifacts/")
 	case "presentation-outline":
 		source, ok := artifactRegenerationSource(artifact)
 		return ok && strings.HasPrefix(source, ".nexusdesk/artifacts/")
@@ -1247,6 +1388,14 @@ func presentationOutlineJobLabel(artifact artifactsSvc.Artifact) string {
 		title = artifact.Kind
 	}
 	return "Presentation outline (" + title + ")"
+}
+
+func documentBriefJobLabel(artifact artifactsSvc.Artifact) string {
+	title := artifactTitle(artifact)
+	if strings.TrimSpace(title) == "" {
+		title = artifact.Kind
+	}
+	return "Document brief (" + title + ")"
 }
 
 func presentationPackageJobLabel(artifact artifactsSvc.Artifact) string {

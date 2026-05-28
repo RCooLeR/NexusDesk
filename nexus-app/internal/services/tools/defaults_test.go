@@ -331,6 +331,56 @@ func TestRegenerateArtifactPresentationPackageTool(t *testing.T) {
 	}
 }
 
+func TestRegenerateArtifactDocumentBriefTool(t *testing.T) {
+	root := t.TempDir()
+	store, err := artifactsSvc.NewStore(root)
+	if err != nil {
+		t.Fatal(err)
+	}
+	source, err := store.WriteDocumentSetReport(artifactsSvc.DocumentSetReport{
+		Title:       "Architecture Notes",
+		Roots:       []string{"docs"},
+		SourcePaths: []string{"docs/a.md"},
+		Content:     "## Goals\n\n- Keep shell native\n- Missing release smoke is a blocker\n- Next action: verify diagnostics\n",
+	})
+	if err != nil {
+		t.Fatalf("WriteDocumentSetReport returned error: %v", err)
+	}
+	original, err := store.WriteDocumentBriefReport(artifactsSvc.BuildDocumentBriefReport("", source.RelPath, source.Title, source.Kind, "old brief", source.SourcePaths))
+	if err != nil {
+		t.Fatalf("WriteDocumentBriefReport returned error: %v", err)
+	}
+	dispatcher := NewDefaultDispatcher(Dependencies{Workspace: workspaceSvc.New()})
+	result, err := dispatcher.ExecuteTool(context.Background(), agent.ToolCall{Name: "regenerate_artifact", Args: map[string]string{"relPath": original.RelPath}}, agent.Request{WorkspaceRoot: root, ApproveWrites: true})
+	if err != nil {
+		t.Fatalf("regenerate_artifact returned error: %v", err)
+	}
+	if !result.Mutated || !strings.Contains(result.Observation, "Regenerated document-brief artifact") || !strings.Contains(result.Observation, source.RelPath) {
+		t.Fatalf("unexpected document brief regeneration result: %#v", result)
+	}
+	matches, err := store.ListArtifacts(artifactsSvc.ListOptions{Query: "kind:document-brief"})
+	if err != nil {
+		t.Fatalf("ListArtifacts returned error: %v", err)
+	}
+	if len(matches) != 2 {
+		t.Fatalf("expected original and regenerated document briefs, got %d", len(matches))
+	}
+	foundFresh := false
+	for _, match := range matches {
+		text, err := store.ReadArtifactText(match.RelPath)
+		if err != nil {
+			t.Fatalf("ReadArtifactText returned error: %v", err)
+		}
+		if strings.Contains(text, "Keep shell native") && strings.Contains(text, "blocker") {
+			foundFresh = true
+			break
+		}
+	}
+	if !foundFresh {
+		t.Fatalf("regenerated document brief did not use current source artifact content")
+	}
+}
+
 func TestDefaultDispatcherWebFetchRequiresApproval(t *testing.T) {
 	server := httptest.NewServer(http.HandlerFunc(func(response http.ResponseWriter, request *http.Request) {
 		response.Header().Set("Content-Type", "text/plain")

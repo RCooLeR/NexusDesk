@@ -12,9 +12,9 @@ Approximate migration status:
 
 - Native foundation and core services: complete enough for sustained native development.
 - Fyne-native migration: roughly 97% complete by useful Wails-era functionality.
-- Wails-era useful workflow parity: roughly 95-96% complete.
-- Native Parity Beta readiness: roughly 93-94% complete.
-- Overall production readiness: roughly 88-89% complete.
+- Wails-era useful workflow parity: roughly 96% complete.
+- Native Parity Beta readiness: roughly 94% complete.
+- Overall production readiness: roughly 89% complete.
 - Distribution and packaging readiness: roughly 65-70% complete.
 
 The app can already:
@@ -28,7 +28,7 @@ The app can already:
 - discover and run bounded project tasks;
 - profile/query local datasets and workspace SQLite files;
 - manage read-only external database profiles for PostgreSQL, MySQL/MariaDB, SQL Server, SQLite, and DuckDB guarded builds with cancellation, redaction, history, and OS-protected credential sidecars;
-- create chart, dashboard, notebook, document, workspace scan, operations, task, chat-answer, comparison, presentation-outline, and packaged presentation zip artifacts, with dependency/source rebuild coverage for dataset summary, query, SQL, chart, dashboard, SQL notebook, SQLite query, document-report, scan-report, document-extraction, operations-runbook, artifact-comparison, chat-answer refresh, presentation-outline, and presentation-package outputs;
+- create chart, dashboard, notebook, document, document-brief, workspace scan, operations, task, chat-answer, comparison, presentation-outline, and packaged presentation zip artifacts, with dependency/source rebuild coverage for dataset summary, query, SQL, chart, dashboard, SQL notebook, SQLite query, document-report, document-brief, scan-report, document-extraction, operations-runbook, artifact-comparison, chat-answer refresh, presentation-outline, and presentation-package outputs;
 - run Ask and Agent modes against configured OpenAI-compatible or Ollama endpoints;
 - let approved agent runs regenerate supported native artifacts from saved source/dependency metadata;
 - persist chat, artifact, job, SQL, approval, and agent/tool audit metadata.
@@ -67,7 +67,7 @@ Remaining blockers:
 - Post-beta editable-widget inline syntax styling if it preserves safe editing/accessibility.
 - Future LSP/deeper cross-file language actions after a packaged provider spike proves reliability.
 - Deeper assistant retrieval/ranking quality beyond deterministic citation/source coverage diagnostics.
-- Richer generated document artifacts and full deck/PPTX-style exports beyond the packaged presentation zip baseline.
+- Full DOCX-style generated document exports and full deck/PPTX-style exports beyond the native document-brief and packaged presentation zip baselines.
 - Final UI polish for onboarding, empty states, settings, diagnostics, and workflow hierarchy.
 
 Exit criteria:
@@ -141,7 +141,7 @@ Exit criteria:
 
 1. Apply the durable slow-workflow contract to concrete OCR, dump import, connector pull, long indexing, report generation, and long agent run implementations.
 2. Continue post-beta editor spikes for inline styling and packaged LSP while preserving the documented Syntax mirror/Document Map Native Parity Beta strategy.
-3. Expand richer generated document artifacts and move packaged presentation exports from native zip packages toward full deck/PPTX outputs.
+3. Expand generated document artifacts from native document briefs toward DOCX-style exports, and move packaged presentation exports from native zip packages toward full deck/PPTX outputs.
 4. Build signed release packaging and installer/update validation.
 5. Run a focused UI polish pass on onboarding, empty states, settings, diagnostics, and workflow hierarchy.
 6. Validate macOS Keychain/Linux Secret Service behavior in platform packaging smoke runs.
