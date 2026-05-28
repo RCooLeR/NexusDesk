@@ -231,6 +231,17 @@ func (s *Service) commitRollback(root string, record RollbackRecord) (RollbackRe
 	return record, nil
 }
 
+func (s *Service) discardPreparedRollback(root string, record RollbackRecord) error {
+	if strings.TrimSpace(record.ID) == "" {
+		return nil
+	}
+	absRoot, err := cleanRoot(root)
+	if err != nil {
+		return err
+	}
+	return os.RemoveAll(filepath.Join(absRoot, filepath.FromSlash(rollbackDirRelPath), record.ID))
+}
+
 func snapshotRollbackPath(absRoot string, id string, relPath string) (RollbackEntry, error) {
 	absTarget, err := filepath.Abs(filepath.Join(absRoot, filepath.FromSlash(relPath)))
 	if err != nil {

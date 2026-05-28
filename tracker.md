@@ -543,7 +543,7 @@ The Fyne migration must not drop product ambition, but this section is intention
 - [ ] Add single-file-open entrypoint (file picker/quick-open) in addition to folder open flow.
 - [ ] Consolidate bottom-panel navigation to reduce tab discoverability and density issues.
 - [ ] Split `internal/ui/shell/data_panel.go` into smaller UI responsibility files.
-- [ ] Ensure `ApplyFileAppend` failure path cleans rollback snapshots cleanly and checks close errors.
+- [x] Ensure `ApplyFileAppend` failure path cleans rollback snapshots cleanly and checks close errors.
 - [ ] Surface directory-entry truncation in navigator UI when entry cap clips folder contents.
 - [ ] Verify explicit discard confirmation path on dirty-tab close and add regression coverage.
 - [ ] Replace full-tree refresh on file operations with targeted tree node refresh helpers.

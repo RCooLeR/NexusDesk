@@ -107,6 +107,36 @@ func TestApplyFileAppendDoesNotTruncateLargeFile(t *testing.T) {
 	assertFileContent(t, filepath.Join(root, "docs", "large.txt"), large+"\nappended\n")
 }
 
+func TestApplyFileAppendDiscardsRollbackOnPreMutationFailure(t *testing.T) {
+	root := t.TempDir()
+	writeFile(t, filepath.Join(root, "docs", "notes.txt"), "original\n")
+
+	if _, err := New().ApplyFileAppend(root, FileWriteRequest{
+		RelPath:  "docs/notes.txt",
+		Content:  "appended\n",
+		Encoding: "unsupported-encoding",
+	}); err == nil {
+		t.Fatal("expected unsupported encoding to fail")
+	}
+	assertFileContent(t, filepath.Join(root, "docs", "notes.txt"), "original\n")
+	rollbacks, err := New().ListRollbacks(root)
+	if err != nil {
+		t.Fatalf("ListRollbacks returned error: %v", err)
+	}
+	if len(rollbacks) != 0 {
+		t.Fatalf("expected no committed rollback, got %#v", rollbacks)
+	}
+	entries, err := os.ReadDir(filepath.Join(root, ".nexusdesk", "rollbacks"))
+	if err != nil && !os.IsNotExist(err) {
+		t.Fatalf("ReadDir rollbacks failed: %v", err)
+	}
+	for _, entry := range entries {
+		if entry.IsDir() {
+			t.Fatalf("expected prepared rollback directory to be discarded, found %s", entry.Name())
+		}
+	}
+}
+
 func TestPreviewFileAppendRejectsBinaryTarget(t *testing.T) {
 	root := t.TempDir()
 	writeBytes(t, filepath.Join(root, "blob.bin"), []byte{'a', 0x00, 'b'})

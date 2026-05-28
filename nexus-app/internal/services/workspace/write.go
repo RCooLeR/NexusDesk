@@ -144,18 +144,29 @@ func (s *Service) ApplyFileAppend(root string, request FileWriteRequest) (FileWr
 	}
 	encoded, _, err := encodeWriteContent(request.Content, request.Encoding)
 	if err != nil {
+		_ = s.discardPreparedRollback(root, rollback)
 		return FileWriteProposal{}, err
 	}
 	if err := os.MkdirAll(filepath.Dir(absTarget), 0o755); err != nil {
+		_ = s.discardPreparedRollback(root, rollback)
 		return FileWriteProposal{}, err
 	}
 	file, err := os.OpenFile(absTarget, os.O_CREATE|os.O_APPEND|os.O_WRONLY, 0o644)
 	if err != nil {
+		_ = s.discardPreparedRollback(root, rollback)
 		return FileWriteProposal{}, err
 	}
-	defer file.Close()
-	if _, err := file.Write(encoded); err != nil {
-		return FileWriteProposal{}, err
+	written, writeErr := file.Write(encoded)
+	closeErr := file.Close()
+	if writeErr != nil {
+		if written > 0 {
+			return s.commitAppendRollbackAfterFailure(root, proposal, rollback, errors.Join(writeErr, closeErr))
+		}
+		_ = s.discardPreparedRollback(root, rollback)
+		return FileWriteProposal{}, errors.Join(writeErr, closeErr)
+	}
+	if closeErr != nil {
+		return s.commitAppendRollbackAfterFailure(root, proposal, rollback, closeErr)
 	}
 	rollback, err = s.commitRollback(root, rollback)
 	if err != nil {
@@ -165,6 +176,16 @@ func (s *Service) ApplyFileAppend(root string, request FileWriteRequest) (FileWr
 	proposal.RollbackID = rollback.ID
 	proposal.Message = fmt.Sprintf("Append applied for %s as %s. Rollback %s is available.", proposal.RelPath, proposal.Encoding, rollback.ID)
 	return proposal, nil
+}
+
+func (s *Service) commitAppendRollbackAfterFailure(root string, proposal FileWriteProposal, rollback RollbackRecord, cause error) (FileWriteProposal, error) {
+	committed, err := s.commitRollback(root, rollback)
+	if err != nil {
+		return FileWriteProposal{}, errors.Join(cause, err)
+	}
+	proposal.RollbackID = committed.ID
+	proposal.Message = fmt.Sprintf("Append did not complete cleanly for %s. Rollback %s is available.", proposal.RelPath, committed.ID)
+	return proposal, fmt.Errorf("%s: %w", proposal.Message, cause)
 }
 
 func ensureAppendTargetSafe(absTarget string) error {
