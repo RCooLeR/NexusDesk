@@ -55,9 +55,13 @@ func TestFormatSettingsProbeResultSummarizesProvider(t *testing.T) {
 		ModelSample:  []string{"llama3.2:3b", "qwen2.5-coder:14b"},
 		Capabilities: []string{"model-list", "chat-completions"},
 		Warnings:     []string{"Configured model was not returned by the provider."},
-		Runtime:      &llmSvc.RuntimeStatus{Message: "Selected model is loaded on CPU."},
+		Runtime: &llmSvc.RuntimeStatus{
+			Message:       "Selected model is loaded on CPU.",
+			SelectedModel: "qwen2.5-coder:14b",
+			LoadedModels:  []llmSvc.RuntimeModel{{Name: "qwen2.5-coder:14b", Model: "qwen2.5-coder:14b", ContextLength: 32768}},
+		},
 	}, nil)
-	for _, part := range []string{"Connected to provider.", "Protocol: ollama-openai-compatible", "Models: 2", "Capabilities:", "Runtime:", "Warnings:"} {
+	for _, part := range []string{"Connected to provider.", "Protocol: ollama-openai-compatible", "Models: 2", "Capabilities:", "Runtime:", "Runtime context: 32768 tokens", "Warnings:"} {
 		if !strings.Contains(message, part) {
 			t.Fatalf("expected probe summary to contain %q, got %q", part, message)
 		}

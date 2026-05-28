@@ -93,7 +93,7 @@ Current native implementation:
 
 - `nexus-app/internal/services/settings` stores non-secret provider, explicit protocol, model, context-window, and response-reserve settings, plus the curated local model catalog used by the Fyne Settings UI.
 - Windows protected secret persistence and assistant memory/profile parity are native; macOS/Linux keychains and richer assistant diagnostics remain follow-up work.
-- `nexus-app/internal/services/llm` implements protocol-flagged OpenAI-compatible chat/completions, streaming SSE parsing, `/models` probing, Ollama `/api/ps` runtime diagnostics, context-window options, response reserve, and workspace-context sentinel escaping.
+- `nexus-app/internal/services/llm` implements protocol-flagged OpenAI-compatible chat/completions, streaming SSE parsing, `/models` probing, Ollama `/api/ps` runtime diagnostics, loaded-model context-window tuning, response reserve, and workspace-context sentinel escaping.
 - `nexus-app/internal/services/assistant` wraps the LLM client for Ask mode and attaches bounded selected-file, directory, project-root, and generated-artifact context packs.
 - `nexus-app/internal/services/agent` owns the native ReAct-style agent loop with plan updates, bounded observations, model-driven tool calls, an emergency backend loop guard, and final-answer behavior.
 - `nexus-app/internal/services/tools` owns the native deterministic tool dispatcher for context, file preview/search/problems, Git status/diff, tasks, rollbacks, approvals, safe file mutations, artifacts, documents, operations files, datasets, SQLite, and approval-gated web text fetches.

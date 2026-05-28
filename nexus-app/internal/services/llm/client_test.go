@@ -277,6 +277,45 @@ func TestConfigFromSettingsIncludesAPIKey(t *testing.T) {
 	}
 }
 
+func TestRuntimeContextWindowMatchesLoadedModel(t *testing.T) {
+	runtime := &RuntimeStatus{
+		SelectedModel: "mistral-small3.2",
+		LoadedModels: []RuntimeModel{
+			{Name: "qwen3:8b", Model: "qwen3:8b", ContextLength: 40960},
+			{Name: "mistral-small3.2:latest", Model: "mistral-small3.2:latest", ContextLength: 131072},
+		},
+	}
+	if got := RuntimeContextWindow("mistral-small3.2", runtime); got != 131072 {
+		t.Fatalf("expected runtime context from loaded model, got %d", got)
+	}
+	if got := RuntimeContextWindow("", runtime); got != 131072 {
+		t.Fatalf("expected selected model fallback, got %d", got)
+	}
+	if got := RuntimeContextWindow("missing", runtime); got != 0 {
+		t.Fatalf("expected missing runtime context to be zero, got %d", got)
+	}
+}
+
+func TestSettingsWithRuntimeContextUpdatesReserve(t *testing.T) {
+	settings := settingssvc.Settings{
+		Model:                 "qwen3:8b",
+		ContextTokens:         32768,
+		ResponseReserveTokens: 4096,
+	}
+	next := SettingsWithRuntimeContext(settings, &RuntimeStatus{
+		LoadedModels: []RuntimeModel{{Name: "qwen3:8b", Model: "qwen3:8b", ContextLength: 40960}},
+	})
+	if next.ContextTokens != 40960 || next.ResponseReserveTokens != 5120 {
+		t.Fatalf("expected runtime context and reserve, got %#v", next)
+	}
+	unchanged := SettingsWithRuntimeContext(next, &RuntimeStatus{
+		LoadedModels: []RuntimeModel{{Name: "other", Model: "other", ContextLength: 999}},
+	})
+	if unchanged != next {
+		t.Fatalf("expected settings without matching runtime context to remain unchanged, got %#v", unchanged)
+	}
+}
+
 func contains(values []string, needle string) bool {
 	for _, value := range values {
 		if value == needle {

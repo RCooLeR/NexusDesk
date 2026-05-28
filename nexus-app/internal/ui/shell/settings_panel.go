@@ -131,6 +131,14 @@ func (v *View) newSettingsPanel() fyne.CanvasObject {
 			cancel()
 			message := formatSettingsProbeResult(result, probeErr)
 			fyne.Do(func() {
+				if probeErr == nil {
+					tuned := llmSvc.SettingsWithRuntimeContext(next, result.Runtime)
+					if tuned.ContextTokens != next.ContextTokens {
+						contextTokens.SetText(strconv.Itoa(tuned.ContextTokens))
+						responseReserve.SetText(strconv.Itoa(tuned.ResponseReserveTokens))
+						message += "\nUpdated context tokens from loaded model runtime."
+					}
+				}
 				probeStatus.SetText(message)
 				testConnection.Enable()
 			})
@@ -229,6 +237,9 @@ func formatSettingsProbeResult(result llmSvc.ProbeResult, err error) string {
 	}
 	if result.Runtime != nil && strings.TrimSpace(result.Runtime.Message) != "" {
 		parts = append(parts, "Runtime: "+result.Runtime.Message)
+	}
+	if runtimeContext := llmSvc.RuntimeContextWindow("", result.Runtime); runtimeContext > 0 {
+		parts = append(parts, fmt.Sprintf("Runtime context: %d tokens", runtimeContext))
 	}
 	if len(result.Warnings) > 0 {
 		parts = append(parts, "Warnings: "+strings.Join(result.Warnings, "; "))
