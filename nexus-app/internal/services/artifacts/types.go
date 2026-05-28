@@ -125,6 +125,35 @@ type SQLiteQueryReport struct {
 	Message        string
 }
 
+type DatasetQueryReport struct {
+	Title       string
+	SourcePath  string
+	Query       string
+	Format      string
+	Columns     []string
+	Rows        [][]string
+	TotalRows   int
+	MatchedRows int
+	Truncated   bool
+	Message     string
+}
+
+type DatasetSQLReport struct {
+	Title       string
+	SourcePath  string
+	SQL         string
+	Engine      string
+	Columns     []string
+	Rows        [][]string
+	TotalRows   int
+	MatchedRows int
+	ShownRows   int
+	DurationMs  int64
+	Truncated   bool
+	Plan        []string
+	Message     string
+}
+
 type OperationsRunbookReport struct {
 	Title           string
 	SourcePath      string

@@ -24,6 +24,9 @@ const (
 	datasetProfileJobKind        = "dataset-profile"
 	datasetQueryJobKind          = "dataset-query"
 	datasetSQLJobKind            = "dataset-sql"
+	datasetQueryExportJobKind    = "dataset-query-export"
+	datasetSQLExportJobKind      = "dataset-sql-export"
+	datasetRebuildJobKind        = "dataset-dependency-rebuild"
 	datasetNotebookRunJobKind    = "dataset-notebook-run"
 	datasetNotebookExportJobKind = "dataset-notebook-export"
 	datasetChartPreviewJobKind   = "dataset-chart-preview"
@@ -41,6 +44,8 @@ func (v *View) newDataPanel() fyne.CanvasObject {
 	sqlButton := widget.NewButtonWithIcon("Run SQL", theme.ComputerIcon(), func() {
 		v.runSelectedDatasetSQL(v.dataQueryEntry.Text)
 	})
+	exportQueryButton := widget.NewButtonWithIcon("Export query CSV", theme.DownloadIcon(), v.exportDatasetQueryCSVArtifact)
+	exportSQLButton := widget.NewButtonWithIcon("Export SQL report", theme.DocumentSaveIcon(), v.exportDatasetSQLReportArtifact)
 	sqliteButton := widget.NewButtonWithIcon("Inspect SQLite", theme.StorageIcon(), v.inspectSelectedSQLite)
 	sqliteQueryButton := widget.NewButtonWithIcon("Run SQLite", theme.MediaPlayIcon(), func() {
 		v.runSelectedSQLiteQuery(v.dataQueryEntry.Text)
@@ -89,6 +94,7 @@ func (v *View) newDataPanel() fyne.CanvasObject {
 	v.dataNotebookCellSelect = notebookCellSelect
 	reuseSQLButton := widget.NewButtonWithIcon("Use latest SQL", theme.ContentPasteIcon(), v.reuseLatestDatasetSQLRun)
 	rerunSQLButton := widget.NewButtonWithIcon("Rerun latest SQL", theme.MediaReplayIcon(), v.rerunLatestDatasetSQLRun)
+	rebuildDependencyButton := widget.NewButtonWithIcon("Rebuild latest", theme.MediaReplayIcon(), v.rebuildLatestDatasetDependency)
 	connectorSelect := widget.NewSelect([]string{}, func(choice string) {
 		v.dataConnectorProfileID = v.dataConnectorOptions[choice]
 	})
@@ -112,10 +118,10 @@ func (v *View) newDataPanel() fyne.CanvasObject {
 		dataActionStrip(listConnectorProfilesButton, saveConnectorProfileButton, deleteConnectorProfileButton, validateConnectorSQLButton, inspectConnectorProfileButton, testConnectorProfileButton, runConnectorQueryButton, cancelConnectorQueryButton),
 	)
 	actions := container.NewAppTabs(
-		container.NewTabItem("Source", dataActionStrip(profileButton, queryButton, sqlButton, sqliteButton, sqliteQueryButton, cancelSQLiteButton)),
+		container.NewTabItem("Source", dataActionStrip(profileButton, queryButton, sqlButton, exportQueryButton, exportSQLButton, sqliteButton, sqliteQueryButton, cancelSQLiteButton)),
 		container.NewTabItem("Notebook", notebookControls),
 		container.NewTabItem("Visuals", dataActionStrip(chartButton, exportChartButton, dashboardButton, exportDashboardButton)),
-		container.NewTabItem("History", dataActionStrip(historyButton, reuseSQLButton, rerunSQLButton, copyCellButton, copyRowButton, saveSQLiteQueryButton, savedSQLiteQueriesButton, exportSQLiteCSVButton, exportSQLiteReportButton)),
+		container.NewTabItem("History", dataActionStrip(historyButton, reuseSQLButton, rerunSQLButton, rebuildDependencyButton, copyCellButton, copyRowButton, saveSQLiteQueryButton, savedSQLiteQueriesButton, exportSQLiteCSVButton, exportSQLiteReportButton)),
 		container.NewTabItem("External DB", externalConnectorControls),
 	)
 	actions.SetTabLocation(container.TabLocationTop)
@@ -542,6 +548,45 @@ func (v *View) rerunLatestDatasetSQLRun() {
 	v.runSelectedDatasetSQL(run.SQL)
 }
 
+func (v *View) rebuildLatestDatasetDependency() {
+	if v.metadataStore == nil {
+		v.dataProfileStatus.SetText("Open a workspace before rebuilding dataset artifacts.")
+		return
+	}
+	workspace := v.state.Workspace()
+	if workspace.Root == "" {
+		v.dataProfileStatus.SetText("Open a workspace before rebuilding dataset artifacts.")
+		return
+	}
+	selected := selectedPathOrEmpty(v)
+	dependencies, err := v.metadataStore.ListDatasetDependencies(selected, 100)
+	if err != nil {
+		v.dataProfileStatus.SetText("Dataset dependency history unavailable.")
+		dialog.ShowError(err, v.window)
+		return
+	}
+	dependency, ok := latestRebuildableDatasetDependency(dependencies)
+	if !ok {
+		v.dataProfileStatus.SetText("No rebuildable dataset dependency found for " + firstNonEmptyString(selected, "this workspace") + ".")
+		return
+	}
+	jobLabel := datasetRebuildJobLabel(dependency)
+	job, ctx := v.jobService.Start(datasetRebuildJobKind, jobLabel)
+	v.jobService.AppendLog(job.ID, "Dependency: "+dependency.ID)
+	v.jobService.AppendLog(job.ID, "Source: "+dependency.SourcePath)
+	v.jobService.AppendLog(job.ID, "Kind: "+dependency.DependentKind)
+	v.dataProfileStatus.SetText("Rebuilding dataset artifact as " + job.ID + ".")
+	v.addActivity("Started " + job.ID + ": " + jobLabel + ".")
+	v.refreshJobs()
+	root := workspace.Root
+	go func() {
+		artifact, err := v.rebuildDatasetDependencyArtifact(ctx, root, dependency)
+		fyne.Do(func() {
+			v.finishDatasetDependencyRebuildJob(job.ID, dependency, artifact, err)
+		})
+	}()
+}
+
 func (v *View) latestReusableSQLRun() (metadataSvc.SQLRunRecord, bool) {
 	if v.metadataStore == nil {
 		v.dataProfileStatus.SetText("Open a workspace before reusing SQL history.")
@@ -764,6 +809,30 @@ func datasetSQLJobLabel(relPath string) string {
 	return "Dataset SQL query (" + relPath + ")"
 }
 
+func datasetQueryExportJobLabel(relPath string) string {
+	relPath = strings.TrimSpace(relPath)
+	if relPath == "" {
+		return "Dataset query CSV export"
+	}
+	return "Dataset query CSV export (" + relPath + ")"
+}
+
+func datasetSQLExportJobLabel(relPath string) string {
+	relPath = strings.TrimSpace(relPath)
+	if relPath == "" {
+		return "Dataset SQL report export"
+	}
+	return "Dataset SQL report export (" + relPath + ")"
+}
+
+func datasetRebuildJobLabel(dependency metadataSvc.DatasetDependencyRecord) string {
+	source := strings.TrimSpace(dependency.SourcePath)
+	if source == "" {
+		source = "dataset"
+	}
+	return "Rebuild " + firstNonEmptyString(dependency.DependentKind, "dependency") + " (" + source + ")"
+}
+
 func datasetNotebookRunJobLabel(relPath string) string {
 	relPath = strings.TrimSpace(relPath)
 	if relPath == "" {
@@ -939,6 +1008,62 @@ func (v *View) exportDatasetDashboardArtifact() {
 		result, dashboard, artifact, err := v.buildDatasetDashboardArtifactForExport(ctx, root, selected, cachedQuery, cachedDashboard, queryText)
 		fyne.Do(func() {
 			v.finishDatasetDashboardExportJob(job.ID, selected, result, dashboard, artifact, err)
+		})
+	}()
+}
+
+func (v *View) exportDatasetQueryCSVArtifact() {
+	workspace := v.state.Workspace()
+	if workspace.Root == "" {
+		v.dataProfileStatus.SetText("Open a workspace before exporting dataset query artifacts.")
+		return
+	}
+	selected := selectedPathOrEmpty(v)
+	if strings.TrimSpace(selected) == "" && strings.TrimSpace(v.dataLastQuery.RelPath) == "" {
+		v.dataProfileStatus.SetText("Run or select a dataset query before exporting CSV.")
+		return
+	}
+	jobLabel := datasetQueryExportJobLabel(selected)
+	job, ctx := v.jobService.Start(datasetQueryExportJobKind, jobLabel)
+	v.jobService.AppendLog(job.ID, "Path: "+firstNonEmptyString(selected, v.dataLastQuery.RelPath))
+	v.dataProfileStatus.SetText("Exporting dataset query CSV as " + job.ID + ".")
+	v.addActivity("Started " + job.ID + ": " + jobLabel + ".")
+	v.refreshJobs()
+	root := workspace.Root
+	cached := v.dataLastQuery
+	queryText := v.dataQueryEntry.Text
+	go func() {
+		result, artifact, err := v.buildDatasetQueryCSVArtifactForExport(ctx, root, selected, cached, queryText)
+		fyne.Do(func() {
+			v.finishDatasetQueryCSVExportJob(job.ID, selected, result, artifact, err)
+		})
+	}()
+}
+
+func (v *View) exportDatasetSQLReportArtifact() {
+	workspace := v.state.Workspace()
+	if workspace.Root == "" {
+		v.dataProfileStatus.SetText("Open a workspace before exporting dataset SQL reports.")
+		return
+	}
+	selected := selectedPathOrEmpty(v)
+	if strings.TrimSpace(selected) == "" {
+		v.dataProfileStatus.SetText("Select a dataset before exporting SQL reports.")
+		return
+	}
+	jobLabel := datasetSQLExportJobLabel(selected)
+	job, ctx := v.jobService.Start(datasetSQLExportJobKind, jobLabel)
+	v.jobService.AppendLog(job.ID, "Path: "+selected)
+	v.jobService.AppendLog(job.ID, fmt.Sprintf("SQL bytes: %d", len(strings.TrimSpace(v.dataQueryEntry.Text))))
+	v.dataProfileStatus.SetText("Exporting dataset SQL report as " + job.ID + ".")
+	v.addActivity("Started " + job.ID + ": " + jobLabel + ".")
+	v.refreshJobs()
+	root := workspace.Root
+	sqlText := v.dataQueryEntry.Text
+	go func() {
+		result, artifact, err := v.buildDatasetSQLReportArtifactForExport(ctx, root, selected, sqlText)
+		fyne.Do(func() {
+			v.finishDatasetSQLReportExportJob(job.ID, selected, sqlText, result, artifact, err)
 		})
 	}()
 }
@@ -1304,6 +1429,63 @@ func (v *View) buildDatasetChartArtifactForExport(
 	return queryResult, chart, artifact, nil
 }
 
+func (v *View) buildDatasetQueryCSVArtifactForExport(
+	ctx context.Context,
+	root string,
+	selected string,
+	cached datasetsSvc.QueryResult,
+	queryText string,
+) (datasetsSvc.QueryResult, artifactsSvc.Artifact, error) {
+	result := cached
+	if strings.TrimSpace(result.RelPath) == "" || (selected != "" && result.RelPath != selected) {
+		var err error
+		result, err = v.datasetService.QueryContext(ctx, root, selected, queryText)
+		if err != nil {
+			return datasetsSvc.QueryResult{}, artifactsSvc.Artifact{}, err
+		}
+	}
+	store, err := artifactsSvc.NewStore(root)
+	if err != nil {
+		return datasetsSvc.QueryResult{}, artifactsSvc.Artifact{}, err
+	}
+	artifact, err := store.WriteDatasetQueryCSVArtifact(datasetQueryArtifactInput(result))
+	if err != nil {
+		return datasetsSvc.QueryResult{}, artifactsSvc.Artifact{}, err
+	}
+	select {
+	case <-ctx.Done():
+		return datasetsSvc.QueryResult{}, artifactsSvc.Artifact{}, ctx.Err()
+	default:
+	}
+	return result, artifact, nil
+}
+
+func (v *View) buildDatasetSQLReportArtifactForExport(
+	ctx context.Context,
+	root string,
+	selected string,
+	sqlText string,
+) (datasetsSvc.SQLResult, artifactsSvc.Artifact, error) {
+	result, err := v.datasetService.QuerySQLContext(ctx, root, selected, sqlText)
+	if err != nil {
+		return datasetsSvc.SQLResult{}, artifactsSvc.Artifact{}, err
+	}
+	store, err := artifactsSvc.NewStore(root)
+	if err != nil {
+		return datasetsSvc.SQLResult{}, artifactsSvc.Artifact{}, err
+	}
+	artifact, err := store.WriteDatasetSQLMarkdownArtifact(datasetSQLArtifactInput(result))
+	if err != nil {
+		return datasetsSvc.SQLResult{}, artifactsSvc.Artifact{}, err
+	}
+	select {
+	case <-ctx.Done():
+		return datasetsSvc.SQLResult{}, artifactsSvc.Artifact{}, ctx.Err()
+	default:
+	}
+	return result, artifact, nil
+}
+
 func (v *View) buildDatasetDashboardArtifactForExport(
 	ctx context.Context,
 	root string,
@@ -1338,6 +1520,96 @@ func (v *View) buildDatasetDashboardArtifactForExport(
 	return queryResult, dashboard, artifact, nil
 }
 
+func (v *View) rebuildDatasetDependencyArtifact(ctx context.Context, root string, dependency metadataSvc.DatasetDependencyRecord) (artifactsSvc.Artifact, error) {
+	switch dependency.DependentKind {
+	case "filter-export", "dataset-query-csv":
+		query := strings.TrimSpace(firstNonEmptyString(dependency.Metadata["query"], dependency.Metadata["filter"]))
+		if query == "" {
+			return artifactsSvc.Artifact{}, errors.New("cannot rebuild dataset query artifact without query text")
+		}
+		result, artifact, err := v.buildDatasetQueryCSVArtifactForExport(ctx, root, dependency.SourcePath, datasetsSvc.QueryResult{}, query)
+		if err != nil {
+			return artifactsSvc.Artifact{}, err
+		}
+		if v.metadataStore != nil {
+			_, _ = v.metadataStore.UpdateDatasetDependencyArtifact(dependency.ID, artifact.RelPath, map[string]string{
+				"query":   result.Query,
+				"format":  result.Format,
+				"rebuilt": time.Now().UTC().Format(time.RFC3339),
+			})
+		}
+		return artifact, nil
+	case "sql-report", "dataset-sql-report":
+		sqlText := strings.TrimSpace(firstNonEmptyString(dependency.Metadata["sql"], dependency.Metadata["query"]))
+		if sqlText == "" {
+			return artifactsSvc.Artifact{}, errors.New("cannot rebuild dataset SQL report without SQL text")
+		}
+		result, artifact, err := v.buildDatasetSQLReportArtifactForExport(ctx, root, dependency.SourcePath, sqlText)
+		if err != nil {
+			return artifactsSvc.Artifact{}, err
+		}
+		if v.metadataStore != nil {
+			record := v.metadataStore.NormalizeSQLRunRecord(sqlRunRecord(result, dependency.SourcePath, sqlText, nil))
+			record.ArtifactPath = artifact.RelPath
+			if err := v.metadataStore.SaveSQLRun(record); err != nil {
+				v.addActivity("Could not persist rebuilt SQL run metadata: " + err.Error())
+			}
+			_, _ = v.metadataStore.UpdateDatasetDependencyArtifact(dependency.ID, artifact.RelPath, map[string]string{
+				"sql":     result.SQL,
+				"engine":  result.Engine,
+				"rebuilt": time.Now().UTC().Format(time.RFC3339),
+			})
+		}
+		return artifact, nil
+	case "chart", "dashboard":
+		query := strings.TrimSpace(dependency.Metadata["query"])
+		result, err := v.datasetService.QueryContext(ctx, root, dependency.SourcePath, query)
+		if err != nil {
+			return artifactsSvc.Artifact{}, err
+		}
+		store, err := artifactsSvc.NewStore(root)
+		if err != nil {
+			return artifactsSvc.Artifact{}, err
+		}
+		if dependency.DependentKind == "dashboard" {
+			dashboard, err := datasetsSvc.BuildDashboard(result)
+			if err != nil {
+				return artifactsSvc.Artifact{}, err
+			}
+			artifact, err := store.WriteChartArtifact(dashboardArtifactInput(dashboard))
+			if err != nil {
+				return artifactsSvc.Artifact{}, err
+			}
+			if v.metadataStore != nil {
+				_, _ = v.metadataStore.UpdateDatasetDependencyArtifact(dependency.ID, artifact.RelPath, map[string]string{
+					"query":   result.Query,
+					"mode":    dashboard.Chart.Mode,
+					"rebuilt": time.Now().UTC().Format(time.RFC3339),
+				})
+			}
+			return artifact, nil
+		}
+		chart, err := datasetsSvc.BuildChart(result)
+		if err != nil {
+			return artifactsSvc.Artifact{}, err
+		}
+		artifact, err := store.WriteChartArtifact(chartArtifactInput(chart))
+		if err != nil {
+			return artifactsSvc.Artifact{}, err
+		}
+		if v.metadataStore != nil {
+			_, _ = v.metadataStore.UpdateDatasetDependencyArtifact(dependency.ID, artifact.RelPath, map[string]string{
+				"query":   result.Query,
+				"mode":    chart.Mode,
+				"rebuilt": time.Now().UTC().Format(time.RFC3339),
+			})
+		}
+		return artifact, nil
+	default:
+		return artifactsSvc.Artifact{}, fmt.Errorf("cannot rebuild dependency kind %q", dependency.DependentKind)
+	}
+}
+
 func (v *View) finishDatasetChartExportJob(
 	jobID string,
 	selected string,
@@ -1366,6 +1638,7 @@ func (v *View) finishDatasetChartExportJob(
 	v.dataLastChart = chart
 	v.dataLastDashboard = datasetsSvc.DashboardResult{}
 	v.persistArtifactRecord(artifact)
+	v.persistDatasetDependency(chartArtifactDependencyRecord(result, chart, artifact))
 	v.dataProfileStatus.SetText("Exported chart " + artifact.RelPath)
 	v.addActivity(artifact.Message)
 	v.refreshArtifactsWithQuery("kind:chart")
@@ -1400,9 +1673,112 @@ func (v *View) finishDatasetDashboardExportJob(
 	v.dataLastChart = dashboard.Chart
 	v.dataLastDashboard = dashboard
 	v.persistArtifactRecord(artifact)
+	v.persistDatasetDependency(dashboardArtifactDependencyRecord(result, dashboard, artifact))
 	v.dataProfileStatus.SetText("Exported dashboard " + artifact.RelPath)
 	v.addActivity(artifact.Message)
 	v.refreshArtifactsWithQuery("kind:dashboard")
+	v.refreshJobs()
+}
+
+func (v *View) finishDatasetQueryCSVExportJob(
+	jobID string,
+	selected string,
+	result datasetsSvc.QueryResult,
+	artifact artifactsSvc.Artifact,
+	err error,
+) {
+	if err != nil {
+		if isDataJobCanceled(err) {
+			v.jobService.Finish(jobID, jobsSvc.StatusCanceled, "Dataset query CSV export cancelled.", nil)
+			v.dataProfileStatus.SetText("Dataset query CSV export cancelled for " + firstNonEmptyString(selected, "selection") + ".")
+			v.addActivity("Cancelled dataset query CSV export for " + firstNonEmptyString(selected, "selection") + ".")
+		} else {
+			v.jobService.Finish(jobID, jobsSvc.StatusFailed, "Dataset query CSV export failed.", err)
+			v.dataProfileStatus.SetText("Dataset query CSV export failed for " + firstNonEmptyString(selected, result.RelPath))
+			dialog.ShowError(err, v.window)
+		}
+		v.refreshJobs()
+		return
+	}
+	artifact.JobID = jobID
+	v.jobService.AppendLog(jobID, "Artifact: "+artifact.RelPath)
+	v.jobService.Finish(jobID, jobsSvc.StatusSuccess, "Created "+artifact.RelPath+".", nil)
+	v.dataLastQuery = result
+	v.persistArtifactRecord(artifact)
+	v.persistDatasetDependency(datasetQueryArtifactDependencyRecord(result, artifact))
+	v.dataProfileStatus.SetText("Exported dataset query CSV " + artifact.RelPath)
+	v.addActivity(artifact.Message)
+	v.refreshArtifactsWithQuery("kind:dataset-query-csv")
+	v.refreshJobs()
+}
+
+func (v *View) finishDatasetSQLReportExportJob(
+	jobID string,
+	selected string,
+	sqlText string,
+	result datasetsSvc.SQLResult,
+	artifact artifactsSvc.Artifact,
+	err error,
+) {
+	record := sqlRunRecord(result, selected, sqlText, err)
+	if v.metadataStore != nil {
+		record = v.metadataStore.NormalizeSQLRunRecord(record)
+		record.ArtifactPath = artifact.RelPath
+		if saveErr := v.metadataStore.SaveSQLRun(record); saveErr != nil {
+			v.addActivity("Could not persist SQL report metadata: " + saveErr.Error())
+		}
+	}
+	if err != nil {
+		if isDataJobCanceled(err) {
+			v.jobService.Finish(jobID, jobsSvc.StatusCanceled, "Dataset SQL report export cancelled.", nil)
+			v.dataProfileStatus.SetText("Dataset SQL report export cancelled for " + selected + ".")
+			v.addActivity("Cancelled dataset SQL report export for " + selected + ".")
+		} else {
+			v.jobService.Finish(jobID, jobsSvc.StatusFailed, "Dataset SQL report export failed.", err)
+			v.dataProfileStatus.SetText("Dataset SQL report export failed for " + selected)
+			dialog.ShowError(err, v.window)
+		}
+		v.refreshJobs()
+		return
+	}
+	artifact.JobID = jobID
+	v.jobService.AppendLog(jobID, "Artifact: "+artifact.RelPath)
+	v.jobService.Finish(jobID, jobsSvc.StatusSuccess, "Created "+artifact.RelPath+".", nil)
+	v.dataLastQuery = result.QueryResult
+	v.persistArtifactRecord(artifact)
+	v.persistDatasetDependency(datasetSQLArtifactDependencyRecord(result, record, artifact))
+	v.dataProfileStatus.SetText("Exported dataset SQL report " + artifact.RelPath)
+	v.addActivity(artifact.Message)
+	v.refreshArtifactsWithQuery("kind:dataset-sql-report")
+	v.refreshJobs()
+}
+
+func (v *View) finishDatasetDependencyRebuildJob(
+	jobID string,
+	dependency metadataSvc.DatasetDependencyRecord,
+	artifact artifactsSvc.Artifact,
+	err error,
+) {
+	if err != nil {
+		if isDataJobCanceled(err) {
+			v.jobService.Finish(jobID, jobsSvc.StatusCanceled, "Dataset dependency rebuild cancelled.", nil)
+			v.dataProfileStatus.SetText("Dataset dependency rebuild cancelled for " + dependency.SourcePath + ".")
+			v.addActivity("Cancelled dataset dependency rebuild for " + dependency.SourcePath + ".")
+		} else {
+			v.jobService.Finish(jobID, jobsSvc.StatusFailed, "Dataset dependency rebuild failed.", err)
+			v.dataProfileStatus.SetText("Dataset dependency rebuild failed for " + dependency.SourcePath)
+			dialog.ShowError(err, v.window)
+		}
+		v.refreshJobs()
+		return
+	}
+	artifact.JobID = jobID
+	v.jobService.AppendLog(jobID, "Artifact: "+artifact.RelPath)
+	v.jobService.Finish(jobID, jobsSvc.StatusSuccess, "Rebuilt "+artifact.RelPath+".", nil)
+	v.persistArtifactRecord(artifact)
+	v.dataProfileStatus.SetText("Rebuilt dataset artifact " + artifact.RelPath)
+	v.addActivity("Rebuilt " + dependency.DependentKind + " dependency for " + dependency.SourcePath + ".")
+	v.refreshArtifactsWithQuery(artifact.Kind)
 	v.refreshJobs()
 }
 

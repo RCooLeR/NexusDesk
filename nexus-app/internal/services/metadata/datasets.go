@@ -1,6 +1,7 @@
 package metadata
 
 import (
+	"database/sql"
 	"encoding/json"
 	"errors"
 	"strings"
@@ -180,6 +181,81 @@ func (s *Store) ListDatasetDependencies(sourcePath string, limit int) ([]Dataset
 		records = append(records, record)
 	}
 	return records, rows.Err()
+}
+
+func (s *Store) GetDatasetDependency(id string) (DatasetDependencyRecord, error) {
+	id = strings.TrimSpace(id)
+	if id == "" {
+		return DatasetDependencyRecord{}, errors.New("dataset dependency id is required")
+	}
+	db, err := s.open()
+	if err != nil {
+		return DatasetDependencyRecord{}, err
+	}
+	row := db.QueryRow(
+		`SELECT id, source_path, dependent_kind, dependent_ref, relation, metadata_json, created_at, updated_at
+		 FROM dataset_dependencies WHERE workspace_root = ? AND id = ?`,
+		s.root,
+		id,
+	)
+	var record DatasetDependencyRecord
+	var metadataJSON string
+	var created string
+	var updated string
+	if err := row.Scan(&record.ID, &record.SourcePath, &record.DependentKind, &record.DependentRef, &record.Relation, &metadataJSON, &created, &updated); err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return DatasetDependencyRecord{}, errors.New("dataset dependency not found")
+		}
+		return DatasetDependencyRecord{}, err
+	}
+	_ = json.Unmarshal([]byte(metadataJSON), &record.Metadata)
+	record.CreatedAt = parseTime(created)
+	record.UpdatedAt = parseTime(updated)
+	if record.Metadata == nil {
+		record.Metadata = map[string]string{}
+	}
+	return record, nil
+}
+
+func (s *Store) UpdateDatasetDependencyArtifact(id string, artifactRelPath string, metadata map[string]string) (DatasetDependencyRecord, error) {
+	record, err := s.GetDatasetDependency(id)
+	if err != nil {
+		return DatasetDependencyRecord{}, err
+	}
+	record.DependentRef = strings.TrimSpace(artifactRelPath)
+	if record.DependentRef == "" {
+		return DatasetDependencyRecord{}, errors.New("dataset dependency artifact path is required")
+	}
+	if record.Metadata == nil {
+		record.Metadata = map[string]string{}
+	}
+	for key, value := range metadata {
+		key = strings.TrimSpace(key)
+		if key != "" {
+			record.Metadata[key] = value
+		}
+	}
+	record.Metadata["artifact"] = record.DependentRef
+	record.UpdatedAt = time.Now().UTC()
+	db, err := s.open()
+	if err != nil {
+		return DatasetDependencyRecord{}, err
+	}
+	metadataJSON, _ := json.Marshal(record.Metadata)
+	_, err = db.Exec(
+		`UPDATE dataset_dependencies
+		 SET dependent_ref = ?, metadata_json = ?, updated_at = ?
+		 WHERE workspace_root = ? AND id = ?`,
+		record.DependentRef,
+		string(metadataJSON),
+		formatTime(record.UpdatedAt),
+		s.root,
+		record.ID,
+	)
+	if err != nil {
+		return DatasetDependencyRecord{}, err
+	}
+	return record, nil
 }
 
 func (s *Store) NormalizeSQLRunRecord(record SQLRunRecord) SQLRunRecord {

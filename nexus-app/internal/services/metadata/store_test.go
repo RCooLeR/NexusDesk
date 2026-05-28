@@ -233,6 +233,20 @@ func TestSaveSQLRunAndDatasetDependency(t *testing.T) {
 	if len(dependencies) != 1 || dependencies[0].DependentRef != sqlRun.ID || dependencies[0].Metadata["engine"] == "" {
 		t.Fatalf("unexpected dependencies: %#v", dependencies)
 	}
+	dependency, err := store.GetDatasetDependency(dependencies[0].ID)
+	if err != nil {
+		t.Fatalf("GetDatasetDependency returned error: %v", err)
+	}
+	if dependency.SourcePath != "data/sales.csv" {
+		t.Fatalf("unexpected dependency lookup: %#v", dependency)
+	}
+	refreshed, err := store.UpdateDatasetDependencyArtifact(dependency.ID, ".nexusdesk/artifacts/data/refreshed.csv", map[string]string{"query": "channel=search"})
+	if err != nil {
+		t.Fatalf("UpdateDatasetDependencyArtifact returned error: %v", err)
+	}
+	if refreshed.DependentRef != ".nexusdesk/artifacts/data/refreshed.csv" || refreshed.Metadata["artifact"] == "" || refreshed.Metadata["query"] == "" {
+		t.Fatalf("unexpected refreshed dependency: %#v", refreshed)
+	}
 }
 
 func TestSaveAndListApprovalRecords(t *testing.T) {

@@ -611,6 +611,28 @@ func formatDatasetHistory(selected string, runs []metadataSvc.SQLRunRecord, depe
 	return builder.String()
 }
 
+func latestRebuildableDatasetDependency(dependencies []metadataSvc.DatasetDependencyRecord) (metadataSvc.DatasetDependencyRecord, bool) {
+	for _, dependency := range dependencies {
+		if canRebuildDatasetDependency(dependency) {
+			return dependency, true
+		}
+	}
+	return metadataSvc.DatasetDependencyRecord{}, false
+}
+
+func canRebuildDatasetDependency(dependency metadataSvc.DatasetDependencyRecord) bool {
+	switch dependency.DependentKind {
+	case "filter-export", "dataset-query-csv":
+		return strings.TrimSpace(firstNonEmptyString(dependency.Metadata["query"], dependency.Metadata["filter"])) != ""
+	case "sql-report", "dataset-sql-report":
+		return strings.TrimSpace(firstNonEmptyString(dependency.Metadata["sql"], dependency.Metadata["query"])) != ""
+	case "chart", "dashboard":
+		return strings.TrimSpace(dependency.SourcePath) != ""
+	default:
+		return false
+	}
+}
+
 func latestReusableSQLRun(runs []metadataSvc.SQLRunRecord, selected string) (metadataSvc.SQLRunRecord, bool) {
 	selected = strings.TrimSpace(selected)
 	for _, run := range runs {
@@ -1022,6 +1044,112 @@ func sqliteArtifactDependencyRecord(source string, sqlRun metadataSvc.SQLRunReco
 		},
 		CreatedAt: sqlRun.StartedAt,
 		UpdatedAt: sqlRun.CompletedAt,
+	}
+}
+
+func datasetQueryArtifactDependencyRecord(result datasetsSvc.QueryResult, artifact artifactsSvc.Artifact) metadataSvc.DatasetDependencyRecord {
+	now := firstNonZeroTime(artifact.GeneratedAt, artifact.CreatedAt, time.Now().UTC())
+	return metadataSvc.DatasetDependencyRecord{
+		SourcePath:    result.RelPath,
+		DependentKind: "filter-export",
+		DependentRef:  artifact.RelPath,
+		Relation:      "exports",
+		Metadata: map[string]string{
+			"artifact": artifact.RelPath,
+			"format":   result.Format,
+			"query":    result.Query,
+		},
+		CreatedAt: now,
+		UpdatedAt: now,
+	}
+}
+
+func datasetSQLArtifactDependencyRecord(result datasetsSvc.SQLResult, sqlRun metadataSvc.SQLRunRecord, artifact artifactsSvc.Artifact) metadataSvc.DatasetDependencyRecord {
+	now := firstNonZeroTime(result.CompletedAt, artifact.GeneratedAt, artifact.CreatedAt, time.Now().UTC())
+	return metadataSvc.DatasetDependencyRecord{
+		SourcePath:    result.RelPath,
+		DependentKind: "sql-report",
+		DependentRef:  artifact.RelPath,
+		Relation:      "exports",
+		Metadata: map[string]string{
+			"artifact": artifact.RelPath,
+			"engine":   result.Engine,
+			"sql":      result.SQL,
+			"sqlRunId": sqlRun.ID,
+		},
+		CreatedAt: firstNonZeroTime(result.StartedAt, now),
+		UpdatedAt: now,
+	}
+}
+
+func chartArtifactDependencyRecord(result datasetsSvc.QueryResult, chart datasetsSvc.ChartResult, artifact artifactsSvc.Artifact) metadataSvc.DatasetDependencyRecord {
+	now := firstNonZeroTime(artifact.GeneratedAt, artifact.CreatedAt, time.Now().UTC())
+	return metadataSvc.DatasetDependencyRecord{
+		SourcePath:    chart.RelPath,
+		DependentKind: "chart",
+		DependentRef:  artifact.RelPath,
+		Relation:      "exports",
+		Metadata: map[string]string{
+			"artifact": artifact.RelPath,
+			"category": chart.CategoryColumn,
+			"format":   result.Format,
+			"mode":     chart.Mode,
+			"query":    result.Query,
+			"value":    chart.ValueColumn,
+		},
+		CreatedAt: now,
+		UpdatedAt: now,
+	}
+}
+
+func dashboardArtifactDependencyRecord(result datasetsSvc.QueryResult, dashboard datasetsSvc.DashboardResult, artifact artifactsSvc.Artifact) metadataSvc.DatasetDependencyRecord {
+	now := firstNonZeroTime(artifact.GeneratedAt, artifact.CreatedAt, time.Now().UTC())
+	return metadataSvc.DatasetDependencyRecord{
+		SourcePath:    dashboard.RelPath,
+		DependentKind: "dashboard",
+		DependentRef:  artifact.RelPath,
+		Relation:      "exports",
+		Metadata: map[string]string{
+			"artifact": artifact.RelPath,
+			"category": dashboard.Chart.CategoryColumn,
+			"format":   result.Format,
+			"mode":     dashboard.Chart.Mode,
+			"query":    result.Query,
+			"value":    dashboard.Chart.ValueColumn,
+		},
+		CreatedAt: now,
+		UpdatedAt: now,
+	}
+}
+
+func datasetQueryArtifactInput(result datasetsSvc.QueryResult) artifactsSvc.DatasetQueryReport {
+	return artifactsSvc.DatasetQueryReport{
+		SourcePath:  result.RelPath,
+		Query:       result.Query,
+		Format:      result.Format,
+		Columns:     append([]string{}, result.Columns...),
+		Rows:        copyTableRows(result.Rows),
+		TotalRows:   result.TotalRows,
+		MatchedRows: result.MatchedRows,
+		Truncated:   result.Truncated,
+		Message:     result.Message,
+	}
+}
+
+func datasetSQLArtifactInput(result datasetsSvc.SQLResult) artifactsSvc.DatasetSQLReport {
+	return artifactsSvc.DatasetSQLReport{
+		SourcePath:  result.RelPath,
+		SQL:         result.SQL,
+		Engine:      result.Engine,
+		Columns:     append([]string{}, result.Columns...),
+		Rows:        copyTableRows(result.Rows),
+		TotalRows:   result.TotalRows,
+		MatchedRows: result.MatchedRows,
+		ShownRows:   len(result.Rows),
+		DurationMs:  result.DurationMs,
+		Truncated:   result.Truncated,
+		Plan:        append([]string{}, result.Plan...),
+		Message:     result.Message,
 	}
 }
 

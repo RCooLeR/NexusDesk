@@ -6,10 +6,16 @@ import (
 	"testing"
 	"time"
 
+	artifactsSvc "nexusdesk/internal/services/artifacts"
 	datasetsSvc "nexusdesk/internal/services/datasets"
 	dbconnectorSvc "nexusdesk/internal/services/dbconnector"
 	metadataSvc "nexusdesk/internal/services/metadata"
 )
+
+func testArtifact(relPath string) artifactsSvc.Artifact {
+	now := time.Date(2026, 5, 28, 12, 0, 0, 0, time.UTC)
+	return artifactsSvc.Artifact{RelPath: relPath, GeneratedAt: now, CreatedAt: now}
+}
 
 func TestFormatDatasetProfileIncludesColumnsAndJSONNotes(t *testing.T) {
 	output := formatDatasetProfile(datasetsSvc.Profile{
@@ -238,6 +244,55 @@ func TestSQLiteQueryArtifactInputMapsRowsAndCaps(t *testing.T) {
 	})
 	if input.SourcePath != "data/store.sqlite" || input.SQL != "select id from users" || input.Rows[0][0] != "1" || input.ResultLimit != 100 {
 		t.Fatalf("unexpected SQLite artifact input: %#v", input)
+	}
+}
+
+func TestDatasetArtifactInputsAndDependenciesCaptureRebuildMetadata(t *testing.T) {
+	query := datasetsSvc.QueryResult{
+		RelPath:     "data/sales.csv",
+		Query:       "channel=search",
+		Format:      "CSV",
+		Columns:     []string{"channel", "spend"},
+		Rows:        [][]string{{"search", "42"}},
+		TotalRows:   2,
+		MatchedRows: 1,
+	}
+	queryInput := datasetQueryArtifactInput(query)
+	if queryInput.SourcePath != "data/sales.csv" || queryInput.Query != "channel=search" || queryInput.Rows[0][1] != "42" {
+		t.Fatalf("unexpected dataset query artifact input: %#v", queryInput)
+	}
+	queryDependency := datasetQueryArtifactDependencyRecord(query, testArtifact(".nexusdesk/artifacts/dataset-queries/query.csv"))
+	if queryDependency.DependentKind != "filter-export" || queryDependency.Metadata["query"] != "channel=search" {
+		t.Fatalf("unexpected query dependency: %#v", queryDependency)
+	}
+
+	sql := datasetsSvc.SQLResult{
+		QueryResult: query,
+		SQL:         "select channel, spend from dataset where channel = 'search'",
+		Engine:      "native-dataset-sql",
+		Plan:        []string{"Read selected dataset."},
+		DurationMs:  5,
+	}
+	sqlInput := datasetSQLArtifactInput(sql)
+	if sqlInput.SourcePath != "data/sales.csv" || sqlInput.SQL == "" || len(sqlInput.Plan) != 1 {
+		t.Fatalf("unexpected dataset SQL artifact input: %#v", sqlInput)
+	}
+	sqlDependency := datasetSQLArtifactDependencyRecord(sql, metadataSvc.SQLRunRecord{ID: "sql-1"}, testArtifact(".nexusdesk/artifacts/dataset-sql/report.md"))
+	if sqlDependency.DependentKind != "sql-report" || sqlDependency.Metadata["sqlRunId"] != "sql-1" || sqlDependency.Metadata["sql"] == "" {
+		t.Fatalf("unexpected SQL dependency: %#v", sqlDependency)
+	}
+}
+
+func TestLatestRebuildableDatasetDependencyUsesSupportedKinds(t *testing.T) {
+	dependency, ok := latestRebuildableDatasetDependency([]metadataSvc.DatasetDependencyRecord{
+		{DependentKind: "sql-run", Metadata: map[string]string{"sql": "select * from dataset"}},
+		{SourcePath: "data/sales.csv", DependentKind: "filter-export", Metadata: map[string]string{"query": "channel=search"}},
+	})
+	if !ok || dependency.DependentKind != "filter-export" {
+		t.Fatalf("expected filter-export dependency, got %#v ok=%v", dependency, ok)
+	}
+	if canRebuildDatasetDependency(metadataSvc.DatasetDependencyRecord{DependentKind: "sql-report", Metadata: map[string]string{}}) {
+		t.Fatal("expected SQL report without SQL text to be non-rebuildable")
 	}
 }
 
