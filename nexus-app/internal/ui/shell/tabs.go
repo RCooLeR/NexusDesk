@@ -9,6 +9,7 @@ import (
 	"fyne.io/fyne/v2/widget"
 
 	"nexusdesk/internal/domain"
+	editorSvc "nexusdesk/internal/services/editor"
 )
 
 func newEditorTabs(welcomeTitle string, openWorkspace func(), openFile func()) *container.DocTabs {
@@ -52,4 +53,14 @@ func (v *View) addPlaceholderTab(title string, body string) {
 	v.tabIDs[tab] = tabState.ID
 	v.editorTabs.Append(tab)
 	v.editorTabs.Select(tab)
+}
+
+func (v *View) closeWelcomeTabs() {
+	for item, id := range v.tabIDs {
+		tab, ok := v.editorSession.Tab(id)
+		if !ok || tab.Kind != editorSvc.KindWelcome {
+			continue
+		}
+		v.closeEditorTabItem(item, id, true)
+	}
 }

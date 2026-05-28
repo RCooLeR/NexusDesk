@@ -569,4 +569,4 @@ The Fyne migration must not drop product ambition, but this section is intention
 - [x] Avoid schema file rewrite on every metadata `Ensure` invocation.
 - [ ] Separate Ask vs Agent system prompt behavior for clearer model role control.
 - [x] Add quick-open keyboard workflow (e.g., Ctrl+P) for direct file navigation.
-- [ ] Close welcome tab on first workspace open or repurpose into workspace-aware home surface.
+- [x] Close welcome tab on first workspace open or repurpose into workspace-aware home surface.

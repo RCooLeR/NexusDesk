@@ -137,6 +137,7 @@ func (v *View) openWorkspace(root string) {
 	v.runWorkspaceOpenAction(workspaceOpenActionAssistantPinsRefresh, v.refreshAssistantContextPins)
 	v.status.SetText(fmt.Sprintf("%s: %d indexed, %d ignored, %d unreadable", workspace.Name, workspace.Summary.Included, workspace.Summary.Ignored, workspace.Summary.Unreadable))
 	v.addActivity("Opened workspace " + workspace.Root)
+	v.closeWelcomeTabs()
 	v.runWorkspaceOpenAction(workspaceOpenActionApprovalsRefresh, v.refreshApprovals)
 }
 

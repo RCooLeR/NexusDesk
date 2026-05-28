@@ -96,6 +96,11 @@ func TestOpenWorkspaceLoadsMetadataStoreWhenAvailable(t *testing.T) {
 	if !containsActivityLine(view.recentActivityLines(20), "Opened workspace "+root) {
 		t.Fatalf("expected workspace-open activity message, got %#v", view.recentActivityLines(20))
 	}
+	for _, tab := range view.editorSession.Tabs() {
+		if tab.Kind == "welcome" {
+			t.Fatalf("expected welcome tab to close after workspace open, got %#v", view.editorSession.Tabs())
+		}
+	}
 }
 
 func TestOpenSingleFileOpensParentWorkspaceAndPreview(t *testing.T) {
