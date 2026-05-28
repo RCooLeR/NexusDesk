@@ -256,14 +256,17 @@ func (v *View) saveLatestAssistantAnswer() {
 		v.addActivity("Assistant answer artifact failed: " + err.Error())
 		return
 	}
+	diagnostic := assistantEvidenceDiagnosticForResult(v.assistantLastResult)
 	artifact, err := store.WriteChatAnswer(artifactsSvc.ChatAnswerReport{
-		Prompt:         v.assistantLastPrompt,
-		Content:        v.assistantLastResult.Message,
-		Model:          v.assistantLastResult.Model,
-		ContextRelPath: v.assistantLastResult.ContextRelPath,
-		Source:         "Nexus assistant",
-		SourcePaths:    assistantEffectiveSourcePaths(v.assistantLastResult),
-		CitationRefs:   assistantCitationRefs(v.assistantLastResult),
+		Prompt:          v.assistantLastPrompt,
+		Content:         v.assistantLastResult.Message,
+		Model:           v.assistantLastResult.Model,
+		ContextRelPath:  v.assistantLastResult.ContextRelPath,
+		Source:          "Nexus assistant",
+		SourcePaths:     assistantEffectiveSourcePaths(v.assistantLastResult),
+		CitationRefs:    assistantCitationRefs(v.assistantLastResult),
+		EvidenceQuality: diagnostic.Quality,
+		EvidenceSummary: diagnostic.Summary,
 	})
 	if err != nil {
 		v.addActivity("Assistant answer artifact failed: " + err.Error())
@@ -404,7 +407,38 @@ func assistantDiagnosticFooter(result assistantSvc.Result) string {
 	if len(citations) > 0 {
 		lines = append(lines, "Citations: `"+strings.Join(citations, "`, `")+"`")
 	}
+	if diagnostic := assistantEvidenceDiagnosticForResult(result); diagnostic.Summary != "" {
+		lines = append(lines, "Evidence: "+diagnostic.Summary)
+	}
 	return strings.Join(lines, "\n")
+}
+
+type assistantEvidenceDiagnostic struct {
+	Quality       string
+	Summary       string
+	SourceCount   int
+	CitationCount int
+}
+
+func assistantEvidenceDiagnosticForResult(result assistantSvc.Result) assistantEvidenceDiagnostic {
+	sources := assistantEffectiveSourcePaths(result)
+	citations := assistantCitationRefs(result)
+	diagnostic := assistantEvidenceDiagnostic{
+		SourceCount:   len(sources),
+		CitationCount: len(citations),
+	}
+	switch {
+	case len(sources) == 0:
+		diagnostic.Quality = "weak"
+		diagnostic.Summary = "weak (no explicit source context)."
+	case len(citations) == 0:
+		diagnostic.Quality = "source-backed"
+		diagnostic.Summary = fmt.Sprintf("source-backed (%d source(s), no line citations detected).", len(sources))
+	default:
+		diagnostic.Quality = "line-cited"
+		diagnostic.Summary = fmt.Sprintf("line-cited (%d source(s), %d line ref(s)).", len(sources), len(citations))
+	}
+	return diagnostic
 }
 
 func assistantEffectiveSourcePaths(result assistantSvc.Result) []string {

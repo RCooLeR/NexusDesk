@@ -97,14 +97,14 @@ func TestChatTurnPreviewGuardsEmptyRoleAndContent(t *testing.T) {
 
 func TestAssistantResponseMarkdownWarnsWithoutSources(t *testing.T) {
 	text := assistantResponseMarkdown(assistantSvc.Result{Message: "Answer"})
-	if !strings.Contains(text, "Answer") || !strings.Contains(text, "No explicit source context") {
+	if !strings.Contains(text, "Answer") || !strings.Contains(text, "No explicit source context") || !strings.Contains(text, "Evidence: weak") {
 		t.Fatalf("expected weak-evidence warning, got %q", text)
 	}
 	withSources := assistantResponseMarkdown(assistantSvc.Result{Message: "Answer", Model: "qwen", ContextRelPath: "context: README.md", SourcePaths: []string{"README.md"}})
 	if strings.Contains(withSources, "No explicit source context") {
 		t.Fatalf("did not expect weak-evidence warning with sources, got %q", withSources)
 	}
-	for _, expected := range []string{"Model: `qwen`", "Context: `context: README.md`", "Sources: `README.md`"} {
+	for _, expected := range []string{"Model: `qwen`", "Context: `context: README.md`", "Sources: `README.md`", "Evidence: source-backed (1 source(s), no line citations detected)."} {
 		if !strings.Contains(withSources, expected) {
 			t.Fatalf("expected source/model footer to contain %q, got %q", expected, withSources)
 		}
@@ -118,7 +118,7 @@ func TestAssistantResponseMarkdownIncludesLineCitations(t *testing.T) {
 		ContextRelPath: "pack: README.md, docs/guide.md",
 	})
 
-	for _, expected := range []string{"Citations: `README.md:L12`, `docs/guide.md:L4-L6`", "Sources: `README.md`, `docs/guide.md`"} {
+	for _, expected := range []string{"Citations: `README.md:L12`, `docs/guide.md:L4-L6`", "Sources: `README.md`, `docs/guide.md`", "Evidence: line-cited (2 source(s), 2 line ref(s))."} {
 		if !strings.Contains(text, expected) {
 			t.Fatalf("expected citation footer to contain %q, got %q", expected, text)
 		}
@@ -129,6 +129,45 @@ func TestAssistantResponseMarkdownIncludesLineCitations(t *testing.T) {
 	})
 	if strings.Join(refs, "|") != "README.md:L12|docs/guide.md:L4-L6" {
 		t.Fatalf("unexpected citation refs: %#v", refs)
+	}
+}
+
+func TestAssistantEvidenceDiagnosticClassifiesSourceQuality(t *testing.T) {
+	cases := []struct {
+		name    string
+		result  assistantSvc.Result
+		quality string
+		summary string
+		sources int
+		refs    int
+	}{
+		{
+			name:    "weak",
+			result:  assistantSvc.Result{Message: "Answer"},
+			quality: "weak",
+			summary: "no explicit source context",
+		},
+		{
+			name:    "source-backed",
+			result:  assistantSvc.Result{Message: "Answer", SourcePaths: []string{"README.md"}},
+			quality: "source-backed",
+			summary: "no line citations detected",
+			sources: 1,
+		},
+		{
+			name:    "line-cited",
+			result:  assistantSvc.Result{Message: "See README.md:12.", SourcePaths: []string{"README.md"}},
+			quality: "line-cited",
+			summary: "1 line ref",
+			sources: 1,
+			refs:    1,
+		},
+	}
+	for _, tt := range cases {
+		got := assistantEvidenceDiagnosticForResult(tt.result)
+		if got.Quality != tt.quality || !strings.Contains(got.Summary, tt.summary) || got.SourceCount != tt.sources || got.CitationCount != tt.refs {
+			t.Fatalf("%s diagnostic = %#v", tt.name, got)
+		}
 	}
 }
 

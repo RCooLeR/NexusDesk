@@ -34,16 +34,18 @@ func (s *Store) WriteChatAnswer(report ChatAnswerReport) (Artifact, error) {
 		return Artifact{}, err
 	}
 	metadata := Metadata{
-		Kind:           "chat-answer",
-		Title:          title,
-		RelPath:        relPath,
-		Source:         firstNonEmptyArtifact(report.Source, "Nexus assistant"),
-		ContextRelPath: strings.TrimSpace(report.ContextRelPath),
-		Prompt:         strings.TrimSpace(report.Prompt),
-		Model:          strings.TrimSpace(report.Model),
-		SourcePaths:    append([]string{}, report.SourcePaths...),
-		CitationRefs:   append([]string{}, report.CitationRefs...),
-		GeneratedAt:    createdAt,
+		Kind:            "chat-answer",
+		Title:           title,
+		RelPath:         relPath,
+		Source:          firstNonEmptyArtifact(report.Source, "Nexus assistant"),
+		ContextRelPath:  strings.TrimSpace(report.ContextRelPath),
+		Prompt:          strings.TrimSpace(report.Prompt),
+		Model:           strings.TrimSpace(report.Model),
+		SourcePaths:     append([]string{}, report.SourcePaths...),
+		CitationRefs:    append([]string{}, report.CitationRefs...),
+		EvidenceQuality: strings.TrimSpace(report.EvidenceQuality),
+		EvidenceSummary: strings.TrimSpace(report.EvidenceSummary),
+		GeneratedAt:     createdAt,
 	}
 	if err := s.writeMetadata(metadata); err != nil {
 		return Artifact{}, err
@@ -87,6 +89,11 @@ func chatAnswerMarkdown(report ChatAnswerReport, title string, content string, c
 			builder.WriteString(citation)
 			builder.WriteString("\n")
 		}
+	}
+	if strings.TrimSpace(report.EvidenceSummary) != "" || strings.TrimSpace(report.EvidenceQuality) != "" {
+		builder.WriteString("\n## Evidence\n\n")
+		writeKV(&builder, "Quality", report.EvidenceQuality)
+		writeKV(&builder, "Summary", report.EvidenceSummary)
 	}
 	if strings.TrimSpace(report.Prompt) != "" {
 		builder.WriteString("\n## Prompt\n\n")
