@@ -568,5 +568,5 @@ The Fyne migration must not drop product ambition, but this section is intention
 - [ ] Replace shell string execution for discovered tasks with argument-based process invocation.
 - [x] Avoid schema file rewrite on every metadata `Ensure` invocation.
 - [ ] Separate Ask vs Agent system prompt behavior for clearer model role control.
-- [ ] Add quick-open keyboard workflow (e.g., Ctrl+P) for direct file navigation.
+- [x] Add quick-open keyboard workflow (e.g., Ctrl+P) for direct file navigation.
 - [ ] Close welcome tab on first workspace open or repurpose into workspace-aware home surface.

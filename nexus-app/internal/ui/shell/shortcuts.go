@@ -27,6 +27,7 @@ func (v *View) installShortcuts() {
 	bindShortcut(canvas, shortcutNextTab(), v.selectNextTab)
 	bindShortcut(canvas, shortcutPreviousTab(), v.selectPreviousTab)
 	bindShortcut(canvas, shortcutSettings(), v.openSettingsTab)
+	bindShortcut(canvas, shortcutQuickOpen(), v.openQuickOpenDialog)
 }
 
 func bindShortcut(canvas fyne.Canvas, shortcut fyne.Shortcut, action func()) {
@@ -113,4 +114,8 @@ func shortcutPreviousTab() fyne.Shortcut {
 
 func shortcutSettings() fyne.Shortcut {
 	return &desktop.CustomShortcut{KeyName: fyne.KeyComma, Modifier: fyne.KeyModifierShortcutDefault}
+}
+
+func shortcutQuickOpen() fyne.Shortcut {
+	return &desktop.CustomShortcut{KeyName: fyne.KeyP, Modifier: fyne.KeyModifierShortcutDefault}
 }

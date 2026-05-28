@@ -252,13 +252,5 @@ func (v *View) openWorkspaceNode(node domain.WorkspaceNode) {
 		v.refreshAssistantContextPins()
 		return
 	}
-	workspace := v.state.Workspace()
-	preview, err := v.workspaceService.PreviewFile(workspace.Root, node.RelPath)
-	if err != nil {
-		dialog.ShowError(err, v.window)
-		return
-	}
-	v.openPreviewTab(preview)
-	v.addActivity("Opened " + node.RelPath)
-	v.refreshAssistantContextPins()
+	v.openWorkspaceRelFile(node.RelPath)
 }

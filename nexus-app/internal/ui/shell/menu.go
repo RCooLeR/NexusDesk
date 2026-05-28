@@ -52,6 +52,8 @@ func (v *View) mainMenu() *fyne.MainMenu {
 			settings,
 		),
 		fyne.NewMenu("Navigate",
+			menuItem("Quick Open", shortcutQuickOpen(), v.openQuickOpenDialog),
+			fyne.NewMenuItemSeparator(),
 			menuItem("Next Tab", shortcutNextTab(), v.selectNextTab),
 			menuItem("Previous Tab", shortcutPreviousTab(), v.selectPreviousTab),
 		),
