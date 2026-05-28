@@ -265,6 +265,7 @@ Goal: restore generated-output workflows with provenance and native inspection.
 - [x] Add first artifact source freshness warnings for missing or modified cited files.
 - [x] Add source fingerprints to artifact metadata so freshness detects same-timestamp content changes.
 - [x] Add first archive restore flow for generated artifacts with collision-safe restore paths.
+- [x] Port native workspace scan report artifacts from Wails behind an explicit cancellable job.
 - [x] Add document preview/extraction for Markdown, TXT, PDF, DOCX, XLSX, HTML/XML.
 - [x] Add first native document extraction slice for Markdown, TXT, HTML, and XML source files with artifact export.
 - [x] Extend native document extraction artifacts to DOCX and PDF preview text with PDF page metadata.
@@ -484,8 +485,8 @@ The Fyne migration must not drop product ambition, but this section is intention
 
 ### Artifacts And Provenance
 
-- [x] Markdown, CSV, SVG/chart, SQL result, task report, notebook report, document report, operations runbook, comparison, and extracted-document artifacts.
-- [ ] Scan report, chat-answer, presentation, and richer generated document artifacts in native UI.
+- [x] Markdown, CSV, SVG/chart, SQL result, task report, notebook report, document report, scan report, operations runbook, comparison, chat-answer, and extracted-document artifacts.
+- [ ] Presentation and richer generated document artifacts in native UI.
 - [x] Provenance sidecars with source files, query IDs, generated timestamps, metadata rows, and freshness fingerprints for explicit artifact writes.
 - [ ] Complete chat/tool-run provenance coverage for every generated output type.
 - [x] Artifact browser with search, metadata, preview, compare, archive, delete, restore, and open-source navigation.

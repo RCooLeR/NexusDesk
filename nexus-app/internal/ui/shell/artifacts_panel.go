@@ -24,6 +24,7 @@ import (
 const (
 	artifactJobKindDocumentReport  = "artifact-document-report"
 	artifactJobKindDocumentExtract = "artifact-document-extract"
+	artifactJobKindScanReport      = "artifact-scan-report"
 )
 
 func (v *View) newArtifactsPanel() fyne.CanvasObject {
@@ -31,6 +32,7 @@ func (v *View) newArtifactsPanel() fyne.CanvasObject {
 	search.SetPlaceHolder("Search artifacts by title, path, kind, source, job, or task")
 	documentReport := widget.NewButtonWithIcon("Document report", theme.DocumentCreateIcon(), v.generateDocumentSetArtifact)
 	documentExtract := widget.NewButtonWithIcon("Extract doc", theme.FileTextIcon(), v.generateDocumentExtractionArtifact)
+	scanReport := widget.NewButtonWithIcon("Scan report", theme.SearchIcon(), v.generateWorkspaceScanReportArtifact)
 	exportComparison := widget.NewButtonWithIcon("Export compare", theme.DocumentSaveIcon(), v.exportArtifactComparison)
 	exportLineage := widget.NewButtonWithIcon("Export lineage", theme.DocumentSaveIcon(), v.exportArtifactLineageGraph)
 	importLineage := widget.NewButtonWithIcon("Import lineage", theme.FolderOpenIcon(), v.importArtifactLineageGraph)
@@ -45,7 +47,7 @@ func (v *View) newArtifactsPanel() fyne.CanvasObject {
 	search.OnSubmitted = func(string) {
 		v.refreshArtifactsWithQuery(search.Text)
 	}
-	header := container.NewBorder(nil, nil, v.artifactStatus, container.NewHBox(documentReport, documentExtract, exportComparison, exportLineage, importLineage, showArchived, refresh), search)
+	header := container.NewBorder(nil, nil, v.artifactStatus, container.NewHBox(documentReport, documentExtract, scanReport, exportComparison, exportLineage, importLineage, showArchived, refresh), search)
 	listScroll := container.NewScroll(v.artifactResults)
 	listScroll.SetMinSize(fyne.NewSize(260, 110))
 	sourceScroll := container.NewVScroll(v.artifactSources)
@@ -55,6 +57,78 @@ func (v *View) newArtifactsPanel() fyne.CanvasObject {
 	split := container.NewVSplit(listScroll, preview)
 	split.Offset = 0.42
 	return container.NewBorder(header, nil, nil, nil, split)
+}
+
+func (v *View) generateWorkspaceScanReportArtifact() {
+	workspace := v.state.Workspace()
+	if workspace.Root == "" {
+		v.addActivity("Open a workspace before generating a scan report.")
+		return
+	}
+	jobLabel := workspaceScanReportJobLabel(workspace.Name)
+	job, ctx := v.jobService.Start(artifactJobKindScanReport, jobLabel)
+	v.jobService.AppendLog(job.ID, "Workspace: "+workspace.Root)
+	v.artifactStatus.SetText("Running " + jobLabel + " as " + job.ID + ".")
+	v.addActivity("Started " + job.ID + ": " + jobLabel + ".")
+	v.refreshJobs()
+	go func() {
+		artifact, err := v.buildWorkspaceScanReportArtifact(ctx, workspace.Root)
+		fyne.Do(func() {
+			v.finishWorkspaceScanReportArtifactJob(job.ID, artifact, err)
+		})
+	}()
+}
+
+func (v *View) buildWorkspaceScanReportArtifact(ctx context.Context, workspaceRoot string) (artifactsSvc.Artifact, error) {
+	report, err := v.workspaceService.ScanReport(ctx, workspaceRoot, workspaceSvc.ScanReportOptions{
+		MaxDepth:   12,
+		MaxEntries: 5000,
+		MaxSamples: 12,
+	})
+	if err != nil {
+		return artifactsSvc.Artifact{}, err
+	}
+	if err := ctx.Err(); err != nil {
+		return artifactsSvc.Artifact{}, err
+	}
+	store, err := artifactsSvc.NewStore(workspaceRoot)
+	if err != nil {
+		return artifactsSvc.Artifact{}, err
+	}
+	artifact, err := store.WriteWorkspaceScanReport(workspaceScanArtifactInput(report))
+	if err != nil {
+		return artifactsSvc.Artifact{}, err
+	}
+	if err := ctx.Err(); err != nil {
+		return artifactsSvc.Artifact{}, err
+	}
+	return artifact, nil
+}
+
+func (v *View) finishWorkspaceScanReportArtifactJob(jobID string, artifact artifactsSvc.Artifact, err error) {
+	if err != nil {
+		if errors.Is(err, context.Canceled) {
+			v.jobService.Finish(jobID, jobsSvc.StatusCanceled, "Workspace scan report canceled.", nil)
+			v.artifactStatus.SetText("Workspace scan report canceled.")
+			v.addActivity("Workspace scan report canceled for " + jobID + ".")
+		} else {
+			v.jobService.Finish(jobID, jobsSvc.StatusFailed, "Workspace scan report failed.", err)
+			v.artifactStatus.SetText("Workspace scan report failed.")
+			dialog.ShowError(err, v.window)
+		}
+		v.refreshJobs()
+		return
+	}
+	artifact.JobID = jobID
+	v.jobService.AppendLog(jobID, "Artifact: "+artifact.RelPath)
+	v.jobService.Finish(jobID, jobsSvc.StatusSuccess, "Created "+artifact.RelPath+".", nil)
+	v.artifactPreview.SetText("")
+	v.refreshArtifactSources(nil)
+	v.artifactStatus.SetText("Created " + artifact.RelPath)
+	v.addActivity(artifact.Message)
+	v.persistArtifactRecord(artifact)
+	v.refreshArtifactsWithQuery("kind:scan-report")
+	v.refreshJobs()
 }
 
 func (v *View) generateDocumentSetArtifact() {
@@ -643,12 +717,37 @@ func documentSetArtifactJobLabel(root string) string {
 	return "Document report (" + root + ")"
 }
 
+func workspaceScanReportJobLabel(workspaceName string) string {
+	workspaceName = strings.TrimSpace(workspaceName)
+	if workspaceName == "" {
+		return "Workspace scan report"
+	}
+	return "Workspace scan report (" + workspaceName + ")"
+}
+
 func documentExtractionArtifactJobLabel(source string) string {
 	source = strings.TrimSpace(source)
 	if source == "" {
 		return "Document extraction"
 	}
 	return "Document extraction (" + source + ")"
+}
+
+func workspaceScanArtifactInput(report workspaceSvc.ScanReport) artifactsSvc.WorkspaceScanReport {
+	return artifactsSvc.WorkspaceScanReport{
+		WorkspaceName:  report.Name,
+		Included:       report.Included,
+		Ignored:        report.Ignored,
+		DepthSkipped:   report.DepthSkipped,
+		EntrySkipped:   report.EntrySkipped,
+		Unreadable:     report.Unreadable,
+		MaxDepth:       report.MaxDepth,
+		MaxEntries:     report.MaxEntries,
+		Truncated:      report.Truncated,
+		IgnoredSamples: append([]string{}, report.IgnoredSamples...),
+		SkippedSamples: append([]string{}, report.SkippedSamples...),
+		Message:        report.Message(),
+	}
 }
 
 func documentExtractionArtifactInput(document documentsSvc.ExtractedDocument) artifactsSvc.DocumentExtractionReport {

@@ -23,7 +23,7 @@ The app can already:
 - inspect Git status/diffs and stage files or hunks through explicit actions;
 - discover and run bounded project tasks;
 - profile/query local datasets and workspace SQLite files;
-- create chart, dashboard, notebook, document, operations, task, and comparison artifacts, with dependency rebuild coverage for dataset summary, query, SQL, chart, dashboard, SQL notebook, and SQLite query outputs;
+- create chart, dashboard, notebook, document, workspace scan, operations, task, chat-answer, and comparison artifacts, with dependency rebuild coverage for dataset summary, query, SQL, chart, dashboard, SQL notebook, and SQLite query outputs;
 - run Ask and Agent modes against configured OpenAI-compatible or Ollama endpoints;
 - persist chat, artifact, job, SQL, approval, and agent/tool audit metadata.
 

@@ -7,6 +7,7 @@ import (
 
 	artifactsSvc "nexusdesk/internal/services/artifacts"
 	documentsSvc "nexusdesk/internal/services/documents"
+	workspaceSvc "nexusdesk/internal/services/workspace"
 )
 
 func TestArtifactMetaFormatsTaskReport(t *testing.T) {
@@ -53,6 +54,34 @@ func TestDocumentArtifactJobLabels(t *testing.T) {
 	}
 	if got := documentExtractionArtifactJobLabel("docs/a.md"); got != "Document extraction (docs/a.md)" {
 		t.Fatalf("unexpected extraction job label: %q", got)
+	}
+	if got := workspaceScanReportJobLabel(""); got != "Workspace scan report" {
+		t.Fatalf("unexpected empty scan report job label: %q", got)
+	}
+	if got := workspaceScanReportJobLabel("repo"); got != "Workspace scan report (repo)" {
+		t.Fatalf("unexpected scan report job label: %q", got)
+	}
+}
+
+func TestWorkspaceScanArtifactInputMapsReportFields(t *testing.T) {
+	input := workspaceScanArtifactInput(workspaceSvc.ScanReport{
+		Name:           "repo",
+		Included:       10,
+		Ignored:        2,
+		DepthSkipped:   1,
+		EntrySkipped:   3,
+		Unreadable:     1,
+		MaxDepth:       12,
+		MaxEntries:     5000,
+		Truncated:      true,
+		IgnoredSamples: []string{"ignored: node_modules"},
+		SkippedSamples: []string{"entry cap: vendor"},
+	})
+	if input.WorkspaceName != "repo" || input.Included != 10 || input.EntrySkipped != 3 || !input.Truncated {
+		t.Fatalf("unexpected scan artifact input: %#v", input)
+	}
+	if len(input.IgnoredSamples) != 1 || len(input.SkippedSamples) != 1 || !strings.Contains(input.Message, "Scanned 10") {
+		t.Fatalf("expected scan samples and message, got %#v", input)
 	}
 }
 

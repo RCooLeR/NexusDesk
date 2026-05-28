@@ -63,6 +63,22 @@ type DocumentExtractionReport struct {
 	Truncated bool
 }
 
+type WorkspaceScanReport struct {
+	Title          string
+	WorkspaceName  string
+	Included       int
+	Ignored        int
+	DepthSkipped   int
+	EntrySkipped   int
+	Unreadable     int
+	MaxDepth       int
+	MaxEntries     int
+	Truncated      bool
+	IgnoredSamples []string
+	SkippedSamples []string
+	Message        string
+}
+
 type ChartArtifactReport struct {
 	Title          string
 	SourcePath     string
