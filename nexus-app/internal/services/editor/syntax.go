@@ -4,6 +4,7 @@ import (
 	"path/filepath"
 	"regexp"
 	"strings"
+	"unicode/utf8"
 )
 
 const (
@@ -21,9 +22,11 @@ type SyntaxLanguage struct {
 }
 
 type SyntaxToken struct {
-	Text string
-	Kind string
-	Line int
+	Text        string
+	Kind        string
+	Line        int
+	StartColumn int
+	EndColumn   int
 }
 
 type SyntaxAnalysis struct {
@@ -49,12 +52,19 @@ func AnalyzeSyntax(fileName string, content string) SyntaxAnalysis {
 			analysis.Truncated = true
 			break
 		}
-		for _, match := range syntaxTokenPattern.FindAllString(line, -1) {
+		for _, loc := range syntaxTokenPattern.FindAllStringIndex(line, -1) {
+			match := line[loc[0]:loc[1]]
 			kind := classifySyntaxToken(match, keywords)
 			if kind == "plain" {
 				continue
 			}
-			analysis.Tokens = append(analysis.Tokens, SyntaxToken{Text: match, Kind: kind, Line: index + 1})
+			analysis.Tokens = append(analysis.Tokens, SyntaxToken{
+				Text:        match,
+				Kind:        kind,
+				Line:        index + 1,
+				StartColumn: runeColumn(line, loc[0]),
+				EndColumn:   runeColumn(line, loc[1]),
+			})
 			analysis.Counts[kind]++
 			if len(analysis.Tokens) >= syntaxMaxTokens {
 				analysis.Truncated = true
@@ -63,6 +73,16 @@ func AnalyzeSyntax(fileName string, content string) SyntaxAnalysis {
 		}
 	}
 	return analysis
+}
+
+func runeColumn(line string, byteOffset int) int {
+	if byteOffset <= 0 {
+		return 0
+	}
+	if byteOffset >= len(line) {
+		return utf8.RuneCountInString(line)
+	}
+	return utf8.RuneCountInString(line[:byteOffset])
 }
 
 func DetectSyntaxLanguage(fileName string) SyntaxLanguage {

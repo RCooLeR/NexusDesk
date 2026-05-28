@@ -49,7 +49,7 @@ Reference: [Wails Feature Inventory](15_WAILS_FEATURE_INVENTORY.md) records the 
 
 Required:
 
-- IDE-grade editor baseline: first native lightweight syntax strategy, future richer inline styling and LSP/cross-file language-action decisions, and continued outline/go-to-symbol/local-definition/document-map/breadcrumb/split/find/format polish.
+- IDE-grade editor baseline: first native lightweight syntax strategy, read-only highlighted syntax preview, future active-editor inline styling and LSP/cross-file language-action decisions, and continued outline/go-to-symbol/local-definition/document-map/breadcrumb/split/find/format polish.
 - External database profile parity: PostgreSQL, MySQL/MariaDB, SQL Server, and DuckDB file/profile read-only query flows with cancellation, caps, redacted errors, and history.
 - Native protected secret storage for Windows first is implemented for provider API keys and connector credentials; macOS/Linux keychain backends remain before full cross-platform secret support.
 - Assistant quality parity: native Fyne now has weak-evidence warnings, retry/compare, Wails-compatible memory/profile storage, stale-source chat history warnings, Wails-compatible context-to-source fallback parsing, source/model footer diagnostics, line-aware citation refs, deterministic evidence-quality labels, curated model context sizing, loaded-model runtime context tuning, and save-latest-answer artifacts.
@@ -125,7 +125,7 @@ Exit criteria:
 ## Immediate Production-Oriented Next Batch
 
 1. Close the remaining Wails inventory parity blockers: editor maturity, deeper retrieval evidence, and future artifact regeneration coverage.
-2. Continue editor parity: richer inline syntax styling and future LSP/deeper cross-file language-action behavior.
+2. Continue editor parity: active-editor inline syntax styling and future LSP/deeper cross-file language-action behavior.
 3. Plan macOS Keychain and Linux Secret Service/libsecret after the Windows protected-secret baseline.
 4. Define the durable job contract for OCR, dump imports, connector pulls, report generation, and long agent runs.
 5. Continue diagnostics hardening with deeper provider/runtime checks and guided remediation.

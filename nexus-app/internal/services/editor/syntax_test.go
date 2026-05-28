@@ -35,6 +35,11 @@ func TestAnalyzeSyntaxClassifiesNativeTokens(t *testing.T) {
 	if len(analysis.Tokens) == 0 || analysis.Tokens[0].Line != 1 {
 		t.Fatalf("unexpected tokens: %#v", analysis.Tokens)
 	}
+	for _, token := range analysis.Tokens {
+		if token.StartColumn < 0 || token.EndColumn <= token.StartColumn {
+			t.Fatalf("expected valid token columns, got %#v", token)
+		}
+	}
 }
 
 func TestAnalyzeSyntaxCapsLargeFiles(t *testing.T) {
@@ -42,5 +47,16 @@ func TestAnalyzeSyntaxCapsLargeFiles(t *testing.T) {
 	analysis := AnalyzeSyntax("main.go", content)
 	if len(analysis.Tokens) != syntaxMaxTokens || !analysis.Truncated {
 		t.Fatalf("expected capped truncated analysis, got tokens=%d truncated=%t", len(analysis.Tokens), analysis.Truncated)
+	}
+}
+
+func TestAnalyzeSyntaxReportsRuneColumns(t *testing.T) {
+	analysis := AnalyzeSyntax("main.go", "const привет = \"hi\"\n")
+	if len(analysis.Tokens) < 2 {
+		t.Fatalf("expected syntax tokens, got %#v", analysis.Tokens)
+	}
+	stringToken := analysis.Tokens[len(analysis.Tokens)-1]
+	if stringToken.Kind != "string" || stringToken.StartColumn != 15 || stringToken.EndColumn != 19 {
+		t.Fatalf("unexpected string token columns: %#v", stringToken)
 	}
 }

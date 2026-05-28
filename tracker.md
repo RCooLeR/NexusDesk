@@ -148,6 +148,7 @@ Goal: recreate the useful local project workbench without Wails or React.
 - [x] Add first draft-only text editor with Source/Preview tabs, automatic dirty state, disabled Save, and Revert Draft.
 - [x] Add Markdown source/rendered toggle.
 - [x] Add first native lightweight syntax strategy: Wails-derived language detection, bounded token analysis, and a Fyne Syntax tab for common code/config languages.
+- [x] Add native read-only highlighted syntax preview with Wails/Monaco-inspired token colors and bounded Fyne `TextGrid` styling.
 - [x] Add first native image preview surface for capped PNG/JPEG/GIF/BMP/SVG/WebP files.
 - [x] Add first native capped CSV/TSV table preview surface.
 - [x] Add first native DOCX text extraction preview.
@@ -330,7 +331,7 @@ Exit criteria:
 ### Gate 1: Native Parity Beta
 
 - [x] Wails-only feature inventory with `port` / `replace` / `drop` / `later` decisions.
-- [ ] IDE-grade editor baseline: richer inline syntax styling and future LSP/deeper cross-file language actions.
+- [ ] IDE-grade editor baseline: native highlighted syntax preview is available; active-editor inline styling and future LSP/deeper cross-file language actions remain.
 - [ ] Native external database profiles for PostgreSQL, MySQL/MariaDB, SQL Server, and DuckDB with read-only guards.
 - [x] Native protected secret storage for Windows; explicit refusal/fallback behavior for unsupported platforms.
 - [x] Assistant quality parity: line-aware citation refs beyond file-level sources in native answer footers and saved chat-answer artifacts.
@@ -387,6 +388,7 @@ The Fyne migration must not drop product ambition, but this section is intention
 - [x] Native local go-to-definition parity slice with cursor-symbol resolution against the Wails-derived outline rules.
 - [ ] Multi-tab editor polish with future LSP-backed cross-file go-to-definition where native language support is available.
 - [x] First native lightweight syntax strategy for common languages, Markdown, SQL, JSON/YAML/XML/HTML, Docker/Compose, logs, and config files.
+- [x] Native read-only highlighted syntax preview with Wails/Monaco-inspired token colors, line numbers, and bounded token styling.
 - [ ] Rich inline syntax styling in the active editor widget and future LSP-backed diagnostics/actions.
 - [x] Markdown source/rendered toggle.
 - [x] Safe edit preview/apply/rollback for text, code, patches, appends, encoding-aware writes, and agent-safe mutation tools.

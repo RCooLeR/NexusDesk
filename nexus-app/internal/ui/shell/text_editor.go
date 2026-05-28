@@ -24,6 +24,7 @@ type textEditorBinding struct {
 	mapList        *fyne.Container
 	syntaxStatus   *widget.Label
 	syntaxPreview  *widget.Label
+	syntaxGrid     *widget.TextGrid
 	relPath        string
 	sourceEncoding string
 	saveEncoding   string
@@ -64,6 +65,7 @@ func (v *View) newTextEditor(tab editorSvc.Tab, preview domain.FilePreview, onSt
 	syntaxPreview := widget.NewLabel("")
 	syntaxPreview.Wrapping = fyne.TextWrapWord
 	syntaxPreview.TextStyle = fyne.TextStyle{Monospace: true}
+	syntaxGrid := newSyntaxHighlightGrid(tab.RelPath, tab.DraftText)
 	binding := &textEditorBinding{
 		source:         source,
 		status:         status,
@@ -74,6 +76,7 @@ func (v *View) newTextEditor(tab editorSvc.Tab, preview domain.FilePreview, onSt
 		mapList:        mapList,
 		syntaxStatus:   syntaxStatus,
 		syntaxPreview:  syntaxPreview,
+		syntaxGrid:     syntaxGrid,
 		relPath:        tab.RelPath,
 		sourceEncoding: initialEncoding,
 		saveEncoding:   initialEncoding,
@@ -146,11 +149,11 @@ func (v *View) newTextEditor(tab editorSvc.Tab, preview domain.FilePreview, onSt
 	previewPanel := container.NewBorder(widget.NewLabel(previewHeader(preview)), nil, nil, nil, rendered.Canvas())
 	outlinePanel := container.NewBorder(outlineStatus, nil, nil, nil, container.NewVScroll(outlineList))
 	mapPanel := container.NewBorder(mapStatus, nil, nil, nil, container.NewVScroll(mapList))
-	syntaxPanel := container.NewBorder(syntaxStatus, nil, nil, nil, container.NewVScroll(syntaxPreview))
+	syntaxPanel := container.NewBorder(syntaxStatus, nil, nil, nil, container.NewHSplit(container.NewVScroll(syntaxGrid), container.NewVScroll(syntaxPreview)))
 	tabs := container.NewAppTabs(
 		container.NewTabItem("Source", sourcePanel),
 		container.NewTabItem("Preview", previewPanel),
-		container.NewTabItem("Syntax", syntaxPanel),
+		container.NewTabItem("Highlight", syntaxPanel),
 		container.NewTabItem("Outline", outlinePanel),
 		container.NewTabItem("Map", mapPanel),
 	)
@@ -265,6 +268,7 @@ func (b *textEditorBinding) setSyntax(text string) {
 	b.syntaxStatus.SetText(syntaxStatusText(analysis))
 	b.syntaxPreview.SetText(formatSyntaxAnalysis(analysis))
 	b.syntaxPreview.Refresh()
+	applySyntaxHighlightGrid(b.syntaxGrid, text, analysis)
 }
 
 func outlineItemText(item editorSvc.OutlineItem) string {
