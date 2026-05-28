@@ -12,15 +12,33 @@ import (
 
 func encodeWriteContent(content string, requestedEncoding string) ([]byte, string, error) {
 	encoding := normalizeWriteEncoding(requestedEncoding)
+	return encodeContent(content, encoding, true, requestedEncoding)
+}
+
+func encodeAppendContent(content string, requestedEncoding string, existingEncoding string, hasExistingContent bool) ([]byte, string, error) {
+	encoding := normalizeWriteEncoding(requestedEncoding)
+	if strings.TrimSpace(requestedEncoding) == "" && existingEncoding != "" {
+		encoding = existingEncoding
+	}
+	if hasExistingContent && existingEncoding != "" && encoding != existingEncoding {
+		return nil, "", fmt.Errorf("append encoding %q does not match existing file encoding %q", encoding, existingEncoding)
+	}
+	return encodeContent(content, encoding, !hasExistingContent, requestedEncoding)
+}
+
+func encodeContent(content string, encoding string, includeSignature bool, requestedEncoding string) ([]byte, string, error) {
 	switch encoding {
 	case encodingUTF8:
 		return []byte(content), encoding, nil
 	case encodingUTF8BOM:
-		return append([]byte{0xef, 0xbb, 0xbf}, []byte(content)...), encoding, nil
+		if includeSignature {
+			return append([]byte{0xef, 0xbb, 0xbf}, []byte(content)...), encoding, nil
+		}
+		return []byte(content), encoding, nil
 	case encodingUTF16LE:
-		return encodeUTF16(content, binary.LittleEndian, []byte{0xff, 0xfe}), encoding, nil
+		return encodeUTF16(content, binary.LittleEndian, signatureBytes(includeSignature, []byte{0xff, 0xfe})), encoding, nil
 	case encodingUTF16BE:
-		return encodeUTF16(content, binary.BigEndian, []byte{0xfe, 0xff}), encoding, nil
+		return encodeUTF16(content, binary.BigEndian, signatureBytes(includeSignature, []byte{0xfe, 0xff})), encoding, nil
 	case encodingWindows1251:
 		encoded, err := charmap.Windows1251.NewEncoder().Bytes([]byte(content))
 		if err != nil {
@@ -36,6 +54,13 @@ func encodeWriteContent(content string, requestedEncoding string) ([]byte, strin
 	default:
 		return nil, "", fmt.Errorf("unsupported write encoding %q", requestedEncoding)
 	}
+}
+
+func signatureBytes(include bool, signature []byte) []byte {
+	if include {
+		return signature
+	}
+	return nil
 }
 
 func normalizeWriteEncoding(value string) string {

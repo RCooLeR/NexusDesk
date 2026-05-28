@@ -1,11 +1,13 @@
 package workspace
 
 import (
+	"encoding/binary"
 	"errors"
 	"fmt"
 	"os"
 	"path/filepath"
 	"strings"
+	"unicode"
 )
 
 const (
@@ -103,18 +105,19 @@ func (s *Service) PreviewFileAppend(root string, request FileWriteRequest) (File
 	if len(request.Content) > writeContentMaxBytes {
 		return FileWriteProposal{}, errors.New("file append preview is too large")
 	}
-	encoded, encoding, err := encodeWriteContent(request.Content, request.Encoding)
+	if info, err := os.Lstat(absTarget); err == nil && info.IsDir() {
+		return FileWriteProposal{}, errors.New("file append target must be a file")
+	}
+	existingEncoding, hasExistingContent, err := inspectAppendTarget(absTarget)
+	if err != nil {
+		return FileWriteProposal{}, err
+	}
+	encoded, encoding, err := encodeAppendContent(request.Content, request.Encoding, existingEncoding, hasExistingContent)
 	if err != nil {
 		return FileWriteProposal{}, err
 	}
 	if len(encoded) > writeContentMaxBytes {
 		return FileWriteProposal{}, errors.New("encoded file append preview is too large")
-	}
-	if info, err := os.Lstat(absTarget); err == nil && info.IsDir() {
-		return FileWriteProposal{}, errors.New("file append target must be a file")
-	}
-	if err := ensureAppendTargetSafe(absTarget); err != nil {
-		return FileWriteProposal{}, err
 	}
 
 	relPath := filepath.ToSlash(cleanRelPath)
@@ -142,7 +145,12 @@ func (s *Service) ApplyFileAppend(root string, request FileWriteRequest) (FileWr
 	if err != nil {
 		return FileWriteProposal{}, err
 	}
-	encoded, _, err := encodeWriteContent(request.Content, request.Encoding)
+	existingEncoding, hasExistingContent, err := inspectAppendTarget(absTarget)
+	if err != nil {
+		_ = s.discardPreparedRollback(root, rollback)
+		return FileWriteProposal{}, err
+	}
+	encoded, _, err := encodeAppendContent(request.Content, request.Encoding, existingEncoding, hasExistingContent)
 	if err != nil {
 		_ = s.discardPreparedRollback(root, rollback)
 		return FileWriteProposal{}, err
@@ -188,25 +196,133 @@ func (s *Service) commitAppendRollbackAfterFailure(root string, proposal FileWri
 	return proposal, fmt.Errorf("%s: %w", proposal.Message, cause)
 }
 
-func ensureAppendTargetSafe(absTarget string) error {
+func inspectAppendTarget(absTarget string) (string, bool, error) {
 	file, err := os.Open(absTarget)
 	if os.IsNotExist(err) {
-		return nil
+		return "", false, nil
 	}
 	if err != nil {
-		return err
+		return "", false, err
 	}
 	defer file.Close()
-	sample := make([]byte, 4096)
-	read, err := file.Read(sample)
+
+	info, err := file.Stat()
+	if err != nil {
+		return "", false, err
+	}
+	if info.Size() == 0 {
+		return "", false, nil
+	}
+	head, tail, err := readAppendSamples(file, info.Size())
+	if err != nil {
+		return "", false, err
+	}
+	encoding, err := appendSampleEncoding(head)
+	if err != nil {
+		return "", false, err
+	}
+	if err := ensureAppendSampleSafe(head, encoding); err != nil {
+		return "", false, err
+	}
+	if len(tail) > 0 {
+		if err := ensureAppendSampleSafe(tail, encoding); err != nil {
+			return "", false, err
+		}
+	}
+	return encoding, true, nil
+}
+
+func readAppendSamples(file *os.File, size int64) ([]byte, []byte, error) {
+	const sampleSize = 4096
+	headSize := int64(sampleSize)
+	if size < headSize {
+		headSize = size
+	}
+	head := make([]byte, headSize)
+	read, err := file.ReadAt(head, 0)
 	if err != nil && read == 0 {
+		return nil, nil, err
+	}
+	head = head[:read]
+	if size <= sampleSize {
+		return head, nil, nil
+	}
+	tail := make([]byte, sampleSize)
+	read, err = file.ReadAt(tail, size-sampleSize)
+	if err != nil && read == 0 {
+		return nil, nil, err
+	}
+	return head, tail[:read], nil
+}
+
+func appendSampleEncoding(sample []byte) (string, error) {
+	if len(sample) == 0 {
+		return "", nil
+	}
+	switch {
+	case strings.HasPrefix(string(sample), "\xef\xbb\xbf"):
+		return encodingUTF8BOM, nil
+	case len(sample)%2 != 0 && (looksLikeUTF16LE(sample) || looksLikeUTF16BE(sample)):
+		return "", errors.New("existing UTF-16 file has an invalid byte length")
+	case strings.HasPrefix(string(sample), "\xff\xfe") || looksLikeUTF16LE(sample):
+		return encodingUTF16LE, nil
+	case strings.HasPrefix(string(sample), "\xfe\xff") || looksLikeUTF16BE(sample):
+		return encodingUTF16BE, nil
+	default:
+		if looksBinary(sample) {
+			return "", errors.New("existing file is not safe text")
+		}
+		if _, encoding, err := decodeText(sample); err == nil {
+			return encoding, nil
+		}
+		return "", errors.New("existing file text encoding is unsupported")
+	}
+}
+
+func ensureAppendSampleSafe(sample []byte, encoding string) error {
+	if len(sample) == 0 {
 		return nil
 	}
-	sample = sample[:read]
-	if looksBinary(sample) && !looksLikeUTF16LE(sample) && !looksLikeUTF16BE(sample) {
-		return errors.New("existing file is not safe text")
+	switch encoding {
+	case encodingUTF16LE:
+		text, err := decodeAppendUTF16Sample(sample, binary.LittleEndian, []byte{0xff, 0xfe})
+		if err != nil || !appendDecodedTextSafe(text) {
+			return errors.New("existing UTF-16 append target has mixed or invalid encoding")
+		}
+	case encodingUTF16BE:
+		text, err := decodeAppendUTF16Sample(sample, binary.BigEndian, []byte{0xfe, 0xff})
+		if err != nil || !appendDecodedTextSafe(text) {
+			return errors.New("existing UTF-16 append target has mixed or invalid encoding")
+		}
+	default:
+		if looksBinary(sample) {
+			return errors.New("existing file is not safe text")
+		}
 	}
 	return nil
+}
+
+func decodeAppendUTF16Sample(sample []byte, order binary.ByteOrder, bom []byte) (string, error) {
+	if len(sample)%2 != 0 {
+		return "", errors.New("invalid UTF-16 byte length")
+	}
+	if len(sample) >= 2 && sample[0] == bom[0] && sample[1] == bom[1] {
+		sample = sample[2:]
+	}
+	return decodeUTF16(sample, order)
+}
+
+func appendDecodedTextSafe(text string) bool {
+	if text == "" {
+		return true
+	}
+	controls := 0
+	for _, char := range text {
+		if unicode.IsControl(char) && char != '\n' && char != '\r' && char != '\t' {
+			controls++
+		}
+	}
+	return controls*100/len([]rune(text)) <= 10
 }
 
 func titleAction(action string) string {

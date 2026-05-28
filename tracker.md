@@ -558,7 +558,7 @@ The Fyne migration must not drop product ambition, but this section is intention
 - [x] Improve search snippets to center on match location for long lines.
 - [x] Normalize `cleanRel` output using `filepath.Clean` after traversal checks.
 - [x] Cap `activityText` and `activityLines` growth so activity rendering remains bounded.
-- [ ] Expand append target safety sampling and encoding checks for UTF-16 and sparse/edge-case encodings.
+- [x] Expand append target safety sampling and encoding checks for UTF-16 and sparse/edge-case encodings.
 - [x] Update welcome flow with immediate open action from startup screen.
 - [x] Remove migration wording from About dialog and align with release messaging.
 - [x] Define and document non-Windows CI/build support matrix and execution plan.

@@ -1,6 +1,7 @@
 package workspace
 
 import (
+	"encoding/binary"
 	"os"
 	"path/filepath"
 	"strings"
@@ -143,6 +144,60 @@ func TestPreviewFileAppendRejectsBinaryTarget(t *testing.T) {
 
 	if _, err := New().PreviewFileAppend(root, FileWriteRequest{RelPath: "blob.bin", Content: "text"}); err == nil {
 		t.Fatal("expected binary append target to be rejected")
+	}
+}
+
+func TestApplyFileAppendPreservesExistingUTF16LEEncoding(t *testing.T) {
+	root := t.TempDir()
+	path := filepath.Join(root, "docs", "utf16.txt")
+	writeBytes(t, path, encodeUTF16("hello", binary.LittleEndian, []byte{0xff, 0xfe}))
+
+	proposal, err := New().ApplyFileAppend(root, FileWriteRequest{
+		RelPath: "docs/utf16.txt",
+		Content: "\nmore",
+	})
+	if err != nil {
+		t.Fatalf("ApplyFileAppend returned error: %v", err)
+	}
+	if proposal.Encoding != encodingUTF16LE {
+		t.Fatalf("expected append to preserve utf-16le, got %q", proposal.Encoding)
+	}
+	content, err := os.ReadFile(path)
+	if err != nil {
+		t.Fatalf("ReadFile failed: %v", err)
+	}
+	text, encoding, err := decodeText(content)
+	if err != nil {
+		t.Fatalf("decodeText failed: %v", err)
+	}
+	if encoding != encodingUTF16LE || text != "hello\nmore" {
+		t.Fatalf("unexpected appended UTF-16 content: encoding=%s text=%q bytes=%#v", encoding, text, content)
+	}
+	if strings.Count(string(content), string([]byte{0xff, 0xfe})) != 1 {
+		t.Fatalf("expected a single UTF-16LE BOM, got %#v", content)
+	}
+}
+
+func TestPreviewFileAppendRejectsEncodingMismatch(t *testing.T) {
+	root := t.TempDir()
+	writeBytes(t, filepath.Join(root, "docs", "utf16.txt"), encodeUTF16("hello", binary.LittleEndian, []byte{0xff, 0xfe}))
+
+	if _, err := New().PreviewFileAppend(root, FileWriteRequest{
+		RelPath:  "docs/utf16.txt",
+		Content:  "more",
+		Encoding: "utf-8",
+	}); err == nil {
+		t.Fatal("expected append encoding mismatch to be rejected")
+	}
+}
+
+func TestPreviewFileAppendSamplesTailForBinaryData(t *testing.T) {
+	root := t.TempDir()
+	content := append([]byte(strings.Repeat("a", 5000)), 0x00, 0x01, 0x02)
+	writeBytes(t, filepath.Join(root, "docs", "mixed.txt"), content)
+
+	if _, err := New().PreviewFileAppend(root, FileWriteRequest{RelPath: "docs/mixed.txt", Content: "text"}); err == nil {
+		t.Fatal("expected binary tail sample to be rejected")
 	}
 }
 
