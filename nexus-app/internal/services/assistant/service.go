@@ -12,6 +12,7 @@ import (
 )
 
 const charsPerTokenEstimate = 4
+const defaultContextMaxBytes = 96 * 1024
 
 const askSystemPrompt = "You are Nexus Ask mode inside Nexus Augentic Studio. Answer directly from the user request and provided workspace context. If more source context is needed, say what to select or inspect next. Do not claim access to files that were not provided, and do not request or describe tool execution."
 
@@ -186,7 +187,7 @@ func requestedContextPaths(request Request) []string {
 func contextBudgetBytes(config llm.Config) int {
 	budgetTokens := config.ContextTokens - config.ResponseReserveTokens
 	if budgetTokens <= 0 {
-		return charsPerTokenEstimate
+		return defaultContextMaxBytes
 	}
 	return budgetTokens * charsPerTokenEstimate
 }

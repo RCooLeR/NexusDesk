@@ -83,7 +83,9 @@ func (v *View) newAssistantPanel() fyne.CanvasObject {
 		memory,
 		saveProfile,
 	)
-	modelRoute := widget.NewSelect(assistantModelRouteOptions(v.settingsStore), nil)
+	modelRoute := widget.NewSelect(assistantModelRouteOptions(v.settingsStore), func(string) {
+		v.refreshAssistantContextPins()
+	})
 	modelRoute.SetSelected(assistantAutoModelRouteLabel)
 	v.assistantModelRoute = modelRoute
 	mode := widget.NewSelect([]string{"Ask", "Agent"}, func(string) {})
@@ -322,6 +324,62 @@ func assistantContainsAny(value string, needles ...string) bool {
 		}
 	}
 	return false
+}
+
+func assistantRouteBudgetLine(store interface {
+	LoadForDisplay() (settingsSvc.Settings, error)
+}, option string, prompt string, pinned []string, selected string) string {
+	settings := settingsSvc.Defaults()
+	if store != nil {
+		if loaded, err := store.LoadForDisplay(); err == nil {
+			settings = loaded
+		}
+	}
+	routeLabel := "Global fallback"
+	option = strings.TrimSpace(option)
+	switch option {
+	case "", assistantAutoModelRouteLabel:
+		routeLabel = "Auto -> global fallback"
+		if routeID := inferAssistantModelRouteID(prompt, pinned, selected); routeID != "" {
+			if route, ok := settingsSvc.ModelRouteByID(settings, routeID); ok {
+				routeLabel = "Auto -> " + firstNonEmpty(route.Label, route.ID)
+				if routed, ok := settingsSvc.SettingsForModelRoute(settings, routeID); ok {
+					settings = routed
+				}
+			}
+		}
+	case assistantGlobalModelRouteLabel:
+		routeLabel = "Global fallback"
+	default:
+		if route, ok := settingsRouteByLabelOrID(settings.ModelRoutes, option); ok {
+			routeLabel = firstNonEmpty(route.Label, route.ID)
+			if routed, ok := settingsSvc.SettingsForModelRoute(settings, route.ID); ok {
+				settings = routed
+			}
+		} else {
+			routeLabel = option + " -> global fallback"
+		}
+	}
+	return fmt.Sprintf("Model route: %s. Context budget: ~%s.", routeLabel, formatDiagnosticsBytes(int64(assistantContextBudgetBytes(settings))))
+}
+
+func settingsRouteByLabelOrID(routes []settingsSvc.ModelRoute, option string) (settingsSvc.ModelRoute, bool) {
+	option = strings.TrimSpace(option)
+	for _, route := range routes {
+		if option == route.ID || option == route.Label {
+			return route, true
+		}
+	}
+	return settingsSvc.ModelRoute{}, false
+}
+
+func assistantContextBudgetBytes(settings settingsSvc.Settings) int {
+	config := llmSvc.ConfigFromSettings(settings)
+	budgetTokens := config.ContextTokens - config.ResponseReserveTokens
+	if budgetTokens <= 0 {
+		return defaultAgentContextMaxBytes
+	}
+	return budgetTokens * 4
 }
 
 func (v *View) loadAssistantProfile() {
@@ -1003,19 +1061,20 @@ func (v *View) refreshAssistantContextPins() {
 		return
 	}
 	paths := v.state.AssistantContextPaths()
+	selected := selectedPathOrEmpty(v)
+	budgetLine := assistantRouteBudgetLine(v.settingsStore, selectedAssistantModelRouteOption(v), "", paths, selected)
 	v.assistantContextList.Objects = nil
 	if len(paths) == 0 {
-		selected := selectedPathOrEmpty(v)
 		if selected == "" {
-			v.assistantContextStatus.SetText("Context: pin files, folders, or the project root before sending.")
+			v.assistantContextStatus.SetText("Context: pin files, folders, or the project root before sending. " + budgetLine)
 		} else {
-			v.assistantContextStatus.SetText("Context: selected item will be used unless pins are added: " + selected)
+			v.assistantContextStatus.SetText("Context: selected item will be used unless pins are added: " + selected + ". " + budgetLine)
 		}
 		v.assistantContextList.Add(widget.NewLabel("No pinned context."))
 		v.assistantContextList.Refresh()
 		return
 	}
-	v.assistantContextStatus.SetText(fmt.Sprintf("Context pack: %d pinned root(s).", len(paths)))
+	v.assistantContextStatus.SetText(fmt.Sprintf("Context pack: %d pinned root(s). %s", len(paths), budgetLine))
 	for _, relPath := range paths {
 		pinnedPath := relPath
 		label := widget.NewLabel(pinnedPath)
@@ -1026,6 +1085,13 @@ func (v *View) refreshAssistantContextPins() {
 		v.assistantContextList.Add(container.NewBorder(nil, nil, nil, remove, label))
 	}
 	v.assistantContextList.Refresh()
+}
+
+func selectedAssistantModelRouteOption(v *View) string {
+	if v == nil || v.assistantModelRoute == nil {
+		return assistantAutoModelRouteLabel
+	}
+	return strings.TrimSpace(v.assistantModelRoute.Selected)
 }
 
 func (v *View) runAgentRequest(text string, response *widget.RichText, send *widget.Button) {

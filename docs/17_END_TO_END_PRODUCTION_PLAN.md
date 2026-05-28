@@ -222,6 +222,7 @@ Already available:
 - Git AI diff summaries and commit drafts resolve the main coding route through the assistant service; assistant results and saved chat-answer artifacts preserve route metadata/warnings.
 - Agent mode resolves the selected model route in the framework-free agent service, sizes context packs against that route, surfaces fallback warnings, and records model/route provenance in the persisted agent audit.
 - Assistant/Agent route selection now includes an auto mode that infers data, SQL, document, image/screenshot, and code routes from pinned/selected context or prompt signals before falling back to the global model.
+- Assistant context controls show the effective auto/manual/global model route and approximate pre-run context budget, with safe fallback sizing when context/reserve settings are misconfigured.
 
 Planned/remaining:
 
@@ -602,7 +603,7 @@ The checklist below is intentionally large. `tracker.md` should keep task-level 
 - [ ] Improve source retrieval/ranking beyond deterministic coverage.
 - [ ] Add contradiction/ambiguity diagnostics when sources disagree.
 - [ ] Add richer artifact-source cross-navigation.
-- [ ] Add better context budget visualization before a run.
+- [x] Add better context budget visualization before a run.
 - [x] Add task-aware model defaults in Settings for coding, backend, database, analytics, research, vision/screenshot, balanced reasoning, and fast-coding routes.
 - [x] Add Ask-mode model-route selector with global fallback and assistant-service route metadata.
 - [x] Wire task-aware model route resolution into Git AI diff summary/commit drafting with assistant-service fallback warnings and saved chat-answer route metadata.

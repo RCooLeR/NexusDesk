@@ -382,6 +382,37 @@ func TestInferAssistantModelRouteIDCoversDataDocumentVisionAndCode(t *testing.T)
 	}
 }
 
+func TestAssistantRouteBudgetLineShowsAutoRouteAndBudget(t *testing.T) {
+	store := shellSettingsStore{settings: settingsSvc.Settings{
+		ContextTokens:         1000,
+		ResponseReserveTokens: 250,
+		ModelRoutes: []settingsSvc.ModelRoute{{
+			ID:                    settingsSvc.RouteCSVExcelScripts,
+			Label:                 "CSV / Excel data scripts",
+			Model:                 "qwen3-coder:30b",
+			ContextTokens:         4000,
+			ResponseReserveTokens: 1000,
+		}},
+	}}
+	line := assistantRouteBudgetLine(store, assistantAutoModelRouteLabel, "", []string{"data/sales.csv"}, "")
+	for _, expected := range []string{"Auto -> CSV / Excel data scripts", "Context budget", "11.7 KiB"} {
+		if !strings.Contains(line, expected) {
+			t.Fatalf("expected %q in budget line %q", expected, line)
+		}
+	}
+}
+
+func TestAssistantRouteBudgetLineFallsBackToSafeBudgetWhenReserveIsTooLarge(t *testing.T) {
+	store := shellSettingsStore{settings: settingsSvc.Settings{
+		ContextTokens:         1000,
+		ResponseReserveTokens: 2000,
+	}}
+	line := assistantRouteBudgetLine(store, assistantGlobalModelRouteLabel, "", nil, "")
+	if !strings.Contains(line, "Global fallback") || !strings.Contains(line, "96.0 KiB") {
+		t.Fatalf("expected global safe fallback budget, got %q", line)
+	}
+}
+
 func TestAssistantContextPathsForRequestPrefersPins(t *testing.T) {
 	paths := assistantContextPathsForRequest([]string{" README.md ", "docs", "README.md"}, "selected.go")
 	if len(paths) != 2 || paths[0] != "README.md" || paths[1] != "docs" {

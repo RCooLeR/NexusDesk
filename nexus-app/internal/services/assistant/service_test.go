@@ -116,6 +116,35 @@ func TestAskStreamCapsSelectedContextToBudget(t *testing.T) {
 	}
 }
 
+func TestAskStreamUsesSafeContextBudgetWhenReserveExceedsContext(t *testing.T) {
+	store := fakeSettingsStore{settings: settingssvc.Settings{
+		Provider:              "openai-compatible",
+		BaseURL:               "http://provider.test/v1",
+		Model:                 "model-a",
+		ContextTokens:         20,
+		ResponseReserveTokens: 40,
+	}}
+	contextPacker := &fakeContextPacker{pack: workspacesvc.ContextPack{
+		Label:       "context: large.txt",
+		Content:     "content",
+		SourcePaths: []string{"large.txt"},
+	}}
+	client := &fakeStreamClient{message: "ok", deltas: []string{"ok"}}
+	service := NewWithDependencies(store, contextPacker, client)
+
+	_, err := service.AskStream(context.Background(), Request{
+		Prompt:        "Read",
+		WorkspaceRoot: "C:/repo",
+		SelectedPath:  "large.txt",
+	}, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if contextPacker.options.MaxBytes != defaultContextMaxBytes {
+		t.Fatalf("expected safe fallback budget, got %d", contextPacker.options.MaxBytes)
+	}
+}
+
 func TestAskStreamSkipsBinarySelection(t *testing.T) {
 	store := fakeSettingsStore{settings: settingssvc.Defaults()}
 	contextPacker := &fakeContextPacker{err: errNoContext}

@@ -536,6 +536,7 @@ The Fyne migration must not drop product ambition, but this section is intention
 - [x] Persist unverified/out-of-context citation diagnostics in native assistant footers and `chat-answer` artifact metadata.
 - [x] Add citation coverage diagnostics so native assistant footers and saved `chat-answer` metadata show cited/uncited source coverage.
 - [x] Persist structured cited/uncited source coverage lists in `chat-answer` artifacts and metadata, and preserve them through chat-answer regeneration.
+- [x] Add pre-run assistant context budget visibility with the effective auto/manual/global model route and safe fallback sizing for misconfigured context/reserve settings.
 - [x] Local assistant memory and prompt profiles.
 - [x] Agent runtime with plan updates, bounded observations, model-driven tool calls, no frontend iteration cap, emergency backend loop guard, and final-answer fallback behavior.
 - [x] Agent runtime resolves selected task-aware model routes without UI/framework coupling and records model/route provenance in SQLite audit history.
@@ -671,6 +672,7 @@ The Fyne migration must not drop product ambition, but this section is intention
 - [x] Cancel streaming LLM response handlers promptly when request context is canceled.
 - [x] Make provider configuration explicit and extensible beyond built-in options with protocol flags.
 - [x] Clamp agent context budget fallback to safe non-trivial defaults when settings become misconfigured.
+- [x] Clamp Ask/assistant context budget fallback to safe non-trivial defaults when settings become misconfigured.
 - [x] Scope global shortcuts so native editor copy remains reliable.
 - [x] Improve search snippets to center on match location for long lines.
 - [x] Normalize `cleanRel` output using `filepath.Clean` after traversal checks.
