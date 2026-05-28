@@ -45,7 +45,7 @@ Production-ready means:
 6. Crashes, hangs, provider failures, and corrupt metadata are visible and recoverable.
 7. The preserved Wails app is no longer needed for day-to-day use.
 
-The professional UI target is a JetBrains-like native workbench: compact dark theme, top menu/toolbar, project and tool-window rails, central tabbed editor, right integrated assistant, grouped bottom tools, DataGrip-style data surfaces, searchable settings, visible diagnostics, and keyboard-first navigation.
+The professional UI target is a JetBrains-like native workbench: compact dark theme, top menu/toolbar, project and tool-window rails, central tabbed editor, right integrated assistant, grouped bottom tools, DataGrip-style data surfaces, searchable settings, visible diagnostics, and keyboard-first navigation. The native color/density baseline is defined in [NexusDesk Native Theme Tokens](26_NATIVE_THEME_TOKENS.md).
 
 ## Release Gates
 
@@ -64,7 +64,7 @@ Required:
 - Task-aware model defaults are now stored and editable in Settings for coding, backend, database, analytics, research, vision/screenshot, balanced reasoning, and fast-coding routes while preserving a global fallback. Ask mode exposes an auto/global/manual route selector with pre-run route and context-budget visibility, assistant/agent auto-routing infers data, SQL, document, image/screenshot, and code routes from selected context or prompt signals, Git AI diff summary/commit drafting resolves the main coding route, Agent mode resolves the selected route with audit provenance, and saved chat-answer artifacts can preserve route metadata; future dedicated Data/document/vision model workflow resolution remains planned.
 - Complete Wails-only feature inventory and explicit keep/drop/replace decisions.
 - Native UI cleanup pass for Workbench, Data, Artifacts, Settings, assistant, and bottom panels.
-- UI direction follows `docs/17_END_TO_END_PRODUCTION_PLAN.md`: grouped tool windows, professional settings, dense but readable data grids, integrated assistant/source diagnostics, and JetBrains-like shell hierarchy.
+- UI direction follows `docs/17_END_TO_END_PRODUCTION_PLAN.md` and the token baseline in `docs/26_NATIVE_THEME_TOKENS.md`: grouped tool windows, professional settings, dense but readable data grids, integrated assistant/source diagnostics, and JetBrains-like shell hierarchy.
 - Import-boundary tests now enforce the active architecture: no Wails/webview imports, no Fyne imports in services/domain, and no UI imports from framework-free service/domain packages.
 
 Remaining blockers:

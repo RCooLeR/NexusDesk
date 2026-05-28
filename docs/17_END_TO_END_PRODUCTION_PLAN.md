@@ -7,7 +7,7 @@ Reference app: `app-wails/`
 
 This document combines the latest project review, the Wails feature inventory, the production readiness plan, Claude's static findings, and the JetBrains-style UI references provided by the product owner. It exists so repeated development sessions keep the same product idea in view: NexusDesk is a native, local-first agentic workbench for code, data, documents, artifacts, operations, and assistant-assisted development.
 
-`tracker.md` remains the task-level checklist. `docs/13_PRODUCTION_READINESS.md` remains the release-gate map. `docs/18_SAFE_AGENT_USER_GUIDE.md` is the private-beta safety guide for agent use, approvals, rollbacks, local data, connector credentials, jobs, diagnostics, and issue reports. `docs/19_BETA_FEEDBACK_AND_RELEASE_NOTES.md` defines the private-beta feedback and release-note loop. `docs/20_CLEAN_MACHINE_SMOKE_CHECKLIST.md` defines release-candidate clean-machine smoke coverage. `docs/21_APP_DATA_AND_UNINSTALL_CLEANUP.md` defines app data, uninstall, and manual cleanup behavior. `docs/22_RELEASE_HYGIENE_AND_ANTIVIRUS.md` defines release artifact discipline, signing/trust expectations, antivirus false-positive triage, release-note requirements, and do-not-ship rules. This file is the end-to-end product and architecture plan that explains why each remaining task matters and what finished should look like.
+`tracker.md` remains the task-level checklist. `docs/13_PRODUCTION_READINESS.md` remains the release-gate map. `docs/18_SAFE_AGENT_USER_GUIDE.md` is the private-beta safety guide for agent use, approvals, rollbacks, local data, connector credentials, jobs, diagnostics, and issue reports. `docs/19_BETA_FEEDBACK_AND_RELEASE_NOTES.md` defines the private-beta feedback and release-note loop. `docs/20_CLEAN_MACHINE_SMOKE_CHECKLIST.md` defines release-candidate clean-machine smoke coverage. `docs/21_APP_DATA_AND_UNINSTALL_CLEANUP.md` defines app data, uninstall, and manual cleanup behavior. `docs/22_RELEASE_HYGIENE_AND_ANTIVIRUS.md` defines release artifact discipline, signing/trust expectations, antivirus false-positive triage, release-note requirements, and do-not-ship rules. `docs/26_NATIVE_THEME_TOKENS.md` defines the Fyne-native JetBrains-like theme token baseline. This file is the end-to-end product and architecture plan that explains why each remaining task matters and what finished should look like.
 
 ## 1. Product North Star
 
@@ -564,7 +564,7 @@ The checklist below is intentionally large. `tracker.md` should keep task-level 
 
 ### 7.4 P1: JetBrains-Like UI Polish
 
-- [ ] Define final native theme tokens: backgrounds, borders, text hierarchy, accent colors, warnings, success/error, selection, focus ring.
+- [x] Define final native theme tokens: backgrounds, borders, text hierarchy, accent colors, warnings, success/error, selection, focus ring.
 - [ ] Define compact density and comfortable density modes.
 - [ ] Polish top menu to include File, Edit, View, Navigate, Code, Refactor, Run, Tools, Help where supported.
 - [ ] Polish top toolbar with workspace, branch, run/task, provider/model status, search, settings.
