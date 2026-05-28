@@ -1,6 +1,8 @@
 package shell
 
 import (
+	"path"
+
 	"fyne.io/fyne/v2"
 	"fyne.io/fyne/v2/container"
 	"fyne.io/fyne/v2/dialog"
@@ -15,8 +17,6 @@ import (
 func (v *View) newEditorPanel(tab editorSvc.Tab, preview domain.FilePreview) fyne.CanvasObject {
 	v.editorPreviews[tab.ID] = preview
 	content := newFilePreview(preview)
-	path := widget.NewLabel(preview.RelPath)
-	path.TextStyle = fyne.TextStyle{Monospace: true}
 	state := widget.NewLabel(editorStateText(tab))
 	save := widget.NewButtonWithIcon("", theme.DocumentSaveIcon(), func() {
 		v.saveEditorDraft(tab.ID)
@@ -32,16 +32,55 @@ func (v *View) newEditorPanel(tab editorSvc.Tab, preview domain.FilePreview) fyn
 	})
 	pin.Importance = widget.LowImportance
 	if preview.Kind == domain.PreviewText {
-		content = v.newTextEditor(tab, preview, func(next editorSvc.Tab) {
+		content = v.newTextEditor(tab, preview, func(next editorSvc.Tab, encodingDirty bool) {
 			state.SetText(editorStateText(next))
-			setSaveEnabled(save, next.Dirty)
+			setSaveEnabled(save, next.Dirty || encodingDirty)
 			v.updateEditorTabState(next)
 		})
 	} else {
 		v.removeTextEditor(tab.ID)
 	}
 	tools := container.NewHBox(pin, save, state)
-	return container.NewBorder(container.NewBorder(nil, nil, path, tools), nil, nil, nil, content)
+	return container.NewBorder(container.NewBorder(nil, nil, v.newEditorBreadcrumbs(tab.RelPath), tools), nil, nil, nil, content)
+}
+
+func (v *View) newEditorBreadcrumbs(relPath string) fyne.CanvasObject {
+	workspace := v.state.Workspace()
+	crumbs := editorSvc.BuildBreadcrumbs(relPath, workspace.Name)
+	row := container.NewHBox()
+	for index, crumb := range crumbs {
+		current := crumb
+		if index > 0 {
+			row.Add(widget.NewLabel(">"))
+		}
+		button := widget.NewButton(current.Label, func() {
+			v.openEditorBreadcrumb(current.RelPath)
+		})
+		button.Importance = widget.LowImportance
+		if current.RelPath == "" {
+			button.Disable()
+		}
+		row.Add(button)
+	}
+	return container.NewHScroll(row)
+}
+
+func (v *View) openEditorBreadcrumb(relPath string) {
+	if relPath == "" {
+		return
+	}
+	workspace := v.state.Workspace()
+	if workspace.Root == "" {
+		v.addActivity("Open a workspace before using breadcrumbs.")
+		return
+	}
+	v.state.SetSelectedPath(relPath)
+	v.refreshNavigatorTargets(relPath)
+	if selectedWorkspaceNodeKind(workspace, relPath) == domain.NodeDirectory || path.Ext(relPath) == "" {
+		v.addActivity("Selected folder " + relPath + " from editor breadcrumbs.")
+		return
+	}
+	v.openWorkspaceRelFile(relPath)
 }
 
 func (v *View) saveEditorDraft(tabID string) {
@@ -55,7 +94,11 @@ func (v *View) saveEditorDraft(tabID string) {
 		v.addActivity("Editor tab is no longer available.")
 		return
 	}
-	if !tab.Dirty {
+	encodingDirty := false
+	if editor, ok := v.textEditor(tab.ID); ok {
+		encodingDirty = editor.encodingDirty()
+	}
+	if !tab.Dirty && !encodingDirty {
 		v.addActivity("No draft changes to save.")
 		return
 	}
@@ -64,10 +107,14 @@ func (v *View) saveEditorDraft(tabID string) {
 		v.addActivity("Could not resolve editor preview for saving " + tab.Title + ".")
 		return
 	}
+	encoding := preview.Encoding
+	if editor, ok := v.textEditor(tab.ID); ok {
+		encoding = editor.writeEncoding()
+	}
 	proposal, err := v.workspaceService.ApplyFileWrite(workspace.Root, workspaceSvc.FileWriteRequest{
 		RelPath:  tab.RelPath,
 		Content:  tab.DraftText,
-		Encoding: preview.Encoding,
+		Encoding: encoding,
 	})
 	if err != nil {
 		dialog.ShowError(err, v.window)
@@ -82,6 +129,9 @@ func (v *View) saveEditorDraft(tabID string) {
 	preview.Size = int64(proposal.Size)
 	preview.Encoding = proposal.Encoding
 	v.editorPreviews[next.ID] = preview
+	if editor, ok := v.textEditor(next.ID); ok {
+		editor.markEncodingSaved(proposal.Encoding)
+	}
 	if item := v.openTabs[next.ID]; item != nil {
 		item.Content = v.newEditorPanel(next, preview)
 	}

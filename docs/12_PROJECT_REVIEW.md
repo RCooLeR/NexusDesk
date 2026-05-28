@@ -29,7 +29,7 @@ Risks to watch:
 
 - `internal/ui/shell` is split into many files, which is good, but it still carries a lot of orchestration state. Future UI work should extract smaller controllers/models before adding deeper editor, connector, and assistant behavior.
 - Several preserved Wails docs still describe active behavior using `app/internal` and React/Wails terms. They must be treated as reference-history until rewritten.
-- The native editor is functional but not yet IDE-grade. Native outline support has started, while syntax highlighting, richer find/replace, split groups, breadcrumbs, format, minimap, and language-aware actions still need a deliberate editor strategy.
+- The native editor is functional but not yet IDE-grade. Native outline, breadcrumbs, and explicit save encoding controls have started, while syntax highlighting, richer find/replace, split groups, format, minimap, and language-aware actions still need a deliberate editor strategy.
 - External database profile flows and Windows credential vault behavior have native parity baselines; connector sync jobs are still future work.
 - Long-running work is only partially routed through durable jobs. OCR, dump imports, connector pulls, report generation, indexing, and long agent runs must not be wired directly to UI callbacks.
 
@@ -55,7 +55,7 @@ Implemented in `nexus-app/`:
 
 Priority migration gaps:
 
-1. Native editor quality: syntax highlighting, richer find/replace, split editor groups, breadcrumbs, minimap, formatting, and language-aware navigation.
+1. Native editor quality: syntax highlighting, richer find/replace, split editor groups, minimap, formatting, and language-aware navigation.
 2. Native editor-adjacent artifact regeneration and source quality: broader regeneration coverage and citation depth.
 3. Job routing for slow workflows: long indexing, OCR, dump imports, connector pulls, report generation, and long agent runs.
 4. Connector and dump workflows: temporary isolated database sandboxes, import lifecycle, storage limits, and read-only analysis.

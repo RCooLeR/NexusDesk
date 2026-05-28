@@ -49,3 +49,32 @@ func TestEditorCursorOffsetRoundTrip(t *testing.T) {
 		t.Fatalf("expected row 1 column 2, got row %d column %d", row, column)
 	}
 }
+
+func TestEditorWriteEncodingNormalizesWailsOptions(t *testing.T) {
+	tests := map[string]string{
+		"":             "utf-8",
+		"UTF8":         "utf-8",
+		"utf-8 bom":    "utf-8-bom",
+		"utf16le":      "utf-16le",
+		"utf-16 be":    "utf-16be",
+		"cp1251":       "windows-1251",
+		"windows1252":  "windows-1252",
+		"custom-value": "custom-value",
+	}
+	for input, want := range tests {
+		if got := editorWriteEncoding(input); got != want {
+			t.Fatalf("editorWriteEncoding(%q) = %q, want %q", input, got, want)
+		}
+	}
+}
+
+func TestTextEditorBindingTracksEncodingDirty(t *testing.T) {
+	binding := &textEditorBinding{sourceEncoding: "utf-8", saveEncoding: "utf-8-bom"}
+	if !binding.encodingDirty() {
+		t.Fatalf("expected changed save encoding to mark editor dirty")
+	}
+	binding.markEncodingSaved("utf8-bom")
+	if binding.encodingDirty() {
+		t.Fatalf("expected saved encoding to become clean")
+	}
+}
