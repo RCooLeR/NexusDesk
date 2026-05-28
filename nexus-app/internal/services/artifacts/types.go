@@ -209,16 +209,17 @@ type OperationsRunbookReport struct {
 }
 
 type ChatAnswerReport struct {
-	Title           string
-	Prompt          string
-	Content         string
-	Source          string
-	ContextRelPath  string
-	Model           string
-	SourcePaths     []string
-	CitationRefs    []string
-	EvidenceQuality string
-	EvidenceSummary string
+	Title            string
+	Prompt           string
+	Content          string
+	Source           string
+	ContextRelPath   string
+	Model            string
+	SourcePaths      []string
+	CitationRefs     []string
+	CitationSnippets []string
+	EvidenceQuality  string
+	EvidenceSummary  string
 }
 
 type OperationsServiceSummary struct {
@@ -258,6 +259,7 @@ type Metadata struct {
 	Model              string              `json:"model,omitempty"`
 	SourcePaths        []string            `json:"sourcePaths,omitempty"`
 	CitationRefs       []string            `json:"citationRefs,omitempty"`
+	CitationSnippets   []string            `json:"citationSnippets,omitempty"`
 	EvidenceQuality    string              `json:"evidenceQuality,omitempty"`
 	EvidenceSummary    string              `json:"evidenceSummary,omitempty"`
 	SourceFingerprints []SourceFingerprint `json:"sourceFingerprints,omitempty"`

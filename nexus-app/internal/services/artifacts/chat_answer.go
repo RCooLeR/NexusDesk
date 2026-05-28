@@ -9,6 +9,9 @@ import (
 	"time"
 )
 
+const chatAnswerCitationSnippetLimit = 16
+const chatAnswerCitationSnippetMaxRunes = 512
+
 func (s *Store) WriteChatAnswer(report ChatAnswerReport) (Artifact, error) {
 	content := strings.TrimSpace(report.Content)
 	if content == "" {
@@ -34,18 +37,19 @@ func (s *Store) WriteChatAnswer(report ChatAnswerReport) (Artifact, error) {
 		return Artifact{}, err
 	}
 	metadata := Metadata{
-		Kind:            "chat-answer",
-		Title:           title,
-		RelPath:         relPath,
-		Source:          firstNonEmptyArtifact(report.Source, "Nexus assistant"),
-		ContextRelPath:  strings.TrimSpace(report.ContextRelPath),
-		Prompt:          strings.TrimSpace(report.Prompt),
-		Model:           strings.TrimSpace(report.Model),
-		SourcePaths:     append([]string{}, report.SourcePaths...),
-		CitationRefs:    append([]string{}, report.CitationRefs...),
-		EvidenceQuality: strings.TrimSpace(report.EvidenceQuality),
-		EvidenceSummary: strings.TrimSpace(report.EvidenceSummary),
-		GeneratedAt:     createdAt,
+		Kind:             "chat-answer",
+		Title:            title,
+		RelPath:          relPath,
+		Source:           firstNonEmptyArtifact(report.Source, "Nexus assistant"),
+		ContextRelPath:   strings.TrimSpace(report.ContextRelPath),
+		Prompt:           strings.TrimSpace(report.Prompt),
+		Model:            strings.TrimSpace(report.Model),
+		SourcePaths:      append([]string{}, report.SourcePaths...),
+		CitationRefs:     append([]string{}, report.CitationRefs...),
+		CitationSnippets: cleanChatAnswerSnippets(report.CitationSnippets),
+		EvidenceQuality:  strings.TrimSpace(report.EvidenceQuality),
+		EvidenceSummary:  strings.TrimSpace(report.EvidenceSummary),
+		GeneratedAt:      createdAt,
 	}
 	if err := s.writeMetadata(metadata); err != nil {
 		return Artifact{}, err
@@ -90,6 +94,14 @@ func chatAnswerMarkdown(report ChatAnswerReport, title string, content string, c
 			builder.WriteString("\n")
 		}
 	}
+	if snippets := cleanChatAnswerSnippets(report.CitationSnippets); len(snippets) > 0 {
+		builder.WriteString("\n## Citation Snippets\n\n")
+		for _, snippet := range snippets {
+			builder.WriteString("- ")
+			builder.WriteString(snippet)
+			builder.WriteString("\n")
+		}
+	}
 	if strings.TrimSpace(report.EvidenceSummary) != "" || strings.TrimSpace(report.EvidenceQuality) != "" {
 		builder.WriteString("\n## Evidence\n\n")
 		writeKV(&builder, "Quality", report.EvidenceQuality)
@@ -115,4 +127,30 @@ func chatAnswerTitle(prompt string) string {
 		prompt = prompt[:61] + "..."
 	}
 	return "Assistant Answer - " + prompt
+}
+
+func cleanChatAnswerSnippets(snippets []string) []string {
+	cleaned := make([]string, 0, len(snippets))
+	seen := map[string]bool{}
+	for _, snippet := range snippets {
+		if len(cleaned) >= chatAnswerCitationSnippetLimit {
+			break
+		}
+		snippet = strings.Join(strings.Fields(snippet), " ")
+		snippet = truncateChatAnswerSnippet(snippet)
+		if snippet == "" || seen[snippet] {
+			continue
+		}
+		seen[snippet] = true
+		cleaned = append(cleaned, snippet)
+	}
+	return cleaned
+}
+
+func truncateChatAnswerSnippet(snippet string) string {
+	runes := []rune(snippet)
+	if len(runes) <= chatAnswerCitationSnippetMaxRunes {
+		return snippet
+	}
+	return string(runes[:chatAnswerCitationSnippetMaxRunes-3]) + "..."
 }

@@ -5,6 +5,7 @@ import (
 	"testing"
 	"time"
 
+	"nexusdesk/internal/domain"
 	agentSvc "nexusdesk/internal/services/agent"
 	assistantSvc "nexusdesk/internal/services/assistant"
 	llmSvc "nexusdesk/internal/services/llm"
@@ -216,6 +217,37 @@ func TestAssistantCitationRefsDedupesAndNormalizes(t *testing.T) {
 	}
 }
 
+func TestAssistantCitationSnippetsExtractsBoundedSourceLines(t *testing.T) {
+	previewer := assistantCitationFakePreviewer{files: map[string]string{
+		"README.md":     "one\ntwo\nthree\nfour\nfive\nsix\n",
+		"docs/guide.md": "alpha\nbeta\n",
+	}}
+	result := assistantSvc.Result{
+		Message:     "See README.md#L2-L5 and docs/guide.md:2.",
+		SourcePaths: []string{"README.md", "docs/guide.md"},
+	}
+	snippets := assistantCitationSnippets("workspace", result, previewer)
+	if len(snippets) != 2 {
+		t.Fatalf("expected two snippets, got %#v", snippets)
+	}
+	for _, expected := range []string{"README.md:L2-L5", "L2: two", "L5: five", "docs/guide.md:L2", "L2: beta"} {
+		if !strings.Contains(strings.Join(snippets, "\n"), expected) {
+			t.Fatalf("expected snippets to contain %q, got %#v", expected, snippets)
+		}
+	}
+}
+
+func TestAssistantCitationSnippetsSkipsMissingSources(t *testing.T) {
+	previewer := assistantCitationFakePreviewer{files: map[string]string{"README.md": "one\n"}}
+	result := assistantSvc.Result{
+		Message:     "See README.md:4 and missing.md:1.",
+		SourcePaths: []string{"README.md", "missing.md"},
+	}
+	if snippets := assistantCitationSnippets("workspace", result, previewer); len(snippets) != 0 {
+		t.Fatalf("expected missing/out-of-range snippets to be skipped, got %#v", snippets)
+	}
+}
+
 func TestCompareLatestAssistantPromptCarriesPromptAndAnswer(t *testing.T) {
 	text := compareLatestAssistantPrompt("What changed?", "A changed.")
 	for _, expected := range []string{"Compare the previous assistant answer", "Original prompt:", "What changed?", "Previous assistant answer:", "A changed.", "recommended final answer"} {
@@ -264,3 +296,19 @@ type shellSettingsStore struct {
 func (s shellSettingsStore) Load() (settingsSvc.Settings, error) {
 	return s.settings, nil
 }
+
+type assistantCitationFakePreviewer struct {
+	files map[string]string
+}
+
+func (p assistantCitationFakePreviewer) PreviewFile(root string, relPath string) (domain.FilePreview, error) {
+	text, ok := p.files[relPath]
+	if !ok {
+		return domain.FilePreview{}, errAssistantCitationFakeMissing{}
+	}
+	return domain.FilePreview{RelPath: relPath, Text: text}, nil
+}
+
+type errAssistantCitationFakeMissing struct{}
+
+func (errAssistantCitationFakeMissing) Error() string { return "missing" }

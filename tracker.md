@@ -477,6 +477,7 @@ The Fyne migration must not drop product ambition, but this section is intention
 - [x] Native assistant source/model diagnostics parity slice: Wails-compatible context-label source fallback parsing, source/model/context answer footer, and effective source persistence for saved answer artifacts.
 - [x] Finer-grained citation refs beyond file-level sources in native assistant UI and chat-answer artifact metadata.
 - [x] Evidence-quality diagnostics for native assistant answers and `chat-answer` artifact metadata.
+- [x] Persist bounded citation snippets in saved `chat-answer` artifacts and metadata for line-cited answers.
 - [x] Local assistant memory and prompt profiles.
 - [x] Agent runtime with plan updates, bounded observations, model-driven tool calls, no frontend iteration cap, emergency backend loop guard, and final-answer fallback behavior.
 - [x] Unified tool registry and dispatcher for deterministic tools and model-requested tools.

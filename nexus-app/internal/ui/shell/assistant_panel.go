@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"regexp"
+	"strconv"
 	"strings"
 	"time"
 
@@ -13,6 +14,7 @@ import (
 	"fyne.io/fyne/v2/theme"
 	"fyne.io/fyne/v2/widget"
 
+	"nexusdesk/internal/domain"
 	agentSvc "nexusdesk/internal/services/agent"
 	approvalsSvc "nexusdesk/internal/services/approvals"
 	artifactsSvc "nexusdesk/internal/services/artifacts"
@@ -27,8 +29,16 @@ import (
 const assistantConversationLimit = 24
 const assistantHistoryPreviewLimit = 6
 const defaultAgentContextMaxBytes = 96 * 1024
+const assistantCitationSnippetLimit = 8
+const assistantCitationSnippetLineLimit = 4
+const assistantCitationSnippetLineMaxChars = 180
 
 var assistantCitationPattern = regexp.MustCompile(`(?i)([\w./\\-]+\.[A-Za-z0-9]{1,12})(?:(?:#L|:)(\d+)(?:[-:L]+(\d+))?)`)
+var assistantCitationRefPattern = regexp.MustCompile(`^(.+):L(\d+)(?:-L(\d+))?$`)
+
+type assistantCitationPreviewer interface {
+	PreviewFile(root string, relPath string) (domain.FilePreview, error)
+}
 
 func (v *View) newAssistantPanel() fyne.CanvasObject {
 	prompt := widget.NewMultiLineEntry()
@@ -257,16 +267,18 @@ func (v *View) saveLatestAssistantAnswer() {
 		return
 	}
 	diagnostic := assistantEvidenceDiagnosticForResult(v.assistantLastResult)
+	citationSnippets := assistantCitationSnippets(workspace.Root, v.assistantLastResult, v.workspaceService)
 	artifact, err := store.WriteChatAnswer(artifactsSvc.ChatAnswerReport{
-		Prompt:          v.assistantLastPrompt,
-		Content:         v.assistantLastResult.Message,
-		Model:           v.assistantLastResult.Model,
-		ContextRelPath:  v.assistantLastResult.ContextRelPath,
-		Source:          "Nexus assistant",
-		SourcePaths:     assistantEffectiveSourcePaths(v.assistantLastResult),
-		CitationRefs:    assistantCitationRefs(v.assistantLastResult),
-		EvidenceQuality: diagnostic.Quality,
-		EvidenceSummary: diagnostic.Summary,
+		Prompt:           v.assistantLastPrompt,
+		Content:          v.assistantLastResult.Message,
+		Model:            v.assistantLastResult.Model,
+		ContextRelPath:   v.assistantLastResult.ContextRelPath,
+		Source:           "Nexus assistant",
+		SourcePaths:      assistantEffectiveSourcePaths(v.assistantLastResult),
+		CitationRefs:     assistantCitationRefs(v.assistantLastResult),
+		CitationSnippets: citationSnippets,
+		EvidenceQuality:  diagnostic.Quality,
+		EvidenceSummary:  diagnostic.Summary,
 	})
 	if err != nil {
 		v.addActivity("Assistant answer artifact failed: " + err.Error())
@@ -520,6 +532,82 @@ func assistantCitationRefs(result assistantSvc.Result) []string {
 		}
 	}
 	return citations
+}
+
+func assistantCitationSnippets(root string, result assistantSvc.Result, previewer assistantCitationPreviewer) []string {
+	root = strings.TrimSpace(root)
+	if root == "" || previewer == nil {
+		return nil
+	}
+	refs := assistantCitationRefs(result)
+	if len(refs) == 0 {
+		return nil
+	}
+	snippets := []string{}
+	for _, ref := range refs {
+		if len(snippets) >= assistantCitationSnippetLimit {
+			break
+		}
+		path, start, end, ok := parseAssistantCitationRef(ref)
+		if !ok {
+			continue
+		}
+		preview, err := previewer.PreviewFile(root, path)
+		if err != nil || strings.TrimSpace(preview.Text) == "" {
+			continue
+		}
+		snippet, ok := assistantSnippetFromText(ref, preview.Text, start, end)
+		if ok {
+			snippets = append(snippets, snippet)
+		}
+	}
+	return snippets
+}
+
+func parseAssistantCitationRef(ref string) (string, int, int, bool) {
+	matches := assistantCitationRefPattern.FindStringSubmatch(strings.TrimSpace(ref))
+	if len(matches) < 3 {
+		return "", 0, 0, false
+	}
+	path := normalizeAssistantCitationPath(matches[1])
+	start, err := strconv.Atoi(matches[2])
+	if path == "" || err != nil || start <= 0 {
+		return "", 0, 0, false
+	}
+	end := start
+	if len(matches) > 3 && strings.TrimSpace(matches[3]) != "" {
+		if parsedEnd, err := strconv.Atoi(matches[3]); err == nil && parsedEnd >= start {
+			end = parsedEnd
+		}
+	}
+	if end-start+1 > assistantCitationSnippetLineLimit {
+		end = start + assistantCitationSnippetLineLimit - 1
+	}
+	return path, start, end, true
+}
+
+func assistantSnippetFromText(ref string, text string, start int, end int) (string, bool) {
+	text = strings.ReplaceAll(text, "\r\n", "\n")
+	text = strings.ReplaceAll(text, "\r", "\n")
+	lines := strings.Split(text, "\n")
+	if start <= 0 || start > len(lines) {
+		return "", false
+	}
+	if end < start {
+		end = start
+	}
+	if end > len(lines) {
+		end = len(lines)
+	}
+	parts := make([]string, 0, end-start+1)
+	for lineNumber := start; lineNumber <= end; lineNumber++ {
+		line := strings.TrimSpace(lines[lineNumber-1])
+		if len(line) > assistantCitationSnippetLineMaxChars {
+			line = line[:assistantCitationSnippetLineMaxChars-3] + "..."
+		}
+		parts = append(parts, fmt.Sprintf("L%d: %s", lineNumber, line))
+	}
+	return ref + " - " + strings.Join(parts, " | "), true
 }
 
 func normalizeAssistantCitationPath(path string) string {
