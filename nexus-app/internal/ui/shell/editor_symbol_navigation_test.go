@@ -1,6 +1,13 @@
 package shell
 
-import "testing"
+import (
+	"os"
+	"path/filepath"
+	"testing"
+
+	"nexusdesk/internal/domain"
+	workspaceSvc "nexusdesk/internal/services/workspace"
+)
 
 func TestEditorSymbolCandidatesUseOutlineLabels(t *testing.T) {
 	items := editorSymbolCandidates("main.go", "package main\n\ntype Runner struct{}\n\nfunc Start() {}\n")
@@ -36,5 +43,35 @@ func TestEditorSymbolStatus(t *testing.T) {
 	}
 	if got := editorSymbolStatus(1, "start"); got != "1 matching symbol(s). Press Enter to jump to the first match." {
 		t.Fatalf("unexpected filtered status: %q", got)
+	}
+}
+
+func TestResolveWorkspaceDefinitionUsesSearchCandidates(t *testing.T) {
+	root := t.TempDir()
+	if err := os.MkdirAll(filepath.Join(root, "cmd"), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.MkdirAll(filepath.Join(root, "internal", "app"), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(root, "cmd", "main.go"), []byte("package main\n\nfunc main() { Start() }\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(root, "internal", "app", "app.go"), []byte("package app\n\nfunc Start() {}\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	view := &View{
+		state:            NewState(),
+		workspaceService: workspaceSvc.New(),
+	}
+	view.state.SetWorkspace(domain.Workspace{Root: root, Name: "repo"})
+
+	result, ok, err := view.resolveWorkspaceDefinition("cmd/main.go", "package main\n\nfunc main() { Start() }\n", "Start")
+
+	if err != nil {
+		t.Fatalf("resolveWorkspaceDefinition returned error: %v", err)
+	}
+	if !ok || result.RelPath != "internal/app/app.go" || result.Item.Line != 3 {
+		t.Fatalf("unexpected workspace definition: %#v ok=%t", result, ok)
 	}
 }

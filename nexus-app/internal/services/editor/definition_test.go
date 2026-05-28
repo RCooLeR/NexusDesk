@@ -13,6 +13,9 @@ func TestResolveDefinitionFindsGoSymbolReference(t *testing.T) {
 	if result.Query != "Start" || result.Item.Label != "Start" || result.Item.Line != 7 {
 		t.Fatalf("unexpected definition result: %#v", result)
 	}
+	if result.RelPath != "main.go" {
+		t.Fatalf("expected local definition rel path, got %q", result.RelPath)
+	}
 }
 
 func TestResolveDefinitionFindsQualifiedMethodReference(t *testing.T) {
@@ -52,5 +55,39 @@ func TestIdentifierAtCursorUsesPreviousRuneAtTokenBoundary(t *testing.T) {
 
 	if got != "callThing" {
 		t.Fatalf("unexpected identifier: %q", got)
+	}
+}
+
+func TestResolveWorkspaceDefinitionFindsOtherFileFirst(t *testing.T) {
+	result, ok := ResolveWorkspaceDefinition("Start", "cmd/main.go", []DefinitionFile{
+		{RelPath: "cmd/main.go", Content: "package main\n\nfunc main() { Start() }\n"},
+		{RelPath: "internal/app/app.go", Content: "package app\n\nfunc Start() {}\n"},
+	})
+
+	if !ok {
+		t.Fatal("expected workspace definition to resolve")
+	}
+	if result.RelPath != "internal/app/app.go" || result.Item.Label != "Start" || result.Item.Line != 3 {
+		t.Fatalf("unexpected workspace definition: %#v", result)
+	}
+}
+
+func TestResolveWorkspaceDefinitionFallsBackToCurrentFile(t *testing.T) {
+	result, ok := ResolveWorkspaceDefinition("Start", "cmd/main.go", []DefinitionFile{
+		{RelPath: "cmd/main.go", Content: "package main\n\nfunc Start() {}\n"},
+	})
+
+	if !ok || result.RelPath != "cmd/main.go" || result.Item.Line != 3 {
+		t.Fatalf("unexpected fallback definition: %#v ok=%t", result, ok)
+	}
+}
+
+func TestResolveWorkspaceDefinitionFindsQualifiedSymbol(t *testing.T) {
+	result, ok := ResolveWorkspaceDefinition("app.Start", "cmd/main.go", []DefinitionFile{
+		{RelPath: "internal/app/app.go", Content: "package app\n\nfunc Start() {}\n"},
+	})
+
+	if !ok || result.Item.Label != "Start" {
+		t.Fatalf("unexpected qualified workspace definition: %#v ok=%t", result, ok)
 	}
 }

@@ -12,7 +12,10 @@ import (
 
 	"nexusdesk/internal/domain"
 	editorSvc "nexusdesk/internal/services/editor"
+	workspaceSvc "nexusdesk/internal/services/workspace"
 )
+
+const workspaceDefinitionSearchLimit = 60
 
 type textEditorBinding struct {
 	source         *widget.Entry
@@ -133,12 +136,40 @@ func (v *View) newTextEditor(tab editorSvc.Tab, preview domain.FilePreview, onSt
 	symbols.Importance = widget.LowImportance
 	definition := widget.NewButtonWithIcon("Definition", theme.NavigateNextIcon(), func() {
 		result, ok := editorSvc.ResolveDefinition(tab.RelPath, source.Text, source.CursorRow, source.CursorColumn)
-		if !ok {
+		if ok {
+			editorSetCursorLine(source, result.Item.Line)
+			status.SetText(definitionStatusText(result, true))
+			return
+		}
+		if strings.TrimSpace(result.Query) == "" {
 			status.SetText(definitionStatusText(result, false))
 			return
 		}
-		editorSetCursorLine(source, result.Item.Line)
-		status.SetText(definitionStatusText(result, true))
+		workspaceResult, found, err := v.resolveWorkspaceDefinition(tab.RelPath, source.Text, result.Query)
+		if err != nil {
+			status.SetText("Workspace definition lookup failed: " + err.Error())
+			return
+		}
+		if !found {
+			status.SetText(definitionStatusText(result, false))
+			return
+		}
+		if workspaceResult.RelPath == tab.RelPath {
+			editorSetCursorLine(source, workspaceResult.Item.Line)
+			status.SetText(definitionStatusText(workspaceResult, true))
+			return
+		}
+		workspace := v.state.Workspace()
+		preview, err := v.workspaceService.PreviewFile(workspace.Root, workspaceResult.RelPath)
+		if err != nil {
+			status.SetText("Workspace definition target could not be opened: " + err.Error())
+			return
+		}
+		v.openPreviewTab(preview)
+		if activeEditor, exists := v.textEditor(v.editorSession.ActiveID()); exists {
+			editorSetCursorLine(activeEditor.source, workspaceResult.Item.Line)
+			activeEditor.status.SetText(definitionStatusText(workspaceResult, true))
+		}
 	})
 	definition.Importance = widget.LowImportance
 
@@ -288,7 +319,43 @@ func definitionStatusText(result editorSvc.DefinitionResult, resolved bool) stri
 	if !resolved {
 		return fmt.Sprintf("No local definition found for %s.", query)
 	}
+	if strings.TrimSpace(result.RelPath) != "" {
+		return fmt.Sprintf("Moved to %s %s in %s on line %d.", result.Item.Kind, result.Item.Label, result.RelPath, result.Item.Line)
+	}
 	return fmt.Sprintf("Moved to %s %s on line %d.", result.Item.Kind, result.Item.Label, result.Item.Line)
+}
+
+func (v *View) resolveWorkspaceDefinition(currentRelPath string, currentContent string, query string) (editorSvc.DefinitionResult, bool, error) {
+	workspace := v.state.Workspace()
+	if strings.TrimSpace(workspace.Root) == "" {
+		return editorSvc.DefinitionResult{Query: query}, false, nil
+	}
+	files := []editorSvc.DefinitionFile{{
+		RelPath: currentRelPath,
+		Content: currentContent,
+	}}
+	seen := map[string]bool{strings.Trim(strings.ReplaceAll(currentRelPath, "\\", "/"), "/"): true}
+	results, err := v.workspaceService.Search(workspace.Root, query, workspaceSvc.SearchOptions{MaxResults: workspaceDefinitionSearchLimit})
+	if err != nil {
+		return editorSvc.DefinitionResult{}, false, err
+	}
+	for _, result := range results {
+		relPath := strings.Trim(strings.ReplaceAll(result.RelPath, "\\", "/"), "/")
+		if relPath == "" || seen[relPath] || result.Kind == "directory" {
+			continue
+		}
+		seen[relPath] = true
+		preview, err := v.workspaceService.PreviewFile(workspace.Root, relPath)
+		if err != nil || strings.TrimSpace(preview.Text) == "" {
+			continue
+		}
+		files = append(files, editorSvc.DefinitionFile{
+			RelPath: preview.RelPath,
+			Content: preview.Text,
+		})
+	}
+	definition, ok := editorSvc.ResolveWorkspaceDefinition(query, currentRelPath, files)
+	return definition, ok, nil
 }
 
 func syntaxStatusText(analysis editorSvc.SyntaxAnalysis) string {

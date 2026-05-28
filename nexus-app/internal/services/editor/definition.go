@@ -6,8 +6,14 @@ import (
 )
 
 type DefinitionResult struct {
-	Query string
-	Item  OutlineItem
+	Query   string
+	RelPath string
+	Item    OutlineItem
+}
+
+type DefinitionFile struct {
+	RelPath string
+	Content string
 }
 
 func ResolveDefinition(fileName string, content string, cursorRow int, cursorColumn int) (DefinitionResult, bool) {
@@ -21,10 +27,46 @@ func ResolveDefinition(fileName string, content string, cursorRow int, cursorCol
 			continue
 		}
 		if definitionKeysMatch(queryKeys, definitionLookupKeys(item.Label)) {
-			return DefinitionResult{Query: query, Item: item}, true
+			return DefinitionResult{Query: query, RelPath: fileName, Item: item}, true
 		}
 	}
 	return DefinitionResult{Query: query}, false
+}
+
+func ResolveWorkspaceDefinition(query string, currentRelPath string, files []DefinitionFile) (DefinitionResult, bool) {
+	query = strings.TrimSpace(query)
+	if query == "" {
+		return DefinitionResult{}, false
+	}
+	currentRelPath = normalizeDefinitionRelPath(currentRelPath)
+	queryKeys := definitionLookupKeys(query)
+	for _, file := range files {
+		relPath := normalizeDefinitionRelPath(file.RelPath)
+		if relPath == "" || relPath == currentRelPath || strings.TrimSpace(file.Content) == "" {
+			continue
+		}
+		for _, item := range BuildOutline(relPath, file.Content) {
+			if definitionKeysMatch(queryKeys, definitionLookupKeys(item.Label)) {
+				return DefinitionResult{Query: query, RelPath: relPath, Item: item}, true
+			}
+		}
+	}
+	for _, file := range files {
+		relPath := normalizeDefinitionRelPath(file.RelPath)
+		if relPath == "" || strings.TrimSpace(file.Content) == "" {
+			continue
+		}
+		for _, item := range BuildOutline(relPath, file.Content) {
+			if definitionKeysMatch(queryKeys, definitionLookupKeys(item.Label)) {
+				return DefinitionResult{Query: query, RelPath: relPath, Item: item}, true
+			}
+		}
+	}
+	return DefinitionResult{Query: query}, false
+}
+
+func normalizeDefinitionRelPath(value string) string {
+	return strings.Trim(strings.ReplaceAll(strings.TrimSpace(value), "\\", "/"), "/")
 }
 
 func identifierAtCursor(content string, cursorRow int, cursorColumn int) string {
