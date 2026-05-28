@@ -209,17 +209,18 @@ type OperationsRunbookReport struct {
 }
 
 type ChatAnswerReport struct {
-	Title            string
-	Prompt           string
-	Content          string
-	Source           string
-	ContextRelPath   string
-	Model            string
-	SourcePaths      []string
-	CitationRefs     []string
-	CitationSnippets []string
-	EvidenceQuality  string
-	EvidenceSummary  string
+	Title                  string
+	Prompt                 string
+	Content                string
+	Source                 string
+	ContextRelPath         string
+	Model                  string
+	SourcePaths            []string
+	CitationRefs           []string
+	UnverifiedCitationRefs []string
+	CitationSnippets       []string
+	EvidenceQuality        string
+	EvidenceSummary        string
 }
 
 type OperationsServiceSummary struct {
@@ -248,22 +249,23 @@ type ListOptions struct {
 }
 
 type Metadata struct {
-	Kind               string              `json:"kind"`
-	Title              string              `json:"title"`
-	RelPath            string              `json:"relPath"`
-	JobID              string              `json:"jobId,omitempty"`
-	TaskID             string              `json:"taskId,omitempty"`
-	Source             string              `json:"source,omitempty"`
-	ContextRelPath     string              `json:"contextRelPath,omitempty"`
-	Prompt             string              `json:"prompt,omitempty"`
-	Model              string              `json:"model,omitempty"`
-	SourcePaths        []string            `json:"sourcePaths,omitempty"`
-	CitationRefs       []string            `json:"citationRefs,omitempty"`
-	CitationSnippets   []string            `json:"citationSnippets,omitempty"`
-	EvidenceQuality    string              `json:"evidenceQuality,omitempty"`
-	EvidenceSummary    string              `json:"evidenceSummary,omitempty"`
-	SourceFingerprints []SourceFingerprint `json:"sourceFingerprints,omitempty"`
-	GeneratedAt        time.Time           `json:"generatedAt"`
+	Kind                   string              `json:"kind"`
+	Title                  string              `json:"title"`
+	RelPath                string              `json:"relPath"`
+	JobID                  string              `json:"jobId,omitempty"`
+	TaskID                 string              `json:"taskId,omitempty"`
+	Source                 string              `json:"source,omitempty"`
+	ContextRelPath         string              `json:"contextRelPath,omitempty"`
+	Prompt                 string              `json:"prompt,omitempty"`
+	Model                  string              `json:"model,omitempty"`
+	SourcePaths            []string            `json:"sourcePaths,omitempty"`
+	CitationRefs           []string            `json:"citationRefs,omitempty"`
+	UnverifiedCitationRefs []string            `json:"unverifiedCitationRefs,omitempty"`
+	CitationSnippets       []string            `json:"citationSnippets,omitempty"`
+	EvidenceQuality        string              `json:"evidenceQuality,omitempty"`
+	EvidenceSummary        string              `json:"evidenceSummary,omitempty"`
+	SourceFingerprints     []SourceFingerprint `json:"sourceFingerprints,omitempty"`
+	GeneratedAt            time.Time           `json:"generatedAt"`
 }
 
 type SourceFingerprint struct {

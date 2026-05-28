@@ -340,6 +340,7 @@ Exit criteria:
 - [x] Assistant Wails parity slice: profile/memory store, active prompt profile injection, weak-evidence warning, retry/compare, and save-latest-answer `chat-answer` artifacts.
 - [x] Assistant stale-source parity slice: chat context paths persist in native metadata and chat history warns when cited sources changed or disappeared.
 - [x] Assistant source-quality UX slice: native answer footers and saved `chat-answer` artifacts classify evidence as weak, source-backed, or line-cited with metadata.
+- [x] Assistant citation coverage diagnostics: answer footers and saved `chat-answer` artifacts now surface line refs that fall outside the attached source set instead of silently dropping them.
 - [ ] Native UI cleanup pass across Workbench, Data, Artifacts, Settings, assistant, and bottom panels.
 
 ### Gate 2: Safety And Reliability Beta
@@ -481,6 +482,7 @@ The Fyne migration must not drop product ambition, but this section is intention
 - [x] Finer-grained citation refs beyond file-level sources in native assistant UI and chat-answer artifact metadata.
 - [x] Evidence-quality diagnostics for native assistant answers and `chat-answer` artifact metadata.
 - [x] Persist bounded citation snippets in saved `chat-answer` artifacts and metadata for line-cited answers.
+- [x] Persist unverified/out-of-context citation diagnostics in native assistant footers and `chat-answer` artifact metadata.
 - [x] Local assistant memory and prompt profiles.
 - [x] Agent runtime with plan updates, bounded observations, model-driven tool calls, no frontend iteration cap, emergency backend loop guard, and final-answer fallback behavior.
 - [x] Unified tool registry and dispatcher for deterministic tools and model-requested tools.

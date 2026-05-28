@@ -37,19 +37,20 @@ func (s *Store) WriteChatAnswer(report ChatAnswerReport) (Artifact, error) {
 		return Artifact{}, err
 	}
 	metadata := Metadata{
-		Kind:             "chat-answer",
-		Title:            title,
-		RelPath:          relPath,
-		Source:           firstNonEmptyArtifact(report.Source, "Nexus assistant"),
-		ContextRelPath:   strings.TrimSpace(report.ContextRelPath),
-		Prompt:           strings.TrimSpace(report.Prompt),
-		Model:            strings.TrimSpace(report.Model),
-		SourcePaths:      append([]string{}, report.SourcePaths...),
-		CitationRefs:     append([]string{}, report.CitationRefs...),
-		CitationSnippets: cleanChatAnswerSnippets(report.CitationSnippets),
-		EvidenceQuality:  strings.TrimSpace(report.EvidenceQuality),
-		EvidenceSummary:  strings.TrimSpace(report.EvidenceSummary),
-		GeneratedAt:      createdAt,
+		Kind:                   "chat-answer",
+		Title:                  title,
+		RelPath:                relPath,
+		Source:                 firstNonEmptyArtifact(report.Source, "Nexus assistant"),
+		ContextRelPath:         strings.TrimSpace(report.ContextRelPath),
+		Prompt:                 strings.TrimSpace(report.Prompt),
+		Model:                  strings.TrimSpace(report.Model),
+		SourcePaths:            append([]string{}, report.SourcePaths...),
+		CitationRefs:           cleanChatAnswerList(report.CitationRefs, chatAnswerCitationSnippetLimit),
+		UnverifiedCitationRefs: cleanChatAnswerList(report.UnverifiedCitationRefs, chatAnswerCitationSnippetLimit),
+		CitationSnippets:       cleanChatAnswerSnippets(report.CitationSnippets),
+		EvidenceQuality:        strings.TrimSpace(report.EvidenceQuality),
+		EvidenceSummary:        strings.TrimSpace(report.EvidenceSummary),
+		GeneratedAt:            createdAt,
 	}
 	if err := s.writeMetadata(metadata); err != nil {
 		return Artifact{}, err
@@ -88,7 +89,16 @@ func chatAnswerMarkdown(report ChatAnswerReport, title string, content string, c
 	}
 	if len(report.CitationRefs) > 0 {
 		builder.WriteString("\n## Citations\n\n")
-		for _, citation := range report.CitationRefs {
+		for _, citation := range cleanChatAnswerList(report.CitationRefs, chatAnswerCitationSnippetLimit) {
+			builder.WriteString("- ")
+			builder.WriteString(citation)
+			builder.WriteString("\n")
+		}
+	}
+	if unverified := cleanChatAnswerList(report.UnverifiedCitationRefs, chatAnswerCitationSnippetLimit); len(unverified) > 0 {
+		builder.WriteString("\n## Unverified Citations\n\n")
+		builder.WriteString("These line references were present in the answer but were not inside the attached source set.\n\n")
+		for _, citation := range unverified {
 			builder.WriteString("- ")
 			builder.WriteString(citation)
 			builder.WriteString("\n")
@@ -127,6 +137,26 @@ func chatAnswerTitle(prompt string) string {
 		prompt = prompt[:61] + "..."
 	}
 	return "Assistant Answer - " + prompt
+}
+
+func cleanChatAnswerList(values []string, limit int) []string {
+	if limit <= 0 {
+		return nil
+	}
+	cleaned := make([]string, 0, len(values))
+	seen := map[string]bool{}
+	for _, value := range values {
+		if len(cleaned) >= limit {
+			break
+		}
+		value = strings.Join(strings.Fields(value), " ")
+		if value == "" || seen[value] {
+			continue
+		}
+		seen[value] = true
+		cleaned = append(cleaned, value)
+	}
+	return cleaned
 }
 
 func cleanChatAnswerSnippets(snippets []string) []string {

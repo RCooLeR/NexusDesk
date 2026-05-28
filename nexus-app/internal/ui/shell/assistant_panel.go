@@ -269,16 +269,17 @@ func (v *View) saveLatestAssistantAnswer() {
 	diagnostic := assistantEvidenceDiagnosticForResult(v.assistantLastResult)
 	citationSnippets := assistantCitationSnippets(workspace.Root, v.assistantLastResult, v.workspaceService)
 	artifact, err := store.WriteChatAnswer(artifactsSvc.ChatAnswerReport{
-		Prompt:           v.assistantLastPrompt,
-		Content:          v.assistantLastResult.Message,
-		Model:            v.assistantLastResult.Model,
-		ContextRelPath:   v.assistantLastResult.ContextRelPath,
-		Source:           "Nexus assistant",
-		SourcePaths:      assistantEffectiveSourcePaths(v.assistantLastResult),
-		CitationRefs:     assistantCitationRefs(v.assistantLastResult),
-		CitationSnippets: citationSnippets,
-		EvidenceQuality:  diagnostic.Quality,
-		EvidenceSummary:  diagnostic.Summary,
+		Prompt:                 v.assistantLastPrompt,
+		Content:                v.assistantLastResult.Message,
+		Model:                  v.assistantLastResult.Model,
+		ContextRelPath:         v.assistantLastResult.ContextRelPath,
+		Source:                 "Nexus assistant",
+		SourcePaths:            assistantEffectiveSourcePaths(v.assistantLastResult),
+		CitationRefs:           assistantCitationRefs(v.assistantLastResult),
+		UnverifiedCitationRefs: assistantUnverifiedCitationRefs(v.assistantLastResult),
+		CitationSnippets:       citationSnippets,
+		EvidenceQuality:        diagnostic.Quality,
+		EvidenceSummary:        diagnostic.Summary,
 	})
 	if err != nil {
 		v.addActivity("Assistant answer artifact failed: " + err.Error())
@@ -419,6 +420,9 @@ func assistantDiagnosticFooter(result assistantSvc.Result) string {
 	if len(citations) > 0 {
 		lines = append(lines, "Citations: `"+strings.Join(citations, "`, `")+"`")
 	}
+	if unverified := assistantUnverifiedCitationRefs(result); len(unverified) > 0 {
+		lines = append(lines, "Unverified citations: `"+strings.Join(unverified, "`, `")+"`")
+	}
 	if diagnostic := assistantEvidenceDiagnosticForResult(result); diagnostic.Summary != "" {
 		lines = append(lines, "Evidence: "+diagnostic.Summary)
 	}
@@ -426,31 +430,57 @@ func assistantDiagnosticFooter(result assistantSvc.Result) string {
 }
 
 type assistantEvidenceDiagnostic struct {
-	Quality       string
-	Summary       string
-	SourceCount   int
-	CitationCount int
+	Quality                 string
+	Summary                 string
+	SourceCount             int
+	CitationCount           int
+	UnverifiedCitationCount int
 }
 
 func assistantEvidenceDiagnosticForResult(result assistantSvc.Result) assistantEvidenceDiagnostic {
 	sources := assistantEffectiveSourcePaths(result)
 	citations := assistantCitationRefs(result)
+	unverified := assistantUnverifiedCitationRefs(result)
 	diagnostic := assistantEvidenceDiagnostic{
-		SourceCount:   len(sources),
-		CitationCount: len(citations),
+		SourceCount:             len(sources),
+		CitationCount:           len(citations),
+		UnverifiedCitationCount: len(unverified),
 	}
 	switch {
 	case len(sources) == 0:
 		diagnostic.Quality = "weak"
-		diagnostic.Summary = "weak (no explicit source context)."
+		diagnostic.Summary = "weak (no explicit source context" + assistantUnverifiedSummarySuffix(len(unverified)) + ")."
 	case len(citations) == 0:
 		diagnostic.Quality = "source-backed"
-		diagnostic.Summary = fmt.Sprintf("source-backed (%d source(s), no line citations detected).", len(sources))
+		if len(unverified) > 0 {
+			diagnostic.Summary = fmt.Sprintf("source-backed (%d source(s), no verified line citations; %s outside selected sources).", len(sources), assistantPlural(len(unverified), "citation", "citations"))
+		} else {
+			diagnostic.Summary = fmt.Sprintf("source-backed (%d source(s), no line citations detected).", len(sources))
+		}
 	default:
 		diagnostic.Quality = "line-cited"
-		diagnostic.Summary = fmt.Sprintf("line-cited (%d source(s), %d line ref(s)).", len(sources), len(citations))
+		if len(unverified) > 0 {
+			diagnostic.Summary = fmt.Sprintf("line-cited (%d source(s), %d line ref(s); %s outside selected sources).", len(sources), len(citations), assistantPlural(len(unverified), "citation", "citations"))
+		} else {
+			diagnostic.Summary = fmt.Sprintf("line-cited (%d source(s), %d line ref(s)).", len(sources), len(citations))
+		}
 	}
 	return diagnostic
+}
+
+func assistantUnverifiedSummarySuffix(count int) string {
+	if count == 0 {
+		return ""
+	}
+	return "; " + assistantPlural(count, "unverified line ref", "unverified line refs")
+}
+
+func assistantPlural(count int, singular string, plural string) string {
+	word := plural
+	if count == 1 {
+		word = singular
+	}
+	return fmt.Sprintf("%d %s", count, word)
 }
 
 func assistantEffectiveSourcePaths(result assistantSvc.Result) []string {
@@ -505,7 +535,40 @@ func dedupeAssistantSourcePaths(paths []string) []string {
 
 func assistantCitationRefs(result assistantSvc.Result) []string {
 	sources := assistantEffectiveSourcePaths(result)
-	matches := assistantCitationPattern.FindAllStringSubmatch(result.Message, -1)
+	if len(sources) == 0 {
+		return nil
+	}
+	citations := []string{}
+	for _, ref := range assistantCitationRefsFromMessage(result.Message) {
+		path, _, _, ok := parseAssistantCitationRef(ref)
+		if ok && assistantCitationAllowed(path, sources) {
+			citations = append(citations, ref)
+		}
+	}
+	return citations
+}
+
+func assistantUnverifiedCitationRefs(result assistantSvc.Result) []string {
+	all := assistantCitationRefsFromMessage(result.Message)
+	if len(all) == 0 {
+		return nil
+	}
+	sources := assistantEffectiveSourcePaths(result)
+	if len(sources) == 0 {
+		return all
+	}
+	unverified := []string{}
+	for _, ref := range all {
+		path, _, _, ok := parseAssistantCitationRef(ref)
+		if !ok || !assistantCitationAllowed(path, sources) {
+			unverified = append(unverified, ref)
+		}
+	}
+	return unverified
+}
+
+func assistantCitationRefsFromMessage(message string) []string {
+	matches := assistantCitationPattern.FindAllStringSubmatch(message, -1)
 	seen := map[string]bool{}
 	citations := []string{}
 	for _, match := range matches {
@@ -513,11 +576,8 @@ func assistantCitationRefs(result assistantSvc.Result) []string {
 			continue
 		}
 		path := normalizeAssistantCitationPath(match[1])
-		if path == "" || !assistantCitationAllowed(path, sources) {
-			continue
-		}
 		start := strings.TrimSpace(match[2])
-		if start == "" {
+		if path == "" || start == "" {
 			continue
 		}
 		ref := path + ":L" + start

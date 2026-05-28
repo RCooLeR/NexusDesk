@@ -119,7 +119,7 @@ func TestAssistantResponseMarkdownIncludesLineCitations(t *testing.T) {
 		ContextRelPath: "pack: README.md, docs/guide.md",
 	})
 
-	for _, expected := range []string{"Citations: `README.md:L12`, `docs/guide.md:L4-L6`", "Sources: `README.md`, `docs/guide.md`", "Evidence: line-cited (2 source(s), 2 line ref(s))."} {
+	for _, expected := range []string{"Citations: `README.md:L12`, `docs/guide.md:L4-L6`", "Unverified citations: `other.md:L1`", "Sources: `README.md`, `docs/guide.md`", "Evidence: line-cited (2 source(s), 2 line ref(s); 1 citation outside selected sources)."} {
 		if !strings.Contains(text, expected) {
 			t.Fatalf("expected citation footer to contain %q, got %q", expected, text)
 		}
@@ -130,6 +130,13 @@ func TestAssistantResponseMarkdownIncludesLineCitations(t *testing.T) {
 	})
 	if strings.Join(refs, "|") != "README.md:L12|docs/guide.md:L4-L6" {
 		t.Fatalf("unexpected citation refs: %#v", refs)
+	}
+	unverified := assistantUnverifiedCitationRefs(assistantSvc.Result{
+		Message:        "Use README.md:12 and docs/guide.md#L4-L6. Ignore other.md:1.",
+		ContextRelPath: "pack: README.md, docs/guide.md",
+	})
+	if strings.Join(unverified, "|") != "other.md:L1" {
+		t.Fatalf("unexpected unverified citation refs: %#v", unverified)
 	}
 }
 
@@ -162,6 +169,14 @@ func TestAssistantEvidenceDiagnosticClassifiesSourceQuality(t *testing.T) {
 			summary: "1 line ref",
 			sources: 1,
 			refs:    1,
+		},
+		{
+			name:    "unverified",
+			result:  assistantSvc.Result{Message: "See missing.md:12.", SourcePaths: []string{"README.md"}},
+			quality: "source-backed",
+			summary: "no verified line citations",
+			sources: 1,
+			refs:    0,
 		},
 	}
 	for _, tt := range cases {
@@ -214,6 +229,21 @@ func TestAssistantCitationRefsDedupesAndNormalizes(t *testing.T) {
 	want := []string{"docs/guide.md:L10", "docs/guide.md:L11-L12"}
 	if strings.Join(refs, "|") != strings.Join(want, "|") {
 		t.Fatalf("unexpected citation refs: %#v", refs)
+	}
+}
+
+func TestAssistantCitationRefsWithoutSourcesAreUnverified(t *testing.T) {
+	result := assistantSvc.Result{Message: "See README.md#L7."}
+	if refs := assistantCitationRefs(result); len(refs) != 0 {
+		t.Fatalf("expected no verified refs without sources, got %#v", refs)
+	}
+	unverified := assistantUnverifiedCitationRefs(result)
+	if strings.Join(unverified, "|") != "README.md:L7" {
+		t.Fatalf("unexpected unverified refs: %#v", unverified)
+	}
+	diagnostic := assistantEvidenceDiagnosticForResult(result)
+	if diagnostic.Quality != "weak" || diagnostic.UnverifiedCitationCount != 1 || !strings.Contains(diagnostic.Summary, "1 unverified line ref") {
+		t.Fatalf("unexpected diagnostic: %#v", diagnostic)
 	}
 }
 
