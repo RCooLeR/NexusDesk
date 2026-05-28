@@ -286,6 +286,24 @@ func TestDatasetArtifactInputsAndDependenciesCaptureRebuildMetadata(t *testing.T
 	if sqlDependency.DependentKind != "sql-report" || sqlDependency.Metadata["sqlRunId"] != "sql-1" || sqlDependency.Metadata["sql"] == "" {
 		t.Fatalf("unexpected SQL dependency: %#v", sqlDependency)
 	}
+
+	profile := datasetsSvc.Profile{
+		RelPath: "data/sales.csv",
+		Format:  "CSV",
+		Rows:    2,
+		Columns: []datasetsSvc.ColumnProfile{
+			{Name: "channel", Type: "text", NonEmpty: 2, Samples: []string{"search", "email"}},
+			{Name: "spend", Type: "integer", NonEmpty: 2, Samples: []string{"42", "7"}},
+		},
+	}
+	summaryInput := datasetSummaryArtifactInput(profile)
+	if summaryInput.SourcePath != "data/sales.csv" || summaryInput.Format != "CSV" || len(summaryInput.Columns) != 2 || summaryInput.Columns[1].Samples[0] != "42" {
+		t.Fatalf("unexpected dataset summary artifact input: %#v", summaryInput)
+	}
+	summaryDependency := datasetSummaryArtifactDependencyRecord(profile, testArtifact(".nexusdesk/artifacts/dataset-summaries/summary.md"))
+	if summaryDependency.DependentKind != "dataset-summary" || summaryDependency.Relation != "summarizes" || summaryDependency.Metadata["columns"] != "2" {
+		t.Fatalf("unexpected summary dependency: %#v", summaryDependency)
+	}
 }
 
 func TestLatestRebuildableDatasetDependencyUsesSupportedKinds(t *testing.T) {
@@ -307,6 +325,9 @@ func TestLatestRebuildableDatasetDependencyUsesSupportedKinds(t *testing.T) {
 	}
 	if canRebuildDatasetDependency(metadataSvc.DatasetDependencyRecord{SourcePath: "data/store.sqlite", DependentKind: "sqlite-query-artifact"}) {
 		t.Fatal("expected SQLite query artifact without SQL text to be non-rebuildable")
+	}
+	if !canRebuildDatasetDependency(metadataSvc.DatasetDependencyRecord{SourcePath: "data/sales.csv", DependentKind: "dataset-summary"}) {
+		t.Fatal("expected dataset summary dependencies to be rebuildable")
 	}
 }
 
@@ -330,6 +351,57 @@ func TestNotebookDependencyRecordPreservesNotebookIDForRebuilds(t *testing.T) {
 	selected, ok = notebookForDatasetDependency([]datasetsSvc.Notebook{notebook}, rebuiltRecord)
 	if !ok || selected.ID != "sales-book" {
 		t.Fatalf("expected rebuilt dependency to keep resolving by metadata id, got %#v ok=%v", selected, ok)
+	}
+}
+
+func TestRebuildDatasetDependencyArtifactSupportsDatasetSummary(t *testing.T) {
+	root := t.TempDir()
+	dataDir := filepath.Join(root, "data")
+	if err := os.MkdirAll(dataDir, 0o755); err != nil {
+		t.Fatalf("MkdirAll failed: %v", err)
+	}
+	if err := os.WriteFile(filepath.Join(dataDir, "sales.csv"), []byte("channel,spend\nsearch,42\nemail,7\n"), 0o644); err != nil {
+		t.Fatalf("WriteFile failed: %v", err)
+	}
+	store, err := metadataSvc.NewStore(root)
+	if err != nil {
+		t.Fatalf("NewStore failed: %v", err)
+	}
+	t.Cleanup(func() { _ = store.Close() })
+	if _, err := store.Ensure(); err != nil {
+		t.Fatalf("Ensure failed: %v", err)
+	}
+	dependency := store.NormalizeDatasetDependencyRecord(metadataSvc.DatasetDependencyRecord{
+		SourcePath:    "data/sales.csv",
+		DependentKind: "dataset-summary",
+		DependentRef:  ".nexusdesk/artifacts/dataset-summaries/old.md",
+		Relation:      "summarizes",
+		Metadata:      map[string]string{"artifact": ".nexusdesk/artifacts/dataset-summaries/old.md"},
+	})
+	if err := store.SaveDatasetDependency(dependency); err != nil {
+		t.Fatalf("SaveDatasetDependency failed: %v", err)
+	}
+	view := &View{datasetService: datasetsSvc.New(nil), metadataStore: store}
+	artifact, err := view.rebuildDatasetDependencyArtifact(context.Background(), root, dependency)
+	if err != nil {
+		t.Fatalf("rebuildDatasetDependencyArtifact failed: %v", err)
+	}
+	if artifact.Kind != "dataset-summary" || !strings.Contains(artifact.RelPath, ".nexusdesk/artifacts/dataset-summaries/") {
+		t.Fatalf("unexpected rebuilt summary artifact: %#v", artifact)
+	}
+	content, err := os.ReadFile(filepath.Join(root, filepath.FromSlash(artifact.RelPath)))
+	if err != nil {
+		t.Fatalf("ReadFile rebuilt summary artifact failed: %v", err)
+	}
+	if !strings.Contains(string(content), "Dataset Summary - sales.csv") || !strings.Contains(string(content), "| spend | integer |") {
+		t.Fatalf("rebuilt summary artifact missing expected content:\n%s", string(content))
+	}
+	updated, err := store.GetDatasetDependency(dependency.ID)
+	if err != nil {
+		t.Fatalf("GetDatasetDependency failed: %v", err)
+	}
+	if updated.DependentRef != artifact.RelPath || updated.Metadata["artifact"] != artifact.RelPath || updated.Metadata["format"] != "CSV" || updated.Metadata["columns"] != "2" {
+		t.Fatalf("expected summary dependency to point at rebuilt artifact, got %#v", updated)
 	}
 }
 

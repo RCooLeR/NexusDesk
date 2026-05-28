@@ -24,6 +24,7 @@ const (
 	datasetProfileJobKind        = "dataset-profile"
 	datasetQueryJobKind          = "dataset-query"
 	datasetSQLJobKind            = "dataset-sql"
+	datasetSummaryExportJobKind  = "dataset-summary-export"
 	datasetQueryExportJobKind    = "dataset-query-export"
 	datasetSQLExportJobKind      = "dataset-sql-export"
 	datasetRebuildJobKind        = "dataset-dependency-rebuild"
@@ -44,6 +45,7 @@ func (v *View) newDataPanel() fyne.CanvasObject {
 	sqlButton := widget.NewButtonWithIcon("Run SQL", theme.ComputerIcon(), func() {
 		v.runSelectedDatasetSQL(v.dataQueryEntry.Text)
 	})
+	exportSummaryButton := widget.NewButtonWithIcon("Export summary", theme.DocumentSaveIcon(), v.exportDatasetSummaryArtifact)
 	exportQueryButton := widget.NewButtonWithIcon("Export query CSV", theme.DownloadIcon(), v.exportDatasetQueryCSVArtifact)
 	exportSQLButton := widget.NewButtonWithIcon("Export SQL report", theme.DocumentSaveIcon(), v.exportDatasetSQLReportArtifact)
 	sqliteButton := widget.NewButtonWithIcon("Inspect SQLite", theme.StorageIcon(), v.inspectSelectedSQLite)
@@ -118,7 +120,7 @@ func (v *View) newDataPanel() fyne.CanvasObject {
 		dataActionStrip(listConnectorProfilesButton, saveConnectorProfileButton, deleteConnectorProfileButton, validateConnectorSQLButton, inspectConnectorProfileButton, testConnectorProfileButton, runConnectorQueryButton, cancelConnectorQueryButton),
 	)
 	actions := container.NewAppTabs(
-		container.NewTabItem("Source", dataActionStrip(profileButton, queryButton, sqlButton, exportQueryButton, exportSQLButton, sqliteButton, sqliteQueryButton, cancelSQLiteButton)),
+		container.NewTabItem("Source", dataActionStrip(profileButton, queryButton, sqlButton, exportSummaryButton, exportQueryButton, exportSQLButton, sqliteButton, sqliteQueryButton, cancelSQLiteButton)),
 		container.NewTabItem("Notebook", notebookControls),
 		container.NewTabItem("Visuals", dataActionStrip(chartButton, exportChartButton, dashboardButton, exportDashboardButton)),
 		container.NewTabItem("History", dataActionStrip(historyButton, reuseSQLButton, rerunSQLButton, rebuildDependencyButton, copyCellButton, copyRowButton, saveSQLiteQueryButton, savedSQLiteQueriesButton, exportSQLiteCSVButton, exportSQLiteReportButton)),
@@ -817,6 +819,14 @@ func datasetQueryExportJobLabel(relPath string) string {
 	return "Dataset query CSV export (" + relPath + ")"
 }
 
+func datasetSummaryExportJobLabel(relPath string) string {
+	relPath = strings.TrimSpace(relPath)
+	if relPath == "" {
+		return "Dataset summary export"
+	}
+	return "Dataset summary export (" + relPath + ")"
+}
+
 func datasetSQLExportJobLabel(relPath string) string {
 	relPath = strings.TrimSpace(relPath)
 	if relPath == "" {
@@ -1036,6 +1046,32 @@ func (v *View) exportDatasetQueryCSVArtifact() {
 		result, artifact, err := v.buildDatasetQueryCSVArtifactForExport(ctx, root, selected, cached, queryText)
 		fyne.Do(func() {
 			v.finishDatasetQueryCSVExportJob(job.ID, selected, result, artifact, err)
+		})
+	}()
+}
+
+func (v *View) exportDatasetSummaryArtifact() {
+	workspace := v.state.Workspace()
+	if workspace.Root == "" {
+		v.dataProfileStatus.SetText("Open a workspace before exporting dataset summaries.")
+		return
+	}
+	selected := selectedPathOrEmpty(v)
+	if strings.TrimSpace(selected) == "" {
+		v.dataProfileStatus.SetText("Select a CSV, TSV, JSON, NDJSON, XLSX, Parquet, or log file before exporting a summary.")
+		return
+	}
+	jobLabel := datasetSummaryExportJobLabel(selected)
+	job, ctx := v.jobService.Start(datasetSummaryExportJobKind, jobLabel)
+	v.jobService.AppendLog(job.ID, "Path: "+selected)
+	v.dataProfileStatus.SetText("Exporting dataset summary as " + job.ID + ".")
+	v.addActivity("Started " + job.ID + ": " + jobLabel + ".")
+	v.refreshJobs()
+	root := workspace.Root
+	go func() {
+		profile, artifact, err := v.buildDatasetSummaryArtifactForExport(ctx, root, selected)
+		fyne.Do(func() {
+			v.finishDatasetSummaryExportJob(job.ID, selected, profile, artifact, err)
 		})
 	}()
 }
@@ -1476,6 +1512,27 @@ func (v *View) buildDatasetQueryCSVArtifactForExport(
 	return result, artifact, nil
 }
 
+func (v *View) buildDatasetSummaryArtifactForExport(ctx context.Context, root string, selected string) (datasetsSvc.Profile, artifactsSvc.Artifact, error) {
+	profile, err := v.datasetService.ProfileContext(ctx, root, selected)
+	if err != nil {
+		return datasetsSvc.Profile{}, artifactsSvc.Artifact{}, err
+	}
+	store, err := artifactsSvc.NewStore(root)
+	if err != nil {
+		return datasetsSvc.Profile{}, artifactsSvc.Artifact{}, err
+	}
+	artifact, err := store.WriteDatasetSummaryMarkdownArtifact(datasetSummaryArtifactInput(profile))
+	if err != nil {
+		return datasetsSvc.Profile{}, artifactsSvc.Artifact{}, err
+	}
+	select {
+	case <-ctx.Done():
+		return datasetsSvc.Profile{}, artifactsSvc.Artifact{}, ctx.Err()
+	default:
+	}
+	return profile, artifact, nil
+}
+
 func (v *View) buildDatasetSQLReportArtifactForExport(
 	ctx context.Context,
 	root string,
@@ -1538,6 +1595,21 @@ func (v *View) buildDatasetDashboardArtifactForExport(
 
 func (v *View) rebuildDatasetDependencyArtifact(ctx context.Context, root string, dependency metadataSvc.DatasetDependencyRecord) (artifactsSvc.Artifact, error) {
 	switch dependency.DependentKind {
+	case "summary", "dataset-summary":
+		profile, artifact, err := v.buildDatasetSummaryArtifactForExport(ctx, root, dependency.SourcePath)
+		if err != nil {
+			return artifactsSvc.Artifact{}, err
+		}
+		if v.metadataStore != nil {
+			_, _ = v.metadataStore.UpdateDatasetDependencyArtifact(dependency.ID, artifact.RelPath, map[string]string{
+				"artifact": artifact.RelPath,
+				"columns":  fmt.Sprintf("%d", len(profile.Columns)),
+				"format":   profile.Format,
+				"rebuilt":  time.Now().UTC().Format(time.RFC3339),
+				"rows":     fmt.Sprintf("%d", profile.Rows),
+			})
+		}
+		return artifact, nil
 	case "filter-export", "dataset-query-csv":
 		query := strings.TrimSpace(firstNonEmptyString(dependency.Metadata["query"], dependency.Metadata["filter"]))
 		if query == "" {
@@ -1776,6 +1848,37 @@ func (v *View) finishDatasetQueryCSVExportJob(
 	v.dataProfileStatus.SetText("Exported dataset query CSV " + artifact.RelPath)
 	v.addActivity(artifact.Message)
 	v.refreshArtifactsWithQuery("kind:dataset-query-csv")
+	v.refreshJobs()
+}
+
+func (v *View) finishDatasetSummaryExportJob(
+	jobID string,
+	selected string,
+	profile datasetsSvc.Profile,
+	artifact artifactsSvc.Artifact,
+	err error,
+) {
+	if err != nil {
+		if isDataJobCanceled(err) {
+			v.jobService.Finish(jobID, jobsSvc.StatusCanceled, "Dataset summary export cancelled.", nil)
+			v.dataProfileStatus.SetText("Dataset summary export cancelled for " + selected + ".")
+			v.addActivity("Cancelled dataset summary export for " + selected + ".")
+		} else {
+			v.jobService.Finish(jobID, jobsSvc.StatusFailed, "Dataset summary export failed.", err)
+			v.dataProfileStatus.SetText("Dataset summary export failed for " + selected)
+			dialog.ShowError(err, v.window)
+		}
+		v.refreshJobs()
+		return
+	}
+	artifact.JobID = jobID
+	v.jobService.AppendLog(jobID, "Artifact: "+artifact.RelPath)
+	v.jobService.Finish(jobID, jobsSvc.StatusSuccess, "Created "+artifact.RelPath+".", nil)
+	v.persistArtifactRecord(artifact)
+	v.persistDatasetDependency(datasetSummaryArtifactDependencyRecord(profile, artifact))
+	v.dataProfileStatus.SetText("Exported dataset summary " + artifact.RelPath)
+	v.addActivity(artifact.Message)
+	v.refreshArtifactsWithQuery("kind:dataset-summary")
 	v.refreshJobs()
 }
 

@@ -154,6 +154,28 @@ type DatasetSQLReport struct {
 	Message     string
 }
 
+type DatasetSummaryReport struct {
+	Title      string
+	SourcePath string
+	Format     string
+	MediaType  string
+	Size       int64
+	Rows       int
+	Columns    []DatasetSummaryColumnReport
+	Sheet      string
+	Sheets     []string
+	Truncated  bool
+	Notes      []string
+}
+
+type DatasetSummaryColumnReport struct {
+	Name     string
+	Type     string
+	NonEmpty int
+	Empty    int
+	Samples  []string
+}
+
 type OperationsRunbookReport struct {
 	Title           string
 	SourcePath      string

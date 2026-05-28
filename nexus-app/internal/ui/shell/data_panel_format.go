@@ -623,6 +623,8 @@ func latestRebuildableDatasetDependency(dependencies []metadataSvc.DatasetDepend
 
 func canRebuildDatasetDependency(dependency metadataSvc.DatasetDependencyRecord) bool {
 	switch dependency.DependentKind {
+	case "summary", "dataset-summary":
+		return strings.TrimSpace(dependency.SourcePath) != ""
 	case "filter-export", "dataset-query-csv":
 		return strings.TrimSpace(firstNonEmptyString(dependency.Metadata["query"], dependency.Metadata["filter"])) != ""
 	case "sql-report", "dataset-sql-report":
@@ -1114,6 +1116,24 @@ func datasetQueryArtifactDependencyRecord(result datasetsSvc.QueryResult, artifa
 	}
 }
 
+func datasetSummaryArtifactDependencyRecord(profile datasetsSvc.Profile, artifact artifactsSvc.Artifact) metadataSvc.DatasetDependencyRecord {
+	now := firstNonZeroTime(artifact.GeneratedAt, artifact.CreatedAt, time.Now().UTC())
+	return metadataSvc.DatasetDependencyRecord{
+		SourcePath:    profile.RelPath,
+		DependentKind: "dataset-summary",
+		DependentRef:  artifact.RelPath,
+		Relation:      "summarizes",
+		Metadata: map[string]string{
+			"artifact": artifact.RelPath,
+			"columns":  fmt.Sprintf("%d", len(profile.Columns)),
+			"format":   profile.Format,
+			"rows":     fmt.Sprintf("%d", profile.Rows),
+		},
+		CreatedAt: now,
+		UpdatedAt: now,
+	}
+}
+
 func datasetSQLArtifactDependencyRecord(result datasetsSvc.SQLResult, sqlRun metadataSvc.SQLRunRecord, artifact artifactsSvc.Artifact) metadataSvc.DatasetDependencyRecord {
 	now := firstNonZeroTime(result.CompletedAt, artifact.GeneratedAt, artifact.CreatedAt, time.Now().UTC())
 	return metadataSvc.DatasetDependencyRecord{
@@ -1200,6 +1220,43 @@ func datasetSQLArtifactInput(result datasetsSvc.SQLResult) artifactsSvc.DatasetS
 		Truncated:   result.Truncated,
 		Plan:        append([]string{}, result.Plan...),
 		Message:     result.Message,
+	}
+}
+
+func datasetSummaryArtifactInput(profile datasetsSvc.Profile) artifactsSvc.DatasetSummaryReport {
+	columns := make([]artifactsSvc.DatasetSummaryColumnReport, 0, len(profile.Columns))
+	for _, column := range profile.Columns {
+		columns = append(columns, artifactsSvc.DatasetSummaryColumnReport{
+			Name:     column.Name,
+			Type:     column.Type,
+			NonEmpty: column.NonEmpty,
+			Empty:    column.Empty,
+			Samples:  append([]string{}, column.Samples...),
+		})
+	}
+	notes := append([]string{}, profile.Notes...)
+	if profile.JSONProfile != nil {
+		notes = append(notes, profile.JSONProfile.Notes...)
+	}
+	if profile.Parquet != nil {
+		if profile.Parquet.MetadataDecoded {
+			notes = append(notes, fmt.Sprintf("Decoded Parquet footer metadata with %d row group(s).", len(profile.Parquet.RowGroups)))
+		}
+		if profile.Parquet.Truncated {
+			notes = append(notes, "Parquet metadata was bounded for responsiveness.")
+		}
+	}
+	return artifactsSvc.DatasetSummaryReport{
+		SourcePath: profile.RelPath,
+		Format:     profile.Format,
+		MediaType:  profile.MediaType,
+		Size:       profile.Size,
+		Rows:       profile.Rows,
+		Columns:    columns,
+		Sheet:      profile.Sheet,
+		Sheets:     append([]string{}, profile.Sheets...),
+		Truncated:  profile.Truncated,
+		Notes:      notes,
 	}
 }
 

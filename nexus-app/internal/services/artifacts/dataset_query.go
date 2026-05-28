@@ -127,6 +127,56 @@ func (s *Store) WriteDatasetSQLMarkdownArtifact(report DatasetSQLReport) (Artifa
 	}, nil
 }
 
+func (s *Store) WriteDatasetSummaryMarkdownArtifact(report DatasetSummaryReport) (Artifact, error) {
+	if strings.TrimSpace(report.SourcePath) == "" {
+		return Artifact{}, errors.New("dataset summary source path is required")
+	}
+	if len(report.Columns) == 0 {
+		return Artifact{}, errors.New("dataset summary requires column profiles")
+	}
+	createdAt := time.Now().UTC()
+	title := datasetSummaryArtifactTitle(report)
+	content := datasetSummaryMarkdown(report, title, createdAt)
+	relPath := s.relPath("dataset-summaries", fmt.Sprintf("%s-%s.md", createdAt.Format("20060102-150405-000000000"), safeName(title)))
+	absPath := s.absPath(relPath)
+	if err := os.MkdirAll(filepath.Dir(absPath), 0o755); err != nil {
+		return Artifact{}, err
+	}
+	file, err := os.OpenFile(absPath, os.O_WRONLY|os.O_CREATE|os.O_EXCL, 0o644)
+	if err != nil {
+		return Artifact{}, err
+	}
+	defer file.Close()
+	if _, err := file.WriteString(content); err != nil {
+		return Artifact{}, err
+	}
+	metadata := Metadata{
+		Kind:           "dataset-summary",
+		Title:          title,
+		RelPath:        relPath,
+		Source:         datasetSummarySourceSummary(report),
+		ContextRelPath: strings.TrimSpace(report.SourcePath),
+		SourcePaths:    []string{report.SourcePath},
+		GeneratedAt:    createdAt,
+	}
+	if err := s.writeMetadata(metadata); err != nil {
+		return Artifact{}, err
+	}
+	return Artifact{
+		Kind:         metadata.Kind,
+		Title:        title,
+		RelPath:      relPath,
+		AbsPath:      absPath,
+		MetadataPath: relPath + ".json",
+		Message:      "Dataset summary artifact created at " + relPath + ".",
+		Size:         int64(len(content)),
+		CreatedAt:    createdAt,
+		GeneratedAt:  createdAt,
+		Source:       metadata.Source,
+		SourcePaths:  []string{report.SourcePath},
+	}, nil
+}
+
 func datasetQueryArtifactTitle(report DatasetQueryReport, suffix string) string {
 	if strings.TrimSpace(report.Title) != "" {
 		return strings.TrimSpace(report.Title)
@@ -147,6 +197,17 @@ func datasetSQLArtifactTitle(report DatasetSQLReport) string {
 		name = "Dataset"
 	}
 	return "Dataset SQL Report - " + name
+}
+
+func datasetSummaryArtifactTitle(report DatasetSummaryReport) string {
+	if strings.TrimSpace(report.Title) != "" {
+		return strings.TrimSpace(report.Title)
+	}
+	name := filepath.Base(filepath.ToSlash(report.SourcePath))
+	if name == "." || name == "/" || name == "" {
+		name = "Dataset"
+	}
+	return "Dataset Summary - " + name
 }
 
 func datasetQuerySourceSummary(report DatasetQueryReport) string {
@@ -173,6 +234,19 @@ func datasetSQLSourceSummary(report DatasetSQLReport) string {
 	}
 	if report.Truncated {
 		parts = append(parts, "bounded sample")
+	}
+	return strings.Join(parts, " | ")
+}
+
+func datasetSummarySourceSummary(report DatasetSummaryReport) string {
+	parts := []string{report.SourcePath}
+	if strings.TrimSpace(report.Format) != "" {
+		parts = append(parts, "format: "+strings.TrimSpace(report.Format))
+	}
+	parts = append(parts, fmt.Sprintf("rows: %d", report.Rows))
+	parts = append(parts, fmt.Sprintf("columns: %d", len(report.Columns)))
+	if report.Truncated {
+		parts = append(parts, "bounded profile")
 	}
 	return strings.Join(parts, " | ")
 }
@@ -211,6 +285,82 @@ func datasetSQLMarkdown(report DatasetSQLReport, title string, createdAt time.Ti
 	}
 	writeMarkdownTable(&builder, report.Columns, report.Rows)
 	return builder.String()
+}
+
+func datasetSummaryMarkdown(report DatasetSummaryReport, title string, createdAt time.Time) string {
+	var builder strings.Builder
+	builder.WriteString("# ")
+	builder.WriteString(title)
+	builder.WriteString("\n\n")
+	writeKV(&builder, "Source", report.SourcePath)
+	writeKV(&builder, "Format", report.Format)
+	writeKV(&builder, "Generated", formatArtifactTime(createdAt))
+	writeKV(&builder, "Rows", fmt.Sprintf("%d", report.Rows))
+	writeKV(&builder, "Columns", fmt.Sprintf("%d", len(report.Columns)))
+	writeKV(&builder, "Size", fmt.Sprintf("%d bytes", report.Size))
+	writeKV(&builder, "Media type", report.MediaType)
+	writeKV(&builder, "Sheet", report.Sheet)
+	if len(report.Sheets) > 0 {
+		writeKV(&builder, "Sheets", strings.Join(report.Sheets, ", "))
+	}
+	writeKV(&builder, "Truncated", fmt.Sprintf("%t", report.Truncated))
+	if len(report.Notes) > 0 {
+		builder.WriteString("\n## Notes\n\n")
+		for _, note := range report.Notes {
+			if note = strings.TrimSpace(note); note != "" {
+				builder.WriteString("- ")
+				builder.WriteString(note)
+				builder.WriteString("\n")
+			}
+		}
+	}
+	builder.WriteString("\n## Columns\n\n")
+	writeMarkdownTable(&builder, []string{"Column", "Type", "Non-empty", "Empty", "Samples"}, datasetSummaryColumnRows(report.Columns))
+	questions := datasetSummarySuggestedQuestions(report.Columns)
+	if len(questions) > 0 {
+		builder.WriteString("\n## Suggested Questions\n\n")
+		for _, question := range questions {
+			builder.WriteString("- ")
+			builder.WriteString(question)
+			builder.WriteString("\n")
+		}
+	}
+	return builder.String()
+}
+
+func datasetSummaryColumnRows(columns []DatasetSummaryColumnReport) [][]string {
+	rows := make([][]string, 0, len(columns))
+	for _, column := range columns {
+		rows = append(rows, []string{
+			column.Name,
+			column.Type,
+			fmt.Sprintf("%d", column.NonEmpty),
+			fmt.Sprintf("%d", column.Empty),
+			strings.Join(column.Samples, ", "),
+		})
+	}
+	return rows
+}
+
+func datasetSummarySuggestedQuestions(columns []DatasetSummaryColumnReport) []string {
+	questions := []string{}
+	for _, column := range columns {
+		name := strings.TrimSpace(column.Name)
+		if name == "" {
+			continue
+		}
+		switch strings.ToLower(strings.TrimSpace(column.Type)) {
+		case "number", "integer", "float", "double", "decimal", "int64":
+			questions = append(questions, "Which segments explain the largest values in `"+strings.ReplaceAll(name, "`", "'")+"`?")
+		case "date", "datetime", "time":
+			questions = append(questions, "What trend appears over `"+strings.ReplaceAll(name, "`", "'")+"`?")
+		}
+	}
+	questions = append(questions,
+		"Which rows are missing important values?",
+		"What chart best communicates the top categories or trends?",
+	)
+	return questions
 }
 
 func firstNonZeroInt(values ...int) int {

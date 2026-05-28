@@ -10,7 +10,7 @@ The product direction still makes sense. Nexus Augentic Studio should stay a nat
 
 The new app is no longer a thin skeleton. `nexus-app/` now has real native services for workspace navigation, previews, safe file mutation, editor tabs, search, problems, Git, tasks, jobs, approvals, LLM chat, agent tooling, metadata, artifacts, datasets, SQLite inspection, document extraction, operations scanning, and history. The most important remaining work is not to invent new studios yet; it is to finish parity and make the native UI feel like a serious IDE-class product.
 
-Approximate Wails-to-Fyne migration status: 91-92% of useful Wails-era backend/workflow capability has been migrated. The remaining gap is concentrated in IDE-grade editor behavior, deeper retrieval evidence, remaining artifact regeneration coverage, slow-work job routing, production packaging, and UI polish.
+Approximate Wails-to-Fyne migration status: 92-93% of useful Wails-era backend/workflow capability has been migrated. The remaining gap is concentrated in IDE-grade editor behavior, deeper retrieval evidence, future artifact regeneration coverage, slow-work job routing, production packaging, and UI polish.
 
 The production release path is tracked in `docs/13_PRODUCTION_READINESS.md`.
 
@@ -56,7 +56,7 @@ Implemented in `nexus-app/`:
 Priority migration gaps:
 
 1. Native editor quality: richer inline syntax styling and future LSP/deeper cross-file language-aware navigation.
-2. Native editor-adjacent artifact regeneration and source quality: remaining regeneration coverage and deeper retrieval/source evidence UX.
+2. Native editor-adjacent artifact regeneration and source quality: future regeneration coverage and deeper retrieval/source evidence UX.
 3. Job routing for slow workflows: long indexing, OCR, dump imports, connector pulls, report generation, and long agent runs.
 4. Connector and dump workflows: temporary isolated database sandboxes, import lifecycle, storage limits, and read-only analysis.
 5. Assistant maturity: model context accounting, runtime diagnostics, source-citation quality, and broader tool coverage.
@@ -75,7 +75,7 @@ The next batches should stay migration-first:
 
 1. Keep closing the Wails-only feature inventory instead of adding new top-level studios.
 2. Finish native editor parity and UI structure.
-3. Add deeper assistant retrieval evidence and remaining artifact regeneration coverage.
+3. Add deeper assistant retrieval evidence and future artifact regeneration coverage.
 4. Add macOS Keychain and Linux Secret Service/libsecret after the Windows protected-secret baseline.
 5. Route remaining slow workflows through durable jobs.
 6. Add dump import design and first safe job scaffold before any database mutation/import execution.

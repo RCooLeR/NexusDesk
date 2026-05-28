@@ -316,7 +316,7 @@ Exit criteria:
 
 ## Next Batch
 
-1. Use the Wails inventory to close remaining Native Parity blockers: editor maturity, richer assistant/source quality, and broader artifact regeneration.
+1. Use the Wails inventory to close remaining Native Parity blockers: editor maturity, deeper retrieval evidence, and broader artifact regeneration.
 2. Finish native editor/UI parity: richer inline syntax styling, future LSP/deeper cross-file language actions, and less cramped native panels.
 3. Extend protected secret storage beyond the Windows baseline with macOS Keychain and Linux Secret Service/libsecret when those platforms move toward release support.
 4. Add durable job routing for long indexing, OCR, dump imports, connector pulls, report generation, and long agent runs.
@@ -419,7 +419,7 @@ The Fyne migration must not drop product ambition, but this section is intention
 - [x] First SQLite connector query preview with SELECT/WITH guard, single-statement validation, visible default row cap/timeout, SQL run metadata, dependency lineage, and read-only result rendering.
 - [x] SQLite connector saved queries plus CSV/Markdown result exports.
 - [x] SQLite connector query cancellation from the native Data panel using context-aware read-only query execution.
-- [x] Native dataset artifact rebuild baseline for query CSV, SQL report, chart, dashboard, SQL notebook, and SQLite query artifact dependency records.
+- [x] Native dataset artifact rebuild baseline for summary, query CSV, SQL report, chart, dashboard, SQL notebook, and SQLite query artifact dependency records.
 - [ ] Richer SQLite connector lineage actions for opening sources and viewing dependent artifacts.
 - [ ] External database profiles for PostgreSQL, MySQL/MariaDB, SQL Server, DuckDB files, and future engines with protected credentials plus live native execution paths.
 - [x] Read-only SQL guard with comment/string-aware parsing, single-statement enforcement, and mutation/export blocking across live external connector execution.
@@ -491,8 +491,8 @@ The Fyne migration must not drop product ambition, but this section is intention
 - [x] Artifact browser with search, metadata, preview, compare, archive, delete, restore, and open-source navigation.
 - [x] Artifact lineage/freshness warnings for current native artifacts.
 - [x] Artifact lineage graph import/export UI parity with workspace graph JSON artifacts.
-- [x] First artifact regeneration workflow that reuses dataset query, SQL, chart, dashboard, SQL notebook, and SQLite query export dependency metadata.
-- [ ] Expand artifact regeneration to summaries and future artifact kinds.
+- [x] First artifact regeneration workflow that reuses dataset summary, query, SQL, chart, dashboard, SQL notebook, and SQLite query export dependency metadata.
+- [ ] Expand artifact regeneration to future artifact kinds beyond the current dataset/query/chart/notebook/SQLite baseline.
 
 ### Operations Studio
 

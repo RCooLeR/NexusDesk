@@ -15,7 +15,7 @@ This inventory records the explicit `port`, `replace`, `drop`, or `later` decisi
 ## Summary
 
 - Most core backend workflows have native equivalents: workspace open/browse, safe file mutation, rollback records, search/problems, Git status/diff/hunk staging, task runs, artifacts, metadata, datasets, SQLite, external connector profile flows, settings, approvals, diagnostics, chat history, and agent audit.
-- The remaining parity blockers are concentrated in editor maturity, remaining artifact regeneration coverage, and richer assistant/source quality polish.
+- The remaining parity blockers are concentrated in editor maturity, future artifact regeneration coverage, and deeper assistant retrieval evidence.
 - React/Wails shell code should not be embedded wholesale. Monaco-specific editor behavior should be replaced by a native editor strategy unless a future spike proves an embedded editor can be shipped cleanly without reviving the Wails/webview architecture.
 
 ## Inventory
@@ -31,7 +31,7 @@ This inventory records the explicit `port`, `replace`, `drop`, or `later` decisi
 | Git history and blame | `GetGitHistory`, `GetGitBlame`, Wails agent `read_git_history`/`read_git_blame` | Native Git service, Git panel, and deterministic agent tools expose read-only history/blame | `ported` | Continue broader Git AI/review work separately |
 | Artifact writer, metadata, archive/delete, compare, source freshness | `app-wails/internal/artifact/*`, `ArtifactStudioPanel.tsx` | Native artifact browser/writer/compare/archive/restore/delete/source actions are implemented | `ported` | Continue regeneration work |
 | Artifact lineage graph import/export and agent context | `GetArtifactLineage`, `ExportArtifactLineageJSON`, `ImportArtifactLineageJSON`, Wails `read_artifact_lineage` | Native workspace lineage graph export/import UI and read-only agent lineage tool are implemented | `ported` | Continue graph polish only |
-| Artifact dependency rebuild/regeneration | `RebuildDatasetDependency` | Native can regenerate dataset query CSV, dataset SQL report, chart, dashboard, SQL notebook run, and SQLite query CSV/Markdown artifacts from dependency metadata | `ported` baseline | Continue broader regeneration coverage for summaries and future artifact kinds |
+| Artifact dependency rebuild/regeneration | `RebuildDatasetDependency` | Native can regenerate dataset summary, dataset query CSV, dataset SQL report, chart, dashboard, SQL notebook run, and SQLite query CSV/Markdown artifacts from dependency metadata | `ported` baseline | Continue broader regeneration coverage for future artifact kinds |
 | Dataset profiling, SQL, notebooks, charts, dashboards, SQLite query artifacts | `dataset_service.go`, `DataStudioPanel.tsx`, `DataOperationsPanel.tsx` | Native Data panel covers profiles, query/SQL, notebook run/export, chart/dashboard artifacts, SQLite saved queries, history, and lineage | `ported` | Continue notebook/editor UX and dump import design |
 | External database profiles and read-only query flows | `internal/dbconnector/*`, `ConnectorProfilesCard.tsx` | Native profile list/save/delete/test/inspect/query/cancel/history exists for PostgreSQL, MySQL/MariaDB, SQL Server, SQLite, and DuckDB guarded builds with protected Windows credential sidecars | `ported` for functional parity | macOS Keychain and Linux Secret Service remain future platform work |
 | Protected secret storage | `app-wails/internal/storage/secret_windows.go`, connector sidecar handling | Native settings API keys and connector credentials use DPAPI-protected sidecars on Windows, redacted display values, and explicit unsupported-platform refusal elsewhere | `ported` Windows baseline | Add macOS Keychain and Linux Secret Service/libsecret before claiming full cross-platform secret support |
@@ -54,7 +54,7 @@ This inventory records the explicit `port`, `replace`, `drop`, or `later` decisi
 
 1. Finish the editor parity strategy: richer inline syntax styling and future LSP/deeper cross-file language choices.
 2. Continue assistant quality polish: deeper retrieval evidence beyond deterministic source/citation/evidence diagnostics.
-3. Expand artifact regeneration beyond the dataset/query/chart/notebook/SQLite rebuild baseline.
+3. Expand artifact regeneration beyond the current dataset summary/query/chart/notebook/SQLite rebuild baseline as future artifact kinds are added.
 4. Add macOS Keychain and Linux Secret Service/libsecret support after the Windows secret-storage baseline.
 
 ## Retirement Decision
