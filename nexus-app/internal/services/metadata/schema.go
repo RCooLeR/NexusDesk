@@ -1,6 +1,6 @@
 package metadata
 
-const schemaVersion = 8
+const schemaVersion = 9
 
 const schemaSQL = `PRAGMA journal_mode = WAL;
 PRAGMA foreign_keys = ON;
@@ -53,6 +53,10 @@ CREATE TABLE IF NOT EXISTS agent_runs (
     prompt TEXT NOT NULL,
     status TEXT NOT NULL,
     message TEXT,
+    model TEXT,
+    model_route_id TEXT,
+    model_route TEXT,
+    route_warning TEXT,
     iterations INTEGER,
     stop_reason TEXT,
     plan_json TEXT,

@@ -72,6 +72,7 @@ type Request struct {
 	ID             string
 	Prompt         string
 	WorkspaceRoot  string
+	ModelRouteID   string
 	ApproveWrites  bool
 	ApproveShell   bool
 	ApproveTool    ToolApprover
@@ -82,26 +83,33 @@ type Request struct {
 }
 
 type Result struct {
-	Message    string
-	Plan       []PlanStep
-	ToolCalls  []ToolResult
-	Iterations int
-	Truncated  bool
-	StopReason string
+	Message      string
+	Model        string
+	ModelRouteID string
+	ModelRoute   string
+	RouteWarning string
+	Plan         []PlanStep
+	ToolCalls    []ToolResult
+	Iterations   int
+	Truncated    bool
+	StopReason   string
 }
 
 type Event struct {
-	RequestID   string
-	Type        string
-	Iteration   int
-	Message     string
-	Model       string
-	ToolName    string
-	ToolArgs    map[string]string
-	Observation string
-	Error       string
-	Risk        string
-	Plan        []PlanStep
+	RequestID    string
+	Type         string
+	Iteration    int
+	Message      string
+	Model        string
+	ModelRouteID string
+	ModelRoute   string
+	RouteWarning string
+	ToolName     string
+	ToolArgs     map[string]string
+	Observation  string
+	Error        string
+	Risk         string
+	Plan         []PlanStep
 }
 
 type Observer func(Event)

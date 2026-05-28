@@ -15,6 +15,9 @@ func formatAgentAuditDetail(run metadataSvc.AgentRunRecord, tools []metadataSvc.
 	writeAuditLine(&builder, "ID", run.ID)
 	writeAuditLine(&builder, "Job", run.JobID)
 	writeAuditLine(&builder, "Status", run.Status)
+	writeAuditLine(&builder, "Model", run.Model)
+	writeAuditLine(&builder, "Model route", run.ModelRoute)
+	writeAuditLine(&builder, "Model route warning", run.RouteWarning)
 	writeAuditLine(&builder, "Iterations", fmt.Sprintf("%d", run.Iterations))
 	writeAuditLine(&builder, "Stop reason", run.StopReason)
 	writeAuditLine(&builder, "Started", formatAuditTime(run.StartedAt))
@@ -85,7 +88,8 @@ func agentAuditTitle(run metadataSvc.AgentRunRecord) string {
 }
 
 func agentAuditMeta(run metadataSvc.AgentRunRecord) string {
-	return fmt.Sprintf("%s - %d iteration(s) - %s", firstNonEmpty(run.Status, "unknown"), run.Iterations, formatAuditTime(run.StartedAt))
+	route := firstNonEmpty(run.ModelRoute, run.Model, "global model")
+	return fmt.Sprintf("%s - %s - %d iteration(s) - %s", firstNonEmpty(run.Status, "unknown"), route, run.Iterations, formatAuditTime(run.StartedAt))
 }
 
 func compactAgentAuditMessage(value string) string {

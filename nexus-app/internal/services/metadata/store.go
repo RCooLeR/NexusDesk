@@ -106,6 +106,19 @@ func (s *Store) ensureSQLiteSchemaLocked() ([]string, error) {
 	if err := ensureColumn(db, "chat_messages", "context_rel_path", "TEXT"); err != nil {
 		return nil, err
 	}
+	for _, column := range []struct {
+		name       string
+		definition string
+	}{
+		{name: "model", definition: "TEXT"},
+		{name: "model_route_id", definition: "TEXT"},
+		{name: "model_route", definition: "TEXT"},
+		{name: "route_warning", definition: "TEXT"},
+	} {
+		if err := ensureColumn(db, "agent_runs", column.name, column.definition); err != nil {
+			return nil, err
+		}
+	}
 	now := time.Now().UTC()
 	if _, err := db.Exec(
 		`INSERT INTO workspaces (id, root, name, opened_at)

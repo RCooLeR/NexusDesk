@@ -935,6 +935,7 @@ func (v *View) runAgentRequest(text string, response *widget.RichText, send *wid
 		ID:            fmt.Sprintf("agent-%d", time.Now().UTC().UnixNano()),
 		Prompt:        text,
 		WorkspaceRoot: workspace.Root,
+		ModelRouteID:  v.selectedAssistantModelRouteID(),
 		ApproveWrites: v.approvalService.HasFullProjectAccess(workspace.Root),
 		ApproveShell:  v.assistantRunTaskApprovalChecked(),
 		ApproveTool:   v.confirmAgentToolApproval,
@@ -977,6 +978,9 @@ func (v *View) runAgentRequest(text string, response *widget.RichText, send *wid
 				return
 			}
 			response.ParseMarkdown(agentFinalMarkdown(result))
+			if result.RouteWarning != "" {
+				v.addActivity(result.RouteWarning)
+			}
 			message := fmt.Sprintf("Agent response completed after %d iteration(s).", result.Iterations)
 			v.addActivity(message)
 			v.jobService.Finish(job.ID, jobsSvc.StatusSuccess, message, nil)
@@ -1069,7 +1073,7 @@ func (v *View) attachAgentContext(request *agentSvc.Request) {
 		return
 	}
 	pack, err := v.workspaceService.BuildContextPack(request.WorkspaceRoot, contextPaths, workspaceSvc.ContextPackOptions{
-		MaxBytes: agentContextBudgetBytes(v.settingsStore),
+		MaxBytes: agentContextBudgetBytes(v.settingsStore, request.ModelRouteID),
 	})
 	if err != nil {
 		v.addActivity("Agent context was not included: " + err.Error())
@@ -1104,13 +1108,16 @@ func assistantContextPathsForRequest(pinned []string, selected string) []string 
 
 func agentContextBudgetBytes(store interface {
 	Load() (settingsSvc.Settings, error)
-}) int {
+}, modelRouteID string) int {
 	if store == nil {
 		return defaultAgentContextMaxBytes
 	}
 	settings, err := store.Load()
 	if err != nil {
 		return defaultAgentContextMaxBytes
+	}
+	if routed, ok := settingsSvc.SettingsForModelRoute(settings, modelRouteID); ok {
+		settings = routed
 	}
 	config := llmSvc.ConfigFromSettings(settings)
 	budgetTokens := config.ContextTokens - config.ResponseReserveTokens
@@ -1157,7 +1164,7 @@ func (t agentActivityTail) Markdown() string {
 func agentEventLine(event agentSvc.Event) string {
 	switch event.Type {
 	case "start":
-		return "Agent started."
+		return firstNonEmpty(event.Message, "Agent started.")
 	case "model_request":
 		return fmt.Sprintf("Thinking, step %d...", event.Iteration)
 	case "tool_start":
@@ -1181,6 +1188,15 @@ func agentFinalMarkdown(result agentSvc.Result) string {
 	message := strings.TrimSpace(result.Message)
 	if message == "" {
 		message = "Agent completed without a final message."
+	}
+	if result.Model != "" {
+		message += "\n\nModel: `" + result.Model + "`"
+	}
+	if result.ModelRoute != "" {
+		message += "\n\nModel route: `" + result.ModelRoute + "`"
+	}
+	if result.RouteWarning != "" {
+		message += "\n\nModel route warning: " + result.RouteWarning
 	}
 	if result.StopReason != "" {
 		message += "\n\nStop reason: `" + result.StopReason + "`"

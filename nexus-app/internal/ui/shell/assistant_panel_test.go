@@ -65,8 +65,8 @@ func TestAgentToolApprovalMessageSummarizesRiskAndTarget(t *testing.T) {
 }
 
 func TestAgentFinalMarkdownIncludesStopReason(t *testing.T) {
-	text := agentFinalMarkdown(agentSvc.Result{Message: "Done", StopReason: "safety_guard"})
-	if !strings.Contains(text, "Done") || !strings.Contains(text, "safety_guard") {
+	text := agentFinalMarkdown(agentSvc.Result{Message: "Done", Model: "qwen3-coder:30b", ModelRoute: "Main coding model", StopReason: "safety_guard"})
+	if !strings.Contains(text, "Done") || !strings.Contains(text, "qwen3-coder:30b") || !strings.Contains(text, "Main coding model") || !strings.Contains(text, "safety_guard") {
 		t.Fatalf("unexpected final markdown: %q", text)
 	}
 }
@@ -364,8 +364,25 @@ func TestAssistantContextPathsForRequestFallsBackToSelected(t *testing.T) {
 
 func TestAgentContextBudgetBytesUsesModelBudget(t *testing.T) {
 	store := shellSettingsStore{settings: settingsSvc.Settings{ContextTokens: 1000, ResponseReserveTokens: 250}}
-	if got := agentContextBudgetBytes(store); got != 3000 {
+	if got := agentContextBudgetBytes(store, ""); got != 3000 {
 		t.Fatalf("unexpected budget bytes: %d", got)
+	}
+}
+
+func TestAgentContextBudgetBytesUsesSelectedModelRoute(t *testing.T) {
+	store := shellSettingsStore{settings: settingsSvc.Settings{
+		ContextTokens:         1000,
+		ResponseReserveTokens: 250,
+		ModelRoutes: []settingsSvc.ModelRoute{{
+			ID:                    settingsSvc.RouteMainCoding,
+			Label:                 "Main coding model",
+			Model:                 "qwen3-coder:30b",
+			ContextTokens:         4000,
+			ResponseReserveTokens: 1000,
+		}},
+	}}
+	if got := agentContextBudgetBytes(store, settingsSvc.RouteMainCoding); got != 12000 {
+		t.Fatalf("unexpected routed budget bytes: %d", got)
 	}
 }
 

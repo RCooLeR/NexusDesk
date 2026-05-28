@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"nexusdesk/internal/services/llm"
+	settingssvc "nexusdesk/internal/services/settings"
 )
 
 type Service struct {
@@ -37,14 +38,20 @@ func (s *Service) Run(ctx context.Context, request Request, observe Observer) (R
 	if err != nil {
 		return Result{}, err
 	}
+	settings, routeInfo := settingsForAgentRequest(settings, request)
 	config := llm.ConfigFromSettings(settings)
 	tools := s.toolDescriptors()
 	state := runState{plan: []PlanStep{{Step: "Understand the request", Status: "in_progress"}}}
-	s.emit(observe, request, Event{Type: "start", Message: "Agent started.", Plan: state.plan})
+	s.emit(observe, request, eventWithRoute(Event{
+		Type:    "start",
+		Message: agentStartMessage(routeInfo),
+		Model:   config.Model,
+		Plan:    state.plan,
+	}, routeInfo))
 
 	for iteration := 1; ; iteration++ {
 		if iteration > backendEmergencyGuard {
-			return s.wrapUpStoppedRun(ctx, config, request, state, observe, iteration-1)
+			return s.wrapUpStoppedRun(ctx, config, request, state, routeInfo, observe, iteration-1)
 		}
 		s.emit(observe, request, Event{Type: "model_request", Iteration: iteration, Message: "Asking model for the next step.", Plan: state.plan})
 		result, err := s.client.Chat(ctx, config, llm.ChatRequest{
@@ -72,14 +79,14 @@ func (s *Service) Run(ctx context.Context, request Request, observe Observer) (R
 			state.plan = finishPlan(state.plan)
 			final = appendMutationVerification(final, state)
 			s.emit(observe, request, Event{Type: "final", Iteration: iteration, Message: limitText(final, maxEventBytes), Plan: state.plan})
-			return Result{Message: final, Plan: state.plan, ToolCalls: state.toolCalls, Iterations: iteration, Truncated: state.truncated}, nil
+			return resultWithRoute(Result{Message: final, Model: result.Model, Plan: state.plan, ToolCalls: state.toolCalls, Iterations: iteration, Truncated: state.truncated}, routeInfo), nil
 		}
 		call, ok := parseAction(message)
 		if !ok {
 			state.plan = finishPlan(state.plan)
 			message = appendMutationVerification(message, state)
 			s.emit(observe, request, Event{Type: "final", Iteration: iteration, Message: limitText(message, maxEventBytes), Plan: state.plan})
-			return Result{Message: message, Plan: state.plan, ToolCalls: state.toolCalls, Iterations: iteration, Truncated: state.truncated}, nil
+			return resultWithRoute(Result{Message: message, Model: result.Model, Plan: state.plan, ToolCalls: state.toolCalls, Iterations: iteration, Truncated: state.truncated}, routeInfo), nil
 		}
 		completed := s.executeTool(ctx, request, call, iteration, observe)
 		state.toolCalls = append(state.toolCalls, completed)
@@ -134,14 +141,14 @@ func (s *Service) executeTool(ctx context.Context, request Request, call ToolCal
 	return result
 }
 
-func (s *Service) wrapUpStoppedRun(ctx context.Context, config llm.Config, request Request, state runState, observe Observer, iterations int) (Result, error) {
+func (s *Service) wrapUpStoppedRun(ctx context.Context, config llm.Config, request Request, state runState, routeInfo agentRouteResolution, observe Observer, iterations int) (Result, error) {
 	state.plan = finishPlan(state.plan)
 	s.emit(observe, request, Event{Type: "finalizing", Iteration: iterations, Message: "Backend safety guard stopped the tool loop; asking for a final answer.", Plan: state.plan})
 	result, err := s.client.Chat(ctx, config, llm.ChatRequest{SystemPrompt: systemPrompt(), Prompt: finalizationPrompt(request, state)})
 	if err != nil {
 		message := "Agent stopped before producing a final answer."
 		s.emit(observe, request, Event{Type: "stopped", Iteration: iterations, Message: message, Error: err.Error(), Plan: state.plan})
-		return Result{Message: message, Plan: state.plan, ToolCalls: state.toolCalls, Iterations: iterations, Truncated: state.truncated, StopReason: stopReasonSafetyGuard}, nil
+		return resultWithRoute(Result{Message: message, Model: config.Model, Plan: state.plan, ToolCalls: state.toolCalls, Iterations: iterations, Truncated: state.truncated, StopReason: stopReasonSafetyGuard}, routeInfo), nil
 	}
 	message := strings.TrimSpace(result.Message)
 	if final := parseFinalAnswer(message); final != "" {
@@ -149,7 +156,7 @@ func (s *Service) wrapUpStoppedRun(ctx context.Context, config llm.Config, reque
 	}
 	message = appendMutationVerification(message, state)
 	s.emit(observe, request, Event{Type: "stopped_finalized", Iteration: iterations, Message: limitText(message, maxEventBytes), Model: result.Model, Plan: state.plan})
-	return Result{Message: message, Plan: state.plan, ToolCalls: state.toolCalls, Iterations: iterations, Truncated: state.truncated, StopReason: stopReasonSafetyWrapped}, nil
+	return resultWithRoute(Result{Message: message, Model: result.Model, Plan: state.plan, ToolCalls: state.toolCalls, Iterations: iterations, Truncated: state.truncated, StopReason: stopReasonSafetyWrapped}, routeInfo), nil
 }
 
 func (s *Service) emit(observe Observer, request Request, event Event) {
@@ -158,4 +165,67 @@ func (s *Service) emit(observe Observer, request Request, event Event) {
 	}
 	event.RequestID = request.ID
 	observe(event)
+}
+
+type agentRouteResolution struct {
+	ID      string
+	Label   string
+	Warning string
+}
+
+func settingsForAgentRequest(settings settingssvc.Settings, request Request) (settingssvc.Settings, agentRouteResolution) {
+	routeID := strings.TrimSpace(request.ModelRouteID)
+	if routeID == "" {
+		return settings, agentRouteResolution{}
+	}
+	route, ok := settingssvc.ModelRouteByID(settings, routeID)
+	if !ok {
+		return settings, agentRouteResolution{
+			ID:      routeID,
+			Warning: "Model route " + routeID + " was not found; using the global model.",
+		}
+	}
+	routed, ok := settingssvc.SettingsForModelRoute(settings, routeID)
+	if !ok {
+		return settings, agentRouteResolution{
+			ID:      routeID,
+			Label:   route.Label,
+			Warning: "Model route " + firstNonEmptyString(route.Label, routeID) + " could not be resolved; using the global model.",
+		}
+	}
+	return routed, agentRouteResolution{ID: route.ID, Label: route.Label}
+}
+
+func resultWithRoute(result Result, route agentRouteResolution) Result {
+	result.ModelRouteID = route.ID
+	result.ModelRoute = route.Label
+	result.RouteWarning = route.Warning
+	return result
+}
+
+func eventWithRoute(event Event, route agentRouteResolution) Event {
+	event.ModelRouteID = route.ID
+	event.ModelRoute = route.Label
+	event.RouteWarning = route.Warning
+	return event
+}
+
+func agentStartMessage(route agentRouteResolution) string {
+	if route.Warning != "" {
+		return "Agent started. " + route.Warning
+	}
+	if route.Label != "" {
+		return "Agent started with " + route.Label + "."
+	}
+	return "Agent started."
+}
+
+func firstNonEmptyString(values ...string) string {
+	for _, value := range values {
+		value = strings.TrimSpace(value)
+		if value != "" {
+			return value
+		}
+	}
+	return ""
 }

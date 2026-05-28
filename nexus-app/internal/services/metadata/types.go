@@ -58,18 +58,22 @@ type AgentPlanStep struct {
 }
 
 type AgentRunRecord struct {
-	ID          string
-	JobID       string
-	Prompt      string
-	Status      string
-	Message     string
-	Iterations  int
-	StopReason  string
-	Plan        []AgentPlanStep
-	SourcePaths []string
-	StartedAt   time.Time
-	CompletedAt time.Time
-	DurationMs  int64
+	ID           string
+	JobID        string
+	Prompt       string
+	Status       string
+	Message      string
+	Model        string
+	ModelRouteID string
+	ModelRoute   string
+	RouteWarning string
+	Iterations   int
+	StopReason   string
+	Plan         []AgentPlanStep
+	SourcePaths  []string
+	StartedAt    time.Time
+	CompletedAt  time.Time
+	DurationMs   int64
 }
 
 type ToolRunRecord struct {

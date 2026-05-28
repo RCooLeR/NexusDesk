@@ -27,6 +27,8 @@ func TestFormatAgentAuditDetailIncludesRunAndToolData(t *testing.T) {
 		Prompt:     "Review project",
 		Status:     "success",
 		Message:    "Done",
+		Model:      "qwen3-coder:30b",
+		ModelRoute: "Main coding model",
 		Iterations: 2,
 		Plan:       []metadataSvc.AgentPlanStep{{Step: "Inspect", Status: "completed"}},
 		StartedAt:  started,
@@ -38,7 +40,7 @@ func TestFormatAgentAuditDetailIncludesRunAndToolData(t *testing.T) {
 		Args:        map[string]string{"relPath": "README.md"},
 		Observation: "ok",
 	}})
-	for _, expected := range []string{"Agent Run", "agent-1", "Review project", "Tool Runs", "#1 read_context", "relPath=README.md"} {
+	for _, expected := range []string{"Agent Run", "agent-1", "qwen3-coder:30b", "Main coding model", "Review project", "Tool Runs", "#1 read_context", "relPath=README.md"} {
 		if !strings.Contains(text, expected) {
 			t.Fatalf("audit detail missing %q:\n%s", expected, text)
 		}

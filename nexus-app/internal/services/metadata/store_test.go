@@ -370,16 +370,19 @@ func TestSaveAndListAgentRunsAndToolRuns(t *testing.T) {
 	store := mustStore(t)
 	started := time.Date(2026, 5, 27, 12, 0, 0, 0, time.UTC)
 	agentRun := AgentRunRecord{
-		JobID:       "job-0002",
-		Prompt:      "Review project",
-		Status:      "success",
-		Message:     "Done",
-		Iterations:  2,
-		Plan:        []AgentPlanStep{{Step: "Inspect", Status: "completed"}},
-		SourcePaths: []string{"README.md"},
-		StartedAt:   started,
-		CompletedAt: started.Add(2 * time.Second),
-		DurationMs:  2000,
+		JobID:        "job-0002",
+		Prompt:       "Review project",
+		Status:       "success",
+		Message:      "Done",
+		Model:        "qwen3-coder:30b",
+		ModelRouteID: "main-coding",
+		ModelRoute:   "Main coding model",
+		Iterations:   2,
+		Plan:         []AgentPlanStep{{Step: "Inspect", Status: "completed"}},
+		SourcePaths:  []string{"README.md"},
+		StartedAt:    started,
+		CompletedAt:  started.Add(2 * time.Second),
+		DurationMs:   2000,
 	}
 	agentRun = store.NormalizeAgentRunRecord(agentRun)
 	if err := store.SaveAgentRun(agentRun); err != nil {
@@ -403,7 +406,7 @@ func TestSaveAndListAgentRunsAndToolRuns(t *testing.T) {
 	if err != nil {
 		t.Fatalf("ListAgentRuns returned error: %v", err)
 	}
-	if len(runs) != 1 || runs[0].Prompt != "Review project" || len(runs[0].Plan) != 1 || len(runs[0].SourcePaths) != 1 {
+	if len(runs) != 1 || runs[0].Prompt != "Review project" || runs[0].Model != "qwen3-coder:30b" || runs[0].ModelRoute != "Main coding model" || len(runs[0].Plan) != 1 || len(runs[0].SourcePaths) != 1 {
 		t.Fatalf("unexpected agent runs: %#v", runs)
 	}
 	tools, err := store.ListToolRuns(agentRun.ID)
@@ -467,6 +470,64 @@ func TestEnsureMigratesTaskRunsArtifactPathColumn(t *testing.T) {
 		StartedAt:    time.Now().UTC(),
 	}); err != nil {
 		t.Fatalf("SaveTaskRun after migration returned error: %v", err)
+	}
+}
+
+func TestEnsureMigratesAgentRunModelRouteColumns(t *testing.T) {
+	root := t.TempDir()
+	dbPath := filepath.Join(root, filepath.FromSlash(metadataDirRelPath), "nexusdesk.sqlite")
+	if err := os.MkdirAll(filepath.Dir(dbPath), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	db, err := sql.Open("sqlite", dbPath)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := db.Exec(`CREATE TABLE agent_runs (
+		id TEXT PRIMARY KEY,
+		workspace_root TEXT NOT NULL,
+		job_id TEXT,
+		prompt TEXT NOT NULL,
+		status TEXT NOT NULL,
+		message TEXT,
+		iterations INTEGER,
+		stop_reason TEXT,
+		plan_json TEXT,
+		source_paths_json TEXT,
+		started_at TEXT NOT NULL,
+		completed_at TEXT,
+		duration_ms INTEGER
+	)`); err != nil {
+		t.Fatal(err)
+	}
+	_ = db.Close()
+	store, err := NewStore(root)
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() { _ = store.Close() })
+	if _, err := store.Ensure(); err != nil {
+		t.Fatalf("Ensure migration returned error: %v", err)
+	}
+	started := time.Now().UTC()
+	if err := store.SaveAgentRun(AgentRunRecord{
+		JobID:        "job-0003",
+		Prompt:       "Review project",
+		Status:       "success",
+		Message:      "Done",
+		Model:        "qwen3-coder:30b",
+		ModelRouteID: "main-coding",
+		ModelRoute:   "Main coding model",
+		StartedAt:    started,
+	}); err != nil {
+		t.Fatalf("SaveAgentRun after migration returned error: %v", err)
+	}
+	runs, err := store.ListAgentRuns(10)
+	if err != nil {
+		t.Fatalf("ListAgentRuns returned error: %v", err)
+	}
+	if len(runs) != 1 || runs[0].Model != "qwen3-coder:30b" || runs[0].ModelRouteID != "main-coding" || runs[0].ModelRoute != "Main coding model" {
+		t.Fatalf("expected migrated route metadata, got %#v", runs)
 	}
 }
 

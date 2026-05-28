@@ -13,18 +13,22 @@ func (v *View) persistAgentRun(jobID string, request agentSvc.Request, result ag
 	}
 	completedAt := time.Now().UTC()
 	record := metadataSvc.AgentRunRecord{
-		ID:          request.ID,
-		JobID:       jobID,
-		Prompt:      request.Prompt,
-		Status:      status,
-		Message:     message,
-		Iterations:  result.Iterations,
-		StopReason:  result.StopReason,
-		Plan:        agentPlanForMetadata(result.Plan),
-		SourcePaths: append([]string{}, request.SourcePaths...),
-		StartedAt:   startedAt,
-		CompletedAt: completedAt,
-		DurationMs:  completedAt.Sub(startedAt).Milliseconds(),
+		ID:           request.ID,
+		JobID:        jobID,
+		Prompt:       request.Prompt,
+		Status:       status,
+		Message:      message,
+		Model:        result.Model,
+		ModelRouteID: result.ModelRouteID,
+		ModelRoute:   result.ModelRoute,
+		RouteWarning: result.RouteWarning,
+		Iterations:   result.Iterations,
+		StopReason:   result.StopReason,
+		Plan:         agentPlanForMetadata(result.Plan),
+		SourcePaths:  append([]string{}, request.SourcePaths...),
+		StartedAt:    startedAt,
+		CompletedAt:  completedAt,
+		DurationMs:   completedAt.Sub(startedAt).Milliseconds(),
 	}
 	if err := v.metadataStore.SaveAgentRun(record); err != nil {
 		v.addActivity("Could not persist agent run: " + err.Error())

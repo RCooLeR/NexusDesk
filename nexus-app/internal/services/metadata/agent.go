@@ -11,12 +11,16 @@ func (s *Store) SaveAgentRun(record AgentRunRecord) error {
 	planJSON, _ := json.Marshal(record.Plan)
 	sourcePathsJSON, _ := json.Marshal(record.SourcePaths)
 	_, err = db.Exec(
-		`INSERT INTO agent_runs (id, workspace_root, job_id, prompt, status, message, iterations, stop_reason, plan_json, source_paths_json, started_at, completed_at, duration_ms)
-		 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+		`INSERT INTO agent_runs (id, workspace_root, job_id, prompt, status, message, model, model_route_id, model_route, route_warning, iterations, stop_reason, plan_json, source_paths_json, started_at, completed_at, duration_ms)
+		 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
 		 ON CONFLICT(id) DO UPDATE SET
 		    job_id = excluded.job_id,
 		    status = excluded.status,
 		    message = excluded.message,
+		    model = excluded.model,
+		    model_route_id = excluded.model_route_id,
+		    model_route = excluded.model_route,
+		    route_warning = excluded.route_warning,
 		    iterations = excluded.iterations,
 		    stop_reason = excluded.stop_reason,
 		    plan_json = excluded.plan_json,
@@ -29,6 +33,10 @@ func (s *Store) SaveAgentRun(record AgentRunRecord) error {
 		record.Prompt,
 		record.Status,
 		record.Message,
+		record.Model,
+		record.ModelRouteID,
+		record.ModelRoute,
+		record.RouteWarning,
 		record.Iterations,
 		record.StopReason,
 		string(planJSON),
@@ -84,7 +92,7 @@ func (s *Store) ListAgentRuns(limit int) ([]AgentRunRecord, error) {
 		return nil, err
 	}
 	rows, err := db.Query(
-		`SELECT id, job_id, prompt, status, message, iterations, stop_reason, plan_json, source_paths_json, started_at, completed_at, duration_ms
+		`SELECT id, job_id, prompt, status, message, model, model_route_id, model_route, route_warning, iterations, stop_reason, plan_json, source_paths_json, started_at, completed_at, duration_ms
 		 FROM agent_runs WHERE workspace_root = ? ORDER BY started_at DESC, id DESC LIMIT ?`,
 		s.root,
 		limit,
@@ -100,7 +108,7 @@ func (s *Store) ListAgentRuns(limit int) ([]AgentRunRecord, error) {
 		var sourcePathsJSON string
 		var started string
 		var completed string
-		if err := rows.Scan(&record.ID, &record.JobID, &record.Prompt, &record.Status, &record.Message, &record.Iterations, &record.StopReason, &planJSON, &sourcePathsJSON, &started, &completed, &record.DurationMs); err != nil {
+		if err := rows.Scan(&record.ID, &record.JobID, &record.Prompt, &record.Status, &record.Message, &record.Model, &record.ModelRouteID, &record.ModelRoute, &record.RouteWarning, &record.Iterations, &record.StopReason, &planJSON, &sourcePathsJSON, &started, &completed, &record.DurationMs); err != nil {
 			return nil, err
 		}
 		_ = json.Unmarshal([]byte(planJSON), &record.Plan)

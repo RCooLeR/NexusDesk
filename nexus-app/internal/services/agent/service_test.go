@@ -145,9 +145,83 @@ Action: write_file({"relPath":"docs/report.md","content":"# Report"})`,
 	}
 }
 
-type fakeSettingsStore struct{}
+func TestRunUsesRequestedModelRoute(t *testing.T) {
+	model := &fakeChatClient{messages: []string{`Final Answer: Routed.`}}
+	store := fakeSettingsStore{settings: settingssvc.Settings{
+		Provider:              "test",
+		BaseURL:               "http://localhost/v1",
+		Model:                 "global-model",
+		ContextTokens:         4096,
+		ResponseReserveTokens: 512,
+		ModelRoutes: []settingssvc.ModelRoute{{
+			ID:                    settingssvc.RouteMainCoding,
+			Label:                 "Main coding model",
+			Model:                 "qwen3-coder:30b",
+			ContextTokens:         131072,
+			ResponseReserveTokens: 16384,
+		}},
+	}}
+	service := New(store, model, ToolExecutorFunc(func(ctx context.Context, call ToolCall, request Request) (ToolResult, error) {
+		return ToolResult{}, errors.New("not used")
+	}))
+	events := []Event{}
+	result, err := service.Run(context.Background(), Request{
+		ID:           "agent-routed",
+		Prompt:       "Review code",
+		ModelRouteID: settingssvc.RouteMainCoding,
+	}, func(event Event) {
+		events = append(events, event)
+	})
+	if err != nil {
+		t.Fatalf("Run returned error: %v", err)
+	}
+	if len(model.configs) != 1 || model.configs[0].Model != "qwen3-coder:30b" || model.configs[0].ContextTokens != 131072 {
+		t.Fatalf("expected routed config, got %#v", model.configs)
+	}
+	if result.ModelRouteID != settingssvc.RouteMainCoding || result.ModelRoute != "Main coding model" || result.RouteWarning != "" {
+		t.Fatalf("expected route metadata, got %#v", result)
+	}
+	if len(events) == 0 || events[0].ModelRoute != "Main coding model" || !strings.Contains(events[0].Message, "Main coding model") {
+		t.Fatalf("expected start event route metadata, got %#v", events)
+	}
+}
 
-func (fakeSettingsStore) Load() (settingssvc.Settings, error) {
+func TestRunFallsBackWhenRequestedModelRouteIsMissing(t *testing.T) {
+	model := &fakeChatClient{messages: []string{`Final Answer: Fallback.`}}
+	store := fakeSettingsStore{settings: settingssvc.Settings{
+		Provider:              "test",
+		BaseURL:               "http://localhost/v1",
+		Model:                 "global-model",
+		ContextTokens:         4096,
+		ResponseReserveTokens: 512,
+		ModelRoutes:           []settingssvc.ModelRoute{},
+	}}
+	service := New(store, model, ToolExecutorFunc(func(ctx context.Context, call ToolCall, request Request) (ToolResult, error) {
+		return ToolResult{}, errors.New("not used")
+	}))
+	result, err := service.Run(context.Background(), Request{
+		Prompt:       "Review code",
+		ModelRouteID: "missing-route",
+	}, nil)
+	if err != nil {
+		t.Fatalf("Run returned error: %v", err)
+	}
+	if len(model.configs) != 1 || model.configs[0].Model != "global-model" {
+		t.Fatalf("expected global fallback config, got %#v", model.configs)
+	}
+	if result.RouteWarning == "" || !strings.Contains(result.RouteWarning, "using the global model") {
+		t.Fatalf("expected route warning, got %#v", result)
+	}
+}
+
+type fakeSettingsStore struct {
+	settings settingssvc.Settings
+}
+
+func (s fakeSettingsStore) Load() (settingssvc.Settings, error) {
+	if s.settings.Model != "" || len(s.settings.ModelRoutes) > 0 {
+		return s.settings, nil
+	}
 	return settingssvc.Settings{Provider: "test", BaseURL: "http://localhost/v1", Model: "test-model", ContextTokens: 4096, ResponseReserveTokens: 512}, nil
 }
 
@@ -155,9 +229,11 @@ type fakeChatClient struct {
 	messages      []string
 	prompts       []string
 	systemPrompts []string
+	configs       []llm.Config
 }
 
 func (c *fakeChatClient) Chat(ctx context.Context, config llm.Config, request llm.ChatRequest) (llm.ChatResult, error) {
+	c.configs = append(c.configs, config)
 	c.prompts = append(c.prompts, request.Prompt)
 	c.systemPrompts = append(c.systemPrompts, request.SystemPrompt)
 	if len(c.messages) == 0 {

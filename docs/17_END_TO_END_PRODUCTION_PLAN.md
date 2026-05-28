@@ -220,11 +220,12 @@ Already available:
 - Settings stores and exposes task-aware model defaults for coding, backend, database, analytics, research, vision/screenshot, balanced reasoning, and fast-coding routes while preserving the global model as the active fallback.
 - Ask mode exposes a model-route selector with global fallback and sends selected routes through the assistant service.
 - Git AI diff summaries and commit drafts resolve the main coding route through the assistant service; assistant results and saved chat-answer artifacts preserve route metadata/warnings.
+- Agent mode resolves the selected model route in the framework-free agent service, sizes context packs against that route, surfaces fallback warnings, and records model/route provenance in the persisted agent audit.
 
 Planned/remaining:
 
 - Deeper retrieval/ranking quality beyond deterministic coverage diagnostics.
-- Wire route-aware model resolution into remaining Data, analytics, research, vision/screenshot, document, and agent workflows with explicit fallback/availability warnings.
+- Wire route-aware model resolution into remaining Data, analytics, research, vision/screenshot, and document workflows with explicit fallback/availability warnings.
 - Better source diagnostics for partial, stale, weak, contradictory, or missing evidence.
 - Complete tool-run provenance coverage for every generated output type.
 - Agent approved shell beyond discovered safe tasks only after shell policy, audit, job routing, and UX are mature.
@@ -604,7 +605,8 @@ The checklist below is intentionally large. `tracker.md` should keep task-level 
 - [x] Add task-aware model defaults in Settings for coding, backend, database, analytics, research, vision/screenshot, balanced reasoning, and fast-coding routes.
 - [x] Add Ask-mode model-route selector with global fallback and assistant-service route metadata.
 - [x] Wire task-aware model route resolution into Git AI diff summary/commit drafting with assistant-service fallback warnings and saved chat-answer route metadata.
-- [ ] Wire task-aware model route resolution into Data, document, vision/screenshot, and agent workflows with fallback warnings and persisted route metadata.
+- [x] Wire task-aware model route resolution into Agent workflows with selected-route context budgeting, fallback warnings, final-response metadata, and persisted agent-audit route/model provenance.
+- [ ] Wire task-aware model route resolution into Data, document, and vision/screenshot workflows with fallback warnings and persisted route metadata.
 - [ ] Add assistant answer quality smoke tests with fixture workspaces.
 - [ ] Add provider-specific guidance for common local model failures.
 

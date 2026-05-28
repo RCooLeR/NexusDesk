@@ -524,7 +524,8 @@ The Fyne migration must not drop product ambition, but this section is intention
 - [x] Add task-aware model defaults in Settings with user-configurable defaults for coding, React/TypeScript/JavaScript, Go backend, Python, PHP/Laravel, SQL, Neo4j/Cypher, CSV/Excel scripts, analytics explanations, research/summaries, vision/screenshot understanding, balanced reasoning/vision, and fastest 30B-class coding.
 - [x] Add Ask-mode model-route selector with global fallback and assistant-service route metadata.
 - [x] Wire task-aware model route resolution into Git AI diff summary/commit drafting with assistant-service fallback warnings and saved `chat-answer` route metadata.
-- [ ] Wire task-aware model route resolution into Data, document, vision/screenshot, and agent workflows with fallback warnings and persisted route metadata.
+- [x] Wire task-aware model route resolution into Agent mode with selected-route context budgeting, fallback warnings, final-response route metadata, and persisted agent-audit model provenance.
+- [ ] Wire task-aware model route resolution into Data, document, and vision/screenshot workflows with fallback warnings and persisted route metadata.
 - [ ] Deeper GPU diagnostics.
 - [x] Streaming chat with selected files/directories/project context, token-budgeted history, persisted turns, and source-path context.
 - [x] Native assistant source/model diagnostics parity slice: Wails-compatible context-label source fallback parsing, source/model/context answer footer, and effective source persistence for saved answer artifacts.
@@ -536,6 +537,7 @@ The Fyne migration must not drop product ambition, but this section is intention
 - [x] Persist structured cited/uncited source coverage lists in `chat-answer` artifacts and metadata, and preserve them through chat-answer regeneration.
 - [x] Local assistant memory and prompt profiles.
 - [x] Agent runtime with plan updates, bounded observations, model-driven tool calls, no frontend iteration cap, emergency backend loop guard, and final-answer fallback behavior.
+- [x] Agent runtime resolves selected task-aware model routes without UI/framework coupling and records model/route provenance in SQLite audit history.
 - [x] Unified tool registry and dispatcher for deterministic tools and model-requested tools.
 - [x] Agent tools for read context, workspace search, problems, Git status/diff, tasks, artifacts, datasets, SQLite, documents, operations files, safe writes, patches, copy/move/delete, and rollback.
 - [x] Agent tools for read-only Git history/blame.
