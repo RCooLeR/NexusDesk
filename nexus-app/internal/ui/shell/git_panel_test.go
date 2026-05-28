@@ -156,3 +156,41 @@ func TestGitAIDiffBlockTruncatesLargeDiff(t *testing.T) {
 		t.Fatalf("expected truncation warning, got:\n%s", block)
 	}
 }
+
+func TestFormatGitHistoryIncludesCommitMetadata(t *testing.T) {
+	text := formatGitHistory(gitSvc.HistoryResult{
+		Path:    "src/app.go",
+		Message: "Loaded 1 Git history entry for src/app.go.",
+		Entries: []gitSvc.HistoryEntry{{
+			ShortHash: "abc1234",
+			Author:    "Ada",
+			Email:     "ada@example.com",
+			Date:      "2026-01-01T00:00:00Z",
+			Subject:   "Add native Git history",
+		}},
+	})
+	for _, expected := range []string{"# Git History", "Path: src/app.go", "abc1234 Add native Git history", "Ada <ada@example.com>"} {
+		if !strings.Contains(text, expected) {
+			t.Fatalf("expected history text to contain %q, got:\n%s", expected, text)
+		}
+	}
+}
+
+func TestFormatGitBlameIncludesLineMetadata(t *testing.T) {
+	text := formatGitBlame(gitSvc.BlameResult{
+		Path:    "src/app.go",
+		Message: "Loaded 1 Git blame line for src/app.go.",
+		Lines: []gitSvc.BlameLine{{
+			Line:      7,
+			ShortHash: "abc1234",
+			Author:    "Ada",
+			Summary:   "Add native Git blame",
+			Content:   "func main() {}",
+		}},
+	})
+	for _, expected := range []string{"# Git Blame", "Path: src/app.go", "7  abc1234", "Ada", "func main() {}", "Add native Git blame"} {
+		if !strings.Contains(text, expected) {
+			t.Fatalf("expected blame text to contain %q, got:\n%s", expected, text)
+		}
+	}
+}

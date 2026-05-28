@@ -87,3 +87,43 @@ type HunkActionResult struct {
 	Status      Status
 	GeneratedAt time.Time
 }
+
+type HistoryEntry struct {
+	Hash      string
+	ShortHash string
+	Author    string
+	Email     string
+	Date      string
+	Subject   string
+}
+
+type HistoryResult struct {
+	Available   bool
+	Path        string
+	Limit       int
+	Entries     []HistoryEntry
+	Truncated   bool
+	Message     string
+	GeneratedAt time.Time
+}
+
+type BlameLine struct {
+	Line      int
+	Hash      string
+	ShortHash string
+	Author    string
+	Date      string
+	Summary   string
+	Content   string
+}
+
+type BlameResult struct {
+	Available   bool
+	Path        string
+	StartLine   int
+	EndLine     int
+	Lines       []BlameLine
+	Truncated   bool
+	Message     string
+	GeneratedAt time.Time
+}

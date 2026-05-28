@@ -7,10 +7,7 @@ import (
 )
 
 func cleanRelPath(value string) (string, error) {
-	value = strings.TrimSpace(value)
-	value = strings.Trim(value, `"'`)
-	value = filepath.ToSlash(value)
-	value = strings.TrimPrefix(value, "/")
+	value = cleanOptionalRelPath(value)
 	if value == "" || value == "." {
 		return "", errors.New("Git path is required")
 	}
@@ -21,4 +18,15 @@ func cleanRelPath(value string) (string, error) {
 		return "", errors.New("Git path must stay inside the repository")
 	}
 	return value, nil
+}
+
+func cleanOptionalRelPath(value string) string {
+	value = strings.TrimSpace(value)
+	value = strings.Trim(value, `"'`)
+	value = filepath.ToSlash(value)
+	value = strings.TrimPrefix(value, "/")
+	if value == "." {
+		return ""
+	}
+	return value
 }

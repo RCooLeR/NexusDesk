@@ -380,7 +380,8 @@ The Fyne migration must not drop product ambition, but this section is intention
 - [x] Problems panel for TODO/FIXME/HACK/BUG markers, merge conflicts, and JSON errors.
 - [ ] Problems panel language diagnostics beyond lightweight local scans.
 - [x] Git status, branch, changed-file tree, staged/unstaged groups, file diff, split/unified/diff-only views, hunk actions, AI diff summary, and commit draft.
-- [ ] Git history, blame, broader AI review, test suggestions, PR draft, and destructive revert/discard actions.
+- [x] Port native read-only Git history and blame service/UI from Wails.
+- [ ] Git history/blame agent context tools, broader AI review, test suggestions, PR draft, and destructive revert/discard actions.
 - [x] Task discovery and approved task runs for npm, Go, Python pytest, Cargo, and Docker Compose validation.
 
 ### Data & Analytics Studio

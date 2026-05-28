@@ -53,6 +53,8 @@ func (v *View) newGitPanel() fyne.CanvasObject {
 	})
 	summarize := widget.NewButtonWithIcon("AI summary", theme.InfoIcon(), v.summarizeSelectedGitDiff)
 	draftCommit := widget.NewButtonWithIcon("Draft commit", theme.MailComposeIcon(), v.draftSelectedGitCommitMessage)
+	history := widget.NewButtonWithIcon("History", theme.HistoryIcon(), v.openSelectedGitHistory)
+	blame := widget.NewButtonWithIcon("Blame", theme.VisibilityIcon(), v.openSelectedGitBlame)
 	prevHunk := widget.NewButtonWithIcon("", theme.NavigateBackIcon(), func() {
 		v.moveGitHunk(-1)
 	})
@@ -62,7 +64,7 @@ func (v *View) newGitPanel() fyne.CanvasObject {
 	})
 	nextHunk.Importance = widget.LowImportance
 	hunkNav := container.NewHBox(prevHunk, v.gitHunkStatus, nextHunk)
-	actions := container.NewHBox(stage, unstage, stageHunk, unstageHunk, summarize, draftCommit, diffMode)
+	actions := container.NewHBox(stage, unstage, stageHunk, unstageHunk, history, blame, summarize, draftCommit, diffMode)
 	diffHeader := container.NewBorder(nil, nil, hunkNav, actions, v.gitDiffStatus)
 	diff := container.NewBorder(diffHeader, nil, nil, nil, v.gitDiffText)
 	split := container.NewVSplit(scroll, diff)
@@ -104,6 +106,43 @@ func (v *View) openGitDiff(path string) {
 	v.gitDiffText.SetText(formatGitDiff(diff, v.gitDiffMode))
 	v.updateGitHunkStatus()
 	v.addActivity(diff.Message)
+}
+
+func (v *View) openSelectedGitHistory() {
+	target := v.currentGitTargetPath()
+	workspace := v.state.Workspace()
+	result, err := v.gitService.History(workspace.Root, target, gitSvc.DefaultHistoryLimit)
+	if err != nil {
+		dialog.ShowError(err, v.window)
+		return
+	}
+	v.gitDiffStatus.SetText(result.Message)
+	v.gitDiffText.SetText(formatGitHistory(result))
+	v.addActivity(result.Message)
+}
+
+func (v *View) openSelectedGitBlame() {
+	target := v.currentGitTargetPath()
+	if strings.TrimSpace(target) == "" {
+		v.addActivity("Select a file before reading Git blame.")
+		return
+	}
+	workspace := v.state.Workspace()
+	result, err := v.gitService.Blame(workspace.Root, target, 1, gitSvc.DefaultHistoryLimit)
+	if err != nil {
+		dialog.ShowError(err, v.window)
+		return
+	}
+	v.gitDiffStatus.SetText(result.Message)
+	v.gitDiffText.SetText(formatGitBlame(result))
+	v.addActivity(result.Message)
+}
+
+func (v *View) currentGitTargetPath() string {
+	if strings.TrimSpace(v.gitLastDiff.Path) != "" {
+		return v.gitLastDiff.Path
+	}
+	return strings.TrimSpace(v.state.SelectedPath())
 }
 
 func (v *View) moveGitHunk(delta int) {
@@ -320,4 +359,70 @@ func gitHunkTargetFromDiff(hunk gitSvc.DiffHunk) gitHunkTarget {
 		Header: hunk.Header,
 		Label:  fmt.Sprintf("%s hunk %d (+%d/-%d)", kind, hunk.Index+1, hunk.AddedLines, hunk.DeletedLines),
 	}
+}
+
+func formatGitHistory(result gitSvc.HistoryResult) string {
+	var builder strings.Builder
+	builder.WriteString("# Git History\n\n")
+	if result.Path != "" {
+		builder.WriteString("Path: ")
+		builder.WriteString(result.Path)
+		builder.WriteString("\n")
+	}
+	builder.WriteString(result.Message)
+	builder.WriteString("\n\n")
+	if len(result.Entries) == 0 {
+		builder.WriteString("No commits found.\n")
+		return builder.String()
+	}
+	for _, entry := range result.Entries {
+		builder.WriteString("- ")
+		builder.WriteString(firstNonEmptyString(entry.ShortHash, entry.Hash))
+		builder.WriteString(" ")
+		builder.WriteString(entry.Subject)
+		builder.WriteString("\n  ")
+		builder.WriteString(entry.Author)
+		if entry.Email != "" {
+			builder.WriteString(" <")
+			builder.WriteString(entry.Email)
+			builder.WriteString(">")
+		}
+		if entry.Date != "" {
+			builder.WriteString(" | ")
+			builder.WriteString(entry.Date)
+		}
+		builder.WriteString("\n")
+	}
+	if result.Truncated {
+		builder.WriteString("\nHistory truncated by the native preview limit.\n")
+	}
+	return builder.String()
+}
+
+func formatGitBlame(result gitSvc.BlameResult) string {
+	var builder strings.Builder
+	builder.WriteString("# Git Blame\n\n")
+	if result.Path != "" {
+		builder.WriteString("Path: ")
+		builder.WriteString(result.Path)
+		builder.WriteString("\n")
+	}
+	builder.WriteString(result.Message)
+	builder.WriteString("\n\n")
+	if len(result.Lines) == 0 {
+		builder.WriteString("No blame lines found.\n")
+		return builder.String()
+	}
+	for _, line := range result.Lines {
+		builder.WriteString(fmt.Sprintf("%4d  %-12s  %-18s  %s\n", line.Line, firstNonEmptyString(line.ShortHash, line.Hash), line.Author, line.Content))
+		if line.Summary != "" || line.Date != "" {
+			builder.WriteString("      ")
+			builder.WriteString(strings.TrimSpace(line.Summary + " " + line.Date))
+			builder.WriteString("\n")
+		}
+	}
+	if result.Truncated {
+		builder.WriteString("\nBlame truncated by the native preview limit.\n")
+	}
+	return builder.String()
 }

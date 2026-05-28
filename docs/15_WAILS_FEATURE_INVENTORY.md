@@ -28,7 +28,7 @@ This inventory records the explicit `port`, `replace`, `drop`, or `later` decisi
 | Monaco syntax highlighting, language workers, minimap/editor outline UX | `MonacoFileEditor.tsx`, `MonacoCodePreview.tsx`, `editorOutline.ts`, frontend `dist/assets/*Mode*` | Native text editor supports editing, preview, dirty-close safety, quick-open, and find/replace; IDE-grade language UX remains incomplete | `replace` | Define Fyne-native syntax/breadcrumb/outline strategy; embed only after a focused spike proves packaging and accessibility |
 | Command palette and quick-open | `CommandPalette.tsx`, `QuickOpenPalette.tsx` | Native quick-open keyboard workflow exists; command palette depth is not fully replicated | `ported` for quick-open, `later` for broader command palette | Keep quick-open native; revisit full command palette after editor/navigation polish |
 | Git status, file diff, file/hunk stage and unstage | `app-wails/app_git.go`, `GitDiffPanel.tsx` | Native Git panel supports status, diff, hunk-windowing, file/hunk actions, and AI summary | `ported` | Continue destructive action policy separately |
-| Git history and blame | `GetGitHistory`, `GetGitBlame`, Wails agent `read_git_history`/`read_git_blame` | Native Git service currently focuses on status/diff/actions | `port` | Add read-only history/blame services, UI rows, and agent context tools |
+| Git history and blame | `GetGitHistory`, `GetGitBlame`, Wails agent `read_git_history`/`read_git_blame` | Native Git service and Git panel now expose read-only history/blame for selected files; agent context tools still need a follow-up | `ported` for UI, `port` for agent context | Add agent context tools for read-only history/blame |
 | Artifact writer, metadata, archive/delete, compare, source freshness | `app-wails/internal/artifact/*`, `ArtifactStudioPanel.tsx` | Native artifact browser/writer/compare/archive/restore/delete/source actions are implemented | `ported` | Continue lineage graph and regeneration work |
 | Artifact lineage graph import/export and dependency rebuild | `GetArtifactLineage`, `ExportArtifactLineageJSON`, `ImportArtifactLineageJSON`, `RebuildDatasetDependency` | Native lineage metadata and freshness exist, but graph import/export and rebuild workflow are not complete | `port` | Add lineage graph import/export UI and regeneration actions after artifact metadata stabilizes |
 | Dataset profiling, SQL, notebooks, charts, dashboards, SQLite query artifacts | `dataset_service.go`, `DataStudioPanel.tsx`, `DataOperationsPanel.tsx` | Native Data panel covers profiles, query/SQL, notebook run/export, chart/dashboard artifacts, SQLite saved queries, history, and lineage | `ported` | Continue notebook/editor UX and dump import design |
@@ -54,7 +54,7 @@ This inventory records the explicit `port`, `replace`, `drop`, or `later` decisi
 1. Finish the editor parity strategy: syntax highlighting, breadcrumbs/outline, encoding controls, split/editor layout decision.
 2. Implement native protected secret storage on Windows with explicit unsupported-platform behavior.
 3. Add assistant prompt profiles/memory plus retry/compare/save-answer UX.
-4. Port read-only Git history/blame into the native Git panel and agent context tools.
+4. Add read-only Git history/blame agent context tools.
 5. Add artifact lineage import/export and regeneration workflows.
 6. Add approval-gated agent web fetch if still desired for parity.
 

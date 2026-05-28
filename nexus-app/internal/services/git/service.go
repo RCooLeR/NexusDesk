@@ -13,6 +13,9 @@ import (
 const commandTimeout = 4 * time.Second
 const diffMaxBytes = 220 * 1024
 const diffContextLines = "3"
+const DefaultHistoryLimit = 20
+const historyMaxLimit = 80
+const blameMaxLines = 220
 
 type Service struct{}
 
