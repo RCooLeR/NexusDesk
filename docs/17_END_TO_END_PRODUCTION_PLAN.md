@@ -95,6 +95,7 @@ The Fyne migration is correct because the desired product is native, local-first
 - `nexus-app/internal/ui`: Fyne shell, widgets, layouts, dialogs, menus, theme, presentation logic.
 - `nexus-app/internal/brand`: brand assets and theme constants.
 - `app-wails/`: reference implementation only until explicit freeze/archive decision.
+- Detailed package ownership is captured in `docs/23_INTERNAL_PACKAGE_OWNERSHIP.md` and exposed in-product through Help and the command palette.
 
 ### 3.2 Non-Negotiable Architecture Rules
 
@@ -520,7 +521,7 @@ The checklist below is intentionally large. `tracker.md` should keep task-level 
 - [x] Add clean-machine smoke checklist and expose it in-product.
 - [x] Add app data and uninstall cleanup guide and expose it in-product.
 - [ ] Keep `docs/12_PROJECT_REVIEW.md`, `docs/13_PRODUCTION_READINESS.md`, `docs/15_WAILS_FEATURE_INVENTORY.md`, and `tracker.md` synchronized after every major milestone.
-- [ ] Add package ownership documentation for every major `internal/` area.
+- [x] Add package ownership documentation for every major `internal/` area.
 - [ ] Add contributor setup, coding standards, and ADR index.
 
 ### 7.2 P0: Architecture And Codebase Health
@@ -533,7 +534,7 @@ The checklist below is intentionally large. `tracker.md` should keep task-level 
 - [x] Split initial large Data panel responsibilities.
 - [ ] Continue extracting `internal/ui/shell` controllers by responsibility.
 - [ ] Define shell state ownership boundaries: workspace, editor, assistant, data, artifacts, jobs, diagnostics.
-- [ ] Add package-level architecture docs for services and UI shell.
+- [x] Add package-level architecture docs for services and UI shell.
 - [ ] Add performance profiling harness for shell redraw, activity log, data grid, large search, and large artifacts.
 
 ### 7.3 P0: Safety And Trust
@@ -656,7 +657,7 @@ The checklist below is intentionally large. `tracker.md` should keep task-level 
 
 - [ ] Stable service interfaces for contributed connectors and parsers.
 - [ ] Plugin/MCP strategy after native core tools are stable.
-- [ ] Contributor docs and architecture decision records.
+- [ ] Contributor setup, coding standards, and architecture decision records.
 - [ ] Test fixture policy for community contributions.
 - [ ] Extension security model before third-party code execution.
 

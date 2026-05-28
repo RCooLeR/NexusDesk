@@ -3,7 +3,6 @@ package artifacts
 import (
 	"errors"
 	"fmt"
-	"os"
 	"path/filepath"
 	"strings"
 	"time"
@@ -46,14 +45,9 @@ func (s *Store) WriteDocumentBriefReport(report DocumentBriefReport) (Artifact, 
 	if title == "" {
 		title = documentBriefTitle(report.SourceTitle, report.SourcePath)
 	}
-	relPath := s.relPath("document-briefs", fmt.Sprintf("%s-%s.md", artifactTimestamp(createdAt), safeName(title)))
-	absPath := s.absPath(relPath)
-	if err := os.MkdirAll(filepath.Dir(absPath), 0o755); err != nil {
-		return Artifact{}, err
-	}
 	sourcePaths := documentBriefSourcePaths(report.SourcePath, report.SourcePaths)
 	markdown := documentBriefMarkdown(report, title, sourcePaths, createdAt)
-	file, err := os.OpenFile(absPath, os.O_WRONLY|os.O_CREATE|os.O_EXCL, 0o644)
+	relPath, absPath, file, err := s.createUniqueArtifactFile("document-briefs", title, ".md", createdAt)
 	if err != nil {
 		return Artifact{}, err
 	}

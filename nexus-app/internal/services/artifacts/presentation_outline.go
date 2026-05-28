@@ -3,7 +3,6 @@ package artifacts
 import (
 	"errors"
 	"fmt"
-	"os"
 	"path/filepath"
 	"strings"
 	"time"
@@ -50,14 +49,9 @@ func (s *Store) WritePresentationOutlineReport(report PresentationOutlineReport)
 	if title == "" {
 		title = presentationOutlineTitle(report.SourceTitle, report.SourcePath)
 	}
-	relPath := s.relPath("presentations", fmt.Sprintf("%s-%s.md", artifactTimestamp(createdAt), safeName(title)))
-	absPath := s.absPath(relPath)
-	if err := os.MkdirAll(filepath.Dir(absPath), 0o755); err != nil {
-		return Artifact{}, err
-	}
 	sourcePaths := presentationOutlineSourcePaths(report.SourcePath, report.SourcePaths)
 	markdown := presentationOutlineMarkdown(report, title, sourcePaths, createdAt)
-	file, err := os.OpenFile(absPath, os.O_WRONLY|os.O_CREATE|os.O_EXCL, 0o644)
+	relPath, absPath, file, err := s.createUniqueArtifactFile("presentations", title, ".md", createdAt)
 	if err != nil {
 		return Artifact{}, err
 	}

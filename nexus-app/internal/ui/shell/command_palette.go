@@ -210,6 +210,13 @@ func (v *View) commandPaletteActions() []commandPaletteAction {
 			Group:  "Help",
 			Run:    v.openReleaseHygieneGuideTab,
 		},
+		{
+			ID:     "help.package_ownership",
+			Title:  "Internal Package Ownership",
+			Detail: "Open contributor guidance for package boundaries, service ownership, UI responsibilities, and safety rules.",
+			Group:  "Help",
+			Run:    v.openPackageOwnershipGuideTab,
+		},
 		v.bottomPanelCommand("view.search", "Search", "Open workspace path and content search results.", "Workbench"),
 		v.bottomPanelCommand("view.problems", "Problems", "Open syntax and workspace diagnostics.", "Workbench"),
 		v.bottomPanelCommand("view.git", "Git", "Open status, diff, history, blame, and hunk actions.", "Workbench"),

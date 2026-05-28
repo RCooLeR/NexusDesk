@@ -627,7 +627,7 @@ The Fyne migration must not drop product ambition, but this section is intention
 
 ### Extensibility And Community
 
-- [ ] Package ownership docs for every major `internal/` area.
+- [x] Package ownership docs for every major `internal/` area, with `docs/23_INTERNAL_PACKAGE_OWNERSHIP.md` and an in-app Help/command-palette guide covering layer rules, service ownership, UI boundaries, slow-work rules, and risky-action rules.
 - [ ] Contributor setup guide, coding standards, tests, and architecture decision records.
 - [ ] Plugin/MCP strategy after native core tools are stable.
 - [ ] Stable service interfaces for community-contributed connectors and document parsers.

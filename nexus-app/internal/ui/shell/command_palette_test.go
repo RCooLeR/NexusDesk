@@ -70,6 +70,7 @@ func TestCommandPaletteIncludesSafeAgentGuide(t *testing.T) {
 	foundSmokeChecklist := false
 	foundAppDataCleanup := false
 	foundReleaseHygiene := false
+	foundPackageOwnership := false
 	for _, command := range commands {
 		switch command.ID {
 		case "help.safe_agent":
@@ -97,10 +98,15 @@ func TestCommandPaletteIncludesSafeAgentGuide(t *testing.T) {
 				t.Fatalf("unexpected release-hygiene command: %#v", command)
 			}
 			foundReleaseHygiene = true
+		case "help.package_ownership":
+			if command.Title != "Internal Package Ownership" || command.Group != "Help" || command.Run == nil {
+				t.Fatalf("unexpected package-ownership command: %#v", command)
+			}
+			foundPackageOwnership = true
 		}
 	}
-	if !foundSafeAgent || !foundBetaFeedback || !foundSmokeChecklist || !foundAppDataCleanup || !foundReleaseHygiene {
-		t.Fatalf("missing help commands: safe_agent=%t beta_feedback=%t smoke_checklist=%t app_data_cleanup=%t release_hygiene=%t in %#v", foundSafeAgent, foundBetaFeedback, foundSmokeChecklist, foundAppDataCleanup, foundReleaseHygiene, commands)
+	if !foundSafeAgent || !foundBetaFeedback || !foundSmokeChecklist || !foundAppDataCleanup || !foundReleaseHygiene || !foundPackageOwnership {
+		t.Fatalf("missing help commands: safe_agent=%t beta_feedback=%t smoke_checklist=%t app_data_cleanup=%t release_hygiene=%t package_ownership=%t in %#v", foundSafeAgent, foundBetaFeedback, foundSmokeChecklist, foundAppDataCleanup, foundReleaseHygiene, foundPackageOwnership, commands)
 	}
 }
 

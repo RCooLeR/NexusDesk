@@ -55,6 +55,8 @@ app-wails/                     Preserved Wails desktop app and migration referen
 app-wails/internal/            Legacy backend packages to port capability by capability
 app-wails/frontend/            Legacy React/TypeScript UI reference
 docs/                          Product, engineering, and brand docs
+docs/23_INTERNAL_PACKAGE_OWNERSHIP.md
+                               Detailed ownership map for major native packages
 docs/brand/                    Brand book, generated assets, and design tokens
 services/                      Development and testing helper services
 tracker.md                     Implementation tracker
@@ -73,6 +75,8 @@ nexus-app/internal/ui/         Fyne shell, panels, dialogs, widgets, theme
 Do not document future directories as existing until they are created.
 
 ## Architecture Rules
+
+See `docs/23_INTERNAL_PACKAGE_OWNERSHIP.md` for the detailed package ownership map and change checklist.
 
 - Keep `main.go` thin.
 - Keep framework-free domain types in `internal/domain`.
