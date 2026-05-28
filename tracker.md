@@ -268,7 +268,7 @@ Goal: restore generated-output workflows with provenance and native inspection.
 - [x] Add source fingerprints to artifact metadata so freshness detects same-timestamp content changes.
 - [x] Add first archive restore flow for generated artifacts with collision-safe restore paths.
 - [x] Port native workspace scan report artifacts from Wails behind an explicit cancellable job.
-- [x] Add artifact-side regeneration for native workspace scan reports, document-extraction artifacts, operations runbooks, and artifact comparison reports through durable Artifacts-panel jobs.
+- [x] Add artifact-side regeneration for native workspace scan reports, document reports, document-extraction artifacts, operations runbooks, and artifact comparison reports through durable Artifacts-panel jobs.
 - [x] Add document preview/extraction for Markdown, TXT, PDF, DOCX, XLSX, HTML/XML.
 - [x] Add first native document extraction slice for Markdown, TXT, HTML, and XML source files with artifact export.
 - [x] Extend native document extraction artifacts to DOCX and PDF preview text with PDF page metadata.
@@ -499,9 +499,9 @@ The Fyne migration must not drop product ambition, but this section is intention
 - [x] Artifact lineage/freshness warnings for current native artifacts.
 - [x] Artifact lineage graph import/export UI parity with workspace graph JSON artifacts.
 - [x] First artifact regeneration workflow that reuses dataset summary, query, SQL, chart, dashboard, SQL notebook, and SQLite query export dependency metadata.
-- [x] Expand artifact regeneration beyond dataset/query/chart/notebook/SQLite baseline with scan-report, document-extract, operations-runbook, and artifact-comparison rebuild actions.
+- [x] Expand artifact regeneration beyond dataset/query/chart/notebook/SQLite baseline with document-report, scan-report, document-extract, operations-runbook, and artifact-comparison rebuild actions.
 - [x] Add approval-gated agent artifact regeneration for supported native rebuildable artifacts.
-- [ ] Expand artifact regeneration to future artifact kinds such as richer generated documents, presentations, and chat-answer refresh flows.
+- [ ] Expand artifact regeneration to future artifact kinds such as generated presentations and chat-answer refresh flows.
 
 ### Operations Studio
 

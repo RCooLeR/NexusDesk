@@ -158,10 +158,22 @@ func (v *View) generateDocumentSetArtifact() {
 }
 
 func (v *View) buildDocumentSetArtifact(ctx context.Context, workspaceRoot string, root string) (artifactsSvc.Artifact, error) {
+	root = filepath.ToSlash(strings.TrimSpace(root))
+	if root == "" {
+		root = "."
+	}
+	return v.buildDocumentSetArtifactFromRoots(ctx, workspaceRoot, []string{root})
+}
+
+func (v *View) buildDocumentSetArtifactFromRoots(ctx context.Context, workspaceRoot string, roots []string) (artifactsSvc.Artifact, error) {
 	if err := ctx.Err(); err != nil {
 		return artifactsSvc.Artifact{}, err
 	}
-	pack, err := v.workspaceService.BuildContextPack(workspaceRoot, []string{root}, workspaceSvc.ContextPackOptions{
+	roots = normalizeArtifactRegenerationSources(roots, true)
+	if len(roots) == 0 {
+		roots = []string{"."}
+	}
+	pack, err := v.workspaceService.BuildContextPack(workspaceRoot, roots, workspaceSvc.ContextPackOptions{
 		ContextCollectOptions: workspaceSvc.ContextCollectOptions{
 			MaxFiles:   24,
 			MaxEntries: 1200,
@@ -180,8 +192,8 @@ func (v *View) buildDocumentSetArtifact(ctx context.Context, workspaceRoot strin
 		return artifactsSvc.Artifact{}, err
 	}
 	artifact, err := store.WriteDocumentSetReport(artifactsSvc.DocumentSetReport{
-		Title:       documentSetArtifactTitle(root),
-		Roots:       []string{root},
+		Title:       documentSetArtifactTitleForRoots(roots),
+		Roots:       append([]string{}, roots...),
 		SourcePaths: pack.SourcePaths,
 		Content:     pack.Content,
 		Truncated:   pack.Truncated,
@@ -440,6 +452,12 @@ func (v *View) buildRegeneratedArtifact(ctx context.Context, workspaceRoot strin
 	switch strings.TrimSpace(artifact.Kind) {
 	case "scan-report":
 		return v.buildWorkspaceScanReportArtifact(ctx, workspaceRoot)
+	case "document-report":
+		roots, ok := artifactRegenerationSources(artifact)
+		if !ok {
+			return artifactsSvc.Artifact{}, fmt.Errorf("document report artifact %s has no source path metadata", artifact.RelPath)
+		}
+		return v.buildDocumentSetArtifactFromRoots(ctx, workspaceRoot, roots)
 	case "document-extract":
 		source, ok := artifactRegenerationSource(artifact)
 		if !ok {
@@ -817,6 +835,9 @@ func artifactCanRegenerate(artifact artifactsSvc.Artifact) bool {
 	switch strings.TrimSpace(artifact.Kind) {
 	case "scan-report":
 		return true
+	case "document-report":
+		_, ok := artifactRegenerationSources(artifact)
+		return ok
 	case "document-extract":
 		_, ok := artifactRegenerationSource(artifact)
 		return ok
@@ -832,16 +853,47 @@ func artifactCanRegenerate(artifact artifactsSvc.Artifact) bool {
 }
 
 func artifactRegenerationSource(artifact artifactsSvc.Artifact) (string, bool) {
-	candidates := append([]string{}, artifact.SourcePaths...)
-	candidates = append(candidates, artifact.Source)
+	sources := normalizeArtifactRegenerationSources(append(append([]string{}, artifact.SourcePaths...), artifact.Source), false)
+	if len(sources) == 0 {
+		return "", false
+	}
+	return sources[0], true
+}
+
+func artifactRegenerationSources(artifact artifactsSvc.Artifact) ([]string, bool) {
+	var candidates []string
+	if strings.TrimSpace(artifact.Source) != "" {
+		if strings.Contains(artifact.Source, ",") {
+			candidates = strings.Split(artifact.Source, ",")
+		} else {
+			candidates = append(candidates, artifact.Source)
+		}
+	}
+	sources := normalizeArtifactRegenerationSources(candidates, true)
+	if len(sources) == 0 {
+		sources = normalizeArtifactRegenerationSources(artifact.SourcePaths, true)
+	}
+	return sources, len(sources) > 0
+}
+
+func normalizeArtifactRegenerationSources(candidates []string, allowProjectRoot bool) []string {
+	seen := make(map[string]struct{}, len(candidates))
+	sources := make([]string, 0, len(candidates))
 	for _, candidate := range candidates {
 		candidate = filepath.ToSlash(strings.TrimSpace(candidate))
-		if candidate == "" || candidate == "." || strings.Contains(candidate, ",") {
+		if candidate == "" || strings.Contains(candidate, ",") {
 			continue
 		}
-		return candidate, true
+		if candidate == "." && !allowProjectRoot {
+			continue
+		}
+		if _, ok := seen[candidate]; ok {
+			continue
+		}
+		seen[candidate] = struct{}{}
+		sources = append(sources, candidate)
 	}
-	return "", false
+	return sources
 }
 
 func artifactRegenerationPair(artifact artifactsSvc.Artifact) (string, string, bool) {
@@ -885,11 +937,18 @@ func artifactTitle(artifact artifactsSvc.Artifact) string {
 }
 
 func documentSetArtifactTitle(root string) string {
-	root = strings.TrimSpace(root)
-	if root == "" || root == "." {
+	return documentSetArtifactTitleForRoots([]string{root})
+}
+
+func documentSetArtifactTitleForRoots(roots []string) string {
+	roots = normalizeArtifactRegenerationSources(roots, true)
+	if len(roots) == 0 || (len(roots) == 1 && roots[0] == ".") {
 		return "Project Document Set Report"
 	}
-	return "Document Set Report - " + root
+	if len(roots) == 1 {
+		return "Document Set Report - " + roots[0]
+	}
+	return fmt.Sprintf("Document Set Report - %d sources", len(roots))
 }
 
 func documentSetArtifactJobLabel(root string) string {

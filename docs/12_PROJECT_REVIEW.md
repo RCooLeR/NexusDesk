@@ -46,7 +46,7 @@ Implemented in `nexus-app/`:
 - Task discovery/run jobs for npm, Go tests, Python pytest, Cargo tests, and Docker Compose config validation.
 - Data profiling/query/SQL/notebooks for CSV, TSV, JSON, NDJSON, XLSX, logs, Parquet metadata, and SQLite files.
 - Chart/dashboard SVG preview and artifact generation.
-- Artifact browser with metadata, lineage, comparison, archive/delete/restore, source freshness, context pinning, job-routed workspace scan reports, and regeneration for scan, document-extraction, operations-runbook, and artifact-comparison artifacts.
+- Artifact browser with metadata, lineage, comparison, archive/delete/restore, source freshness, context pinning, job-routed workspace scan reports, and regeneration for document-report, scan, document-extraction, operations-runbook, and artifact-comparison artifacts.
 - Document extraction/report artifacts for Markdown, TXT, HTML, XML, DOCX, XLSX, and PDF preview text.
 - Operations inspection for Dockerfiles, Compose, env/config/script/log files, Compose topology, safe config validation, and runbook artifacts.
 - Settings, LLM transport, streaming Ask mode, Agent mode, deterministic tools including approval-gated artifact regeneration, approval queue, full-project access policy, rollback browser, history, audit, source/model answer diagnostics, evidence-quality labels, line-aware citation refs, saved citation snippets, and durable metadata.
@@ -56,7 +56,7 @@ Implemented in `nexus-app/`:
 Priority migration gaps:
 
 1. Native editor quality: active-editor inline syntax styling and future LSP/deeper cross-file language-aware navigation.
-2. Native editor-adjacent artifact regeneration and source quality: richer future regeneration coverage and deeper retrieval/source evidence UX.
+2. Native editor-adjacent artifact regeneration and source quality: future presentation/chat-answer regeneration coverage and deeper retrieval/source evidence UX.
 3. Job routing for slow workflows: long indexing, OCR, dump imports, connector pulls, report generation, and long agent runs.
 4. Connector and dump workflows: temporary isolated database sandboxes, import lifecycle, storage limits, and read-only analysis.
 5. Assistant maturity: model context accounting, runtime diagnostics, source-citation quality, and broader tool coverage.
@@ -75,7 +75,7 @@ The next batches should stay migration-first:
 
 1. Keep closing the Wails-only feature inventory instead of adding new top-level studios.
 2. Finish native editor parity and UI structure.
-3. Add deeper assistant retrieval evidence and future artifact regeneration coverage.
+3. Add deeper assistant retrieval evidence and future presentation/chat-answer regeneration coverage.
 4. Add macOS Keychain and Linux Secret Service/libsecret after the Windows protected-secret baseline.
 5. Route remaining slow workflows through durable jobs.
 6. Add dump import design and first safe job scaffold before any database mutation/import execution.

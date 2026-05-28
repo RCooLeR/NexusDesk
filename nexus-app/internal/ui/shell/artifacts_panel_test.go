@@ -41,6 +41,9 @@ func TestDocumentSetArtifactTitle(t *testing.T) {
 	if got := documentSetArtifactTitle("docs"); got != "Document Set Report - docs" {
 		t.Fatalf("unexpected selected document title: %q", got)
 	}
+	if got := documentSetArtifactTitleForRoots([]string{"docs", "README.md"}); got != "Document Set Report - 2 sources" {
+		t.Fatalf("unexpected multi-root document title: %q", got)
+	}
 }
 
 func TestDocumentArtifactJobLabels(t *testing.T) {
@@ -138,6 +141,21 @@ func TestArtifactCanRegenerateSupportedKinds(t *testing.T) {
 			want:     true,
 		},
 		{
+			name:     "document report with sources",
+			artifact: artifactsSvc.Artifact{Kind: "document-report", SourcePaths: []string{"docs/a.md"}},
+			want:     true,
+		},
+		{
+			name:     "document report with project root source",
+			artifact: artifactsSvc.Artifact{Kind: "document-report", Source: "."},
+			want:     true,
+		},
+		{
+			name:     "document report without source",
+			artifact: artifactsSvc.Artifact{Kind: "document-report"},
+			want:     false,
+		},
+		{
 			name:     "document extract with source",
 			artifact: artifactsSvc.Artifact{Kind: "document-extract", SourcePaths: []string{"docs/a.md"}},
 			want:     true,
@@ -200,6 +218,30 @@ func TestArtifactRegenerationSourceUsesSourcePathsBeforeSource(t *testing.T) {
 	}
 	if _, ok := artifactRegenerationSource(artifactsSvc.Artifact{Source: "docs/a.md, docs/b.md"}); ok {
 		t.Fatal("expected comma-separated source summary to be rejected")
+	}
+}
+
+func TestArtifactRegenerationSourcesAllowDocumentReportRoots(t *testing.T) {
+	sources, ok := artifactRegenerationSources(artifactsSvc.Artifact{
+		SourcePaths: []string{"docs/a.md", "docs/a.md", "docs/b.md"},
+		Source:      "docs",
+	})
+	if !ok || strings.Join(sources, ",") != "docs" {
+		t.Fatalf("expected document report roots to take precedence: %#v ok=%t", sources, ok)
+	}
+	sources, ok = artifactRegenerationSources(artifactsSvc.Artifact{
+		SourcePaths: []string{"docs/a.md", "docs/a.md", "docs/b.md"},
+	})
+	if !ok || strings.Join(sources, ",") != "docs/a.md,docs/b.md" {
+		t.Fatalf("unexpected regeneration sources: %#v ok=%t", sources, ok)
+	}
+	sources, ok = artifactRegenerationSources(artifactsSvc.Artifact{Source: "docs, README.md"})
+	if !ok || strings.Join(sources, ",") != "docs,README.md" {
+		t.Fatalf("unexpected comma source fallback: %#v ok=%t", sources, ok)
+	}
+	sources, ok = artifactRegenerationSources(artifactsSvc.Artifact{Source: "."})
+	if !ok || len(sources) != 1 || sources[0] != "." {
+		t.Fatalf("expected project root source, got %#v ok=%t", sources, ok)
 	}
 }
 

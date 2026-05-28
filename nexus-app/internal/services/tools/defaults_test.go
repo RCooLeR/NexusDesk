@@ -193,6 +193,55 @@ func TestRegenerateArtifactDocumentExtractTool(t *testing.T) {
 	}
 }
 
+func TestRegenerateArtifactDocumentReportTool(t *testing.T) {
+	root := t.TempDir()
+	if err := os.WriteFile(filepath.Join(root, "README.md"), []byte("# Project\n\nFresh project notes.\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	store, err := artifactsSvc.NewStore(root)
+	if err != nil {
+		t.Fatal(err)
+	}
+	original, err := store.WriteDocumentSetReport(artifactsSvc.DocumentSetReport{
+		Title:       "Old Docs",
+		Roots:       []string{"README.md"},
+		SourcePaths: []string{"README.md"},
+		Content:     "old content",
+	})
+	if err != nil {
+		t.Fatalf("WriteDocumentSetReport returned error: %v", err)
+	}
+	dispatcher := NewDefaultDispatcher(Dependencies{Workspace: workspaceSvc.New()})
+	result, err := dispatcher.ExecuteTool(context.Background(), agent.ToolCall{Name: "regenerate_artifact", Args: map[string]string{"relPath": original.RelPath}}, agent.Request{WorkspaceRoot: root, ApproveWrites: true})
+	if err != nil {
+		t.Fatalf("regenerate_artifact returned error: %v", err)
+	}
+	if !result.Mutated || !strings.Contains(result.Observation, "Regenerated document-report artifact") || !strings.Contains(result.Observation, "README.md") {
+		t.Fatalf("unexpected regeneration result: %#v", result)
+	}
+	matches, err := store.ListArtifacts(artifactsSvc.ListOptions{Query: "kind:document-report"})
+	if err != nil {
+		t.Fatalf("ListArtifacts returned error: %v", err)
+	}
+	if len(matches) != 2 {
+		t.Fatalf("expected original and regenerated document reports, got %d", len(matches))
+	}
+	foundFresh := false
+	for _, match := range matches {
+		text, err := store.ReadArtifactText(match.RelPath)
+		if err != nil {
+			t.Fatalf("ReadArtifactText returned error: %v", err)
+		}
+		if strings.Contains(text, "Fresh project notes.") {
+			foundFresh = true
+			break
+		}
+	}
+	if !foundFresh {
+		t.Fatalf("regenerated document report did not use current source content")
+	}
+}
+
 func TestRegenerateArtifactComparisonTool(t *testing.T) {
 	root := t.TempDir()
 	store, err := artifactsSvc.NewStore(root)

@@ -70,6 +70,33 @@ func (h defaultHandlers) rebuildArtifact(ctx context.Context, root string, store
 			return artifactsSvc.Artifact{}, err
 		}
 		return store.WriteWorkspaceScanReport(workspaceScanArtifactInput(report))
+	case "document-report":
+		roots, ok := artifactRegenerationSources(original)
+		if !ok {
+			return artifactsSvc.Artifact{}, fmt.Errorf("document report artifact %s has no source path metadata", original.RelPath)
+		}
+		pack, err := h.deps.Workspace.BuildContextPack(root, roots, workspaceSvc.ContextPackOptions{
+			ContextCollectOptions: workspaceSvc.ContextCollectOptions{
+				MaxFiles:   24,
+				MaxEntries: 1200,
+				MaxDepth:   8,
+			},
+			MaxBytes: 128 * 1024,
+		})
+		if err != nil {
+			return artifactsSvc.Artifact{}, err
+		}
+		if err := ctx.Err(); err != nil {
+			return artifactsSvc.Artifact{}, err
+		}
+		return store.WriteDocumentSetReport(artifactsSvc.DocumentSetReport{
+			Title:       documentSetArtifactTitleForRoots(roots),
+			Roots:       append([]string{}, roots...),
+			SourcePaths: pack.SourcePaths,
+			Content:     pack.Content,
+			Truncated:   pack.Truncated,
+			GeneratedBy: "Nexus native agent artifact tool",
+		})
 	case "document-extract":
 		source, ok := artifactRegenerationSource(original)
 		if !ok {
@@ -129,16 +156,47 @@ func artifactByExactPath(store *artifactsSvc.Store, relPath string) (artifactsSv
 }
 
 func artifactRegenerationSource(artifact artifactsSvc.Artifact) (string, bool) {
-	candidates := append([]string{}, artifact.SourcePaths...)
-	candidates = append(candidates, artifact.Source)
+	sources := normalizeArtifactRegenerationSources(append(append([]string{}, artifact.SourcePaths...), artifact.Source), false)
+	if len(sources) == 0 {
+		return "", false
+	}
+	return sources[0], true
+}
+
+func artifactRegenerationSources(artifact artifactsSvc.Artifact) ([]string, bool) {
+	var candidates []string
+	if strings.TrimSpace(artifact.Source) != "" {
+		if strings.Contains(artifact.Source, ",") {
+			candidates = strings.Split(artifact.Source, ",")
+		} else {
+			candidates = append(candidates, artifact.Source)
+		}
+	}
+	sources := normalizeArtifactRegenerationSources(candidates, true)
+	if len(sources) == 0 {
+		sources = normalizeArtifactRegenerationSources(artifact.SourcePaths, true)
+	}
+	return sources, len(sources) > 0
+}
+
+func normalizeArtifactRegenerationSources(candidates []string, allowProjectRoot bool) []string {
+	seen := make(map[string]struct{}, len(candidates))
+	sources := make([]string, 0, len(candidates))
 	for _, candidate := range candidates {
 		candidate = filepath.ToSlash(strings.TrimSpace(candidate))
-		if candidate == "" || candidate == "." || strings.Contains(candidate, ",") {
+		if candidate == "" || strings.Contains(candidate, ",") {
 			continue
 		}
-		return candidate, true
+		if candidate == "." && !allowProjectRoot {
+			continue
+		}
+		if _, ok := seen[candidate]; ok {
+			continue
+		}
+		seen[candidate] = struct{}{}
+		sources = append(sources, candidate)
 	}
-	return "", false
+	return sources
 }
 
 func artifactRegenerationPair(artifact artifactsSvc.Artifact) (string, string, bool) {
@@ -197,6 +255,17 @@ func documentExtractionArtifactInput(document documentsSvc.ExtractedDocument) ar
 		Pages:     document.Pages,
 		Truncated: document.Truncated,
 	}
+}
+
+func documentSetArtifactTitleForRoots(roots []string) string {
+	roots = normalizeArtifactRegenerationSources(roots, true)
+	if len(roots) == 0 || (len(roots) == 1 && roots[0] == ".") {
+		return "Project Document Set Report"
+	}
+	if len(roots) == 1 {
+		return "Document Set Report - " + roots[0]
+	}
+	return fmt.Sprintf("Document Set Report - %d sources", len(roots))
 }
 
 func operationsRunbookArtifactInput(inspection operationsSvc.Inspection) artifactsSvc.OperationsRunbookReport {
