@@ -10,6 +10,7 @@ import (
 	"time"
 
 	settingsSvc "nexusdesk/internal/services/settings"
+	startupSvc "nexusdesk/internal/services/startup"
 )
 
 const (
@@ -52,21 +53,23 @@ type Snapshot struct {
 	APIKeyRequired   bool
 	APIKeyConfigured bool
 	Toolchain        ToolchainStatus
+	StartupRecovery  startupSvc.Status
 	Items            []Item
 }
 
 type Options struct {
-	WorkspaceRoot  string
-	WorkspaceName  string
-	Settings       settingsSvc.Settings
-	SettingsError  string
-	Now            time.Time
-	GOOS           string
-	GOARCH         string
-	MSYS2UCRT64Bin string
-	LookupPath     func(string) (string, error)
-	Getenv         func(string) string
-	Stat           func(string) (os.FileInfo, error)
+	WorkspaceRoot   string
+	WorkspaceName   string
+	Settings        settingsSvc.Settings
+	SettingsError   string
+	Now             time.Time
+	GOOS            string
+	GOARCH          string
+	MSYS2UCRT64Bin  string
+	LookupPath      func(string) (string, error)
+	Getenv          func(string) string
+	Stat            func(string) (os.FileInfo, error)
+	StartupRecovery startupSvc.Status
 }
 
 func Collect(options Options) Snapshot {
@@ -94,6 +97,7 @@ func Collect(options Options) Snapshot {
 		APIKeyRequired:   apiKeyRequired,
 		APIKeyConfigured: apiKeyConfigured,
 		Toolchain:        inspectToolchain(options),
+		StartupRecovery:  options.StartupRecovery,
 	}
 	snapshot.Items = append(snapshot.Items,
 		workspaceItem(snapshot),
@@ -101,6 +105,7 @@ func Collect(options Options) Snapshot {
 		modelItem(snapshot),
 		credentialsItem(snapshot),
 		toolchainItem(snapshot.Toolchain),
+		startupRecoveryItem(snapshot.StartupRecovery),
 		safetyItem(),
 	)
 	return snapshot
@@ -257,6 +262,33 @@ func safetyItem() Item {
 		Label:  "Local safety",
 		Status: StatusOK,
 		Detail: "Approvals, rollback records, job history, redacted issue reports, and local metadata are available for risky actions.",
+	}
+}
+
+func startupRecoveryItem(status startupSvc.Status) Item {
+	if status.PreviousUnclean {
+		return Item{
+			ID:     "startup",
+			Label:  "Startup recovery",
+			Status: StatusWarning,
+			Detail: status.Message,
+			Action: "Open Diagnostics, inspect recent Jobs and Agent Audit, then export an issue report if the previous run lost work.",
+		}
+	}
+	if strings.TrimSpace(status.Message) != "" && strings.Contains(strings.ToLower(status.Message), "unavailable") {
+		return Item{
+			ID:     "startup",
+			Label:  "Startup recovery",
+			Status: StatusWarning,
+			Detail: status.Message,
+			Action: "Verify app data permissions if startup recovery markers keep failing.",
+		}
+	}
+	return Item{
+		ID:     "startup",
+		Label:  "Startup recovery",
+		Status: StatusOK,
+		Detail: "Clean-exit markers are active for crash and hang triage.",
 	}
 }
 

@@ -8,6 +8,7 @@ import (
 	"time"
 
 	settingsSvc "nexusdesk/internal/services/settings"
+	startupSvc "nexusdesk/internal/services/startup"
 )
 
 func TestCollectFlagsFirstRunActions(t *testing.T) {
@@ -119,6 +120,22 @@ func TestCollectWarnsWhenCGODisabled(t *testing.T) {
 	assertItemStatus(t, snapshot, "toolchain", StatusWarning)
 	if !strings.Contains(snapshot.Toolchain.Detail, "CGO_ENABLED=0") {
 		t.Fatalf("expected CGO warning, got %q", snapshot.Toolchain.Detail)
+	}
+}
+
+func TestCollectWarnsAboutPreviousUncleanStartup(t *testing.T) {
+	snapshot := Collect(Options{
+		Settings:   settingsSvc.Settings{Model: "qwen3:8b"},
+		GOOS:       "linux",
+		LookupPath: fixedPath("/usr/bin/gcc"),
+		StartupRecovery: startupSvc.Status{
+			PreviousUnclean: true,
+			Message:         "Previous NexusDesk run did not record a clean exit.",
+		},
+	})
+	assertItemStatus(t, snapshot, "startup", StatusWarning)
+	if !strings.Contains(FormatMarkdown(snapshot), "Startup recovery") {
+		t.Fatalf("expected startup recovery in readiness markdown")
 	}
 }
 

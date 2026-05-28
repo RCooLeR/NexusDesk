@@ -633,7 +633,7 @@ The checklist below is intentionally large. `tracker.md` should keep task-level 
 - [x] Slow-workflow job contract.
 - [ ] Route every future slow workflow through jobs before UI exposure.
 - [x] Add issue-report bundle.
-- [ ] Add crash/hang detector or startup recovery notes.
+- [x] Add crash/hang detector or startup recovery notes.
 - [ ] Add search index metadata and recovery/export.
 - [x] Add job history retention controls and cleanup policy.
 

@@ -13,6 +13,7 @@ import (
 	llmSvc "nexusdesk/internal/services/llm"
 	metadataSvc "nexusdesk/internal/services/metadata"
 	settingsSvc "nexusdesk/internal/services/settings"
+	startupSvc "nexusdesk/internal/services/startup"
 )
 
 func TestDiagnosticsStatusLineReflectsProbeAndMetadataState(t *testing.T) {
@@ -74,6 +75,9 @@ func TestFormatDiagnosticsSnapshotIncludesCoreSections(t *testing.T) {
 		RecentSQLFailuresList:   []string{"sql-2 [sqlite failed] sample.db: syntax error"},
 		RecentAgentFailuresList: []string{"agent-5 [failed] iter 8 stop max_iterations: loop guard triggered"},
 		ActivityTail:            []string{"Opened workspace E:/workspace", "Ran read-only SQLite query for sample.db"},
+		StartupRecovery: startupSvc.Status{
+			Path: "C:/Users/example/AppData/Roaming/NexusDesk/startup-session.json",
+		},
 		RecommendedActions: []string{
 			"Open Jobs and Agent Audit tabs to inspect recent failures and retry safe workloads.",
 		},
@@ -84,6 +88,8 @@ func TestFormatDiagnosticsSnapshotIncludesCoreSections(t *testing.T) {
 		"## Provider",
 		"Probe: ok",
 		"## Provider Runtime",
+		"## Startup Recovery",
+		"Status: ok - clean-exit markers are active.",
 		"## Metadata",
 		"Status: ok",
 		"## Jobs",
@@ -153,6 +159,19 @@ func TestDiagnosticsRecommendedActionsCoversProviderMetadataAndFailures(t *testi
 		if !strings.Contains(joined, expected) {
 			t.Fatalf("expected %q in actions:\n%s", expected, joined)
 		}
+	}
+}
+
+func TestDiagnosticsRecommendedActionsIncludesStartupRecovery(t *testing.T) {
+	actions := diagnosticsRecommendedActions(diagnosticsSnapshot{
+		StartupRecovery: startupSvc.Status{
+			PreviousUnclean: true,
+			Message:         "Previous NexusDesk run did not record a clean exit.",
+		},
+	})
+	joined := strings.Join(actions, "\n")
+	if !strings.Contains(joined, "Review Startup Recovery") {
+		t.Fatalf("expected startup recovery action, got:\n%s", joined)
 	}
 }
 

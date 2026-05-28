@@ -621,6 +621,7 @@ The Fyne migration must not drop product ambition, but this section is intention
 - [x] Harden compatibility import stamp handling: atomic writes + malformed-stamp quarantine fallback so startup never stalls on bad marker JSON.
 - [x] Add context-aware compatibility import execution and route workspace import jobs through cancellable metadata-import context.
 - [x] Add job history retention controls and cleanup policy: explicit Jobs-panel cleanup prunes successful/canceled completed jobs by count/age while preserving running jobs and failures/timeouts by default.
+- [x] Add startup recovery markers and crash/hang triage visibility in Home readiness and Diagnostics; clean exits mark the session closed, while previous unclean exits warn users before repeating long work.
 - [x] Folder open remains cheap: no Git, Docker, OCR, connector pulls, dump imports, model calls, shell commands, or deep indexing.
 - [x] Diagnostics panel for app logs, provider status, GPU/model status, metadata health, and job history.
 

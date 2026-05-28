@@ -16,6 +16,7 @@ import (
 	llmSvc "nexusdesk/internal/services/llm"
 	metadataSvc "nexusdesk/internal/services/metadata"
 	settingsSvc "nexusdesk/internal/services/settings"
+	startupSvc "nexusdesk/internal/services/startup"
 )
 
 const (
@@ -47,6 +48,7 @@ type diagnosticsSnapshot struct {
 	RecentAgentRuns         int
 	RecentAgentFailures     int
 	RecentArtifacts         int
+	StartupRecovery         startupSvc.Status
 	RuntimeSummary          []string
 	RecentJobFailures       []string
 	RecentTaskFailuresList  []string
@@ -198,9 +200,13 @@ func (v *View) refreshDiagnostics() {
 
 func (v *View) collectDiagnosticsSnapshot(root string, activityTail []string) diagnosticsSnapshot {
 	snapshot := diagnosticsSnapshot{
-		CollectedAt:   time.Now().UTC(),
-		WorkspaceRoot: root,
-		ActivityTail:  append([]string(nil), activityTail...),
+		CollectedAt:     time.Now().UTC(),
+		WorkspaceRoot:   root,
+		ActivityTail:    append([]string(nil), activityTail...),
+		StartupRecovery: v.startupStatus,
+	}
+	if snapshot.StartupRecovery.PreviousUnclean {
+		snapshot.Warnings = append(snapshot.Warnings, snapshot.StartupRecovery.Message)
 	}
 	inMemoryJobs := v.jobService.List()
 	snapshot.InMemoryJobs = len(inMemoryJobs)
@@ -419,6 +425,25 @@ func formatDiagnosticsSnapshot(snapshot diagnosticsSnapshot) string {
 			builder.WriteString(line)
 			builder.WriteString("\n")
 		}
+	}
+
+	builder.WriteString("\n## Startup Recovery\n")
+	if snapshot.StartupRecovery.PreviousUnclean {
+		builder.WriteString("Status: warning - ")
+		builder.WriteString(firstNonEmptyString(snapshot.StartupRecovery.Message, "Previous run did not record a clean exit."))
+		builder.WriteString("\n")
+		if !snapshot.StartupRecovery.PreviousStartedAt.IsZero() {
+			builder.WriteString("Previous start: ")
+			builder.WriteString(snapshot.StartupRecovery.PreviousStartedAt.Local().Format("2006-01-02 15:04:05"))
+			builder.WriteString("\n")
+		}
+	} else {
+		builder.WriteString("Status: ok - clean-exit markers are active.\n")
+	}
+	if strings.TrimSpace(snapshot.StartupRecovery.Path) != "" {
+		builder.WriteString("Marker: ")
+		builder.WriteString(snapshot.StartupRecovery.Path)
+		builder.WriteString("\n")
 	}
 
 	builder.WriteString("\n## Metadata\n")
@@ -642,6 +667,9 @@ func diagnosticsRecommendedActions(snapshot diagnosticsSnapshot) []string {
 	}
 	if snapshot.RecentPersistedFailures > 0 || snapshot.RecentTaskFailures > 0 || snapshot.RecentSQLFailures > 0 || snapshot.RecentAgentFailures > 0 || snapshot.InMemoryFailedJobs > 0 {
 		actions = append(actions, "Open Jobs and Agent Audit tabs to inspect recent failures and retry safe workloads.")
+	}
+	if snapshot.StartupRecovery.PreviousUnclean {
+		actions = append(actions, "Review Startup Recovery, Jobs, Agent Audit, and metadata health before repeating any long workflow from the previous session.")
 	}
 	if len(snapshot.ActivityTail) == 0 {
 		actions = append(actions, "Trigger one small task and rerun diagnostics to populate runtime activity context.")

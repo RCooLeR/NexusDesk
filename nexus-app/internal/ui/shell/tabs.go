@@ -59,10 +59,11 @@ func (v *View) welcomeReadinessMarkdown() string {
 	}
 	workspace := v.state.Workspace()
 	return readinessSvc.FormatMarkdown(readinessSvc.Collect(readinessSvc.Options{
-		WorkspaceRoot: workspace.Root,
-		WorkspaceName: workspace.Name,
-		Settings:      current,
-		SettingsError: settingsError,
+		WorkspaceRoot:   workspace.Root,
+		WorkspaceName:   workspace.Name,
+		Settings:        current,
+		SettingsError:   settingsError,
+		StartupRecovery: v.startupStatus,
 	}))
 }
 

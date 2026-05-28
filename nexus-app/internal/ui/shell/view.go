@@ -23,6 +23,7 @@ import (
 	operationsSvc "nexusdesk/internal/services/operations"
 	recentWorkspacesSvc "nexusdesk/internal/services/recentworkspaces"
 	settingsSvc "nexusdesk/internal/services/settings"
+	startupSvc "nexusdesk/internal/services/startup"
 	tasksSvc "nexusdesk/internal/services/tasks"
 	toolsSvc "nexusdesk/internal/services/tools"
 	workspaceSvc "nexusdesk/internal/services/workspace"
@@ -158,6 +159,7 @@ type View struct {
 	assistantLastPrompt      string
 	assistantLastResult      assistantSvc.Result
 	diagnosticsProber        diagnosticsProber
+	startupStatus            startupSvc.Status
 }
 
 type artifactsCompareSelection struct {
@@ -167,6 +169,10 @@ type artifactsCompareSelection struct {
 }
 
 func New(window fyne.Window) *View {
+	return NewWithStartupStatus(window, startupSvc.Status{})
+}
+
+func NewWithStartupStatus(window fyne.Window, startupStatus startupSvc.Status) *View {
 	editorSession := editorSvc.NewSession()
 	welcome := editorSession.OpenWelcome("Welcome")
 	var view *View
@@ -344,6 +350,7 @@ func New(window fyne.Window) *View {
 		approvalStatus:    widget.NewLabel("Approval records have not been loaded."),
 		accessStatus:      widget.NewLabel("Full project access: inactive"),
 		diagnosticsProber: llmClient,
+		startupStatus:     startupStatus,
 	}
 	welcomeItem.Content = view.newWelcomePanel()
 	view.configureEditorTabs()

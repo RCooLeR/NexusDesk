@@ -92,6 +92,7 @@ Required:
 - Backup/export flow for local-first workspace state.
 - Diagnostics panel for app logs, provider status, metadata health, job history, GPU/model runtime, and recent failures.
 - Job history retention controls and cleanup policy: the Jobs panel can prune successful/canceled completed jobs by count/age while preserving running jobs and failures/timeouts by default.
+- Startup recovery markers and crash/hang triage visibility: launch writes a local session marker, clean exit closes it, and Home/Diagnostics warn when the previous run did not shut down cleanly.
 - Audit coverage for connector jobs, OCR, dump imports, Docker mutations, shell tools, and future high-risk operations.
 - Crash/hang checks for folder open, malformed files, corrupt metadata, missing providers, and canceled long work.
 
