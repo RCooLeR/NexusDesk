@@ -134,6 +134,10 @@ func (v *View) newTextEditor(tab editorSvc.Tab, preview domain.FilePreview, onSt
 		v.openEditorSymbolDialog(tab.ID)
 	})
 	symbols.Importance = widget.LowImportance
+	references := widget.NewButtonWithIcon("References", theme.SearchIcon(), func() {
+		v.openEditorReferencesDialog(tab.ID)
+	})
+	references.Importance = widget.LowImportance
 	definition := widget.NewButtonWithIcon("Definition", theme.NavigateNextIcon(), func() {
 		result, ok := editorSvc.ResolveDefinition(tab.RelPath, source.Text, source.CursorRow, source.CursorColumn)
 		if ok {
@@ -175,7 +179,7 @@ func (v *View) newTextEditor(tab editorSvc.Tab, preview domain.FilePreview, onSt
 
 	v.bindTextEditor(tab.ID, binding)
 
-	encodingControl := container.NewHBox(widget.NewLabel("Save as"), encodingSelect, definition, symbols, format, revert)
+	encodingControl := container.NewHBox(widget.NewLabel("Save as"), encodingSelect, definition, references, symbols, format, revert)
 	sourcePanel := container.NewBorder(container.NewBorder(nil, nil, status, encodingControl), nil, nil, nil, source)
 	previewPanel := container.NewBorder(widget.NewLabel(previewHeader(preview)), nil, nil, nil, rendered.Canvas())
 	outlinePanel := container.NewBorder(outlineStatus, nil, nil, nil, container.NewVScroll(outlineList))

@@ -17,7 +17,7 @@ type DefinitionFile struct {
 }
 
 func ResolveDefinition(fileName string, content string, cursorRow int, cursorColumn int) (DefinitionResult, bool) {
-	query := identifierAtCursor(content, cursorRow, cursorColumn)
+	query := SymbolAtCursor(content, cursorRow, cursorColumn)
 	if query == "" {
 		return DefinitionResult{}, false
 	}
@@ -31,6 +31,10 @@ func ResolveDefinition(fileName string, content string, cursorRow int, cursorCol
 		}
 	}
 	return DefinitionResult{Query: query}, false
+}
+
+func SymbolAtCursor(content string, cursorRow int, cursorColumn int) string {
+	return identifierAtCursor(content, cursorRow, cursorColumn)
 }
 
 func ResolveWorkspaceDefinition(query string, currentRelPath string, files []DefinitionFile) (DefinitionResult, bool) {

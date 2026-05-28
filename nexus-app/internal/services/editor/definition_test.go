@@ -58,6 +58,12 @@ func TestIdentifierAtCursorUsesPreviousRuneAtTokenBoundary(t *testing.T) {
 	}
 }
 
+func TestSymbolAtCursorExportsIdentifierLookup(t *testing.T) {
+	if got := SymbolAtCursor("server.Start()\n", 0, 9); got != "server.Start" {
+		t.Fatalf("unexpected exported cursor symbol: %q", got)
+	}
+}
+
 func TestResolveWorkspaceDefinitionFindsOtherFileFirst(t *testing.T) {
 	result, ok := ResolveWorkspaceDefinition("Start", "cmd/main.go", []DefinitionFile{
 		{RelPath: "cmd/main.go", Content: "package main\n\nfunc main() { Start() }\n"},
