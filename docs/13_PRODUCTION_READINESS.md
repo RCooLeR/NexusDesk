@@ -11,7 +11,7 @@ The active product is `nexus-app/`, the Fyne-native application. `app-wails/` is
 Approximate migration status:
 
 - Native foundation and core services: mostly complete.
-- Wails-era useful workflow parity: roughly 93-94% migrated.
+- Wails-era useful workflow parity: roughly 94% migrated.
 - Production polish, packaging, cross-platform confidence, and advanced connector/editor features: still incomplete.
 
 The app can already:
@@ -50,7 +50,7 @@ Reference: [Wails Feature Inventory](15_WAILS_FEATURE_INVENTORY.md) records the 
 
 Required:
 
-- IDE-grade editor baseline: first native lightweight syntax strategy, read-only highlighted syntax preview, Problems syntax diagnostics for JSON/Go/YAML/TOML/XML, bounded workspace go-to-definition fallback and references search, command palette baseline, future active-editor inline styling and LSP/cross-file language-action decisions, and continued outline/go-to-symbol/local-definition/document-map/breadcrumb/split/find/format polish.
+- IDE-grade editor baseline: first native lightweight syntax strategy, read-only highlighted syntax preview, language-action readiness for formatting/highlighting/outline/definition/reference/LSP status, Problems syntax diagnostics for JSON/Go/YAML/TOML/XML, bounded workspace go-to-definition fallback and references search, command palette baseline, future active-editor inline styling and LSP/cross-file language-action decisions, and continued outline/go-to-symbol/local-definition/document-map/breadcrumb/split/find/format polish.
 - External database profile parity: PostgreSQL, MySQL/MariaDB, SQL Server, and DuckDB file/profile read-only query flows with cancellation, caps, redacted errors, and history.
 - Native protected secret storage for Windows first is implemented for provider API keys and connector credentials; macOS/Linux keychain backends remain before full cross-platform secret support.
 - Assistant quality parity: native Fyne now has weak-evidence warnings, retry/compare, Wails-compatible memory/profile storage, stale-source chat history warnings, Wails-compatible context-to-source fallback parsing, source/model footer diagnostics, line-aware citation refs, explicit unverified/out-of-context citation diagnostics, bounded citation snippets in saved answer artifacts, deterministic evidence-quality labels, curated model context sizing, loaded-model runtime context tuning, and save-latest-answer artifacts.

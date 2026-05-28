@@ -393,6 +393,7 @@ The Fyne migration must not drop product ambition, but this section is intention
 - [x] Native local go-to-definition parity slice with cursor-symbol resolution against the Wails-derived outline rules.
 - [x] Native bounded workspace go-to-definition fallback for unresolved editor symbols using workspace search, preview-safe reads, and outline matching.
 - [x] Native bounded find-references language action for cursor symbols using workspace search and jumpable preview-safe matches.
+- [x] Native editor language-action readiness slice that surfaces available formatting, highlighting, outline, definition/reference fallback, and future LSP status per active file.
 - [ ] Multi-tab editor polish with future LSP-backed cross-file go-to-definition where native language support is available.
 - [x] First native lightweight syntax strategy for common languages, Markdown, SQL, JSON/YAML/XML/HTML, Docker/Compose, logs, and config files.
 - [x] Native read-only highlighted syntax preview with Wails/Monaco-inspired token colors, line numbers, and bounded token styling.

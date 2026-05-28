@@ -56,6 +56,18 @@ func FormatDocument(fileName string, content string) (FormatResult, error) {
 	return FormatResult{Content: next, Changed: true, Message: "Formatted document draft."}, nil
 }
 
+func CanFormatDocument(fileName string) bool {
+	extension := strings.ToLower(filepath.Ext(fileName))
+	lowerName := strings.ToLower(filepath.Base(fileName))
+	language := DetectSyntaxLanguage(fileName)
+	switch extension {
+	case ".go", ".json", ".code-workspace", ".md", ".markdown", ".mdx", ".yaml", ".yml", ".sql", ".env", ".txt", ".log", ".csv", ".tsv":
+		return true
+	default:
+		return lowerName == "dockerfile" || strings.HasPrefix(lowerName, "dockerfile.") || language.NativeLight || formatWhitespaceOnlyExtension(extension, lowerName)
+	}
+}
+
 func formatWhitespaceOnlyExtension(extension string, lowerName string) bool {
 	if lowerName == "makefile" || strings.HasSuffix(lowerName, ".env") || strings.HasSuffix(lowerName, ".toml") {
 		return true

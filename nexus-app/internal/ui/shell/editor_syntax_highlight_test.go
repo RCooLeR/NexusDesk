@@ -1,6 +1,11 @@
 package shell
 
-import "testing"
+import (
+	"strings"
+	"testing"
+
+	editorSvc "nexusdesk/internal/services/editor"
+)
 
 func TestSyntaxHighlightGridStylesTokens(t *testing.T) {
 	grid := newSyntaxHighlightGrid("main.go", "package main\n// boot\nconst count = 42\n")
@@ -33,5 +38,14 @@ func TestSyntaxHighlightGridKeepsPlainTextUnstyled(t *testing.T) {
 func TestNormalizeSyntaxHighlightTextUsesLF(t *testing.T) {
 	if got := normalizeSyntaxHighlightText("a\r\nb"); got != "a\nb" {
 		t.Fatalf("unexpected normalized text: %q", got)
+	}
+}
+
+func TestFormatLanguageActionPlanShowsStatuses(t *testing.T) {
+	text := formatLanguageActionPlan(editorSvc.BuildLanguageActionPlan("main.go", "package main\n\nfunc main() {}\n"))
+	for _, expected := range []string{"Language Actions", "Summary:", "Syntax highlighting [available]", "Definition and references [fallback]", "External LSP [planned]"} {
+		if !strings.Contains(text, expected) {
+			t.Fatalf("language action plan missing %q:\n%s", expected, text)
+		}
 	}
 }

@@ -18,21 +18,22 @@ import (
 const workspaceDefinitionSearchLimit = 60
 
 type textEditorBinding struct {
-	source         *widget.Entry
-	status         *widget.Label
-	rendered       *previewPane
-	outlineStatus  *widget.Label
-	outlineList    *fyne.Container
-	mapStatus      *widget.Label
-	mapList        *fyne.Container
-	syntaxStatus   *widget.Label
-	syntaxPreview  *widget.Label
-	syntaxGrid     *widget.TextGrid
-	relPath        string
-	sourceEncoding string
-	saveEncoding   string
-	onEncoding     func()
-	onState        func(editorSvc.Tab, bool)
+	source          *widget.Entry
+	status          *widget.Label
+	rendered        *previewPane
+	outlineStatus   *widget.Label
+	outlineList     *fyne.Container
+	mapStatus       *widget.Label
+	mapList         *fyne.Container
+	syntaxStatus    *widget.Label
+	syntaxPreview   *widget.Label
+	languageActions *widget.Label
+	syntaxGrid      *widget.TextGrid
+	relPath         string
+	sourceEncoding  string
+	saveEncoding    string
+	onEncoding      func()
+	onState         func(editorSvc.Tab, bool)
 }
 
 func (b *textEditorBinding) applyTabState(tab editorSvc.Tab) {
@@ -68,22 +69,25 @@ func (v *View) newTextEditor(tab editorSvc.Tab, preview domain.FilePreview, onSt
 	syntaxPreview := widget.NewLabel("")
 	syntaxPreview.Wrapping = fyne.TextWrapWord
 	syntaxPreview.TextStyle = fyne.TextStyle{Monospace: true}
+	languageActions := widget.NewLabel("")
+	languageActions.Wrapping = fyne.TextWrapWord
 	syntaxGrid := newSyntaxHighlightGrid(tab.RelPath, tab.DraftText)
 	binding := &textEditorBinding{
-		source:         source,
-		status:         status,
-		rendered:       rendered,
-		outlineStatus:  outlineStatus,
-		outlineList:    outlineList,
-		mapStatus:      mapStatus,
-		mapList:        mapList,
-		syntaxStatus:   syntaxStatus,
-		syntaxPreview:  syntaxPreview,
-		syntaxGrid:     syntaxGrid,
-		relPath:        tab.RelPath,
-		sourceEncoding: initialEncoding,
-		saveEncoding:   initialEncoding,
-		onState:        onState,
+		source:          source,
+		status:          status,
+		rendered:        rendered,
+		outlineStatus:   outlineStatus,
+		outlineList:     outlineList,
+		mapStatus:       mapStatus,
+		mapList:         mapList,
+		syntaxStatus:    syntaxStatus,
+		syntaxPreview:   syntaxPreview,
+		languageActions: languageActions,
+		syntaxGrid:      syntaxGrid,
+		relPath:         tab.RelPath,
+		sourceEncoding:  initialEncoding,
+		saveEncoding:    initialEncoding,
+		onState:         onState,
 	}
 	encodingSelect := widget.NewSelect(editorEncodingOptions(), func(value string) {
 		binding.saveEncoding = editorWriteEncoding(value)
@@ -184,7 +188,8 @@ func (v *View) newTextEditor(tab editorSvc.Tab, preview domain.FilePreview, onSt
 	previewPanel := container.NewBorder(widget.NewLabel(previewHeader(preview)), nil, nil, nil, rendered.Canvas())
 	outlinePanel := container.NewBorder(outlineStatus, nil, nil, nil, container.NewVScroll(outlineList))
 	mapPanel := container.NewBorder(mapStatus, nil, nil, nil, container.NewVScroll(mapList))
-	syntaxPanel := container.NewBorder(syntaxStatus, nil, nil, nil, container.NewHSplit(container.NewVScroll(syntaxGrid), container.NewVScroll(syntaxPreview)))
+	syntaxDetails := container.NewVScroll(container.NewVBox(languageActions, syntaxPreview))
+	syntaxPanel := container.NewBorder(syntaxStatus, nil, nil, nil, container.NewHSplit(container.NewVScroll(syntaxGrid), syntaxDetails))
 	tabs := container.NewAppTabs(
 		container.NewTabItem("Source", sourcePanel),
 		container.NewTabItem("Preview", previewPanel),
@@ -301,6 +306,10 @@ func (b *textEditorBinding) setSyntax(text string) {
 	}
 	analysis := editorSvc.AnalyzeSyntax(b.relPath, text)
 	b.syntaxStatus.SetText(syntaxStatusText(analysis))
+	if b.languageActions != nil {
+		b.languageActions.SetText(formatLanguageActionPlan(editorSvc.BuildLanguageActionPlan(b.relPath, text)))
+		b.languageActions.Refresh()
+	}
 	b.syntaxPreview.SetText(formatSyntaxAnalysis(analysis))
 	b.syntaxPreview.Refresh()
 	applySyntaxHighlightGrid(b.syntaxGrid, text, analysis)
@@ -417,6 +426,24 @@ func formatSyntaxAnalysis(analysis editorSvc.SyntaxAnalysis) string {
 	}
 	if len(analysis.Tokens) > limit {
 		builder.WriteString(fmt.Sprintf("... %d more token(s)\n", len(analysis.Tokens)-limit))
+	}
+	return builder.String()
+}
+
+func formatLanguageActionPlan(plan editorSvc.LanguageActionPlan) string {
+	var builder strings.Builder
+	builder.WriteString("Language Actions\n")
+	builder.WriteString("Summary: ")
+	builder.WriteString(firstNonEmptyString(plan.Summary, "no language actions"))
+	builder.WriteString("\n")
+	for _, action := range plan.Actions {
+		builder.WriteString("- ")
+		builder.WriteString(action.Name)
+		builder.WriteString(" [")
+		builder.WriteString(action.Status)
+		builder.WriteString("]: ")
+		builder.WriteString(action.Detail)
+		builder.WriteString("\n")
 	}
 	return builder.String()
 }
