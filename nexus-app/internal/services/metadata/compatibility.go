@@ -288,12 +288,13 @@ func (s *Store) importCompatibilityChats(ctx context.Context, path string) (int,
 				return imported, skipped, err
 			}
 		}
-		sourcePaths := cleanCompatibilityPaths(append(message.SourcePaths, message.ContextRelPath))
+		sourcePaths := cleanCompatibilityPaths(message.SourcePaths)
 		record := ChatMessageRecord{
-			Role:        message.Role,
-			Content:     message.Content,
-			SourcePaths: sourcePaths,
-			CreatedAt:   parseCompatibilityTime(message.CreatedAt),
+			Role:           message.Role,
+			Content:        message.Content,
+			ContextRelPath: filepath.ToSlash(strings.TrimSpace(message.ContextRelPath)),
+			SourcePaths:    sourcePaths,
+			CreatedAt:      parseCompatibilityTime(message.CreatedAt),
 		}
 		if err := s.SaveChatMessage(record); err != nil {
 			skipped++

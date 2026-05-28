@@ -73,7 +73,7 @@ func TestImportCompatibilityDataImportsWailsJSONStores(t *testing.T) {
 			userChat = chat
 		}
 	}
-	if len(chats) != 2 || userChat.Content != "Analyze sales" || !containsString(userChat.SourcePaths, "data/sales.csv") {
+	if len(chats) != 2 || userChat.Content != "Analyze sales" || userChat.ContextRelPath != "data/sales.csv" || !containsString(userChat.SourcePaths, "tracker.md") {
 		t.Fatalf("unexpected imported chats: %#v", chats)
 	}
 	approvals, err := store.ListApprovalRecords(10)

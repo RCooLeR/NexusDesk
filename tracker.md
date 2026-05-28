@@ -331,8 +331,9 @@ Exit criteria:
 - [ ] IDE-grade editor baseline: syntax highlighting, find/replace, encoding controls, and split/breadcrumb/outline strategy.
 - [ ] Native external database profiles for PostgreSQL, MySQL/MariaDB, SQL Server, and DuckDB with read-only guards.
 - [x] Native protected secret storage for Windows; explicit refusal/fallback behavior for unsupported platforms.
-- [ ] Assistant quality parity: weak-evidence warnings, retry/compare, richer citations, memory/profile plan, and model diagnostics.
+- [ ] Assistant quality parity: richer citations and model diagnostics.
 - [x] Assistant Wails parity slice: profile/memory store, active prompt profile injection, weak-evidence warning, retry/compare, and save-latest-answer `chat-answer` artifacts.
+- [x] Assistant stale-source parity slice: chat context paths persist in native metadata and chat history warns when cited sources changed or disappeared.
 - [ ] Native UI cleanup pass across Workbench, Data, Artifacts, Settings, assistant, and bottom panels.
 
 ### Gate 2: Safety And Reliability Beta
@@ -454,8 +455,8 @@ The Fyne migration must not drop product ambition, but this section is intention
 - [x] Add API key input/persistence in native settings and propagate bearer auth into OpenAI-compatible chat/probe config.
 - [ ] Curated native local model catalog, deeper GPU diagnostics, and automatic loaded-model context-window tuning.
 - [x] Streaming chat with selected files/directories/project context, token-budgeted history, persisted turns, and source-path context.
-- [ ] Weak-evidence warnings, retries, answer comparison, richer citations, and assistant memory/profile parity in native UI.
-- [ ] Local assistant memory and prompt profiles.
+- [ ] Richer citations and model diagnostics in native assistant UI.
+- [x] Local assistant memory and prompt profiles.
 - [x] Agent runtime with plan updates, bounded observations, model-driven tool calls, no frontend iteration cap, emergency backend loop guard, and final-answer fallback behavior.
 - [x] Unified tool registry and dispatcher for deterministic tools and model-requested tools.
 - [x] Agent tools for read context, workspace search, problems, Git status/diff, tasks, artifacts, datasets, SQLite, documents, operations files, safe writes, patches, copy/move/delete, and rollback.

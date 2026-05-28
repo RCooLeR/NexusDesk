@@ -22,7 +22,7 @@ func TestEnsureCreatesSQLiteStoreAndManifest(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Ensure returned error: %v", err)
 	}
-	if status.SchemaVersion != 7 || status.SchemaHash == "" {
+	if status.SchemaVersion != schemaVersion || status.SchemaHash == "" {
 		t.Fatalf("unexpected status: %#v", status)
 	}
 	if _, err := os.Stat(status.Path); err != nil {
@@ -286,11 +286,12 @@ func TestSaveAndListChatMessages(t *testing.T) {
 		t.Fatalf("SaveChatMessage user returned error: %v", err)
 	}
 	if err := store.SaveChatMessage(ChatMessageRecord{
-		Role:        "assistant",
-		Content:     "The native app gained chat persistence.",
-		Model:       "qwen2.5-coder:14b",
-		SourcePaths: []string{"tracker.md"},
-		CreatedAt:   started.Add(time.Second),
+		Role:           "assistant",
+		Content:        "The native app gained chat persistence.",
+		Model:          "qwen2.5-coder:14b",
+		ContextRelPath: "context: tracker.md",
+		SourcePaths:    []string{"tracker.md"},
+		CreatedAt:      started.Add(time.Second),
 	}); err != nil {
 		t.Fatalf("SaveChatMessage assistant returned error: %v", err)
 	}
@@ -298,7 +299,7 @@ func TestSaveAndListChatMessages(t *testing.T) {
 	if err != nil {
 		t.Fatalf("ListChatMessages returned error: %v", err)
 	}
-	if len(messages) != 2 || messages[0].Role != "user" || messages[1].Model == "" || len(messages[1].SourcePaths) != 1 {
+	if len(messages) != 2 || messages[0].Role != "user" || messages[1].Model == "" || messages[1].ContextRelPath != "context: tracker.md" || len(messages[1].SourcePaths) != 1 {
 		t.Fatalf("unexpected chat messages: %#v", messages)
 	}
 
@@ -420,6 +421,54 @@ func TestEnsureMigratesTaskRunsArtifactPathColumn(t *testing.T) {
 		StartedAt:    time.Now().UTC(),
 	}); err != nil {
 		t.Fatalf("SaveTaskRun after migration returned error: %v", err)
+	}
+}
+
+func TestEnsureMigratesChatContextRelPathColumn(t *testing.T) {
+	root := t.TempDir()
+	dbPath := filepath.Join(root, filepath.FromSlash(metadataDirRelPath), "nexusdesk.sqlite")
+	if err := os.MkdirAll(filepath.Dir(dbPath), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	db, err := sql.Open("sqlite", dbPath)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := db.Exec(`CREATE TABLE chat_messages (
+		id TEXT PRIMARY KEY,
+		workspace_root TEXT NOT NULL,
+		role TEXT NOT NULL,
+		content TEXT NOT NULL,
+		model TEXT,
+		source_paths_json TEXT,
+		created_at TEXT NOT NULL
+	)`); err != nil {
+		t.Fatal(err)
+	}
+	_ = db.Close()
+	store, err := NewStore(root)
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() { _ = store.Close() })
+	if _, err := store.Ensure(); err != nil {
+		t.Fatalf("Ensure migration returned error: %v", err)
+	}
+	if err := store.SaveChatMessage(ChatMessageRecord{
+		Role:           "assistant",
+		Content:        "Answer with context",
+		ContextRelPath: "context: README.md",
+		SourcePaths:    []string{"README.md"},
+		CreatedAt:      time.Now().UTC(),
+	}); err != nil {
+		t.Fatalf("SaveChatMessage after migration returned error: %v", err)
+	}
+	messages, err := store.ListChatMessages(10)
+	if err != nil {
+		t.Fatalf("ListChatMessages returned error: %v", err)
+	}
+	if len(messages) != 1 || messages[0].ContextRelPath != "context: README.md" {
+		t.Fatalf("expected migrated context path, got %#v", messages)
 	}
 }
 

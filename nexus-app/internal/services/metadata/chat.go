@@ -10,6 +10,7 @@ import (
 func (s *Store) SaveChatMessage(record ChatMessageRecord) error {
 	record.Role = normalizeChatRole(record.Role)
 	record.Content = strings.TrimSpace(record.Content)
+	record.ContextRelPath = strings.TrimSpace(record.ContextRelPath)
 	if record.Role == "" {
 		return errors.New("chat role must be user or assistant")
 	}
@@ -26,12 +27,13 @@ func (s *Store) SaveChatMessage(record ChatMessageRecord) error {
 	record = s.NormalizeChatMessageRecord(record)
 	sourcePathsJSON, _ := json.Marshal(record.SourcePaths)
 	_, err = db.Exec(
-		`INSERT INTO chat_messages (id, workspace_root, role, content, model, source_paths_json, created_at)
-		 VALUES (?, ?, ?, ?, ?, ?, ?)
+		`INSERT INTO chat_messages (id, workspace_root, role, content, model, context_rel_path, source_paths_json, created_at)
+		 VALUES (?, ?, ?, ?, ?, ?, ?, ?)
 		 ON CONFLICT(id) DO UPDATE SET
 		    role = excluded.role,
 		    content = excluded.content,
 		    model = excluded.model,
+		    context_rel_path = excluded.context_rel_path,
 		    source_paths_json = excluded.source_paths_json,
 		    created_at = excluded.created_at`,
 		record.ID,
@@ -39,6 +41,7 @@ func (s *Store) SaveChatMessage(record ChatMessageRecord) error {
 		record.Role,
 		record.Content,
 		record.Model,
+		record.ContextRelPath,
 		string(sourcePathsJSON),
 		formatTime(record.CreatedAt),
 	)
@@ -54,9 +57,9 @@ func (s *Store) ListChatMessages(limit int) ([]ChatMessageRecord, error) {
 		return nil, err
 	}
 	rows, err := db.Query(
-		`SELECT id, role, content, model, source_paths_json, created_at
+		`SELECT id, role, content, model, COALESCE(context_rel_path, ''), source_paths_json, created_at
 		 FROM (
-		    SELECT id, role, content, model, source_paths_json, created_at
+		    SELECT id, role, content, model, COALESCE(context_rel_path, '') AS context_rel_path, source_paths_json, created_at
 		    FROM chat_messages
 		    WHERE workspace_root = ?
 		    ORDER BY created_at DESC, id DESC
@@ -84,7 +87,7 @@ func (s *Store) SearchChatMessages(query string, limit int) ([]ChatMessageRecord
 	}
 	if query == "" {
 		rows, err := db.Query(
-			`SELECT id, role, content, model, source_paths_json, created_at
+			`SELECT id, role, content, model, COALESCE(context_rel_path, ''), source_paths_json, created_at
 			 FROM chat_messages
 			 WHERE workspace_root = ?
 			 ORDER BY created_at DESC, id DESC
@@ -100,18 +103,20 @@ func (s *Store) SearchChatMessages(query string, limit int) ([]ChatMessageRecord
 	}
 	like := "%" + strings.ToLower(query) + "%"
 	rows, err := db.Query(
-		`SELECT id, role, content, model, source_paths_json, created_at
+		`SELECT id, role, content, model, COALESCE(context_rel_path, ''), source_paths_json, created_at
 		 FROM chat_messages
 		 WHERE workspace_root = ?
 		   AND (
 		       lower(role) LIKE ?
 		       OR lower(content) LIKE ?
 		       OR lower(model) LIKE ?
+		       OR lower(context_rel_path) LIKE ?
 		       OR lower(source_paths_json) LIKE ?
 		   )
 		 ORDER BY created_at DESC, id DESC
 		 LIMIT ?`,
 		s.root,
+		like,
 		like,
 		like,
 		like,
@@ -155,7 +160,7 @@ func scanChatMessages(rows chatRows) ([]ChatMessageRecord, error) {
 		var record ChatMessageRecord
 		var sourcePathsJSON string
 		var created string
-		if err := rows.Scan(&record.ID, &record.Role, &record.Content, &record.Model, &sourcePathsJSON, &created); err != nil {
+		if err := rows.Scan(&record.ID, &record.Role, &record.Content, &record.Model, &record.ContextRelPath, &sourcePathsJSON, &created); err != nil {
 			return nil, err
 		}
 		_ = json.Unmarshal([]byte(sourcePathsJSON), &record.SourcePaths)

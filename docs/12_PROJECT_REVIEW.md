@@ -56,10 +56,10 @@ Implemented in `nexus-app/`:
 Priority migration gaps:
 
 1. Native editor quality: syntax highlighting, find/replace, split editor groups, breadcrumbs, outline, minimap, formatting, and language-aware navigation.
-2. Native editor-adjacent artifact regeneration and source quality: richer stale-source chat indicators, broader regeneration coverage, and citation depth.
+2. Native editor-adjacent artifact regeneration and source quality: broader regeneration coverage and citation depth.
 3. Job routing for slow workflows: long indexing, OCR, dump imports, connector pulls, report generation, and long agent runs.
 4. Connector and dump workflows: temporary isolated database sandboxes, import lifecycle, storage limits, and read-only analysis.
-5. Assistant maturity: model context accounting, runtime diagnostics, source-citation quality, source freshness in chat, and broader tool coverage.
+5. Assistant maturity: model context accounting, runtime diagnostics, source-citation quality, and broader tool coverage.
 6. UI polish: reduce crowded action strips, use structured tabs/dialogs/split panes, improve density, align with JetBrains-class workbench expectations, and add native visual checks.
 7. Documentation cleanup: continue separating active Fyne behavior from preserved Wails history.
 
@@ -75,7 +75,7 @@ The next batches should stay migration-first:
 
 1. Keep closing the Wails-only feature inventory instead of adding new top-level studios.
 2. Finish native editor parity and UI structure.
-3. Add richer assistant citations/source freshness and broader artifact regeneration coverage.
+3. Add richer assistant citations and broader artifact regeneration coverage.
 4. Add macOS Keychain and Linux Secret Service/libsecret after the Windows protected-secret baseline.
 5. Route remaining slow workflows through durable jobs.
 6. Add dump import design and first safe job scaffold before any database mutation/import execution.

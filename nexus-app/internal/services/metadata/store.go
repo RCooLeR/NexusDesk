@@ -103,6 +103,9 @@ func (s *Store) ensureSQLiteSchemaLocked() ([]string, error) {
 	if err := ensureColumn(db, "task_runs", "artifact_path", "TEXT"); err != nil {
 		return nil, err
 	}
+	if err := ensureColumn(db, "chat_messages", "context_rel_path", "TEXT"); err != nil {
+		return nil, err
+	}
 	now := time.Now().UTC()
 	if _, err := db.Exec(
 		`INSERT INTO workspaces (id, root, name, opened_at)

@@ -92,11 +92,11 @@ Capabilities should be explicit. The app should not assume every model supports 
 Current native implementation:
 
 - `nexus-app/internal/services/settings` stores non-secret provider, explicit protocol, model, context-window, and response-reserve settings.
-- Secret persistence and assistant memory/profile parity remain Wails-reference work to port carefully.
+- Windows protected secret persistence and assistant memory/profile parity are native; macOS/Linux keychains and richer assistant diagnostics remain follow-up work.
 - `nexus-app/internal/services/llm` implements protocol-flagged OpenAI-compatible chat/completions, streaming SSE parsing, `/models` probing, Ollama `/api/ps` runtime diagnostics, context-window options, response reserve, and workspace-context sentinel escaping.
 - `nexus-app/internal/services/assistant` wraps the LLM client for Ask mode and attaches bounded selected-file, directory, project-root, and generated-artifact context packs.
 - `nexus-app/internal/services/agent` owns the native ReAct-style agent loop with plan updates, bounded observations, model-driven tool calls, an emergency backend loop guard, and final-answer behavior.
-- `nexus-app/internal/services/tools` owns the native deterministic tool dispatcher for context, file preview/search/problems, Git status/diff, tasks, rollbacks, approvals, safe file mutations, artifacts, documents, operations files, datasets, and SQLite.
+- `nexus-app/internal/services/tools` owns the native deterministic tool dispatcher for context, file preview/search/problems, Git status/diff, tasks, rollbacks, approvals, safe file mutations, artifacts, documents, operations files, datasets, SQLite, and approval-gated web text fetches.
 - Persistent workspace changes are treated as a trust boundary: write, append, copy, move, delete, rollback, and patch tools require scoped full-project access and still route through workspace services that enforce rooted paths, `.nexusdesk` guards, exact patch matching, rollback snapshots, and audit records.
 - The Fyne assistant panel owns only prompt composition, context-pin controls, compact recent-history display, the compact live activity tail, final-answer replacement, and read-only audit rendering.
 - Durable chat, agent, tool-run, approval, artifact, SQL, dataset dependency, and job records live in native SQLite metadata where available, with Wails-era import compatibility on workspace open.

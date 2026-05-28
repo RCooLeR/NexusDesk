@@ -88,12 +88,13 @@ type ToolRunRecord struct {
 }
 
 type ChatMessageRecord struct {
-	ID          string
-	Role        string
-	Content     string
-	Model       string
-	SourcePaths []string
-	CreatedAt   time.Time
+	ID             string
+	Role           string
+	Content        string
+	Model          string
+	ContextRelPath string
+	SourcePaths    []string
+	CreatedAt      time.Time
 }
 
 type ArtifactRecord struct {

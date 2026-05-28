@@ -1,6 +1,6 @@
 package metadata
 
-const schemaVersion = 7
+const schemaVersion = 8
 
 const schemaSQL = `PRAGMA journal_mode = WAL;
 PRAGMA foreign_keys = ON;
@@ -84,6 +84,7 @@ CREATE TABLE IF NOT EXISTS chat_messages (
     role TEXT NOT NULL,
     content TEXT NOT NULL,
     model TEXT,
+    context_rel_path TEXT,
     source_paths_json TEXT,
     created_at TEXT NOT NULL
 );

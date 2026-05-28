@@ -303,11 +303,12 @@ func (v *View) persistAssistantExchange(prompt string, result assistantSvc.Resul
 		return
 	}
 	if err := v.metadataStore.SaveChatMessage(metadataSvc.ChatMessageRecord{
-		Role:        "assistant",
-		Content:     result.Message,
-		Model:       result.Model,
-		SourcePaths: result.SourcePaths,
-		CreatedAt:   time.Now().UTC(),
+		Role:           "assistant",
+		Content:        result.Message,
+		Model:          result.Model,
+		ContextRelPath: strings.TrimSpace(result.ContextRelPath),
+		SourcePaths:    result.SourcePaths,
+		CreatedAt:      time.Now().UTC(),
 	}); err != nil {
 		v.addActivity("Could not persist assistant chat message: " + err.Error())
 		return

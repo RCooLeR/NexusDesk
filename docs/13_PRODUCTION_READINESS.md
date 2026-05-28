@@ -52,7 +52,7 @@ Required:
 - IDE-grade editor baseline: syntax highlighting strategy, reliable find/replace, split groups or equivalent layout decision, breadcrumbs/outline strategy, and file encoding controls.
 - External database profile parity: PostgreSQL, MySQL/MariaDB, SQL Server, and DuckDB file/profile read-only query flows with cancellation, caps, redacted errors, and history.
 - Native protected secret storage for Windows first is implemented for provider API keys and connector credentials; macOS/Linux keychain backends remain before full cross-platform secret support.
-- Assistant quality parity: native Fyne now has weak-evidence warnings, retry/compare, Wails-compatible memory/profile storage, and save-latest-answer artifacts; richer citations, source freshness in chat, and clearer model diagnostics remain.
+- Assistant quality parity: native Fyne now has weak-evidence warnings, retry/compare, Wails-compatible memory/profile storage, stale-source chat history warnings, and save-latest-answer artifacts; richer citations and clearer model diagnostics remain.
 - Complete Wails-only feature inventory and explicit keep/drop/replace decisions.
 - Native UI cleanup pass for Workbench, Data, Artifacts, Settings, assistant, and bottom panels.
 

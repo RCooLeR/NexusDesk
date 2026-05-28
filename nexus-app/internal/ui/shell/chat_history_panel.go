@@ -2,7 +2,10 @@ package shell
 
 import (
 	"fmt"
+	"os"
+	"path/filepath"
 	"strings"
+	"time"
 
 	"fyne.io/fyne/v2"
 	"fyne.io/fyne/v2/container"
@@ -54,11 +57,12 @@ func (v *View) refreshChatHistory(query string) {
 		return
 	}
 	v.chatHistoryStatus.SetText(chatHistoryStatusText(query, len(records)))
-	v.chatHistoryResults.Objects = chatHistoryRows(records, v.openChatHistoryRecord, v.useChatHistoryRecordForAssistant)
+	freshness := chatHistoryFreshness(v.metadataStore.Root(), records)
+	v.chatHistoryResults.Objects = chatHistoryRows(records, freshness, v.openChatHistoryRecord, v.useChatHistoryRecordForAssistant)
 	if len(records) == 0 {
 		v.chatHistoryDetail.SetText("")
 	} else {
-		v.chatHistoryDetail.SetText(formatChatHistoryRecord(records[0]))
+		v.chatHistoryDetail.SetText(formatChatHistoryRecord(records[0], freshness[records[0].ID]))
 	}
 	v.chatHistoryResults.Refresh()
 }
@@ -67,7 +71,11 @@ func (v *View) openChatHistoryRecord(record metadataSvc.ChatMessageRecord) {
 	if v.chatHistoryDetail == nil {
 		return
 	}
-	v.chatHistoryDetail.SetText(formatChatHistoryRecord(record))
+	stale := []string{}
+	if v.metadataStore != nil {
+		stale = chatHistoryFreshness(v.metadataStore.Root(), []metadataSvc.ChatMessageRecord{record})[record.ID]
+	}
+	v.chatHistoryDetail.SetText(formatChatHistoryRecord(record, stale))
 }
 
 func (v *View) useChatHistoryRecordForAssistant(record metadataSvc.ChatMessageRecord) {
@@ -95,6 +103,7 @@ func (v *View) useChatHistoryRecordForAssistant(record metadataSvc.ChatMessageRe
 
 func chatHistoryRows(
 	records []metadataSvc.ChatMessageRecord,
+	freshness map[string][]string,
 	onOpen func(metadataSvc.ChatMessageRecord),
 	onUse func(metadataSvc.ChatMessageRecord),
 ) []fyne.CanvasObject {
@@ -109,7 +118,7 @@ func chatHistoryRows(
 		title.Truncation = fyne.TextTruncateEllipsis
 		preview := widget.NewLabel(compactChatHistoryContent(item.Content, 120))
 		preview.Truncation = fyne.TextTruncateEllipsis
-		meta := widget.NewLabel(chatHistoryRowMeta(item))
+		meta := widget.NewLabel(chatHistoryRowMeta(item, freshness[item.ID]))
 		meta.Truncation = fyne.TextTruncateEllipsis
 		open := widget.NewButtonWithIcon("", theme.VisibilityIcon(), func() {
 			onOpen(item)
@@ -140,7 +149,7 @@ func chatHistoryRowTitle(record metadataSvc.ChatMessageRecord) string {
 	return strings.ToUpper(role[:1]) + role[1:]
 }
 
-func chatHistoryRowMeta(record metadataSvc.ChatMessageRecord) string {
+func chatHistoryRowMeta(record metadataSvc.ChatMessageRecord, staleSources []string) string {
 	parts := []string{}
 	if !record.CreatedAt.IsZero() {
 		parts = append(parts, record.CreatedAt.Local().Format("2006-01-02 15:04"))
@@ -150,6 +159,9 @@ func chatHistoryRowMeta(record metadataSvc.ChatMessageRecord) string {
 	}
 	if len(record.SourcePaths) > 0 {
 		parts = append(parts, fmt.Sprintf("%d source(s)", len(record.SourcePaths)))
+	}
+	if len(staleSources) > 0 {
+		parts = append(parts, fmt.Sprintf("%d stale source(s)", len(staleSources)))
 	}
 	return strings.Join(parts, " | ")
 }
@@ -165,20 +177,92 @@ func compactChatHistoryContent(content string, limit int) string {
 	return content[:limit-3] + "..."
 }
 
-func formatChatHistoryRecord(record metadataSvc.ChatMessageRecord) string {
+func formatChatHistoryRecord(record metadataSvc.ChatMessageRecord, staleSources []string) string {
 	var builder strings.Builder
 	builder.WriteString(chatHistoryRowTitle(record))
-	if meta := chatHistoryRowMeta(record); meta != "" {
+	if meta := chatHistoryRowMeta(record, staleSources); meta != "" {
 		builder.WriteString("\n")
 		builder.WriteString(meta)
+	}
+	if strings.TrimSpace(record.ContextRelPath) != "" {
+		builder.WriteString("\nContext: ")
+		builder.WriteString(record.ContextRelPath)
 	}
 	if len(record.SourcePaths) > 0 {
 		builder.WriteString("\nSources: ")
 		builder.WriteString(strings.Join(record.SourcePaths, ", "))
 	}
+	if len(staleSources) > 0 {
+		builder.WriteString("\nWarning: context changed since this answer was created: ")
+		builder.WriteString(strings.Join(staleSources, ", "))
+	}
 	builder.WriteString("\n\n")
 	builder.WriteString(strings.TrimSpace(record.Content))
 	return builder.String()
+}
+
+func chatHistoryFreshness(root string, records []metadataSvc.ChatMessageRecord) map[string][]string {
+	out := map[string][]string{}
+	root = strings.TrimSpace(root)
+	if root == "" {
+		return out
+	}
+	for _, record := range records {
+		for _, source := range chatHistorySourceCandidates(record) {
+			if chatSourceStale(root, source, record.CreatedAt) {
+				out[record.ID] = append(out[record.ID], source)
+			}
+		}
+	}
+	return out
+}
+
+func chatHistorySourceCandidates(record metadataSvc.ChatMessageRecord) []string {
+	seen := map[string]bool{}
+	sources := []string{}
+	candidates := append([]string{}, record.SourcePaths...)
+	context := strings.TrimSpace(record.ContextRelPath)
+	if context != "" && !strings.Contains(context, ":") {
+		candidates = append(candidates, context)
+	}
+	for _, source := range candidates {
+		source = filepath.ToSlash(strings.TrimSpace(source))
+		if source == "" || source == "." || seen[source] {
+			continue
+		}
+		seen[source] = true
+		sources = append(sources, source)
+	}
+	return sources
+}
+
+func chatSourceStale(root string, source string, createdAt time.Time) bool {
+	absPath, ok := safeChatSourcePath(root, source)
+	if !ok {
+		return false
+	}
+	info, err := os.Stat(absPath)
+	if os.IsNotExist(err) {
+		return true
+	}
+	if err != nil {
+		return false
+	}
+	return !createdAt.IsZero() && info.ModTime().UTC().After(createdAt.UTC())
+}
+
+func safeChatSourcePath(root string, relPath string) (string, bool) {
+	relPath = filepath.ToSlash(strings.Trim(strings.TrimSpace(relPath), `"'`))
+	relPath = strings.TrimPrefix(relPath, "/")
+	if relPath == "" || relPath == "." || relPath == ".." || strings.HasPrefix(relPath, "../") || strings.Contains(relPath, "/../") || filepath.IsAbs(relPath) {
+		return "", false
+	}
+	target := filepath.Join(root, filepath.FromSlash(relPath))
+	relToRoot, err := filepath.Rel(root, target)
+	if err != nil || relToRoot == ".." || strings.HasPrefix(relToRoot, ".."+string(filepath.Separator)) {
+		return "", false
+	}
+	return target, true
 }
 
 func chatHistorySeedPrompt(record metadataSvc.ChatMessageRecord) string {
