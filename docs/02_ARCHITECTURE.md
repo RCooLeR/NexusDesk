@@ -130,7 +130,7 @@ File mutation data remains framework-free as well: `nexus-app/internal/services/
 
 Agent-authored file mutations use that same framework-free mutation boundary. The native deterministic tool dispatcher exposes approval-gated `write_file`, `append_file`, `copy_file`, `move_file`, `delete_file`, and `apply_patch` tools, but they only run when scoped full-project access is active and still call the workspace safe mutation services so traversal protection, `.nexusdesk` guards, text/binary checks, encoding rules, exact-match unified patch validation, diff observations, and rollback snapshots stay centralized.
 
-Workspace search remains framework-free: `nexus-app/internal/services/workspace` owns bounded path/content search, while the Fyne shell owns only the toolbar entry, bottom Search tab, and result-to-preview navigation.
+Workspace search remains framework-free: `nexus-app/internal/services/workspace` owns bounded path/content search and explicit search metadata export/recovery under `.nexusdesk/search/`, while the Fyne shell owns only the toolbar entry, bottom Search tab, metadata-export intent, status text, and result-to-preview navigation. Agent/tool searches keep using the side-effect-free search method so read-only tool calls do not quietly write workspace state.
 
 Workspace context packing remains framework-free too: `nexus-app/internal/services/workspace/context.go` expands explicit file, directory, or project-root context paths into capped preview-safe packs, while assistant/UI code only chooses which paths to request.
 

@@ -184,10 +184,10 @@ Already available:
 - Search snippets centered around match location.
 - Entry caps and truncation UI for large directories.
 - Shared candidate policy for preview/context behavior.
+- Search metadata export/recovery: explicit workspace searches persist bounded `.nexusdesk/search/index-metadata.json` manifests with result paths/lines and scan counts, while corrupt search metadata is quarantined under `.nexusdesk/search/recovery/` before a clean manifest is written.
 
 Planned/remaining:
 
-- Search index metadata and broader recovery/export flows.
 - Long indexing as explicit durable job, never on folder open.
 - Better ranking, grouping, and source weighting for assistant retrieval.
 
@@ -331,6 +331,7 @@ Already available:
 - SQLite metadata for chats, approvals, artifacts, jobs, SQL, dataset dependencies, agent/tool runs.
 - Wails-era compatibility import for chats, approvals, artifacts, tool runs, SQL, dependencies.
 - Corrupt metadata recovery and metadata backup export.
+- Search metadata recovery/export for explicit user-triggered workspace searches.
 - Diagnostics for provider, metadata health, jobs, tasks, SQL, agent failures, runtime state.
 - Shared slow-workflow job contract and explicit user-start enforcement.
 
@@ -339,7 +340,6 @@ Planned/remaining:
 - Audit coverage for future connector sync, OCR, dump import, arbitrary shell, and Docker mutation workflows.
 - Issue-report bundle with secret redaction and opt-in workspace content inclusion. Implemented as a Diagnostics export that writes a redacted ZIP with diagnostics text, activity tail, environment metadata, workspace-state file names, and no workspace file contents by default.
 - Crash/hang checks for folder open, malformed files, corrupt metadata, missing providers, and canceled long work.
-- Search index metadata recovery/export.
 
 ### 4.11 Packaging, Platform, Release
 
@@ -634,7 +634,7 @@ The checklist below is intentionally large. `tracker.md` should keep task-level 
 - [ ] Route every future slow workflow through jobs before UI exposure.
 - [x] Add issue-report bundle.
 - [x] Add crash/hang detector or startup recovery notes.
-- [ ] Add search index metadata and recovery/export.
+- [x] Add search index metadata and recovery/export.
 - [x] Add job history retention controls and cleanup policy.
 
 ### 7.10 P1: Packaging, CI, Release

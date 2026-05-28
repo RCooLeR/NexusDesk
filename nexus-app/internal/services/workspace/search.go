@@ -32,25 +32,39 @@ type SearchResult struct {
 }
 
 func (s *Service) Search(root string, query string, options SearchOptions) ([]SearchResult, error) {
+	results, _, err := s.SearchWithMetadata(root, query, options)
+	return results, err
+}
+
+func (s *Service) SearchWithMetadata(root string, query string, options SearchOptions) ([]SearchResult, SearchMetadata, error) {
 	query = strings.TrimSpace(query)
+	metadata := SearchMetadata{
+		Version:     searchMetadataVersion,
+		Query:       query,
+		Regex:       options.Regex,
+		GeneratedAt: nowUTC(),
+	}
 	if query == "" {
-		return []SearchResult{}, nil
+		return []SearchResult{}, metadata, nil
 	}
 	absRoot, err := cleanRoot(root)
 	if err != nil {
-		return nil, err
+		return nil, metadata, err
 	}
 	maxResults := options.MaxResults
 	if maxResults <= 0 {
 		maxResults = defaultSearchMaxResults
 	}
+	metadata.WorkspaceName = filepath.Base(absRoot)
+	metadata.MaxResults = maxResults
 	matcher, err := newSearchMatcher(query, options.Regex)
 	if err != nil {
-		return nil, err
+		return nil, metadata, err
 	}
 
 	searchService := *s
 	searchService.previewByteLimit = searchPreviewMaxBytes
+	stats := searchStats{}
 	results := []SearchResult{}
 	err = filepath.WalkDir(absRoot, func(path string, entry fs.DirEntry, walkErr error) error {
 		if walkErr != nil || path == absRoot {
@@ -66,18 +80,21 @@ func (s *Service) Search(root string, query string, options SearchOptions) ([]Se
 		relPath = filepath.ToSlash(relPath)
 		if shouldSkipSearchPath(relPath, entry) {
 			if entry.IsDir() {
+				stats.DirectoriesSkipped++
 				return filepath.SkipDir
 			}
 			return nil
 		}
 		if depthOf(relPath) > defaultSearchMaxDepth {
 			if entry.IsDir() {
+				stats.DirectoriesSkipped++
 				return filepath.SkipDir
 			}
 			return nil
 		}
 
 		if matcher.matches(relPath) {
+			stats.PathMatches++
 			results = append(results, SearchResult{
 				RelPath:   relPath,
 				Name:      entry.Name(),
@@ -92,12 +109,18 @@ func (s *Service) Search(root string, query string, options SearchOptions) ([]Se
 		}
 		if !entry.IsDir() {
 			remaining := maxResults - len(results)
-			results = append(results, searchService.searchFileContent(absRoot, relPath, matcher, remaining)...)
+			stats.FilesScanned++
+			matches := searchService.searchFileContent(absRoot, relPath, matcher, remaining)
+			if len(matches) > 0 {
+				stats.FilesWithContentMatches++
+				stats.ContentMatches += len(matches)
+			}
+			results = append(results, matches...)
 		}
 		return nil
 	})
 	if err != nil {
-		return nil, err
+		return nil, metadata, err
 	}
 
 	sort.SliceStable(results, func(left int, right int) bool {
@@ -109,7 +132,9 @@ func (s *Service) Search(root string, query string, options SearchOptions) ([]Se
 	if len(results) > maxResults {
 		results = results[:maxResults]
 	}
-	return results, nil
+	stats.Truncated = len(results) >= maxResults
+	metadata = metadata.withResults(results, stats)
+	return results, metadata, nil
 }
 
 func (s *Service) searchFileContent(root string, relPath string, matcher searchMatcher, maxResults int) []SearchResult {

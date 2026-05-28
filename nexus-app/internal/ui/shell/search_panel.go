@@ -25,15 +25,22 @@ func (v *View) searchWorkspace(query string) {
 		v.addActivity("Open a workspace before searching.")
 		return
 	}
-	results, err := v.workspaceService.Search(workspace.Root, query, workspaceSvc.SearchOptions{MaxResults: 80})
+	results, metadata, err := v.workspaceService.SearchWithMetadata(workspace.Root, query, workspaceSvc.SearchOptions{MaxResults: 80})
 	if err != nil {
 		dialog.ShowError(err, v.window)
 		return
 	}
-	v.searchStatus.SetText(fmt.Sprintf("%d result(s) for %q", len(results), query))
+	export, exportErr := v.workspaceService.WriteSearchMetadata(workspace.Root, metadata)
+	status := fmt.Sprintf("%d result(s) for %q. Indexed %d file(s). Metadata: %s.", len(results), query, metadata.FilesScanned, export.RelPath)
+	if exportErr != nil {
+		status = fmt.Sprintf("%d result(s) for %q. Metadata export failed: %v.", len(results), query, exportErr)
+	} else if export.Recovered {
+		status = fmt.Sprintf("%s Recovered corrupt metadata to %s.", status, export.RecoveredRelPath)
+	}
+	v.searchStatus.SetText(status)
 	v.searchResults.Objects = searchResultRows(results, v.openSearchResult)
 	v.searchResults.Refresh()
-	v.addActivity(fmt.Sprintf("Search found %d result(s) for %q.", len(results), query))
+	v.addActivity(status)
 }
 
 func (v *View) openSearchResult(result workspaceSvc.SearchResult) {

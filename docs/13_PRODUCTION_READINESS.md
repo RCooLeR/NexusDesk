@@ -89,6 +89,7 @@ Required:
 - Shared durable slow-workflow contract for OCR, dump imports, connector pulls, long indexing, report generation, long agent runs, and packaged exports.
 - Concrete durable job routing for each slow workflow as it is implemented.
 - Metadata recovery/export path for `.nexusdesk/metadata`.
+- Search metadata recovery/export path for explicit workspace searches: bounded `.nexusdesk/search/index-metadata.json` manifests store result paths/lines and scan counts without snippets, and corrupt manifests are quarantined before replacement.
 - Backup/export flow for local-first workspace state.
 - Diagnostics panel for app logs, provider status, metadata health, job history, GPU/model runtime, and recent failures.
 - Job history retention controls and cleanup policy: the Jobs panel can prune successful/canceled completed jobs by count/age while preserving running jobs and failures/timeouts by default.
