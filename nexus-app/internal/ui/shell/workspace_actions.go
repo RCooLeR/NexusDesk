@@ -247,6 +247,22 @@ func (v *View) refreshNavigator() {
 	v.navigator.Refresh()
 }
 
+func (v *View) refreshNavigatorTargets(paths ...string) {
+	if v.navigatorTree == nil || v.navigatorStore == nil {
+		v.refreshNavigator()
+		return
+	}
+	if err := v.navigatorStore.refreshParents(paths...); err != nil {
+		v.addActivity("Could not refresh project tree selection: " + err.Error())
+		v.refreshNavigator()
+		return
+	}
+	v.navigatorTree.Refresh()
+	if v.navigatorRefreshSummary != nil {
+		v.navigatorRefreshSummary()
+	}
+}
+
 func (v *View) openWorkspaceNode(node domain.WorkspaceNode) {
 	if node.Kind == domain.NodeDirectory {
 		v.addActivity("Selected folder " + node.RelPath)

@@ -29,6 +29,21 @@ func TestTreeStoreBranchPathForSelection(t *testing.T) {
 	}
 }
 
+func TestNavigatorParentID(t *testing.T) {
+	cases := map[string]string{
+		"":                  "",
+		"README.md":         "",
+		"docs/readme.md":    "docs",
+		"docs/guides":       "docs",
+		"/docs/guides/a.md": "docs/guides",
+	}
+	for input, want := range cases {
+		if got := navigatorParentID(input); got != want {
+			t.Fatalf("navigatorParentID(%q) = %q, want %q", input, got, want)
+		}
+	}
+}
+
 func sameTreeBranches(left []string, right []string) bool {
 	if len(left) != len(right) {
 		return false

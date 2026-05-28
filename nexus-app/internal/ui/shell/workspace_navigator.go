@@ -59,6 +59,9 @@ func (v *View) newWorkspaceNavigator() fyne.CanvasObject {
 		visibility.SetText(navigatorVisibilitySummary(store.includeIgnored, store.visibleSummary()))
 	}
 	refreshVisibility()
+	v.navigatorTree = tree
+	v.navigatorStore = store
+	v.navigatorRefreshSummary = refreshVisibility
 	showIgnored := widget.NewCheck("Show ignored", func(include bool) {
 		if err := store.setIncludeIgnored(include); err != nil {
 			v.addActivity("Could not reload project tree: " + err.Error())

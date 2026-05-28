@@ -27,7 +27,7 @@ func (v *View) promptCreateFile() {
 			return
 		}
 		proposal, err := v.workspaceService.ApplyFileCreate(workspace.Root, workspaceSvc.FileCreateRequest{RelPath: target.Text})
-		v.finishFileOperation(proposal.Message, err)
+		v.finishFileOperation(proposal.Message, err, target.Text)
 	}, v.window)
 }
 
@@ -46,7 +46,7 @@ func (v *View) promptCreateFolder() {
 			return
 		}
 		proposal, err := v.workspaceService.ApplyDirectoryCreate(workspace.Root, workspaceSvc.DirectoryCreateRequest{RelPath: target.Text})
-		v.finishFileOperation(proposal.Message, err)
+		v.finishFileOperation(proposal.Message, err, target.Text)
 	}, v.window)
 }
 
@@ -67,7 +67,7 @@ func (v *View) promptCopyFile() {
 		}
 		workspace := v.state.Workspace()
 		proposal, err := v.workspaceService.ApplyFileCopy(workspace.Root, workspaceSvc.FileCopyRequest{SourceRelPath: source, TargetRelPath: target.Text})
-		v.finishFileOperation(proposal.Message, err)
+		v.finishFileOperation(proposal.Message, err, target.Text)
 	}, v.window)
 }
 
@@ -88,7 +88,7 @@ func (v *View) promptRenameFile() {
 		}
 		workspace := v.state.Workspace()
 		proposal, err := v.workspaceService.ApplyFileRename(workspace.Root, workspaceSvc.FileMoveRequest{SourceRelPath: source, TargetRelPath: target.Text})
-		v.finishFileOperation(proposal.Message, err)
+		v.finishFileOperation(proposal.Message, err, source, target.Text)
 	}, v.window)
 }
 
@@ -104,17 +104,18 @@ func (v *View) confirmDeleteFile() {
 		}
 		workspace := v.state.Workspace()
 		proposal, err := v.workspaceService.ApplyFileDelete(workspace.Root, source)
-		v.finishFileOperation(proposal.Message, err)
+		v.finishFileOperation(proposal.Message, err, source)
 	}, v.window)
 }
 
-func (v *View) finishFileOperation(message string, err error) {
+func (v *View) finishFileOperation(message string, err error, affectedPaths ...string) {
 	if err != nil {
 		dialog.ShowError(err, v.window)
 		return
 	}
 	v.addActivity(message)
-	v.refreshWorkspace()
+	v.refreshNavigatorTargets(affectedPaths...)
+	v.refreshAssistantContextPins()
 }
 
 func (v *View) setNavigatorClipboard(mode string) {
@@ -170,7 +171,7 @@ func (v *View) pasteNavigatorClipboard() {
 		if err == nil {
 			v.navigatorClipboard = navigatorClipboard{}
 		}
-		v.finishFileOperation(proposal.Message, err)
+		v.finishFileOperation(proposal.Message, err, clipboard.SourceRelPath, targetRelPath)
 		return
 	}
 	targetRelPath = navigatorUniqueCopyPath(workspace, targetRelPath)
@@ -178,7 +179,7 @@ func (v *View) pasteNavigatorClipboard() {
 		SourceRelPath: clipboard.SourceRelPath,
 		TargetRelPath: targetRelPath,
 	})
-	v.finishFileOperation(proposal.Message, err)
+	v.finishFileOperation(proposal.Message, err, targetRelPath)
 }
 
 func navigatorPasteDirectory(workspace domain.Workspace, selected string) string {

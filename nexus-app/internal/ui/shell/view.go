@@ -46,6 +46,9 @@ type View struct {
 	editorSession            *editorSvc.Session
 	status                   *widget.Label
 	navigator                *fyne.Container
+	navigatorTree            *widget.Tree
+	navigatorStore           *treeStore
+	navigatorRefreshSummary  func()
 	editorTabs               *container.DocTabs
 	bottomTabs               *container.AppTabs
 	openTabs                 map[string]*container.TabItem

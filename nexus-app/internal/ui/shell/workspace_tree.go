@@ -1,6 +1,7 @@
 package shell
 
 import (
+	"path"
 	"strings"
 
 	"fyne.io/fyne/v2"
@@ -120,6 +121,31 @@ func (s *treeStore) branchPathForSelection(selected string) []string {
 		}
 	}
 	return branches
+}
+
+func (s *treeStore) refreshParents(paths ...string) error {
+	parents := map[string]bool{}
+	for _, relPath := range paths {
+		parents[navigatorParentID(relPath)] = true
+	}
+	for parent := range parents {
+		if err := s.load(parent); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+func navigatorParentID(relPath string) string {
+	relPath = strings.TrimSpace(path.Clean(strings.Trim(relPath, "/")))
+	if relPath == "" || relPath == "." {
+		return ""
+	}
+	parent := path.Dir(relPath)
+	if parent == "." || parent == "/" {
+		return ""
+	}
+	return parent
 }
 
 func newWorkspaceTree(

@@ -546,7 +546,7 @@ The Fyne migration must not drop product ambition, but this section is intention
 - [x] Ensure `ApplyFileAppend` failure path cleans rollback snapshots cleanly and checks close errors.
 - [x] Surface directory-entry truncation in navigator UI when entry cap clips folder contents.
 - [x] Verify explicit discard confirmation path on dirty-tab close and add regression coverage.
-- [ ] Replace full-tree refresh on file operations with targeted tree node refresh helpers.
+- [x] Replace full-tree refresh on file operations with targeted tree node refresh helpers.
 - [x] Implement hunk-windowed unified diffs with optional large-file elision.
 - [x] Add guardrails for empty role/action string formatting in agent/activity path rendering.
 - [x] Add settings-level LLM connection test action with model count and warning reporting.
