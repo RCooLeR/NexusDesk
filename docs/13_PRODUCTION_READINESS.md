@@ -49,7 +49,7 @@ Reference: [Wails Feature Inventory](15_WAILS_FEATURE_INVENTORY.md) records the 
 
 Required:
 
-- IDE-grade editor baseline: syntax highlighting strategy, minimap/language-action decisions, and continued outline/go-to-symbol/breadcrumb/split/find/format polish.
+- IDE-grade editor baseline: syntax highlighting strategy, language-action decisions, and continued outline/go-to-symbol/document-map/breadcrumb/split/find/format polish.
 - External database profile parity: PostgreSQL, MySQL/MariaDB, SQL Server, and DuckDB file/profile read-only query flows with cancellation, caps, redacted errors, and history.
 - Native protected secret storage for Windows first is implemented for provider API keys and connector credentials; macOS/Linux keychain backends remain before full cross-platform secret support.
 - Assistant quality parity: native Fyne now has weak-evidence warnings, retry/compare, Wails-compatible memory/profile storage, stale-source chat history warnings, Wails-compatible context-to-source fallback parsing, source/model footer diagnostics, curated model context sizing, loaded-model runtime context tuning, and save-latest-answer artifacts; finer-grained citations remain.
@@ -125,7 +125,7 @@ Exit criteria:
 ## Immediate Production-Oriented Next Batch
 
 1. Close the remaining Wails inventory parity blockers: editor maturity, richer assistant/source quality, and broader artifact regeneration.
-2. Continue editor parity: syntax highlighting decision, minimap strategy, and deeper language-action behavior.
+2. Continue editor parity: syntax highlighting decision and deeper language-action behavior.
 3. Plan macOS Keychain and Linux Secret Service/libsecret after the Windows protected-secret baseline.
 4. Define the durable job contract for OCR, dump imports, connector pulls, report generation, and long agent runs.
 5. Continue diagnostics hardening with deeper provider/runtime checks and guided remediation.

@@ -18,3 +18,11 @@ func TestSecondaryEditorOptionsExcludeActiveFile(t *testing.T) {
 		t.Fatalf("unexpected secondary options: %#v", options)
 	}
 }
+
+func TestDocumentMapItemText(t *testing.T) {
+	text := documentMapItemText(editorSvc.DocumentMapItem{Kind: "todo", Label: "TODO: wire startup", Line: 12})
+
+	if text != "todo  TODO: wire startup  L12" {
+		t.Fatalf("unexpected document map text: %q", text)
+	}
+}

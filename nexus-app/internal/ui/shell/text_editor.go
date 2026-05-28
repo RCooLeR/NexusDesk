@@ -19,6 +19,8 @@ type textEditorBinding struct {
 	rendered       *previewPane
 	outlineStatus  *widget.Label
 	outlineList    *fyne.Container
+	mapStatus      *widget.Label
+	mapList        *fyne.Container
 	relPath        string
 	sourceEncoding string
 	saveEncoding   string
@@ -33,6 +35,7 @@ func (b *textEditorBinding) applyTabState(tab editorSvc.Tab) {
 	b.status.SetText(draftStatusText(tab))
 	b.rendered.SetText(tab.DraftText)
 	b.setOutline(tab.DraftText)
+	b.setDocumentMap(tab.DraftText)
 	if b.onState != nil {
 		b.onState(tab, b.encodingDirty())
 	}
@@ -49,12 +52,17 @@ func (v *View) newTextEditor(tab editorSvc.Tab, preview domain.FilePreview, onSt
 	outlineStatus := widget.NewLabel("")
 	outlineStatus.Wrapping = fyne.TextWrapWord
 	outlineList := container.NewVBox()
+	mapStatus := widget.NewLabel("")
+	mapStatus.Wrapping = fyne.TextWrapWord
+	mapList := container.NewVBox()
 	binding := &textEditorBinding{
 		source:         source,
 		status:         status,
 		rendered:       rendered,
 		outlineStatus:  outlineStatus,
 		outlineList:    outlineList,
+		mapStatus:      mapStatus,
+		mapList:        mapList,
 		relPath:        tab.RelPath,
 		sourceEncoding: initialEncoding,
 		saveEncoding:   initialEncoding,
@@ -74,6 +82,7 @@ func (v *View) newTextEditor(tab editorSvc.Tab, preview domain.FilePreview, onSt
 		}
 	}
 	binding.setOutline(tab.DraftText)
+	binding.setDocumentMap(tab.DraftText)
 	source.OnChanged = func(text string) {
 		if !v.editorSession.UpdateDraft(tab.ID, text) {
 			return
@@ -82,6 +91,7 @@ func (v *View) newTextEditor(tab editorSvc.Tab, preview domain.FilePreview, onSt
 			status.SetText(draftStatusTextWithEncoding(next, binding.encodingDirty()))
 			rendered.SetText(next.DraftText)
 			binding.setOutline(next.DraftText)
+			binding.setDocumentMap(next.DraftText)
 			onState(next, binding.encodingDirty())
 		}
 	}
@@ -112,10 +122,12 @@ func (v *View) newTextEditor(tab editorSvc.Tab, preview domain.FilePreview, onSt
 	sourcePanel := container.NewBorder(container.NewBorder(nil, nil, status, encodingControl), nil, nil, nil, source)
 	previewPanel := container.NewBorder(widget.NewLabel(previewHeader(preview)), nil, nil, nil, rendered.Canvas())
 	outlinePanel := container.NewBorder(outlineStatus, nil, nil, nil, container.NewVScroll(outlineList))
+	mapPanel := container.NewBorder(mapStatus, nil, nil, nil, container.NewVScroll(mapList))
 	tabs := container.NewAppTabs(
 		container.NewTabItem("Source", sourcePanel),
 		container.NewTabItem("Preview", previewPanel),
 		container.NewTabItem("Outline", outlinePanel),
+		container.NewTabItem("Map", mapPanel),
 	)
 	tabs.SetTabLocation(container.TabLocationTop)
 	return tabs
@@ -194,9 +206,39 @@ func (b *textEditorBinding) setOutline(text string) {
 	b.outlineList.Refresh()
 }
 
+func (b *textEditorBinding) setDocumentMap(text string) {
+	if b == nil || b.mapList == nil || b.mapStatus == nil {
+		return
+	}
+	items := editorSvc.BuildDocumentMap(b.relPath, text)
+	b.mapList.Objects = b.mapList.Objects[:0]
+	if len(items) == 0 {
+		b.mapStatus.SetText("Map: no landmarks detected for this file.")
+		b.mapList.Add(widget.NewLabel("No document map landmarks detected."))
+		b.mapList.Refresh()
+		return
+	}
+	b.mapStatus.SetText(fmt.Sprintf("Map: %d landmark(s). This native overview replaces Monaco's minimap with jumpable structure.", len(items)))
+	for _, item := range items {
+		current := item
+		button := widget.NewButton(documentMapItemText(current), func() {
+			editorSetCursorLine(b.source, current.Line)
+			b.mapStatus.SetText(fmt.Sprintf("Moved cursor to %s on line %d.", current.Label, current.Line))
+		})
+		button.Alignment = widget.ButtonAlignLeading
+		button.Importance = widget.LowImportance
+		b.mapList.Add(button)
+	}
+	b.mapList.Refresh()
+}
+
 func outlineItemText(item editorSvc.OutlineItem) string {
 	indent := strings.Repeat("  ", item.Level)
 	return fmt.Sprintf("%s%s  %s  L%d", indent, item.Kind, item.Label, item.Line)
+}
+
+func documentMapItemText(item editorSvc.DocumentMapItem) string {
+	return fmt.Sprintf("%s  %s  L%d", item.Kind, item.Label, item.Line)
 }
 
 func draftStatusText(tab editorSvc.Tab) string {
