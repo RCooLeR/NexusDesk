@@ -5,19 +5,23 @@ import (
 
 	"fyne.io/fyne/v2"
 	"fyne.io/fyne/v2/container"
+	"fyne.io/fyne/v2/theme"
 	"fyne.io/fyne/v2/widget"
 
 	"nexusdesk/internal/domain"
 )
 
-func newEditorTabs(welcomeTitle string) *container.DocTabs {
-	tabs := container.NewDocTabs(container.NewTabItem(welcomeTitle, welcomePanel()))
+func newEditorTabs(welcomeTitle string, openWorkspace func(), openFile func()) *container.DocTabs {
+	tabs := container.NewDocTabs(container.NewTabItem(welcomeTitle, welcomePanel(openWorkspace, openFile)))
 	tabs.SetTabLocation(container.TabLocationTop)
 	return tabs
 }
 
-func welcomePanel() fyne.CanvasObject {
-	return container.NewCenter(widget.NewRichTextFromMarkdown("# Nexus Augentic Studio\n\nFyne-native migration shell. Open a workspace to begin."))
+func welcomePanel(openWorkspace func(), openFile func()) fyne.CanvasObject {
+	title := widget.NewRichTextFromMarkdown("# Nexus Augentic Studio\n\nNative local-first workbench.")
+	openWorkspaceButton := widget.NewButtonWithIcon("Open Workspace", theme.FolderOpenIcon(), openWorkspace)
+	openFileButton := widget.NewButtonWithIcon("Open File", theme.FileTextIcon(), openFile)
+	return container.NewCenter(container.NewVBox(title, container.NewHBox(openWorkspaceButton, openFileButton)))
 }
 
 func (v *View) configureEditorTabs() {
