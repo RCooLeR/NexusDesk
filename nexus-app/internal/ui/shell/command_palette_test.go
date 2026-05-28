@@ -69,6 +69,7 @@ func TestCommandPaletteIncludesSafeAgentGuide(t *testing.T) {
 	foundSafeAgent := false
 	foundSmokeChecklist := false
 	foundAppDataCleanup := false
+	foundReleaseHygiene := false
 	for _, command := range commands {
 		switch command.ID {
 		case "help.safe_agent":
@@ -91,10 +92,15 @@ func TestCommandPaletteIncludesSafeAgentGuide(t *testing.T) {
 				t.Fatalf("unexpected app-data-cleanup command: %#v", command)
 			}
 			foundAppDataCleanup = true
+		case "help.release_hygiene":
+			if command.Title != "Release Hygiene & Antivirus Notes" || command.Group != "Help" || command.Run == nil {
+				t.Fatalf("unexpected release-hygiene command: %#v", command)
+			}
+			foundReleaseHygiene = true
 		}
 	}
-	if !foundSafeAgent || !foundBetaFeedback || !foundSmokeChecklist || !foundAppDataCleanup {
-		t.Fatalf("missing help commands: safe_agent=%t beta_feedback=%t smoke_checklist=%t app_data_cleanup=%t in %#v", foundSafeAgent, foundBetaFeedback, foundSmokeChecklist, foundAppDataCleanup, commands)
+	if !foundSafeAgent || !foundBetaFeedback || !foundSmokeChecklist || !foundAppDataCleanup || !foundReleaseHygiene {
+		t.Fatalf("missing help commands: safe_agent=%t beta_feedback=%t smoke_checklist=%t app_data_cleanup=%t release_hygiene=%t in %#v", foundSafeAgent, foundBetaFeedback, foundSmokeChecklist, foundAppDataCleanup, foundReleaseHygiene, commands)
 	}
 }
 

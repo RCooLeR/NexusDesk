@@ -203,6 +203,13 @@ func (v *View) commandPaletteActions() []commandPaletteAction {
 			Group:  "Help",
 			Run:    v.openAppDataCleanupGuideTab,
 		},
+		{
+			ID:     "help.release_hygiene",
+			Title:  "Release Hygiene & Antivirus Notes",
+			Detail: "Open signing, manifest, false-positive triage, release-note, and do-not-ship guidance.",
+			Group:  "Help",
+			Run:    v.openReleaseHygieneGuideTab,
+		},
 		v.bottomPanelCommand("view.search", "Search", "Open workspace path and content search results.", "Workbench"),
 		v.bottomPanelCommand("view.problems", "Problems", "Open syntax and workspace diagnostics.", "Workbench"),
 		v.bottomPanelCommand("view.git", "Git", "Open status, diff, history, blame, and hunk actions.", "Workbench"),

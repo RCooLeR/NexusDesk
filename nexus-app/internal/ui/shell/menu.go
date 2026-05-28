@@ -28,6 +28,7 @@ func (v *View) mainMenu() *fyne.MainMenu {
 	betaFeedbackGuide := fyne.NewMenuItemWithIcon("Beta Feedback & Release Notes", theme.DocumentIcon(), v.openBetaFeedbackGuideTab)
 	smokeChecklistGuide := fyne.NewMenuItemWithIcon("Clean-Machine Smoke Checklist", theme.ConfirmIcon(), v.openSmokeChecklistGuideTab)
 	appDataCleanupGuide := fyne.NewMenuItemWithIcon("App Data & Uninstall Cleanup", theme.StorageIcon(), v.openAppDataCleanupGuideTab)
+	releaseHygieneGuide := fyne.NewMenuItemWithIcon("Release Hygiene & Antivirus Notes", theme.WarningIcon(), v.openReleaseHygieneGuideTab)
 	about := fyne.NewMenuItemWithIcon("About Nexus", theme.InfoIcon(), v.showAbout)
 
 	return fyne.NewMainMenu(
@@ -68,7 +69,7 @@ func (v *View) mainMenu() *fyne.MainMenu {
 			fyne.NewMenuItem("Refresh Activity", func() { v.activityLog.Refresh() }),
 			menuItem("Command Palette", shortcutCommandPalette(), v.openCommandPaletteDialog),
 		),
-		fyne.NewMenu("Help", safeAgentGuide, betaFeedbackGuide, smokeChecklistGuide, appDataCleanupGuide, fyne.NewMenuItemSeparator(), about),
+		fyne.NewMenu("Help", safeAgentGuide, betaFeedbackGuide, smokeChecklistGuide, appDataCleanupGuide, releaseHygieneGuide, fyne.NewMenuItemSeparator(), about),
 	)
 }
 
@@ -104,4 +105,8 @@ func (v *View) openSmokeChecklistGuideTab() {
 
 func (v *View) openAppDataCleanupGuideTab() {
 	v.addPlaceholderTab("App Data Cleanup", userGuideSvc.AppDataCleanupMarkdown())
+}
+
+func (v *View) openReleaseHygieneGuideTab() {
+	v.addPlaceholderTab("Release Hygiene", userGuideSvc.ReleaseHygieneMarkdown())
 }
