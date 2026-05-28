@@ -70,20 +70,19 @@ func (s *Service) Run(ctx context.Context, request Request, observe Observer) (R
 		}
 		if final := parseFinalAnswer(message); final != "" {
 			state.plan = finishPlan(state.plan)
-			final = guardMutationClaim(final, state.mutated)
+			final = appendMutationVerification(final, state)
 			s.emit(observe, request, Event{Type: "final", Iteration: iteration, Message: limitText(final, maxEventBytes), Plan: state.plan})
 			return Result{Message: final, Plan: state.plan, ToolCalls: state.toolCalls, Iterations: iteration, Truncated: state.truncated}, nil
 		}
 		call, ok := parseAction(message)
 		if !ok {
 			state.plan = finishPlan(state.plan)
-			message = guardMutationClaim(message, state.mutated)
+			message = appendMutationVerification(message, state)
 			s.emit(observe, request, Event{Type: "final", Iteration: iteration, Message: limitText(message, maxEventBytes), Plan: state.plan})
 			return Result{Message: message, Plan: state.plan, ToolCalls: state.toolCalls, Iterations: iteration, Truncated: state.truncated}, nil
 		}
 		completed := s.executeTool(ctx, request, call, iteration, observe)
 		state.toolCalls = append(state.toolCalls, completed)
-		state.mutated = state.mutated || completed.Mutated
 		observation := completed.Observation
 		if completed.Error != "" {
 			observation = "ERROR: " + completed.Error
@@ -148,7 +147,7 @@ func (s *Service) wrapUpStoppedRun(ctx context.Context, config llm.Config, reque
 	if final := parseFinalAnswer(message); final != "" {
 		message = final
 	}
-	message = guardMutationClaim(message, state.mutated)
+	message = appendMutationVerification(message, state)
 	s.emit(observe, request, Event{Type: "stopped_finalized", Iteration: iterations, Message: limitText(message, maxEventBytes), Model: result.Model, Plan: state.plan})
 	return Result{Message: message, Plan: state.plan, ToolCalls: state.toolCalls, Iterations: iterations, Truncated: state.truncated, StopReason: stopReasonSafetyWrapped}, nil
 }

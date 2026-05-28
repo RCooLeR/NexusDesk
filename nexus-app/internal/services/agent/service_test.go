@@ -57,8 +57,11 @@ Action: read_context({"relPath":"README.md"})`,
 	if err != nil {
 		t.Fatalf("Run returned error: %v", err)
 	}
-	if result.Message != "README says hello." || len(result.ToolCalls) != 1 || result.Iterations != 2 {
+	if !strings.Contains(result.Message, "README says hello.") || len(result.ToolCalls) != 1 || result.Iterations != 2 {
 		t.Fatalf("unexpected result: %#v", result)
+	}
+	if !strings.Contains(result.Message, "no workspace mutation was reported") {
+		t.Fatalf("expected observation-driven mutation verification, got %q", result.Message)
 	}
 	if len(events) == 0 || events[len(events)-1].Type != "final" {
 		t.Fatalf("expected final event, got %#v", events)
@@ -103,10 +106,13 @@ func TestRunHandlesUpdatePlanWithoutExecutor(t *testing.T) {
 	if len(result.Plan) != 2 || result.Plan[1].Status != "completed" {
 		t.Fatalf("unexpected final plan: %#v", result.Plan)
 	}
+	if !strings.Contains(result.Message, "no tool observation was recorded") {
+		t.Fatalf("expected no-observation mutation verification, got %q", result.Message)
+	}
 }
 
-func TestRunAddsVerificationNoteForUnobservedMutationClaim(t *testing.T) {
-	model := &fakeChatClient{messages: []string{`Final Answer: I created gemma-findings.md.`}}
+func TestRunAddsObservationDrivenVerificationWithoutLanguageHeuristic(t *testing.T) {
+	model := &fakeChatClient{messages: []string{`Final Answer: Создал gemma-findings.md.`}}
 	service := New(fakeSettingsStore{}, model, ToolExecutorFunc(func(ctx context.Context, call ToolCall, request Request) (ToolResult, error) {
 		return ToolResult{}, errors.New("not used")
 	}))
@@ -114,8 +120,28 @@ func TestRunAddsVerificationNoteForUnobservedMutationClaim(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Run returned error: %v", err)
 	}
-	if !strings.Contains(result.Message, "Verification note") {
-		t.Fatalf("expected verification note, got %q", result.Message)
+	if !strings.Contains(result.Message, "no tool observation was recorded") {
+		t.Fatalf("expected observation-driven verification note, got %q", result.Message)
+	}
+}
+
+func TestRunReportsVerifiedMutationObservation(t *testing.T) {
+	model := &fakeChatClient{messages: []string{
+		`Thought: write it.
+Action: write_file({"relPath":"docs/report.md","content":"# Report"})`,
+		`Final Answer: Готово.`,
+	}}
+	executor := ToolExecutorFunc(func(ctx context.Context, call ToolCall, request Request) (ToolResult, error) {
+		return ToolResult{Name: call.Name, Args: call.Args, Observation: "Path: docs/report.md\nAction: create", Risk: "high", Mutated: true}, nil
+	})
+	service := New(fakeSettingsStore{}, model, executor)
+	result, err := service.Run(context.Background(), Request{Prompt: "Create report", ApproveWrites: true}, nil)
+	if err != nil {
+		t.Fatalf("Run returned error: %v", err)
+	}
+	if !strings.Contains(result.Message, "verified 1 successful workspace mutation") ||
+		!strings.Contains(result.Message, "write_file docs/report.md") {
+		t.Fatalf("expected verified mutation summary, got %q", result.Message)
 	}
 }
 

@@ -1,7 +1,7 @@
 package agent
 
 import (
-	"regexp"
+	"fmt"
 	"strings"
 	"unicode/utf8"
 )
@@ -20,7 +20,6 @@ type runState struct {
 	toolCalls []ToolResult
 	history   []string
 	truncated bool
-	mutated   bool
 }
 
 func (s *runState) appendHistory(label string, content string) {
@@ -52,37 +51,68 @@ func limitText(value string, maxBytes int) string {
 	return limited
 }
 
-func claimsMutation(message string) bool {
-	normalized := strings.ToLower(strings.TrimSpace(message))
-	if normalized == "" {
-		return false
-	}
-	negative := []string{
-		"did not create", "didn't create", "could not create", "cannot create", "can't create",
-		"did not write", "didn't write", "could not write", "cannot write", "can't write",
-		"did not save", "could not save", "cannot save", "can't save",
-		"not created", "not written", "not saved",
-	}
-	for _, phrase := range negative {
-		if strings.Contains(normalized, phrase) {
-			return false
-		}
-	}
-	patterns := []*regexp.Regexp{
-		regexp.MustCompile(`\b(i|i have|i've|we|we have|we've)\s+(created|wrote|written|saved|updated|modified|generated|documented|recorded|added)\b`),
-		regexp.MustCompile(`\b(file|artifact|document|report)\s+.*\b(created|written|saved|updated|generated)\b`),
-	}
-	for _, pattern := range patterns {
-		if pattern.MatchString(normalized) {
-			return true
-		}
-	}
-	return false
-}
-
-func guardMutationClaim(message string, mutated bool) string {
-	if mutated || !claimsMutation(message) {
+func appendMutationVerification(message string, state runState) string {
+	message = strings.TrimSpace(message)
+	note := mutationVerificationNote(state)
+	if note == "" {
 		return message
 	}
-	return strings.TrimSpace(message) + "\n\nVerification note: this agent run did not receive a successful mutating tool observation, so any claimed workspace write should be treated as unverified."
+	if message == "" {
+		return note
+	}
+	return message + "\n\n" + note
+}
+
+func mutationVerificationNote(state runState) string {
+	successes := []string{}
+	attempts := 0
+	for _, call := range state.toolCalls {
+		if call.Mutated {
+			successes = append(successes, mutationToolSummary(call))
+			continue
+		}
+		if isMutationTool(call.Name) {
+			attempts++
+		}
+	}
+	if len(successes) > 0 {
+		total := len(successes)
+		if total > 5 {
+			successes = append(successes[:5], fmt.Sprintf("+%d more", total-5))
+		}
+		return fmt.Sprintf("Mutation verification: verified %d successful workspace mutation(s) from tool observation(s): %s.", total, strings.Join(successes, "; "))
+	}
+	if attempts > 0 {
+		return fmt.Sprintf("Mutation verification: no successful workspace mutation was observed; %d mutation-capable tool attempt(s) failed or were blocked.", attempts)
+	}
+	if len(state.toolCalls) > 0 {
+		return "Mutation verification: no workspace mutation was reported by the completed tool observations."
+	}
+	return "Mutation verification: no tool observation was recorded, so no workspace mutation is verified."
+}
+
+func isMutationTool(name string) bool {
+	switch strings.TrimSpace(name) {
+	case "write_file", "append_file", "copy_file", "move_file", "delete_file", "apply_patch", "rollback_file_mutation":
+		return true
+	default:
+		return false
+	}
+}
+
+func mutationToolSummary(call ToolResult) string {
+	target := firstMutationArg(call.Args, "relPath", "targetRelPath", "sourceRelPath", "id", "path", "target", "source")
+	if target == "" {
+		return call.Name
+	}
+	return call.Name + " " + target
+}
+
+func firstMutationArg(args map[string]string, keys ...string) string {
+	for _, key := range keys {
+		if value := strings.TrimSpace(args[key]); value != "" {
+			return value
+		}
+	}
+	return ""
 }
