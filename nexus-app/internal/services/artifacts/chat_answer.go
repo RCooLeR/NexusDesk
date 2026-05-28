@@ -11,6 +11,7 @@ import (
 
 const chatAnswerCitationSnippetLimit = 16
 const chatAnswerCitationSnippetMaxRunes = 512
+const chatAnswerSourceCoverageLimit = 64
 
 func (s *Store) WriteChatAnswer(report ChatAnswerReport) (Artifact, error) {
 	content := strings.TrimSpace(report.Content)
@@ -48,6 +49,8 @@ func (s *Store) WriteChatAnswer(report ChatAnswerReport) (Artifact, error) {
 		CitationRefs:           cleanChatAnswerList(report.CitationRefs, chatAnswerCitationSnippetLimit),
 		UnverifiedCitationRefs: cleanChatAnswerList(report.UnverifiedCitationRefs, chatAnswerCitationSnippetLimit),
 		CitationSnippets:       cleanChatAnswerSnippets(report.CitationSnippets),
+		CitedSourcePaths:       cleanChatAnswerList(report.CitedSourcePaths, chatAnswerSourceCoverageLimit),
+		UncitedSourcePaths:     cleanChatAnswerList(report.UncitedSourcePaths, chatAnswerSourceCoverageLimit),
 		EvidenceQuality:        strings.TrimSpace(report.EvidenceQuality),
 		EvidenceSummary:        strings.TrimSpace(report.EvidenceSummary),
 		GeneratedAt:            createdAt,
@@ -116,6 +119,29 @@ func chatAnswerMarkdown(report ChatAnswerReport, title string, content string, c
 		builder.WriteString("\n## Evidence\n\n")
 		writeKV(&builder, "Quality", report.EvidenceQuality)
 		writeKV(&builder, "Summary", report.EvidenceSummary)
+	}
+	citedSources := cleanChatAnswerList(report.CitedSourcePaths, chatAnswerSourceCoverageLimit)
+	uncitedSources := cleanChatAnswerList(report.UncitedSourcePaths, chatAnswerSourceCoverageLimit)
+	if len(citedSources) > 0 || len(uncitedSources) > 0 {
+		builder.WriteString("\n## Source Coverage\n\n")
+		writeKV(&builder, "Cited sources", fmt.Sprintf("%d", len(citedSources)))
+		writeKV(&builder, "Uncited sources", fmt.Sprintf("%d", len(uncitedSources)))
+		if len(citedSources) > 0 {
+			builder.WriteString("\n### Cited Sources\n\n")
+			for _, source := range citedSources {
+				builder.WriteString("- ")
+				builder.WriteString(source)
+				builder.WriteString("\n")
+			}
+		}
+		if len(uncitedSources) > 0 {
+			builder.WriteString("\n### Uncited Sources\n\n")
+			for _, source := range uncitedSources {
+				builder.WriteString("- ")
+				builder.WriteString(source)
+				builder.WriteString("\n")
+			}
+		}
 	}
 	if strings.TrimSpace(report.Prompt) != "" {
 		builder.WriteString("\n## Prompt\n\n")

@@ -13,8 +13,8 @@ Approximate migration status:
 - Native foundation and core services: complete enough for sustained native development.
 - Fyne-native migration: roughly 97% complete by useful Wails-era functionality.
 - Wails-era useful workflow parity: roughly 95-96% complete.
-- Native Parity Beta readiness: roughly 92-94% complete.
-- Overall production readiness: roughly 88% complete.
+- Native Parity Beta readiness: roughly 93-94% complete.
+- Overall production readiness: roughly 88-89% complete.
 - Distribution and packaging readiness: roughly 65-70% complete.
 
 The app can already:
@@ -58,7 +58,7 @@ Required:
 - IDE-grade editor baseline: first native lightweight syntax strategy, read-only highlighted syntax preview with cursor-aware active-line/token/symbol status, language-action readiness for formatting/highlighting/draft-diagnostics/outline/definition/reference/LSP status, live unsaved-draft diagnostics for markers/merge conflicts/JSON/Go/YAML/TOML/XML, Problems syntax diagnostics for saved JSON/Go/YAML/TOML/XML files, bounded workspace go-to-definition fallback and references search, command palette baseline, documented Syntax mirror/Document Map beta replacement decision, and continued outline/go-to-symbol/local-definition/document-map/breadcrumb/split/find/format polish.
 - External database profile parity: PostgreSQL, MySQL/MariaDB, SQL Server, and DuckDB file/profile read-only query flows with cancellation, caps, redacted errors, and history.
 - Native protected secret storage is implemented for provider API keys and connector credentials with Windows DPAPI, macOS Keychain, Linux Secret Service/libsecret via `secret-tool`, and explicit refusal on unsupported platforms.
-- Assistant quality parity: native Fyne now has weak-evidence warnings, retry/compare, Wails-compatible memory/profile storage, stale-source chat history warnings, Wails-compatible context-to-source fallback parsing, source/model footer diagnostics, line-aware citation refs, explicit unverified/out-of-context citation diagnostics, cited/uncited source coverage diagnostics, bounded citation snippets in saved answer artifacts, deterministic evidence-quality labels, curated model context sizing, loaded-model runtime context tuning, and save-latest-answer artifacts.
+- Assistant quality parity: native Fyne now has weak-evidence warnings, retry/compare, Wails-compatible memory/profile storage, stale-source chat history warnings, Wails-compatible context-to-source fallback parsing, source/model footer diagnostics, line-aware citation refs, explicit unverified/out-of-context citation diagnostics, cited/uncited source coverage diagnostics, structured cited/uncited source coverage metadata in saved answer artifacts, bounded citation snippets in saved answer artifacts, deterministic evidence-quality labels, curated model context sizing, loaded-model runtime context tuning, and save-latest-answer artifacts.
 - Complete Wails-only feature inventory and explicit keep/drop/replace decisions.
 - Native UI cleanup pass for Workbench, Data, Artifacts, Settings, assistant, and bottom panels.
 
@@ -66,7 +66,7 @@ Remaining blockers:
 
 - Post-beta editable-widget inline syntax styling if it preserves safe editing/accessibility.
 - Future LSP/deeper cross-file language actions after a packaged provider spike proves reliability.
-- Deeper assistant retrieval evidence beyond deterministic citation/source diagnostics.
+- Deeper assistant retrieval/ranking quality beyond deterministic citation/source coverage diagnostics.
 - Richer generated document artifacts and full deck/PPTX-style exports beyond the packaged presentation zip baseline.
 - Final UI polish for onboarding, empty states, settings, diagnostics, and workflow hierarchy.
 

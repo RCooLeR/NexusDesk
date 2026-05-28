@@ -196,6 +196,9 @@ func TestAssistantEvidenceDiagnosticReportsPartialCitationCoverage(t *testing.T)
 	if diagnostic.Quality != "line-cited" || diagnostic.CitedSourceCount != 1 || diagnostic.SourceCount != 3 {
 		t.Fatalf("unexpected coverage diagnostic: %#v", diagnostic)
 	}
+	if strings.Join(diagnostic.CitedSourcePaths, "|") != "README.md" {
+		t.Fatalf("unexpected cited sources: %#v", diagnostic.CitedSourcePaths)
+	}
 	if strings.Join(diagnostic.UncitedSourcePaths, "|") != "docs/guide.md|notes/todo.md" {
 		t.Fatalf("unexpected uncited sources: %#v", diagnostic.UncitedSourcePaths)
 	}

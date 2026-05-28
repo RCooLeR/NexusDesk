@@ -553,6 +553,8 @@ func TestBuildChatAnswerRefreshArtifactPreservesMetadata(t *testing.T) {
 		CitationRefs:           []string{"README.md:L12"},
 		UnverifiedCitationRefs: []string{"outside.md:L3"},
 		CitationSnippets:       []string{"README.md:L12 Third setup step."},
+		CitedSourcePaths:       []string{"README.md"},
+		UncitedSourcePaths:     []string{"docs/guide.md"},
 		EvidenceQuality:        "line-cited",
 		EvidenceSummary:        "line-cited (1 source(s), 1 line ref(s); 1 citation outside selected sources).",
 	})
@@ -571,7 +573,7 @@ func TestBuildChatAnswerRefreshArtifactPreservesMetadata(t *testing.T) {
 	if err != nil {
 		t.Fatalf("ReadArtifactText() error = %v", err)
 	}
-	for _, expected := range []string{"# Saved Assistant Answer", "## Citations", "README.md:L12", "## Unverified Citations", "outside.md:L3", "## Citation Snippets", "Third setup step", "## Evidence", "## Prompt", "Summarize README", "## Answer", "Use the setup guide."} {
+	for _, expected := range []string{"# Saved Assistant Answer", "## Citations", "README.md:L12", "## Unverified Citations", "outside.md:L3", "## Citation Snippets", "Third setup step", "## Evidence", "## Source Coverage", "docs/guide.md", "## Prompt", "Summarize README", "## Answer", "Use the setup guide."} {
 		if !strings.Contains(text, expected) {
 			t.Fatalf("rebuilt chat answer missing %q:\n%s", expected, text)
 		}
@@ -597,6 +599,12 @@ func TestBuildChatAnswerRefreshArtifactPreservesMetadata(t *testing.T) {
 	}
 	if len(metadata.CitationSnippets) != 1 || !strings.Contains(metadata.CitationSnippets[0], "Third setup step") {
 		t.Fatalf("rebuilt metadata lost citation snippets: %#v", metadata.CitationSnippets)
+	}
+	if len(metadata.CitedSourcePaths) != 1 || metadata.CitedSourcePaths[0] != "README.md" {
+		t.Fatalf("rebuilt metadata lost cited source coverage: %#v", metadata.CitedSourcePaths)
+	}
+	if len(metadata.UncitedSourcePaths) != 1 || metadata.UncitedSourcePaths[0] != "docs/guide.md" {
+		t.Fatalf("rebuilt metadata lost uncited source coverage: %#v", metadata.UncitedSourcePaths)
 	}
 }
 

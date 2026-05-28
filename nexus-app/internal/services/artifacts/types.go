@@ -219,6 +219,8 @@ type ChatAnswerReport struct {
 	CitationRefs           []string
 	UnverifiedCitationRefs []string
 	CitationSnippets       []string
+	CitedSourcePaths       []string
+	UncitedSourcePaths     []string
 	EvidenceQuality        string
 	EvidenceSummary        string
 }
@@ -284,6 +286,8 @@ type Metadata struct {
 	CitationRefs           []string            `json:"citationRefs,omitempty"`
 	UnverifiedCitationRefs []string            `json:"unverifiedCitationRefs,omitempty"`
 	CitationSnippets       []string            `json:"citationSnippets,omitempty"`
+	CitedSourcePaths       []string            `json:"citedSourcePaths,omitempty"`
+	UncitedSourcePaths     []string            `json:"uncitedSourcePaths,omitempty"`
 	EvidenceQuality        string              `json:"evidenceQuality,omitempty"`
 	EvidenceSummary        string              `json:"evidenceSummary,omitempty"`
 	SourceFingerprints     []SourceFingerprint `json:"sourceFingerprints,omitempty"`

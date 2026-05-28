@@ -24,10 +24,10 @@ Native editor parity decision: `docs/16_EDITOR_PARITY_STRATEGY.md`.
 Summary:
 
 - The Fyne migration remains the correct direction and `nexus-app/` is the active product.
-- Current estimate: Fyne-native migration is roughly 97% complete, Wails useful-code parity is roughly 95-96%, Native Parity Beta readiness is roughly 92-94%, and overall production readiness is roughly 88%.
+- Current estimate: Fyne-native migration is roughly 97% complete, Wails useful-code parity is roughly 95-96%, Native Parity Beta readiness is roughly 93-94%, and overall production readiness is roughly 88-89%.
 - The architecture is healthy: thin executable root, framework-free domain/services, Fyne-only UI packages, explicit approvals, safe workspace mutation boundaries, manual Git/Docker actions, durable metadata, and local-first safety rules.
 - The biggest remaining architectural risk is UI/orchestration complexity in `internal/ui/shell`; future UI work should keep extracting focused panels, controllers, and service-owned behavior.
-- The highest-priority unfinished work is migration and production readiness, not new top-level studios: applying durable slow-job routing to the remaining slow workflows, richer document/PPTX exports, deeper assistant evidence quality, packaging, onboarding, and native UI polish.
+- The highest-priority unfinished work is migration and production readiness, not new top-level studios: applying durable slow-job routing to the remaining slow workflows, richer document/PPTX exports, deeper assistant retrieval quality beyond deterministic source coverage, packaging, onboarding, and native UI polish.
 - `app-wails/` should remain as reference until the remaining native parity blockers are completed or explicitly moved out of Native Parity Beta.
 
 Production direction:
@@ -336,7 +336,7 @@ Exit criteria:
 
 ## Next Batch
 
-1. Use the Wails inventory to close remaining Native Parity blockers: editor maturity, deeper retrieval evidence, and future generated-presentation regeneration.
+1. Use the Wails inventory to close remaining Native Parity blockers: deeper assistant retrieval/ranking quality, richer generated document/full deck outputs, and final UI polish.
 2. Finish native editor/UI parity: richer inline syntax styling, future LSP/deeper cross-file language actions, and less cramped native panels.
 3. Continue platform validation for protected secret storage now that Windows DPAPI, macOS Keychain, and Linux Secret Service/libsecret command-backed backends exist.
 4. Apply the durable slow-workflow contract to concrete long indexing, OCR, dump imports, connector pulls, report generation, and long agent run implementations.
@@ -507,6 +507,7 @@ The Fyne migration must not drop product ambition, but this section is intention
 - [x] Persist bounded citation snippets in saved `chat-answer` artifacts and metadata for line-cited answers.
 - [x] Persist unverified/out-of-context citation diagnostics in native assistant footers and `chat-answer` artifact metadata.
 - [x] Add citation coverage diagnostics so native assistant footers and saved `chat-answer` metadata show cited/uncited source coverage.
+- [x] Persist structured cited/uncited source coverage lists in `chat-answer` artifacts and metadata, and preserve them through chat-answer regeneration.
 - [x] Local assistant memory and prompt profiles.
 - [x] Agent runtime with plan updates, bounded observations, model-driven tool calls, no frontend iteration cap, emergency backend loop guard, and final-answer fallback behavior.
 - [x] Unified tool registry and dispatcher for deterministic tools and model-requested tools.
@@ -525,7 +526,8 @@ The Fyne migration must not drop product ambition, but this section is intention
 - [x] First native packaged presentation zip exports in the Artifacts UI from presentation outlines, with manifest/package-file metadata and package preview text.
 - [ ] Richer generated document artifacts and full deck/PPTX-style presentation exports in native UI.
 - [x] Provenance sidecars with source files, query IDs, generated timestamps, metadata rows, and freshness fingerprints for explicit artifact writes.
-- [ ] Complete chat/tool-run provenance coverage for every generated output type.
+- [x] Chat-answer artifacts include prompt/model/context/source/citation/unverified-citation/snippet/evidence and structured cited/uncited source coverage metadata.
+- [ ] Complete tool-run provenance coverage for every generated output type beyond chat-answer artifacts.
 - [x] Artifact browser with search, metadata, preview, compare, archive, delete, restore, and open-source navigation.
 - [x] Artifact lineage/freshness warnings for current native artifacts.
 - [x] Artifact lineage graph import/export UI parity with workspace graph JSON artifacts.

@@ -278,6 +278,8 @@ func (v *View) saveLatestAssistantAnswer() {
 		CitationRefs:           assistantCitationRefs(v.assistantLastResult),
 		UnverifiedCitationRefs: assistantUnverifiedCitationRefs(v.assistantLastResult),
 		CitationSnippets:       citationSnippets,
+		CitedSourcePaths:       diagnostic.CitedSourcePaths,
+		UncitedSourcePaths:     diagnostic.UncitedSourcePaths,
 		EvidenceQuality:        diagnostic.Quality,
 		EvidenceSummary:        diagnostic.Summary,
 	})
@@ -436,6 +438,7 @@ type assistantEvidenceDiagnostic struct {
 	CitationCount           int
 	UnverifiedCitationCount int
 	CitedSourceCount        int
+	CitedSourcePaths        []string
 	UncitedSourcePaths      []string
 }
 
@@ -449,6 +452,7 @@ func assistantEvidenceDiagnosticForResult(result assistantSvc.Result) assistantE
 		CitationCount:           len(citations),
 		UnverifiedCitationCount: len(unverified),
 		CitedSourceCount:        len(citedSources),
+		CitedSourcePaths:        citedSources,
 		UncitedSourcePaths:      uncitedSources,
 	}
 	switch {

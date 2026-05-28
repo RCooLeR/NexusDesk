@@ -12,8 +12,8 @@ Approximate current status:
 
 - Fyne-native migration: 96-97% complete by useful Wails-era functionality.
 - Wails useful-code parity: 94-96% complete.
-- Native Parity Beta readiness: 92-94% complete.
-- Overall production readiness: about 88% complete.
+- Native Parity Beta readiness: 93-94% complete.
+- Overall production readiness: about 88-89% complete.
 - Distribution/packaging readiness: about 65-70% complete.
 
 The remaining work is concentrated in final editor parity, richer generated document/presentation outputs, deeper assistant evidence quality, durable routing for slow workflows, signed packaging, onboarding, platform smoke, and final UI polish.
@@ -163,7 +163,7 @@ Native parity and editor:
 
 Assistant/source quality:
 
-- Improve retrieval evidence beyond deterministic citation/source diagnostics.
+- Improve retrieval/ranking quality beyond deterministic citation/source/coverage diagnostics.
 - Add stronger source diagnostics for weak, stale, partial, or uncited context.
 - Improve provenance consistency for all generated outputs.
 

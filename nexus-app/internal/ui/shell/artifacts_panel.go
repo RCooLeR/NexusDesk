@@ -749,6 +749,8 @@ func buildChatAnswerRefreshArtifact(ctx context.Context, workspaceRoot string, a
 		CitationRefs:           append([]string{}, metadata.CitationRefs...),
 		UnverifiedCitationRefs: append([]string{}, metadata.UnverifiedCitationRefs...),
 		CitationSnippets:       append([]string{}, metadata.CitationSnippets...),
+		CitedSourcePaths:       append([]string{}, metadata.CitedSourcePaths...),
+		UncitedSourcePaths:     append([]string{}, metadata.UncitedSourcePaths...),
 		EvidenceQuality:        metadata.EvidenceQuality,
 		EvidenceSummary:        metadata.EvidenceSummary,
 	})

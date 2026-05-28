@@ -17,12 +17,14 @@ func TestWriteChatAnswerCreatesMarkdownAndMetadata(t *testing.T) {
 		Content:                "Use the setup guide.",
 		Model:                  "model-a",
 		ContextRelPath:         "context: README.md",
-		SourcePaths:            []string{"README.md"},
+		SourcePaths:            []string{"README.md", "docs/guide.md"},
 		CitationRefs:           []string{"README.md:L12"},
 		UnverifiedCitationRefs: []string{"other.md:L3"},
 		CitationSnippets:       []string{"README.md:L12 Third setup step."},
+		CitedSourcePaths:       []string{"README.md"},
+		UncitedSourcePaths:     []string{"docs/guide.md"},
 		EvidenceQuality:        "line-cited",
-		EvidenceSummary:        "line-cited (1 source(s), 1 line ref(s); 1 citation outside selected sources).",
+		EvidenceSummary:        "line-cited (2 source(s), 1 line ref(s), cited 1/2 source(s); uncited: docs/guide.md; 1 citation outside selected sources).",
 	})
 	if err != nil {
 		t.Fatalf("WriteChatAnswer returned error: %v", err)
@@ -35,7 +37,7 @@ func TestWriteChatAnswerCreatesMarkdownAndMetadata(t *testing.T) {
 		t.Fatal(err)
 	}
 	text := string(data)
-	for _, expected := range []string{"# Assistant Answer - Summarize README", "Model:** model-a", "README.md", "## Citations", "README.md:L12", "## Unverified Citations", "other.md:L3", "## Citation Snippets", "Third setup step", "## Evidence", "Quality:** line-cited", "outside selected sources", "## Prompt", "## Answer", "Use the setup guide."} {
+	for _, expected := range []string{"# Assistant Answer - Summarize README", "Model:** model-a", "README.md", "## Citations", "README.md:L12", "## Unverified Citations", "other.md:L3", "## Citation Snippets", "Third setup step", "## Evidence", "Quality:** line-cited", "outside selected sources", "## Source Coverage", "Cited sources:** 1", "Uncited sources:** 1", "## Prompt", "## Answer", "Use the setup guide."} {
 		if !strings.Contains(text, expected) {
 			t.Fatalf("expected artifact markdown to contain %q, got %q", expected, text)
 		}
@@ -52,6 +54,12 @@ func TestWriteChatAnswerCreatesMarkdownAndMetadata(t *testing.T) {
 	}
 	if len(metadata.CitationSnippets) != 1 || !strings.Contains(metadata.CitationSnippets[0], "Third setup step") {
 		t.Fatalf("expected citation snippets in metadata, got %#v", metadata.CitationSnippets)
+	}
+	if len(metadata.CitedSourcePaths) != 1 || metadata.CitedSourcePaths[0] != "README.md" {
+		t.Fatalf("expected cited source coverage in metadata, got %#v", metadata.CitedSourcePaths)
+	}
+	if len(metadata.UncitedSourcePaths) != 1 || metadata.UncitedSourcePaths[0] != "docs/guide.md" {
+		t.Fatalf("expected uncited source coverage in metadata, got %#v", metadata.UncitedSourcePaths)
 	}
 	if metadata.EvidenceQuality != "line-cited" || !strings.Contains(metadata.EvidenceSummary, "1 line ref") {
 		t.Fatalf("expected evidence metadata, got %#v", metadata)
