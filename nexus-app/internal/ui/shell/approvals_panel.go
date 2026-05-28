@@ -62,6 +62,7 @@ func (v *View) confirmGrantFullProjectAccess() {
 		}
 		policy, err := v.approvalService.GrantFullProjectAccess(workspace.Root, time.Hour)
 		if err != nil {
+			v.addActivity("Approval persistence failed: " + err.Error())
 			dialog.ShowError(err, v.window)
 			return
 		}
@@ -78,6 +79,7 @@ func (v *View) revokeFullProjectAccess() {
 	}
 	policy, err := v.approvalService.RevokeFullProjectAccess(workspace.Root)
 	if err != nil {
+		v.addActivity("Approval persistence failed: " + err.Error())
 		dialog.ShowError(err, v.window)
 		return
 	}

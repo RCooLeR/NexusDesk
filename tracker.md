@@ -539,7 +539,7 @@ The Fyne migration must not drop product ambition, but this section is intention
 - [x] Extend file preview to truncated text preview over cap and only reject truly non-previewable binaries.
 - [ ] Align preview/context candidate detection across extensions and filename basenames via a shared policy table.
 - [ ] Improve encoding fallback from hardcoded Windows-1251 for unsupported text encodings.
-- [ ] Avoid full-history replay in approval persistence; persist only the new record and serialize repository writes safely.
+- [x] Avoid full-history replay in approval persistence; persist only the new record and serialize repository writes safely.
 - [x] Add single-file-open entrypoint (file picker/quick-open) in addition to folder open flow.
 - [ ] Consolidate bottom-panel navigation to reduce tab discoverability and density issues.
 - [ ] Split `internal/ui/shell/data_panel.go` into smaller UI responsibility files.
@@ -550,7 +550,7 @@ The Fyne migration must not drop product ambition, but this section is intention
 - [ ] Implement hunk-windowed unified diffs with optional large-file elision.
 - [ ] Add guardrails for empty role/action string formatting in agent/activity path rendering.
 - [x] Add settings-level LLM connection test action with model count and warning reporting.
-- [ ] Surface persistence failures from repository writes in activity/diagnostics.
+- [x] Surface persistence failures from repository writes in activity/diagnostics.
 - [ ] Cancel streaming LLM response handlers promptly when request context is canceled.
 - [ ] Make provider configuration explicit and extensible beyond built-in options with protocol flags.
 - [x] Clamp agent context budget fallback to safe non-trivial defaults when settings become misconfigured.

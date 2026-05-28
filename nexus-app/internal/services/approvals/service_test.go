@@ -1,6 +1,7 @@
 package approvals
 
 import (
+	"errors"
 	"testing"
 	"time"
 )
@@ -51,11 +52,47 @@ func TestAppendWritesRepositoryAndListPrefersRepository(t *testing.T) {
 	}
 }
 
+func TestAppendPersistsOnlyNewRepositoryRecord(t *testing.T) {
+	root := t.TempDir()
+	repository := &fakeApprovalRepository{}
+	service := New()
+	service.SetRepository(repository)
+
+	if _, err := service.Append(root, Record{Action: "first", Target: "one.md"}); err != nil {
+		t.Fatalf("first Append returned error: %v", err)
+	}
+	if _, err := service.Append(root, Record{Action: "second", Target: "two.md"}); err != nil {
+		t.Fatalf("second Append returned error: %v", err)
+	}
+
+	if len(repository.records) != 2 {
+		t.Fatalf("expected one repository save per append, got %#v", repository.records)
+	}
+	if repository.records[0].Action != "second" || repository.records[1].Action != "first" {
+		t.Fatalf("unexpected repository record order: %#v", repository.records)
+	}
+}
+
+func TestAppendSurfacesRepositorySaveFailure(t *testing.T) {
+	root := t.TempDir()
+	repository := &fakeApprovalRepository{saveErr: errors.New("metadata unavailable")}
+	service := New()
+	service.SetRepository(repository)
+
+	if _, err := service.Append(root, Record{Action: "write", Target: "notes.md"}); err == nil {
+		t.Fatal("expected repository save failure")
+	}
+}
+
 type fakeApprovalRepository struct {
 	records []Record
+	saveErr error
 }
 
 func (r *fakeApprovalRepository) SaveApprovalRecord(record Record) error {
+	if r.saveErr != nil {
+		return r.saveErr
+	}
 	r.records = append([]Record{record}, r.records...)
 	return nil
 }

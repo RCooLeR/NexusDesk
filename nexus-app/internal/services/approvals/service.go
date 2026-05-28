@@ -6,6 +6,7 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+	"sync"
 	"time"
 )
 
@@ -20,6 +21,7 @@ type Repository interface {
 }
 
 type Service struct {
+	mu         sync.RWMutex
 	repository Repository
 }
 
@@ -28,17 +30,28 @@ func New() *Service {
 }
 
 func (s *Service) SetRepository(repository Repository) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
 	s.repository = repository
 }
 
 func (s *Service) Append(root string, record Record) ([]Record, error) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
 	absRoot, err := cleanRoot(root)
 	if err != nil {
 		return nil, err
 	}
-	records, err := s.List(absRoot)
-	if err != nil {
+	records := []Record{}
+	if err := readJSON(logPath(absRoot), &records); err != nil {
 		return nil, err
+	}
+	if s.repository != nil {
+		metadataRecords, err := s.repository.ListApprovalRecords(maxApprovalRecords)
+		if err == nil && len(metadataRecords) > 0 {
+			records = metadataRecords
+		}
 	}
 	now := time.Now().UTC()
 	record.Action = fallback(record.Action, "approval")
@@ -59,14 +72,17 @@ func (s *Service) Append(root string, record Record) ([]Record, error) {
 		return nil, err
 	}
 	if s.repository != nil {
-		for _, record := range records {
-			_ = s.repository.SaveApprovalRecord(record)
+		if err := s.repository.SaveApprovalRecord(record); err != nil {
+			return nil, err
 		}
 	}
 	return records, nil
 }
 
 func (s *Service) List(root string) ([]Record, error) {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+
 	absRoot, err := cleanRoot(root)
 	if err != nil {
 		return nil, err
