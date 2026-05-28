@@ -170,6 +170,16 @@ type OperationsRunbookReport struct {
 	GeneratedBy     string
 }
 
+type ChatAnswerReport struct {
+	Title          string
+	Prompt         string
+	Content        string
+	Source         string
+	ContextRelPath string
+	Model          string
+	SourcePaths    []string
+}
+
 type OperationsServiceSummary struct {
 	Name      string
 	Image     string
@@ -202,6 +212,9 @@ type Metadata struct {
 	JobID              string              `json:"jobId,omitempty"`
 	TaskID             string              `json:"taskId,omitempty"`
 	Source             string              `json:"source,omitempty"`
+	ContextRelPath     string              `json:"contextRelPath,omitempty"`
+	Prompt             string              `json:"prompt,omitempty"`
+	Model              string              `json:"model,omitempty"`
 	SourcePaths        []string            `json:"sourcePaths,omitempty"`
 	SourceFingerprints []SourceFingerprint `json:"sourceFingerprints,omitempty"`
 	GeneratedAt        time.Time           `json:"generatedAt"`

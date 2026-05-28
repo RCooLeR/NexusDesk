@@ -27,10 +27,15 @@ type StreamClient interface {
 	ChatStream(ctx context.Context, config llm.Config, chatRequest llm.ChatRequest, onDelta func(string) error) (llm.ChatResult, error)
 }
 
+type ProfileReader interface {
+	Get() (Profile, error)
+}
+
 type Service struct {
 	settingsStore SettingsStore
 	contextPacker ContextPacker
 	client        StreamClient
+	profileStore  ProfileReader
 }
 
 type Request struct {
@@ -58,6 +63,10 @@ func NewWithDependencies(settingsStore SettingsStore, contextPacker ContextPacke
 	return &Service{settingsStore: settingsStore, contextPacker: contextPacker, client: client}
 }
 
+func (s *Service) SetProfileStore(store ProfileReader) {
+	s.profileStore = store
+}
+
 func (s *Service) AskStream(ctx context.Context, request Request, onDelta func(string) error) (Result, error) {
 	settings, err := s.settingsStore.Load()
 	if err != nil {
@@ -66,7 +75,7 @@ func (s *Service) AskStream(ctx context.Context, request Request, onDelta func(s
 	config := llm.ConfigFromSettings(settings)
 	chatRequest := llm.ChatRequest{
 		SystemPrompt: askSystemPrompt,
-		Prompt:       request.Prompt,
+		Prompt:       s.promptWithProfile(request.Prompt),
 		Conversation: append([]llm.ChatTurn{}, request.Conversation...),
 	}
 	contextWarning := s.attachSelectedContext(config, request, &chatRequest)
@@ -82,6 +91,17 @@ func (s *Service) AskStream(ctx context.Context, request Request, onDelta func(s
 		SourcePaths:    result.SourcePaths,
 		ContextWarning: contextWarning,
 	}, nil
+}
+
+func (s *Service) promptWithProfile(prompt string) string {
+	if s.profileStore == nil {
+		return prompt
+	}
+	profile, err := s.profileStore.Get()
+	if err != nil {
+		return prompt
+	}
+	return ApplyProfileToPrompt(prompt, profile)
 }
 
 func (s *Service) attachSelectedContext(config llm.Config, request Request, chatRequest *llm.ChatRequest) string {

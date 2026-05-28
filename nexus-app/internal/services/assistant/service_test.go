@@ -138,6 +138,27 @@ func TestAskStreamSkipsBinarySelection(t *testing.T) {
 	}
 }
 
+func TestAskStreamAppliesAssistantProfileWhenConfigured(t *testing.T) {
+	store := fakeSettingsStore{settings: settingssvc.Defaults()}
+	client := &fakeStreamClient{message: "ok", deltas: []string{"ok"}}
+	service := NewWithDependencies(store, nil, client)
+	service.SetProfileStore(fakeProfileStore{profile: Profile{
+		Memory:          "Prefer compact answers.",
+		ActiveProfileID: "reviewer",
+		PromptProfiles:  DefaultProfile().PromptProfiles,
+	}})
+
+	_, err := service.AskStream(context.Background(), Request{Prompt: "Review this"}, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, expected := range []string{"Active prompt profile: Reviewer", "Prefer compact answers.", "User request:", "Review this"} {
+		if !strings.Contains(client.request.Prompt, expected) {
+			t.Fatalf("expected profiled prompt to contain %q, got %q", expected, client.request.Prompt)
+		}
+	}
+}
+
 type fakeSettingsStore struct {
 	settings settingssvc.Settings
 	err      error
@@ -161,6 +182,15 @@ func (p *fakeContextPacker) BuildContextPack(_ string, paths []string, options w
 }
 
 var errNoContext = errors.New("context paths did not contain previewable text files")
+
+type fakeProfileStore struct {
+	profile Profile
+	err     error
+}
+
+func (s fakeProfileStore) Get() (Profile, error) {
+	return s.profile, s.err
+}
 
 type fakeStreamClient struct {
 	config  llm.Config

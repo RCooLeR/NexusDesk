@@ -36,6 +36,7 @@ type View struct {
 	jobService               *jobsSvc.Service
 	approvalService          *approvalsSvc.Service
 	assistantService         *assistantSvc.Service
+	assistantProfileStore    *assistantSvc.ProfileStore
 	agentService             *agentSvc.Service
 	datasetService           *datasetsSvc.Service
 	dbconnectorService       *dbconnectorSvc.Service
@@ -149,6 +150,11 @@ type View struct {
 	assistantPrompt          *widget.Entry
 	assistantMode            *widget.Select
 	assistantRunTaskApproval *widget.Check
+	assistantProfile         assistantSvc.Profile
+	assistantProfileSelect   *widget.Select
+	assistantMemory          *widget.Entry
+	assistantLastPrompt      string
+	assistantLastResult      assistantSvc.Result
 	diagnosticsProber        diagnosticsProber
 }
 
@@ -203,6 +209,11 @@ func New(window fyne.Window) *View {
 	workspaceService := workspaceSvc.New()
 	llmClient := llmSvc.NewClient()
 	assistantService := assistantSvc.New(settingsStore, workspaceService, llmClient)
+	assistantProfileStore, err := assistantSvc.NewDefaultProfileStore()
+	if err != nil {
+		assistantProfileStore = assistantSvc.NewProfileStore("nexus-assistant-profile.json")
+	}
+	assistantService.SetProfileStore(assistantProfileStore)
 	gitService := gitSvc.New()
 	taskService := tasksSvc.New()
 	toolDispatcher := toolsSvc.NewDefaultDispatcher(toolsSvc.Dependencies{
@@ -248,6 +259,7 @@ func New(window fyne.Window) *View {
 		jobService:            jobsSvc.New(),
 		approvalService:       approvalsSvc.New(),
 		assistantService:      assistantService,
+		assistantProfileStore: assistantProfileStore,
 		agentService:          agentService,
 		datasetService:        datasetService,
 		dbconnectorService:    dbconnectorService,

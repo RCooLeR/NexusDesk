@@ -6,6 +6,7 @@ import (
 	"time"
 
 	agentSvc "nexusdesk/internal/services/agent"
+	assistantSvc "nexusdesk/internal/services/assistant"
 	llmSvc "nexusdesk/internal/services/llm"
 	metadataSvc "nexusdesk/internal/services/metadata"
 	settingsSvc "nexusdesk/internal/services/settings"
@@ -91,6 +92,37 @@ func TestChatTurnPreviewGuardsEmptyRoleAndContent(t *testing.T) {
 	preview := chatTurnPreview(llmSvc.ChatTurn{})
 	if preview != "Turn: (empty)" {
 		t.Fatalf("unexpected empty turn preview: %q", preview)
+	}
+}
+
+func TestAssistantResponseMarkdownWarnsWithoutSources(t *testing.T) {
+	text := assistantResponseMarkdown(assistantSvc.Result{Message: "Answer"})
+	if !strings.Contains(text, "Answer") || !strings.Contains(text, "No explicit source context") {
+		t.Fatalf("expected weak-evidence warning, got %q", text)
+	}
+	withSources := assistantResponseMarkdown(assistantSvc.Result{Message: "Answer", SourcePaths: []string{"README.md"}})
+	if strings.Contains(withSources, "No explicit source context") {
+		t.Fatalf("did not expect weak-evidence warning with sources, got %q", withSources)
+	}
+}
+
+func TestCompareLatestAssistantPromptCarriesPromptAndAnswer(t *testing.T) {
+	text := compareLatestAssistantPrompt("What changed?", "A changed.")
+	for _, expected := range []string{"Compare the previous assistant answer", "Original prompt:", "What changed?", "Previous assistant answer:", "A changed.", "recommended final answer"} {
+		if !strings.Contains(text, expected) {
+			t.Fatalf("expected compare prompt to contain %q, got %q", expected, text)
+		}
+	}
+}
+
+func TestAssistantProfileOptionRoundTripsID(t *testing.T) {
+	profile := assistantSvc.DefaultProfile()
+	option := assistantProfileOption(profile.PromptProfiles[1])
+	if option != "Reviewer" {
+		t.Fatalf("unexpected option label: %q", option)
+	}
+	if got := assistantProfileIDFromOption(option, profile); got != "reviewer" {
+		t.Fatalf("unexpected option id: %q", got)
 	}
 }
 

@@ -14,6 +14,7 @@ import (
 
 	agentSvc "nexusdesk/internal/services/agent"
 	approvalsSvc "nexusdesk/internal/services/approvals"
+	artifactsSvc "nexusdesk/internal/services/artifacts"
 	assistantSvc "nexusdesk/internal/services/assistant"
 	jobsSvc "nexusdesk/internal/services/jobs"
 	llmSvc "nexusdesk/internal/services/llm"
@@ -53,6 +54,21 @@ func (v *View) newAssistantPanel() fyne.CanvasObject {
 		v.assistantHistoryStatus,
 		v.assistantHistoryList,
 	)
+	profileSelect := widget.NewSelect(nil, func(profileID string) {
+		v.updateAssistantProfileSelection(profileID)
+	})
+	v.assistantProfileSelect = profileSelect
+	memory := widget.NewMultiLineEntry()
+	memory.SetPlaceHolder("Assistant memory and preferences")
+	memory.SetMinRowsVisible(2)
+	v.assistantMemory = memory
+	saveProfile := widget.NewButtonWithIcon("Save memory", theme.DocumentSaveIcon(), v.saveAssistantProfile)
+	profileBar := container.NewVBox(
+		widget.NewLabel("Prompt profile"),
+		profileSelect,
+		memory,
+		saveProfile,
+	)
 	mode := widget.NewSelect([]string{"Ask", "Agent"}, func(string) {})
 	mode.SetSelected("Ask")
 	v.assistantMode = mode
@@ -62,10 +78,21 @@ func (v *View) newAssistantPanel() fyne.CanvasObject {
 	send.OnTapped = func() {
 		v.runAssistantRequest(prompt, response, send, mode.Selected)
 	}
-	composer := container.NewBorder(nil, nil, container.NewVBox(mode, agentTaskApproval), send, prompt)
+	retry := widget.NewButton("Retry", func() {
+		v.retryLatestAssistantAnswer(prompt, response, send)
+	})
+	compare := widget.NewButton("Compare", func() {
+		v.compareLatestAssistantAnswer(prompt, response, send)
+	})
+	saveAnswer := widget.NewButtonWithIcon("Save answer", theme.DocumentSaveIcon(), func() {
+		v.saveLatestAssistantAnswer()
+	})
+	assistantActions := container.NewHBox(retry, compare, saveAnswer)
+	composer := container.NewBorder(assistantActions, nil, container.NewVBox(mode, agentTaskApproval), send, prompt)
 	composer = container.NewPadded(composer)
-	sidebar := container.NewVBox(contextBar, widget.NewSeparator(), historyBar)
+	sidebar := container.NewVBox(profileBar, widget.NewSeparator(), contextBar, widget.NewSeparator(), historyBar)
 	card := widget.NewCard("Assistant", "Local-first context and tool mediation", container.NewBorder(sidebar, composer, nil, nil, response))
+	v.loadAssistantProfile()
 	v.refreshAssistantContextPins()
 	v.refreshAssistantHistory()
 	return container.NewPadded(card)
@@ -111,14 +138,136 @@ func (v *View) runAssistantRequest(prompt *widget.Entry, response *widget.RichTe
 				v.addActivity("Assistant request failed: " + err.Error())
 				return
 			}
-			response.ParseMarkdown(result.Message)
+			response.ParseMarkdown(assistantResponseMarkdown(result))
 			if result.ContextWarning != "" {
 				v.addActivity(result.ContextWarning)
 			}
+			if len(result.SourcePaths) == 0 {
+				v.addActivity("Assistant answer has no explicit source context attached.")
+			}
+			v.assistantLastPrompt = text
+			v.assistantLastResult = result
 			v.persistAssistantExchange(text, result, startedAt)
 			v.addActivity("Assistant response completed with " + result.Model + ".")
 		})
 	}()
+}
+
+func (v *View) loadAssistantProfile() {
+	if v.assistantProfileStore == nil {
+		v.assistantProfile = assistantSvc.DefaultProfile()
+		v.refreshAssistantProfileControls()
+		return
+	}
+	profile, err := v.assistantProfileStore.Get()
+	if err != nil {
+		v.assistantProfile = assistantSvc.DefaultProfile()
+		v.addActivity("Assistant profile defaults loaded: " + err.Error())
+	} else {
+		v.assistantProfile = profile
+	}
+	v.refreshAssistantProfileControls()
+}
+
+func (v *View) refreshAssistantProfileControls() {
+	if v.assistantProfileSelect == nil || v.assistantMemory == nil {
+		return
+	}
+	profile := assistantSvc.NormalizeProfile(v.assistantProfile)
+	options := make([]string, 0, len(profile.PromptProfiles))
+	for _, item := range profile.PromptProfiles {
+		options = append(options, assistantProfileOption(item))
+	}
+	v.assistantProfileSelect.Options = options
+	if active := assistantSvc.ActivePromptProfile(profile); active.ID != "" {
+		v.assistantProfileSelect.SetSelected(assistantProfileOption(active))
+	}
+	v.assistantMemory.SetText(profile.Memory)
+	v.assistantProfile = profile
+}
+
+func (v *View) updateAssistantProfileSelection(option string) {
+	profileID := assistantProfileIDFromOption(option, v.assistantProfile)
+	if profileID == "" {
+		return
+	}
+	v.assistantProfile.ActiveProfileID = profileID
+}
+
+func (v *View) saveAssistantProfile() {
+	if v.assistantProfileStore == nil {
+		v.addActivity("Assistant profile store is unavailable.")
+		return
+	}
+	profile := v.assistantProfile
+	if v.assistantProfileSelect != nil && strings.TrimSpace(v.assistantProfileSelect.Selected) != "" {
+		profile.ActiveProfileID = assistantProfileIDFromOption(v.assistantProfileSelect.Selected, profile)
+	}
+	if v.assistantMemory != nil {
+		profile.Memory = v.assistantMemory.Text
+	}
+	if len(profile.PromptProfiles) == 0 {
+		profile.PromptProfiles = assistantSvc.DefaultProfile().PromptProfiles
+	}
+	saved, err := v.assistantProfileStore.Save(profile)
+	if err != nil {
+		v.addActivity("Assistant profile save failed: " + err.Error())
+		return
+	}
+	v.assistantProfile = saved
+	v.refreshAssistantProfileControls()
+	v.addActivity("Assistant profile saved: " + assistantSvc.ActivePromptProfile(saved).Name + ".")
+}
+
+func (v *View) retryLatestAssistantAnswer(prompt *widget.Entry, response *widget.RichText, send *widget.Button) {
+	if strings.TrimSpace(v.assistantLastPrompt) == "" {
+		v.addActivity("No assistant answer is available to retry yet.")
+		return
+	}
+	prompt.SetText(v.assistantLastPrompt)
+	v.runAssistantRequest(prompt, response, send, "Ask")
+}
+
+func (v *View) compareLatestAssistantAnswer(prompt *widget.Entry, response *widget.RichText, send *widget.Button) {
+	if strings.TrimSpace(v.assistantLastPrompt) == "" || strings.TrimSpace(v.assistantLastResult.Message) == "" {
+		v.addActivity("No assistant answer is available to compare yet.")
+		return
+	}
+	comparePrompt := compareLatestAssistantPrompt(v.assistantLastPrompt, v.assistantLastResult.Message)
+	prompt.SetText(comparePrompt)
+	v.runAssistantRequest(prompt, response, send, "Ask")
+}
+
+func (v *View) saveLatestAssistantAnswer() {
+	workspace := v.state.Workspace()
+	if strings.TrimSpace(workspace.Root) == "" {
+		v.addActivity("Open a workspace before saving an assistant answer artifact.")
+		return
+	}
+	if strings.TrimSpace(v.assistantLastResult.Message) == "" {
+		v.addActivity("No assistant answer is available to save yet.")
+		return
+	}
+	store, err := artifactsSvc.NewStore(workspace.Root)
+	if err != nil {
+		v.addActivity("Assistant answer artifact failed: " + err.Error())
+		return
+	}
+	artifact, err := store.WriteChatAnswer(artifactsSvc.ChatAnswerReport{
+		Prompt:         v.assistantLastPrompt,
+		Content:        v.assistantLastResult.Message,
+		Model:          v.assistantLastResult.Model,
+		ContextRelPath: v.assistantLastResult.ContextRelPath,
+		Source:         "Nexus assistant",
+		SourcePaths:    append([]string{}, v.assistantLastResult.SourcePaths...),
+	})
+	if err != nil {
+		v.addActivity("Assistant answer artifact failed: " + err.Error())
+		return
+	}
+	v.persistArtifactRecord(artifact)
+	v.refreshArtifactsWithQuery("kind:chat-answer")
+	v.addActivity(artifact.Message)
 }
 
 func (v *View) loadAssistantChatHistory() {
@@ -218,6 +367,63 @@ func chatTurnPreview(turn llmSvc.ChatTurn) string {
 		content = content[:87] + "..."
 	}
 	return strings.ToUpper(role[:1]) + role[1:] + ": " + content
+}
+
+func assistantResponseMarkdown(result assistantSvc.Result) string {
+	message := strings.TrimSpace(result.Message)
+	if message == "" {
+		message = "Assistant completed without a final message."
+	}
+	if len(result.SourcePaths) > 0 {
+		return message
+	}
+	return message + "\n\n> No explicit source context is attached to this answer."
+}
+
+func compareLatestAssistantPrompt(prompt string, previousAnswer string) string {
+	return strings.Join([]string{
+		"Compare the previous assistant answer with a fresh answer using the currently selected model/settings.",
+		"",
+		"Original prompt:",
+		strings.TrimSpace(prompt),
+		"",
+		"Previous assistant answer:",
+		strings.TrimSpace(previousAnswer),
+		"",
+		"Return agreements, differences, corrections, and a recommended final answer. Stay grounded in attached source context and call out uncertainty.",
+	}, "\n")
+}
+
+func assistantProfileOption(profile assistantSvc.PromptProfile) string {
+	name := strings.TrimSpace(profile.Name)
+	id := strings.TrimSpace(profile.ID)
+	if name == "" {
+		return id
+	}
+	if id == "" || strings.EqualFold(name, id) {
+		return name
+	}
+	return name + " (" + id + ")"
+}
+
+func assistantProfileIDFromOption(option string, profile assistantSvc.Profile) string {
+	option = strings.TrimSpace(option)
+	if option == "" {
+		return ""
+	}
+	profile = assistantSvc.NormalizeProfile(profile)
+	for _, item := range profile.PromptProfiles {
+		if option == item.ID || option == item.Name || option == assistantProfileOption(item) {
+			return item.ID
+		}
+	}
+	if strings.HasSuffix(option, ")") {
+		start := strings.LastIndex(option, "(")
+		if start >= 0 {
+			return strings.TrimSpace(strings.TrimSuffix(option[start+1:], ")"))
+		}
+	}
+	return option
 }
 
 func (v *View) pinSelectedAssistantContext() {

@@ -332,6 +332,7 @@ Exit criteria:
 - [ ] Native external database profiles for PostgreSQL, MySQL/MariaDB, SQL Server, and DuckDB with read-only guards.
 - [ ] Native protected secret storage for Windows; explicit refusal/fallback behavior for unsupported platforms.
 - [ ] Assistant quality parity: weak-evidence warnings, retry/compare, richer citations, memory/profile plan, and model diagnostics.
+- [x] Assistant Wails parity slice: profile/memory store, active prompt profile injection, weak-evidence warning, retry/compare, and save-latest-answer `chat-answer` artifacts.
 - [ ] Native UI cleanup pass across Workbench, Data, Artifacts, Settings, assistant, and bottom panels.
 
 ### Gate 2: Safety And Reliability Beta
