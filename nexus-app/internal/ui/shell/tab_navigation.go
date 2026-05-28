@@ -22,16 +22,20 @@ func (v *View) requestCloseTab(item *container.TabItem) {
 	if tab, ok := v.editorSession.Tab(id); ok && tab.Dirty {
 		v.editorTabs.Select(item)
 		dialog.ShowConfirm("Discard unsaved changes?", dirtyTabCloseMessage(tab.Title), func(confirm bool) {
-			if !confirm {
-				v.addActivity("Kept modified tab " + tab.Title + " open.")
-				v.editorTabs.Select(item)
-				return
-			}
-			v.closeEditorTabItem(item, id, true)
+			v.handleDirtyTabCloseDecision(item, id, tab.Title, confirm)
 		}, v.window)
 		return
 	}
 	v.closeEditorTabItem(item, id, false)
+}
+
+func (v *View) handleDirtyTabCloseDecision(item *container.TabItem, id string, title string, confirm bool) {
+	if !confirm {
+		v.addActivity("Kept modified tab " + title + " open.")
+		v.editorTabs.Select(item)
+		return
+	}
+	v.closeEditorTabItem(item, id, true)
 }
 
 func (v *View) closeEditorTabItem(item *container.TabItem, id string, force bool) {
