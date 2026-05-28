@@ -98,6 +98,37 @@ func TestOpenWorkspaceLoadsMetadataStoreWhenAvailable(t *testing.T) {
 	}
 }
 
+func TestOpenSingleFileOpensParentWorkspaceAndPreview(t *testing.T) {
+	root := t.TempDir()
+	filePath := filepath.Join(root, "notes.md")
+	if err := os.WriteFile(filePath, []byte("# Notes\n"), 0o644); err != nil {
+		t.Fatalf("WriteFile failed: %v", err)
+	}
+	app := fynetest.NewTempApp(t)
+	window := app.NewWindow("single-file-open")
+	defer window.Close()
+	view := New(window)
+	t.Cleanup(func() {
+		if view.metadataStore != nil {
+			_ = view.metadataStore.Close()
+		}
+	})
+	view.compatibilityImportByWS[root] = true
+
+	view.openSingleFile(filePath)
+
+	if got := view.state.Workspace().Root; got != root {
+		t.Fatalf("expected parent workspace %q, got %q", root, got)
+	}
+	tab, ok := view.editorSession.Tab(view.editorSession.ActiveID())
+	if !ok {
+		t.Fatal("expected active editor tab")
+	}
+	if tab.RelPath != "notes.md" || tab.SourceText != "# Notes\n" {
+		t.Fatalf("unexpected opened tab: %#v", tab)
+	}
+}
+
 func containsActivityLine(lines []string, part string) bool {
 	part = strings.TrimSpace(part)
 	if part == "" {

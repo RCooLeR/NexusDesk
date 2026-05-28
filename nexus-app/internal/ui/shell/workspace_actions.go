@@ -2,6 +2,7 @@ package shell
 
 import (
 	"fmt"
+	"os"
 	"path/filepath"
 	"strings"
 
@@ -26,6 +27,20 @@ func (v *View) openWorkspaceDialog() {
 	}, v.window)
 }
 
+func (v *View) openFileDialog() {
+	dialog.ShowFileOpen(func(uri fyne.URIReadCloser, err error) {
+		if err != nil {
+			dialog.ShowError(err, v.window)
+			return
+		}
+		if uri == nil {
+			return
+		}
+		defer uri.Close()
+		v.openSingleFile(uri.URI().Path())
+	}, v.window)
+}
+
 func (v *View) refreshWorkspace() {
 	workspace := v.state.Workspace()
 	if workspace.Root == "" {
@@ -33,6 +48,36 @@ func (v *View) refreshWorkspace() {
 		return
 	}
 	v.openWorkspace(workspace.Root)
+}
+
+func (v *View) openSingleFile(path string) {
+	path = strings.TrimSpace(path)
+	if path == "" {
+		v.addActivity("No file selected.")
+		return
+	}
+	info, err := os.Stat(path)
+	if err != nil {
+		dialog.ShowError(err, v.window)
+		return
+	}
+	if info.IsDir() {
+		dialog.ShowError(fmt.Errorf("selected path is a folder, not a file"), v.window)
+		return
+	}
+	root := filepath.Dir(path)
+	relPath := filepath.Base(path)
+	v.openWorkspace(root)
+	if v.state.Workspace().Root == "" {
+		return
+	}
+	preview, err := v.workspaceService.PreviewFile(root, relPath)
+	if err != nil {
+		dialog.ShowError(err, v.window)
+		return
+	}
+	v.openPreviewTab(preview)
+	v.addActivity("Opened file " + path + ".")
 }
 
 func (v *View) openWorkspace(root string) {

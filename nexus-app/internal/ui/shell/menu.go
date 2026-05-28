@@ -13,6 +13,7 @@ func (v *View) InstallWindowActions() {
 
 func (v *View) mainMenu() *fyne.MainMenu {
 	openWorkspace := menuItem("Open Workspace", shortcutOpenWorkspace(), v.openWorkspaceDialog)
+	openFile := fyne.NewMenuItemWithIcon("Open File", theme.FileTextIcon(), v.openFileDialog)
 	refresh := menuItem("Refresh Workspace", shortcutRefreshWorkspace(), v.refreshWorkspace)
 	closeTab := menuItem("Close Tab", shortcutCloseTab(), v.closeSelectedTab)
 	settings := menuItem("Settings", shortcutSettings(), v.openSettingsTab)
@@ -23,7 +24,7 @@ func (v *View) mainMenu() *fyne.MainMenu {
 	about := fyne.NewMenuItemWithIcon("About Nexus", theme.InfoIcon(), v.showAbout)
 
 	return fyne.NewMainMenu(
-		fyne.NewMenu("File", openWorkspace, refresh, fyne.NewMenuItemSeparator(), closeTab),
+		fyne.NewMenu("File", openWorkspace, openFile, refresh, fyne.NewMenuItemSeparator(), closeTab),
 		fyne.NewMenu("Edit",
 			copySelection,
 			fyne.NewMenuItemSeparator(),
