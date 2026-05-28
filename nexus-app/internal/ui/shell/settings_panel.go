@@ -57,12 +57,25 @@ func (v *View) newSettingsPanel() fyne.CanvasObject {
 	model := widget.NewEntry()
 	model.SetText(current.Model)
 	model.SetPlaceHolder("Choose from Test connection or type a model ID")
+	recommendedModel := widget.NewSelect(settingsModelOptionLabels(), nil)
 	apiKey := widget.NewPasswordEntry()
 	apiKey.SetText(current.APIKey)
 	contextTokens := widget.NewEntry()
 	contextTokens.SetText(strconv.Itoa(current.ContextTokens))
 	responseReserve := widget.NewEntry()
 	responseReserve.SetText(strconv.Itoa(current.ResponseReserveTokens))
+	recommendedModel.OnChanged = func(label string) {
+		option, ok := settingsModelOptionByLabel(label)
+		if !ok {
+			return
+		}
+		model.SetText(option.ID)
+		contextTokens.SetText(strconv.Itoa(option.MaxContextTokens))
+		responseReserve.SetText(strconv.Itoa(settingsSvc.ResponseReserveForContext(option.MaxContextTokens)))
+	}
+	if label, ok := settingsModelLabelForID(current.Model); ok {
+		recommendedModel.SetSelected(label)
+	}
 	probeStatus := widget.NewLabel("Connection test has not run.")
 	probeStatus.Wrapping = fyne.TextWrapWord
 	testConnection := widget.NewButtonWithIcon("Test connection", theme.SearchIcon(), nil)
@@ -73,6 +86,7 @@ func (v *View) newSettingsPanel() fyne.CanvasObject {
 			widget.NewFormItem("Protocol", protocol),
 			widget.NewFormItem("Base URL", baseURL),
 			widget.NewFormItem("Model for chat", model),
+			widget.NewFormItem("Recommended model", recommendedModel),
 			widget.NewFormItem("API key", apiKey),
 			widget.NewFormItem("Context tokens", contextTokens),
 			widget.NewFormItem("Response reserve", responseReserve),
@@ -132,6 +146,37 @@ func (v *View) newSettingsPanel() fyne.CanvasObject {
 		nil,
 		form,
 	))
+}
+
+func settingsModelOptionLabels() []string {
+	options := settingsSvc.RecommendedModelOptions()
+	labels := make([]string, 0, len(options))
+	for _, option := range options {
+		labels = append(labels, option.Label)
+	}
+	return labels
+}
+
+func settingsModelOptionByLabel(label string) (settingsSvc.ModelOption, bool) {
+	for _, option := range settingsSvc.RecommendedModelOptions() {
+		if option.Label == label {
+			return option, true
+		}
+	}
+	return settingsSvc.ModelOption{}, false
+}
+
+func settingsModelLabelForID(model string) (string, bool) {
+	for _, option := range settingsSvc.RecommendedModelOptions() {
+		if settingsModelIDMatches(option.ID, model) {
+			return option.Label, true
+		}
+	}
+	return "", false
+}
+
+func settingsModelIDMatches(left string, right string) bool {
+	return strings.TrimSuffix(strings.ToLower(strings.TrimSpace(left)), ":latest") == strings.TrimSuffix(strings.ToLower(strings.TrimSpace(right)), ":latest")
 }
 
 func settingsFromForm(provider string, protocol string, baseURL string, model string, apiKey string, contextTokensValue string, responseReserveValue string) (settingsSvc.Settings, error) {

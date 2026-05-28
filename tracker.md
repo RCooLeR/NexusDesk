@@ -331,7 +331,7 @@ Exit criteria:
 - [ ] IDE-grade editor baseline: syntax highlighting, richer find/replace, and split/minimap strategy.
 - [ ] Native external database profiles for PostgreSQL, MySQL/MariaDB, SQL Server, and DuckDB with read-only guards.
 - [x] Native protected secret storage for Windows; explicit refusal/fallback behavior for unsupported platforms.
-- [ ] Assistant quality parity: richer citations and model diagnostics.
+- [ ] Assistant quality parity: richer citations, clearer model diagnostics, and automatic runtime context tuning.
 - [x] Assistant Wails parity slice: profile/memory store, active prompt profile injection, weak-evidence warning, retry/compare, and save-latest-answer `chat-answer` artifacts.
 - [x] Assistant stale-source parity slice: chat context paths persist in native metadata and chat history warns when cited sources changed or disappeared.
 - [ ] Native UI cleanup pass across Workbench, Data, Artifacts, Settings, assistant, and bottom panels.
@@ -452,10 +452,11 @@ The Fyne migration must not drop product ambition, but this section is intention
 
 ### AI Assistant And Agent
 
-- [ ] Provider settings for Ollama/OpenAI-compatible endpoints, curated local model catalog, runtime context-window detection, response reserve, GPU diagnostics, and provider probes.
+- [ ] Provider settings for Ollama/OpenAI-compatible endpoints, runtime context-window detection, response reserve, GPU diagnostics, and provider probes.
 - [x] Native provider settings for Ollama/OpenAI-compatible/custom endpoints, explicit protocol flags, provider probes, context-window options, response reserve, and Ollama runtime diagnostics.
+- [x] Curated native local model catalog ported from Wails with recommended model labels, context-window sizing, and response reserve defaults in Fyne Settings.
 - [x] Add API key input/persistence in native settings and propagate bearer auth into OpenAI-compatible chat/probe config.
-- [ ] Curated native local model catalog, deeper GPU diagnostics, and automatic loaded-model context-window tuning.
+- [ ] Deeper GPU diagnostics and automatic loaded-model context-window tuning.
 - [x] Streaming chat with selected files/directories/project context, token-budgeted history, persisted turns, and source-path context.
 - [ ] Richer citations and model diagnostics in native assistant UI.
 - [x] Local assistant memory and prompt profiles.

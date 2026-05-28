@@ -177,3 +177,32 @@ func TestProviderProfilesExposeExtensibleOptions(t *testing.T) {
 		t.Fatalf("expected explicit protocol options")
 	}
 }
+
+func TestRecommendedModelCatalogPortsWailsContextRules(t *testing.T) {
+	options := RecommendedModelOptions()
+	if len(options) == 0 || options[0].ID != "qwen3:4b-instruct" {
+		t.Fatalf("expected Wails recommended model catalog, got %#v", options)
+	}
+	if got := ModelContextWindow("mistral-small3.2"); got != 131072 {
+		t.Fatalf("expected :latest-insensitive context lookup, got %d", got)
+	}
+	if got := ModelContextWindow("unknown-model"); got != FallbackModelContextTokens {
+		t.Fatalf("expected fallback context, got %d", got)
+	}
+}
+
+func TestSettingsForSelectedModelUpdatesContextAndReserve(t *testing.T) {
+	settings := SettingsForSelectedModel(Defaults(), "qwen3:8b")
+	if settings.Model != "qwen3:8b" || settings.ContextTokens != 40960 {
+		t.Fatalf("unexpected selected model settings: %#v", settings)
+	}
+	if settings.ResponseReserveTokens != 5120 {
+		t.Fatalf("expected 1/8 response reserve, got %d", settings.ResponseReserveTokens)
+	}
+	if got := ResponseReserveForContext(999999); got != 32768 {
+		t.Fatalf("expected reserve cap, got %d", got)
+	}
+	if got := ResponseReserveForContext(1000); got != 2048 {
+		t.Fatalf("expected reserve floor, got %d", got)
+	}
+}

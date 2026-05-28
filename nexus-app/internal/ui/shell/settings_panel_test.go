@@ -30,6 +30,21 @@ func TestSettingsFromFormRejectsInvalidTokens(t *testing.T) {
 	}
 }
 
+func TestSettingsModelOptionHelpersUseRecommendedCatalog(t *testing.T) {
+	labels := settingsModelOptionLabels()
+	if len(labels) == 0 || !strings.Contains(labels[0], "Qwen3 4B") {
+		t.Fatalf("expected Wails recommended model labels, got %#v", labels)
+	}
+	option, ok := settingsModelOptionByLabel(labels[0])
+	if !ok || option.ID != "qwen3:4b-instruct" {
+		t.Fatalf("expected first recommended model option, got %#v ok=%v", option, ok)
+	}
+	label, ok := settingsModelLabelForID("mistral-small3.2")
+	if !ok || !strings.Contains(label, "Mistral Small") {
+		t.Fatalf("expected :latest-insensitive model label lookup, got %q ok=%v", label, ok)
+	}
+}
+
 func TestFormatSettingsProbeResultSummarizesProvider(t *testing.T) {
 	message := formatSettingsProbeResult(llmSvc.ProbeResult{
 		OK:           true,
