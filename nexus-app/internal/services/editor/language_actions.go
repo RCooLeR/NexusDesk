@@ -2,6 +2,7 @@ package editor
 
 import (
 	"fmt"
+	"path/filepath"
 	"strings"
 )
 
@@ -60,6 +61,25 @@ func BuildLanguageActionPlan(fileName string, content string) LanguageActionPlan
 			Detail: "No native formatter or whitespace strategy is registered for this file type.",
 		})
 	}
+	if hasDraftDiagnosticSupport(fileName) {
+		diagnostics := AnalyzeDraftDiagnostics(fileName, content)
+		status := LanguageActionAvailable
+		detail := "Live draft diagnostics check markers, merge conflicts, and parse errors before Save."
+		if len(diagnostics) > 0 {
+			detail = fmt.Sprintf("Live draft diagnostics found %d issue(s) before Save.", len(diagnostics))
+		}
+		actions = append(actions, LanguageAction{
+			Name:   "Draft diagnostics",
+			Status: status,
+			Detail: detail,
+		})
+	} else {
+		actions = append(actions, LanguageAction{
+			Name:   "Draft diagnostics",
+			Status: LanguageActionUnavailable,
+			Detail: "No parser diagnostics are registered for this file type yet; markers are still shown for text drafts.",
+		})
+	}
 	if len(outline) > 0 {
 		actions = append(actions,
 			LanguageAction{
@@ -112,6 +132,16 @@ func BuildLanguageActionPlan(fileName string, content string) LanguageActionPlan
 		Actions:  actions,
 		Summary:  languageActionSummary(actions),
 	}
+}
+
+func hasDraftDiagnosticSupport(fileName string) bool {
+	language := DetectSyntaxLanguage(fileName)
+	switch language.ID {
+	case "go", "json", "yaml":
+		return true
+	}
+	extension := strings.ToLower(filepath.Ext(fileName))
+	return extension == ".toml" || extension == ".xml"
 }
 
 func languageActionSummary(actions []LanguageAction) string {

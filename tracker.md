@@ -150,6 +150,7 @@ Goal: recreate the useful local project workbench without Wails or React.
 - [x] Add first native lightweight syntax strategy: Wails-derived language detection, bounded token analysis, and a Fyne Syntax tab for common code/config languages.
 - [x] Add native read-only highlighted syntax preview with Wails/Monaco-inspired token colors and bounded Fyne `TextGrid` styling.
 - [x] Add cursor-aware native syntax mirror with active-line highlighting and token/symbol status for the current editor draft.
+- [x] Add live native draft diagnostics tab for unsaved marker, merge-conflict, and JSON/Go/YAML/TOML/XML parser issues.
 - [x] Add first native image preview surface for capped PNG/JPEG/GIF/BMP/SVG/WebP files.
 - [x] Add first native capped CSV/TSV table preview surface.
 - [x] Add first native DOCX text extraction preview.

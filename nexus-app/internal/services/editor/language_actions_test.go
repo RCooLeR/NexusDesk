@@ -15,6 +15,7 @@ func TestBuildLanguageActionPlanReportsNativeGoActions(t *testing.T) {
 	}
 	assertLanguageAction(t, plan, "Syntax highlighting", LanguageActionAvailable)
 	assertLanguageAction(t, plan, "Format draft", LanguageActionAvailable)
+	assertLanguageAction(t, plan, "Draft diagnostics", LanguageActionAvailable)
 	assertLanguageAction(t, plan, "Outline and symbols", LanguageActionAvailable)
 	assertLanguageAction(t, plan, "Definition and references", LanguageActionFallback)
 	assertLanguageAction(t, plan, "External LSP", LanguageActionPlanned)
@@ -24,6 +25,7 @@ func TestBuildLanguageActionPlanReportsPlainTextLimits(t *testing.T) {
 	plan := BuildLanguageActionPlan("notes.unknown", "just text\n")
 	assertLanguageAction(t, plan, "Syntax highlighting", LanguageActionUnavailable)
 	assertLanguageAction(t, plan, "Format draft", LanguageActionUnavailable)
+	assertLanguageAction(t, plan, "Draft diagnostics", LanguageActionUnavailable)
 	assertLanguageAction(t, plan, "Outline and symbols", LanguageActionUnavailable)
 	assertLanguageAction(t, plan, "Definition and references", LanguageActionUnavailable)
 	if strings.Contains(plan.Summary, "planned=") {

@@ -18,24 +18,26 @@ import (
 const workspaceDefinitionSearchLimit = 60
 
 type textEditorBinding struct {
-	source          *widget.Entry
-	status          *widget.Label
-	rendered        *previewPane
-	outlineStatus   *widget.Label
-	outlineList     *fyne.Container
-	mapStatus       *widget.Label
-	mapList         *fyne.Container
-	syntaxStatus    *widget.Label
-	syntaxPreview   *widget.Label
-	languageActions *widget.Label
-	syntaxGrid      *widget.TextGrid
-	syntaxText      string
-	syntaxAnalysis  editorSvc.SyntaxAnalysis
-	relPath         string
-	sourceEncoding  string
-	saveEncoding    string
-	onEncoding      func()
-	onState         func(editorSvc.Tab, bool)
+	source           *widget.Entry
+	status           *widget.Label
+	rendered         *previewPane
+	outlineStatus    *widget.Label
+	outlineList      *fyne.Container
+	mapStatus        *widget.Label
+	mapList          *fyne.Container
+	diagnosticStatus *widget.Label
+	diagnosticList   *fyne.Container
+	syntaxStatus     *widget.Label
+	syntaxPreview    *widget.Label
+	languageActions  *widget.Label
+	syntaxGrid       *widget.TextGrid
+	syntaxText       string
+	syntaxAnalysis   editorSvc.SyntaxAnalysis
+	relPath          string
+	sourceEncoding   string
+	saveEncoding     string
+	onEncoding       func()
+	onState          func(editorSvc.Tab, bool)
 }
 
 func (b *textEditorBinding) applyTabState(tab editorSvc.Tab) {
@@ -66,6 +68,9 @@ func (v *View) newTextEditor(tab editorSvc.Tab, preview domain.FilePreview, onSt
 	mapStatus := widget.NewLabel("")
 	mapStatus.Wrapping = fyne.TextWrapWord
 	mapList := container.NewVBox()
+	diagnosticStatus := widget.NewLabel("")
+	diagnosticStatus.Wrapping = fyne.TextWrapWord
+	diagnosticList := container.NewVBox()
 	syntaxStatus := widget.NewLabel("")
 	syntaxStatus.Wrapping = fyne.TextWrapWord
 	syntaxPreview := widget.NewLabel("")
@@ -75,21 +80,23 @@ func (v *View) newTextEditor(tab editorSvc.Tab, preview domain.FilePreview, onSt
 	languageActions.Wrapping = fyne.TextWrapWord
 	syntaxGrid := newSyntaxHighlightGrid(tab.RelPath, tab.DraftText)
 	binding := &textEditorBinding{
-		source:          source,
-		status:          status,
-		rendered:        rendered,
-		outlineStatus:   outlineStatus,
-		outlineList:     outlineList,
-		mapStatus:       mapStatus,
-		mapList:         mapList,
-		syntaxStatus:    syntaxStatus,
-		syntaxPreview:   syntaxPreview,
-		languageActions: languageActions,
-		syntaxGrid:      syntaxGrid,
-		relPath:         tab.RelPath,
-		sourceEncoding:  initialEncoding,
-		saveEncoding:    initialEncoding,
-		onState:         onState,
+		source:           source,
+		status:           status,
+		rendered:         rendered,
+		outlineStatus:    outlineStatus,
+		outlineList:      outlineList,
+		mapStatus:        mapStatus,
+		mapList:          mapList,
+		diagnosticStatus: diagnosticStatus,
+		diagnosticList:   diagnosticList,
+		syntaxStatus:     syntaxStatus,
+		syntaxPreview:    syntaxPreview,
+		languageActions:  languageActions,
+		syntaxGrid:       syntaxGrid,
+		relPath:          tab.RelPath,
+		sourceEncoding:   initialEncoding,
+		saveEncoding:     initialEncoding,
+		onState:          onState,
 	}
 	encodingSelect := widget.NewSelect(editorEncodingOptions(), func(value string) {
 		binding.saveEncoding = editorWriteEncoding(value)
@@ -106,6 +113,7 @@ func (v *View) newTextEditor(tab editorSvc.Tab, preview domain.FilePreview, onSt
 	}
 	binding.setOutline(tab.DraftText)
 	binding.setDocumentMap(tab.DraftText)
+	binding.setDiagnostics(tab.DraftText)
 	binding.setSyntax(tab.DraftText)
 	source.OnChanged = func(text string) {
 		if !v.editorSession.UpdateDraft(tab.ID, text) {
@@ -116,6 +124,7 @@ func (v *View) newTextEditor(tab editorSvc.Tab, preview domain.FilePreview, onSt
 			rendered.SetText(next.DraftText)
 			binding.setOutline(next.DraftText)
 			binding.setDocumentMap(next.DraftText)
+			binding.setDiagnostics(next.DraftText)
 			binding.setSyntax(next.DraftText)
 			onState(next, binding.encodingDirty())
 		}
@@ -193,12 +202,14 @@ func (v *View) newTextEditor(tab editorSvc.Tab, preview domain.FilePreview, onSt
 	previewPanel := container.NewBorder(widget.NewLabel(previewHeader(preview)), nil, nil, nil, rendered.Canvas())
 	outlinePanel := container.NewBorder(outlineStatus, nil, nil, nil, container.NewVScroll(outlineList))
 	mapPanel := container.NewBorder(mapStatus, nil, nil, nil, container.NewVScroll(mapList))
+	diagnosticsPanel := container.NewBorder(diagnosticStatus, nil, nil, nil, container.NewVScroll(diagnosticList))
 	syntaxDetails := container.NewVScroll(container.NewVBox(languageActions, syntaxPreview))
 	syntaxPanel := container.NewBorder(syntaxStatus, nil, nil, nil, container.NewHSplit(container.NewVScroll(syntaxGrid), syntaxDetails))
 	tabs := container.NewAppTabs(
 		container.NewTabItem("Source", sourcePanel),
 		container.NewTabItem("Preview", previewPanel),
 		container.NewTabItem("Highlight", syntaxPanel),
+		container.NewTabItem("Diagnostics", diagnosticsPanel),
 		container.NewTabItem("Outline", outlinePanel),
 		container.NewTabItem("Map", mapPanel),
 	)
@@ -305,6 +316,32 @@ func (b *textEditorBinding) setDocumentMap(text string) {
 	b.mapList.Refresh()
 }
 
+func (b *textEditorBinding) setDiagnostics(text string) {
+	if b == nil || b.diagnosticList == nil || b.diagnosticStatus == nil {
+		return
+	}
+	diagnostics := editorSvc.AnalyzeDraftDiagnostics(b.relPath, text)
+	b.diagnosticList.Objects = b.diagnosticList.Objects[:0]
+	if len(diagnostics) == 0 {
+		b.diagnosticStatus.SetText("Diagnostics: no draft problems detected.")
+		b.diagnosticList.Add(widget.NewLabel("No live draft diagnostics for this file."))
+		b.diagnosticList.Refresh()
+		return
+	}
+	b.diagnosticStatus.SetText(draftDiagnosticsStatusText(diagnostics))
+	for _, diagnostic := range diagnostics {
+		current := diagnostic
+		button := widget.NewButton(draftDiagnosticItemText(current), func() {
+			editorSetCursorLine(b.source, current.Line)
+			b.diagnosticStatus.SetText(fmt.Sprintf("Moved cursor to %s on line %d.", current.Source, current.Line))
+		})
+		button.Alignment = widget.ButtonAlignLeading
+		button.Importance = widget.LowImportance
+		b.diagnosticList.Add(button)
+	}
+	b.diagnosticList.Refresh()
+}
+
 func (b *textEditorBinding) setSyntax(text string) {
 	if b == nil || b.syntaxStatus == nil || b.syntaxPreview == nil {
 		return
@@ -343,6 +380,31 @@ func outlineItemText(item editorSvc.OutlineItem) string {
 
 func documentMapItemText(item editorSvc.DocumentMapItem) string {
 	return fmt.Sprintf("%s  %s  L%d", item.Kind, item.Label, item.Line)
+}
+
+func draftDiagnosticItemText(diagnostic editorSvc.DraftDiagnostic) string {
+	return fmt.Sprintf("%s  %s/%s  L%d  %s", diagnostic.RelPath, diagnostic.Severity, diagnostic.Source, diagnostic.Line, diagnostic.Message)
+}
+
+func draftDiagnosticsStatusText(diagnostics []editorSvc.DraftDiagnostic) string {
+	if len(diagnostics) == 0 {
+		return "Diagnostics: no draft problems detected."
+	}
+	counts := map[string]int{}
+	for _, diagnostic := range diagnostics {
+		severity := strings.TrimSpace(diagnostic.Severity)
+		if severity == "" {
+			severity = "info"
+		}
+		counts[severity]++
+	}
+	parts := []string{}
+	for _, severity := range []string{"error", "warning", "info"} {
+		if counts[severity] > 0 {
+			parts = append(parts, fmt.Sprintf("%s=%d", severity, counts[severity]))
+		}
+	}
+	return fmt.Sprintf("Diagnostics: %d draft problem(s): %s.", len(diagnostics), strings.Join(parts, ", "))
 }
 
 func definitionStatusText(result editorSvc.DefinitionResult, resolved bool) string {

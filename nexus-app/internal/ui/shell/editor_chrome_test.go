@@ -28,6 +28,25 @@ func TestDocumentMapItemText(t *testing.T) {
 	}
 }
 
+func TestDraftDiagnosticFormatting(t *testing.T) {
+	diagnostics := []editorSvc.DraftDiagnostic{
+		{RelPath: "config/app.json", Severity: "error", Source: "json", Line: 2, Message: "invalid character"},
+		{RelPath: "config/app.json", Severity: "info", Source: "marker", Line: 3, Message: "TODO"},
+	}
+
+	status := draftDiagnosticsStatusText(diagnostics)
+	if !containsAll(status, []string{"Diagnostics:", "2 draft problem", "error=1", "info=1"}) {
+		t.Fatalf("unexpected diagnostics status: %q", status)
+	}
+	item := draftDiagnosticItemText(diagnostics[0])
+	if !containsAll(item, []string{"config/app.json", "error/json", "L2", "invalid character"}) {
+		t.Fatalf("unexpected diagnostic item: %q", item)
+	}
+	if empty := draftDiagnosticsStatusText(nil); empty != "Diagnostics: no draft problems detected." {
+		t.Fatalf("unexpected empty diagnostics status: %q", empty)
+	}
+}
+
 func TestDefinitionStatusText(t *testing.T) {
 	resolved := definitionStatusText(editorSvc.DefinitionResult{
 		Query: "Start",
