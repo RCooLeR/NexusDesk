@@ -2,6 +2,7 @@ package tools
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"sort"
 	"strings"
@@ -37,6 +38,18 @@ func (d *Dispatcher) ExecuteTool(ctx context.Context, call agent.ToolCall, reque
 		result := agent.ToolResult{Name: name, Args: call.Args, Risk: "unknown", Error: "tool is not registered"}
 		return result, fmt.Errorf("tool %q is not registered", name)
 	}
+	if toolRequiresPerCallApproval(tool, request) {
+		if request.ApproveTool == nil || !request.ApproveTool(ctx, agent.ToolApprovalRequest{
+			Name:        name,
+			Args:        call.Args,
+			Risk:        tool.Descriptor.Risk,
+			Description: tool.Descriptor.Description,
+		}) {
+			err := errors.New("per-call approval was denied for high-risk agent tool")
+			return agent.ToolResult{Name: name, Args: call.Args, Risk: tool.Descriptor.Risk, Observation: err.Error(), Error: err.Error()}, err
+		}
+		request = requestWithPerCallApproval(request, name)
+	}
 	result, err := tool.Handler(ctx, call, request)
 	if result.Name == "" {
 		result.Name = name
@@ -48,6 +61,27 @@ func (d *Dispatcher) ExecuteTool(ctx context.Context, call agent.ToolCall, reque
 		result.Risk = tool.Descriptor.Risk
 	}
 	return result, err
+}
+
+func toolRequiresPerCallApproval(tool Tool, request agent.Request) bool {
+	if strings.ToLower(strings.TrimSpace(tool.Descriptor.Risk)) != "high" {
+		return false
+	}
+	switch tool.Descriptor.Name {
+	case "run_task":
+		return !request.ApproveShell
+	default:
+		return !request.ApproveWrites
+	}
+}
+
+func requestWithPerCallApproval(request agent.Request, toolName string) agent.Request {
+	if toolName == "run_task" {
+		request.ApproveShell = true
+		return request
+	}
+	request.ApproveWrites = true
+	return request
 }
 
 func (d *Dispatcher) ToolDescriptors() []agent.ToolDescriptor {

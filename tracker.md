@@ -535,7 +535,7 @@ The Fyne migration must not drop product ambition, but this section is intention
 - [x] Mirror write-path symlink protections for all read paths (`PreviewFile`, context-pack, search) by rechecking resolved real paths.
 - [x] Rework metadata store hot path so `Store` opens DB once and runs `Ensure` outside hot loops.
 - [x] Replace fixed model dropdown with a configurable/free-form model selector and in-panel probe-driven model validation.
-- [ ] Add per-call agent approval modal for high-risk mutation tools instead of only ambient full-project approval.
+- [x] Add per-call agent approval modal for high-risk mutation tools instead of only ambient full-project approval.
 - [x] Extend file preview to truncated text preview over cap and only reject truly non-previewable binaries.
 - [x] Align preview/context candidate detection across extensions and filename basenames via a shared policy table.
 - [x] Improve encoding fallback from hardcoded Windows-1251 for unsupported text encodings.

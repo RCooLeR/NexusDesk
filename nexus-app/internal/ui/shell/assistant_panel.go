@@ -8,10 +8,12 @@ import (
 
 	"fyne.io/fyne/v2"
 	"fyne.io/fyne/v2/container"
+	"fyne.io/fyne/v2/dialog"
 	"fyne.io/fyne/v2/theme"
 	"fyne.io/fyne/v2/widget"
 
 	agentSvc "nexusdesk/internal/services/agent"
+	approvalsSvc "nexusdesk/internal/services/approvals"
 	assistantSvc "nexusdesk/internal/services/assistant"
 	jobsSvc "nexusdesk/internal/services/jobs"
 	llmSvc "nexusdesk/internal/services/llm"
@@ -301,6 +303,7 @@ func (v *View) runAgentRequest(text string, response *widget.RichText, send *wid
 		WorkspaceRoot: workspace.Root,
 		ApproveWrites: v.approvalService.HasFullProjectAccess(workspace.Root),
 		ApproveShell:  v.assistantRunTaskApprovalChecked(),
+		ApproveTool:   v.confirmAgentToolApproval,
 	}
 	v.attachAgentContext(&request)
 	job, ctx := v.jobService.Start("agent", agentJobLabel(text))
@@ -354,6 +357,76 @@ func (v *View) assistantRunTaskApprovalChecked() bool {
 		return false
 	}
 	return v.assistantRunTaskApproval.Checked || v.approvalService.HasFullProjectAccess(v.state.Workspace().Root)
+}
+
+func (v *View) confirmAgentToolApproval(ctx context.Context, request agentSvc.ToolApprovalRequest) bool {
+	result := make(chan bool, 1)
+	fyne.Do(func() {
+		message := widget.NewLabel(agentToolApprovalMessage(request))
+		message.Wrapping = fyne.TextWrapWord
+		dialog.ShowCustomConfirm("Approve agent tool", "Approve once", "Deny", container.NewPadded(message), func(confirm bool) {
+			v.recordAgentToolApproval(request, confirm)
+			result <- confirm
+		}, v.window)
+	})
+	select {
+	case approved := <-result:
+		return approved
+	case <-ctx.Done():
+		return false
+	}
+}
+
+func (v *View) recordAgentToolApproval(request agentSvc.ToolApprovalRequest, approved bool) {
+	workspace := v.state.Workspace()
+	if workspace.Root == "" || v.approvalService == nil {
+		return
+	}
+	decision := "denied"
+	if approved {
+		decision = "approved"
+	}
+	if _, err := v.approvalService.Append(workspace.Root, approvalsSvc.Record{
+		Action:   "agent-tool:" + request.Name,
+		Target:   agentToolApprovalTarget(request),
+		Risk:     request.Risk,
+		Decision: decision,
+		Message:  "Per-call agent tool approval",
+	}); err != nil {
+		v.addActivity("Could not persist agent tool approval: " + err.Error())
+		return
+	}
+	v.refreshApprovals()
+}
+
+func agentToolApprovalMessage(request agentSvc.ToolApprovalRequest) string {
+	var builder strings.Builder
+	builder.WriteString("Nexus Agent requested a high-risk tool.\n\n")
+	builder.WriteString("Tool: ")
+	builder.WriteString(request.Name)
+	if request.Risk != "" {
+		builder.WriteString("\nRisk: ")
+		builder.WriteString(request.Risk)
+	}
+	if request.Description != "" {
+		builder.WriteString("\n\n")
+		builder.WriteString(request.Description)
+	}
+	if target := agentToolApprovalTarget(request); target != "" {
+		builder.WriteString("\n\nTarget: ")
+		builder.WriteString(target)
+	}
+	builder.WriteString("\n\nApprove only this single tool call?")
+	return builder.String()
+}
+
+func agentToolApprovalTarget(request agentSvc.ToolApprovalRequest) string {
+	for _, key := range []string{"relPath", "targetRelPath", "sourceRelPath", "taskId", "id"} {
+		if value := strings.TrimSpace(request.Args[key]); value != "" {
+			return value
+		}
+	}
+	return ""
 }
 
 func (v *View) attachAgentContext(request *agentSvc.Request) {

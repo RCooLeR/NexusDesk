@@ -48,6 +48,15 @@ type ToolCall struct {
 	StartedAt string            `json:"startedAt"`
 }
 
+type ToolApprovalRequest struct {
+	Name        string
+	Args        map[string]string
+	Risk        string
+	Description string
+}
+
+type ToolApprover func(ctx context.Context, request ToolApprovalRequest) bool
+
 type ToolResult struct {
 	Name        string            `json:"name"`
 	Args        map[string]string `json:"args"`
@@ -65,6 +74,7 @@ type Request struct {
 	WorkspaceRoot  string
 	ApproveWrites  bool
 	ApproveShell   bool
+	ApproveTool    ToolApprover
 	Conversation   []llm.ChatTurn
 	ContextRelPath string
 	ContextContent string

@@ -48,6 +48,20 @@ func TestAgentEventLineGuardsEmptyToolNames(t *testing.T) {
 	}
 }
 
+func TestAgentToolApprovalMessageSummarizesRiskAndTarget(t *testing.T) {
+	message := agentToolApprovalMessage(agentSvc.ToolApprovalRequest{
+		Name:        "write_file",
+		Risk:        "high",
+		Description: "Write a file",
+		Args:        map[string]string{"relPath": "docs/report.md"},
+	})
+	for _, expected := range []string{"write_file", "high", "Write a file", "docs/report.md", "single tool call"} {
+		if !strings.Contains(message, expected) {
+			t.Fatalf("expected approval message to contain %q, got %q", expected, message)
+		}
+	}
+}
+
 func TestAgentFinalMarkdownIncludesStopReason(t *testing.T) {
 	text := agentFinalMarkdown(agentSvc.Result{Message: "Done", StopReason: "safety_guard"})
 	if !strings.Contains(text, "Done") || !strings.Contains(text, "safety_guard") {
