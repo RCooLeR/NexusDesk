@@ -534,7 +534,7 @@ The Fyne migration must not drop product ambition, but this section is intention
 - [x] Unblock agent `run_task` execution path by allowing shell-task approval when requested by agent flow.
 - [x] Mirror write-path symlink protections for all read paths (`PreviewFile`, context-pack, search) by rechecking resolved real paths.
 - [x] Rework metadata store hot path so `Store` opens DB once and runs `Ensure` outside hot loops.
-- [ ] Replace fixed model dropdown with a configurable/free-form model selector and in-panel probe-driven model validation.
+- [x] Replace fixed model dropdown with a configurable/free-form model selector and in-panel probe-driven model validation.
 - [ ] Add per-call agent approval modal for high-risk mutation tools instead of only ambient full-project approval.
 - [x] Extend file preview to truncated text preview over cap and only reject truly non-previewable binaries.
 - [ ] Align preview/context candidate detection across extensions and filename basenames via a shared policy table.
@@ -549,7 +549,7 @@ The Fyne migration must not drop product ambition, but this section is intention
 - [ ] Replace full-tree refresh on file operations with targeted tree node refresh helpers.
 - [ ] Implement hunk-windowed unified diffs with optional large-file elision.
 - [ ] Add guardrails for empty role/action string formatting in agent/activity path rendering.
-- [ ] Add settings-level LLM connection test action with model count and warning reporting.
+- [x] Add settings-level LLM connection test action with model count and warning reporting.
 - [ ] Surface persistence failures from repository writes in activity/diagnostics.
 - [ ] Cancel streaming LLM response handlers promptly when request context is canceled.
 - [ ] Make provider configuration explicit and extensible beyond built-in options with protocol flags.
