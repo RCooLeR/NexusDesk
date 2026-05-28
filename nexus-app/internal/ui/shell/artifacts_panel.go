@@ -1926,6 +1926,8 @@ func artifactPreviewText(store *artifactsSvc.Store, artifact artifactsSvc.Artifa
 		builder.WriteString("DOCX document export\n\n")
 		writeArtifactComparisonKV(&builder, "Artifact", artifact.RelPath)
 		writeArtifactComparisonKV(&builder, "Format", firstNonEmpty(metadata.ExportFormat, "docx"))
+		writeArtifactComparisonKV(&builder, "Template", metadata.ExportTemplate)
+		writeArtifactComparisonKV(&builder, "Theme", metadata.ThemeName)
 		writeArtifactComparisonKV(&builder, "Source brief", metadata.Source)
 		writeArtifactPackageValidation(&builder, metadata.PackageValidation)
 		if len(metadata.PackageFiles) > 0 {
@@ -1951,6 +1953,8 @@ func artifactPreviewText(store *artifactsSvc.Store, artifact artifactsSvc.Artifa
 		builder.WriteString("PPTX presentation deck export\n\n")
 		writeArtifactComparisonKV(&builder, "Artifact", artifact.RelPath)
 		writeArtifactComparisonKV(&builder, "Format", firstNonEmpty(metadata.ExportFormat, "pptx"))
+		writeArtifactComparisonKV(&builder, "Template", metadata.ExportTemplate)
+		writeArtifactComparisonKV(&builder, "Theme", metadata.ThemeName)
 		writeArtifactComparisonKV(&builder, "Source outline", metadata.Source)
 		writeArtifactPackageValidation(&builder, metadata.PackageValidation)
 		if len(metadata.PackageFiles) > 0 {

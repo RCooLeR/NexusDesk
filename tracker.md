@@ -24,10 +24,10 @@ Native editor parity decision: `docs/16_EDITOR_PARITY_STRATEGY.md`.
 Summary:
 
 - The Fyne migration remains the correct direction and `nexus-app/` is the active product.
-- Current estimate: Fyne-native migration is roughly 98% complete, Wails useful-code parity is roughly 97%, Native Parity Beta readiness is roughly 95%, and overall production readiness is roughly 91%.
+- Current estimate: Fyne-native migration is roughly 98% complete, Wails useful-code parity is roughly 97%, Native Parity Beta readiness is roughly 96%, and overall production readiness is roughly 92%.
 - The architecture is healthy: thin executable root, framework-free domain/services, Fyne-only UI packages, explicit approvals, safe workspace mutation boundaries, manual Git/Docker actions, durable metadata, and local-first safety rules.
 - The biggest remaining architectural risk is UI/orchestration complexity in `internal/ui/shell`; future UI work should keep extracting focused panels, controllers, and service-owned behavior.
-- The highest-priority unfinished work is migration and production readiness, not new top-level studios: applying durable slow-job routing to the remaining slow workflows, richer DOCX/PPTX template/theme polish beyond current native export and package-validation baselines, deeper assistant retrieval quality beyond deterministic source coverage, packaging, onboarding, and native UI polish.
+- The highest-priority unfinished work is migration and production readiness, not new top-level studios: applying durable slow-job routing to the remaining slow workflows, richer DOCX/PPTX template variants and cross-suite smoke beyond current native export/theme/validation baselines, deeper assistant retrieval quality beyond deterministic source coverage, packaging, onboarding, and native UI polish.
 - `app-wails/` should remain as reference until the remaining native parity blockers are completed or explicitly moved out of Native Parity Beta.
 
 Production direction:
@@ -42,7 +42,7 @@ Immediate execution order:
 - Validate macOS Keychain and Linux Secret Service/libsecret behavior during platform packaging smoke.
 - Apply the durable slow-job contract to OCR, dump imports, connector pulls, long indexing, report generation, and long agent runs as those workflows are implemented.
 - Keep the documented native editor parity strategy visible in Language Actions and continue post-beta LSP/inline-styling spikes without blocking Native Parity Beta.
-- Polish richer generated document/deck exports beyond native DOCX/PPTX baselines, including templates, theme control, cross-suite compatibility smoke, and richer visual design.
+- Polish richer generated document/deck exports beyond native DOCX/PPTX baselines, including template variants, cross-suite compatibility smoke, and richer visual design.
 - Build signed release packaging and installer/update validation.
 - Run a focused UI polish pass on onboarding, empty states, settings, diagnostics, and workflow hierarchy.
 
@@ -292,6 +292,7 @@ Goal: restore generated-output workflows with provenance and native inspection.
 - [x] Add first native DOCX document export artifact target from document briefs with OpenXML package output, preview metadata, source lineage, Artifacts-panel job routing, and agent/UI regeneration.
 - [x] Add first native PPTX presentation deck export target from packaged presentation artifacts with OpenXML package output, preview metadata, source lineage, Artifacts-panel job routing, and agent/UI regeneration.
 - [x] Add first release-grade Office package validation for native DOCX/PPTX exports: required part checks, XML well-formedness checks, PPTX slide relationship coverage, persisted validation metadata, and Artifacts preview status.
+- [x] Add first native Office theme baseline for generated DOCX/PPTX exports: template/theme metadata, professional DOCX font/color styles, branded PPTX background/accent/footer treatment, and preview visibility.
 - [x] Add read-only operations scanners for Dockerfiles, Compose, env/config/logs.
 - [x] Add Compose service topology summary from inspected Compose files.
 - [x] Add first operations runbook artifact export from inspected Docker/Compose/env/config/log evidence.
@@ -532,7 +533,8 @@ The Fyne migration must not drop product ambition, but this section is intention
 - [x] First richer generated document brief artifacts in the Artifacts UI with source provenance.
 - [x] First native DOCX document exports in the Artifacts UI from document briefs, with OpenXML package output, package-file metadata, and package preview text.
 - [x] First DOCX/PPTX package validation metadata and preview status for native Office exports.
-- [ ] Richer DOCX/PPTX templates, theme control, cross-suite compatibility smoke, and visual design polish in native UI.
+- [x] First DOCX/PPTX Office theme baseline with persisted template/theme metadata and branded generated output styling.
+- [ ] Richer DOCX/PPTX template variants, cross-suite compatibility smoke, and visual design polish in native UI.
 - [x] Provenance sidecars with source files, query IDs, generated timestamps, metadata rows, and freshness fingerprints for explicit artifact writes.
 - [x] Chat-answer artifacts include prompt/model/context/source/citation/unverified-citation/snippet/evidence and structured cited/uncited source coverage metadata.
 - [ ] Complete tool-run provenance coverage for every generated output type beyond chat-answer artifacts.

@@ -40,6 +40,9 @@ func TestWriteDocumentExportReportCreatesDocxArtifact(t *testing.T) {
 	if metadata.PackageValidation == nil || !metadata.PackageValidation.Valid || metadata.PackageValidation.XMLFiles == 0 {
 		t.Fatalf("expected valid document package validation metadata, got %#v", metadata.PackageValidation)
 	}
+	if metadata.ExportTemplate != officeExportTemplateName || metadata.ThemeName != officeExportThemeName {
+		t.Fatalf("expected Office theme metadata, got template=%q theme=%q", metadata.ExportTemplate, metadata.ThemeName)
+	}
 
 	reader, err := zip.OpenReader(artifact.AbsPath)
 	if err != nil {
@@ -47,13 +50,19 @@ func TestWriteDocumentExportReportCreatesDocxArtifact(t *testing.T) {
 	}
 	defer reader.Close()
 	documentXML := readZipText(t, reader.File, "word/document.xml")
-	for _, expected := range []string{"Document Export - Architecture Notes", "Executive Summary", "- Native parity is close.", "Packaging smoke remains a blocker.", "Source artifact: .nexusdesk/artifacts/document-briefs/brief.md"} {
+	for _, expected := range []string{"Document Export - Architecture Notes", "Executive Summary", "- Native parity is close.", "Packaging smoke remains a blocker.", "Source artifact: .nexusdesk/artifacts/document-briefs/brief.md", officeExportThemeName} {
 		if !strings.Contains(documentXML, expected) {
 			t.Fatalf("document.xml missing %q:\n%s", expected, documentXML)
 		}
 	}
-	if readZipText(t, reader.File, "[Content_Types].xml") == "" || readZipText(t, reader.File, "word/styles.xml") == "" {
+	stylesXML := readZipText(t, reader.File, "word/styles.xml")
+	if readZipText(t, reader.File, "[Content_Types].xml") == "" || stylesXML == "" {
 		t.Fatal("expected required docx package parts")
+	}
+	for _, expected := range []string{officeFontHeading, officeFontBody, officeColorAccent, officeColorAccentAlt} {
+		if !strings.Contains(stylesXML, expected) {
+			t.Fatalf("styles.xml missing themed value %q:\n%s", expected, stylesXML)
+		}
 	}
 }
 

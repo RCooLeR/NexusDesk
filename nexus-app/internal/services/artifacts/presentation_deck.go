@@ -87,6 +87,8 @@ func (s *Store) WritePresentationDeckReport(report PresentationDeckReport) (Arti
 		SourcePaths:       sourcePaths,
 		GeneratedAt:       createdAt,
 		ExportFormat:      presentationDeckFormat,
+		ExportTemplate:    officeExportTemplateName,
+		ThemeName:         officeExportThemeName,
 		PackageFiles:      append([]string{}, files...),
 		PackageValidation: &validation,
 	}
@@ -173,7 +175,7 @@ func presentationDeckRootRels() string {
 }
 
 func presentationDeckAppProperties(slideCount int) string {
-	return `<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Properties xmlns="http://schemas.openxmlformats.org/officeDocument/2006/extended-properties" xmlns:vt="http://schemas.openxmlformats.org/officeDocument/2006/docPropsVTypes"><Application>NexusDesk</Application><Slides>` + fmt.Sprintf("%d", slideCount) + `</Slides></Properties>`
+	return `<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Properties xmlns="http://schemas.openxmlformats.org/officeDocument/2006/extended-properties" xmlns:vt="http://schemas.openxmlformats.org/officeDocument/2006/docPropsVTypes"><Application>NexusDesk</Application><Template>` + xmlEscape(officeExportTemplateName) + `</Template><Company>NexusDesk</Company><Slides>` + fmt.Sprintf("%d", slideCount) + `</Slides></Properties>`
 }
 
 func presentationDeckPresentationXML(slides []presentationSlide) string {
@@ -208,12 +210,21 @@ func presentationDeckPresentationRels(slideCount int) string {
 func presentationDeckSlideXML(slide presentationSlide, slideNumber int) string {
 	var builder strings.Builder
 	builder.WriteString(`<?xml version="1.0" encoding="UTF-8" standalone="yes"?>`)
-	builder.WriteString(`<p:sld xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships" xmlns:p="http://schemas.openxmlformats.org/presentationml/2006/main"><p:cSld><p:spTree>`)
+	builder.WriteString(`<p:sld xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships" xmlns:p="http://schemas.openxmlformats.org/presentationml/2006/main"><p:cSld>`)
+	builder.WriteString(`<p:bg><p:bgPr><a:solidFill><a:srgbClr val="`)
+	builder.WriteString(officeColorPaper)
+	builder.WriteString(`"/></a:solidFill><a:effectLst/></p:bgPr></p:bg><p:spTree>`)
 	builder.WriteString(`<p:nvGrpSpPr><p:cNvPr id="1" name=""/><p:cNvGrpSpPr/><p:nvPr/></p:nvGrpSpPr><p:grpSpPr><a:xfrm><a:off x="0" y="0"/><a:ext cx="0" cy="0"/><a:chOff x="0" y="0"/><a:chExt cx="0" cy="0"/></a:xfrm></p:grpSpPr>`)
-	builder.WriteString(presentationDeckTextShape(2, "Title", 609600, 457200, 10972800, 914400, slide.Title, nil))
-	builder.WriteString(presentationDeckTextShape(3, "Body", 914400, 1676400, 10363200, 4267200, "", slide.Bullets))
+	builder.WriteString(presentationDeckAccentShape(2))
+	builder.WriteString(presentationDeckTextShape(3, "Title", 731520, 457200, 10820400, 914400, slide.Title, nil))
+	builder.WriteString(presentationDeckTextShape(4, "Body", 914400, 1676400, 10363200, 4267200, "", slide.Bullets))
+	builder.WriteString(presentationDeckTextShape(5, "Footer", 914400, 6172200, 10363200, 365760, fmt.Sprintf("%s - slide %d", officeExportThemeName, slideNumber), nil))
 	builder.WriteString(`</p:spTree></p:cSld></p:sld>`)
 	return builder.String()
+}
+
+func presentationDeckAccentShape(id int) string {
+	return `<p:sp><p:nvSpPr><p:cNvPr id="` + fmt.Sprintf("%d", id) + `" name="Accent ` + fmt.Sprintf("%d", id) + `"/><p:cNvSpPr/><p:nvPr/></p:nvSpPr><p:spPr><a:xfrm><a:off x="0" y="0"/><a:ext cx="274320" cy="6858000"/></a:xfrm><a:prstGeom prst="rect"><a:avLst/></a:prstGeom><a:solidFill><a:srgbClr val="` + officeColorAccent + `"/></a:solidFill><a:ln><a:noFill/></a:ln></p:spPr></p:sp>`
 }
 
 func presentationDeckTextShape(id int, name string, x int, y int, cx int, cy int, title string, bullets []string) string {
@@ -234,12 +245,28 @@ func presentationDeckTextShape(id int, name string, x int, y int, cx int, cy int
 	builder.WriteString(fmt.Sprintf("%d", cy))
 	builder.WriteString(`"/></a:xfrm></p:spPr><p:txBody><a:bodyPr wrap="square"/><a:lstStyle/>`)
 	if strings.TrimSpace(title) != "" {
-		builder.WriteString(`<a:p><a:r><a:rPr lang="en-US" sz="3600" b="1"/><a:t>`)
+		size := "3600"
+		color := officeColorAccent
+		if strings.EqualFold(name, "Footer") {
+			size = "1200"
+			color = officeColorMuted
+		}
+		builder.WriteString(`<a:p><a:r><a:rPr lang="en-US" sz="`)
+		builder.WriteString(size)
+		builder.WriteString(`" b="1"><a:solidFill><a:srgbClr val="`)
+		builder.WriteString(color)
+		builder.WriteString(`"/></a:solidFill><a:latin typeface="`)
+		builder.WriteString(xmlEscape(officeFontHeading))
+		builder.WriteString(`"/></a:rPr><a:t>`)
 		builder.WriteString(xmlEscape(title))
 		builder.WriteString(`</a:t></a:r></a:p>`)
 	}
 	for _, bullet := range bullets {
-		builder.WriteString(`<a:p><a:pPr marL="342900" indent="-171450"/><a:r><a:rPr lang="en-US" sz="2200"/><a:t>`)
+		builder.WriteString(`<a:p><a:pPr marL="342900" indent="-171450"/><a:r><a:rPr lang="en-US" sz="2200"><a:solidFill><a:srgbClr val="`)
+		builder.WriteString(officeColorInk)
+		builder.WriteString(`"/></a:solidFill><a:latin typeface="`)
+		builder.WriteString(xmlEscape(officeFontBody))
+		builder.WriteString(`"/></a:rPr><a:t>`)
 		builder.WriteString(xmlEscape(bullet))
 		builder.WriteString(`</a:t></a:r></a:p>`)
 	}

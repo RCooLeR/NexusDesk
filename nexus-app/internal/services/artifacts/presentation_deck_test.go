@@ -40,6 +40,9 @@ func TestWritePresentationDeckReportCreatesPPTXAndMetadata(t *testing.T) {
 	if metadata.PackageValidation == nil || !metadata.PackageValidation.Valid || metadata.PackageValidation.SlideCount != 2 {
 		t.Fatalf("expected valid deck package validation metadata, got %#v", metadata.PackageValidation)
 	}
+	if metadata.ExportTemplate != officeExportTemplateName || metadata.ThemeName != officeExportThemeName {
+		t.Fatalf("expected Office theme metadata, got template=%q theme=%q", metadata.ExportTemplate, metadata.ThemeName)
+	}
 	if len(metadata.SourcePaths) != 3 || metadata.SourcePaths[0] != ".nexusdesk/artifacts/presentations/slides.md" {
 		t.Fatalf("expected source outline first in metadata paths, got %#v", metadata.SourcePaths)
 	}
@@ -59,6 +62,11 @@ func TestWritePresentationDeckReportCreatesPPTXAndMetadata(t *testing.T) {
 	}
 	if !strings.Contains(parts["ppt/slides/slide1.xml"], "Keep shell native") || !strings.Contains(parts["ppt/slides/slide2.xml"], "Packaging smoke remains") {
 		t.Fatalf("deck slides lost content: %#v", parts)
+	}
+	for _, expected := range []string{officeColorPaper, officeColorAccent, officeFontHeading, officeExportThemeName} {
+		if !strings.Contains(parts["ppt/slides/slide1.xml"], expected) {
+			t.Fatalf("deck slide missing themed value %q:\n%s", expected, parts["ppt/slides/slide1.xml"])
+		}
 	}
 }
 

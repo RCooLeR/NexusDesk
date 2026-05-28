@@ -324,6 +324,8 @@ type Metadata struct {
 	EvidenceSummary        string              `json:"evidenceSummary,omitempty"`
 	SourceFingerprints     []SourceFingerprint `json:"sourceFingerprints,omitempty"`
 	ExportFormat           string              `json:"exportFormat,omitempty"`
+	ExportTemplate         string              `json:"exportTemplate,omitempty"`
+	ThemeName              string              `json:"themeName,omitempty"`
 	PackageFiles           []string            `json:"packageFiles,omitempty"`
 	PackageValidation      *PackageValidation  `json:"packageValidation,omitempty"`
 	GeneratedAt            time.Time           `json:"generatedAt"`
