@@ -64,6 +64,42 @@ func (v *View) newSettingsPanel() fyne.CanvasObject {
 	contextTokens.SetText(strconv.Itoa(current.ContextTokens))
 	responseReserve := widget.NewEntry()
 	responseReserve.SetText(strconv.Itoa(current.ResponseReserveTokens))
+	modelRoutes := current.ModelRoutes
+	selectedRouteID := ""
+	routeSelect := widget.NewSelect(settingsRouteOptionLabels(modelRoutes), nil)
+	routeModel := widget.NewEntry()
+	routeModel.SetPlaceHolder("Model ID for the selected task route")
+	routeRecommendedModel := widget.NewSelect(settingsModelOptionLabels(), nil)
+	routeDetail := widget.NewLabel("Task model defaults are saved for future route-aware workflows. The global chat model above remains the current fallback.")
+	routeDetail.Wrapping = fyne.TextWrapWord
+	routeModel.OnChanged = func(value string) {
+		if selectedRouteID == "" {
+			return
+		}
+		modelRoutes = settingsModelRoutesWithModel(modelRoutes, selectedRouteID, value)
+		routeDetail.SetText(settingsRouteDetail(modelRoutes, selectedRouteID))
+	}
+	routeRecommendedModel.OnChanged = func(label string) {
+		option, ok := settingsModelOptionByLabel(label)
+		if !ok {
+			return
+		}
+		routeModel.SetText(option.ID)
+	}
+	routeSelect.OnChanged = func(label string) {
+		route, ok := settingsRouteByLabel(modelRoutes, label)
+		if !ok {
+			return
+		}
+		selectedRouteID = route.ID
+		routeModel.SetText(route.Model)
+		if recommendedLabel, ok := settingsModelLabelForID(route.Model); ok {
+			routeRecommendedModel.SetSelected(recommendedLabel)
+		} else {
+			routeRecommendedModel.ClearSelected()
+		}
+		routeDetail.SetText(settingsRouteDetail(modelRoutes, selectedRouteID))
+	}
 	recommendedModel.OnChanged = func(label string) {
 		option, ok := settingsModelOptionByLabel(label)
 		if !ok {
@@ -75,6 +111,9 @@ func (v *View) newSettingsPanel() fyne.CanvasObject {
 	}
 	if label, ok := settingsModelLabelForID(current.Model); ok {
 		recommendedModel.SetSelected(label)
+	}
+	if len(routeSelect.Options) > 0 {
+		routeSelect.SetSelected(routeSelect.Options[0])
 	}
 	probeStatus := widget.NewLabel("Connection test has not run.")
 	probeStatus.Wrapping = fyne.TextWrapWord
@@ -90,9 +129,13 @@ func (v *View) newSettingsPanel() fyne.CanvasObject {
 			widget.NewFormItem("API key", apiKey),
 			widget.NewFormItem("Context tokens", contextTokens),
 			widget.NewFormItem("Response reserve", responseReserve),
+			widget.NewFormItem("Task route", routeSelect),
+			widget.NewFormItem("Task route model", routeModel),
+			widget.NewFormItem("Task route recommended model", routeRecommendedModel),
+			widget.NewFormItem("Task route detail", routeDetail),
 		},
 		OnSubmit: func() {
-			next, err := settingsFromForm(provider.Selected, protocol.Selected, baseURL.Text, model.Text, apiKey.Text, contextTokens.Text, responseReserve.Text)
+			next, err := settingsFromFormWithRoutes(provider.Selected, protocol.Selected, baseURL.Text, model.Text, apiKey.Text, contextTokens.Text, responseReserve.Text, modelRoutes)
 			if err != nil {
 				dialog.ShowError(err, v.window)
 				return
@@ -183,11 +226,57 @@ func settingsModelLabelForID(model string) (string, bool) {
 	return "", false
 }
 
+func settingsRouteOptionLabels(routes []settingsSvc.ModelRoute) []string {
+	labels := make([]string, 0, len(routes))
+	for _, route := range routes {
+		labels = append(labels, route.Label)
+	}
+	return labels
+}
+
+func settingsRouteByLabel(routes []settingsSvc.ModelRoute, label string) (settingsSvc.ModelRoute, bool) {
+	for _, route := range routes {
+		if route.Label == label {
+			return route, true
+		}
+	}
+	return settingsSvc.ModelRoute{}, false
+}
+
+func settingsModelRoutesWithModel(routes []settingsSvc.ModelRoute, routeID string, model string) []settingsSvc.ModelRoute {
+	settings := settingsSvc.Settings{ModelRoutes: append([]settingsSvc.ModelRoute(nil), routes...)}
+	settings = settingsSvc.SettingsWithModelRoute(settings, routeID, model)
+	return settings.ModelRoutes
+}
+
+func settingsRouteDetail(routes []settingsSvc.ModelRoute, routeID string) string {
+	for _, route := range routes {
+		if route.ID != routeID {
+			continue
+		}
+		parts := []string{
+			"Capability: " + firstNonEmptyString(route.CapabilityProfile, "custom"),
+			fmt.Sprintf("Context: %d tokens", route.ContextTokens),
+			fmt.Sprintf("Reserve: %d tokens", route.ResponseReserveTokens),
+			"Provider: " + firstNonEmptyString(route.Provider, "global fallback"),
+		}
+		if strings.TrimSpace(route.AlternativeModel) != "" {
+			parts = append(parts, "Alternative: "+route.AlternativeModel)
+		}
+		return strings.Join(parts, "\n")
+	}
+	return "Select a task route to edit its default model."
+}
+
 func settingsModelIDMatches(left string, right string) bool {
 	return strings.TrimSuffix(strings.ToLower(strings.TrimSpace(left)), ":latest") == strings.TrimSuffix(strings.ToLower(strings.TrimSpace(right)), ":latest")
 }
 
 func settingsFromForm(provider string, protocol string, baseURL string, model string, apiKey string, contextTokensValue string, responseReserveValue string) (settingsSvc.Settings, error) {
+	return settingsFromFormWithRoutes(provider, protocol, baseURL, model, apiKey, contextTokensValue, responseReserveValue, nil)
+}
+
+func settingsFromFormWithRoutes(provider string, protocol string, baseURL string, model string, apiKey string, contextTokensValue string, responseReserveValue string, modelRoutes []settingsSvc.ModelRoute) (settingsSvc.Settings, error) {
 	contextTokens, err := strconv.Atoi(contextTokensValue)
 	if err != nil {
 		return settingsSvc.Settings{}, err
@@ -204,6 +293,7 @@ func settingsFromForm(provider string, protocol string, baseURL string, model st
 		APIKey:                apiKey,
 		ContextTokens:         contextTokens,
 		ResponseReserveTokens: responseReserve,
+		ModelRoutes:           modelRoutes,
 	}, nil
 }
 

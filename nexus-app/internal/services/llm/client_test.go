@@ -6,6 +6,7 @@ import (
 	"errors"
 	"net/http"
 	"net/http/httptest"
+	"reflect"
 	"strings"
 	"testing"
 
@@ -311,7 +312,7 @@ func TestSettingsWithRuntimeContextUpdatesReserve(t *testing.T) {
 	unchanged := SettingsWithRuntimeContext(next, &RuntimeStatus{
 		LoadedModels: []RuntimeModel{{Name: "other", Model: "other", ContextLength: 999}},
 	})
-	if unchanged != next {
+	if !reflect.DeepEqual(unchanged, next) {
 		t.Fatalf("expected settings without matching runtime context to remain unchanged, got %#v", unchanged)
 	}
 }

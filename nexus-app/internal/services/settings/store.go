@@ -249,6 +249,7 @@ func normalized(settings Settings) Settings {
 	if settings.ResponseReserveTokens >= settings.ContextTokens {
 		settings.ResponseReserveTokens = settings.ContextTokens / 4
 	}
+	settings.ModelRoutes = normalizedModelRoutes(settings.ModelRoutes)
 	return settings
 }
 

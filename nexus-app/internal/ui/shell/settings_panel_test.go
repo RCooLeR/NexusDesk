@@ -6,6 +6,7 @@ import (
 	"testing"
 
 	llmSvc "nexusdesk/internal/services/llm"
+	settingsSvc "nexusdesk/internal/services/settings"
 )
 
 func TestSettingsFromFormParsesTokens(t *testing.T) {
@@ -30,6 +31,17 @@ func TestSettingsFromFormRejectsInvalidTokens(t *testing.T) {
 	}
 }
 
+func TestSettingsFromFormPreservesTaskModelRoutes(t *testing.T) {
+	routes := []settingsSvc.ModelRoute{{ID: settingsSvc.RouteMainCoding, Label: "Main coding model", Model: "qwen3-coder:30b"}}
+	settings, err := settingsFromFormWithRoutes("ollama", "ollama-openai-compatible", "http://localhost:11434/v1", "qwen3:8b", "", "32768", "4096", routes)
+	if err != nil {
+		t.Fatalf("settingsFromFormWithRoutes returned error: %v", err)
+	}
+	if len(settings.ModelRoutes) != 1 || settings.ModelRoutes[0].Model != "qwen3-coder:30b" {
+		t.Fatalf("expected model routes to be preserved, got %#v", settings.ModelRoutes)
+	}
+}
+
 func TestSettingsModelOptionHelpersUseRecommendedCatalog(t *testing.T) {
 	labels := settingsModelOptionLabels()
 	if len(labels) == 0 || !strings.Contains(labels[0], "Qwen3 4B") {
@@ -39,9 +51,33 @@ func TestSettingsModelOptionHelpersUseRecommendedCatalog(t *testing.T) {
 	if !ok || option.ID != "qwen3:4b-instruct" {
 		t.Fatalf("expected first recommended model option, got %#v ok=%v", option, ok)
 	}
+	if _, ok := settingsModelLabelForID("qwen3-coder:30b"); !ok {
+		t.Fatal("expected production coding model in settings catalog")
+	}
 	label, ok := settingsModelLabelForID("mistral-small3.2")
 	if !ok || !strings.Contains(label, "Mistral Small") {
 		t.Fatalf("expected :latest-insensitive model label lookup, got %q ok=%v", label, ok)
+	}
+}
+
+func TestSettingsRouteHelpersUpdateSelectedRoute(t *testing.T) {
+	routes := settingsSvc.DefaultModelRoutes()
+	labels := settingsRouteOptionLabels(routes)
+	if len(labels) == 0 || !strings.Contains(labels[0], "Main coding") {
+		t.Fatalf("expected route labels, got %#v", labels)
+	}
+	route, ok := settingsRouteByLabel(routes, "Research / summaries")
+	if !ok || route.ID != settingsSvc.RouteResearchSummaries {
+		t.Fatalf("expected research route lookup, got %#v ok=%v", route, ok)
+	}
+	routes = settingsModelRoutesWithModel(routes, settingsSvc.RouteResearchSummaries, "qwen3.6:27b")
+	updated, ok := settingsRouteByLabel(routes, "Research / summaries")
+	if !ok || updated.Model != "qwen3.6:27b" || updated.ResponseReserveTokens == 0 {
+		t.Fatalf("expected route model update, got %#v ok=%v", updated, ok)
+	}
+	detail := settingsRouteDetail(routes, settingsSvc.RouteVisionScreenshot)
+	if !strings.Contains(detail, "Alternative: qwen3.6:27b") {
+		t.Fatalf("expected alternate model in route detail, got %q", detail)
 	}
 }
 

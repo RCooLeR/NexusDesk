@@ -4,6 +4,7 @@ import (
 	"nexusdesk/internal/services/protectedsecret"
 	"os"
 	"path/filepath"
+	"reflect"
 	"runtime"
 	"strings"
 	"testing"
@@ -39,7 +40,8 @@ func TestStoreSavesAndLoadsSettings(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Load returned error: %v", err)
 	}
-	if got != want {
+	want = normalized(want)
+	if !reflect.DeepEqual(got, want) {
 		t.Fatalf("settings mismatch: got %#v want %#v", got, want)
 	}
 }
@@ -187,6 +189,9 @@ func TestRecommendedModelCatalogPortsWailsContextRules(t *testing.T) {
 	if len(options) == 0 || options[0].ID != "qwen3:4b-instruct" {
 		t.Fatalf("expected Wails recommended model catalog, got %#v", options)
 	}
+	if got := ModelContextWindow("qwen3-coder:30b"); got != 131072 {
+		t.Fatalf("expected production coding model in catalog, got %d", got)
+	}
 	if got := ModelContextWindow("mistral-small3.2"); got != 131072 {
 		t.Fatalf("expected :latest-insensitive context lookup, got %d", got)
 	}
@@ -208,5 +213,55 @@ func TestSettingsForSelectedModelUpdatesContextAndReserve(t *testing.T) {
 	}
 	if got := ResponseReserveForContext(1000); got != 2048 {
 		t.Fatalf("expected reserve floor, got %d", got)
+	}
+}
+
+func TestDefaultModelRoutesCoverTaskAwarePresets(t *testing.T) {
+	settings := normalized(Settings{})
+	route, ok := ModelRouteByID(settings, RouteMainCoding)
+	if !ok {
+		t.Fatalf("expected main coding route in %#v", settings.ModelRoutes)
+	}
+	if route.Model != "qwen3-coder:30b" || route.ContextTokens != 131072 {
+		t.Fatalf("unexpected coding route: %#v", route)
+	}
+	vision, ok := ModelRouteByID(settings, RouteVisionScreenshot)
+	if !ok || vision.Model != "gemma4:31b" || vision.AlternativeModel != "qwen3.6:27b" {
+		t.Fatalf("expected vision route with alternate model, got %#v ok=%v", vision, ok)
+	}
+}
+
+func TestSettingsForModelRouteAppliesRouteOverrides(t *testing.T) {
+	base := normalized(Settings{
+		ModelRoutes: []ModelRoute{
+			{
+				ID:                    RouteAnalytics,
+				Model:                 "custom-analytics",
+				ContextTokens:         64000,
+				ResponseReserveTokens: 8000,
+				CapabilityProfile:     "analytics",
+			},
+		},
+	})
+	routed, ok := SettingsForModelRoute(base, RouteAnalytics)
+	if !ok {
+		t.Fatal("expected analytics route")
+	}
+	if routed.Model != "custom-analytics" || routed.ContextTokens != 64000 || routed.ResponseReserveTokens != 8000 {
+		t.Fatalf("route overrides were not applied: %#v", routed)
+	}
+	if _, ok := SettingsForModelRoute(base, "missing-route"); ok {
+		t.Fatal("expected missing route to report false")
+	}
+}
+
+func TestSettingsWithModelRouteUpdatesRouteModelAndBudget(t *testing.T) {
+	settings := SettingsWithModelRoute(normalized(Settings{}), RouteResearchSummaries, "qwen3.6:27b")
+	route, ok := ModelRouteByID(settings, RouteResearchSummaries)
+	if !ok {
+		t.Fatal("expected research route")
+	}
+	if route.Model != "qwen3.6:27b" || route.ContextTokens != 131072 || route.ResponseReserveTokens != 16384 {
+		t.Fatalf("unexpected updated route: %#v", route)
 	}
 }

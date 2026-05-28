@@ -99,7 +99,7 @@ NexusDesk should let users configure different default models for different app 
 Important behavior:
 
 - A global default model remains available as the fallback.
-- Each task route can override provider, model, context tokens, response reserve, temperature, and capability expectations.
+- Each task route can override provider, model, context tokens, response reserve, and capability expectations. Temperature remains a future route field when generation controls become user-facing.
 - The app should probe whether a configured local model is installed/loaded and show warnings before a workflow starts.
 - If a route model is unavailable, the app should ask whether to use the global fallback rather than silently switching.
 - Saved chat answers, artifacts, agent runs, and audit records should store the resolved task route and model used.
@@ -135,7 +135,8 @@ The routing engine should map app surfaces to these task defaults:
 
 Current native implementation:
 
-- `nexus-app/internal/services/settings` stores non-secret provider, explicit protocol, model, context-window, and response-reserve settings, plus the curated local model catalog used by the Fyne Settings UI.
+- `nexus-app/internal/services/settings` stores non-secret provider, explicit protocol, global model, context-window, response-reserve settings, persisted task-aware model routes, and the curated local model catalog used by the Fyne Settings UI.
+- Fyne Settings exposes the first Task route selector/editor so users can save different defaults for coding, backend, database, analytics, research, vision/screenshot, balanced reasoning, and fast-coding routes. Existing Ask/Agent calls still use the global model until each workflow is deliberately wired to resolve a route with fallback/availability warnings.
 - Windows protected secret persistence and assistant memory/profile parity are native; macOS/Linux keychains and richer assistant diagnostics remain follow-up work.
 - `nexus-app/internal/services/llm` implements protocol-flagged OpenAI-compatible chat/completions, streaming SSE parsing, `/models` probing, Ollama `/api/ps` runtime diagnostics, loaded-model context-window tuning, response reserve, and workspace-context sentinel escaping.
 - `nexus-app/internal/services/assistant` wraps the LLM client for Ask mode and attaches bounded selected-file, directory, project-root, and generated-artifact context packs.
