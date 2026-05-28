@@ -147,6 +147,16 @@ func TestArtifactCanRegenerateSupportedKinds(t *testing.T) {
 			want:     false,
 		},
 		{
+			name:     "operations runbook with source",
+			artifact: artifactsSvc.Artifact{Kind: "operations-runbook", SourcePaths: []string{"compose.yml"}},
+			want:     true,
+		},
+		{
+			name:     "operations runbook without source",
+			artifact: artifactsSvc.Artifact{Kind: "operations-runbook"},
+			want:     false,
+		},
+		{
 			name:     "archived scan report",
 			artifact: artifactsSvc.Artifact{Kind: "scan-report", Archived: true},
 			want:     false,

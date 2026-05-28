@@ -446,6 +446,13 @@ func (v *View) buildRegeneratedArtifact(ctx context.Context, workspaceRoot strin
 			return artifactsSvc.Artifact{}, fmt.Errorf("document extraction artifact %s has no source path metadata", artifact.RelPath)
 		}
 		return v.buildDocumentExtractionArtifact(ctx, workspaceRoot, source)
+	case "operations-runbook":
+		source, ok := artifactRegenerationSource(artifact)
+		if !ok {
+			return artifactsSvc.Artifact{}, fmt.Errorf("operations runbook artifact %s has no source path metadata", artifact.RelPath)
+		}
+		_, rebuilt, err := v.buildOperationsRunbookArtifact(ctx, workspaceRoot, source)
+		return rebuilt, err
 	default:
 		return artifactsSvc.Artifact{}, fmt.Errorf("artifact kind %q cannot be regenerated yet", artifact.Kind)
 	}
@@ -780,6 +787,9 @@ func artifactCanRegenerate(artifact artifactsSvc.Artifact) bool {
 	case "scan-report":
 		return true
 	case "document-extract":
+		_, ok := artifactRegenerationSource(artifact)
+		return ok
+	case "operations-runbook":
 		_, ok := artifactRegenerationSource(artifact)
 		return ok
 	default:
