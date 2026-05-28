@@ -635,7 +635,7 @@ The checklist below is intentionally large. `tracker.md` should keep task-level 
 - [x] Add issue-report bundle.
 - [ ] Add crash/hang detector or startup recovery notes.
 - [ ] Add search index metadata and recovery/export.
-- [ ] Add job history retention controls and cleanup policy.
+- [x] Add job history retention controls and cleanup policy.
 
 ### 7.10 P1: Packaging, CI, Release
 

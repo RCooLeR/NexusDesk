@@ -134,6 +134,52 @@ func TestSaveAndListTaskRuns(t *testing.T) {
 	}
 }
 
+func TestDeleteJobsRemovesJobsAndTaskRuns(t *testing.T) {
+	store := mustStore(t)
+	started := time.Date(2026, 5, 27, 12, 0, 0, 0, time.UTC)
+	for _, id := range []string{"job-delete", "job-keep"} {
+		if err := store.SaveJob(jobssvc.Job{
+			ID:        id,
+			Kind:      "task",
+			Label:     id,
+			Status:    jobssvc.StatusSuccess,
+			Message:   "done",
+			StartedAt: started,
+		}); err != nil {
+			t.Fatalf("SaveJob(%s) returned error: %v", id, err)
+		}
+		if err := store.SaveTaskRun(TaskRunRecord{
+			JobID:       id,
+			TaskID:      id + "-task",
+			Kind:        "go-test",
+			Label:       id,
+			Command:     "go test ./...",
+			Cwd:         ".",
+			Status:      "success",
+			StartedAt:   started,
+			CompletedAt: started.Add(time.Second),
+		}); err != nil {
+			t.Fatalf("SaveTaskRun(%s) returned error: %v", id, err)
+		}
+	}
+	if err := store.DeleteJobs([]string{"job-delete"}); err != nil {
+		t.Fatalf("DeleteJobs returned error: %v", err)
+	}
+	jobs, err := store.ListJobs()
+	if err != nil {
+		t.Fatalf("ListJobs returned error: %v", err)
+	}
+	if len(jobs) != 1 || jobs[0].ID != "job-keep" {
+		t.Fatalf("unexpected jobs after delete: %#v", jobs)
+	}
+	if _, ok, err := store.LatestTaskRunForJob("job-delete"); err != nil || ok {
+		t.Fatalf("expected deleted task run to be gone, ok=%v err=%v", ok, err)
+	}
+	if _, ok, err := store.LatestTaskRunForJob("job-keep"); err != nil || !ok {
+		t.Fatalf("expected retained task run, ok=%v err=%v", ok, err)
+	}
+}
+
 func TestSaveListAndDeleteArtifacts(t *testing.T) {
 	store := mustStore(t)
 	generated := time.Date(2026, 5, 27, 12, 0, 0, 0, time.UTC)

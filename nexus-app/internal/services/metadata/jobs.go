@@ -71,6 +71,34 @@ func (s *Store) ListJobs() ([]jobssvc.Job, error) {
 	return jobs, rows.Err()
 }
 
+func (s *Store) DeleteJobs(ids []string) error {
+	if len(ids) == 0 {
+		return nil
+	}
+	db, err := s.open()
+	if err != nil {
+		return err
+	}
+	tx, err := db.Begin()
+	if err != nil {
+		return err
+	}
+	for _, id := range ids {
+		if id == "" {
+			continue
+		}
+		if _, err := tx.Exec(`DELETE FROM task_runs WHERE workspace_root = ? AND job_id = ?`, s.root, id); err != nil {
+			_ = tx.Rollback()
+			return err
+		}
+		if _, err := tx.Exec(`DELETE FROM jobs WHERE workspace_root = ? AND id = ?`, s.root, id); err != nil {
+			_ = tx.Rollback()
+			return err
+		}
+	}
+	return tx.Commit()
+}
+
 func (s *Store) SaveTaskRun(record TaskRunRecord) error {
 	db, err := s.open()
 	if err != nil {

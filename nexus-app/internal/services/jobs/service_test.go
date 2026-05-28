@@ -3,6 +3,7 @@ package jobs
 import (
 	"errors"
 	"testing"
+	"time"
 )
 
 func TestServiceTracksJobLifecycle(t *testing.T) {
@@ -81,6 +82,54 @@ func TestServiceLoadsPersistedJobsAndContinuesIDs(t *testing.T) {
 	}
 }
 
+func TestServicePrunesTerminalJobsWithRetentionPolicy(t *testing.T) {
+	now := time.Date(2026, 5, 28, 12, 0, 0, 0, time.UTC)
+	repo := &fakeJobRepository{}
+	service := NewWithRepository(repo)
+	for _, job := range []Job{
+		{ID: "job-running", Kind: "task", Label: "running", Status: StatusRunning, StartedAt: now.Add(-2 * time.Hour)},
+		{ID: "job-failed", Kind: "task", Label: "failed", Status: StatusFailed, StartedAt: now.Add(-4 * time.Hour), CompletedAt: now.Add(-3 * time.Hour)},
+		{ID: "job-new", Kind: "task", Label: "new", Status: StatusSuccess, StartedAt: now.Add(-2 * time.Hour), CompletedAt: now.Add(-90 * time.Minute)},
+		{ID: "job-old", Kind: "task", Label: "old", Status: StatusSuccess, StartedAt: now.Add(-72 * time.Hour), CompletedAt: now.Add(-71 * time.Hour)},
+		{ID: "job-canceled", Kind: "task", Label: "canceled", Status: StatusCanceled, StartedAt: now.Add(-96 * time.Hour), CompletedAt: now.Add(-95 * time.Hour)},
+	} {
+		service.jobs = append(service.jobs, job)
+	}
+
+	result, err := service.Prune(RetentionPolicy{KeepRecent: 1, MaxAge: 48 * time.Hour, Now: now})
+	if err != nil {
+		t.Fatalf("Prune returned error: %v", err)
+	}
+	if result.Removed != 2 || len(repo.deleted) != 2 {
+		t.Fatalf("expected two deleted jobs, result=%#v deleted=%#v", result, repo.deleted)
+	}
+	for _, id := range []string{"job-old", "job-canceled"} {
+		if _, ok := service.Get(id); ok {
+			t.Fatalf("expected %s to be pruned", id)
+		}
+	}
+	for _, id := range []string{"job-running", "job-failed", "job-new"} {
+		if _, ok := service.Get(id); !ok {
+			t.Fatalf("expected %s to be retained", id)
+		}
+	}
+}
+
+func TestServicePruneCanIncludeFailuresWhenRequested(t *testing.T) {
+	now := time.Date(2026, 5, 28, 12, 0, 0, 0, time.UTC)
+	service := New()
+	service.jobs = []Job{
+		{ID: "job-failed", Kind: "task", Label: "failed", Status: StatusFailed, CompletedAt: now.Add(-72 * time.Hour)},
+	}
+	result, err := service.Prune(RetentionPolicy{KeepRecent: 0, MaxAge: 24 * time.Hour, IncludeFailures: true, Now: now})
+	if err != nil {
+		t.Fatalf("Prune returned error: %v", err)
+	}
+	if result.Removed != 1 {
+		t.Fatalf("expected failed job to be pruned when requested, got %#v", result)
+	}
+}
+
 func TestSlowWorkflowSpecsRequireDurableExplicitStarts(t *testing.T) {
 	specs := SlowWorkflowSpecs()
 	if len(specs) == 0 {
@@ -126,8 +175,9 @@ func TestUnknownWorkflowKindKeepsCompatibility(t *testing.T) {
 }
 
 type fakeJobRepository struct {
-	listed []Job
-	saved  []Job
+	listed  []Job
+	saved   []Job
+	deleted []string
 }
 
 func (r *fakeJobRepository) SaveJob(job Job) error {
@@ -137,4 +187,9 @@ func (r *fakeJobRepository) SaveJob(job Job) error {
 
 func (r *fakeJobRepository) ListJobs() ([]Job, error) {
 	return append([]Job{}, r.listed...), nil
+}
+
+func (r *fakeJobRepository) DeleteJobs(ids []string) error {
+	r.deleted = append(r.deleted, ids...)
+	return nil
 }

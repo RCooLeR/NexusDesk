@@ -18,7 +18,8 @@ import (
 
 func (v *View) newJobsPanel() fyne.CanvasObject {
 	refresh := widget.NewButtonWithIcon("Refresh", theme.ViewRefreshIcon(), v.refreshJobs)
-	header := container.NewBorder(nil, nil, v.jobStatus, refresh)
+	cleanup := widget.NewButtonWithIcon("Clean Up", theme.DeleteIcon(), v.confirmPruneJobs)
+	header := container.NewBorder(nil, nil, v.jobStatus, container.NewHBox(refresh, cleanup))
 	scroll := container.NewScroll(v.jobResults)
 	scroll.SetMinSize(fyne.NewSize(240, 110))
 	return container.NewBorder(header, nil, nil, nil, scroll)
@@ -36,6 +37,29 @@ func (v *View) cancelJob(id string) {
 		v.addActivity("Cancel requested for " + id + ".")
 	}
 	v.refreshJobs()
+}
+
+func (v *View) confirmPruneJobs() {
+	policy := jobsSvc.DefaultRetentionPolicy()
+	message := fmt.Sprintf(
+		"Remove completed successful/canceled jobs older than %s or beyond the latest %d retained records. Running jobs and failed/timed-out jobs are kept.",
+		formatRetentionAge(policy.MaxAge),
+		policy.KeepRecent,
+	)
+	dialog.ShowConfirm("Clean up job history", message, func(confirm bool) {
+		if !confirm {
+			return
+		}
+		result, err := v.jobService.Prune(policy)
+		if err != nil {
+			dialog.ShowError(err, v.window)
+			v.addActivity("Job history cleanup failed: " + err.Error())
+			return
+		}
+		v.jobStatus.SetText(fmt.Sprintf("Removed %d job(s); kept %d.", result.Removed, result.Kept+result.RunningKept+result.FailuresKept))
+		v.addActivity(fmt.Sprintf("Cleaned up %d completed job(s); running and failed jobs were preserved.", result.Removed))
+		v.refreshJobs()
+	}, v.window)
 }
 
 func (v *View) confirmRetryJob(id string) {
@@ -279,6 +303,21 @@ func taskRunHasOutput(record metadataSvc.TaskRunRecord) bool {
 
 func jobHasOutput(job jobsSvc.Job) bool {
 	return strings.TrimSpace(job.Message) != "" || strings.TrimSpace(job.Error) != "" || len(job.LogTail) > 0
+}
+
+func formatRetentionAge(value time.Duration) string {
+	if value <= 0 {
+		return "the configured age"
+	}
+	hours := int(value.Hours())
+	if hours%24 == 0 {
+		days := hours / 24
+		if days == 1 {
+			return "1 day"
+		}
+		return fmt.Sprintf("%d days", days)
+	}
+	return value.String()
 }
 
 func formatJobRecord(job jobsSvc.Job) string {

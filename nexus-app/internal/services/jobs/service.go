@@ -3,6 +3,7 @@ package jobs
 import (
 	"context"
 	"fmt"
+	"sort"
 	"sync"
 	"time"
 )
@@ -20,6 +21,7 @@ type Service struct {
 type Repository interface {
 	SaveJob(Job) error
 	ListJobs() ([]Job, error)
+	DeleteJobs([]string) error
 }
 
 func New() *Service {
@@ -152,6 +154,69 @@ func (s *Service) Get(id string) (Job, bool) {
 	return job, true
 }
 
+func (s *Service) Prune(policy RetentionPolicy) (RetentionResult, error) {
+	policy = normalizeRetentionPolicy(policy)
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	candidates := make([]Job, 0, len(s.jobs))
+	result := RetentionResult{}
+	for _, job := range s.jobs {
+		switch {
+		case job.Status == StatusRunning:
+			result.RunningKept++
+		case isFailureStatus(job.Status) && !policy.IncludeFailures:
+			result.FailuresKept++
+		case isTerminalStatus(job.Status):
+			candidates = append(candidates, job)
+		default:
+			result.Kept++
+		}
+	}
+	sort.SliceStable(candidates, func(i, j int) bool {
+		return jobRetentionTime(candidates[i]).After(jobRetentionTime(candidates[j]))
+	})
+
+	pruneIDs := map[string]bool{}
+	for index, job := range candidates {
+		keepByRecent := policy.KeepRecent > 0 && index < policy.KeepRecent
+		olderThanMaxAge := policy.MaxAge > 0 && policy.Now.Sub(jobRetentionTime(job)) > policy.MaxAge
+		if keepByRecent && !olderThanMaxAge {
+			result.Kept++
+			continue
+		}
+		if !olderThanMaxAge && policy.KeepRecent <= 0 {
+			result.Kept++
+			continue
+		}
+		if !olderThanMaxAge && index < policy.KeepRecent {
+			result.Kept++
+			continue
+		}
+		pruneIDs[job.ID] = true
+		result.RepositoryIDs = append(result.RepositoryIDs, job.ID)
+	}
+	if len(pruneIDs) == 0 {
+		return result, nil
+	}
+	if s.repo != nil {
+		if err := s.repo.DeleteJobs(result.RepositoryIDs); err != nil {
+			return result, err
+		}
+	}
+	filtered := s.jobs[:0]
+	for _, job := range s.jobs {
+		if pruneIDs[job.ID] {
+			delete(s.cancels, job.ID)
+			continue
+		}
+		filtered = append(filtered, job)
+	}
+	s.jobs = filtered
+	result.Removed = len(pruneIDs)
+	return result, nil
+}
+
 func (s *Service) indexOf(id string) int {
 	for index := range s.jobs {
 		if s.jobs[index].ID == id {
@@ -166,6 +231,49 @@ func (s *Service) persistLocked(job Job) {
 		return
 	}
 	_ = s.repo.SaveJob(job)
+}
+
+func DefaultRetentionPolicy() RetentionPolicy {
+	return RetentionPolicy{
+		KeepRecent:      100,
+		MaxAge:          30 * 24 * time.Hour,
+		IncludeFailures: false,
+	}
+}
+
+func normalizeRetentionPolicy(policy RetentionPolicy) RetentionPolicy {
+	defaults := DefaultRetentionPolicy()
+	if policy.KeepRecent < 0 {
+		policy.KeepRecent = 0
+	}
+	if policy.KeepRecent == 0 && policy.MaxAge == 0 {
+		policy.KeepRecent = defaults.KeepRecent
+		policy.MaxAge = defaults.MaxAge
+	}
+	if policy.Now.IsZero() {
+		policy.Now = time.Now().UTC()
+	} else {
+		policy.Now = policy.Now.UTC()
+	}
+	return policy
+}
+
+func isTerminalStatus(status Status) bool {
+	return status == StatusSuccess || status == StatusCanceled || status == StatusFailed || status == StatusTimedOut
+}
+
+func isFailureStatus(status Status) bool {
+	return status == StatusFailed || status == StatusTimedOut
+}
+
+func jobRetentionTime(job Job) time.Time {
+	if !job.CompletedAt.IsZero() {
+		return job.CompletedAt.UTC()
+	}
+	if !job.StartedAt.IsZero() {
+		return job.StartedAt.UTC()
+	}
+	return time.Time{}
 }
 
 func nextIDFromJobs(jobs []Job) int {

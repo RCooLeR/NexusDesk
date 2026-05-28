@@ -23,3 +23,18 @@ type Job struct {
 	StartedAt   time.Time
 	CompletedAt time.Time
 }
+
+type RetentionPolicy struct {
+	KeepRecent      int
+	MaxAge          time.Duration
+	IncludeFailures bool
+	Now             time.Time
+}
+
+type RetentionResult struct {
+	Removed       int
+	Kept          int
+	RunningKept   int
+	FailuresKept  int
+	RepositoryIDs []string
+}
