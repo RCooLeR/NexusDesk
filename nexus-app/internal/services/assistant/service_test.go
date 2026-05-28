@@ -159,6 +159,67 @@ func TestAskStreamAppliesAssistantProfileWhenConfigured(t *testing.T) {
 	}
 }
 
+func TestAskStreamAppliesRequestedModelRoute(t *testing.T) {
+	store := fakeSettingsStore{settings: settingssvc.Settings{
+		Provider:              "ollama",
+		Protocol:              settingssvc.ProtocolOllamaOpenAICompatible,
+		BaseURL:               "http://localhost:11434/v1",
+		Model:                 "global-model",
+		ContextTokens:         32000,
+		ResponseReserveTokens: 4000,
+		ModelRoutes: []settingssvc.ModelRoute{
+			{
+				ID:                    settingssvc.RouteMainCoding,
+				Label:                 "Main coding model",
+				Model:                 "qwen3-coder:30b",
+				ContextTokens:         131072,
+				ResponseReserveTokens: 16384,
+			},
+		},
+	}}
+	client := &fakeStreamClient{message: "ok", deltas: []string{"ok"}}
+	service := NewWithDependencies(store, nil, client)
+
+	result, err := service.AskStream(context.Background(), Request{
+		Prompt:       "Review diff",
+		ModelRouteID: settingssvc.RouteMainCoding,
+	}, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if client.config.Model != "qwen3-coder:30b" || client.config.ContextTokens != 131072 {
+		t.Fatalf("expected routed model config, got %#v", client.config)
+	}
+	if result.ModelRouteID != settingssvc.RouteMainCoding || result.ModelRoute != "Main coding model" || result.RouteWarning != "" {
+		t.Fatalf("expected route metadata in result, got %#v", result)
+	}
+}
+
+func TestAskStreamFallsBackWhenRequestedModelRouteIsMissing(t *testing.T) {
+	store := fakeSettingsStore{settings: settingssvc.Settings{
+		Model:                 "global-model",
+		ContextTokens:         32000,
+		ResponseReserveTokens: 4000,
+		ModelRoutes:           []settingssvc.ModelRoute{},
+	}}
+	client := &fakeStreamClient{message: "ok", deltas: []string{"ok"}}
+	service := NewWithDependencies(store, nil, client)
+
+	result, err := service.AskStream(context.Background(), Request{
+		Prompt:       "Review diff",
+		ModelRouteID: "missing-route",
+	}, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if client.config.Model != "global-model" {
+		t.Fatalf("expected global model fallback, got %#v", client.config)
+	}
+	if result.RouteWarning == "" || !strings.Contains(result.RouteWarning, "using the global model") {
+		t.Fatalf("expected route warning, got %#v", result)
+	}
+}
+
 type fakeSettingsStore struct {
 	settings settingssvc.Settings
 	err      error

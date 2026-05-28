@@ -8,6 +8,7 @@ import (
 
 	assistantSvc "nexusdesk/internal/services/assistant"
 	gitSvc "nexusdesk/internal/services/git"
+	settingsSvc "nexusdesk/internal/services/settings"
 )
 
 const maxGitAIDiffChars = 48000
@@ -34,6 +35,7 @@ func (v *View) runGitAI(label string, prompt string) {
 		result, err := v.assistantService.AskStream(context.Background(), assistantSvc.Request{
 			Prompt:        prompt,
 			WorkspaceRoot: v.state.Workspace().Root,
+			ModelRouteID:  settingsSvc.RouteMainCoding,
 		}, func(delta string) error {
 			builder.WriteString(delta)
 			current := builder.String()
@@ -50,7 +52,14 @@ func (v *View) runGitAI(label string, prompt string) {
 				v.addActivity(message)
 				return
 			}
-			v.gitDiffStatus.SetText(label + " completed with " + result.Model + ".")
+			status := label + " completed with " + result.Model + "."
+			if strings.TrimSpace(result.ModelRoute) != "" {
+				status = label + " completed with " + result.Model + " via " + result.ModelRoute + "."
+			}
+			if strings.TrimSpace(result.RouteWarning) != "" {
+				v.addActivity(result.RouteWarning)
+			}
+			v.gitDiffStatus.SetText(status)
 			v.gitDiffText.SetText(result.Message)
 			v.addActivity(label + " completed for " + v.gitLastDiff.Path + ".")
 		})

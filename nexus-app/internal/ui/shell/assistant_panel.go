@@ -155,6 +155,9 @@ func (v *View) runAssistantRequest(prompt *widget.Entry, response *widget.RichTe
 			if result.ContextWarning != "" {
 				v.addActivity(result.ContextWarning)
 			}
+			if result.RouteWarning != "" {
+				v.addActivity(result.RouteWarning)
+			}
 			if len(assistantEffectiveSourcePaths(result)) == 0 {
 				v.addActivity("Assistant answer has no explicit source context attached.")
 			}
@@ -272,6 +275,8 @@ func (v *View) saveLatestAssistantAnswer() {
 		Prompt:                 v.assistantLastPrompt,
 		Content:                v.assistantLastResult.Message,
 		Model:                  v.assistantLastResult.Model,
+		ModelRouteID:           v.assistantLastResult.ModelRouteID,
+		ModelRoute:             v.assistantLastResult.ModelRoute,
 		ContextRelPath:         v.assistantLastResult.ContextRelPath,
 		Source:                 "Nexus assistant",
 		SourcePaths:            assistantEffectiveSourcePaths(v.assistantLastResult),
@@ -408,6 +413,12 @@ func assistantDiagnosticFooter(result assistantSvc.Result) string {
 	lines := []string{}
 	if model := strings.TrimSpace(result.Model); model != "" {
 		lines = append(lines, "Model: `"+model+"`")
+	}
+	if route := strings.TrimSpace(result.ModelRoute); route != "" {
+		lines = append(lines, "Model route: `"+route+"`")
+	}
+	if warning := strings.TrimSpace(result.RouteWarning); warning != "" {
+		lines = append(lines, "Model route warning: "+warning)
 	}
 	if contextPath := strings.TrimSpace(result.ContextRelPath); contextPath != "" && contextPath != "agent" {
 		lines = append(lines, "Context: `"+contextPath+"`")

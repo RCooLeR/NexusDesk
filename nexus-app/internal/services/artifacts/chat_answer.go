@@ -45,6 +45,8 @@ func (s *Store) WriteChatAnswer(report ChatAnswerReport) (Artifact, error) {
 		ContextRelPath:         strings.TrimSpace(report.ContextRelPath),
 		Prompt:                 strings.TrimSpace(report.Prompt),
 		Model:                  strings.TrimSpace(report.Model),
+		ModelRouteID:           strings.TrimSpace(report.ModelRouteID),
+		ModelRoute:             strings.TrimSpace(report.ModelRoute),
 		SourcePaths:            append([]string{}, report.SourcePaths...),
 		CitationRefs:           cleanChatAnswerList(report.CitationRefs, chatAnswerCitationSnippetLimit),
 		UnverifiedCitationRefs: cleanChatAnswerList(report.UnverifiedCitationRefs, chatAnswerCitationSnippetLimit),
@@ -81,6 +83,7 @@ func chatAnswerMarkdown(report ChatAnswerReport, title string, content string, c
 	writeKV(&builder, "Generated", formatArtifactTime(createdAt))
 	writeKV(&builder, "Source", firstNonEmptyArtifact(report.Source, "Nexus assistant"))
 	writeKV(&builder, "Model", report.Model)
+	writeKV(&builder, "Model route", report.ModelRoute)
 	writeKV(&builder, "Context", report.ContextRelPath)
 	if len(report.SourcePaths) > 0 {
 		builder.WriteString("\n## Sources\n\n")

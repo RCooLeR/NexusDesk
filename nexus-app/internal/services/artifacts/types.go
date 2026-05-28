@@ -236,6 +236,8 @@ type ChatAnswerReport struct {
 	Source                 string
 	ContextRelPath         string
 	Model                  string
+	ModelRouteID           string
+	ModelRoute             string
 	SourcePaths            []string
 	CitationRefs           []string
 	UnverifiedCitationRefs []string
@@ -314,6 +316,8 @@ type Metadata struct {
 	ContextRelPath         string              `json:"contextRelPath,omitempty"`
 	Prompt                 string              `json:"prompt,omitempty"`
 	Model                  string              `json:"model,omitempty"`
+	ModelRouteID           string              `json:"modelRouteId,omitempty"`
+	ModelRoute             string              `json:"modelRoute,omitempty"`
 	SourcePaths            []string            `json:"sourcePaths,omitempty"`
 	CitationRefs           []string            `json:"citationRefs,omitempty"`
 	UnverifiedCitationRefs []string            `json:"unverifiedCitationRefs,omitempty"`

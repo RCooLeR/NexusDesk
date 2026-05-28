@@ -44,6 +44,7 @@ type Request struct {
 	SelectedPath  string
 	ContextPaths  []string
 	Conversation  []llm.ChatTurn
+	ModelRouteID  string
 }
 
 type Result struct {
@@ -53,6 +54,9 @@ type Result struct {
 	ContextRelPath string
 	SourcePaths    []string
 	ContextWarning string
+	ModelRouteID   string
+	ModelRoute     string
+	RouteWarning   string
 }
 
 func New(settingsStore *settingssvc.Store, previewer *workspacesvc.Service, client *llm.Client) *Service {
@@ -72,6 +76,7 @@ func (s *Service) AskStream(ctx context.Context, request Request, onDelta func(s
 	if err != nil {
 		return Result{}, err
 	}
+	settings, routeInfo := s.settingsForRequest(settings, request)
 	config := llm.ConfigFromSettings(settings)
 	chatRequest := llm.ChatRequest{
 		SystemPrompt: askSystemPrompt,
@@ -90,7 +95,42 @@ func (s *Service) AskStream(ctx context.Context, request Request, onDelta func(s
 		ContextRelPath: result.ContextRelPath,
 		SourcePaths:    result.SourcePaths,
 		ContextWarning: contextWarning,
+		ModelRouteID:   routeInfo.ID,
+		ModelRoute:     routeInfo.Label,
+		RouteWarning:   routeInfo.Warning,
 	}, nil
+}
+
+type routeResolution struct {
+	ID      string
+	Label   string
+	Warning string
+}
+
+func (s *Service) settingsForRequest(settings settingssvc.Settings, request Request) (settingssvc.Settings, routeResolution) {
+	routeID := strings.TrimSpace(request.ModelRouteID)
+	if routeID == "" {
+		return settings, routeResolution{}
+	}
+	route, ok := settingssvc.ModelRouteByID(settings, routeID)
+	if !ok {
+		return settings, routeResolution{
+			ID:      routeID,
+			Warning: "Model route " + routeID + " was not found; using the global model.",
+		}
+	}
+	routed, ok := settingssvc.SettingsForModelRoute(settings, routeID)
+	if !ok {
+		return settings, routeResolution{
+			ID:      routeID,
+			Label:   route.Label,
+			Warning: "Model route " + firstNonEmptyString(route.Label, routeID) + " could not be resolved; using the global model.",
+		}
+	}
+	return routed, routeResolution{
+		ID:    route.ID,
+		Label: route.Label,
+	}
 }
 
 func (s *Service) promptWithProfile(prompt string) string {
@@ -149,4 +189,13 @@ func contextBudgetBytes(config llm.Config) int {
 		return charsPerTokenEstimate
 	}
 	return budgetTokens * charsPerTokenEstimate
+}
+
+func firstNonEmptyString(values ...string) string {
+	for _, value := range values {
+		if strings.TrimSpace(value) != "" {
+			return strings.TrimSpace(value)
+		}
+	}
+	return ""
 }

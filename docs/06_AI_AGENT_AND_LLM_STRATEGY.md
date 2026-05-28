@@ -136,7 +136,9 @@ The routing engine should map app surfaces to these task defaults:
 Current native implementation:
 
 - `nexus-app/internal/services/settings` stores non-secret provider, explicit protocol, global model, context-window, response-reserve settings, persisted task-aware model routes, and the curated local model catalog used by the Fyne Settings UI.
-- Fyne Settings exposes the first Task route selector/editor so users can save different defaults for coding, backend, database, analytics, research, vision/screenshot, balanced reasoning, and fast-coding routes. Existing Ask/Agent calls still use the global model until each workflow is deliberately wired to resolve a route with fallback/availability warnings.
+- Fyne Settings exposes the first Task route selector/editor so users can save different defaults for coding, backend, database, analytics, research, vision/screenshot, balanced reasoning, and fast-coding routes.
+- `nexus-app/internal/services/assistant` accepts an optional model route ID, resolves it through Settings, returns route metadata/warnings, and keeps the global model as fallback when a requested route is missing.
+- Git AI diff summaries and commit-message drafts now request the main coding route, and saved `chat-answer` artifacts preserve resolved model-route metadata when present. Broader Ask/Agent/Data/document/vision route selection remains deliberately staged.
 - Windows protected secret persistence and assistant memory/profile parity are native; macOS/Linux keychains and richer assistant diagnostics remain follow-up work.
 - `nexus-app/internal/services/llm` implements protocol-flagged OpenAI-compatible chat/completions, streaming SSE parsing, `/models` probing, Ollama `/api/ps` runtime diagnostics, loaded-model context-window tuning, response reserve, and workspace-context sentinel escaping.
 - `nexus-app/internal/services/assistant` wraps the LLM client for Ask mode and attaches bounded selected-file, directory, project-root, and generated-artifact context packs.

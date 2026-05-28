@@ -101,11 +101,11 @@ func TestAssistantResponseMarkdownWarnsWithoutSources(t *testing.T) {
 	if !strings.Contains(text, "Answer") || !strings.Contains(text, "No explicit source context") || !strings.Contains(text, "Evidence: weak") {
 		t.Fatalf("expected weak-evidence warning, got %q", text)
 	}
-	withSources := assistantResponseMarkdown(assistantSvc.Result{Message: "Answer", Model: "qwen", ContextRelPath: "context: README.md", SourcePaths: []string{"README.md"}})
+	withSources := assistantResponseMarkdown(assistantSvc.Result{Message: "Answer", Model: "qwen", ModelRoute: "Main coding model", ContextRelPath: "context: README.md", SourcePaths: []string{"README.md"}})
 	if strings.Contains(withSources, "No explicit source context") {
 		t.Fatalf("did not expect weak-evidence warning with sources, got %q", withSources)
 	}
-	for _, expected := range []string{"Model: `qwen`", "Context: `context: README.md`", "Sources: `README.md`", "Evidence: source-backed (1 source(s), no line citations detected, cited 0/1 source(s))."} {
+	for _, expected := range []string{"Model: `qwen`", "Model route: `Main coding model`", "Context: `context: README.md`", "Sources: `README.md`", "Evidence: source-backed (1 source(s), no line citations detected, cited 0/1 source(s))."} {
 		if !strings.Contains(withSources, expected) {
 			t.Fatalf("expected source/model footer to contain %q, got %q", expected, withSources)
 		}
