@@ -14,7 +14,7 @@ Approximate migration status:
 - Fyne-native migration: roughly 98% complete by useful Wails-era functionality.
 - Wails-era useful workflow parity: roughly 97% complete.
 - Native Parity Beta readiness: roughly 96% complete.
-- Overall production readiness: roughly 93% complete.
+- Overall production readiness: roughly 94% complete.
 - Distribution and packaging readiness: roughly 70-75% complete.
 
 The app can already:
@@ -71,7 +71,7 @@ Remaining blockers:
 - Future LSP/deeper cross-file language actions after a packaged provider spike proves reliability.
 - Deeper assistant retrieval/ranking quality beyond deterministic citation/source coverage diagnostics.
 - Richer DOCX/PPTX generated-output template variants, cross-suite compatibility smoke, and visual polish beyond the native validated/theme-backed document-export and presentation-deck baselines.
-- Final UI polish for onboarding, empty states, settings, diagnostics, and workflow hierarchy.
+- Final UI polish for empty states, settings, diagnostics, and workflow hierarchy after the first native Home readiness/onboarding cockpit baseline.
 
 Exit criteria:
 
@@ -121,8 +121,8 @@ Goal: put the app in front of real users while preserving trust.
 
 Required:
 
-- Onboarding flow for workspace open, model setup, permissions, and local data policy.
-- First-run diagnostics for missing model endpoint, missing compiler/build toolchain, and unavailable provider.
+- Onboarding flow for workspace open, model setup, permissions, and local data policy. Implemented as a native Home readiness cockpit with setup health, safety posture, and first actions.
+- First-run diagnostics for missing model endpoint, missing compiler/build toolchain, and unavailable provider. Implemented in the Home readiness cockpit; continue deep runtime probing in Diagnostics.
 - Issue-report bundle that redacts secrets and excludes workspace contents unless explicitly included. Implemented in Diagnostics as a redacted ZIP export containing diagnostics text, activity tail, environment metadata, workspace-state file names, and no workspace file contents by default.
 - Documentation for safe agent use, approvals, rollbacks, local data, and connector credentials.
 - Beta feedback loop and release notes.

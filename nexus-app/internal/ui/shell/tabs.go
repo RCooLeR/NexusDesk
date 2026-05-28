@@ -12,7 +12,9 @@ import (
 
 	"nexusdesk/internal/domain"
 	editorSvc "nexusdesk/internal/services/editor"
+	readinessSvc "nexusdesk/internal/services/readiness"
 	recentWorkspacesSvc "nexusdesk/internal/services/recentworkspaces"
+	settingsSvc "nexusdesk/internal/services/settings"
 )
 
 func newEditorTabs(welcomeItem *container.TabItem) *container.DocTabs {
@@ -22,11 +24,46 @@ func newEditorTabs(welcomeItem *container.TabItem) *container.DocTabs {
 }
 
 func (v *View) newWelcomePanel() fyne.CanvasObject {
-	title := widget.NewRichTextFromMarkdown("# Nexus Augentic Studio\n\nNative local-first workbench.")
+	title := widget.NewRichTextFromMarkdown("# Nexus Augentic Studio\n\nNative local-first workbench for code, data, agents, and artifacts.")
 	openWorkspaceButton := widget.NewButtonWithIcon("Open Workspace", theme.FolderOpenIcon(), v.openWorkspaceDialog)
 	openFileButton := widget.NewButtonWithIcon("Open File", theme.FileTextIcon(), v.openFileDialog)
+	settingsButton := widget.NewButtonWithIcon("Model Settings", theme.SettingsIcon(), v.openSettingsTab)
+	diagnosticsButton := widget.NewButtonWithIcon("Diagnostics", theme.SearchIcon(), func() {
+		if !v.selectBottomTab("Diagnostics") {
+			v.addActivity("Diagnostics panel is unavailable.")
+		}
+	})
+	readiness := widget.NewRichTextFromMarkdown(v.welcomeReadinessMarkdown())
 	recent := v.recentWorkspaceRows()
-	return container.NewCenter(container.NewVBox(title, container.NewHBox(openWorkspaceButton, openFileButton), widget.NewSeparator(), recent))
+	content := container.NewVBox(
+		title,
+		container.NewHBox(openWorkspaceButton, openFileButton, settingsButton, diagnosticsButton),
+		widget.NewSeparator(),
+		widget.NewCard("Setup", "", readiness),
+		widget.NewSeparator(),
+		widget.NewCard("Recent Workspaces", "", recent),
+	)
+	return container.NewPadded(container.NewVScroll(content))
+}
+
+func (v *View) welcomeReadinessMarkdown() string {
+	current := settingsSvc.Defaults()
+	settingsError := ""
+	if v.settingsStore != nil {
+		loaded, err := v.settingsStore.LoadForDisplay()
+		if err != nil {
+			settingsError = err.Error()
+		} else {
+			current = loaded
+		}
+	}
+	workspace := v.state.Workspace()
+	return readinessSvc.FormatMarkdown(readinessSvc.Collect(readinessSvc.Options{
+		WorkspaceRoot: workspace.Root,
+		WorkspaceName: workspace.Name,
+		Settings:      current,
+		SettingsError: settingsError,
+	}))
 }
 
 func (v *View) recentWorkspaceRows() fyne.CanvasObject {

@@ -140,7 +140,7 @@ Already available:
 
 - Launches as a Fyne-native desktop app.
 - Opens local folders with native dialogs.
-- Maintains recent workspaces and a Home/open flow.
+- Maintains recent workspaces and a Home/open flow with a first-run readiness cockpit for workspace, provider/model, credentials, native toolchain, safety posture, and quick actions.
 - Renders lazy project tree with ignored-path handling, entry caps, refresh, reveal, collapse, and context actions.
 - Supports single-file open and quick-open workflows.
 - Keeps folder open fast by avoiding automatic expensive or external operations.
@@ -149,7 +149,7 @@ Already available:
 Planned/remaining:
 
 - More JetBrains-like tool-window grouping and rail polish.
-- Better first-run onboarding and workspace home surface.
+- Continue polishing the workspace home surface after the first-run readiness cockpit baseline.
 - Status bar and global health indicators that feel productized.
 - More consistent keyboard navigation/focus behavior across all panes.
 
@@ -479,8 +479,8 @@ Goal: real users can try NexusDesk safely.
 
 Must be true:
 
-- First-run onboarding exists.
-- Model/provider setup is understandable.
+- First-run onboarding exists through the native Home readiness cockpit.
+- Model/provider setup is understandable and visible before agent workflows start.
 - Permissions, approvals, local data, rollback, and connector credentials are documented in-product and in docs.
 - Issue-report bundle exists with redaction.
 - Release notes and feedback loop exist.
@@ -552,7 +552,7 @@ The checklist below is intentionally large. `tracker.md` should keep task-level 
 - [ ] Add left/right tool-window rails with consistent icons, labels, shortcuts, and active states.
 - [ ] Add status bar with workspace, provider, branch, jobs, warnings, encoding, line ending, app version.
 - [ ] Improve Settings into searchable grouped preferences with inline validation.
-- [ ] Improve onboarding Home tab with recent workspaces, model setup, safety explanation, and first actions.
+- [x] Improve onboarding Home tab with recent workspaces, model setup, safety explanation, and first actions.
 - [ ] Improve assistant panel layout: Ask/Agent modes, sources, approvals, diagnostics, footer evidence, run history.
 - [ ] Improve data-grid visual polish: header hierarchy, row density, selection, loading states, error states.
 - [ ] Improve artifact browser polish: type badges, lineage, freshness, regeneration, comparison, preview.

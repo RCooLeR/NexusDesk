@@ -25,10 +25,10 @@ End-to-end production master plan and JetBrains-like UI target: `docs/17_END_TO_
 Summary:
 
 - The Fyne migration remains the correct direction and `nexus-app/` is the active product.
-- Current estimate: Fyne-native migration is roughly 98% complete, Wails useful-code parity is roughly 97%, Native Parity Beta readiness is roughly 96%, and overall production readiness is roughly 93%.
+- Current estimate: Fyne-native migration is roughly 98% complete, Wails useful-code parity is roughly 97%, Native Parity Beta readiness is roughly 96%, and overall production readiness is roughly 94%.
 - The architecture is healthy: thin executable root, framework-free domain/services, Fyne-only UI packages, explicit approvals, safe workspace mutation boundaries, manual Git/Docker actions, durable metadata, and local-first safety rules.
 - The biggest remaining architectural risk is UI/orchestration complexity in `internal/ui/shell`; future UI work should keep extracting focused panels, controllers, and service-owned behavior.
-- The highest-priority unfinished work is migration and production readiness, not new top-level studios: applying durable slow-job routing to the remaining slow workflows, richer DOCX/PPTX template variants and cross-suite smoke beyond current native export/theme/validation baselines, deeper assistant retrieval quality beyond deterministic source coverage, signed packaging/installer validation, onboarding, and native UI polish.
+- The highest-priority unfinished work is migration and production readiness, not new top-level studios: applying durable slow-job routing to the remaining slow workflows, richer DOCX/PPTX template variants and cross-suite smoke beyond current native export/theme/validation baselines, deeper assistant retrieval quality beyond deterministic source coverage, signed packaging/installer validation, safe-agent user docs, and native UI polish.
 - Final UI direction is a professional JetBrains-like native workbench: top menu/toolbar, left project/tool rail, central tabbed editor, right integrated assistant, grouped bottom tool windows, compact dark theme, strong keyboard workflows, DataGrip-style data surfaces, and trust-building settings/diagnostics.
 - `app-wails/` should remain as reference until the remaining native parity blockers are completed or explicitly moved out of Native Parity Beta.
 
@@ -37,7 +37,7 @@ Production direction:
 - Gate 1 is Native Parity Beta: editor parity, external DB profiles, protected secrets, assistant quality, Wails-only inventory, and native UI cleanup.
 - Gate 2 is Safety And Reliability Beta: durable jobs, metadata recovery/export, diagnostics, audit coverage, and failure recovery.
 - Gate 3 is Packaging And Platform Beta: repeatable signed Windows builds, CI, visual/manual smoke, platform support matrix, and release hygiene.
-- Gate 4 is Private Beta: onboarding, issue-report bundles, safe-agent docs, and user feedback loop.
+- Gate 4 is Private Beta: onboarding/readiness, issue-report bundles, safe-agent docs, and user feedback loop.
 
 Immediate execution order:
 
@@ -47,7 +47,7 @@ Immediate execution order:
 - Keep the documented native editor parity strategy visible in Language Actions and continue post-beta LSP/inline-styling spikes without blocking Native Parity Beta.
 - Polish richer generated document/deck exports beyond native DOCX/PPTX baselines, including template variants, cross-suite compatibility smoke, and richer visual design.
 - Build signed release packaging and installer/update validation.
-- Run a focused UI polish pass on onboarding, empty states, settings, diagnostics, and workflow hierarchy.
+- Continue the focused UI polish pass on empty states, settings, diagnostics, and workflow hierarchy now that the first Home readiness/onboarding cockpit exists.
 
 ## Repository State
 
@@ -154,6 +154,7 @@ Goal: recreate the useful local project workbench without Wails or React.
 
 - [x] Add folder open flow using native Fyne dialog.
 - [x] Add native recent-workspace persistence with Home tab open/remove/clear actions.
+- [x] Add first-run Home readiness cockpit for workspace open, model/provider setup, API-key state, native build toolchain status, local safety posture, and quick first actions.
 - [x] Render first workspace tree from the service scan.
 - [x] Add lazy child loading for large workspace trees.
 - [x] Add first native file preview service with rooted text preview, UTF-8/UTF-8 BOM/UTF-16/Windows-1251 decoding, binary detection, traversal protection, and size cap.
@@ -393,8 +394,8 @@ Exit criteria:
 
 ### Gate 4: Private Beta
 
-- [ ] Onboarding flow for workspace open, model setup, permissions, and local data policy.
-- [ ] First-run diagnostics for missing model endpoint, missing toolchain, and unavailable provider.
+- [x] Onboarding flow for workspace open, model setup, permissions, and local data policy.
+- [x] First-run diagnostics for missing model endpoint, missing toolchain, and unavailable provider.
 - [x] Redacted issue-report bundle that excludes workspace contents unless explicitly included.
 - [ ] User docs for safe agent use, approvals, rollbacks, local data, and connector credentials.
 - [ ] Beta feedback loop and release notes.
