@@ -4,17 +4,18 @@ go 1.25.7
 
 require (
 	fyne.io/fyne/v2 v2.7.4
+	github.com/BurntSushi/toml v1.6.0
 	github.com/go-sql-driver/mysql v1.10.0
 	github.com/jackc/pgx/v5 v5.9.2
 	github.com/microsoft/go-mssqldb v1.10.0
 	golang.org/x/text v0.37.0
+	gopkg.in/yaml.v3 v3.0.1
 	modernc.org/sqlite v1.36.3
 )
 
 require (
 	filippo.io/edwards25519 v1.2.0 // indirect
 	fyne.io/systray v1.12.1 // indirect
-	github.com/BurntSushi/toml v1.6.0 // indirect
 	github.com/clipperhouse/uax29/v2 v2.7.0 // indirect
 	github.com/davecgh/go-spew v1.1.2-0.20180830191138-d8f796af33cc // indirect
 	github.com/dustin/go-humanize v1.0.1 // indirect
@@ -60,7 +61,6 @@ require (
 	golang.org/x/net v0.55.0 // indirect
 	golang.org/x/sync v0.20.0 // indirect
 	golang.org/x/sys v0.45.0 // indirect
-	gopkg.in/yaml.v3 v3.0.1 // indirect
 	modernc.org/libc v1.61.13 // indirect
 	modernc.org/mathutil v1.7.1 // indirect
 	modernc.org/memory v1.8.2 // indirect

@@ -23,6 +23,36 @@ func TestScanProblemsFindsMarkersAndJSONErrors(t *testing.T) {
 	}
 }
 
+func TestScanProblemsFindsLanguageDiagnostics(t *testing.T) {
+	root := t.TempDir()
+	writeFile(t, filepath.Join(root, "src", "broken.go"), "package main\n\nfunc broken( {\n")
+	writeFile(t, filepath.Join(root, "config", "bad.yaml"), "services:\n  app: [\n")
+	writeFile(t, filepath.Join(root, "config", "bad.toml"), "[package\nname = \"nexus\"\n")
+
+	summary, err := New().ScanProblems(root, 20)
+	if err != nil {
+		t.Fatalf("ScanProblems returned error: %v", err)
+	}
+	assertProblem(t, summary.Problems, "src/broken.go", "error", "go")
+	assertProblem(t, summary.Problems, "config/bad.yaml", "error", "yaml")
+	assertProblem(t, summary.Problems, "config/bad.toml", "error", "toml")
+}
+
+func TestScanProblemsIgnoresValidLanguageFiles(t *testing.T) {
+	root := t.TempDir()
+	writeFile(t, filepath.Join(root, "src", "main.go"), "package main\n\nfunc main() {}\n")
+	writeFile(t, filepath.Join(root, "config", "app.yaml"), "services:\n  app:\n    image: nexus\n")
+	writeFile(t, filepath.Join(root, "config", "app.toml"), "[package]\nname = \"nexus\"\n")
+
+	summary, err := New().ScanProblems(root, 20)
+	if err != nil {
+		t.Fatalf("ScanProblems returned error: %v", err)
+	}
+	if len(summary.Problems) != 0 {
+		t.Fatalf("expected no problems for valid language files, got %#v", summary.Problems)
+	}
+}
+
 func TestScanProblemsFindsMergeConflictMarkers(t *testing.T) {
 	root := t.TempDir()
 	writeFile(t, filepath.Join(root, "src", "main.go"), "<<<<<<< HEAD\nleft\n=======\nright\n>>>>>>> branch\n")

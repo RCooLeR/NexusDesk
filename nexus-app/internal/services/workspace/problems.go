@@ -2,12 +2,20 @@ package workspace
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
+	"go/parser"
+	"go/scanner"
+	"go/token"
 	"io/fs"
 	"path/filepath"
+	"regexp"
 	"sort"
 	"strings"
 	"time"
+
+	"github.com/BurntSushi/toml"
+	"gopkg.in/yaml.v3"
 
 	"nexusdesk/internal/domain"
 )
@@ -16,6 +24,8 @@ const (
 	defaultProblemMaxResults = 80
 	problemPreviewMaxBytes   = 64 * 1024
 )
+
+var diagnosticLinePattern = regexp.MustCompile(`(?i)\bline\s+(\d+)`)
 
 type ProblemSummary struct {
 	Problems    []WorkspaceProblem
@@ -119,10 +129,29 @@ func (s *Service) scanFileProblems(root string, relPath string) []WorkspaceProbl
 		return nil
 	}
 	problems := markerProblems(preview)
-	if strings.EqualFold(filepath.Ext(preview.Name), ".json") && !json.Valid([]byte(preview.Text)) {
-		problems = append(problems, jsonProblem(preview))
-	}
+	problems = append(problems, syntaxProblems(preview)...)
 	return problems
+}
+
+func syntaxProblems(preview domain.FilePreview) []WorkspaceProblem {
+	ext := strings.ToLower(filepath.Ext(preview.Name))
+	switch ext {
+	case ".json":
+		if !json.Valid([]byte(preview.Text)) {
+			return []WorkspaceProblem{jsonProblem(preview)}
+		}
+	case ".go":
+		return goProblems(preview)
+	case ".yaml", ".yml":
+		if problem, ok := yamlProblem(preview); ok {
+			return []WorkspaceProblem{problem}
+		}
+	case ".toml":
+		if problem, ok := tomlProblem(preview); ok {
+			return []WorkspaceProblem{problem}
+		}
+	}
+	return nil
 }
 
 func markerProblems(preview domain.FilePreview) []WorkspaceProblem {
@@ -167,6 +196,74 @@ func jsonProblem(preview domain.FilePreview) WorkspaceProblem {
 	}
 }
 
+func goProblems(preview domain.FilePreview) []WorkspaceProblem {
+	fileSet := token.NewFileSet()
+	_, err := parser.ParseFile(fileSet, preview.RelPath, preview.Text, parser.AllErrors)
+	if err == nil {
+		return nil
+	}
+	if list, ok := err.(scanner.ErrorList); ok {
+		problems := make([]WorkspaceProblem, 0, minInt(len(list), 4))
+		for index, item := range list {
+			if index >= 4 {
+				break
+			}
+			problems = append(problems, WorkspaceProblem{
+				RelPath:  preview.RelPath,
+				Name:     preview.Name,
+				Severity: "error",
+				Source:   "go",
+				Message:  "Go syntax: " + item.Msg,
+				Line:     maxInt(item.Pos.Line, 1),
+			})
+		}
+		return problems
+	}
+	position := fileSet.Position(errPosition(fileSet, err))
+	return []WorkspaceProblem{{
+		RelPath:  preview.RelPath,
+		Name:     preview.Name,
+		Severity: "error",
+		Source:   "go",
+		Message:  "Go syntax: " + err.Error(),
+		Line:     maxInt(position.Line, 1),
+	}}
+}
+
+func yamlProblem(preview domain.FilePreview) (WorkspaceProblem, bool) {
+	var node yaml.Node
+	if err := yaml.Unmarshal([]byte(preview.Text), &node); err != nil {
+		return WorkspaceProblem{
+			RelPath:  preview.RelPath,
+			Name:     preview.Name,
+			Severity: "error",
+			Source:   "yaml",
+			Message:  "YAML syntax: " + strings.TrimPrefix(err.Error(), "yaml: "),
+			Line:     diagnosticLine(err.Error()),
+		}, true
+	}
+	return WorkspaceProblem{}, false
+}
+
+func tomlProblem(preview domain.FilePreview) (WorkspaceProblem, bool) {
+	if _, err := toml.Decode(preview.Text, &map[string]any{}); err != nil {
+		line := diagnosticLine(err.Error())
+		var parseErr toml.ParseError
+		if errors.As(err, &parseErr) && parseErr.Position.Line > 0 {
+			line = parseErr.Position.Line
+		}
+		return WorkspaceProblem{
+			RelPath:  preview.RelPath,
+			Name:     preview.Name,
+			Severity: "error",
+			Source:   "toml",
+			Message:  "TOML syntax: " + err.Error(),
+			Line:     line,
+		}, true
+	}
+	return WorkspaceProblem{}, false
+}
+
 func problemFromLine(preview domain.FilePreview, severity string, source string, message string, lineNumber int, line string) WorkspaceProblem {
 	snippet := trimSearchSnippet(line, 0)
 	if snippet != "" {
@@ -196,6 +293,39 @@ func lineForOffset(content string, offset int64) int {
 		}
 	}
 	return line
+}
+
+func diagnosticLine(message string) int {
+	match := diagnosticLinePattern.FindStringSubmatch(message)
+	if len(match) < 2 {
+		return 1
+	}
+	var line int
+	if _, err := fmt.Sscanf(match[1], "%d", &line); err != nil || line <= 0 {
+		return 1
+	}
+	return line
+}
+
+func errPosition(fileSet *token.FileSet, err error) token.Pos {
+	if positioned, ok := err.(interface{ Pos() token.Pos }); ok {
+		return positioned.Pos()
+	}
+	return token.NoPos
+}
+
+func minInt(left int, right int) int {
+	if left < right {
+		return left
+	}
+	return right
+}
+
+func maxInt(left int, right int) int {
+	if left > right {
+		return left
+	}
+	return right
 }
 
 func problemSeverityRank(severity string) int {

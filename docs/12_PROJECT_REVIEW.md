@@ -29,7 +29,7 @@ Risks to watch:
 
 - `internal/ui/shell` is split into many files, which is good, but it still carries a lot of orchestration state. Future UI work should extract smaller controllers/models before adding deeper editor, connector, and assistant behavior.
 - Several preserved Wails docs still describe active behavior using `app/internal` and React/Wails terms. They must be treated as reference-history until rewritten.
-- The native editor is functional but not yet IDE-grade. Native outline, searchable go-to-symbol, local go-to-definition, jumpable Document Map, first lightweight Syntax tab, read-only highlighted syntax preview, breadcrumbs, explicit save encoding controls, deterministic Go/JSON format actions, safe Markdown/config/SQL/Dockerfile/text whitespace formatting, Wails-style secondary split preview selection, and live find match counts have started, while active-editor inline syntax styling and future LSP/deeper cross-file language actions still need deliberate follow-through.
+- The native editor is functional but not yet IDE-grade. Native outline, searchable go-to-symbol, local go-to-definition, jumpable Document Map, first lightweight Syntax tab, read-only highlighted syntax preview, Problems syntax diagnostics for JSON/Go/YAML/TOML, breadcrumbs, explicit save encoding controls, deterministic Go/JSON format actions, safe Markdown/config/SQL/Dockerfile/text whitespace formatting, Wails-style secondary split preview selection, and live find match counts have started, while active-editor inline syntax styling and future LSP/deeper cross-file language actions still need deliberate follow-through.
 - External database profile flows and Windows credential vault behavior have native parity baselines; connector sync jobs are still future work.
 - Long-running work is only partially routed through durable jobs. OCR, dump imports, connector pulls, report generation, indexing, and long agent runs must not be wired directly to UI callbacks.
 
@@ -41,7 +41,7 @@ Implemented in `nexus-app/`:
 - Workspace tree with lazy loading, ignored-path controls, file operations, context menus, and Git badges from manual refresh.
 - File previews for text/code, Markdown, images, CSV/TSV, DOCX, PDF text, XLSX-derived rows, and binary metadata.
 - Editor tab lifecycle with pinned ordering, dirty markers, safe save, revert, and explicit discard confirmation for modified tabs.
-- Search and Problems panels using bounded preview-safe reads.
+- Search and Problems panels using bounded preview-safe reads, including local syntax diagnostics for common code/config files.
 - Git status/diff panel with directory-grouped changes, unified/split/diff-only views, hunk navigation, file-level stage/unstage, and hunk stage/unstage.
 - Task discovery/run jobs for npm, Go tests, Python pytest, Cargo tests, and Docker Compose config validation.
 - Data profiling/query/SQL/notebooks for CSV, TSV, JSON, NDJSON, XLSX, logs, Parquet metadata, and SQLite files.

@@ -161,6 +161,7 @@ Goal: recreate the useful local project workbench without Wails or React.
 - [x] Add first project-tree reveal/collapse controls and ignored-path visibility affordances.
 - [x] Add first native workspace path/content search service and bottom result panel.
 - [x] Add first native Problems service and bottom panel from the bounded marker/JSON scanner.
+- [x] Add native Problems language diagnostics for Go, YAML, and TOML syntax using bounded preview-safe reads.
 
 Exit criteria:
 
@@ -394,8 +395,8 @@ The Fyne migration must not drop product ambition, but this section is intention
 - [x] Safe edit preview/apply/rollback for text, code, patches, appends, encoding-aware writes, and agent-safe mutation tools.
 - [x] Workspace search over paths, previewable text, artifacts, chat history, and lightweight regex content matches.
 - [x] Expand workspace search to return multiple content matches per file with bounded per-file caps.
-- [x] Problems panel for TODO/FIXME/HACK/BUG markers, merge conflicts, and JSON errors.
-- [ ] Problems panel language diagnostics beyond lightweight local scans.
+- [x] Problems panel for TODO/FIXME/HACK/BUG markers, merge conflicts, JSON errors, and Go/YAML/TOML syntax diagnostics.
+- [ ] Problems panel deeper semantic diagnostics beyond local syntax scans.
 - [x] Git status, branch, changed-file tree, staged/unstaged groups, file diff, split/unified/diff-only views, hunk actions, AI diff summary, and commit draft.
 - [x] Port native read-only Git history and blame service/UI from Wails.
 - [x] Port native read-only Git history/blame agent context tools from Wails.
