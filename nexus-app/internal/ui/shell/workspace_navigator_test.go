@@ -96,6 +96,25 @@ func TestNavigatorVisibilitySummary(t *testing.T) {
 	if visible != "6 shown, 2 ignored visible where safe" {
 		t.Fatalf("unexpected visible summary: %q", visible)
 	}
+	truncated := navigatorVisibilitySummary(false, domain.ScanSummary{Included: 600, EntryCap: 1})
+	if truncated != "600 shown, 1 folder(s) clipped by entry cap" {
+		t.Fatalf("unexpected truncated summary: %q", truncated)
+	}
+	truncatedWithIgnored := navigatorVisibilitySummary(false, domain.ScanSummary{Included: 600, Ignored: 3, EntryCap: 2})
+	if truncatedWithIgnored != "600 shown, 3 ignored hidden, 2 folder(s) clipped by entry cap" {
+		t.Fatalf("unexpected ignored truncated summary: %q", truncatedWithIgnored)
+	}
+}
+
+func TestTreeStoreVisibleSummaryAggregatesLoadedEntryCaps(t *testing.T) {
+	store := &treeStore{summaries: map[string]domain.ScanSummary{
+		"":     {Included: 4, EntryCap: 1},
+		"docs": {Included: 600, EntryCap: 1},
+	}}
+	summary := store.visibleSummary()
+	if summary.Included != 4 || summary.EntryCap != 2 {
+		t.Fatalf("unexpected visible summary: %#v", summary)
+	}
 }
 
 func TestNavigatorPasteDirectoryUsesSelectionKind(t *testing.T) {

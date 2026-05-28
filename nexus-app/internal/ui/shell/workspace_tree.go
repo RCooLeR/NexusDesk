@@ -90,6 +90,15 @@ func (s *treeStore) summary(parentID string) domain.ScanSummary {
 	return s.summaries[parentID]
 }
 
+func (s *treeStore) visibleSummary() domain.ScanSummary {
+	summary := s.summary("")
+	summary.EntryCap = 0
+	for _, loaded := range s.summaries {
+		summary.EntryCap += loaded.EntryCap
+	}
+	return summary
+}
+
 func (s *treeStore) badge(relPath string) string {
 	return s.badges[relPath]
 }
@@ -119,6 +128,7 @@ func newWorkspaceTree(
 	badges map[string]string,
 	onSelected func(domain.WorkspaceNode),
 	onContext func(domain.WorkspaceNode, *fyne.PointEvent),
+	onLoaded func(string, domain.ScanSummary),
 ) (*widget.Tree, *treeStore) {
 	store := newTreeStore(state.Workspace(), service, badges)
 	tree := widget.NewTree(
@@ -155,6 +165,9 @@ func newWorkspaceTree(
 	tree.OnBranchOpened = func(uid widget.TreeNodeID) {
 		if err := store.load(uid); err != nil {
 			return
+		}
+		if onLoaded != nil {
+			onLoaded(uid, store.summary(uid))
 		}
 		tree.Refresh()
 	}

@@ -42,6 +42,7 @@ func (v *View) newWorkspaceNavigator() fyne.CanvasObject {
 		widget.NewButtonWithIcon("", theme.DocumentCreateIcon(), v.promptRenameFile),
 		widget.NewButtonWithIcon("", theme.DeleteIcon(), v.confirmDeleteFile),
 	)
+	var refreshVisibility func()
 	tree, store := newWorkspaceTree(v.state, v.workspaceService, v.gitFileBadges, func(node domain.WorkspaceNode) {
 		summary.SetText(navigatorSelectionSummary(node.RelPath))
 		v.openWorkspaceNode(node)
@@ -49,9 +50,13 @@ func (v *View) newWorkspaceNavigator() fyne.CanvasObject {
 		v.state.SetSelectedPath(node.RelPath)
 		summary.SetText(navigatorSelectionSummary(node.RelPath))
 		v.showNavigatorContextMenu(node, event)
+	}, func(string, domain.ScanSummary) {
+		if refreshVisibility != nil {
+			refreshVisibility()
+		}
 	})
-	refreshVisibility := func() {
-		visibility.SetText(navigatorVisibilitySummary(store.includeIgnored, store.summary("")))
+	refreshVisibility = func() {
+		visibility.SetText(navigatorVisibilitySummary(store.includeIgnored, store.visibleSummary()))
 	}
 	refreshVisibility()
 	showIgnored := widget.NewCheck("Show ignored", func(include bool) {
@@ -105,13 +110,17 @@ func navigatorSelectionSummary(selected string) string {
 }
 
 func navigatorVisibilitySummary(includeIgnored bool, summary domain.ScanSummary) string {
+	truncation := ""
+	if summary.EntryCap > 0 {
+		truncation = fmt.Sprintf(", %d folder(s) clipped by entry cap", summary.EntryCap)
+	}
 	if includeIgnored {
-		return fmt.Sprintf("%d shown, %d ignored visible where safe", summary.Included, summary.Ignored)
+		return fmt.Sprintf("%d shown, %d ignored visible where safe%s", summary.Included, summary.Ignored, truncation)
 	}
 	if summary.Ignored == 0 {
-		return fmt.Sprintf("%d shown", summary.Included)
+		return fmt.Sprintf("%d shown%s", summary.Included, truncation)
 	}
-	return fmt.Sprintf("%d shown, %d ignored hidden", summary.Included, summary.Ignored)
+	return fmt.Sprintf("%d shown, %d ignored hidden%s", summary.Included, summary.Ignored, truncation)
 }
 
 func navigatorActionOptions(selected string, kind domain.WorkspaceNodeKind, hasClipboard bool) []string {
