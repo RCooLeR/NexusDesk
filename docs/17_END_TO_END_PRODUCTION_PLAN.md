@@ -97,6 +97,7 @@ The Fyne migration is correct because the desired product is native, local-first
 - `app-wails/`: reference implementation only until explicit freeze/archive decision.
 - Detailed package ownership is captured in `docs/23_INTERNAL_PACKAGE_OWNERSHIP.md` and exposed in-product through Help and the command palette.
 - Contributor setup, coding standards, validation expectations, and ADR process are captured in `docs/24_CONTRIBUTOR_SETUP_AND_STANDARDS.md` and exposed in-product through Help and the command palette.
+- The first framework-free performance profiling harness is documented in `docs/25_PERFORMANCE_PROFILING_HARNESS.md` and implemented under `nexus-app/internal/services/perf`.
 
 ### 3.2 Non-Negotiable Architecture Rules
 
@@ -536,7 +537,7 @@ The checklist below is intentionally large. `tracker.md` should keep task-level 
 - [ ] Continue extracting `internal/ui/shell` controllers by responsibility.
 - [ ] Define shell state ownership boundaries: workspace, editor, assistant, data, artifacts, jobs, diagnostics.
 - [x] Add package-level architecture docs for services and UI shell.
-- [ ] Add performance profiling harness for shell redraw, activity log, data grid, large search, and large artifacts.
+- [x] Add performance profiling harness for shell redraw, activity log, data grid, large search, and large artifacts.
 
 ### 7.3 P0: Safety And Trust
 
@@ -680,10 +681,10 @@ Initial targets:
 
 Performance work to add:
 
-- Large workspace smoke fixture.
-- Large CSV/query/grid fixture.
-- Long chat/agent session fixture.
-- Large artifact directory fixture.
+- [x] Large workspace smoke fixture baseline through `internal/services/perf`.
+- [x] Large CSV/query/grid fixture baseline through `internal/services/perf`.
+- [ ] Long chat/agent session fixture.
+- [x] Large artifact directory fixture baseline through `internal/services/perf`.
 - Startup/folder-open timing logs in diagnostics.
 - Memory snapshot or profiling recipe for release candidates.
 

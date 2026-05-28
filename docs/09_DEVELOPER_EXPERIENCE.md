@@ -21,6 +21,14 @@ cd nexus-app
 .\scripts\dev-env.ps1 -Run
 ```
 
+Performance smoke for service-level hot paths:
+
+```powershell
+cd nexus-app
+go test ./internal/services/perf
+go test ./internal/services/perf -bench . -benchmem
+```
+
 Current workstation status:
 
 - MSYS2 UCRT64 GCC is installed under `C:\msys64\ucrt64\bin`.
@@ -77,6 +85,7 @@ Do not document future directories as existing until they are created.
 ## Architecture Rules
 
 See `docs/23_INTERNAL_PACKAGE_OWNERSHIP.md` for the detailed package ownership map and change checklist. See `docs/24_CONTRIBUTOR_SETUP_AND_STANDARDS.md` for setup, coding standards, testing expectations, documentation rules, and ADR process.
+See `docs/25_PERFORMANCE_PROFILING_HARNESS.md` for the first framework-free performance smoke harness.
 
 - Keep `main.go` thin.
 - Keep framework-free domain types in `internal/domain`.

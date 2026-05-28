@@ -27,6 +27,7 @@ This document is the contributor-facing ownership map for the Fyne-native `nexus
 | `services/protectedsecret` | OS-protected secret storage via Windows DPAPI, macOS Keychain, Linux Secret Service/libsecret, and unsupported-platform refusal | UI can display redacted values only. |
 | `services/tools` | Deterministic agent tool descriptors, risk metadata, argument parsing, dispatch, approval-gated high-risk tool execution | Arbitrary shell remains out of scope until explicitly designed. |
 | `services/jobs` | Job IDs, status, logs, cancellation, retry state, retention policy, repository hooks | Slow workflows should route through jobs before UI exposure. |
+| `services/perf` | Framework-free performance smoke harnesses for shell-model, activity, data-grid, search, and artifact hot paths | It must stay deterministic and avoid desktop-window dependencies. |
 | `services/startup` | App-session recovery markers and previous unclean-exit detection | Home/Diagnostics render this state; they do not own marker semantics. |
 | `services/metadata` | SQLite metadata, schema, jobs/tasks/chats/approvals/artifacts/SQL/agent/tool records, Wails compatibility import, backup/recovery | UI and agent code should not read SQLite directly. |
 | `services/issuereport` | Redacted diagnostics bundles and workspace-state evidence export | Workspace contents remain opt-in, not default. |
