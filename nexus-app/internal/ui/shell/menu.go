@@ -26,6 +26,7 @@ func (v *View) mainMenu() *fyne.MainMenu {
 	findReplace := menuItem("Find / Replace", shortcutFindReplace(), v.openFindReplaceDialog)
 	safeAgentGuide := fyne.NewMenuItemWithIcon("Safe Agent Guide", theme.HelpIcon(), v.openSafeAgentGuideTab)
 	betaFeedbackGuide := fyne.NewMenuItemWithIcon("Beta Feedback & Release Notes", theme.DocumentIcon(), v.openBetaFeedbackGuideTab)
+	smokeChecklistGuide := fyne.NewMenuItemWithIcon("Clean-Machine Smoke Checklist", theme.ConfirmIcon(), v.openSmokeChecklistGuideTab)
 	about := fyne.NewMenuItemWithIcon("About Nexus", theme.InfoIcon(), v.showAbout)
 
 	return fyne.NewMainMenu(
@@ -66,7 +67,7 @@ func (v *View) mainMenu() *fyne.MainMenu {
 			fyne.NewMenuItem("Refresh Activity", func() { v.activityLog.Refresh() }),
 			menuItem("Command Palette", shortcutCommandPalette(), v.openCommandPaletteDialog),
 		),
-		fyne.NewMenu("Help", safeAgentGuide, betaFeedbackGuide, fyne.NewMenuItemSeparator(), about),
+		fyne.NewMenu("Help", safeAgentGuide, betaFeedbackGuide, smokeChecklistGuide, fyne.NewMenuItemSeparator(), about),
 	)
 }
 
@@ -94,4 +95,8 @@ func (v *View) openSafeAgentGuideTab() {
 
 func (v *View) openBetaFeedbackGuideTab() {
 	v.addPlaceholderTab("Beta Feedback", userGuideSvc.BetaFeedbackMarkdown())
+}
+
+func (v *View) openSmokeChecklistGuideTab() {
+	v.addPlaceholderTab("Smoke Checklist", userGuideSvc.CleanMachineSmokeChecklistMarkdown())
 }

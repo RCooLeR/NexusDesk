@@ -67,6 +67,7 @@ func TestCommandPaletteIncludesSafeAgentGuide(t *testing.T) {
 	commands := view.commandPaletteActions()
 	foundBetaFeedback := false
 	foundSafeAgent := false
+	foundSmokeChecklist := false
 	for _, command := range commands {
 		switch command.ID {
 		case "help.safe_agent":
@@ -79,10 +80,15 @@ func TestCommandPaletteIncludesSafeAgentGuide(t *testing.T) {
 				t.Fatalf("unexpected beta-feedback command: %#v", command)
 			}
 			foundBetaFeedback = true
+		case "help.smoke_checklist":
+			if command.Title != "Clean-Machine Smoke Checklist" || command.Group != "Help" || command.Run == nil {
+				t.Fatalf("unexpected smoke-checklist command: %#v", command)
+			}
+			foundSmokeChecklist = true
 		}
 	}
-	if !foundSafeAgent || !foundBetaFeedback {
-		t.Fatalf("missing help commands: safe_agent=%t beta_feedback=%t in %#v", foundSafeAgent, foundBetaFeedback, commands)
+	if !foundSafeAgent || !foundBetaFeedback || !foundSmokeChecklist {
+		t.Fatalf("missing help commands: safe_agent=%t beta_feedback=%t smoke_checklist=%t in %#v", foundSafeAgent, foundBetaFeedback, foundSmokeChecklist, commands)
 	}
 }
 

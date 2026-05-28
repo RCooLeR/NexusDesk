@@ -7,7 +7,7 @@ Reference app: `app-wails/`
 
 This document combines the latest project review, the Wails feature inventory, the production readiness plan, Claude's static findings, and the JetBrains-style UI references provided by the product owner. It exists so repeated development sessions keep the same product idea in view: NexusDesk is a native, local-first agentic workbench for code, data, documents, artifacts, operations, and assistant-assisted development.
 
-`tracker.md` remains the task-level checklist. `docs/13_PRODUCTION_READINESS.md` remains the release-gate map. `docs/18_SAFE_AGENT_USER_GUIDE.md` is the private-beta safety guide for agent use, approvals, rollbacks, local data, connector credentials, jobs, diagnostics, and issue reports. `docs/19_BETA_FEEDBACK_AND_RELEASE_NOTES.md` defines the private-beta feedback and release-note loop. This file is the end-to-end product and architecture plan that explains why each remaining task matters and what finished should look like.
+`tracker.md` remains the task-level checklist. `docs/13_PRODUCTION_READINESS.md` remains the release-gate map. `docs/18_SAFE_AGENT_USER_GUIDE.md` is the private-beta safety guide for agent use, approvals, rollbacks, local data, connector credentials, jobs, diagnostics, and issue reports. `docs/19_BETA_FEEDBACK_AND_RELEASE_NOTES.md` defines the private-beta feedback and release-note loop. `docs/20_CLEAN_MACHINE_SMOKE_CHECKLIST.md` defines release-candidate clean-machine smoke coverage. This file is the end-to-end product and architecture plan that explains why each remaining task matters and what finished should look like.
 
 ## 1. Product North Star
 
@@ -207,6 +207,7 @@ Already available:
 - Source/model footer diagnostics.
 - In-product Safe Agent Guide from Help and the command palette.
 - In-product Beta Feedback and Release Notes guide from Help and the command palette.
+- In-product Clean-Machine Smoke Checklist from Help and the command palette.
 - Line-aware citations, bounded snippets, evidence labels, weak-evidence warnings, stale-source warnings, cited/uncited coverage, unverified/out-of-context citation diagnostics.
 - Agent runtime with plan updates, bounded observations, emergency backend loop guard, tool dispatcher, audit, final fallback.
 - Agent tools for context, search, problems, Git, tasks, artifacts, datasets, SQLite, documents, operations, safe file mutations, rollback, web fetch, and artifact regeneration.
@@ -514,6 +515,7 @@ The checklist below is intentionally large. `tracker.md` should keep task-level 
 - [x] Add master production plan with JetBrains-like UI target.
 - [x] Add Safe Agent User Guide and expose it in-product.
 - [x] Add beta feedback and release-notes guide and expose it in-product.
+- [x] Add clean-machine smoke checklist and expose it in-product.
 - [ ] Keep `docs/12_PROJECT_REVIEW.md`, `docs/13_PRODUCTION_READINESS.md`, `docs/15_WAILS_FEATURE_INVENTORY.md`, and `tracker.md` synchronized after every major milestone.
 - [ ] Add package ownership documentation for every major `internal/` area.
 - [ ] Add contributor setup, coding standards, and ADR index.
@@ -644,7 +646,7 @@ The checklist below is intentionally large. `tracker.md` should keep task-level 
 - [ ] Installer/update/uninstall validation.
 - [ ] Antivirus false-positive mitigation notes.
 - [x] Release notes and beta feedback loop.
-- [ ] Clean-machine smoke checklist for each supported OS.
+- [x] Clean-machine smoke checklist for each supported OS.
 
 ### 7.11 P2: Extensibility And Community
 

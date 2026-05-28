@@ -189,6 +189,13 @@ func (v *View) commandPaletteActions() []commandPaletteAction {
 			Group:  "Help",
 			Run:    v.openBetaFeedbackGuideTab,
 		},
+		{
+			ID:     "help.smoke_checklist",
+			Title:  "Clean-Machine Smoke Checklist",
+			Detail: "Open release-candidate smoke checks for install, launch, workspace, assistant, data, diagnostics, and uninstall.",
+			Group:  "Help",
+			Run:    v.openSmokeChecklistGuideTab,
+		},
 		v.bottomPanelCommand("view.search", "Search", "Open workspace path and content search results.", "Workbench"),
 		v.bottomPanelCommand("view.problems", "Problems", "Open syntax and workspace diagnostics.", "Workbench"),
 		v.bottomPanelCommand("view.git", "Git", "Open status, diff, history, blame, and hunk actions.", "Workbench"),
