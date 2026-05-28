@@ -12,7 +12,7 @@ func TestStoreLoadsDefaultsWhenMissing(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Load returned error: %v", err)
 	}
-	if settings.Provider != Defaults().Provider || settings.Model == "" {
+	if settings.Provider != Defaults().Provider || settings.Model != "" {
 		t.Fatalf("expected defaults, got %#v", settings)
 	}
 }
@@ -51,5 +51,12 @@ func TestStoreNormalizesAPIKeyWhitespace(t *testing.T) {
 	settings := normalized(Settings{APIKey: "  abc123  "})
 	if settings.APIKey != "abc123" {
 		t.Fatalf("expected trimmed API key, got %#v", settings)
+	}
+}
+
+func TestStoreDoesNotInventDefaultModel(t *testing.T) {
+	settings := normalized(Settings{Model: "  "})
+	if settings.Model != "" {
+		t.Fatalf("expected empty model to remain explicit, got %#v", settings)
 	}
 }

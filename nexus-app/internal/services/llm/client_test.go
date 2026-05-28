@@ -153,6 +153,16 @@ func TestChatSendsOllamaContextOptions(t *testing.T) {
 	}
 }
 
+func TestChatRequiresExplicitModel(t *testing.T) {
+	_, err := NewClientWithHTTPClient(http.DefaultClient).Chat(context.Background(), Config{
+		Provider: "ollama",
+		BaseURL:  "http://localhost:11434/v1",
+	}, ChatRequest{Prompt: "hi"})
+	if err == nil || !strings.Contains(err.Error(), "LLM model is required") {
+		t.Fatalf("expected missing model error, got %v", err)
+	}
+}
+
 func TestProbeModels(t *testing.T) {
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if r.URL.Path != "/v1/models" {

@@ -104,9 +104,6 @@ func normalizeConfig(config Config) Config {
 	if config.BaseURL == "" {
 		config.BaseURL = defaults.BaseURL
 	}
-	if config.Model == "" {
-		config.Model = defaults.Model
-	}
 	if config.ContextTokens <= 0 {
 		config.ContextTokens = defaults.ContextTokens
 	}

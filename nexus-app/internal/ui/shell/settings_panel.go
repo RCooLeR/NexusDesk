@@ -44,7 +44,7 @@ func (v *View) newSettingsPanel() fyne.CanvasObject {
 	baseURL.SetText(current.BaseURL)
 	model := widget.NewEntry()
 	model.SetText(current.Model)
-	model.SetPlaceHolder("qwen2.5-coder:14b, llama3.2:3b, gpt-4.1-mini, ...")
+	model.SetPlaceHolder("Choose from Test connection or type a model ID")
 	apiKey := widget.NewPasswordEntry()
 	apiKey.SetText(current.APIKey)
 	contextTokens := widget.NewEntry()
@@ -59,7 +59,7 @@ func (v *View) newSettingsPanel() fyne.CanvasObject {
 		Items: []*widget.FormItem{
 			widget.NewFormItem("Provider", provider),
 			widget.NewFormItem("Base URL", baseURL),
-			widget.NewFormItem("Model", model),
+			widget.NewFormItem("Model for chat", model),
 			widget.NewFormItem("API key", apiKey),
 			widget.NewFormItem("Context tokens", contextTokens),
 			widget.NewFormItem("Response reserve", responseReserve),

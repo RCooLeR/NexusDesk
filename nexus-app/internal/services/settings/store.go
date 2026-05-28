@@ -66,9 +66,7 @@ func normalized(settings Settings) Settings {
 	if settings.BaseURL == "" {
 		settings.BaseURL = defaults.BaseURL
 	}
-	if settings.Model == "" {
-		settings.Model = defaults.Model
-	}
+	settings.Model = strings.TrimSpace(settings.Model)
 	if settings.ContextTokens <= 0 {
 		settings.ContextTokens = defaults.ContextTokens
 	}

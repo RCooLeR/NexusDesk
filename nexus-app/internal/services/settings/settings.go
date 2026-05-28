@@ -13,7 +13,7 @@ func Defaults() Settings {
 	return Settings{
 		Provider:              "ollama",
 		BaseURL:               "http://localhost:11434/v1",
-		Model:                 "qwen2.5-coder:14b",
+		Model:                 "",
 		ContextTokens:         32768,
 		ResponseReserveTokens: 4096,
 	}

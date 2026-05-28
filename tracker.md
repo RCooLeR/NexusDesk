@@ -562,7 +562,7 @@ The Fyne migration must not drop product ambition, but this section is intention
 - [x] Update welcome flow with immediate open action from startup screen.
 - [x] Remove migration wording from About dialog and align with release messaging.
 - [x] Define and document non-Windows CI/build support matrix and execution plan.
-- [ ] Revisit default LLM model strategy to avoid hard-coded defaults that rarely match local setups.
+- [x] Revisit default LLM model strategy to avoid hard-coded defaults that rarely match local setups.
 - [ ] Replace locale-bound mutation-claim heuristics with mutation-observation-driven verification.
 - [ ] Expand safe task execution whitelist beyond current npm/go/compose-only support.
 - [ ] Replace shell string execution for discovered tasks with argument-based process invocation.
