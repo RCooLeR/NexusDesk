@@ -2,6 +2,7 @@ package settings
 
 type Settings struct {
 	Provider              string
+	Protocol              string
 	BaseURL               string
 	Model                 string
 	APIKey                string
@@ -9,9 +10,24 @@ type Settings struct {
 	ResponseReserveTokens int
 }
 
+type ProviderProfile struct {
+	ID             string
+	Label          string
+	Protocol       string
+	DefaultBaseURL string
+	RequiresAPIKey bool
+	RuntimeProbe   bool
+}
+
+const (
+	ProtocolOpenAICompatible       = "openai-compatible"
+	ProtocolOllamaOpenAICompatible = "ollama-openai-compatible"
+)
+
 func Defaults() Settings {
 	return Settings{
 		Provider:              "ollama",
+		Protocol:              ProtocolOllamaOpenAICompatible,
 		BaseURL:               "http://localhost:11434/v1",
 		Model:                 "",
 		ContextTokens:         32768,
@@ -32,5 +48,48 @@ func ModelOptions() []string {
 }
 
 func ProviderOptions() []string {
-	return []string{"ollama", "openai-compatible"}
+	profiles := ProviderProfiles()
+	options := make([]string, 0, len(profiles))
+	for _, profile := range profiles {
+		options = append(options, profile.ID)
+	}
+	return options
+}
+
+func ProtocolOptions() []string {
+	return []string{ProtocolOllamaOpenAICompatible, ProtocolOpenAICompatible}
+}
+
+func ProviderProfiles() []ProviderProfile {
+	return []ProviderProfile{
+		{
+			ID:             "ollama",
+			Label:          "Ollama",
+			Protocol:       ProtocolOllamaOpenAICompatible,
+			DefaultBaseURL: "http://localhost:11434/v1",
+			RuntimeProbe:   true,
+		},
+		{
+			ID:             "openai-compatible",
+			Label:          "OpenAI-compatible",
+			Protocol:       ProtocolOpenAICompatible,
+			DefaultBaseURL: "http://localhost:1234/v1",
+		},
+		{
+			ID:             "custom-openai-compatible",
+			Label:          "Custom OpenAI-compatible",
+			Protocol:       ProtocolOpenAICompatible,
+			DefaultBaseURL: "https://api.openai.com/v1",
+			RequiresAPIKey: true,
+		},
+	}
+}
+
+func ProviderProfileByID(id string) (ProviderProfile, bool) {
+	for _, profile := range ProviderProfiles() {
+		if profile.ID == id {
+			return profile, true
+		}
+	}
+	return ProviderProfile{}, false
 }

@@ -9,9 +9,12 @@ import (
 )
 
 func TestSettingsFromFormParsesTokens(t *testing.T) {
-	settings, err := settingsFromForm("ollama", "http://localhost:11434/v1", "qwen2.5-coder:14b", "api-key", "32768", "4096")
+	settings, err := settingsFromForm("ollama", "ollama-openai-compatible", "http://localhost:11434/v1", "qwen2.5-coder:14b", "api-key", "32768", "4096")
 	if err != nil {
 		t.Fatalf("settingsFromForm returned error: %v", err)
+	}
+	if settings.Protocol != "ollama-openai-compatible" {
+		t.Fatalf("expected protocol to round-trip, got %#v", settings)
 	}
 	if settings.APIKey != "api-key" {
 		t.Fatalf("expected API key to round-trip, got %#v", settings)
@@ -22,7 +25,7 @@ func TestSettingsFromFormParsesTokens(t *testing.T) {
 }
 
 func TestSettingsFromFormRejectsInvalidTokens(t *testing.T) {
-	if _, err := settingsFromForm("ollama", "http://localhost:11434/v1", "qwen2.5-coder:14b", "api-key", "bad", "4096"); err == nil {
+	if _, err := settingsFromForm("ollama", "ollama-openai-compatible", "http://localhost:11434/v1", "qwen2.5-coder:14b", "api-key", "bad", "4096"); err == nil {
 		t.Fatal("expected invalid context tokens to fail")
 	}
 }
@@ -32,13 +35,14 @@ func TestFormatSettingsProbeResultSummarizesProvider(t *testing.T) {
 		OK:           true,
 		Message:      "Connected to provider.",
 		Endpoint:     "http://localhost:11434/v1/models",
+		Protocol:     "ollama-openai-compatible",
 		ModelCount:   2,
 		ModelSample:  []string{"llama3.2:3b", "qwen2.5-coder:14b"},
 		Capabilities: []string{"model-list", "chat-completions"},
 		Warnings:     []string{"Configured model was not returned by the provider."},
 		Runtime:      &llmSvc.RuntimeStatus{Message: "Selected model is loaded on CPU."},
 	}, nil)
-	for _, part := range []string{"Connected to provider.", "Models: 2", "Capabilities:", "Runtime:", "Warnings:"} {
+	for _, part := range []string{"Connected to provider.", "Protocol: ollama-openai-compatible", "Models: 2", "Capabilities:", "Runtime:", "Warnings:"} {
 		if !strings.Contains(message, part) {
 			t.Fatalf("expected probe summary to contain %q, got %q", part, message)
 		}

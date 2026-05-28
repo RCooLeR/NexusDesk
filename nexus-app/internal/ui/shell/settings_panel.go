@@ -40,8 +40,20 @@ func (v *View) newSettingsPanel() fyne.CanvasObject {
 	}
 	provider := widget.NewSelect(settingsSvc.ProviderOptions(), nil)
 	provider.SetSelected(current.Provider)
+	protocol := widget.NewSelect(settingsSvc.ProtocolOptions(), nil)
+	protocol.SetSelected(current.Protocol)
 	baseURL := widget.NewEntry()
 	baseURL.SetText(current.BaseURL)
+	provider.OnChanged = func(id string) {
+		profile, ok := settingsSvc.ProviderProfileByID(id)
+		if !ok {
+			return
+		}
+		protocol.SetSelected(profile.Protocol)
+		if strings.TrimSpace(baseURL.Text) == "" || baseURL.Text == settingsSvc.Defaults().BaseURL {
+			baseURL.SetText(profile.DefaultBaseURL)
+		}
+	}
 	model := widget.NewEntry()
 	model.SetText(current.Model)
 	model.SetPlaceHolder("Choose from Test connection or type a model ID")
@@ -58,6 +70,7 @@ func (v *View) newSettingsPanel() fyne.CanvasObject {
 	form := &widget.Form{
 		Items: []*widget.FormItem{
 			widget.NewFormItem("Provider", provider),
+			widget.NewFormItem("Protocol", protocol),
 			widget.NewFormItem("Base URL", baseURL),
 			widget.NewFormItem("Model for chat", model),
 			widget.NewFormItem("API key", apiKey),
@@ -65,7 +78,7 @@ func (v *View) newSettingsPanel() fyne.CanvasObject {
 			widget.NewFormItem("Response reserve", responseReserve),
 		},
 		OnSubmit: func() {
-			next, err := settingsFromForm(provider.Selected, baseURL.Text, model.Text, apiKey.Text, contextTokens.Text, responseReserve.Text)
+			next, err := settingsFromForm(provider.Selected, protocol.Selected, baseURL.Text, model.Text, apiKey.Text, contextTokens.Text, responseReserve.Text)
 			if err != nil {
 				dialog.ShowError(err, v.window)
 				return
@@ -79,7 +92,7 @@ func (v *View) newSettingsPanel() fyne.CanvasObject {
 		SubmitText: "Save",
 	}
 	testConnection.OnTapped = func() {
-		next, err := settingsFromForm(provider.Selected, baseURL.Text, model.Text, apiKey.Text, contextTokens.Text, responseReserve.Text)
+		next, err := settingsFromForm(provider.Selected, protocol.Selected, baseURL.Text, model.Text, apiKey.Text, contextTokens.Text, responseReserve.Text)
 		if err != nil {
 			dialog.ShowError(err, v.window)
 			return
@@ -111,7 +124,7 @@ func (v *View) newSettingsPanel() fyne.CanvasObject {
 	))
 }
 
-func settingsFromForm(provider string, baseURL string, model string, apiKey string, contextTokensValue string, responseReserveValue string) (settingsSvc.Settings, error) {
+func settingsFromForm(provider string, protocol string, baseURL string, model string, apiKey string, contextTokensValue string, responseReserveValue string) (settingsSvc.Settings, error) {
 	contextTokens, err := strconv.Atoi(contextTokensValue)
 	if err != nil {
 		return settingsSvc.Settings{}, err
@@ -122,6 +135,7 @@ func settingsFromForm(provider string, baseURL string, model string, apiKey stri
 	}
 	return settingsSvc.Settings{
 		Provider:              provider,
+		Protocol:              protocol,
 		BaseURL:               baseURL,
 		Model:                 model,
 		APIKey:                apiKey,
@@ -144,6 +158,9 @@ func formatSettingsProbeResult(result llmSvc.ProbeResult, err error) string {
 	}
 	if result.Endpoint != "" {
 		parts = append(parts, "Endpoint: "+result.Endpoint)
+	}
+	if protocol := strings.TrimSpace(result.Protocol); protocol != "" {
+		parts = append(parts, "Protocol: "+protocol)
 	}
 	if result.ModelCount > 0 {
 		line := fmt.Sprintf("Models: %d", result.ModelCount)

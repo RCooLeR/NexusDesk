@@ -179,6 +179,32 @@ func TestChatSendsOllamaContextOptions(t *testing.T) {
 	}
 }
 
+func TestChatUsesExplicitOllamaProtocolForOptions(t *testing.T) {
+	var captured chatCompletionRequest
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if err := json.NewDecoder(r.Body).Decode(&captured); err != nil {
+			t.Fatal(err)
+		}
+		_, _ = w.Write([]byte(`{"choices":[{"message":{"content":"ok"}}]}`))
+	}))
+	defer server.Close()
+
+	_, err := NewClientWithHTTPClient(server.Client()).Chat(context.Background(), Config{
+		Provider:              "custom",
+		Protocol:              settingssvc.ProtocolOllamaOpenAICompatible,
+		BaseURL:               server.URL,
+		Model:                 "qwen",
+		ContextTokens:         8192,
+		ResponseReserveTokens: 1024,
+	}, ChatRequest{Prompt: "hi"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if captured.Options["num_ctx"] != float64(8192) || captured.Options["num_predict"] != float64(1024) {
+		t.Fatalf("expected explicit protocol to send Ollama options, got %+v", captured.Options)
+	}
+}
+
 func TestChatRequiresExplicitModel(t *testing.T) {
 	_, err := NewClientWithHTTPClient(http.DefaultClient).Chat(context.Background(), Config{
 		Provider: "ollama",
@@ -241,11 +267,12 @@ func TestProviderErrorDetailIsRedacted(t *testing.T) {
 func TestConfigFromSettingsIncludesAPIKey(t *testing.T) {
 	config := ConfigFromSettings(settingssvc.Settings{
 		Provider: "openai-compatible",
+		Protocol: settingssvc.ProtocolOpenAICompatible,
 		BaseURL:  "http://localhost:1234/v1",
 		Model:    "test-model",
 		APIKey:   "secret",
 	})
-	if config.APIKey != "secret" {
+	if config.APIKey != "secret" || config.Protocol != settingssvc.ProtocolOpenAICompatible {
 		t.Fatalf("expected API key to propagate, got %#v", config)
 	}
 }

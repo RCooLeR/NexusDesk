@@ -11,6 +11,8 @@ import (
 	"net/http"
 	"strings"
 	"time"
+
+	settingssvc "nexusdesk/internal/services/settings"
 )
 
 const chatTimeout = 5 * time.Minute
@@ -229,6 +231,9 @@ func chatSystemPrompt(systemPrompt string) string {
 }
 
 func shouldSendOllamaOptions(config Config) bool {
+	if strings.TrimSpace(config.Protocol) == settingssvc.ProtocolOllamaOpenAICompatible {
+		return true
+	}
 	provider := strings.ToLower(config.Provider)
 	baseURL := strings.ToLower(config.BaseURL)
 	return strings.Contains(provider, "ollama") ||

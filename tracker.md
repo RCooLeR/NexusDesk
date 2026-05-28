@@ -446,7 +446,7 @@ The Fyne migration must not drop product ambition, but this section is intention
 ### AI Assistant And Agent
 
 - [ ] Provider settings for Ollama/OpenAI-compatible endpoints, curated local model catalog, runtime context-window detection, response reserve, GPU diagnostics, and provider probes.
-- [x] Native provider settings for Ollama/OpenAI-compatible endpoints, provider probes, context-window options, response reserve, and Ollama runtime diagnostics.
+- [x] Native provider settings for Ollama/OpenAI-compatible/custom endpoints, explicit protocol flags, provider probes, context-window options, response reserve, and Ollama runtime diagnostics.
 - [x] Add API key input/persistence in native settings and propagate bearer auth into OpenAI-compatible chat/probe config.
 - [ ] Curated native local model catalog, deeper GPU diagnostics, and automatic loaded-model context-window tuning.
 - [x] Streaming chat with selected files/directories/project context, token-budgeted history, persisted turns, and source-path context.
@@ -552,7 +552,7 @@ The Fyne migration must not drop product ambition, but this section is intention
 - [x] Add settings-level LLM connection test action with model count and warning reporting.
 - [x] Surface persistence failures from repository writes in activity/diagnostics.
 - [x] Cancel streaming LLM response handlers promptly when request context is canceled.
-- [ ] Make provider configuration explicit and extensible beyond built-in options with protocol flags.
+- [x] Make provider configuration explicit and extensible beyond built-in options with protocol flags.
 - [x] Clamp agent context budget fallback to safe non-trivial defaults when settings become misconfigured.
 - [x] Scope global shortcuts so native editor copy remains reliable.
 - [x] Improve search snippets to center on match location for long lines.

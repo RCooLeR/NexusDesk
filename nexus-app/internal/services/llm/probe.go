@@ -35,6 +35,7 @@ func (c *Client) Probe(ctx context.Context, config Config) (ProbeResult, error) 
 			OK:           false,
 			Message:      fmt.Sprintf("Provider returned HTTP %d", response.StatusCode),
 			Endpoint:     endpoint,
+			Protocol:     config.Protocol,
 			Capabilities: []string{},
 			Warnings:     []string{},
 		}, nil
@@ -66,6 +67,7 @@ func (c *Client) Probe(ctx context.Context, config Config) (ProbeResult, error) 
 		OK:           true,
 		Message:      message,
 		Endpoint:     endpoint,
+		Protocol:     config.Protocol,
 		ModelCount:   len(modelIDs),
 		ModelSample:  sampleModels(modelIDs),
 		Capabilities: capabilities,

@@ -60,6 +60,7 @@ Users should be able to configure:
 ```json
 {
   "provider": "openai_compatible",
+  "protocol": "openai-compatible",
   "baseUrl": "http://localhost:11434/v1",
   "apiKey": "",
   "model": "qwen2.5-coder:7b",
@@ -90,9 +91,9 @@ Capabilities should be explicit. The app should not assume every model supports 
 
 Current native implementation:
 
-- `nexus-app/internal/services/settings` stores non-secret provider, model, context-window, and response-reserve settings.
+- `nexus-app/internal/services/settings` stores non-secret provider, explicit protocol, model, context-window, and response-reserve settings.
 - Secret persistence and assistant memory/profile parity remain Wails-reference work to port carefully.
-- `nexus-app/internal/services/llm` implements OpenAI-compatible chat/completions, streaming SSE parsing, `/models` probing, Ollama `/api/ps` runtime diagnostics, context-window options, response reserve, and workspace-context sentinel escaping.
+- `nexus-app/internal/services/llm` implements protocol-flagged OpenAI-compatible chat/completions, streaming SSE parsing, `/models` probing, Ollama `/api/ps` runtime diagnostics, context-window options, response reserve, and workspace-context sentinel escaping.
 - `nexus-app/internal/services/assistant` wraps the LLM client for Ask mode and attaches bounded selected-file, directory, project-root, and generated-artifact context packs.
 - `nexus-app/internal/services/agent` owns the native ReAct-style agent loop with plan updates, bounded observations, model-driven tool calls, an emergency backend loop guard, and final-answer behavior.
 - `nexus-app/internal/services/tools` owns the native deterministic tool dispatcher for context, file preview/search/problems, Git status/diff, tasks, rollbacks, approvals, safe file mutations, artifacts, documents, operations files, datasets, and SQLite.

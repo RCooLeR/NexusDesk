@@ -312,7 +312,7 @@ Provider support starts with:
 Current native status:
 
 - `nexus-app/internal/services/llm` implements the OpenAI-compatible chat/completions transport, streaming SSE delta parsing, `/models` probing, Ollama `/api/ps` runtime diagnostics, and context-window/response-reserve request fields.
-- It accepts `llm.Config` and adapts from the native non-secret settings store with `ConfigFromSettings`.
+- It accepts `llm.Config` with an explicit provider protocol flag and adapts from the native non-secret settings store with `ConfigFromSettings`.
 - It keeps workspace context quoted behind Nexus sentinels and escapes fence/sentinel strings from file content before model submission.
 - `nexus-app/internal/services/assistant` wraps the LLM client for the Fyne assistant panel, streams deltas, and attaches bounded context packs from selected workspace files, directories, or the project root.
 

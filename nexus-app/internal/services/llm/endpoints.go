@@ -36,10 +36,11 @@ func ollamaRuntimeEndpoint(config Config) (string, bool) {
 		return "", false
 	}
 	provider := strings.ToLower(config.Provider)
+	protocol := strings.TrimSpace(config.Protocol)
 	host := strings.ToLower(parsed.Hostname())
 	port := parsed.Port()
 	isLocalHost := host == "localhost" || host == "127.0.0.1" || host == "::1"
-	isOllama := strings.Contains(provider, "ollama") || (isLocalHost && port == "11434")
+	isOllama := protocol == "ollama-openai-compatible" || strings.Contains(provider, "ollama") || (isLocalHost && port == "11434")
 	if !isOllama {
 		return "", false
 	}

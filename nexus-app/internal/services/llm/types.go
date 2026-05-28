@@ -12,6 +12,7 @@ import (
 
 type Config struct {
 	Provider              string
+	Protocol              string
 	BaseURL               string
 	Model                 string
 	APIKey                string
@@ -45,6 +46,7 @@ type ProbeResult struct {
 	OK           bool
 	Message      string
 	Endpoint     string
+	Protocol     string
 	ModelCount   int
 	ModelSample  []string
 	Capabilities []string
@@ -85,6 +87,7 @@ func NewClientWithHTTPClient(httpClient *http.Client) *Client {
 func ConfigFromSettings(settings settingssvc.Settings) Config {
 	return Config{
 		Provider:              settings.Provider,
+		Protocol:              settings.Protocol,
 		BaseURL:               settings.BaseURL,
 		Model:                 settings.Model,
 		APIKey:                settings.APIKey,
@@ -96,11 +99,15 @@ func ConfigFromSettings(settings settingssvc.Settings) Config {
 func normalizeConfig(config Config) Config {
 	defaults := settingssvc.Defaults()
 	config.Provider = strings.TrimSpace(config.Provider)
+	config.Protocol = strings.TrimSpace(config.Protocol)
 	config.BaseURL = strings.TrimSpace(config.BaseURL)
 	config.Model = strings.TrimSpace(config.Model)
 	config.APIKey = strings.TrimSpace(config.APIKey)
 	if config.Provider == "" {
 		config.Provider = defaults.Provider
+	}
+	if config.Protocol == "" {
+		config.Protocol = providerProtocol(config.Provider, config.BaseURL)
 	}
 	if config.BaseURL == "" {
 		config.BaseURL = defaults.BaseURL
@@ -115,4 +122,18 @@ func normalizeConfig(config Config) Config {
 		config.ResponseReserveTokens = config.ContextTokens / 4
 	}
 	return config
+}
+
+func providerProtocol(provider string, baseURL string) string {
+	if profile, ok := settingssvc.ProviderProfileByID(strings.TrimSpace(provider)); ok {
+		return profile.Protocol
+	}
+	provider = strings.ToLower(strings.TrimSpace(provider))
+	baseURL = strings.ToLower(strings.TrimSpace(baseURL))
+	if strings.Contains(provider, "ollama") ||
+		strings.Contains(baseURL, "localhost:11434") ||
+		strings.Contains(baseURL, "127.0.0.1:11434") {
+		return settingssvc.ProtocolOllamaOpenAICompatible
+	}
+	return settingssvc.ProtocolOpenAICompatible
 }

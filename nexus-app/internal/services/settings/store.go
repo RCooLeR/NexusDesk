@@ -31,14 +31,14 @@ func (s *Store) Path() string {
 }
 
 func (s *Store) Load() (Settings, error) {
-	settings := Defaults()
 	data, err := os.ReadFile(s.path)
 	if os.IsNotExist(err) {
-		return settings, nil
+		return Defaults(), nil
 	}
 	if err != nil {
 		return Settings{}, err
 	}
+	var settings Settings
 	if err := json.Unmarshal(data, &settings); err != nil {
 		return Settings{}, err
 	}
@@ -59,12 +59,22 @@ func (s *Store) Save(settings Settings) error {
 
 func normalized(settings Settings) Settings {
 	defaults := Defaults()
+	settings.Provider = strings.TrimSpace(settings.Provider)
+	settings.Protocol = strings.TrimSpace(settings.Protocol)
+	settings.BaseURL = strings.TrimSpace(settings.BaseURL)
 	settings.APIKey = strings.TrimSpace(settings.APIKey)
 	if settings.Provider == "" {
 		settings.Provider = defaults.Provider
 	}
+	if settings.Protocol == "" {
+		settings.Protocol = inferProtocol(settings.Provider, settings.BaseURL)
+	}
 	if settings.BaseURL == "" {
-		settings.BaseURL = defaults.BaseURL
+		if profile, ok := ProviderProfileByID(settings.Provider); ok && profile.DefaultBaseURL != "" {
+			settings.BaseURL = profile.DefaultBaseURL
+		} else {
+			settings.BaseURL = defaults.BaseURL
+		}
 	}
 	settings.Model = strings.TrimSpace(settings.Model)
 	if settings.ContextTokens <= 0 {
@@ -77,4 +87,18 @@ func normalized(settings Settings) Settings {
 		settings.ResponseReserveTokens = settings.ContextTokens / 4
 	}
 	return settings
+}
+
+func inferProtocol(provider string, baseURL string) string {
+	if profile, ok := ProviderProfileByID(strings.TrimSpace(provider)); ok {
+		return profile.Protocol
+	}
+	lowerProvider := strings.ToLower(strings.TrimSpace(provider))
+	lowerBaseURL := strings.ToLower(strings.TrimSpace(baseURL))
+	if strings.Contains(lowerProvider, "ollama") ||
+		strings.Contains(lowerBaseURL, "localhost:11434") ||
+		strings.Contains(lowerBaseURL, "127.0.0.1:11434") {
+		return ProtocolOllamaOpenAICompatible
+	}
+	return ProtocolOpenAICompatible
 }
