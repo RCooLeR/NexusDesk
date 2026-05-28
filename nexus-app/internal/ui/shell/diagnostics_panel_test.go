@@ -76,6 +76,7 @@ func TestFormatDiagnosticsSnapshotIncludesCoreSections(t *testing.T) {
 		RecentSQLFailuresList:   []string{"sql-2 [sqlite failed] sample.db: syntax error"},
 		RecentAgentFailuresList: []string{"agent-5 [failed] iter 8 stop max_iterations: loop guard triggered"},
 		ActivityTail:            []string{"Opened workspace E:/workspace", "Ran read-only SQLite query for sample.db"},
+		ProviderGuidance:        []string{"For Ollama, start the runtime with \"ollama serve\" and verify installed models with \"ollama list\"."},
 		StartupRecovery: startupSvc.Status{
 			Path: "C:/Users/example/AppData/Roaming/NexusDesk/startup-session.json",
 		},
@@ -98,6 +99,8 @@ func TestFormatDiagnosticsSnapshotIncludesCoreSections(t *testing.T) {
 		"## Provider",
 		"Probe: ok",
 		"## Provider Runtime",
+		"## Provider Guidance",
+		"ollama serve",
 		"## Startup Recovery",
 		"Status: ok - clean-exit markers are active.",
 		"## Performance Timings",
@@ -257,6 +260,9 @@ func TestCollectDiagnosticsSnapshotIncludesProbeErrorWarning(t *testing.T) {
 	if !strings.Contains(joinedActions, "Open Settings and verify provider base URL, credentials, and selected model.") {
 		t.Fatalf("expected provider remediation action, got %v", snapshot.RecommendedActions)
 	}
+	if !strings.Contains(joinedActions, "ollama serve") {
+		t.Fatalf("expected Ollama-specific remediation action, got %v", snapshot.RecommendedActions)
+	}
 }
 
 func TestCollectDiagnosticsSnapshotMarksNonOKProbeAsWarning(t *testing.T) {
@@ -296,6 +302,9 @@ func TestCollectDiagnosticsSnapshotMarksNonOKProbeAsWarning(t *testing.T) {
 	joinedActions := strings.Join(snapshot.RecommendedActions, "\n")
 	if !strings.Contains(joinedActions, "Run provider probe again after checking model availability and endpoint health.") {
 		t.Fatalf("expected rerun probe action, got %v", snapshot.RecommendedActions)
+	}
+	if !strings.Contains(joinedActions, "API key") {
+		t.Fatalf("expected provider-specific auth guidance, got %v", snapshot.RecommendedActions)
 	}
 }
 

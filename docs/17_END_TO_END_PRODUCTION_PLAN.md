@@ -611,7 +611,7 @@ The checklist below is intentionally large. `tracker.md` should keep task-level 
 - [x] Add assistant/agent auto-routing by selected context for data, SQL, document, image/screenshot, and code tasks.
 - [ ] Wire task-aware model route resolution into future dedicated Data, document, and vision/screenshot model workflows with fallback warnings and persisted route metadata.
 - [ ] Add assistant answer quality smoke tests with fixture workspaces.
-- [ ] Add provider-specific guidance for common local model failures.
+- [x] Add provider-specific guidance for common local model failures in Settings and Diagnostics, covering Ollama runtime startup, auth/base-URL failures, missing configured models, empty model lists, provider health, and unloaded runtime models.
 
 ### 7.7 P1: Artifacts And Documents
 

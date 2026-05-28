@@ -92,7 +92,7 @@ Required:
 - Metadata recovery/export path for `.nexusdesk/metadata`.
 - Search metadata recovery/export path for explicit workspace searches: bounded `.nexusdesk/search/index-metadata.json` manifests store result paths/lines and scan counts without snippets, and corrupt manifests are quarantined before replacement.
 - Backup/export flow for local-first workspace state.
-- Diagnostics panel for app logs, provider status, metadata health, job history, GPU/model runtime, recent failures, and startup/folder-open performance timings with over-budget warnings.
+- Diagnostics panel for app logs, provider status, metadata health, job history, GPU/model runtime, recent failures, provider-specific model/runtime remediation guidance, and startup/folder-open performance timings with over-budget warnings.
 - Job history retention controls and cleanup policy: the Jobs panel can prune successful/canceled completed jobs by count/age while preserving running jobs and failures/timeouts by default.
 - Startup recovery markers and crash/hang triage visibility: launch writes a local session marker, clean exit closes it, and Home/Diagnostics warn when the previous run did not shut down cleanly.
 - Audit coverage for connector jobs, OCR, dump imports, Docker mutations, shell tools, and future high-risk operations.
@@ -127,7 +127,7 @@ Goal: put the app in front of real users while preserving trust.
 Required:
 
 - Onboarding flow for workspace open, model setup, permissions, and local data policy. Implemented as a native Home readiness cockpit with setup health, safety posture, and first actions.
-- First-run diagnostics for missing model endpoint, missing compiler/build toolchain, and unavailable provider. Implemented in the Home readiness cockpit; continue deep runtime probing in Diagnostics.
+- First-run diagnostics for missing model endpoint, missing compiler/build toolchain, and unavailable provider. Implemented in the Home readiness cockpit; Diagnostics now adds provider-specific remediation for common Ollama/OpenAI-compatible failures such as stopped local runtimes, missing models, unloaded models, auth failures, and bad `/v1` base URLs.
 - Issue-report bundle that redacts secrets and excludes workspace contents unless explicitly included. Implemented in Diagnostics as a redacted ZIP export containing diagnostics text, activity tail, environment metadata, workspace-state file names, and no workspace file contents by default.
 - Documentation for safe agent use, approvals, rollbacks, local data, and connector credentials. Implemented in `docs/18_SAFE_AGENT_USER_GUIDE.md` and exposed in-product from Help and the command palette.
 - Beta feedback loop and release notes. Implemented in `docs/19_BETA_FEEDBACK_AND_RELEASE_NOTES.md` and exposed in-product from Help and the command palette.

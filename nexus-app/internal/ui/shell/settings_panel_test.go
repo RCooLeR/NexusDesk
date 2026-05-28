@@ -82,7 +82,11 @@ func TestSettingsRouteHelpersUpdateSelectedRoute(t *testing.T) {
 }
 
 func TestFormatSettingsProbeResultSummarizesProvider(t *testing.T) {
-	message := formatSettingsProbeResult(llmSvc.ProbeResult{
+	message := formatSettingsProbeResultWithConfig(llmSvc.Config{
+		Provider: "ollama",
+		BaseURL:  "http://localhost:11434/v1",
+		Model:    "missing-model:latest",
+	}, llmSvc.ProbeResult{
 		OK:           true,
 		Message:      "Connected to provider.",
 		Endpoint:     "http://localhost:11434/v1/models",
@@ -92,12 +96,13 @@ func TestFormatSettingsProbeResultSummarizesProvider(t *testing.T) {
 		Capabilities: []string{"model-list", "chat-completions"},
 		Warnings:     []string{"Configured model was not returned by the provider."},
 		Runtime: &llmSvc.RuntimeStatus{
-			Message:       "Selected model is loaded on CPU.",
-			SelectedModel: "qwen2.5-coder:14b",
-			LoadedModels:  []llmSvc.RuntimeModel{{Name: "qwen2.5-coder:14b", Model: "qwen2.5-coder:14b", ContextLength: 32768}},
+			Message:             "Selected model is loaded on CPU.",
+			SelectedModel:       "qwen2.5-coder:14b",
+			SelectedModelLoaded: true,
+			LoadedModels:        []llmSvc.RuntimeModel{{Name: "qwen2.5-coder:14b", Model: "qwen2.5-coder:14b", ContextLength: 32768}},
 		},
 	}, nil)
-	for _, part := range []string{"Connected to provider.", "Protocol: ollama-openai-compatible", "Models: 2", "Capabilities:", "Runtime:", "Runtime context: 32768 tokens", "Warnings:"} {
+	for _, part := range []string{"Connected to provider.", "Protocol: ollama-openai-compatible", "Models: 2", "Capabilities:", "Runtime:", "Runtime context: 32768 tokens", "Warnings:", "Guidance:", "ollama pull missing-model:latest"} {
 		if !strings.Contains(message, part) {
 			t.Fatalf("expected probe summary to contain %q, got %q", part, message)
 		}
@@ -105,8 +110,14 @@ func TestFormatSettingsProbeResultSummarizesProvider(t *testing.T) {
 }
 
 func TestFormatSettingsProbeResultHandlesErrors(t *testing.T) {
-	message := formatSettingsProbeResult(llmSvc.ProbeResult{}, errors.New("connection refused"))
+	message := formatSettingsProbeResultWithConfig(llmSvc.Config{
+		Provider: "ollama",
+		BaseURL:  "http://localhost:11434/v1",
+	}, llmSvc.ProbeResult{}, errors.New("connection refused"))
 	if !strings.Contains(message, "connection refused") {
 		t.Fatalf("expected probe error in message, got %q", message)
+	}
+	if !strings.Contains(message, "ollama serve") {
+		t.Fatalf("expected Ollama remediation guidance, got %q", message)
 	}
 }

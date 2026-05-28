@@ -170,9 +170,10 @@ func (v *View) newSettingsPanel() fyne.CanvasObject {
 			if prober == nil {
 				prober = llmSvc.NewClient()
 			}
-			result, probeErr := prober.Probe(ctx, llmSvc.ConfigFromSettings(next))
+			probeConfig := llmSvc.ConfigFromSettings(next)
+			result, probeErr := prober.Probe(ctx, probeConfig)
 			cancel()
-			message := formatSettingsProbeResult(result, probeErr)
+			message := formatSettingsProbeResultWithConfig(probeConfig, result, probeErr)
 			fyne.Do(func() {
 				if probeErr == nil {
 					tuned := llmSvc.SettingsWithRuntimeContext(next, result.Runtime)
@@ -298,8 +299,16 @@ func settingsFromFormWithRoutes(provider string, protocol string, baseURL string
 }
 
 func formatSettingsProbeResult(result llmSvc.ProbeResult, err error) string {
+	return formatSettingsProbeResultWithConfig(llmSvc.Config{}, result, err)
+}
+
+func formatSettingsProbeResultWithConfig(config llmSvc.Config, result llmSvc.ProbeResult, err error) string {
 	if err != nil {
-		return "Connection test failed: " + err.Error()
+		parts := []string{"Connection test failed: " + err.Error()}
+		if guidance := llmSvc.ProviderGuidance(config, result, err); len(guidance) > 0 {
+			parts = append(parts, "Guidance: "+strings.Join(guidance, "; "))
+		}
+		return strings.Join(parts, "\n")
 	}
 	parts := []string{strings.TrimSpace(result.Message)}
 	if parts[0] == "" {
@@ -333,6 +342,9 @@ func formatSettingsProbeResult(result llmSvc.ProbeResult, err error) string {
 	}
 	if len(result.Warnings) > 0 {
 		parts = append(parts, "Warnings: "+strings.Join(result.Warnings, "; "))
+	}
+	if guidance := llmSvc.ProviderGuidance(config, result, err); len(guidance) > 0 {
+		parts = append(parts, "Guidance: "+strings.Join(guidance, "; "))
 	}
 	return strings.Join(parts, "\n")
 }

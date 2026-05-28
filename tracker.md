@@ -607,6 +607,7 @@ The Fyne migration must not drop product ambition, but this section is intention
 - [x] Shared slow-workflow job contract with explicit-user-start enforcement and workspace-open prohibition for OCR, dump imports, connector pulls, long indexing, report generation, long agent runs, and packaged exports.
 - [x] First Diagnostics surface for provider probe/runtime status, metadata health, and recent persisted job/task/SQL/agent failure snapshots.
 - [x] Diagnostics quick actions and recommended-remediation hints for provider/settings, metadata health, and recent failure triage.
+- [x] Provider-specific model/runtime failure guidance in Settings and Diagnostics: Ollama `ollama serve`/`ollama list`/`ollama pull`/warmup hints, OpenAI-compatible auth/base-URL guidance, empty-model-list recovery, and provider overload/rate-limit remediation.
 - [x] Diagnostics redacted issue-report export bundle with diagnostics text, activity tail, environment metadata, workspace-state file names, path/secret redaction, and no workspace contents unless explicit relative paths are requested.
 - [x] Route native document-report and document-extraction artifact generation through durable jobs with persisted job records and job-output opening.
 - [x] Route external connector query execution through durable jobs with cancellation, job logs, and Jobs-panel output fallback for non-task job types.

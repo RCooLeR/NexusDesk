@@ -58,6 +58,7 @@ type diagnosticsSnapshot struct {
 	RecentSQLFailuresList   []string
 	RecentAgentFailuresList []string
 	ActivityTail            []string
+	ProviderGuidance        []string
 	RecommendedActions      []string
 	Warnings                []string
 }
@@ -244,8 +245,10 @@ func (v *View) collectDiagnosticsSnapshot(root string, activityTail []string) di
 		if prober == nil {
 			prober = llmSvc.NewClient()
 		}
-		probe, probeErr := prober.Probe(ctx, llmSvc.ConfigFromSettings(settings))
+		probeConfig := llmSvc.ConfigFromSettings(settings)
+		probe, probeErr := prober.Probe(ctx, probeConfig)
 		cancel()
+		snapshot.ProviderGuidance = llmSvc.ProviderGuidance(probeConfig, probe, probeErr)
 		if probeErr != nil {
 			snapshot.ProbeError = probeErr.Error()
 			snapshot.Warnings = append(snapshot.Warnings, "Provider probe failed: "+probeErr.Error())
@@ -430,6 +433,14 @@ func formatDiagnosticsSnapshot(snapshot diagnosticsSnapshot) string {
 	if len(snapshot.RuntimeSummary) > 0 {
 		builder.WriteString("\n## Provider Runtime\n")
 		for _, line := range snapshot.RuntimeSummary {
+			builder.WriteString("- ")
+			builder.WriteString(line)
+			builder.WriteString("\n")
+		}
+	}
+	if len(snapshot.ProviderGuidance) > 0 {
+		builder.WriteString("\n## Provider Guidance\n")
+		for _, line := range snapshot.ProviderGuidance {
 			builder.WriteString("- ")
 			builder.WriteString(line)
 			builder.WriteString("\n")
@@ -678,6 +689,7 @@ func diagnosticsRecommendedActions(snapshot diagnosticsSnapshot) []string {
 	} else if snapshot.ProbeResult != nil && !snapshot.ProbeResult.OK {
 		actions = append(actions, "Run provider probe again after checking model availability and endpoint health.")
 	}
+	actions = append(actions, snapshot.ProviderGuidance...)
 	if snapshot.ProbeResult != nil && snapshot.ProbeResult.Runtime != nil && strings.TrimSpace(snapshot.ProbeResult.Runtime.SelectedModel) != "" && !snapshot.ProbeResult.Runtime.SelectedModelLoaded {
 		actions = append(actions, "Load the selected model in your runtime or switch to an already-loaded model in Settings.")
 	}
