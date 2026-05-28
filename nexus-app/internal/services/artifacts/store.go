@@ -2,9 +2,11 @@ package artifacts
 
 import (
 	"errors"
+	"fmt"
 	"os"
 	"path/filepath"
 	"strings"
+	"time"
 )
 
 const artifactsDirRelPath = ".nexusdesk/artifacts"
@@ -39,4 +41,9 @@ func (s *Store) relPath(parts ...string) string {
 
 func (s *Store) absPath(relPath string) string {
 	return filepath.Join(s.root, filepath.FromSlash(relPath))
+}
+
+func artifactTimestamp(value time.Time) string {
+	value = value.UTC()
+	return fmt.Sprintf("%s-%09d", value.Format("20060102-150405"), value.Nanosecond())
 }

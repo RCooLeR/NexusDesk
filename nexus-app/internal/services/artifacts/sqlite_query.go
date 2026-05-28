@@ -19,7 +19,7 @@ func (s *Store) WriteSQLiteQueryCSVArtifact(report SQLiteQueryReport) (Artifact,
 	}
 	createdAt := time.Now().UTC()
 	title := sqliteQueryArtifactTitle(report, "CSV")
-	relPath := s.relPath("sqlite-queries", fmt.Sprintf("%s-%s.csv", createdAt.Format("20060102-150405-000000000"), safeName(title)))
+	relPath := s.relPath("sqlite-queries", fmt.Sprintf("%s-%s.csv", artifactTimestamp(createdAt), safeName(title)))
 	absPath := s.absPath(relPath)
 	if err := os.MkdirAll(filepath.Dir(absPath), 0o755); err != nil {
 		return Artifact{}, err
@@ -66,7 +66,7 @@ func (s *Store) WriteSQLiteQueryMarkdownArtifact(report SQLiteQueryReport) (Arti
 	createdAt := time.Now().UTC()
 	title := sqliteQueryArtifactTitle(report, "Report")
 	content := sqliteQueryMarkdown(report, title, createdAt)
-	relPath := s.relPath("sqlite-queries", fmt.Sprintf("%s-%s.md", createdAt.Format("20060102-150405-000000000"), safeName(title)))
+	relPath := s.relPath("sqlite-queries", fmt.Sprintf("%s-%s.md", artifactTimestamp(createdAt), safeName(title)))
 	absPath := s.absPath(relPath)
 	if err := os.MkdirAll(filepath.Dir(absPath), 0o755); err != nil {
 		return Artifact{}, err

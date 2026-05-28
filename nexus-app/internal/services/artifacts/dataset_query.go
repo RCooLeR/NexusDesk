@@ -19,7 +19,7 @@ func (s *Store) WriteDatasetQueryCSVArtifact(report DatasetQueryReport) (Artifac
 	}
 	createdAt := time.Now().UTC()
 	title := datasetQueryArtifactTitle(report, "CSV")
-	relPath := s.relPath("dataset-queries", fmt.Sprintf("%s-%s.csv", createdAt.Format("20060102-150405-000000000"), safeName(title)))
+	relPath := s.relPath("dataset-queries", fmt.Sprintf("%s-%s.csv", artifactTimestamp(createdAt), safeName(title)))
 	absPath := s.absPath(relPath)
 	if err := os.MkdirAll(filepath.Dir(absPath), 0o755); err != nil {
 		return Artifact{}, err
@@ -88,7 +88,7 @@ func (s *Store) WriteDatasetSQLMarkdownArtifact(report DatasetSQLReport) (Artifa
 	createdAt := time.Now().UTC()
 	title := datasetSQLArtifactTitle(report)
 	content := datasetSQLMarkdown(report, title, createdAt)
-	relPath := s.relPath("dataset-sql", fmt.Sprintf("%s-%s.md", createdAt.Format("20060102-150405-000000000"), safeName(title)))
+	relPath := s.relPath("dataset-sql", fmt.Sprintf("%s-%s.md", artifactTimestamp(createdAt), safeName(title)))
 	absPath := s.absPath(relPath)
 	if err := os.MkdirAll(filepath.Dir(absPath), 0o755); err != nil {
 		return Artifact{}, err
@@ -137,7 +137,7 @@ func (s *Store) WriteDatasetSummaryMarkdownArtifact(report DatasetSummaryReport)
 	createdAt := time.Now().UTC()
 	title := datasetSummaryArtifactTitle(report)
 	content := datasetSummaryMarkdown(report, title, createdAt)
-	relPath := s.relPath("dataset-summaries", fmt.Sprintf("%s-%s.md", createdAt.Format("20060102-150405-000000000"), safeName(title)))
+	relPath := s.relPath("dataset-summaries", fmt.Sprintf("%s-%s.md", artifactTimestamp(createdAt), safeName(title)))
 	absPath := s.absPath(relPath)
 	if err := os.MkdirAll(filepath.Dir(absPath), 0o755); err != nil {
 		return Artifact{}, err

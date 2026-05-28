@@ -23,7 +23,7 @@ func (s *Store) WriteDocumentExtractionReport(report DocumentExtractionReport) (
 	if title == "" {
 		title = filepath.Base(source)
 	}
-	relPath := s.relPath("document-extracts", fmt.Sprintf("%s-%s.md", createdAt.Format("20060102-150405-000000000"), safeName(title)))
+	relPath := s.relPath("document-extracts", fmt.Sprintf("%s-%s.md", artifactTimestamp(createdAt), safeName(title)))
 	absPath := s.absPath(relPath)
 	if err := os.MkdirAll(filepath.Dir(absPath), 0o755); err != nil {
 		return Artifact{}, err

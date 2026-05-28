@@ -81,3 +81,17 @@ func TestCleanChatAnswerSnippetsBoundsAndDedupes(t *testing.T) {
 		t.Fatalf("expected long snippet to be truncated, got %q", cleaned[1])
 	}
 }
+
+func TestExtractChatAnswerContentUsesAnswerSection(t *testing.T) {
+	content := ExtractChatAnswerContent("# Assistant Answer\n\n## Prompt\n\nQ\n\n## Answer\n\nA\n\n## Sources\n\n- README.md\n")
+	if content != "A" {
+		t.Fatalf("unexpected extracted answer content: %q", content)
+	}
+}
+
+func TestExtractChatAnswerContentFallsBackToTrimmedMarkdown(t *testing.T) {
+	content := ExtractChatAnswerContent("\n# Legacy Answer\n\nUse the README.\n")
+	if content != "# Legacy Answer\n\nUse the README." {
+		t.Fatalf("unexpected legacy content: %q", content)
+	}
+}

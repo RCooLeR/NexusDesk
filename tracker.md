@@ -268,7 +268,7 @@ Goal: restore generated-output workflows with provenance and native inspection.
 - [x] Add source fingerprints to artifact metadata so freshness detects same-timestamp content changes.
 - [x] Add first archive restore flow for generated artifacts with collision-safe restore paths.
 - [x] Port native workspace scan report artifacts from Wails behind an explicit cancellable job.
-- [x] Add artifact-side regeneration for native workspace scan reports, document reports, document-extraction artifacts, operations runbooks, and artifact comparison reports through durable Artifacts-panel jobs.
+- [x] Add artifact-side regeneration for native workspace scan reports, document reports, document-extraction artifacts, operations runbooks, artifact comparison reports, and saved chat-answer refresh artifacts through durable Artifacts-panel jobs.
 - [x] Add document preview/extraction for Markdown, TXT, PDF, DOCX, XLSX, HTML/XML.
 - [x] Add first native document extraction slice for Markdown, TXT, HTML, and XML source files with artifact export.
 - [x] Extend native document extraction artifacts to DOCX and PDF preview text with PDF page metadata.
@@ -320,7 +320,7 @@ Exit criteria:
 
 ## Next Batch
 
-1. Use the Wails inventory to close remaining Native Parity blockers: editor maturity, deeper retrieval evidence, and broader artifact regeneration.
+1. Use the Wails inventory to close remaining Native Parity blockers: editor maturity, deeper retrieval evidence, and future generated-presentation regeneration.
 2. Finish native editor/UI parity: richer inline syntax styling, future LSP/deeper cross-file language actions, and less cramped native panels.
 3. Extend protected secret storage beyond the Windows baseline with macOS Keychain and Linux Secret Service/libsecret when those platforms move toward release support.
 4. Add durable job routing for long indexing, OCR, dump imports, connector pulls, report generation, and long agent runs.
@@ -508,7 +508,8 @@ The Fyne migration must not drop product ambition, but this section is intention
 - [x] First artifact regeneration workflow that reuses dataset summary, query, SQL, chart, dashboard, SQL notebook, and SQLite query export dependency metadata.
 - [x] Expand artifact regeneration beyond dataset/query/chart/notebook/SQLite baseline with document-report, scan-report, document-extract, operations-runbook, and artifact-comparison rebuild actions.
 - [x] Add approval-gated agent artifact regeneration for supported native rebuildable artifacts.
-- [ ] Expand artifact regeneration to future artifact kinds such as generated presentations and chat-answer refresh flows.
+- [x] Add saved chat-answer refresh regeneration from persisted prompt/model/source/citation/evidence metadata without requiring a new model call.
+- [ ] Expand artifact regeneration to future artifact kinds such as generated presentations.
 
 ### Operations Studio
 

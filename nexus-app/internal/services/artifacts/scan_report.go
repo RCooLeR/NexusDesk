@@ -19,7 +19,7 @@ func (s *Store) WriteWorkspaceScanReport(report WorkspaceScanReport) (Artifact, 
 		title = "Workspace Scan Report - " + strings.TrimSpace(report.WorkspaceName)
 	}
 	markdown := workspaceScanMarkdown(report, title, createdAt)
-	relPath := s.relPath("scan-reports", fmt.Sprintf("%s-%s.md", createdAt.Format("20060102-150405-000000000"), safeName(title)))
+	relPath := s.relPath("scan-reports", fmt.Sprintf("%s-%s.md", artifactTimestamp(createdAt), safeName(title)))
 	absPath := s.absPath(relPath)
 	if err := os.MkdirAll(filepath.Dir(absPath), 0o755); err != nil {
 		return Artifact{}, err

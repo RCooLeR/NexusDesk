@@ -97,3 +97,38 @@ func TestCleanRestoreRelPathRejectsArchiveAndMetadataTargets(t *testing.T) {
 		t.Fatal("expected active artifact path to be accepted")
 	}
 }
+
+func TestReadArtifactMetadataLoadsSidecar(t *testing.T) {
+	store, err := NewStore(t.TempDir())
+	if err != nil {
+		t.Fatal(err)
+	}
+	artifact, err := store.WriteChatAnswer(ChatAnswerReport{Prompt: "Q", Content: "A", Model: "model-a"})
+	if err != nil {
+		t.Fatalf("WriteChatAnswer returned error: %v", err)
+	}
+	metadata, err := store.ReadArtifactMetadata(artifact.RelPath)
+	if err != nil {
+		t.Fatalf("ReadArtifactMetadata returned error: %v", err)
+	}
+	if metadata.Kind != "chat-answer" || metadata.Prompt != "Q" || metadata.Model != "model-a" {
+		t.Fatalf("unexpected metadata: %#v", metadata)
+	}
+}
+
+func TestReadArtifactMetadataRejectsMissingSidecar(t *testing.T) {
+	store, err := NewStore(t.TempDir())
+	if err != nil {
+		t.Fatal(err)
+	}
+	report, err := store.WriteTaskRunReport(TaskRunReport{ID: "task", Label: "Task", Command: "go test", Cwd: ".", Status: "success"})
+	if err != nil {
+		t.Fatalf("WriteTaskRunReport returned error: %v", err)
+	}
+	if err := os.Remove(report.AbsPath + ".json"); err != nil {
+		t.Fatalf("remove metadata sidecar: %v", err)
+	}
+	if _, err := store.ReadArtifactMetadata(report.RelPath); err == nil {
+		t.Fatal("expected missing sidecar to be rejected")
+	}
+}

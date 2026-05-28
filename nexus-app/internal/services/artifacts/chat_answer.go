@@ -22,7 +22,7 @@ func (s *Store) WriteChatAnswer(report ChatAnswerReport) (Artifact, error) {
 	if title == "" {
 		title = chatAnswerTitle(report.Prompt)
 	}
-	relPath := s.relPath("chat-answers", fmt.Sprintf("%s-%s.md", createdAt.Format("20060102-150405-000000000"), safeName(title)))
+	relPath := s.relPath("chat-answers", fmt.Sprintf("%s-%s.md", artifactTimestamp(createdAt), safeName(title)))
 	absPath := s.absPath(relPath)
 	if err := os.MkdirAll(filepath.Dir(absPath), 0o755); err != nil {
 		return Artifact{}, err
@@ -126,6 +126,26 @@ func chatAnswerMarkdown(report ChatAnswerReport, title string, content string, c
 	builder.WriteString(content)
 	builder.WriteString("\n")
 	return builder.String()
+}
+
+func ExtractChatAnswerContent(markdown string) string {
+	text := strings.ReplaceAll(markdown, "\r\n", "\n")
+	text = strings.ReplaceAll(text, "\r", "\n")
+	marker := "## Answer\n"
+	index := strings.LastIndex(text, "\n"+marker)
+	if index >= 0 {
+		index++
+	} else if strings.HasPrefix(text, marker) {
+		index = 0
+	}
+	if index < 0 {
+		return strings.TrimSpace(markdown)
+	}
+	answer := text[index+len(marker):]
+	if nextHeading := strings.Index(answer, "\n## "); nextHeading >= 0 {
+		answer = answer[:nextHeading]
+	}
+	return strings.TrimSpace(answer)
 }
 
 func chatAnswerTitle(prompt string) string {

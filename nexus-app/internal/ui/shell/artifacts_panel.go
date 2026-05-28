@@ -477,9 +477,53 @@ func (v *View) buildRegeneratedArtifact(ctx context.Context, workspaceRoot strin
 			return artifactsSvc.Artifact{}, fmt.Errorf("comparison artifact %s has no compared artifact path metadata", artifact.RelPath)
 		}
 		return buildArtifactComparisonReport(ctx, workspaceRoot, left, right)
+	case "chat-answer":
+		return buildChatAnswerRefreshArtifact(ctx, workspaceRoot, artifact)
 	default:
 		return artifactsSvc.Artifact{}, fmt.Errorf("artifact kind %q cannot be regenerated yet", artifact.Kind)
 	}
+}
+
+func buildChatAnswerRefreshArtifact(ctx context.Context, workspaceRoot string, artifact artifactsSvc.Artifact) (artifactsSvc.Artifact, error) {
+	if err := ctx.Err(); err != nil {
+		return artifactsSvc.Artifact{}, err
+	}
+	store, err := artifactsSvc.NewStore(workspaceRoot)
+	if err != nil {
+		return artifactsSvc.Artifact{}, err
+	}
+	metadata, err := store.ReadArtifactMetadata(artifact.RelPath)
+	if err != nil {
+		return artifactsSvc.Artifact{}, err
+	}
+	if strings.TrimSpace(metadata.Kind) != "chat-answer" {
+		return artifactsSvc.Artifact{}, fmt.Errorf("artifact %s metadata kind %q is not chat-answer", artifact.RelPath, metadata.Kind)
+	}
+	text, err := store.ReadArtifactText(artifact.RelPath)
+	if err != nil {
+		return artifactsSvc.Artifact{}, err
+	}
+	content := artifactsSvc.ExtractChatAnswerContent(text)
+	if strings.TrimSpace(content) == "" {
+		return artifactsSvc.Artifact{}, fmt.Errorf("chat answer artifact %s has no answer content", artifact.RelPath)
+	}
+	if err := ctx.Err(); err != nil {
+		return artifactsSvc.Artifact{}, err
+	}
+	return store.WriteChatAnswer(artifactsSvc.ChatAnswerReport{
+		Title:                  metadata.Title,
+		Prompt:                 metadata.Prompt,
+		Content:                content,
+		Source:                 metadata.Source,
+		ContextRelPath:         metadata.ContextRelPath,
+		Model:                  metadata.Model,
+		SourcePaths:            append([]string{}, metadata.SourcePaths...),
+		CitationRefs:           append([]string{}, metadata.CitationRefs...),
+		UnverifiedCitationRefs: append([]string{}, metadata.UnverifiedCitationRefs...),
+		CitationSnippets:       append([]string{}, metadata.CitationSnippets...),
+		EvidenceQuality:        metadata.EvidenceQuality,
+		EvidenceSummary:        metadata.EvidenceSummary,
+	})
 }
 
 func buildArtifactComparisonReport(ctx context.Context, workspaceRoot string, left string, right string) (artifactsSvc.Artifact, error) {
@@ -847,6 +891,8 @@ func artifactCanRegenerate(artifact artifactsSvc.Artifact) bool {
 	case "artifact-comparison":
 		_, _, ok := artifactRegenerationPair(artifact)
 		return ok
+	case "chat-answer":
+		return strings.TrimSpace(artifact.RelPath) != "" && strings.TrimSpace(artifact.MetadataPath) != ""
 	default:
 		return false
 	}

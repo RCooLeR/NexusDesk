@@ -41,6 +41,17 @@ func (s *Store) readMetadata(relPath string) (Metadata, string) {
 	return metadata, metadataRelPath
 }
 
+func (s *Store) ReadArtifactMetadata(relPath string) (Metadata, error) {
+	if _, err := s.resolveArtifactPath(relPath); err != nil {
+		return Metadata{}, err
+	}
+	metadata, _ := s.readMetadata(filepath.ToSlash(strings.TrimSpace(relPath)))
+	if strings.TrimSpace(metadata.RelPath) == "" {
+		return Metadata{}, errors.New("artifact metadata sidecar is missing or unreadable")
+	}
+	return metadata, nil
+}
+
 func isMetadataSidecar(name string) bool {
 	name = filepath.ToSlash(strings.ToLower(strings.TrimSpace(name)))
 	if !strings.HasSuffix(name, ".json") {

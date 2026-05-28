@@ -13,7 +13,7 @@ func (s *Store) ArchiveArtifact(relPath string) (Artifact, error) {
 	if err != nil {
 		return Artifact{}, err
 	}
-	stamp := time.Now().UTC().Format("20060102-150405-000000000")
+	stamp := artifactTimestamp(time.Now().UTC())
 	targetRel := s.relPath("archive", stamp+"-"+filepath.Base(artifact.RelPath))
 	targetAbs := s.absPath(targetRel)
 	if err := os.MkdirAll(filepath.Dir(targetAbs), 0o755); err != nil {
@@ -75,7 +75,7 @@ func (s *Store) restoreTargetRelPath(artifact Artifact) string {
 	if _, err := os.Stat(s.absPath(targetRel)); os.IsNotExist(err) {
 		return targetRel
 	}
-	stamp := time.Now().UTC().Format("20060102-150405-000000000")
+	stamp := artifactTimestamp(time.Now().UTC())
 	dir := filepath.ToSlash(filepath.Dir(targetRel))
 	name := filepath.Base(targetRel)
 	return filepath.ToSlash(filepath.Join(dir, stamp+"-restored-"+name))

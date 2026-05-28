@@ -28,7 +28,7 @@ func (s *Store) WriteChartArtifact(report ChartArtifactReport) (Artifact, error)
 	if title == "" {
 		title = chartArtifactTitle(report)
 	}
-	relPath := s.relPath(artifactFolder, fmt.Sprintf("%s-%s.svg", createdAt.Format("20060102-150405-000000000"), safeName(title)))
+	relPath := s.relPath(artifactFolder, fmt.Sprintf("%s-%s.svg", artifactTimestamp(createdAt), safeName(title)))
 	absPath := s.absPath(relPath)
 	if err := os.MkdirAll(filepath.Dir(absPath), 0o755); err != nil {
 		return Artifact{}, err

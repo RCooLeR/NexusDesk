@@ -10,7 +10,7 @@ import (
 
 func (s *Store) WriteTaskRunReport(record TaskRunReport) (Artifact, error) {
 	createdAt := time.Now().UTC()
-	stamp := createdAt.Format("20060102-150405-000000000")
+	stamp := artifactTimestamp(createdAt)
 	identifier := strings.TrimSpace(record.ID)
 	if identifier == "" {
 		identifier = strings.TrimSpace(record.JobID)

@@ -18,7 +18,7 @@ func (s *Store) WriteArtifactComparisonReport(comparison ArtifactComparison) (Ar
 	}
 	createdAt := time.Now().UTC()
 	title := artifactComparisonTitle(comparison)
-	relPath := s.relPath("comparisons", fmt.Sprintf("%s-%s.md", createdAt.Format("20060102-150405-000000000"), comparisonFileSlug(comparison)))
+	relPath := s.relPath("comparisons", fmt.Sprintf("%s-%s.md", artifactTimestamp(createdAt), comparisonFileSlug(comparison)))
 	absPath := s.absPath(relPath)
 	if err := os.MkdirAll(filepath.Dir(absPath), 0o755); err != nil {
 		return Artifact{}, err

@@ -40,7 +40,7 @@ func (s *Store) LineageGraph(options ListOptions) (Lineage, error) {
 func (s *Store) WriteLineageGraphArtifact(lineage Lineage) (Artifact, error) {
 	lineage = summarizeLineage(lineage)
 	createdAt := time.Now().UTC()
-	relPath := s.relPath("lineage", fmt.Sprintf("%s-artifact-lineage.json", createdAt.Format("20060102-150405-000000000")))
+	relPath := s.relPath("lineage", fmt.Sprintf("%s-artifact-lineage.json", artifactTimestamp(createdAt)))
 	absPath := s.absPath(relPath)
 	if err := os.MkdirAll(filepath.Dir(absPath), 0o755); err != nil {
 		return Artifact{}, err

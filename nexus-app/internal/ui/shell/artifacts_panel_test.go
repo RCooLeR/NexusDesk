@@ -189,6 +189,16 @@ func TestArtifactCanRegenerateSupportedKinds(t *testing.T) {
 			want:     false,
 		},
 		{
+			name:     "chat answer with metadata sidecar",
+			artifact: artifactsSvc.Artifact{Kind: "chat-answer", RelPath: ".nexusdesk/artifacts/chat-answers/answer.md", MetadataPath: ".nexusdesk/artifacts/chat-answers/answer.md.json"},
+			want:     true,
+		},
+		{
+			name:     "chat answer without metadata sidecar",
+			artifact: artifactsSvc.Artifact{Kind: "chat-answer", RelPath: ".nexusdesk/artifacts/chat-answers/answer.md"},
+			want:     false,
+		},
+		{
 			name:     "archived scan report",
 			artifact: artifactsSvc.Artifact{Kind: "scan-report", Archived: true},
 			want:     false,
@@ -311,6 +321,87 @@ func TestBuildArtifactComparisonReportRegeneratesFromSourceArtifacts(t *testing.
 		if !strings.Contains(text, expected) {
 			t.Fatalf("comparison report missing %q:\n%s", expected, text)
 		}
+	}
+}
+
+func TestBuildChatAnswerRefreshArtifactPreservesMetadata(t *testing.T) {
+	root := t.TempDir()
+	store, err := artifactsSvc.NewStore(root)
+	if err != nil {
+		t.Fatalf("NewStore() error = %v", err)
+	}
+	original, err := store.WriteChatAnswer(artifactsSvc.ChatAnswerReport{
+		Title:                  "Saved Assistant Answer",
+		Prompt:                 "Summarize README",
+		Content:                "Use the setup guide.\n\nIt has three steps.",
+		Source:                 "Nexus assistant",
+		ContextRelPath:         "README.md",
+		Model:                  "model-a",
+		SourcePaths:            []string{"README.md"},
+		CitationRefs:           []string{"README.md:L12"},
+		UnverifiedCitationRefs: []string{"outside.md:L3"},
+		CitationSnippets:       []string{"README.md:L12 Third setup step."},
+		EvidenceQuality:        "line-cited",
+		EvidenceSummary:        "line-cited (1 source(s), 1 line ref(s); 1 citation outside selected sources).",
+	})
+	if err != nil {
+		t.Fatalf("WriteChatAnswer() error = %v", err)
+	}
+
+	rebuilt, err := buildChatAnswerRefreshArtifact(context.Background(), root, original)
+	if err != nil {
+		t.Fatalf("buildChatAnswerRefreshArtifact() error = %v", err)
+	}
+	if rebuilt.Kind != "chat-answer" || rebuilt.RelPath == "" {
+		t.Fatalf("unexpected rebuilt artifact: %#v", rebuilt)
+	}
+	text, err := store.ReadArtifactText(rebuilt.RelPath)
+	if err != nil {
+		t.Fatalf("ReadArtifactText() error = %v", err)
+	}
+	for _, expected := range []string{"# Saved Assistant Answer", "## Citations", "README.md:L12", "## Unverified Citations", "outside.md:L3", "## Citation Snippets", "Third setup step", "## Evidence", "## Prompt", "Summarize README", "## Answer", "Use the setup guide."} {
+		if !strings.Contains(text, expected) {
+			t.Fatalf("rebuilt chat answer missing %q:\n%s", expected, text)
+		}
+	}
+	if strings.Contains(text, "It has three steps.\n\n## Citations") {
+		t.Fatalf("rebuilt answer folded old metadata sections into answer content:\n%s", text)
+	}
+	metadata, err := store.ReadArtifactMetadata(rebuilt.RelPath)
+	if err != nil {
+		t.Fatalf("ReadArtifactMetadata() error = %v", err)
+	}
+	if metadata.Prompt != "Summarize README" || metadata.Model != "model-a" || metadata.ContextRelPath != "README.md" || metadata.EvidenceQuality != "line-cited" {
+		t.Fatalf("rebuilt metadata lost prompt/model/context/evidence fields: %#v", metadata)
+	}
+	if len(metadata.SourcePaths) != 1 || metadata.SourcePaths[0] != "README.md" {
+		t.Fatalf("rebuilt metadata lost source paths: %#v", metadata.SourcePaths)
+	}
+	if len(metadata.CitationRefs) != 1 || metadata.CitationRefs[0] != "README.md:L12" {
+		t.Fatalf("rebuilt metadata lost citation refs: %#v", metadata.CitationRefs)
+	}
+	if len(metadata.UnverifiedCitationRefs) != 1 || metadata.UnverifiedCitationRefs[0] != "outside.md:L3" {
+		t.Fatalf("rebuilt metadata lost unverified citation refs: %#v", metadata.UnverifiedCitationRefs)
+	}
+	if len(metadata.CitationSnippets) != 1 || !strings.Contains(metadata.CitationSnippets[0], "Third setup step") {
+		t.Fatalf("rebuilt metadata lost citation snippets: %#v", metadata.CitationSnippets)
+	}
+}
+
+func TestBuildChatAnswerRefreshArtifactHonorsCancelledContext(t *testing.T) {
+	root := t.TempDir()
+	store, err := artifactsSvc.NewStore(root)
+	if err != nil {
+		t.Fatalf("NewStore() error = %v", err)
+	}
+	artifact, err := store.WriteChatAnswer(artifactsSvc.ChatAnswerReport{Prompt: "Q", Content: "A"})
+	if err != nil {
+		t.Fatalf("WriteChatAnswer() error = %v", err)
+	}
+	ctx, cancel := context.WithCancel(context.Background())
+	cancel()
+	if _, err := buildChatAnswerRefreshArtifact(ctx, root, artifact); err == nil {
+		t.Fatal("expected cancelled context to stop chat-answer regeneration")
 	}
 }
 
