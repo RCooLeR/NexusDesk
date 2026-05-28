@@ -265,3 +265,15 @@ func editorSetCursorOffset(entry *widget.Entry, text string, offset int) {
 	entry.CursorColumn = column
 	entry.Refresh()
 }
+
+func editorSetCursorLine(entry *widget.Entry, line int) {
+	if entry == nil {
+		return
+	}
+	if line < 1 {
+		line = 1
+	}
+	entry.CursorRow = line - 1
+	entry.CursorColumn = 0
+	entry.Refresh()
+}

@@ -10,7 +10,7 @@ The product direction still makes sense. Nexus Augentic Studio should stay a nat
 
 The new app is no longer a thin skeleton. `nexus-app/` now has real native services for workspace navigation, previews, safe file mutation, editor tabs, search, problems, Git, tasks, jobs, approvals, LLM chat, agent tooling, metadata, artifacts, datasets, SQLite inspection, document extraction, operations scanning, and history. The most important remaining work is not to invent new studios yet; it is to finish parity and make the native UI feel like a serious IDE-class product.
 
-Approximate Wails-to-Fyne migration status: 85-90% of useful Wails-era backend/workflow capability has been migrated. The remaining gap is concentrated in IDE-grade editor behavior, richer assistant/source quality, broader artifact regeneration, slow-work job routing, production packaging, and UI polish.
+Approximate Wails-to-Fyne migration status: 88-90% of useful Wails-era backend/workflow capability has been migrated. The remaining gap is concentrated in IDE-grade editor behavior, richer assistant/source quality, broader artifact regeneration, slow-work job routing, production packaging, and UI polish.
 
 The production release path is tracked in `docs/13_PRODUCTION_READINESS.md`.
 
@@ -29,7 +29,7 @@ Risks to watch:
 
 - `internal/ui/shell` is split into many files, which is good, but it still carries a lot of orchestration state. Future UI work should extract smaller controllers/models before adding deeper editor, connector, and assistant behavior.
 - Several preserved Wails docs still describe active behavior using `app/internal` and React/Wails terms. They must be treated as reference-history until rewritten.
-- The native editor is functional but not yet IDE-grade. Syntax highlighting, richer find/replace, split groups, breadcrumbs, outline, format, minimap, and language-aware actions still need a deliberate editor strategy.
+- The native editor is functional but not yet IDE-grade. Native outline support has started, while syntax highlighting, richer find/replace, split groups, breadcrumbs, format, minimap, and language-aware actions still need a deliberate editor strategy.
 - External database profile flows and Windows credential vault behavior have native parity baselines; connector sync jobs are still future work.
 - Long-running work is only partially routed through durable jobs. OCR, dump imports, connector pulls, report generation, indexing, and long agent runs must not be wired directly to UI callbacks.
 
@@ -55,7 +55,7 @@ Implemented in `nexus-app/`:
 
 Priority migration gaps:
 
-1. Native editor quality: syntax highlighting, find/replace, split editor groups, breadcrumbs, outline, minimap, formatting, and language-aware navigation.
+1. Native editor quality: syntax highlighting, richer find/replace, split editor groups, breadcrumbs, minimap, formatting, and language-aware navigation.
 2. Native editor-adjacent artifact regeneration and source quality: broader regeneration coverage and citation depth.
 3. Job routing for slow workflows: long indexing, OCR, dump imports, connector pulls, report generation, and long agent runs.
 4. Connector and dump workflows: temporary isolated database sandboxes, import lifecycle, storage limits, and read-only analysis.

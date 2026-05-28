@@ -316,7 +316,7 @@ Exit criteria:
 ## Next Batch
 
 1. Use the Wails inventory to close remaining Native Parity blockers: editor maturity, richer assistant/source quality, and broader artifact regeneration.
-2. Finish native editor/UI parity: syntax highlighting plan, find/replace, split editor groups or equivalent layout decision, breadcrumbs/outline/minimap strategy, and less cramped native panels.
+2. Finish native editor/UI parity: syntax highlighting plan, richer find/replace, split editor groups or equivalent layout decision, breadcrumbs/minimap strategy, and less cramped native panels.
 3. Extend protected secret storage beyond the Windows baseline with macOS Keychain and Linux Secret Service/libsecret when those platforms move toward release support.
 4. Add durable job routing for long indexing, OCR, dump imports, connector pulls, report generation, and long agent runs.
 5. Add dump import job design before any Docker/database import execution.
@@ -328,7 +328,7 @@ Exit criteria:
 ### Gate 1: Native Parity Beta
 
 - [x] Wails-only feature inventory with `port` / `replace` / `drop` / `later` decisions.
-- [ ] IDE-grade editor baseline: syntax highlighting, find/replace, encoding controls, and split/breadcrumb/outline strategy.
+- [ ] IDE-grade editor baseline: syntax highlighting, richer find/replace, encoding controls, and split/breadcrumb/minimap strategy.
 - [ ] Native external database profiles for PostgreSQL, MySQL/MariaDB, SQL Server, and DuckDB with read-only guards.
 - [x] Native protected secret storage for Windows; explicit refusal/fallback behavior for unsupported platforms.
 - [ ] Assistant quality parity: richer citations and model diagnostics.
@@ -373,7 +373,8 @@ The Fyne migration must not drop product ambition, but this section is intention
 - [ ] IDE-grade project tree polish with richer density, better icons/badges, keyboard navigation, and broader context actions.
 - [x] First native multi-tab editor state with pinned ordering, dirty markers, safe save, revert, and explicit discard confirmation when closing modified tabs.
 - [x] First native text-editor find/replace flow with Edit menu actions, keyboard shortcuts, next-match navigation, and replace-next/replace-all actions.
-- [ ] Multi-tab editor polish with split editor groups, breadcrumbs, outline, minimap, find, format, and go-to-definition where available.
+- [x] Native editor outline parity slice with Wails-derived symbol rules for Markdown, Go, JavaScript/TypeScript, CSS, JSON, and YAML plus Fyne cursor navigation.
+- [ ] Multi-tab editor polish with split editor groups, breadcrumbs, minimap, richer find, format, and go-to-definition where available.
 - [ ] Syntax highlighting strategy for common languages, Markdown, SQL, JSON/YAML/XML, Docker/Compose, logs, and config files.
 - [x] Markdown source/rendered toggle.
 - [x] Safe edit preview/apply/rollback for text, code, patches, appends, encoding-aware writes, and agent-safe mutation tools.
