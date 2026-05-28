@@ -575,7 +575,7 @@ func TestBuildDocumentExportArtifactUsesBriefMetadata(t *testing.T) {
 	if err != nil {
 		t.Fatalf("artifactPreviewText() error = %v", err)
 	}
-	if !strings.Contains(preview, "DOCX document export") || !strings.Contains(preview, "word/document.xml") {
+	if !strings.Contains(preview, "DOCX document export") || !strings.Contains(preview, "word/document.xml") || !strings.Contains(preview, "Package validation: passed") {
 		t.Fatalf("document export preview missing details:\n%s", preview)
 	}
 }
@@ -796,7 +796,7 @@ func TestBuildPresentationDeckFromPackageArtifactUsesOutlineMetadata(t *testing.
 	if err != nil {
 		t.Fatalf("artifactPreviewText() error = %v", err)
 	}
-	if !strings.Contains(preview, "PPTX presentation deck export") || !strings.Contains(preview, "ppt/slides/slide1.xml") {
+	if !strings.Contains(preview, "PPTX presentation deck export") || !strings.Contains(preview, "ppt/slides/slide1.xml") || !strings.Contains(preview, "Package validation: passed") {
 		t.Fatalf("deck preview missing details:\n%s", preview)
 	}
 }

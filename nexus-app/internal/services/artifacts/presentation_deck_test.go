@@ -37,6 +37,9 @@ func TestWritePresentationDeckReportCreatesPPTXAndMetadata(t *testing.T) {
 	if metadata.Kind != "presentation-deck" || metadata.ExportFormat != "pptx" || len(metadata.PackageFiles) == 0 {
 		t.Fatalf("unexpected deck metadata: %#v", metadata)
 	}
+	if metadata.PackageValidation == nil || !metadata.PackageValidation.Valid || metadata.PackageValidation.SlideCount != 2 {
+		t.Fatalf("expected valid deck package validation metadata, got %#v", metadata.PackageValidation)
+	}
 	if len(metadata.SourcePaths) != 3 || metadata.SourcePaths[0] != ".nexusdesk/artifacts/presentations/slides.md" {
 		t.Fatalf("expected source outline first in metadata paths, got %#v", metadata.SourcePaths)
 	}

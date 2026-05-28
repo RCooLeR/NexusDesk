@@ -74,15 +74,21 @@ func (s *Store) WritePresentationDeckReport(report PresentationDeckReport) (Arti
 	if err != nil {
 		return Artifact{}, err
 	}
+	validation, err := ValidateOfficePackage(absPath, presentationDeckFormat, files)
+	if err != nil {
+		_ = os.Remove(absPath)
+		return Artifact{}, err
+	}
 	metadata := Metadata{
-		Kind:         "presentation-deck",
-		Title:        title,
-		RelPath:      relPath,
-		Source:       filepath.ToSlash(strings.TrimSpace(report.SourcePath)),
-		SourcePaths:  sourcePaths,
-		GeneratedAt:  createdAt,
-		ExportFormat: presentationDeckFormat,
-		PackageFiles: append([]string{}, files...),
+		Kind:              "presentation-deck",
+		Title:             title,
+		RelPath:           relPath,
+		Source:            filepath.ToSlash(strings.TrimSpace(report.SourcePath)),
+		SourcePaths:       sourcePaths,
+		GeneratedAt:       createdAt,
+		ExportFormat:      presentationDeckFormat,
+		PackageFiles:      append([]string{}, files...),
+		PackageValidation: &validation,
 	}
 	if err := s.writeMetadata(metadata); err != nil {
 		return Artifact{}, err

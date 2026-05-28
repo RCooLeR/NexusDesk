@@ -84,15 +84,21 @@ func (s *Store) WriteDocumentExportReport(report DocumentExportReport) (Artifact
 	if err != nil {
 		return Artifact{}, err
 	}
+	validation, err := ValidateOfficePackage(absPath, documentExportFormat, files)
+	if err != nil {
+		_ = os.Remove(absPath)
+		return Artifact{}, err
+	}
 	metadata := Metadata{
-		Kind:         "document-export",
-		Title:        title,
-		RelPath:      relPath,
-		Source:       filepath.ToSlash(strings.TrimSpace(report.SourcePath)),
-		SourcePaths:  sourcePaths,
-		GeneratedAt:  createdAt,
-		ExportFormat: documentExportFormat,
-		PackageFiles: append([]string{}, files...),
+		Kind:              "document-export",
+		Title:             title,
+		RelPath:           relPath,
+		Source:            filepath.ToSlash(strings.TrimSpace(report.SourcePath)),
+		SourcePaths:       sourcePaths,
+		GeneratedAt:       createdAt,
+		ExportFormat:      documentExportFormat,
+		PackageFiles:      append([]string{}, files...),
+		PackageValidation: &validation,
 	}
 	if err := s.writeMetadata(metadata); err != nil {
 		return Artifact{}, err

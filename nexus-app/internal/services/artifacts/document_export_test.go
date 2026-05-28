@@ -37,6 +37,9 @@ func TestWriteDocumentExportReportCreatesDocxArtifact(t *testing.T) {
 	if metadata.Kind != "document-export" || metadata.ExportFormat != "docx" || len(metadata.PackageFiles) == 0 || metadata.Source != ".nexusdesk/artifacts/document-briefs/brief.md" {
 		t.Fatalf("unexpected document export metadata: %#v", metadata)
 	}
+	if metadata.PackageValidation == nil || !metadata.PackageValidation.Valid || metadata.PackageValidation.XMLFiles == 0 {
+		t.Fatalf("expected valid document package validation metadata, got %#v", metadata.PackageValidation)
+	}
 
 	reader, err := zip.OpenReader(artifact.AbsPath)
 	if err != nil {

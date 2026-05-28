@@ -325,7 +325,20 @@ type Metadata struct {
 	SourceFingerprints     []SourceFingerprint `json:"sourceFingerprints,omitempty"`
 	ExportFormat           string              `json:"exportFormat,omitempty"`
 	PackageFiles           []string            `json:"packageFiles,omitempty"`
+	PackageValidation      *PackageValidation  `json:"packageValidation,omitempty"`
 	GeneratedAt            time.Time           `json:"generatedAt"`
+}
+
+type PackageValidation struct {
+	Format        string    `json:"format"`
+	Valid         bool      `json:"valid"`
+	CheckedAt     time.Time `json:"checkedAt"`
+	RequiredFiles []string  `json:"requiredFiles,omitempty"`
+	MissingFiles  []string  `json:"missingFiles,omitempty"`
+	CheckedFiles  int       `json:"checkedFiles,omitempty"`
+	XMLFiles      int       `json:"xmlFiles,omitempty"`
+	SlideCount    int       `json:"slideCount,omitempty"`
+	Message       string    `json:"message,omitempty"`
 }
 
 type SourceFingerprint struct {

@@ -1927,6 +1927,7 @@ func artifactPreviewText(store *artifactsSvc.Store, artifact artifactsSvc.Artifa
 		writeArtifactComparisonKV(&builder, "Artifact", artifact.RelPath)
 		writeArtifactComparisonKV(&builder, "Format", firstNonEmpty(metadata.ExportFormat, "docx"))
 		writeArtifactComparisonKV(&builder, "Source brief", metadata.Source)
+		writeArtifactPackageValidation(&builder, metadata.PackageValidation)
 		if len(metadata.PackageFiles) > 0 {
 			builder.WriteString("\n## Package Files\n\n")
 			for _, file := range metadata.PackageFiles {
@@ -1951,6 +1952,7 @@ func artifactPreviewText(store *artifactsSvc.Store, artifact artifactsSvc.Artifa
 		writeArtifactComparisonKV(&builder, "Artifact", artifact.RelPath)
 		writeArtifactComparisonKV(&builder, "Format", firstNonEmpty(metadata.ExportFormat, "pptx"))
 		writeArtifactComparisonKV(&builder, "Source outline", metadata.Source)
+		writeArtifactPackageValidation(&builder, metadata.PackageValidation)
 		if len(metadata.PackageFiles) > 0 {
 			builder.WriteString("\n## Package Files\n\n")
 			for _, file := range metadata.PackageFiles {
@@ -2013,4 +2015,26 @@ func writeArtifactComparisonKV(builder *strings.Builder, key string, value strin
 	builder.WriteString(": ")
 	builder.WriteString(value)
 	builder.WriteString("\n")
+}
+
+func writeArtifactPackageValidation(builder *strings.Builder, validation *artifactsSvc.PackageValidation) {
+	if validation == nil {
+		writeArtifactComparisonKV(builder, "Package validation", "not recorded")
+		return
+	}
+	status := "failed"
+	if validation.Valid {
+		status = "passed"
+	}
+	details := status
+	if strings.TrimSpace(validation.Message) != "" {
+		details += " - " + strings.TrimSpace(validation.Message)
+	}
+	writeArtifactComparisonKV(builder, "Package validation", details)
+	if validation.XMLFiles > 0 {
+		writeArtifactComparisonKV(builder, "Validated XML parts", fmt.Sprintf("%d", validation.XMLFiles))
+	}
+	if validation.SlideCount > 0 {
+		writeArtifactComparisonKV(builder, "Validated slides", fmt.Sprintf("%d", validation.SlideCount))
+	}
 }
