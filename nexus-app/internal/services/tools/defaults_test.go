@@ -381,6 +381,43 @@ func TestRegenerateArtifactDocumentBriefTool(t *testing.T) {
 	}
 }
 
+func TestRegenerateArtifactDocumentExportTool(t *testing.T) {
+	root := t.TempDir()
+	store, err := artifactsSvc.NewStore(root)
+	if err != nil {
+		t.Fatal(err)
+	}
+	brief, err := store.WriteDocumentBriefReport(artifactsSvc.DocumentBriefReport{
+		Title:       "Document Brief - Architecture Notes",
+		SourcePath:  ".nexusdesk/artifacts/document-sets/report.md",
+		SourceKind:  "document-report",
+		SourcePaths: []string{"docs/a.md"},
+		Content:     "### Executive Summary\n\n- Keep shell native.\n\n### Risks And Gaps\n\n- Packaging smoke remains a blocker.\n",
+	})
+	if err != nil {
+		t.Fatalf("WriteDocumentBriefReport returned error: %v", err)
+	}
+	original, err := store.WriteDocumentExportReport(artifactsSvc.BuildDocumentExportReport("", brief.RelPath, brief.Title, brief.Kind, "old export", brief.SourcePaths))
+	if err != nil {
+		t.Fatalf("WriteDocumentExportReport returned error: %v", err)
+	}
+	dispatcher := NewDefaultDispatcher(Dependencies{Workspace: workspaceSvc.New()})
+	result, err := dispatcher.ExecuteTool(context.Background(), agent.ToolCall{Name: "regenerate_artifact", Args: map[string]string{"relPath": original.RelPath}}, agent.Request{WorkspaceRoot: root, ApproveWrites: true})
+	if err != nil {
+		t.Fatalf("regenerate_artifact returned error: %v", err)
+	}
+	if !result.Mutated || !strings.Contains(result.Observation, "Regenerated document-export artifact") || !strings.Contains(result.Observation, brief.RelPath) {
+		t.Fatalf("unexpected document export regeneration result: %#v", result)
+	}
+	matches, err := store.ListArtifacts(artifactsSvc.ListOptions{Query: "kind:document-export"})
+	if err != nil {
+		t.Fatalf("ListArtifacts returned error: %v", err)
+	}
+	if len(matches) != 2 {
+		t.Fatalf("expected original and regenerated document exports, got %d", len(matches))
+	}
+}
+
 func TestDefaultDispatcherWebFetchRequiresApproval(t *testing.T) {
 	server := httptest.NewServer(http.HandlerFunc(func(response http.ResponseWriter, request *http.Request) {
 		response.Header().Set("Content-Type", "text/plain")

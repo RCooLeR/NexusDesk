@@ -209,6 +209,16 @@ func TestArtifactCanRegenerateSupportedKinds(t *testing.T) {
 			want:     false,
 		},
 		{
+			name:     "document export with source brief",
+			artifact: artifactsSvc.Artifact{Kind: "document-export", SourcePaths: []string{".nexusdesk/artifacts/document-briefs/brief.md"}},
+			want:     true,
+		},
+		{
+			name:     "document export without source brief",
+			artifact: artifactsSvc.Artifact{Kind: "document-export", SourcePaths: []string{".nexusdesk/artifacts/document-sets/report.md"}},
+			want:     false,
+		},
+		{
 			name:     "presentation outline with source artifact",
 			artifact: artifactsSvc.Artifact{Kind: "presentation-outline", SourcePaths: []string{".nexusdesk/artifacts/document-sets/report.md"}},
 			want:     true,
@@ -281,6 +291,18 @@ func TestArtifactCanGenerateDocumentBriefForReportArtifacts(t *testing.T) {
 				t.Fatalf("artifactCanGenerateDocumentBrief() = %t, want %t", got, tc.want)
 			}
 		})
+	}
+}
+
+func TestArtifactCanGenerateDocumentArtifactIncludesExports(t *testing.T) {
+	if !artifactCanGenerateDocumentArtifact(artifactsSvc.Artifact{Kind: "document-report", RelPath: ".nexusdesk/artifacts/document-sets/report.md"}) {
+		t.Fatal("document reports should generate document briefs")
+	}
+	if !artifactCanGenerateDocumentArtifact(artifactsSvc.Artifact{Kind: "document-brief", RelPath: ".nexusdesk/artifacts/document-briefs/brief.md"}) {
+		t.Fatal("document briefs should generate DOCX document exports")
+	}
+	if artifactCanGenerateDocumentArtifact(artifactsSvc.Artifact{Kind: "document-export", RelPath: ".nexusdesk/artifacts/document-exports/export.docx"}) {
+		t.Fatal("document exports should not recursively generate exports")
 	}
 }
 
@@ -508,6 +530,77 @@ func TestBuildDocumentBriefRefreshArtifactRegeneratesFromSource(t *testing.T) {
 	}
 	if !strings.Contains(text, source.RelPath) || !strings.Contains(text, "Keep shell native") {
 		t.Fatalf("rebuilt brief lost source linkage/content:\n%s", text)
+	}
+}
+
+func TestBuildDocumentExportArtifactUsesBriefMetadata(t *testing.T) {
+	root := t.TempDir()
+	store, err := artifactsSvc.NewStore(root)
+	if err != nil {
+		t.Fatalf("NewStore() error = %v", err)
+	}
+	brief, err := store.WriteDocumentBriefReport(artifactsSvc.DocumentBriefReport{
+		Title:       "Document Brief - Architecture Notes",
+		SourcePath:  ".nexusdesk/artifacts/document-sets/report.md",
+		SourceKind:  "document-report",
+		SourcePaths: []string{"docs/a.md"},
+		Content:     "### Executive Summary\n\n- Keep shell native.\n\n### Risks And Gaps\n\n- Packaging smoke remains a blocker.\n",
+	})
+	if err != nil {
+		t.Fatalf("WriteDocumentBriefReport() error = %v", err)
+	}
+	created, err := buildDocumentExportArtifact(context.Background(), root, brief)
+	if err != nil {
+		t.Fatalf("buildDocumentExportArtifact() error = %v", err)
+	}
+	if created.Kind != "document-export" || len(created.SourcePaths) != 3 || created.SourcePaths[0] != brief.RelPath {
+		t.Fatalf("unexpected document export artifact: %#v", created)
+	}
+	metadata, err := store.ReadArtifactMetadata(created.RelPath)
+	if err != nil {
+		t.Fatalf("ReadArtifactMetadata() error = %v", err)
+	}
+	if metadata.ExportFormat != "docx" || len(metadata.PackageFiles) == 0 || metadata.Source != brief.RelPath {
+		t.Fatalf("unexpected export metadata: %#v", metadata)
+	}
+	preview, err := artifactPreviewText(store, created)
+	if err != nil {
+		t.Fatalf("artifactPreviewText() error = %v", err)
+	}
+	if !strings.Contains(preview, "DOCX document export") || !strings.Contains(preview, "word/document.xml") {
+		t.Fatalf("document export preview missing details:\n%s", preview)
+	}
+}
+
+func TestBuildDocumentExportRefreshArtifactRegeneratesFromBrief(t *testing.T) {
+	root := t.TempDir()
+	store, err := artifactsSvc.NewStore(root)
+	if err != nil {
+		t.Fatalf("NewStore() error = %v", err)
+	}
+	brief, err := store.WriteDocumentBriefReport(artifactsSvc.DocumentBriefReport{
+		Title:       "Document Brief - Architecture Notes",
+		SourcePath:  ".nexusdesk/artifacts/document-sets/report.md",
+		SourceKind:  "document-report",
+		SourcePaths: []string{"docs/a.md"},
+		Content:     "### Executive Summary\n\n- Keep shell native.\n",
+	})
+	if err != nil {
+		t.Fatalf("WriteDocumentBriefReport() error = %v", err)
+	}
+	exported, err := buildDocumentExportArtifact(context.Background(), root, brief)
+	if err != nil {
+		t.Fatalf("buildDocumentExportArtifact() error = %v", err)
+	}
+	rebuilt, err := buildDocumentExportRefreshArtifact(context.Background(), root, exported)
+	if err != nil {
+		t.Fatalf("buildDocumentExportRefreshArtifact() error = %v", err)
+	}
+	if rebuilt.Kind != "document-export" || rebuilt.RelPath == exported.RelPath {
+		t.Fatalf("unexpected rebuilt document export: %#v", rebuilt)
+	}
+	if len(rebuilt.SourcePaths) == 0 || rebuilt.SourcePaths[0] != brief.RelPath {
+		t.Fatalf("rebuilt export lost brief source: %#v", rebuilt.SourcePaths)
 	}
 }
 

@@ -60,6 +60,16 @@ type DocumentBriefReport struct {
 	GeneratedBy  string
 }
 
+type DocumentExportReport struct {
+	Title       string
+	SourcePath  string
+	SourceTitle string
+	SourceKind  string
+	SourcePaths []string
+	Content     string
+	GeneratedBy string
+}
+
 type DocumentExtractionReport struct {
 	Title     string
 	RelPath   string

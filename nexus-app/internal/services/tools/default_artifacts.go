@@ -148,6 +148,12 @@ func (h defaultHandlers) rebuildArtifact(ctx context.Context, root string, store
 			return artifactsSvc.Artifact{}, fmt.Errorf("document brief artifact %s has no source artifact metadata", original.RelPath)
 		}
 		return rebuildDocumentBriefArtifact(ctx, store, source)
+	case "document-export":
+		source, ok := artifactRegenerationSource(original)
+		if !ok {
+			return artifactsSvc.Artifact{}, fmt.Errorf("document export artifact %s has no source brief metadata", original.RelPath)
+		}
+		return rebuildDocumentExportArtifact(ctx, store, source)
 	case "presentation-package":
 		source, ok := artifactRegenerationSource(original)
 		if !ok {
@@ -200,6 +206,31 @@ func rebuildDocumentBriefArtifact(ctx context.Context, store *artifactsSvc.Store
 		return artifactsSvc.Artifact{}, err
 	}
 	return store.WriteDocumentBriefReport(artifactsSvc.BuildDocumentBriefReport(
+		"",
+		source,
+		metadata.Title,
+		metadata.Kind,
+		text,
+		metadata.SourcePaths,
+	))
+}
+
+func rebuildDocumentExportArtifact(ctx context.Context, store *artifactsSvc.Store, source string) (artifactsSvc.Artifact, error) {
+	if err := ctx.Err(); err != nil {
+		return artifactsSvc.Artifact{}, err
+	}
+	metadata, err := store.ReadArtifactMetadata(source)
+	if err != nil {
+		return artifactsSvc.Artifact{}, err
+	}
+	text, err := store.ReadArtifactText(source)
+	if err != nil {
+		return artifactsSvc.Artifact{}, err
+	}
+	if err := ctx.Err(); err != nil {
+		return artifactsSvc.Artifact{}, err
+	}
+	return store.WriteDocumentExportReport(artifactsSvc.BuildDocumentExportReport(
 		"",
 		source,
 		metadata.Title,
