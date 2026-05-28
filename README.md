@@ -29,6 +29,7 @@ Nexus Augentic Studio is not only a chatbot. It should feel like a serious IDE-s
 - [Fyne Migration Plan](docs/11_FYNE_MIGRATION_PLAN.md)
 - [Current Project Review](docs/12_PROJECT_REVIEW.md)
 - [Production Readiness Plan](docs/13_PRODUCTION_READINESS.md)
+- [Platform Support Matrix](docs/14_PLATFORM_SUPPORT.md)
 - [Implementation Tracker](tracker.md)
 
 ## Current Project Layout
