@@ -2,6 +2,7 @@ package shell
 
 import (
 	"context"
+	"database/sql"
 	"os"
 	"path/filepath"
 	"strings"
@@ -12,6 +13,8 @@ import (
 	datasetsSvc "nexusdesk/internal/services/datasets"
 	dbconnectorSvc "nexusdesk/internal/services/dbconnector"
 	metadataSvc "nexusdesk/internal/services/metadata"
+
+	_ "modernc.org/sqlite"
 )
 
 func testArtifact(relPath string) artifactsSvc.Artifact {
@@ -299,6 +302,12 @@ func TestLatestRebuildableDatasetDependencyUsesSupportedKinds(t *testing.T) {
 	if !canRebuildDatasetDependency(metadataSvc.DatasetDependencyRecord{SourcePath: "data/sales.csv", DependentKind: "sql-notebook"}) {
 		t.Fatal("expected saved SQL notebook dependencies to be rebuildable")
 	}
+	if !canRebuildDatasetDependency(metadataSvc.DatasetDependencyRecord{SourcePath: "data/store.sqlite", DependentKind: "sqlite-query-artifact", Metadata: map[string]string{"sql": "select id from orders"}}) {
+		t.Fatal("expected SQLite query artifact dependencies to be rebuildable")
+	}
+	if canRebuildDatasetDependency(metadataSvc.DatasetDependencyRecord{SourcePath: "data/store.sqlite", DependentKind: "sqlite-query-artifact"}) {
+		t.Fatal("expected SQLite query artifact without SQL text to be non-rebuildable")
+	}
 }
 
 func TestNotebookDependencyRecordPreservesNotebookIDForRebuilds(t *testing.T) {
@@ -382,6 +391,75 @@ func TestRebuildDatasetDependencyArtifactSupportsSQLNotebook(t *testing.T) {
 	if updated.DependentRef != artifact.RelPath || updated.Metadata["artifact"] != artifact.RelPath || updated.Metadata["notebookID"] != "sales-book" {
 		t.Fatalf("expected dependency to point at rebuilt artifact with notebook id, got %#v", updated)
 	}
+}
+
+func TestRebuildDatasetDependencyArtifactSupportsSQLiteQueryArtifacts(t *testing.T) {
+	root := t.TempDir()
+	dbPath := filepath.Join(root, "data", "store.sqlite")
+	if err := makeShellSQLiteFixture(dbPath); err != nil {
+		t.Fatalf("makeShellSQLiteFixture failed: %v", err)
+	}
+	store, err := metadataSvc.NewStore(root)
+	if err != nil {
+		t.Fatalf("NewStore failed: %v", err)
+	}
+	t.Cleanup(func() { _ = store.Close() })
+	if _, err := store.Ensure(); err != nil {
+		t.Fatalf("Ensure failed: %v", err)
+	}
+	originalArtifact := artifactsSvc.Artifact{
+		Kind:    "sqlite-query-csv",
+		RelPath: ".nexusdesk/artifacts/sqlite-queries/old.csv",
+	}
+	run := metadataSvc.SQLRunRecord{
+		ID:          "sqlite-run-1",
+		SQL:         "select id, total from orders order by id",
+		Engine:      "sqlite-readonly",
+		StartedAt:   time.Now().UTC(),
+		CompletedAt: time.Now().UTC(),
+	}
+	dependency := store.NormalizeDatasetDependencyRecord(sqliteArtifactDependencyRecord("data/store.sqlite", run, originalArtifact))
+	if err := store.SaveDatasetDependency(dependency); err != nil {
+		t.Fatalf("SaveDatasetDependency failed: %v", err)
+	}
+	view := &View{dbconnectorService: dbconnectorSvc.New(), metadataStore: store}
+	artifact, err := view.rebuildDatasetDependencyArtifact(context.Background(), root, dependency)
+	if err != nil {
+		t.Fatalf("rebuildDatasetDependencyArtifact failed: %v", err)
+	}
+	if artifact.Kind != "sqlite-query-csv" || filepath.Ext(artifact.RelPath) != ".csv" {
+		t.Fatalf("unexpected rebuilt SQLite artifact: %#v", artifact)
+	}
+	content, err := os.ReadFile(filepath.Join(root, filepath.FromSlash(artifact.RelPath)))
+	if err != nil {
+		t.Fatalf("ReadFile rebuilt SQLite artifact failed: %v", err)
+	}
+	if !strings.Contains(string(content), "id,total") || !strings.Contains(string(content), "10,42.5") {
+		t.Fatalf("rebuilt SQLite CSV artifact missing expected content:\n%s", string(content))
+	}
+	updated, err := store.GetDatasetDependency(dependency.ID)
+	if err != nil {
+		t.Fatalf("GetDatasetDependency failed: %v", err)
+	}
+	if updated.DependentRef != artifact.RelPath || updated.Metadata["artifact"] != artifact.RelPath || updated.Metadata["format"] != "csv" || updated.Metadata["sql"] == "" {
+		t.Fatalf("expected SQLite dependency to point at rebuilt artifact, got %#v", updated)
+	}
+}
+
+func makeShellSQLiteFixture(path string) error {
+	if err := os.MkdirAll(filepath.Dir(path), 0o755); err != nil {
+		return err
+	}
+	db, err := sql.Open("sqlite", path)
+	if err != nil {
+		return err
+	}
+	defer db.Close()
+	_, err = db.Exec(`
+		create table orders (id integer primary key, total real);
+		insert into orders (id, total) values (10, 42.5), (11, 7.25);
+	`)
+	return err
 }
 
 func TestSQLiteSQLRunRecordCapturesFailure(t *testing.T) {

@@ -10,7 +10,7 @@ The product direction still makes sense. Nexus Augentic Studio should stay a nat
 
 The new app is no longer a thin skeleton. `nexus-app/` now has real native services for workspace navigation, previews, safe file mutation, editor tabs, search, problems, Git, tasks, jobs, approvals, LLM chat, agent tooling, metadata, artifacts, datasets, SQLite inspection, document extraction, operations scanning, and history. The most important remaining work is not to invent new studios yet; it is to finish parity and make the native UI feel like a serious IDE-class product.
 
-Approximate Wails-to-Fyne migration status: 90-91% of useful Wails-era backend/workflow capability has been migrated. The remaining gap is concentrated in IDE-grade editor behavior, deeper source-quality UX, remaining artifact regeneration coverage, slow-work job routing, production packaging, and UI polish.
+Approximate Wails-to-Fyne migration status: 90-92% of useful Wails-era backend/workflow capability has been migrated. The remaining gap is concentrated in IDE-grade editor behavior, deeper source-quality UX, remaining artifact regeneration coverage, slow-work job routing, production packaging, and UI polish.
 
 The production release path is tracked in `docs/13_PRODUCTION_READINESS.md`.
 

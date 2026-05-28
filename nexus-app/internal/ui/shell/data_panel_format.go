@@ -631,9 +631,24 @@ func canRebuildDatasetDependency(dependency metadataSvc.DatasetDependencyRecord)
 		return strings.TrimSpace(dependency.SourcePath) != ""
 	case "sql-notebook", "sql-notebook-run":
 		return strings.TrimSpace(dependency.SourcePath) != ""
+	case "sqlite-query-artifact":
+		return strings.TrimSpace(dependency.SourcePath) != "" && strings.TrimSpace(firstNonEmptyString(dependency.Metadata["sql"], dependency.Metadata["query"])) != ""
 	default:
 		return false
 	}
+}
+
+func sqliteArtifactKindForDependency(dependency metadataSvc.DatasetDependencyRecord) string {
+	value := strings.ToLower(strings.TrimSpace(firstNonEmptyString(
+		dependency.Metadata["format"],
+		dependency.Metadata["kind"],
+		dependency.Metadata["artifact"],
+		dependency.DependentRef,
+	)))
+	if strings.Contains(value, "csv") || filepath.Ext(value) == ".csv" {
+		return "csv"
+	}
+	return "markdown"
 }
 
 func notebookForDatasetDependency(notebooks []datasetsSvc.Notebook, dependency metadataSvc.DatasetDependencyRecord) (datasetsSvc.Notebook, bool) {
@@ -1068,10 +1083,18 @@ func sqliteArtifactDependencyRecord(source string, sqlRun metadataSvc.SQLRunReco
 			"engine":   sqlRun.Engine,
 			"sql":      sqlRun.SQL,
 			"artifact": artifact.RelPath,
+			"format":   sqliteArtifactKindForArtifact(artifact),
 		},
 		CreatedAt: sqlRun.StartedAt,
 		UpdatedAt: sqlRun.CompletedAt,
 	}
+}
+
+func sqliteArtifactKindForArtifact(artifact artifactsSvc.Artifact) string {
+	if artifact.Kind == "sqlite-query-csv" || strings.EqualFold(filepath.Ext(artifact.RelPath), ".csv") {
+		return "csv"
+	}
+	return "markdown"
 }
 
 func datasetQueryArtifactDependencyRecord(result datasetsSvc.QueryResult, artifact artifactsSvc.Artifact) metadataSvc.DatasetDependencyRecord {

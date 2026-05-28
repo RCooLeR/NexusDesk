@@ -1648,6 +1648,30 @@ func (v *View) rebuildDatasetDependencyArtifact(ctx context.Context, root string
 			})
 		}
 		return artifact, nil
+	case "sqlite-query-artifact":
+		sqlText := strings.TrimSpace(firstNonEmptyString(dependency.Metadata["sql"], dependency.Metadata["query"]))
+		if sqlText == "" {
+			return artifactsSvc.Artifact{}, errors.New("cannot rebuild SQLite query artifact without SQL text")
+		}
+		kind := sqliteArtifactKindForDependency(dependency)
+		result, artifact, err := v.buildSQLiteArtifactForExport(ctx, root, dependency.SourcePath, kind, dbconnectorSvc.SQLiteQueryResult{}, sqlText)
+		if err != nil {
+			return artifactsSvc.Artifact{}, err
+		}
+		if v.metadataStore != nil {
+			record := v.metadataStore.NormalizeSQLRunRecord(sqliteSQLRunRecord(result, dependency.SourcePath, sqlText, time.Now().UTC(), nil))
+			record.ArtifactPath = artifact.RelPath
+			if err := v.metadataStore.SaveSQLRun(record); err != nil {
+				v.addActivity("Could not persist rebuilt SQLite artifact SQL metadata: " + err.Error())
+			}
+			_, _ = v.metadataStore.UpdateDatasetDependencyArtifact(dependency.ID, artifact.RelPath, map[string]string{
+				"engine":  result.Engine,
+				"sql":     result.SQL,
+				"format":  sqliteArtifactKindForArtifact(artifact),
+				"rebuilt": time.Now().UTC().Format(time.RFC3339),
+			})
+		}
+		return artifact, nil
 	default:
 		return artifactsSvc.Artifact{}, fmt.Errorf("cannot rebuild dependency kind %q", dependency.DependentKind)
 	}

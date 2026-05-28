@@ -416,8 +416,8 @@ The Fyne migration must not drop product ambition, but this section is intention
 - [x] First SQLite connector query preview with SELECT/WITH guard, single-statement validation, visible default row cap/timeout, SQL run metadata, dependency lineage, and read-only result rendering.
 - [x] SQLite connector saved queries plus CSV/Markdown result exports.
 - [x] SQLite connector query cancellation from the native Data panel using context-aware read-only query execution.
-- [x] Native dataset artifact rebuild baseline for query CSV, SQL report, chart, dashboard, and SQL notebook dependency records.
-- [ ] Richer SQLite connector lineage actions for opening sources, viewing dependent artifacts, and rebuilding stale outputs.
+- [x] Native dataset artifact rebuild baseline for query CSV, SQL report, chart, dashboard, SQL notebook, and SQLite query artifact dependency records.
+- [ ] Richer SQLite connector lineage actions for opening sources and viewing dependent artifacts.
 - [ ] External database profiles for PostgreSQL, MySQL/MariaDB, SQL Server, DuckDB files, and future engines with protected credentials plus live native execution paths.
 - [x] Read-only SQL guard with comment/string-aware parsing, single-statement enforcement, and mutation/export blocking across live external connector execution.
 - [x] Add connector runtime error redaction baseline for DSN/URL/query-string/JSON password fields before UI display.
@@ -487,8 +487,8 @@ The Fyne migration must not drop product ambition, but this section is intention
 - [x] Artifact browser with search, metadata, preview, compare, archive, delete, restore, and open-source navigation.
 - [x] Artifact lineage/freshness warnings for current native artifacts.
 - [x] Artifact lineage graph import/export UI parity with workspace graph JSON artifacts.
-- [x] First artifact regeneration workflow that reuses dataset query, SQL, chart, dashboard, and SQL notebook dependency metadata.
-- [ ] Expand artifact regeneration to summaries, SQLite exports, and future artifact kinds.
+- [x] First artifact regeneration workflow that reuses dataset query, SQL, chart, dashboard, SQL notebook, and SQLite query export dependency metadata.
+- [ ] Expand artifact regeneration to summaries and future artifact kinds.
 
 ### Operations Studio
 
