@@ -330,6 +330,24 @@ func TestAssistantProfileOptionRoundTripsID(t *testing.T) {
 	}
 }
 
+func TestAssistantModelRouteOptionsIncludeGlobalFallbackAndRoutes(t *testing.T) {
+	store := shellSettingsStore{settings: settingsSvc.Settings{
+		ModelRoutes: []settingsSvc.ModelRoute{
+			{ID: settingsSvc.RouteMainCoding, Label: "Main coding model", Model: "qwen3-coder:30b"},
+		},
+	}}
+	options := assistantModelRouteOptions(store)
+	if len(options) != 2 || options[0] != assistantGlobalModelRouteLabel || options[1] != "Main coding model" {
+		t.Fatalf("unexpected route options: %#v", options)
+	}
+	if got := assistantModelRouteIDFromOption("Main coding model", store.settings.ModelRoutes); got != settingsSvc.RouteMainCoding {
+		t.Fatalf("expected route id lookup, got %q", got)
+	}
+	if got := assistantModelRouteIDFromOption(assistantGlobalModelRouteLabel, store.settings.ModelRoutes); got != "" {
+		t.Fatalf("expected global fallback to return empty route id, got %q", got)
+	}
+}
+
 func TestAssistantContextPathsForRequestPrefersPins(t *testing.T) {
 	paths := assistantContextPathsForRequest([]string{" README.md ", "docs", "README.md"}, "selected.go")
 	if len(paths) != 2 || paths[0] != "README.md" || paths[1] != "docs" {
@@ -356,6 +374,10 @@ type shellSettingsStore struct {
 }
 
 func (s shellSettingsStore) Load() (settingsSvc.Settings, error) {
+	return s.settings, nil
+}
+
+func (s shellSettingsStore) LoadForDisplay() (settingsSvc.Settings, error) {
 	return s.settings, nil
 }
 

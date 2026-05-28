@@ -218,12 +218,13 @@ Already available:
 - Agent tools for context, search, problems, Git, tasks, artifacts, datasets, SQLite, documents, operations, safe file mutations, rollback, web fetch, and artifact regeneration.
 - High-risk mutation tools use per-call approval modal and audit records.
 - Settings stores and exposes task-aware model defaults for coding, backend, database, analytics, research, vision/screenshot, balanced reasoning, and fast-coding routes while preserving the global model as the active fallback.
+- Ask mode exposes a model-route selector with global fallback and sends selected routes through the assistant service.
 - Git AI diff summaries and commit drafts resolve the main coding route through the assistant service; assistant results and saved chat-answer artifacts preserve route metadata/warnings.
 
 Planned/remaining:
 
 - Deeper retrieval/ranking quality beyond deterministic coverage diagnostics.
-- Wire route-aware model resolution into remaining Ask, Data, analytics, research, vision/screenshot, document, and agent workflows with explicit fallback/availability warnings.
+- Wire route-aware model resolution into remaining Data, analytics, research, vision/screenshot, document, and agent workflows with explicit fallback/availability warnings.
 - Better source diagnostics for partial, stale, weak, contradictory, or missing evidence.
 - Complete tool-run provenance coverage for every generated output type.
 - Agent approved shell beyond discovered safe tasks only after shell policy, audit, job routing, and UX are mature.
@@ -601,8 +602,9 @@ The checklist below is intentionally large. `tracker.md` should keep task-level 
 - [ ] Add richer artifact-source cross-navigation.
 - [ ] Add better context budget visualization before a run.
 - [x] Add task-aware model defaults in Settings for coding, backend, database, analytics, research, vision/screenshot, balanced reasoning, and fast-coding routes.
+- [x] Add Ask-mode model-route selector with global fallback and assistant-service route metadata.
 - [x] Wire task-aware model route resolution into Git AI diff summary/commit drafting with assistant-service fallback warnings and saved chat-answer route metadata.
-- [ ] Wire task-aware model route resolution into Ask, Data, document, vision/screenshot, and agent workflows with fallback warnings and persisted route metadata.
+- [ ] Wire task-aware model route resolution into Data, document, vision/screenshot, and agent workflows with fallback warnings and persisted route metadata.
 - [ ] Add assistant answer quality smoke tests with fixture workspaces.
 - [ ] Add provider-specific guidance for common local model failures.
 

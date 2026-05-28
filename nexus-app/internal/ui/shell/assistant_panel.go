@@ -82,6 +82,9 @@ func (v *View) newAssistantPanel() fyne.CanvasObject {
 		memory,
 		saveProfile,
 	)
+	modelRoute := widget.NewSelect(assistantModelRouteOptions(v.settingsStore), nil)
+	modelRoute.SetSelected(assistantGlobalModelRouteLabel)
+	v.assistantModelRoute = modelRoute
 	mode := widget.NewSelect([]string{"Ask", "Agent"}, func(string) {})
 	mode.SetSelected("Ask")
 	v.assistantMode = mode
@@ -101,7 +104,7 @@ func (v *View) newAssistantPanel() fyne.CanvasObject {
 		v.saveLatestAssistantAnswer()
 	})
 	assistantActions := container.NewHBox(retry, compare, saveAnswer)
-	composer := container.NewBorder(assistantActions, nil, container.NewVBox(mode, agentTaskApproval), send, prompt)
+	composer := container.NewBorder(assistantActions, nil, container.NewVBox(mode, modelRoute, agentTaskApproval), send, prompt)
 	composer = container.NewPadded(composer)
 	sidebar := container.NewVBox(profileBar, widget.NewSeparator(), contextBar, widget.NewSeparator(), historyBar)
 	card := widget.NewCard("Assistant", "Local-first context and tool mediation", container.NewBorder(sidebar, composer, nil, nil, response))
@@ -128,6 +131,7 @@ func (v *View) runAssistantRequest(prompt *widget.Entry, response *widget.RichTe
 		SelectedPath:  v.state.SelectedPath(),
 		ContextPaths:  assistantContextPathsForRequest(v.state.AssistantContextPaths(), ""),
 		Conversation:  v.state.AssistantConversation(),
+		ModelRouteID:  v.selectedAssistantModelRouteID(),
 	}
 	startedAt := time.Now().UTC()
 	send.Disable()
@@ -167,6 +171,53 @@ func (v *View) runAssistantRequest(prompt *widget.Entry, response *widget.RichTe
 			v.addActivity("Assistant response completed with " + result.Model + ".")
 		})
 	}()
+}
+
+const assistantGlobalModelRouteLabel = "Global model fallback"
+
+func (v *View) selectedAssistantModelRouteID() string {
+	if v == nil || v.assistantModelRoute == nil {
+		return ""
+	}
+	routes := assistantModelRoutesForStore(v.settingsStore)
+	return assistantModelRouteIDFromOption(v.assistantModelRoute.Selected, routes)
+}
+
+func assistantModelRouteOptions(store interface {
+	LoadForDisplay() (settingsSvc.Settings, error)
+}) []string {
+	routes := assistantModelRoutesForStore(store)
+	options := []string{assistantGlobalModelRouteLabel}
+	for _, route := range routes {
+		options = append(options, route.Label)
+	}
+	return options
+}
+
+func assistantModelRoutesForStore(store interface {
+	LoadForDisplay() (settingsSvc.Settings, error)
+}) []settingsSvc.ModelRoute {
+	if store == nil {
+		return settingsSvc.DefaultModelRoutes()
+	}
+	settings, err := store.LoadForDisplay()
+	if err != nil {
+		return settingsSvc.DefaultModelRoutes()
+	}
+	return settings.ModelRoutes
+}
+
+func assistantModelRouteIDFromOption(option string, routes []settingsSvc.ModelRoute) string {
+	option = strings.TrimSpace(option)
+	if option == "" || option == assistantGlobalModelRouteLabel {
+		return ""
+	}
+	for _, route := range routes {
+		if option == route.ID || option == route.Label {
+			return route.ID
+		}
+	}
+	return ""
 }
 
 func (v *View) loadAssistantProfile() {

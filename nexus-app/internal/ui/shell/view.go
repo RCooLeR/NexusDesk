@@ -156,6 +156,7 @@ type View struct {
 	assistantRunTaskApproval *widget.Check
 	assistantProfile         assistantSvc.Profile
 	assistantProfileSelect   *widget.Select
+	assistantModelRoute      *widget.Select
 	assistantMemory          *widget.Entry
 	assistantLastPrompt      string
 	assistantLastResult      assistantSvc.Result
