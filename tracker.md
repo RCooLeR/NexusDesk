@@ -483,7 +483,8 @@ The Fyne migration must not drop product ambition, but this section is intention
 - [x] Agent tools for read context, workspace search, problems, Git status/diff, tasks, artifacts, datasets, SQLite, documents, operations files, safe writes, patches, copy/move/delete, and rollback.
 - [x] Agent tools for read-only Git history/blame.
 - [x] Agent tool for read-only artifact lineage context.
-- [ ] Agent tools for artifact regeneration actions and approved shell.
+- [x] Agent tool for approval-gated artifact regeneration actions.
+- [ ] Agent approved shell beyond discovered safe tasks.
 - [x] Approval-gated native `web_fetch` agent tool with Wails-equivalent HTTP(S), redirect, size, content-type, allow-list, and local-network guards.
 - [x] Live activity tail that shows compact model/tool progress while preserving persisted agent audit history.
 
@@ -498,6 +499,7 @@ The Fyne migration must not drop product ambition, but this section is intention
 - [x] Artifact lineage graph import/export UI parity with workspace graph JSON artifacts.
 - [x] First artifact regeneration workflow that reuses dataset summary, query, SQL, chart, dashboard, SQL notebook, and SQLite query export dependency metadata.
 - [x] Expand artifact regeneration beyond dataset/query/chart/notebook/SQLite baseline with scan-report, document-extract, operations-runbook, and artifact-comparison rebuild actions.
+- [x] Add approval-gated agent artifact regeneration for supported native rebuildable artifacts.
 - [ ] Expand artifact regeneration to future artifact kinds such as richer generated documents, presentations, and chat-answer refresh flows.
 
 ### Operations Studio

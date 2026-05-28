@@ -9,6 +9,7 @@ import (
 	"path/filepath"
 	"strings"
 	"testing"
+	"time"
 
 	"nexusdesk/internal/services/agent"
 	artifactsSvc "nexusdesk/internal/services/artifacts"
@@ -124,6 +125,121 @@ func TestDefaultDispatcherArtifactLineageTool(t *testing.T) {
 		if !strings.Contains(result.Observation, expected) {
 			t.Fatalf("expected observation to contain %q:\n%s", expected, result.Observation)
 		}
+	}
+}
+
+func TestRegenerateArtifactRequiresApproval(t *testing.T) {
+	root := t.TempDir()
+	store, err := artifactsSvc.NewStore(root)
+	if err != nil {
+		t.Fatal(err)
+	}
+	artifact, err := store.WriteWorkspaceScanReport(artifactsSvc.WorkspaceScanReport{
+		WorkspaceName: "repo",
+		Included:      1,
+		Message:       "Scanned 1 workspace entry, skipped 0.",
+	})
+	if err != nil {
+		t.Fatalf("WriteWorkspaceScanReport returned error: %v", err)
+	}
+	dispatcher := NewDefaultDispatcher(Dependencies{Workspace: workspaceSvc.New()})
+	result, err := dispatcher.ExecuteTool(context.Background(), agent.ToolCall{Name: "regenerate_artifact", Args: map[string]string{"relPath": artifact.RelPath}}, agent.Request{WorkspaceRoot: root})
+	if err == nil || result.Risk != "high" || !strings.Contains(result.Observation, "approval") {
+		t.Fatalf("expected approval error, got result=%#v err=%v", result, err)
+	}
+}
+
+func TestRegenerateArtifactDocumentExtractTool(t *testing.T) {
+	root := t.TempDir()
+	if err := os.WriteFile(filepath.Join(root, "guide.md"), []byte("# Guide\n\nUseful content.\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	store, err := artifactsSvc.NewStore(root)
+	if err != nil {
+		t.Fatal(err)
+	}
+	original, err := store.WriteDocumentExtractionReport(artifactsSvc.DocumentExtractionReport{
+		Title:   "Old Guide",
+		RelPath: "guide.md",
+		Format:  "markdown",
+		Content: "old content",
+		Lines:   1,
+		Words:   2,
+	})
+	if err != nil {
+		t.Fatalf("WriteDocumentExtractionReport returned error: %v", err)
+	}
+	dispatcher := NewDefaultDispatcher(Dependencies{Workspace: workspaceSvc.New()})
+	result, err := dispatcher.ExecuteTool(context.Background(), agent.ToolCall{Name: "regenerate_artifact", Args: map[string]string{"relPath": original.RelPath}}, agent.Request{WorkspaceRoot: root, ApproveWrites: true})
+	if err != nil {
+		t.Fatalf("regenerate_artifact returned error: %v", err)
+	}
+	if !result.Mutated || !strings.Contains(result.Observation, "Regenerated document-extract artifact") || !strings.Contains(result.Observation, "guide.md") {
+		t.Fatalf("unexpected regeneration result: %#v", result)
+	}
+	matches, err := store.ListArtifacts(artifactsSvc.ListOptions{Query: "kind:document-extract"})
+	if err != nil {
+		t.Fatalf("ListArtifacts returned error: %v", err)
+	}
+	if len(matches) != 2 {
+		t.Fatalf("expected original and regenerated document artifacts, got %d", len(matches))
+	}
+	text, err := store.ReadArtifactText(matches[0].RelPath)
+	if err != nil {
+		t.Fatalf("ReadArtifactText returned error: %v", err)
+	}
+	if !strings.Contains(text, "Useful content.") {
+		t.Fatalf("regenerated document did not use current source content:\n%s", text)
+	}
+}
+
+func TestRegenerateArtifactComparisonTool(t *testing.T) {
+	root := t.TempDir()
+	store, err := artifactsSvc.NewStore(root)
+	if err != nil {
+		t.Fatal(err)
+	}
+	left, err := store.WriteDocumentSetReport(artifactsSvc.DocumentSetReport{
+		Title:       "Left",
+		Roots:       []string{"docs"},
+		SourcePaths: []string{"docs/a.md"},
+		Content:     "old",
+	})
+	if err != nil {
+		t.Fatalf("WriteDocumentSetReport(left) returned error: %v", err)
+	}
+	right, err := store.WriteDocumentSetReport(artifactsSvc.DocumentSetReport{
+		Title:       "Right",
+		Roots:       []string{"docs"},
+		SourcePaths: []string{"docs/a.md"},
+		Content:     "new",
+	})
+	if err != nil {
+		t.Fatalf("WriteDocumentSetReport(right) returned error: %v", err)
+	}
+	comparison, err := store.CompareArtifacts(left.RelPath, right.RelPath)
+	if err != nil {
+		t.Fatalf("CompareArtifacts returned error: %v", err)
+	}
+	original, err := store.WriteArtifactComparisonReport(comparison)
+	if err != nil {
+		t.Fatalf("WriteArtifactComparisonReport returned error: %v", err)
+	}
+	time.Sleep(1100 * time.Millisecond)
+	dispatcher := NewDefaultDispatcher(Dependencies{Workspace: workspaceSvc.New()})
+	result, err := dispatcher.ExecuteTool(context.Background(), agent.ToolCall{Name: "regenerate_artifact", Args: map[string]string{"relPath": original.RelPath}}, agent.Request{WorkspaceRoot: root, ApproveWrites: true})
+	if err != nil {
+		t.Fatalf("regenerate_artifact returned error: %v", err)
+	}
+	if !result.Mutated || !strings.Contains(result.Observation, "Regenerated artifact-comparison artifact") {
+		t.Fatalf("unexpected comparison regeneration result: %#v", result)
+	}
+	matches, err := store.ListArtifacts(artifactsSvc.ListOptions{Query: "kind:artifact-comparison"})
+	if err != nil {
+		t.Fatalf("ListArtifacts returned error: %v", err)
+	}
+	if len(matches) != 2 {
+		t.Fatalf("expected original and regenerated comparison artifacts, got %d", len(matches))
 	}
 }
 

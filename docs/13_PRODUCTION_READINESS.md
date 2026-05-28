@@ -25,6 +25,7 @@ The app can already:
 - profile/query local datasets and workspace SQLite files;
 - create chart, dashboard, notebook, document, workspace scan, operations, task, chat-answer, and comparison artifacts, with dependency/source rebuild coverage for dataset summary, query, SQL, chart, dashboard, SQL notebook, SQLite query, scan-report, document-extraction, operations-runbook, and artifact-comparison outputs;
 - run Ask and Agent modes against configured OpenAI-compatible or Ollama endpoints;
+- let approved agent runs regenerate supported native artifacts from saved source/dependency metadata;
 - persist chat, artifact, job, SQL, approval, and agent/tool audit metadata.
 
 ## Production Definition
