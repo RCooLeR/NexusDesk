@@ -1,0 +1,41 @@
+name: Nexus App Windows CI
+
+on:
+  push:
+    paths:
+      - ".github/workflows/nexus-app-windows.yml"
+      - "nexus-app/**"
+      - "docs/**"
+      - "tracker.md"
+  pull_request:
+    paths:
+      - ".github/workflows/nexus-app-windows.yml"
+      - "nexus-app/**"
+      - "docs/**"
+      - "tracker.md"
+
+jobs:
+  windows-native:
+    name: Windows native Fyne smoke
+    runs-on: windows-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version-file: nexus-app/go.mod
+          cache-dependency-path: nexus-app/go.sum
+
+      - name: Set up MSYS2 UCRT64 compiler
+        uses: msys2/setup-msys2@v2
+        with:
+          msystem: UCRT64
+          update: true
+          install: mingw-w64-ucrt-x86_64-gcc
+
+      - name: Run native Windows CI checks
+        shell: pwsh
+        run: .\nexus-app\scripts\ci-windows.ps1

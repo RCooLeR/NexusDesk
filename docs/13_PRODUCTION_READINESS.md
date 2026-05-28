@@ -88,7 +88,7 @@ Goal: produce repeatable signed builds.
 Required:
 
 - Repeatable Windows build pipeline with app icon, version metadata, installer/update plan, and code-signing path.
-- CI for `go test ./...`, formatting, static checks, and build smoke.
+- First Windows native CI smoke for formatting, `go test ./...`, `go vet ./...`, CGO/Fyne build, and `git diff --check` now exists; signed release packaging, version metadata validation, and Linux/macOS smoke jobs remain open.
 - Windows visual/manual smoke checklist for every main surface.
 - Linux/macOS build investigation and explicit support matrix, defined in [Platform Support Matrix](14_PLATFORM_SUPPORT.md).
 - Antivirus false-positive mitigation notes and release-build hygiene.

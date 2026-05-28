@@ -48,7 +48,7 @@ This inventory records the explicit `port`, `replace`, `drop`, or `later` decisi
 | Operations read-only inspection/runbooks | `OperationsInspector.tsx`, operations docs | Native operations panel scans Docker/Compose/env/config/log evidence and exports runbooks | `ported` baseline | Mutating Docker/system workflows stay blocked until job/audit maturity |
 | Document extraction | `workspace/docx_text.go`, `pdf_text.go` | Native document extraction artifacts cover Markdown/TXT/HTML/XML/DOCX/PDF | `ported` baseline | OCR/scanned documents are later job-routed work |
 | Presentation/report generation | Roadmap/docs references, artifact report foundation | Not a completed Wails-only production feature | `later` | Implement after artifact lineage and report-generation jobs are stable |
-| Packaging/build docs for Wails | `app-wails/README.md`, Wails build scripts | Active app is `nexus-app/`; Wails instructions are reference-only | `drop` from primary path | Remove Wails build instructions from primary docs after freeze |
+| Packaging/build docs for Wails | `app-wails/README.md`, Wails build scripts | Active app is `nexus-app/`; Wails instructions are reference-only; first Windows native CI smoke exists for the Fyne app | `drop` from primary path | Remove Wails build instructions from primary docs after freeze |
 
 ## Native Parity Blockers From This Inventory
 

@@ -2,8 +2,8 @@ package workspace
 
 import (
 	"path/filepath"
-	"testing"
 	"strings"
+	"testing"
 )
 
 func TestSearchFindsPathAndContentMatches(t *testing.T) {

@@ -354,7 +354,8 @@ Exit criteria:
 ### Gate 3: Packaging And Platform Beta
 
 - [ ] Repeatable Windows build pipeline with icon, version metadata, installer/update plan, and code-signing path.
-- [ ] CI for tests, formatting/static checks, and build smoke.
+- [x] First Windows native CI smoke for gofmt, `go test ./...`, `go vet ./...`, CGO/Fyne build, and `git diff --check`.
+- [ ] Expand CI into signed release packaging, version metadata validation, and future Linux/macOS smoke jobs.
 - [ ] Windows visual/manual smoke checklist for every main surface.
 - [x] Linux/macOS build investigation and explicit support matrix.
 - [ ] Antivirus false-positive mitigation notes and release-build hygiene.
@@ -563,7 +564,8 @@ The Fyne migration must not drop product ambition, but this section is intention
 - [ ] Contributor setup guide, coding standards, tests, and architecture decision records.
 - [ ] Plugin/MCP strategy after native core tools are stable.
 - [ ] Stable service interfaces for community-contributed connectors and document parsers.
-- [ ] CI matrix for Windows first, then Linux/macOS once platform secrets and Fyne builds are ready.
+- [x] First Windows native CI workflow for formatting, tests, static analysis, and Fyne build smoke.
+- [ ] Expand CI matrix to Linux/macOS once platform secrets and Fyne build prerequisites are ready.
 
 ## Claude Findings Integration
 

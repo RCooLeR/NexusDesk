@@ -14,8 +14,8 @@ This document defines the production support stance for the Fyne-native `nexus-a
 
 Windows can move from primary beta target to supported release target only when:
 
-- `go test ./internal/domain ./internal/services/... ./internal/ui/shell ./internal/ui/theme ./internal/brand` passes in CI and locally.
-- The Fyne app builds from a clean checkout through the documented helper.
+- `go test ./...`, `go vet ./...`, gofmt checks, and `git diff --check` pass in the Windows native CI workflow and locally.
+- The Fyne app builds from a clean checkout through the documented helper and the Windows CI smoke workflow.
 - The executable carries the approved icon and version metadata.
 - Manual smoke covers workspace open, quick-open, editor save/revert, assistant settings/probe, agent approvals, data preview/query, artifacts, jobs, Git, tasks, operations, rollback, and diagnostics.
 - Protected secret storage has a Windows implementation or a clearly refused fallback for secret-bearing features.
@@ -36,7 +36,7 @@ The first non-Windows pass should be a build-smoke project, not a support promis
 
 The intended matrix is:
 
-- `windows-latest`: tests, formatting/static checks, Windows Fyne build smoke, icon/version metadata validation.
+- `windows-latest`: implemented first for gofmt, `go test ./...`, `go vet ./...`, `git diff --check`, and Windows Fyne build smoke. Icon/version metadata validation remains a release-packaging follow-up.
 - `ubuntu-latest`: tests first, then CGO/Fyne build smoke once dependencies are documented.
 - `macos-latest`: tests first, then app bundle build smoke once signing/notarization requirements are documented.
 
