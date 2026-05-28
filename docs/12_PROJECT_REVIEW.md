@@ -4,19 +4,21 @@ Date: 2026-05-28
 
 This review records the current state of Nexus Augentic Studio after the latest Fyne migration and production-readiness work. It is intentionally explicit: `nexus-app/` is the active product, while `app-wails/` remains the reference implementation until remaining native parity blockers are either completed or deliberately moved out of Native Parity Beta.
 
+For the current end-to-end execution plan, Claude findings integration, and JetBrains-like UI target, use [End-To-End Production Master Plan](17_END_TO_END_PRODUCTION_PLAN.md). This review is a snapshot; the master plan and `tracker.md` are the active steering documents.
+
 ## Executive Summary
 
 Nexus Augentic Studio is now much closer to a production-grade native desktop studio than to a migration prototype. The Wails-to-Fyne move remains the right architectural decision: the active app is a local-first IDE/data/document/operations workbench with an always-visible assistant, not a web dashboard wrapped in a desktop shell.
 
 Approximate current status:
 
-- Fyne-native migration: 96-97% complete by useful Wails-era functionality.
-- Wails useful-code parity: 94-96% complete.
-- Native Parity Beta readiness: 93-94% complete.
-- Overall production readiness: about 88-89% complete.
-- Distribution/packaging readiness: about 65-70% complete.
+- Fyne-native migration: roughly 98% complete by useful Wails-era functionality.
+- Wails useful-code parity: roughly 97% complete.
+- Native Parity Beta readiness: roughly 96% complete.
+- Overall production readiness: roughly 93% complete.
+- Distribution/packaging readiness: roughly 70-75% complete.
 
-The remaining work is concentrated in final editor parity, richer generated document/presentation outputs, deeper assistant evidence quality, durable routing for slow workflows, signed packaging, onboarding, platform smoke, and final UI polish.
+The remaining work is concentrated in JetBrains-like native UI polish, richer generated document/presentation outputs, deeper assistant retrieval and evidence quality, durable routing for future slow workflows, signed packaging, onboarding, platform smoke, and final performance/security validation.
 
 ## Architecture Health
 
@@ -41,6 +43,7 @@ Risks to watch:
 - Future UI work should continue extracting focused controllers, panel state, and service-owned behavior before adding new large workflows.
 - The native editor is strong for a Fyne baseline, but not yet Monaco/LSP-grade.
 - Product breadth is high, so final polish now depends on cohesive workflows, onboarding, and confidence-building diagnostics rather than simply adding more panels.
+- Final UI polish should explicitly follow the supplied JetBrains/DataGrip-style references: compact dark shell, top menu/toolbar, project/tool rails, central tabbed editor, right assistant, grouped bottom tool windows, professional settings, and dense but readable data grids.
 
 ## Current Native Capability Snapshot
 
@@ -214,6 +217,8 @@ Packaging and beta:
 `app-wails/` should not be retired yet. It remains useful for final editor behavior comparison, historical Wails workflows, and explicit parity decisions.
 
 The active product path should remain migration-first and production-first. Avoid adding new top-level studios until Workbench, Data & Analytics, Artifacts, Settings, Assistant, diagnostics, and packaging feel coherent and reliable.
+
+Claude's findings in `claude-findings.md` are integrated into `tracker.md` and summarized in `docs/17_END_TO_END_PRODUCTION_PLAN.md`. The original report remains useful historical evidence, but future work should track the active checklist rather than reopening already-resolved static findings.
 
 ## Recommended Next Engineering Order
 

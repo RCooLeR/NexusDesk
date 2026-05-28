@@ -182,7 +182,7 @@ Review status as of 2026-05-28:
 
 - The product shape is still sound: a small primary rail for Workbench, Data & Analytics, Artifacts, and Settings, with the AI assistant always visible.
 - The Fyne app is now the active implementation, not a placeholder shell. `nexus-app/internal/services/` contains real workspace, editor, Git, data, artifact, metadata, LLM, assistant, agent, task, job, operations, approval, history, document, and connector slices.
-- Current planning estimate: the useful Wails-to-Fyne migration is roughly 96-97% complete, with remaining blockers concentrated in editor strategy, richer generated outputs, durable slow jobs, packaging, onboarding, platform smoke, and polish.
+- Current planning estimate: the useful Wails-to-Fyne migration is roughly 98% complete, with remaining blockers concentrated in JetBrains-like native UI polish, richer generated document/deck outputs, future durable slow jobs, signed packaging, onboarding, platform smoke, assistant retrieval quality, and performance validation. See `docs/17_END_TO_END_PRODUCTION_PLAN.md` for the combined end-to-end production roadmap.
 - The Wails backend still has useful reference implementations for some Monaco-era editor workflows and mature shell behavior. Those should be ported capability-by-capability rather than copied as large bridge files.
 - The React frontend has good workflow references, but it should not dictate the new native structure. Fyne UI should be rebuilt around native panels, menus, dialogs, tabs, jobs, and approval surfaces.
 - Service/domain packages should remain framework-free. Fyne imports belong in `internal/app`, `internal/ui`, UI tests, and theme/brand presentation code.

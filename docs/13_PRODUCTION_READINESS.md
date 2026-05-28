@@ -2,7 +2,7 @@
 
 Date: 2026-05-28
 
-This document defines what Nexus Augentic Studio still needs before it can be treated as a production desktop application. `tracker.md` remains the task-level execution source of truth; this document is the release-readiness map.
+This document defines what Nexus Augentic Studio still needs before it can be treated as a production desktop application. `tracker.md` remains the task-level execution source of truth; this document is the release-readiness map. The broader end-to-end product plan, Claude findings integration, and JetBrains-like UI target live in [End-To-End Production Master Plan](17_END_TO_END_PRODUCTION_PLAN.md).
 
 ## Current State
 
@@ -45,6 +45,8 @@ Production-ready means:
 6. Crashes, hangs, provider failures, and corrupt metadata are visible and recoverable.
 7. The preserved Wails app is no longer needed for day-to-day use.
 
+The professional UI target is a JetBrains-like native workbench: compact dark theme, top menu/toolbar, project and tool-window rails, central tabbed editor, right integrated assistant, grouped bottom tools, DataGrip-style data surfaces, searchable settings, visible diagnostics, and keyboard-first navigation.
+
 ## Release Gates
 
 ### Gate 1: Native Parity Beta
@@ -61,6 +63,7 @@ Required:
 - Assistant quality parity: native Fyne now has weak-evidence warnings, retry/compare, Wails-compatible memory/profile storage, stale-source chat history warnings, Wails-compatible context-to-source fallback parsing, source/model footer diagnostics, line-aware citation refs, explicit unverified/out-of-context citation diagnostics, cited/uncited source coverage diagnostics, structured cited/uncited source coverage metadata in saved answer artifacts, bounded citation snippets in saved answer artifacts, deterministic evidence-quality labels, curated model context sizing, loaded-model runtime context tuning, and save-latest-answer artifacts.
 - Complete Wails-only feature inventory and explicit keep/drop/replace decisions.
 - Native UI cleanup pass for Workbench, Data, Artifacts, Settings, assistant, and bottom panels.
+- UI direction follows `docs/17_END_TO_END_PRODUCTION_PLAN.md`: grouped tool windows, professional settings, dense but readable data grids, integrated assistant/source diagnostics, and JetBrains-like shell hierarchy.
 
 Remaining blockers:
 
@@ -120,7 +123,7 @@ Required:
 
 - Onboarding flow for workspace open, model setup, permissions, and local data policy.
 - First-run diagnostics for missing model endpoint, missing compiler/build toolchain, and unavailable provider.
-- Issue-report bundle that redacts secrets and excludes workspace contents unless explicitly included.
+- Issue-report bundle that redacts secrets and excludes workspace contents unless explicitly included. Implemented in Diagnostics as a redacted ZIP export containing diagnostics text, activity tail, environment metadata, workspace-state file names, and no workspace file contents by default.
 - Documentation for safe agent use, approvals, rollbacks, local data, and connector credentials.
 - Beta feedback loop and release notes.
 
@@ -139,12 +142,13 @@ Exit criteria:
 
 ## Immediate Production-Oriented Next Batch
 
-1. Apply the durable slow-workflow contract to concrete OCR, dump import, connector pull, long indexing, report generation, and long agent run implementations.
-2. Continue post-beta editor spikes for inline styling and packaged LSP while preserving the documented Syntax mirror/Document Map Native Parity Beta strategy.
-3. Polish generated document/deck artifacts beyond native validated/theme-backed DOCX/PPTX baselines with richer template variants, cross-suite compatibility smoke, and visual design.
-4. Build signed release packaging, installer/update validation, and artifact upload/signing around the generated release manifests.
-5. Run a focused UI polish pass on onboarding, empty states, settings, diagnostics, and workflow hierarchy.
-6. Validate macOS Keychain/Linux Secret Service behavior in platform packaging smoke runs.
+1. Keep `docs/17_END_TO_END_PRODUCTION_PLAN.md`, `tracker.md`, this file, and the Wails inventory synchronized as the current source of truth.
+2. Apply the durable slow-workflow contract to concrete OCR, dump import, connector pull, long indexing, report generation, and long agent run implementations.
+3. Continue post-beta editor spikes for inline styling and packaged LSP while preserving the documented Syntax mirror/Document Map Native Parity Beta strategy.
+4. Polish generated document/deck artifacts beyond native validated/theme-backed DOCX/PPTX baselines with richer template variants, cross-suite compatibility smoke, and visual design.
+5. Build signed release packaging, installer/update validation, and artifact upload/signing around the generated release manifests.
+6. Run a focused JetBrains-like UI polish pass on onboarding, empty states, settings, diagnostics, data grids, assistant, and workflow hierarchy.
+7. Validate macOS Keychain/Linux Secret Service behavior in platform packaging smoke runs.
 
 ## Documentation Rule
 
@@ -152,6 +156,7 @@ Every production-readiness item must be reflected in exactly one of:
 
 - `tracker.md` for task execution;
 - `docs/13_PRODUCTION_READINESS.md` for release gates;
+- `docs/17_END_TO_END_PRODUCTION_PLAN.md` for end-to-end product direction, UI north star, and combined roadmap;
 - a focused design doc when implementation needs detailed architecture.
 
 Avoid duplicating long checklists across multiple docs. Link back to this file instead.

@@ -11,6 +11,7 @@ import (
 	"fyne.io/fyne/v2/theme"
 	"fyne.io/fyne/v2/widget"
 
+	issueReportSvc "nexusdesk/internal/services/issuereport"
 	jobsSvc "nexusdesk/internal/services/jobs"
 	llmSvc "nexusdesk/internal/services/llm"
 	metadataSvc "nexusdesk/internal/services/metadata"
@@ -63,6 +64,7 @@ type diagnosticsProber interface {
 func (v *View) newDiagnosticsPanel() fyne.CanvasObject {
 	refresh := widget.NewButtonWithIcon("Refresh", theme.ViewRefreshIcon(), v.refreshDiagnostics)
 	copyReport := widget.NewButtonWithIcon("Copy report", theme.ContentCopyIcon(), v.copyDiagnosticsReport)
+	exportIssueReport := widget.NewButtonWithIcon("Export issue report", theme.DownloadIcon(), v.exportDiagnosticsIssueReport)
 	exportMetadata := widget.NewButtonWithIcon("Export metadata", theme.DownloadIcon(), v.exportDiagnosticsMetadataBackup)
 	exportState := widget.NewButtonWithIcon("Export state", theme.DownloadIcon(), v.exportDiagnosticsWorkspaceStateBackup)
 	openSettings := widget.NewButtonWithIcon("Settings", theme.SettingsIcon(), v.openSettingsTab)
@@ -76,7 +78,7 @@ func (v *View) newDiagnosticsPanel() fyne.CanvasObject {
 			v.addActivity("Agent Audit panel is unavailable.")
 		}
 	})
-	actions := container.NewHBox(refresh, copyReport, exportMetadata, exportState, openSettings, openJobs, openAudit)
+	actions := container.NewHBox(refresh, copyReport, exportIssueReport, exportMetadata, exportState, openSettings, openJobs, openAudit)
 	header := container.NewVBox(v.diagnosticsStatus, actions)
 	scroll := container.NewScroll(v.diagnosticsDetail)
 	scroll.SetMinSize(fyne.NewSize(260, 120))
@@ -138,6 +140,39 @@ func (v *View) exportDiagnosticsWorkspaceStateBackup() {
 	}
 	v.diagnosticsStatus.SetText("Workspace state backup exported: " + result.Path)
 	v.addActivity(fmt.Sprintf("Exported workspace state backup %s (%d file(s), %d bytes).", result.Path, len(result.Files), result.SizeBytes))
+}
+
+func (v *View) exportDiagnosticsIssueReport() {
+	workspace := v.state.Workspace()
+	if workspace.Root == "" {
+		v.diagnosticsStatus.SetText("Open a workspace before exporting an issue report.")
+		return
+	}
+	root := workspace.Root
+	v.diagnosticsStatus.SetText("Exporting redacted issue report...")
+	activityTail := v.recentActivityLines(diagnosticsActivityTailLimit)
+	currentReport := strings.TrimSpace(v.diagnosticsDetail.Text)
+	go func() {
+		report := currentReport
+		if report == "" || strings.Contains(report, "Run diagnostics to inspect") {
+			snapshot := v.collectDiagnosticsSnapshot(root, activityTail)
+			report = formatDiagnosticsSnapshot(snapshot)
+		}
+		result, err := issueReportSvc.Export(issueReportSvc.Options{
+			WorkspaceRoot:     root,
+			DiagnosticsReport: report,
+			ActivityTail:      activityTail,
+		})
+		fyne.Do(func() {
+			if err != nil {
+				v.diagnosticsStatus.SetText("Issue report export failed.")
+				v.addActivity("Issue report export failed: " + err.Error())
+				return
+			}
+			v.diagnosticsStatus.SetText("Redacted issue report exported: " + result.Path)
+			v.addActivity(fmt.Sprintf("Exported redacted issue report %s (%d file(s), %d bytes).", result.Path, len(result.Files), result.SizeBytes))
+		})
+	}()
 }
 
 func (v *View) refreshDiagnostics() {

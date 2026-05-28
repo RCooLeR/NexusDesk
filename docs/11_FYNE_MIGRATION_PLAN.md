@@ -70,14 +70,15 @@ Rules:
 
 ## Current Baseline
 
-The latest reviewed `nexus-app` baseline includes the original shell slice plus substantial native parity. See `docs/12_PROJECT_REVIEW.md` for the dated review, `docs/13_PRODUCTION_READINESS.md` for release gates, and `docs/15_WAILS_FEATURE_INVENTORY.md` for explicit Wails retirement blockers.
+The latest reviewed `nexus-app` baseline includes the original shell slice plus substantial native parity. See `docs/12_PROJECT_REVIEW.md` for the dated review, `docs/13_PRODUCTION_READINESS.md` for release gates, `docs/15_WAILS_FEATURE_INVENTORY.md` for explicit Wails retirement blockers, and `docs/17_END_TO_END_PRODUCTION_PLAN.md` for the combined production plan, Claude findings integration, and JetBrains-like UI target.
 
 Current estimate:
 
-- Fyne-native migration: roughly 96-97% complete by useful Wails-era functionality.
-- Wails useful-code parity: roughly 94-96% complete.
-- Native Parity Beta readiness: roughly 93-94% complete.
-- Overall production readiness: roughly 88-89% complete.
+- Fyne-native migration: roughly 98% complete by useful Wails-era functionality.
+- Wails useful-code parity: roughly 97% complete.
+- Native Parity Beta readiness: roughly 96% complete.
+- Overall production readiness: roughly 93% complete.
+- Distribution and packaging readiness: roughly 70-75% complete.
 
 Current implemented areas include:
 
@@ -141,7 +142,8 @@ Remaining migration blockers:
 - Native editor beta replacement decision is documented in `docs/16_EDITOR_PARITY_STRATEGY.md`; editable-widget inline syntax styling is now a post-beta enhancement.
 - Future LSP/deeper cross-file language action strategy.
 - Deeper assistant retrieval/ranking quality beyond current deterministic source/citation/evidence/coverage diagnostics.
-- Richer generated document artifacts and packaged presentation exports.
+- Richer generated document/deck template variants and cross-suite compatibility smoke beyond current native export baselines.
+- JetBrains-like native UI polish around tool windows, settings, assistant, data grids, diagnostics, onboarding, and workflow hierarchy.
 - Platform packaging/runtime validation for macOS Keychain and Linux Secret Service/libsecret support.
 - Apply the shared durable slow-workflow contract to OCR, dump imports, connector pulls, long indexing, long report generation, packaged exports, and long agent runs as those workflows are implemented.
 

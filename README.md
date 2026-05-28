@@ -31,6 +31,8 @@ Nexus Augentic Studio is not only a chatbot. It should feel like a serious IDE-s
 - [Production Readiness Plan](docs/13_PRODUCTION_READINESS.md)
 - [Platform Support Matrix](docs/14_PLATFORM_SUPPORT.md)
 - [Wails Feature Inventory](docs/15_WAILS_FEATURE_INVENTORY.md)
+- [Native Editor Parity Strategy](docs/16_EDITOR_PARITY_STRATEGY.md)
+- [End-To-End Production Master Plan](docs/17_END_TO_END_PRODUCTION_PLAN.md)
 - [Implementation Tracker](tracker.md)
 
 ## Current Project Layout
@@ -91,16 +93,17 @@ App creates artifacts such as reports, charts, files, or configs
 
 ## Current Focus
 
-The active application is `nexus-app/`. The preserved Wails app remains a reference, but new development should finish Fyne parity first, then continue with new features. The current review is in `docs/12_PROJECT_REVIEW.md`, the production release path is in `docs/13_PRODUCTION_READINESS.md`, the Wails retirement/parity inventory is in `docs/15_WAILS_FEATURE_INVENTORY.md`, and the execution source of truth is `tracker.md`.
+The active application is `nexus-app/`. The preserved Wails app remains a reference, but new development should finish Fyne parity first, then continue with new features. The current review is in `docs/12_PROJECT_REVIEW.md`, the production release path is in `docs/13_PRODUCTION_READINESS.md`, the Wails retirement/parity inventory is in `docs/15_WAILS_FEATURE_INVENTORY.md`, the end-to-end production and JetBrains-like UI target is in `docs/17_END_TO_END_PRODUCTION_PLAN.md`, and the execution source of truth is `tracker.md`.
 
 Current planning estimate:
 
-- Fyne-native migration is roughly 96-97% complete by useful Wails-era functionality.
-- Wails useful-code parity is roughly 94-96% complete.
-- Native Parity Beta readiness is roughly 90-93% complete.
-- Overall production readiness is roughly 87% complete.
+- Fyne-native migration is roughly 98% complete by useful Wails-era functionality.
+- Wails useful-code parity is roughly 97% complete.
+- Native Parity Beta readiness is roughly 96% complete.
+- Overall production readiness is roughly 93% complete.
+- Distribution and packaging readiness is roughly 70-75% complete.
 
-The remaining work is concentrated in final editor strategy, durable routing for slow workflows, richer generated document/presentation exports, assistant evidence quality, signed packaging, onboarding, platform smoke, and UI polish.
+The remaining work is concentrated in JetBrains-like native UI polish, durable routing for future slow workflows, richer generated document/presentation exports, assistant retrieval/evidence quality, signed packaging, onboarding, platform smoke, diagnostics, and performance validation.
 
 ## First Stable Focus
 

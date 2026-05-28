@@ -20,6 +20,7 @@ Latest full project review: `docs/12_PROJECT_REVIEW.md`.
 Production-readiness gates: `docs/13_PRODUCTION_READINESS.md`.
 Wails feature inventory and retirement blockers: `docs/15_WAILS_FEATURE_INVENTORY.md`.
 Native editor parity decision: `docs/16_EDITOR_PARITY_STRATEGY.md`.
+End-to-end production master plan and JetBrains-like UI target: `docs/17_END_TO_END_PRODUCTION_PLAN.md`.
 
 Summary:
 
@@ -28,6 +29,7 @@ Summary:
 - The architecture is healthy: thin executable root, framework-free domain/services, Fyne-only UI packages, explicit approvals, safe workspace mutation boundaries, manual Git/Docker actions, durable metadata, and local-first safety rules.
 - The biggest remaining architectural risk is UI/orchestration complexity in `internal/ui/shell`; future UI work should keep extracting focused panels, controllers, and service-owned behavior.
 - The highest-priority unfinished work is migration and production readiness, not new top-level studios: applying durable slow-job routing to the remaining slow workflows, richer DOCX/PPTX template variants and cross-suite smoke beyond current native export/theme/validation baselines, deeper assistant retrieval quality beyond deterministic source coverage, signed packaging/installer validation, onboarding, and native UI polish.
+- Final UI direction is a professional JetBrains-like native workbench: top menu/toolbar, left project/tool rail, central tabbed editor, right integrated assistant, grouped bottom tool windows, compact dark theme, strong keyboard workflows, DataGrip-style data surfaces, and trust-building settings/diagnostics.
 - `app-wails/` should remain as reference until the remaining native parity blockers are completed or explicitly moved out of Native Parity Beta.
 
 Production direction:
@@ -39,6 +41,7 @@ Production direction:
 
 Immediate execution order:
 
+- Keep `docs/17_END_TO_END_PRODUCTION_PLAN.md` current as the product north star for all repeated development sessions.
 - Validate macOS Keychain and Linux Secret Service/libsecret behavior during platform packaging smoke.
 - Apply the durable slow-job contract to OCR, dump imports, connector pulls, long indexing, report generation, and long agent runs as those workflows are implemented.
 - Keep the documented native editor parity strategy visible in Language Actions and continue post-beta LSP/inline-styling spikes without blocking Native Parity Beta.
@@ -50,6 +53,7 @@ Immediate execution order:
 
 - [x] `app-wails/` preserves the existing Wails application and all current migration source code.
 - [x] `nexus-app/` is the new Fyne-native application root.
+- [x] `docs/17_END_TO_END_PRODUCTION_PLAN.md` documents the full end-to-end production plan, Claude findings integration, and JetBrains-like UI target.
 - [x] `nexus-app/main.go` is the only executable root file.
 - [x] `nexus-app/go.mod` owns the new Fyne dependency graph.
 - [x] `nexus-app/internal/app/` owns desktop lifecycle and window setup.
@@ -391,7 +395,7 @@ Exit criteria:
 
 - [ ] Onboarding flow for workspace open, model setup, permissions, and local data policy.
 - [ ] First-run diagnostics for missing model endpoint, missing toolchain, and unavailable provider.
-- [ ] Redacted issue-report bundle that excludes workspace contents unless explicitly included.
+- [x] Redacted issue-report bundle that excludes workspace contents unless explicitly included.
 - [ ] User docs for safe agent use, approvals, rollbacks, local data, and connector credentials.
 - [ ] Beta feedback loop and release notes.
 
@@ -583,6 +587,7 @@ The Fyne migration must not drop product ambition, but this section is intention
 - [x] Shared slow-workflow job contract with explicit-user-start enforcement and workspace-open prohibition for OCR, dump imports, connector pulls, long indexing, report generation, long agent runs, and packaged exports.
 - [x] First Diagnostics surface for provider probe/runtime status, metadata health, and recent persisted job/task/SQL/agent failure snapshots.
 - [x] Diagnostics quick actions and recommended-remediation hints for provider/settings, metadata health, and recent failure triage.
+- [x] Diagnostics redacted issue-report export bundle with diagnostics text, activity tail, environment metadata, workspace-state file names, path/secret redaction, and no workspace contents unless explicit relative paths are requested.
 - [x] Route native document-report and document-extraction artifact generation through durable jobs with persisted job records and job-output opening.
 - [x] Route external connector query execution through durable jobs with cancellation, job logs, and Jobs-panel output fallback for non-task job types.
 - [x] Route external connector test/inspect flows through durable jobs with cancellable context propagation and Jobs-panel output fallback.

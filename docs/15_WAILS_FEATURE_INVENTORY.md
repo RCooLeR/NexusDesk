@@ -4,6 +4,8 @@ Date: 2026-05-28
 
 This inventory records the explicit `port`, `replace`, `drop`, or `later` decisions needed before the preserved Wails app can be frozen. It is based on static inspection of `app-wails/`, `app-wails/frontend/src/`, and the current Fyne-native `nexus-app/` implementation.
 
+For the combined end-to-end production plan, Claude findings integration, and JetBrains-like UI target, see [End-To-End Production Master Plan](17_END_TO_END_PRODUCTION_PLAN.md).
+
 ## Decision Vocabulary
 
 - `ported`: Already covered by `nexus-app/` with equivalent or better native behavior.
@@ -18,6 +20,7 @@ This inventory records the explicit `port`, `replace`, `drop`, or `later` decisi
 - The remaining parity blockers are concentrated in post-beta editor depth, richer DOCX/PPTX template variants and cross-suite smoke beyond current native export/theme/validation baselines, packaging/runtime validation, and deeper assistant retrieval/ranking quality beyond deterministic source coverage.
 - React/Wails shell code should not be embedded wholesale. Monaco-specific editor behavior should be replaced by a native editor strategy unless a future spike proves an embedded editor can be shipped cleanly without reviving the Wails/webview architecture.
 - Current estimate: roughly 97% of useful Wails-era capability has native coverage, with the remaining gap mostly in high-polish editor, evidence, richer document/deck template variants, and platform-hardening areas rather than core app scaffolding.
+- Final UI parity should not copy the React/Wails shell. It should use the Fyne-native JetBrains-like workbench target: tool windows, project rail, tabbed editor, right assistant, grouped bottom panels, compact settings, DataGrip-style data surfaces, and keyboard-first workflows.
 
 ## Inventory
 
