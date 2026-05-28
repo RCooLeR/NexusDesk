@@ -48,6 +48,9 @@ func TestAskStreamLoadsSettingsAndStreamsSelectedContext(t *testing.T) {
 	if client.request.ContextRelPath != "context: README.md" || client.request.ContextContent != "workspace context" {
 		t.Fatalf("selected context was not attached: %#v", client.request)
 	}
+	if !strings.Contains(client.request.SystemPrompt, "Nexus Ask mode") {
+		t.Fatalf("expected Ask-specific system prompt, got %q", client.request.SystemPrompt)
+	}
 	if len(contextPacker.paths) != 1 || contextPacker.paths[0] != "README.md" {
 		t.Fatalf("unexpected context paths: %#v", contextPacker.paths)
 	}

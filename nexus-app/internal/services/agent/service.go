@@ -48,6 +48,7 @@ func (s *Service) Run(ctx context.Context, request Request, observe Observer) (R
 		}
 		s.emit(observe, request, Event{Type: "model_request", Iteration: iteration, Message: "Asking model for the next step.", Plan: state.plan})
 		result, err := s.client.Chat(ctx, config, llm.ChatRequest{
+			SystemPrompt:   systemPrompt(),
 			Prompt:         runtimePrompt(request, state, tools),
 			Conversation:   request.Conversation,
 			ContextRelPath: request.ContextRelPath,
@@ -137,7 +138,7 @@ func (s *Service) executeTool(ctx context.Context, request Request, call ToolCal
 func (s *Service) wrapUpStoppedRun(ctx context.Context, config llm.Config, request Request, state runState, observe Observer, iterations int) (Result, error) {
 	state.plan = finishPlan(state.plan)
 	s.emit(observe, request, Event{Type: "finalizing", Iteration: iterations, Message: "Backend safety guard stopped the tool loop; asking for a final answer.", Plan: state.plan})
-	result, err := s.client.Chat(ctx, config, llm.ChatRequest{Prompt: finalizationPrompt(request, state)})
+	result, err := s.client.Chat(ctx, config, llm.ChatRequest{SystemPrompt: systemPrompt(), Prompt: finalizationPrompt(request, state)})
 	if err != nil {
 		message := "Agent stopped before producing a final answer."
 		s.emit(observe, request, Event{Type: "stopped", Iteration: iterations, Message: message, Error: err.Error(), Plan: state.plan})

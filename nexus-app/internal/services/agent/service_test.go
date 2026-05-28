@@ -66,6 +66,12 @@ Action: read_context({"relPath":"README.md"})`,
 	if !strings.Contains(model.prompts[1], "hello from README") {
 		t.Fatalf("second prompt did not include observation:\n%s", model.prompts[1])
 	}
+	if len(model.systemPrompts) == 0 || !strings.Contains(model.systemPrompts[0], "Nexus Agent") {
+		t.Fatalf("expected Agent-specific system prompt, got %#v", model.systemPrompts)
+	}
+	if strings.Contains(model.prompts[0], "You are Nexus Agent") {
+		t.Fatalf("agent role instructions should live in the system prompt, got runtime prompt:\n%s", model.prompts[0])
+	}
 }
 
 func TestRunPromptIncludesRegisteredToolDescriptors(t *testing.T) {
@@ -120,12 +126,14 @@ func (fakeSettingsStore) Load() (settingssvc.Settings, error) {
 }
 
 type fakeChatClient struct {
-	messages []string
-	prompts  []string
+	messages      []string
+	prompts       []string
+	systemPrompts []string
 }
 
 func (c *fakeChatClient) Chat(ctx context.Context, config llm.Config, request llm.ChatRequest) (llm.ChatResult, error) {
 	c.prompts = append(c.prompts, request.Prompt)
+	c.systemPrompts = append(c.systemPrompts, request.SystemPrompt)
 	if len(c.messages) == 0 {
 		return llm.ChatResult{}, errors.New("no fake messages left")
 	}

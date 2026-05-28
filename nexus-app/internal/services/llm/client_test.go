@@ -61,6 +61,9 @@ func TestChatPostsOpenAICompatibleRequest(t *testing.T) {
 	if len(captured.Messages) != 4 {
 		t.Fatalf("unexpected message count %d", len(captured.Messages))
 	}
+	if !strings.Contains(captured.Messages[0].Content, "Nexus") {
+		t.Fatalf("missing default system prompt: %#v", captured.Messages[0])
+	}
 	userMessage := captured.Messages[len(captured.Messages)-1].Content
 	if !strings.Contains(userMessage, "Workspace context file: README.md") {
 		t.Fatalf("context was not quoted: %q", userMessage)
@@ -70,6 +73,29 @@ func TestChatPostsOpenAICompatibleRequest(t *testing.T) {
 	}
 	if len(captured.Options) != 0 {
 		t.Fatalf("non-Ollama provider should not receive options: %+v", captured.Options)
+	}
+}
+
+func TestChatUsesRequestSystemPrompt(t *testing.T) {
+	var captured chatCompletionRequest
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if err := json.NewDecoder(r.Body).Decode(&captured); err != nil {
+			t.Fatal(err)
+		}
+		_, _ = w.Write([]byte(`{"choices":[{"message":{"content":"ok"}}]}`))
+	}))
+	defer server.Close()
+
+	_, err := NewClientWithHTTPClient(server.Client()).Chat(context.Background(), Config{
+		Provider: "openai-compatible",
+		BaseURL:  server.URL,
+		Model:    "test-model",
+	}, ChatRequest{SystemPrompt: "custom role", Prompt: "hi"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if captured.Messages[0].Role != "system" || captured.Messages[0].Content != "custom role" {
+		t.Fatalf("unexpected system message: %#v", captured.Messages[0])
 	}
 }
 

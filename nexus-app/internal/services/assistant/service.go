@@ -13,6 +13,8 @@ import (
 
 const charsPerTokenEstimate = 4
 
+const askSystemPrompt = "You are Nexus Ask mode inside Nexus Augentic Studio. Answer directly from the user request and provided workspace context. If more source context is needed, say what to select or inspect next. Do not claim access to files that were not provided, and do not request or describe tool execution."
+
 type SettingsStore interface {
 	Load() (settingssvc.Settings, error)
 }
@@ -63,6 +65,7 @@ func (s *Service) AskStream(ctx context.Context, request Request, onDelta func(s
 	}
 	config := llm.ConfigFromSettings(settings)
 	chatRequest := llm.ChatRequest{
+		SystemPrompt: askSystemPrompt,
 		Prompt:       request.Prompt,
 		Conversation: append([]llm.ChatTurn{}, request.Conversation...),
 	}

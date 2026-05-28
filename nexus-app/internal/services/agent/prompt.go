@@ -17,8 +17,7 @@ func systemPrompt() string {
 
 func runtimePrompt(request Request, state runState, tools []ToolDescriptor) string {
 	var builder strings.Builder
-	builder.WriteString(systemPrompt())
-	builder.WriteString("\n\nAvailable built-in tool:\n")
+	builder.WriteString("Available built-in tool:\n")
 	builder.WriteString("- update_plan: Replace visible plan steps. Risk=low Inputs=steps.\n")
 	if len(tools) > 0 {
 		builder.WriteString("\nRegistered deterministic tools:\n")
@@ -72,8 +71,7 @@ func runtimePrompt(request Request, state runState, tools []ToolDescriptor) stri
 
 func finalizationPrompt(request Request, state runState) string {
 	var builder strings.Builder
-	builder.WriteString(systemPrompt())
-	builder.WriteString("\n\nThe backend guard is stopping further tool calls. Do not request more tools. Produce a concise final answer from the completed observations.\n")
+	builder.WriteString("The backend guard is stopping further tool calls. Do not request more tools. Produce a concise final answer from the completed observations.\n")
 	builder.WriteString("\nUser request:\n")
 	builder.WriteString(strings.TrimSpace(request.Prompt))
 	if len(state.toolCalls) > 0 {

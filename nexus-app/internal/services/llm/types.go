@@ -20,6 +20,7 @@ type Config struct {
 }
 
 type ChatRequest struct {
+	SystemPrompt   string
 	Prompt         string
 	ContextRelPath string
 	ContextContent string

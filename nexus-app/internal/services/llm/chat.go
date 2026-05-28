@@ -178,7 +178,7 @@ func readChatCompletionStream(ctx context.Context, response *http.Response, onDe
 }
 
 func buildChatMessages(prompt string, chatRequest ChatRequest) []chatMessage {
-	messages := []chatMessage{{Role: "system", Content: systemPrompt()}}
+	messages := []chatMessage{{Role: "system", Content: chatSystemPrompt(chatRequest.SystemPrompt)}}
 	for _, turn := range chatRequest.Conversation {
 		role := normalizeChatTurnRole(turn.Role)
 		content := strings.TrimSpace(turn.Content)
@@ -220,7 +220,11 @@ func sanitizeWorkspaceContext(content string) string {
 	return replacer.Replace(content)
 }
 
-func systemPrompt() string {
+func chatSystemPrompt(systemPrompt string) string {
+	systemPrompt = strings.TrimSpace(systemPrompt)
+	if systemPrompt != "" {
+		return systemPrompt
+	}
 	return "You are Nexus, the assistant inside Nexus Augentic Studio. Answer from provided workspace context when it is present. If more source context is needed, say what to select or inspect next. Do not claim access to files that were not provided."
 }
 
