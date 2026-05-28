@@ -486,6 +486,7 @@ The Fyne migration must not drop product ambition, but this section is intention
 - [x] Evidence-quality diagnostics for native assistant answers and `chat-answer` artifact metadata.
 - [x] Persist bounded citation snippets in saved `chat-answer` artifacts and metadata for line-cited answers.
 - [x] Persist unverified/out-of-context citation diagnostics in native assistant footers and `chat-answer` artifact metadata.
+- [x] Add citation coverage diagnostics so native assistant footers and saved `chat-answer` metadata show cited/uncited source coverage.
 - [x] Local assistant memory and prompt profiles.
 - [x] Agent runtime with plan updates, bounded observations, model-driven tool calls, no frontend iteration cap, emergency backend loop guard, and final-answer fallback behavior.
 - [x] Unified tool registry and dispatcher for deterministic tools and model-requested tools.

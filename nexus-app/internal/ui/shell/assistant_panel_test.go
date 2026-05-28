@@ -105,7 +105,7 @@ func TestAssistantResponseMarkdownWarnsWithoutSources(t *testing.T) {
 	if strings.Contains(withSources, "No explicit source context") {
 		t.Fatalf("did not expect weak-evidence warning with sources, got %q", withSources)
 	}
-	for _, expected := range []string{"Model: `qwen`", "Context: `context: README.md`", "Sources: `README.md`", "Evidence: source-backed (1 source(s), no line citations detected)."} {
+	for _, expected := range []string{"Model: `qwen`", "Context: `context: README.md`", "Sources: `README.md`", "Evidence: source-backed (1 source(s), no line citations detected, cited 0/1 source(s))."} {
 		if !strings.Contains(withSources, expected) {
 			t.Fatalf("expected source/model footer to contain %q, got %q", expected, withSources)
 		}
@@ -119,7 +119,7 @@ func TestAssistantResponseMarkdownIncludesLineCitations(t *testing.T) {
 		ContextRelPath: "pack: README.md, docs/guide.md",
 	})
 
-	for _, expected := range []string{"Citations: `README.md:L12`, `docs/guide.md:L4-L6`", "Unverified citations: `other.md:L1`", "Sources: `README.md`, `docs/guide.md`", "Evidence: line-cited (2 source(s), 2 line ref(s); 1 citation outside selected sources)."} {
+	for _, expected := range []string{"Citations: `README.md:L12`, `docs/guide.md:L4-L6`", "Unverified citations: `other.md:L1`", "Sources: `README.md`, `docs/guide.md`", "Evidence: line-cited (2 source(s), 2 line ref(s), cited 2/2 source(s); 1 citation outside selected sources)."} {
 		if !strings.Contains(text, expected) {
 			t.Fatalf("expected citation footer to contain %q, got %q", expected, text)
 		}
@@ -159,14 +159,14 @@ func TestAssistantEvidenceDiagnosticClassifiesSourceQuality(t *testing.T) {
 			name:    "source-backed",
 			result:  assistantSvc.Result{Message: "Answer", SourcePaths: []string{"README.md"}},
 			quality: "source-backed",
-			summary: "no line citations detected",
+			summary: "cited 0/1 source",
 			sources: 1,
 		},
 		{
 			name:    "line-cited",
 			result:  assistantSvc.Result{Message: "See README.md:12.", SourcePaths: []string{"README.md"}},
 			quality: "line-cited",
-			summary: "1 line ref",
+			summary: "cited 1/1 source",
 			sources: 1,
 			refs:    1,
 		},
@@ -184,6 +184,35 @@ func TestAssistantEvidenceDiagnosticClassifiesSourceQuality(t *testing.T) {
 		if got.Quality != tt.quality || !strings.Contains(got.Summary, tt.summary) || got.SourceCount != tt.sources || got.CitationCount != tt.refs {
 			t.Fatalf("%s diagnostic = %#v", tt.name, got)
 		}
+	}
+}
+
+func TestAssistantEvidenceDiagnosticReportsPartialCitationCoverage(t *testing.T) {
+	result := assistantSvc.Result{
+		Message:     "Use README.md:12 for setup.",
+		SourcePaths: []string{"README.md", "docs/guide.md", "notes/todo.md"},
+	}
+	diagnostic := assistantEvidenceDiagnosticForResult(result)
+	if diagnostic.Quality != "line-cited" || diagnostic.CitedSourceCount != 1 || diagnostic.SourceCount != 3 {
+		t.Fatalf("unexpected coverage diagnostic: %#v", diagnostic)
+	}
+	if strings.Join(diagnostic.UncitedSourcePaths, "|") != "docs/guide.md|notes/todo.md" {
+		t.Fatalf("unexpected uncited sources: %#v", diagnostic.UncitedSourcePaths)
+	}
+	for _, expected := range []string{"cited 1/3 source(s)", "uncited: docs/guide.md, notes/todo.md"} {
+		if !strings.Contains(diagnostic.Summary, expected) {
+			t.Fatalf("expected coverage summary to contain %q, got %q", expected, diagnostic.Summary)
+		}
+	}
+}
+
+func TestAssistantCitationSourceCoverageTreatsDirectorySourceAsCovered(t *testing.T) {
+	cited, uncited := assistantCitationSourceCoverage([]string{"docs", "README.md"}, []string{"docs/guide.md:L4"})
+	if strings.Join(cited, "|") != "docs" {
+		t.Fatalf("expected docs directory to be covered, got cited=%#v uncited=%#v", cited, uncited)
+	}
+	if strings.Join(uncited, "|") != "README.md" {
+		t.Fatalf("expected README to be uncited, got %#v", uncited)
 	}
 }
 

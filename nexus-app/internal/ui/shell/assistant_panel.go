@@ -435,16 +435,21 @@ type assistantEvidenceDiagnostic struct {
 	SourceCount             int
 	CitationCount           int
 	UnverifiedCitationCount int
+	CitedSourceCount        int
+	UncitedSourcePaths      []string
 }
 
 func assistantEvidenceDiagnosticForResult(result assistantSvc.Result) assistantEvidenceDiagnostic {
 	sources := assistantEffectiveSourcePaths(result)
 	citations := assistantCitationRefs(result)
 	unverified := assistantUnverifiedCitationRefs(result)
+	citedSources, uncitedSources := assistantCitationSourceCoverage(sources, citations)
 	diagnostic := assistantEvidenceDiagnostic{
 		SourceCount:             len(sources),
 		CitationCount:           len(citations),
 		UnverifiedCitationCount: len(unverified),
+		CitedSourceCount:        len(citedSources),
+		UncitedSourcePaths:      uncitedSources,
 	}
 	switch {
 	case len(sources) == 0:
@@ -453,19 +458,64 @@ func assistantEvidenceDiagnosticForResult(result assistantSvc.Result) assistantE
 	case len(citations) == 0:
 		diagnostic.Quality = "source-backed"
 		if len(unverified) > 0 {
-			diagnostic.Summary = fmt.Sprintf("source-backed (%d source(s), no verified line citations; %s outside selected sources).", len(sources), assistantPlural(len(unverified), "citation", "citations"))
+			diagnostic.Summary = fmt.Sprintf("source-backed (%d source(s), no verified line citations, cited 0/%d source(s); %s outside selected sources).", len(sources), len(sources), assistantPlural(len(unverified), "citation", "citations"))
 		} else {
-			diagnostic.Summary = fmt.Sprintf("source-backed (%d source(s), no line citations detected).", len(sources))
+			diagnostic.Summary = fmt.Sprintf("source-backed (%d source(s), no line citations detected, cited 0/%d source(s)).", len(sources), len(sources))
 		}
 	default:
 		diagnostic.Quality = "line-cited"
+		coverage := assistantCitationCoverageSummary(len(citedSources), sources, uncitedSources)
 		if len(unverified) > 0 {
-			diagnostic.Summary = fmt.Sprintf("line-cited (%d source(s), %d line ref(s); %s outside selected sources).", len(sources), len(citations), assistantPlural(len(unverified), "citation", "citations"))
+			diagnostic.Summary = fmt.Sprintf("line-cited (%d source(s), %d line ref(s), %s; %s outside selected sources).", len(sources), len(citations), coverage, assistantPlural(len(unverified), "citation", "citations"))
 		} else {
-			diagnostic.Summary = fmt.Sprintf("line-cited (%d source(s), %d line ref(s)).", len(sources), len(citations))
+			diagnostic.Summary = fmt.Sprintf("line-cited (%d source(s), %d line ref(s), %s).", len(sources), len(citations), coverage)
 		}
 	}
 	return diagnostic
+}
+
+func assistantCitationCoverageSummary(citedSourceCount int, sources []string, uncitedSources []string) string {
+	summary := fmt.Sprintf("cited %d/%d source(s)", citedSourceCount, len(sources))
+	if len(uncitedSources) > 0 {
+		summary += "; uncited: " + strings.Join(uncitedSources, ", ")
+	}
+	return summary
+}
+
+func assistantCitationSourceCoverage(sources []string, citations []string) ([]string, []string) {
+	if len(sources) == 0 {
+		return nil, nil
+	}
+	citationPaths := make([]string, 0, len(citations))
+	for _, ref := range citations {
+		path, _, _, ok := parseAssistantCitationRef(ref)
+		if ok {
+			citationPaths = append(citationPaths, path)
+		}
+	}
+	cited := []string{}
+	uncited := []string{}
+	for _, source := range sources {
+		source = normalizeAssistantCitationPath(source)
+		if source == "" {
+			continue
+		}
+		if assistantSourceCoveredByCitation(source, citationPaths) {
+			cited = append(cited, source)
+		} else {
+			uncited = append(uncited, source)
+		}
+	}
+	return cited, uncited
+}
+
+func assistantSourceCoveredByCitation(source string, citationPaths []string) bool {
+	for _, citationPath := range citationPaths {
+		if source == "." || source == citationPath || strings.HasPrefix(citationPath, strings.TrimSuffix(source, "/")+"/") {
+			return true
+		}
+	}
+	return false
 }
 
 func assistantUnverifiedSummarySuffix(count int) string {
