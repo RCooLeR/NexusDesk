@@ -328,7 +328,7 @@ Exit criteria:
 ### Gate 1: Native Parity Beta
 
 - [x] Wails-only feature inventory with `port` / `replace` / `drop` / `later` decisions.
-- [ ] IDE-grade editor baseline: syntax highlighting, richer find/replace, and split/minimap strategy.
+- [ ] IDE-grade editor baseline: syntax highlighting, richer find/replace, broader formatting, and split/minimap strategy.
 - [ ] Native external database profiles for PostgreSQL, MySQL/MariaDB, SQL Server, and DuckDB with read-only guards.
 - [x] Native protected secret storage for Windows; explicit refusal/fallback behavior for unsupported platforms.
 - [ ] Assistant quality parity: richer citations and clearer model diagnostics.
@@ -375,7 +375,8 @@ The Fyne migration must not drop product ambition, but this section is intention
 - [x] First native text-editor find/replace flow with Edit menu actions, keyboard shortcuts, next-match navigation, and replace-next/replace-all actions.
 - [x] Native editor outline parity slice with Wails-derived symbol rules for Markdown, Go, JavaScript/TypeScript, CSS, JSON, and YAML plus Fyne cursor navigation.
 - [x] Native editor breadcrumb and save-encoding parity slice with Wails-derived breadcrumb rules, clickable Fyne breadcrumb navigation, and explicit UTF-8/UTF-16/Windows encoding selection for safe writes.
-- [ ] Multi-tab editor polish with split editor groups, minimap, richer find, format, and go-to-definition where available.
+- [x] Native format-document parity slice with deterministic Go and JSON draft formatting from the Fyne editor.
+- [ ] Multi-tab editor polish with split editor groups, minimap, richer find, broader format coverage, and go-to-definition where available.
 - [ ] Syntax highlighting strategy for common languages, Markdown, SQL, JSON/YAML/XML, Docker/Compose, logs, and config files.
 - [x] Markdown source/rendered toggle.
 - [x] Safe edit preview/apply/rollback for text, code, patches, appends, encoding-aware writes, and agent-safe mutation tools.

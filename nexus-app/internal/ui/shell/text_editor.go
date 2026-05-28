@@ -89,10 +89,22 @@ func (v *View) newTextEditor(tab editorSvc.Tab, preview domain.FilePreview, onSt
 		v.revertEditorDraft(tab.ID)
 	})
 	revert.Importance = widget.LowImportance
+	format := widget.NewButtonWithIcon("Format", theme.DocumentCreateIcon(), func() {
+		result, err := editorSvc.FormatDocument(tab.RelPath, source.Text)
+		if err != nil {
+			status.SetText(err.Error())
+			return
+		}
+		if result.Changed {
+			source.SetText(result.Content)
+		}
+		status.SetText(result.Message)
+	})
+	format.Importance = widget.LowImportance
 
 	v.bindTextEditor(tab.ID, binding)
 
-	encodingControl := container.NewHBox(widget.NewLabel("Save as"), encodingSelect, revert)
+	encodingControl := container.NewHBox(widget.NewLabel("Save as"), encodingSelect, format, revert)
 	sourcePanel := container.NewBorder(container.NewBorder(nil, nil, status, encodingControl), nil, nil, nil, source)
 	previewPanel := container.NewBorder(widget.NewLabel(previewHeader(preview)), nil, nil, nil, rendered.Canvas())
 	outlinePanel := container.NewBorder(outlineStatus, nil, nil, nil, container.NewVScroll(outlineList))
