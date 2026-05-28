@@ -554,7 +554,7 @@ The Fyne migration must not drop product ambition, but this section is intention
 - [x] Cancel streaming LLM response handlers promptly when request context is canceled.
 - [ ] Make provider configuration explicit and extensible beyond built-in options with protocol flags.
 - [x] Clamp agent context budget fallback to safe non-trivial defaults when settings become misconfigured.
-- [ ] Scope global shortcuts so native editor copy remains reliable.
+- [x] Scope global shortcuts so native editor copy remains reliable.
 - [x] Improve search snippets to center on match location for long lines.
 - [x] Normalize `cleanRel` output using `filepath.Clean` after traversal checks.
 - [x] Cap `activityText` and `activityLines` growth so activity rendering remains bounded.

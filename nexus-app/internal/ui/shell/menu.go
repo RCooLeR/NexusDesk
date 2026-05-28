@@ -17,7 +17,7 @@ func (v *View) mainMenu() *fyne.MainMenu {
 	refresh := menuItem("Refresh Workspace", shortcutRefreshWorkspace(), v.refreshWorkspace)
 	closeTab := menuItem("Close Tab", shortcutCloseTab(), v.closeSelectedTab)
 	settings := menuItem("Settings", shortcutSettings(), v.openSettingsTab)
-	copySelection := menuItem("Copy", shortcutCopy(), v.copySelection)
+	copySelection := copyDataCellMenuItem(v.copySelection)
 	saveDraft := menuItem("Save Draft", shortcutSaveDraft(), v.saveActiveEditorDraft)
 	revertDraft := menuItem("Revert Draft", shortcutRevertDraft(), v.revertActiveEditorDraft)
 	findReplace := menuItem("Find / Replace", shortcutFindReplace(), v.openFindReplaceDialog)
@@ -75,6 +75,10 @@ func disabledMenuItem(label string) *fyne.MenuItem {
 	item := fyne.NewMenuItem(label, nil)
 	item.Disabled = true
 	return item
+}
+
+func copyDataCellMenuItem(action func()) *fyne.MenuItem {
+	return fyne.NewMenuItem("Copy Data Cell", action)
 }
 
 func (v *View) showAbout() {

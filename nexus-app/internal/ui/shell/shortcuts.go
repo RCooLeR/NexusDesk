@@ -10,7 +10,6 @@ func (v *View) installShortcuts() {
 	bindShortcut(canvas, shortcutOpenWorkspace(), v.openWorkspaceDialog)
 	bindShortcut(canvas, shortcutRefreshWorkspace(), v.refreshWorkspace)
 	bindShortcut(canvas, shortcutCloseTab(), v.closeSelectedTab)
-	bindShortcut(canvas, shortcutCopy(), v.copySelection)
 	bindShortcut(canvas, shortcutSaveDraft(), v.saveActiveEditorDraft)
 	bindShortcut(canvas, shortcutRevertDraft(), v.revertActiveEditorDraft)
 	bindShortcut(canvas, shortcutFindReplace(), v.openFindReplaceDialog)
@@ -46,10 +45,6 @@ func shortcutRefreshWorkspace() fyne.Shortcut {
 
 func shortcutCloseTab() fyne.Shortcut {
 	return &desktop.CustomShortcut{KeyName: fyne.KeyW, Modifier: fyne.KeyModifierShortcutDefault}
-}
-
-func shortcutCopy() fyne.Shortcut {
-	return &desktop.CustomShortcut{KeyName: fyne.KeyC, Modifier: fyne.KeyModifierShortcutDefault}
 }
 
 func shortcutSaveDraft() fyne.Shortcut {
