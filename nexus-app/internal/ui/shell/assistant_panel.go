@@ -209,6 +209,9 @@ func chatTurnPreview(turn llmSvc.ChatTurn) string {
 		role = "turn"
 	}
 	content := strings.Join(strings.Fields(turn.Content), " ")
+	if content == "" {
+		content = "(empty)"
+	}
 	if len(content) > 90 {
 		content = content[:87] + "..."
 	}
@@ -451,11 +454,11 @@ func agentEventLine(event agentSvc.Event) string {
 	case "model_request":
 		return fmt.Sprintf("Thinking, step %d...", event.Iteration)
 	case "tool_start":
-		return "Tool requested: " + event.ToolName
+		return "Tool requested: " + firstNonEmpty(event.ToolName, "unknown tool")
 	case "tool_done":
-		return "Tool completed: " + event.ToolName
+		return "Tool completed: " + firstNonEmpty(event.ToolName, "unknown tool")
 	case "tool_error":
-		return "Tool failed: " + firstNonEmpty(event.ToolName, event.Error)
+		return "Tool failed: " + firstNonEmpty(event.ToolName, event.Error, "unknown tool")
 	case "plan_update":
 		return "Plan updated."
 	case "finalizing":

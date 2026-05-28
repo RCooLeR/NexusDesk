@@ -39,6 +39,15 @@ func TestAgentEventLineFormatsUsefulEvents(t *testing.T) {
 	}
 }
 
+func TestAgentEventLineGuardsEmptyToolNames(t *testing.T) {
+	for _, eventType := range []string{"tool_start", "tool_done", "tool_error"} {
+		line := agentEventLine(agentSvc.Event{Type: eventType})
+		if strings.HasSuffix(line, ": ") || !strings.Contains(line, "unknown tool") {
+			t.Fatalf("expected guarded empty tool name for %s, got %q", eventType, line)
+		}
+	}
+}
+
 func TestAgentFinalMarkdownIncludesStopReason(t *testing.T) {
 	text := agentFinalMarkdown(agentSvc.Result{Message: "Done", StopReason: "safety_guard"})
 	if !strings.Contains(text, "Done") || !strings.Contains(text, "safety_guard") {
@@ -61,6 +70,13 @@ func TestChatTurnPreviewCompactsLongContent(t *testing.T) {
 	preview := chatTurnPreview(llmSvc.ChatTurn{Role: "assistant", Content: strings.Repeat("word ", 40)})
 	if !strings.HasPrefix(preview, "Assistant: ") || len(preview) > 105 {
 		t.Fatalf("unexpected preview: %q", preview)
+	}
+}
+
+func TestChatTurnPreviewGuardsEmptyRoleAndContent(t *testing.T) {
+	preview := chatTurnPreview(llmSvc.ChatTurn{})
+	if preview != "Turn: (empty)" {
+		t.Fatalf("unexpected empty turn preview: %q", preview)
 	}
 }
 
