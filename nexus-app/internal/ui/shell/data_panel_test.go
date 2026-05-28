@@ -2,6 +2,8 @@ package shell
 
 import (
 	"context"
+	"os"
+	"path/filepath"
 	"strings"
 	"testing"
 	"time"
@@ -293,6 +295,92 @@ func TestLatestRebuildableDatasetDependencyUsesSupportedKinds(t *testing.T) {
 	}
 	if canRebuildDatasetDependency(metadataSvc.DatasetDependencyRecord{DependentKind: "sql-report", Metadata: map[string]string{}}) {
 		t.Fatal("expected SQL report without SQL text to be non-rebuildable")
+	}
+	if !canRebuildDatasetDependency(metadataSvc.DatasetDependencyRecord{SourcePath: "data/sales.csv", DependentKind: "sql-notebook"}) {
+		t.Fatal("expected saved SQL notebook dependencies to be rebuildable")
+	}
+}
+
+func TestNotebookDependencyRecordPreservesNotebookIDForRebuilds(t *testing.T) {
+	notebook := datasetsSvc.Notebook{
+		ID:      "sales-book",
+		RelPath: "data/sales.csv",
+		Label:   "Sales Notebook",
+		Cells:   []datasetsSvc.NotebookCell{{ID: "cell-1", Kind: "sql", SQL: "select * from dataset"}},
+	}
+	record := notebookDependencyRecord("data/sales.csv", notebook)
+	if record.DependentKind != "sql-notebook" || record.DependentRef != "sales-book" || record.Metadata["notebookID"] != "sales-book" {
+		t.Fatalf("unexpected notebook dependency record: %#v", record)
+	}
+	selected, ok := notebookForDatasetDependency([]datasetsSvc.Notebook{notebook}, record)
+	if !ok || selected.ID != "sales-book" {
+		t.Fatalf("expected notebook dependency to resolve by id, got %#v ok=%v", selected, ok)
+	}
+	rebuiltRecord := record
+	rebuiltRecord.DependentRef = ".nexusdesk/artifacts/notebooks/run.md"
+	selected, ok = notebookForDatasetDependency([]datasetsSvc.Notebook{notebook}, rebuiltRecord)
+	if !ok || selected.ID != "sales-book" {
+		t.Fatalf("expected rebuilt dependency to keep resolving by metadata id, got %#v ok=%v", selected, ok)
+	}
+}
+
+func TestRebuildDatasetDependencyArtifactSupportsSQLNotebook(t *testing.T) {
+	root := t.TempDir()
+	dataDir := filepath.Join(root, "data")
+	if err := os.MkdirAll(dataDir, 0o755); err != nil {
+		t.Fatalf("MkdirAll failed: %v", err)
+	}
+	if err := os.WriteFile(filepath.Join(dataDir, "sales.csv"), []byte("channel,spend\nsearch,42\nemail,7\n"), 0o644); err != nil {
+		t.Fatalf("WriteFile failed: %v", err)
+	}
+	datasetService := datasetsSvc.New(nil)
+	notebook, err := datasetService.SaveNotebook(root, datasetsSvc.NotebookSaveRequest{
+		ID:      "sales-book",
+		RelPath: "data/sales.csv",
+		Label:   "Sales Notebook",
+		Cells: []datasetsSvc.NotebookCell{{
+			ID:    "cell-1",
+			Kind:  "sql",
+			Label: "Top spend",
+			SQL:   "select channel, spend from dataset order by spend desc",
+		}},
+	})
+	if err != nil {
+		t.Fatalf("SaveNotebook failed: %v", err)
+	}
+	store, err := metadataSvc.NewStore(root)
+	if err != nil {
+		t.Fatalf("NewStore failed: %v", err)
+	}
+	t.Cleanup(func() { _ = store.Close() })
+	if _, err := store.Ensure(); err != nil {
+		t.Fatalf("Ensure failed: %v", err)
+	}
+	dependency := store.NormalizeDatasetDependencyRecord(notebookDependencyRecord("data/sales.csv", notebook))
+	if err := store.SaveDatasetDependency(dependency); err != nil {
+		t.Fatalf("SaveDatasetDependency failed: %v", err)
+	}
+	view := &View{datasetService: datasetService, metadataStore: store}
+	artifact, err := view.rebuildDatasetDependencyArtifact(context.Background(), root, dependency)
+	if err != nil {
+		t.Fatalf("rebuildDatasetDependencyArtifact failed: %v", err)
+	}
+	if artifact.Kind != "sql-notebook-run" || !strings.Contains(artifact.RelPath, ".nexusdesk/artifacts/notebooks/") {
+		t.Fatalf("unexpected rebuilt artifact: %#v", artifact)
+	}
+	content, err := os.ReadFile(filepath.Join(root, filepath.FromSlash(artifact.RelPath)))
+	if err != nil {
+		t.Fatalf("ReadFile rebuilt artifact failed: %v", err)
+	}
+	if !strings.Contains(string(content), "Sales Notebook") || !strings.Contains(string(content), "| search | 42 |") {
+		t.Fatalf("rebuilt notebook artifact missing expected content:\n%s", string(content))
+	}
+	updated, err := store.GetDatasetDependency(dependency.ID)
+	if err != nil {
+		t.Fatalf("GetDatasetDependency failed: %v", err)
+	}
+	if updated.DependentRef != artifact.RelPath || updated.Metadata["artifact"] != artifact.RelPath || updated.Metadata["notebookID"] != "sales-book" {
+		t.Fatalf("expected dependency to point at rebuilt artifact with notebook id, got %#v", updated)
 	}
 }
 

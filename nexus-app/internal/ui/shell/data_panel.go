@@ -1111,6 +1111,22 @@ func (v *View) runNotebookForDataset(ctx context.Context, root string, selected 
 	return result, notebook.Label, nil
 }
 
+func (v *View) runNotebookForDatasetDependency(ctx context.Context, root string, dependency metadataSvc.DatasetDependencyRecord) (datasetsSvc.NotebookRunResult, datasetsSvc.Notebook, error) {
+	notebooks, err := v.datasetService.ListNotebooks(root, dependency.SourcePath)
+	if err != nil {
+		return datasetsSvc.NotebookRunResult{}, datasetsSvc.Notebook{}, err
+	}
+	notebook, ok := notebookForDatasetDependency(notebooks, dependency)
+	if !ok {
+		return datasetsSvc.NotebookRunResult{}, datasetsSvc.Notebook{}, fmt.Errorf("no saved SQL notebook found for %s", dependency.SourcePath)
+	}
+	result, err := v.datasetService.RunNotebookContext(ctx, root, notebook)
+	if err != nil {
+		return datasetsSvc.NotebookRunResult{}, notebook, err
+	}
+	return result, notebook, nil
+}
+
 func (v *View) finishDatasetNotebookRunJob(jobID string, selected string, notebookLabel string, result datasetsSvc.NotebookRunResult, err error) {
 	if err != nil {
 		if isDataJobCanceled(err) {
@@ -1602,6 +1618,33 @@ func (v *View) rebuildDatasetDependencyArtifact(ctx context.Context, root string
 				"query":   result.Query,
 				"mode":    chart.Mode,
 				"rebuilt": time.Now().UTC().Format(time.RFC3339),
+			})
+		}
+		return artifact, nil
+	case "sql-notebook", "sql-notebook-run":
+		result, notebook, err := v.runNotebookForDatasetDependency(ctx, root, dependency)
+		if err != nil {
+			return artifactsSvc.Artifact{}, err
+		}
+		store, err := artifactsSvc.NewStore(root)
+		if err != nil {
+			return artifactsSvc.Artifact{}, err
+		}
+		artifact, err := store.WriteNotebookRunReport(notebookRunArtifactInput(result))
+		if err != nil {
+			return artifactsSvc.Artifact{}, err
+		}
+		select {
+		case <-ctx.Done():
+			return artifactsSvc.Artifact{}, ctx.Err()
+		default:
+		}
+		if v.metadataStore != nil {
+			_, _ = v.metadataStore.UpdateDatasetDependencyArtifact(dependency.ID, artifact.RelPath, map[string]string{
+				"notebookID": notebook.ID,
+				"label":      notebook.Label,
+				"cells":      fmt.Sprintf("%d", len(notebook.Cells)),
+				"rebuilt":    time.Now().UTC().Format(time.RFC3339),
 			})
 		}
 		return artifact, nil

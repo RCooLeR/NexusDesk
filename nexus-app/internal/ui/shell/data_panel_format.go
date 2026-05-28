@@ -2,6 +2,7 @@ package shell
 
 import (
 	"fmt"
+	"path/filepath"
 	"sort"
 	"strings"
 	"time"
@@ -628,9 +629,35 @@ func canRebuildDatasetDependency(dependency metadataSvc.DatasetDependencyRecord)
 		return strings.TrimSpace(firstNonEmptyString(dependency.Metadata["sql"], dependency.Metadata["query"])) != ""
 	case "chart", "dashboard":
 		return strings.TrimSpace(dependency.SourcePath) != ""
+	case "sql-notebook", "sql-notebook-run":
+		return strings.TrimSpace(dependency.SourcePath) != ""
 	default:
 		return false
 	}
+}
+
+func notebookForDatasetDependency(notebooks []datasetsSvc.Notebook, dependency metadataSvc.DatasetDependencyRecord) (datasetsSvc.Notebook, bool) {
+	targetID := strings.TrimSpace(firstNonEmptyString(dependency.Metadata["notebookID"], dependency.Metadata["notebook"], dependency.DependentRef))
+	targetLabel := strings.TrimSpace(dependency.Metadata["label"])
+	if targetID != "" && !strings.Contains(filepath.ToSlash(targetID), "/") {
+		for _, notebook := range notebooks {
+			if notebook.ID == targetID {
+				return notebook, true
+			}
+		}
+		return datasetsSvc.Notebook{}, false
+	}
+	if targetLabel != "" {
+		for _, notebook := range notebooks {
+			if strings.EqualFold(strings.TrimSpace(notebook.Label), targetLabel) {
+				return notebook, true
+			}
+		}
+	}
+	if len(notebooks) > 0 {
+		return notebooks[0], true
+	}
+	return datasetsSvc.Notebook{}, false
 }
 
 func latestReusableSQLRun(runs []metadataSvc.SQLRunRecord, selected string) (metadataSvc.SQLRunRecord, bool) {
@@ -1160,8 +1187,9 @@ func notebookDependencyRecord(source string, notebook datasetsSvc.Notebook) meta
 		DependentRef:  notebook.ID,
 		Relation:      "saves",
 		Metadata: map[string]string{
-			"label": notebook.Label,
-			"cells": fmt.Sprintf("%d", len(notebook.Cells)),
+			"notebookID": notebook.ID,
+			"label":      notebook.Label,
+			"cells":      fmt.Sprintf("%d", len(notebook.Cells)),
 		},
 		CreatedAt: notebook.CreatedAt,
 		UpdatedAt: notebook.UpdatedAt,
