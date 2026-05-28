@@ -1,6 +1,7 @@
 package shell
 
 import (
+	"context"
 	"strings"
 	"testing"
 	"time"
@@ -157,6 +158,19 @@ func TestArtifactCanRegenerateSupportedKinds(t *testing.T) {
 			want:     false,
 		},
 		{
+			name: "comparison with compared artifacts",
+			artifact: artifactsSvc.Artifact{
+				Kind:        "artifact-comparison",
+				SourcePaths: []string{".nexusdesk/artifacts/document-sets/left.md", ".nexusdesk/artifacts/document-sets/right.md"},
+			},
+			want: true,
+		},
+		{
+			name:     "comparison without compared artifacts",
+			artifact: artifactsSvc.Artifact{Kind: "artifact-comparison", SourcePaths: []string{".nexusdesk/artifacts/document-sets/left.md"}},
+			want:     false,
+		},
+		{
 			name:     "archived scan report",
 			artifact: artifactsSvc.Artifact{Kind: "scan-report", Archived: true},
 			want:     false,
@@ -186,6 +200,75 @@ func TestArtifactRegenerationSourceUsesSourcePathsBeforeSource(t *testing.T) {
 	}
 	if _, ok := artifactRegenerationSource(artifactsSvc.Artifact{Source: "docs/a.md, docs/b.md"}); ok {
 		t.Fatal("expected comma-separated source summary to be rejected")
+	}
+}
+
+func TestArtifactRegenerationPairUsesSourcePathsAndSourceFallback(t *testing.T) {
+	left, right, ok := artifactRegenerationPair(artifactsSvc.Artifact{
+		SourcePaths: []string{".nexusdesk/artifacts/a.md", ".nexusdesk/artifacts/b.md"},
+	})
+	if !ok || left != ".nexusdesk/artifacts/a.md" || right != ".nexusdesk/artifacts/b.md" {
+		t.Fatalf("unexpected source path pair: left=%q right=%q ok=%t", left, right, ok)
+	}
+	left, right, ok = artifactRegenerationPair(artifactsSvc.Artifact{
+		Source: ".nexusdesk/artifacts/a.md, .nexusdesk/artifacts/b.md",
+	})
+	if !ok || left != ".nexusdesk/artifacts/a.md" || right != ".nexusdesk/artifacts/b.md" {
+		t.Fatalf("unexpected fallback pair: left=%q right=%q ok=%t", left, right, ok)
+	}
+	left, right, ok = artifactRegenerationPair(artifactsSvc.Artifact{
+		SourcePaths: []string{".nexusdesk/artifacts/stale.md"},
+		Source:      ".nexusdesk/artifacts/a.md, .nexusdesk/artifacts/b.md",
+	})
+	if !ok || left != ".nexusdesk/artifacts/a.md" || right != ".nexusdesk/artifacts/b.md" {
+		t.Fatalf("unexpected incomplete-sourcepaths fallback pair: left=%q right=%q ok=%t", left, right, ok)
+	}
+	if _, _, ok := artifactRegenerationPair(artifactsSvc.Artifact{
+		SourcePaths: []string{".nexusdesk/artifacts/a.md", ".nexusdesk/artifacts/a.md"},
+	}); ok {
+		t.Fatal("expected identical comparison paths to be rejected")
+	}
+}
+
+func TestBuildArtifactComparisonReportRegeneratesFromSourceArtifacts(t *testing.T) {
+	root := t.TempDir()
+	store, err := artifactsSvc.NewStore(root)
+	if err != nil {
+		t.Fatalf("NewStore() error = %v", err)
+	}
+	left, err := store.WriteDocumentSetReport(artifactsSvc.DocumentSetReport{
+		Title:       "Left",
+		Roots:       []string{"docs"},
+		SourcePaths: []string{"docs/a.md"},
+		Content:     "old",
+	})
+	if err != nil {
+		t.Fatalf("WriteDocumentSetReport(left) error = %v", err)
+	}
+	right, err := store.WriteDocumentSetReport(artifactsSvc.DocumentSetReport{
+		Title:       "Right",
+		Roots:       []string{"docs"},
+		SourcePaths: []string{"docs/a.md"},
+		Content:     "new",
+	})
+	if err != nil {
+		t.Fatalf("WriteDocumentSetReport(right) error = %v", err)
+	}
+	rebuilt, err := buildArtifactComparisonReport(context.Background(), root, left.RelPath, right.RelPath)
+	if err != nil {
+		t.Fatalf("buildArtifactComparisonReport() error = %v", err)
+	}
+	if rebuilt.Kind != "artifact-comparison" || len(rebuilt.SourcePaths) != 2 {
+		t.Fatalf("unexpected rebuilt comparison artifact: %#v", rebuilt)
+	}
+	text, err := store.ReadArtifactText(rebuilt.RelPath)
+	if err != nil {
+		t.Fatalf("ReadArtifactText() error = %v", err)
+	}
+	for _, expected := range []string{"# Artifact Comparison", left.RelPath, right.RelPath, "-old", "+new"} {
+		if !strings.Contains(text, expected) {
+			t.Fatalf("comparison report missing %q:\n%s", expected, text)
+		}
 	}
 }
 

@@ -46,7 +46,7 @@ Implemented in `nexus-app/`:
 - Task discovery/run jobs for npm, Go tests, Python pytest, Cargo tests, and Docker Compose config validation.
 - Data profiling/query/SQL/notebooks for CSV, TSV, JSON, NDJSON, XLSX, logs, Parquet metadata, and SQLite files.
 - Chart/dashboard SVG preview and artifact generation.
-- Artifact browser with metadata, lineage, comparison, archive/delete/restore, source freshness, context pinning, job-routed workspace scan reports, and regeneration for scan, document-extraction, and operations-runbook artifacts.
+- Artifact browser with metadata, lineage, comparison, archive/delete/restore, source freshness, context pinning, job-routed workspace scan reports, and regeneration for scan, document-extraction, operations-runbook, and artifact-comparison artifacts.
 - Document extraction/report artifacts for Markdown, TXT, HTML, XML, DOCX, XLSX, and PDF preview text.
 - Operations inspection for Dockerfiles, Compose, env/config/script/log files, Compose topology, safe config validation, and runbook artifacts.
 - Settings, LLM transport, streaming Ask mode, Agent mode, deterministic tools, approval queue, full-project access policy, rollback browser, history, audit, source/model answer diagnostics, evidence-quality labels, line-aware citation refs, and durable metadata.

@@ -453,9 +453,40 @@ func (v *View) buildRegeneratedArtifact(ctx context.Context, workspaceRoot strin
 		}
 		_, rebuilt, err := v.buildOperationsRunbookArtifact(ctx, workspaceRoot, source)
 		return rebuilt, err
+	case "artifact-comparison":
+		left, right, ok := artifactRegenerationPair(artifact)
+		if !ok {
+			return artifactsSvc.Artifact{}, fmt.Errorf("comparison artifact %s has no compared artifact path metadata", artifact.RelPath)
+		}
+		return buildArtifactComparisonReport(ctx, workspaceRoot, left, right)
 	default:
 		return artifactsSvc.Artifact{}, fmt.Errorf("artifact kind %q cannot be regenerated yet", artifact.Kind)
 	}
+}
+
+func buildArtifactComparisonReport(ctx context.Context, workspaceRoot string, left string, right string) (artifactsSvc.Artifact, error) {
+	if err := ctx.Err(); err != nil {
+		return artifactsSvc.Artifact{}, err
+	}
+	store, err := artifactsSvc.NewStore(workspaceRoot)
+	if err != nil {
+		return artifactsSvc.Artifact{}, err
+	}
+	comparison, err := store.CompareArtifacts(left, right)
+	if err != nil {
+		return artifactsSvc.Artifact{}, err
+	}
+	if err := ctx.Err(); err != nil {
+		return artifactsSvc.Artifact{}, err
+	}
+	rebuilt, err := store.WriteArtifactComparisonReport(comparison)
+	if err != nil {
+		return artifactsSvc.Artifact{}, err
+	}
+	if err := ctx.Err(); err != nil {
+		return artifactsSvc.Artifact{}, err
+	}
+	return rebuilt, nil
 }
 
 func (v *View) finishArtifactRegenerationJob(jobID string, original artifactsSvc.Artifact, rebuilt artifactsSvc.Artifact, err error) {
@@ -792,6 +823,9 @@ func artifactCanRegenerate(artifact artifactsSvc.Artifact) bool {
 	case "operations-runbook":
 		_, ok := artifactRegenerationSource(artifact)
 		return ok
+	case "artifact-comparison":
+		_, _, ok := artifactRegenerationPair(artifact)
+		return ok
 	default:
 		return false
 	}
@@ -808,6 +842,31 @@ func artifactRegenerationSource(artifact artifactsSvc.Artifact) (string, bool) {
 		return candidate, true
 	}
 	return "", false
+}
+
+func artifactRegenerationPair(artifact artifactsSvc.Artifact) (string, string, bool) {
+	candidates := append([]string{}, artifact.SourcePaths...)
+	if len(candidates) < 2 {
+		candidates = nil
+		if strings.Contains(artifact.Source, ",") {
+			candidates = strings.Split(artifact.Source, ",")
+		}
+	}
+	paths := make([]string, 0, 2)
+	for _, candidate := range candidates {
+		candidate = filepath.ToSlash(strings.TrimSpace(candidate))
+		if candidate == "" || candidate == "." || strings.Contains(candidate, ",") {
+			continue
+		}
+		paths = append(paths, candidate)
+		if len(paths) == 2 {
+			break
+		}
+	}
+	if len(paths) != 2 || paths[0] == paths[1] {
+		return "", "", false
+	}
+	return paths[0], paths[1], true
 }
 
 func artifactRegenerationJobLabel(artifact artifactsSvc.Artifact) string {

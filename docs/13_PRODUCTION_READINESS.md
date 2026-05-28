@@ -23,7 +23,7 @@ The app can already:
 - inspect Git status/diffs and stage files or hunks through explicit actions;
 - discover and run bounded project tasks;
 - profile/query local datasets and workspace SQLite files;
-- create chart, dashboard, notebook, document, workspace scan, operations, task, chat-answer, and comparison artifacts, with dependency/source rebuild coverage for dataset summary, query, SQL, chart, dashboard, SQL notebook, SQLite query, scan-report, document-extraction, and operations-runbook outputs;
+- create chart, dashboard, notebook, document, workspace scan, operations, task, chat-answer, and comparison artifacts, with dependency/source rebuild coverage for dataset summary, query, SQL, chart, dashboard, SQL notebook, SQLite query, scan-report, document-extraction, operations-runbook, and artifact-comparison outputs;
 - run Ask and Agent modes against configured OpenAI-compatible or Ollama endpoints;
 - persist chat, artifact, job, SQL, approval, and agent/tool audit metadata.
 
@@ -124,7 +124,7 @@ Exit criteria:
 
 ## Immediate Production-Oriented Next Batch
 
-1. Close the remaining Wails inventory parity blockers: editor maturity, deeper retrieval evidence, and future artifact regeneration coverage for richer generated documents/presentations/comparison reports/chat answers.
+1. Close the remaining Wails inventory parity blockers: editor maturity, deeper retrieval evidence, and future artifact regeneration coverage for richer generated documents/presentations/chat answers.
 2. Continue editor parity: active-editor inline syntax styling and future LSP/deeper cross-file language-action behavior.
 3. Plan macOS Keychain and Linux Secret Service/libsecret after the Windows protected-secret baseline.
 4. Define the durable job contract for OCR, dump imports, connector pulls, report generation, and long agent runs.
