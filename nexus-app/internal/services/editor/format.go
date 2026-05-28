@@ -18,6 +18,7 @@ type FormatResult struct {
 func FormatDocument(fileName string, content string) (FormatResult, error) {
 	extension := strings.ToLower(filepath.Ext(fileName))
 	lowerName := strings.ToLower(filepath.Base(fileName))
+	language := DetectSyntaxLanguage(fileName)
 	var next string
 	var err error
 	switch extension {
@@ -43,12 +44,28 @@ func FormatDocument(fileName string, content string) (FormatResult, error) {
 			next = formatWhitespaceDocument(content, false)
 			break
 		}
+		if language.NativeLight || formatWhitespaceOnlyExtension(extension, lowerName) {
+			next = formatWhitespaceDocument(content, false)
+			break
+		}
 		return FormatResult{}, fmt.Errorf("formatting is not available for %s files yet", strings.TrimPrefix(extension, "."))
 	}
 	if next == content {
 		return FormatResult{Content: content, Changed: false, Message: "Document is already formatted."}, nil
 	}
 	return FormatResult{Content: next, Changed: true, Message: "Formatted document draft."}, nil
+}
+
+func formatWhitespaceOnlyExtension(extension string, lowerName string) bool {
+	if lowerName == "makefile" || strings.HasSuffix(lowerName, ".env") || strings.HasSuffix(lowerName, ".toml") {
+		return true
+	}
+	switch extension {
+	case ".bat", ".cmd", ".conf", ".config", ".css", ".htm", ".html", ".ini", ".java", ".js", ".jsx", ".less", ".ps1", ".py", ".rs", ".scss", ".sh", ".svg", ".toml", ".ts", ".tsx", ".xml":
+		return true
+	default:
+		return false
+	}
 }
 
 func formatWhitespaceDocument(content string, preserveMarkdownHardBreaks bool) string {

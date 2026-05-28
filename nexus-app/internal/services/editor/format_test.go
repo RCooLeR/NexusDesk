@@ -59,8 +59,32 @@ func TestFormatDocumentFormatsDockerfileByName(t *testing.T) {
 	}
 }
 
+func TestFormatDocumentFormatsRecognizedCodeWhitespace(t *testing.T) {
+	cases := map[string]string{
+		"script.py":       "print('hi')  \r\n",
+		"src/app.tsx":     "export const App = () => null\t\r\n",
+		"styles/site.css": "body { color: red; }  \r\n",
+		"diagram.svg":     "<svg>  \r\n</svg>\t\r\n",
+		"Cargo.toml":      "[package]  \r\nname = \"nexus\"\t\r\n",
+	}
+	for fileName, content := range cases {
+		t.Run(fileName, func(t *testing.T) {
+			result, err := FormatDocument(fileName, content)
+			if err != nil {
+				t.Fatalf("FormatDocument returned error: %v", err)
+			}
+			if !result.Changed || strings.Contains(result.Content, "\r") || strings.Contains(result.Content, "\t\n") || strings.Contains(result.Content, "  \n") {
+				t.Fatalf("expected whitespace-normalized code, got %#v", result)
+			}
+			if !strings.HasSuffix(result.Content, "\n") {
+				t.Fatalf("expected formatted content to end with newline, got %q", result.Content)
+			}
+		})
+	}
+}
+
 func TestFormatDocumentReportsUnsupportedExtensions(t *testing.T) {
-	if _, err := FormatDocument("script.py", "print('hi')\n"); err == nil || !strings.Contains(err.Error(), "not available") {
+	if _, err := FormatDocument("archive.bin", "bytes\n"); err == nil || !strings.Contains(err.Error(), "not available") {
 		t.Fatalf("expected unsupported format error, got %v", err)
 	}
 }
