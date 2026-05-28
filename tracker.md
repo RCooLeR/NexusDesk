@@ -301,8 +301,8 @@ Exit criteria:
 
 Goal: remove the old app only after the Fyne app earns it.
 
-- [ ] Identify any Wails-only features still missing in Fyne.
-- [ ] Decide whether any React/Monaco code should be replaced, embedded, or permanently dropped.
+- [x] Identify any Wails-only features still missing in Fyne.
+- [x] Decide whether any React/Monaco code should be replaced, embedded, or permanently dropped.
 - [ ] Freeze `app-wails` after feature parity milestone.
 - [ ] Remove Wails build instructions from primary docs.
 - [ ] Archive or delete `app-wails` after explicit approval.
@@ -314,20 +314,19 @@ Exit criteria:
 
 ## Next Batch
 
-1. Create a Wails-only feature inventory and mark each item `port`, `replace`, `drop`, or `later`.
+1. Use the Wails inventory to close remaining Native Parity blockers: recent workspaces, editor maturity, protected secrets, assistant profile/memory UX, Git history/blame, lineage import/export, and optional web fetch.
 2. Finish native editor/UI parity: syntax highlighting plan, find/replace, split editor groups or equivalent layout decision, breadcrumbs/outline/minimap strategy, and less cramped native panels.
 3. Design and implement native protected secret storage on Windows first, with explicit unsupported-platform behavior.
-4. Add live read-only execution, inspection, and cancellation flows for external connector profiles after the native profile store and SQL guard baseline.
-5. Route long indexing, OCR, dump imports, connector pulls, report generation, and long agent runs through durable jobs.
-6. Add dump import job design before any Docker/database import execution.
-7. Continue Diagnostics hardening with deeper provider-specific runtime/GPU checks and guided remediation workflows.
-8. Keep cleaning Wails-era documentation wording so active docs clearly describe `nexus-app/` behavior and mark `app-wails/` as reference history.
+4. Add durable job routing for long indexing, OCR, dump imports, connector pulls, report generation, and long agent runs.
+5. Add dump import job design before any Docker/database import execution.
+6. Continue Diagnostics hardening with deeper provider-specific runtime/GPU checks and guided remediation workflows.
+7. Keep cleaning Wails-era documentation wording so active docs clearly describe `nexus-app/` behavior and mark `app-wails/` as reference history.
 
 ## Production Readiness Checklist
 
 ### Gate 1: Native Parity Beta
 
-- [ ] Wails-only feature inventory with `port` / `replace` / `drop` / `later` decisions.
+- [x] Wails-only feature inventory with `port` / `replace` / `drop` / `later` decisions.
 - [ ] IDE-grade editor baseline: syntax highlighting, find/replace, encoding controls, and split/breadcrumb/outline strategy.
 - [ ] Native external database profiles for PostgreSQL, MySQL/MariaDB, SQL Server, and DuckDB with read-only guards.
 - [ ] Native protected secret storage for Windows; explicit refusal/fallback behavior for unsupported platforms.

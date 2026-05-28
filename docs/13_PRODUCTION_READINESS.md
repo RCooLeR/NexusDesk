@@ -45,6 +45,8 @@ Production-ready means:
 
 Goal: make `nexus-app/` the only app developers need during normal work.
 
+Reference: [Wails Feature Inventory](15_WAILS_FEATURE_INVENTORY.md) records the explicit port/replace/drop/later decisions needed before freezing `app-wails`.
+
 Required:
 
 - IDE-grade editor baseline: syntax highlighting strategy, reliable find/replace, split groups or equivalent layout decision, breadcrumbs/outline strategy, and file encoding controls.
@@ -122,12 +124,11 @@ Exit criteria:
 
 ## Immediate Production-Oriented Next Batch
 
-1. Create a Wails-only feature inventory and mark each item `port`, `replace`, `drop`, or `later`.
+1. Close the Wails inventory parity blockers: recent workspaces, editor maturity, protected secrets, assistant profile/memory UX, Git history/blame, lineage import/export, and optional web fetch.
 2. Start editor parity: syntax highlighting decision and find/replace behavior.
 3. Start native protected secret storage design and Windows implementation.
-4. Port external database profile model and guarded read-only query service into `nexus-app`.
-5. Define the durable job contract for OCR, dump imports, connector pulls, report generation, and long agent runs.
-6. Add a Diagnostics surface plan and first metadata/provider health checks.
+4. Define the durable job contract for OCR, dump imports, connector pulls, report generation, and long agent runs.
+5. Continue diagnostics hardening with deeper provider/runtime checks and guided remediation.
 
 ## Documentation Rule
 
