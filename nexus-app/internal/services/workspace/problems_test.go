@@ -28,6 +28,7 @@ func TestScanProblemsFindsLanguageDiagnostics(t *testing.T) {
 	writeFile(t, filepath.Join(root, "src", "broken.go"), "package main\n\nfunc broken( {\n")
 	writeFile(t, filepath.Join(root, "config", "bad.yaml"), "services:\n  app: [\n")
 	writeFile(t, filepath.Join(root, "config", "bad.toml"), "[package\nname = \"nexus\"\n")
+	writeFile(t, filepath.Join(root, "docs", "bad.xml"), "<root>\n  <item>\n</root>\n")
 
 	summary, err := New().ScanProblems(root, 20)
 	if err != nil {
@@ -36,6 +37,7 @@ func TestScanProblemsFindsLanguageDiagnostics(t *testing.T) {
 	assertProblem(t, summary.Problems, "src/broken.go", "error", "go")
 	assertProblem(t, summary.Problems, "config/bad.yaml", "error", "yaml")
 	assertProblem(t, summary.Problems, "config/bad.toml", "error", "toml")
+	assertProblem(t, summary.Problems, "docs/bad.xml", "error", "xml")
 }
 
 func TestScanProblemsIgnoresValidLanguageFiles(t *testing.T) {
@@ -43,6 +45,7 @@ func TestScanProblemsIgnoresValidLanguageFiles(t *testing.T) {
 	writeFile(t, filepath.Join(root, "src", "main.go"), "package main\n\nfunc main() {}\n")
 	writeFile(t, filepath.Join(root, "config", "app.yaml"), "services:\n  app:\n    image: nexus\n")
 	writeFile(t, filepath.Join(root, "config", "app.toml"), "[package]\nname = \"nexus\"\n")
+	writeFile(t, filepath.Join(root, "docs", "guide.xml"), "<root>\n  <item>ok</item>\n</root>\n")
 
 	summary, err := New().ScanProblems(root, 20)
 	if err != nil {

@@ -2,11 +2,13 @@ package workspace
 
 import (
 	"encoding/json"
+	"encoding/xml"
 	"errors"
 	"fmt"
 	"go/parser"
 	"go/scanner"
 	"go/token"
+	"io"
 	"io/fs"
 	"path/filepath"
 	"regexp"
@@ -150,6 +152,10 @@ func syntaxProblems(preview domain.FilePreview) []WorkspaceProblem {
 		if problem, ok := tomlProblem(preview); ok {
 			return []WorkspaceProblem{problem}
 		}
+	case ".xml":
+		if problem, ok := xmlProblem(preview); ok {
+			return []WorkspaceProblem{problem}
+		}
 	}
 	return nil
 }
@@ -262,6 +268,29 @@ func tomlProblem(preview domain.FilePreview) (WorkspaceProblem, bool) {
 		}, true
 	}
 	return WorkspaceProblem{}, false
+}
+
+func xmlProblem(preview domain.FilePreview) (WorkspaceProblem, bool) {
+	decoder := xml.NewDecoder(strings.NewReader(preview.Text))
+	for {
+		if _, err := decoder.Token(); err != nil {
+			if errors.Is(err, io.EOF) {
+				return WorkspaceProblem{}, false
+			}
+			line := 1
+			if syntaxErr, ok := err.(*xml.SyntaxError); ok && syntaxErr.Line > 0 {
+				line = syntaxErr.Line
+			}
+			return WorkspaceProblem{
+				RelPath:  preview.RelPath,
+				Name:     preview.Name,
+				Severity: "error",
+				Source:   "xml",
+				Message:  "XML syntax: " + err.Error(),
+				Line:     line,
+			}, true
+		}
+	}
 }
 
 func problemFromLine(preview domain.FilePreview, severity string, source string, message string, lineNumber int, line string) WorkspaceProblem {

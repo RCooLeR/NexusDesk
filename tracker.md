@@ -161,7 +161,7 @@ Goal: recreate the useful local project workbench without Wails or React.
 - [x] Add first project-tree reveal/collapse controls and ignored-path visibility affordances.
 - [x] Add first native workspace path/content search service and bottom result panel.
 - [x] Add first native Problems service and bottom panel from the bounded marker/JSON scanner.
-- [x] Add native Problems language diagnostics for Go, YAML, and TOML syntax using bounded preview-safe reads.
+- [x] Add native Problems language diagnostics for Go, YAML, TOML, and XML syntax using bounded preview-safe reads.
 
 Exit criteria:
 
@@ -396,6 +396,7 @@ The Fyne migration must not drop product ambition, but this section is intention
 - [ ] Multi-tab editor polish with future LSP-backed cross-file go-to-definition where native language support is available.
 - [x] First native lightweight syntax strategy for common languages, Markdown, SQL, JSON/YAML/XML/HTML, Docker/Compose, logs, and config files.
 - [x] Native read-only highlighted syntax preview with Wails/Monaco-inspired token colors, line numbers, and bounded token styling.
+- [x] Native Problems XML diagnostics for well-formed document/config markup.
 - [ ] Rich inline syntax styling in the active editor widget and future LSP-backed diagnostics/actions.
 - [x] Markdown source/rendered toggle.
 - [x] Safe edit preview/apply/rollback for text, code, patches, appends, encoding-aware writes, and agent-safe mutation tools.
