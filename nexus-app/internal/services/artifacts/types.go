@@ -187,20 +187,28 @@ type SourceFingerprint struct {
 }
 
 type Lineage struct {
-	Nodes []LineageNode
-	Edges []LineageEdge
+	Nodes              []LineageNode  `json:"nodes"`
+	Edges              []LineageEdge  `json:"edges"`
+	RelationshipCounts map[string]int `json:"relationshipCounts,omitempty"`
+	Message            string         `json:"message,omitempty"`
 }
 
 type LineageNode struct {
-	ID    string
-	Kind  string
-	Label string
+	ID      string `json:"id"`
+	Kind    string `json:"kind"`
+	Label   string `json:"label"`
+	RelPath string `json:"relPath,omitempty"`
 }
 
 type LineageEdge struct {
-	From  string
-	To    string
-	Label string
+	From  string `json:"from"`
+	To    string `json:"to"`
+	Label string `json:"label"`
+}
+
+type LineageImport struct {
+	Lineage Lineage `json:"lineage"`
+	Message string  `json:"message"`
 }
 
 type ArtifactComparison struct {

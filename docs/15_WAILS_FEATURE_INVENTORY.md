@@ -15,7 +15,7 @@ This inventory records the explicit `port`, `replace`, `drop`, or `later` decisi
 ## Summary
 
 - Most core backend workflows have native equivalents: workspace open/browse, safe file mutation, rollback records, search/problems, Git status/diff/hunk staging, task runs, artifacts, metadata, datasets, SQLite, external connector profile flows, settings, approvals, diagnostics, chat history, and agent audit.
-- The remaining parity blockers are concentrated in editor maturity, protected secrets, assistant profile/memory UX, richer Git history/blame, and a few agent/artifact lineage affordances.
+- The remaining parity blockers are concentrated in editor maturity, protected secrets, assistant profile/memory UX, artifact regeneration, and approval-gated web fetch.
 - React/Wails shell code should not be embedded wholesale. Monaco-specific editor behavior should be replaced by a native editor strategy unless a future spike proves an embedded editor can be shipped cleanly without reviving the Wails/webview architecture.
 
 ## Inventory
@@ -29,8 +29,9 @@ This inventory records the explicit `port`, `replace`, `drop`, or `later` decisi
 | Command palette and quick-open | `CommandPalette.tsx`, `QuickOpenPalette.tsx` | Native quick-open keyboard workflow exists; command palette depth is not fully replicated | `ported` for quick-open, `later` for broader command palette | Keep quick-open native; revisit full command palette after editor/navigation polish |
 | Git status, file diff, file/hunk stage and unstage | `app-wails/app_git.go`, `GitDiffPanel.tsx` | Native Git panel supports status, diff, hunk-windowing, file/hunk actions, and AI summary | `ported` | Continue destructive action policy separately |
 | Git history and blame | `GetGitHistory`, `GetGitBlame`, Wails agent `read_git_history`/`read_git_blame` | Native Git service, Git panel, and deterministic agent tools expose read-only history/blame | `ported` | Continue broader Git AI/review work separately |
-| Artifact writer, metadata, archive/delete, compare, source freshness | `app-wails/internal/artifact/*`, `ArtifactStudioPanel.tsx` | Native artifact browser/writer/compare/archive/restore/delete/source actions are implemented | `ported` | Continue lineage graph and regeneration work |
-| Artifact lineage graph import/export and dependency rebuild | `GetArtifactLineage`, `ExportArtifactLineageJSON`, `ImportArtifactLineageJSON`, `RebuildDatasetDependency` | Native lineage metadata and freshness exist, but graph import/export and rebuild workflow are not complete | `port` | Add lineage graph import/export UI and regeneration actions after artifact metadata stabilizes |
+| Artifact writer, metadata, archive/delete, compare, source freshness | `app-wails/internal/artifact/*`, `ArtifactStudioPanel.tsx` | Native artifact browser/writer/compare/archive/restore/delete/source actions are implemented | `ported` | Continue regeneration work |
+| Artifact lineage graph import/export and agent context | `GetArtifactLineage`, `ExportArtifactLineageJSON`, `ImportArtifactLineageJSON`, Wails `read_artifact_lineage` | Native workspace lineage graph export/import UI and read-only agent lineage tool are implemented | `ported` | Continue graph polish only |
+| Artifact dependency rebuild/regeneration | `RebuildDatasetDependency` | Native source freshness exists, but original-parameter regeneration is not complete | `port` | Add regeneration actions that reuse original source context and parameters |
 | Dataset profiling, SQL, notebooks, charts, dashboards, SQLite query artifacts | `dataset_service.go`, `DataStudioPanel.tsx`, `DataOperationsPanel.tsx` | Native Data panel covers profiles, query/SQL, notebook run/export, chart/dashboard artifacts, SQLite saved queries, history, and lineage | `ported` | Continue notebook/editor UX and dump import design |
 | External database profiles and read-only query flows | `internal/dbconnector/*`, `ConnectorProfilesCard.tsx` | Native profile list/save/delete/test/inspect/query/cancel/history exists for PostgreSQL, MySQL/MariaDB, SQL Server, SQLite, and DuckDB guarded builds | `ported` for functional parity | Move credentials to protected storage before production |
 | Protected secret storage | `app-wails/internal/storage/secret_windows.go`, connector sidecar handling | Native stores non-secret settings and redacted connector profiles; OS-protected secret storage is still a gate | `port` | Windows protected storage first; explicit unsupported-platform refusal/fallback |
@@ -54,7 +55,7 @@ This inventory records the explicit `port`, `replace`, `drop`, or `later` decisi
 1. Finish the editor parity strategy: syntax highlighting, breadcrumbs/outline, encoding controls, split/editor layout decision.
 2. Implement native protected secret storage on Windows with explicit unsupported-platform behavior.
 3. Add assistant prompt profiles/memory plus retry/compare/save-answer UX.
-4. Add artifact lineage import/export and regeneration workflows.
+4. Add artifact regeneration workflows that reuse original source context and parameters.
 5. Add approval-gated agent web fetch if still desired for parity.
 
 ## Retirement Decision

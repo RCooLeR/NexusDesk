@@ -4,9 +4,11 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"sort"
 	"strings"
 
 	"nexusdesk/internal/services/agent"
+	artifactsSvc "nexusdesk/internal/services/artifacts"
 	gitsvc "nexusdesk/internal/services/git"
 	taskssvc "nexusdesk/internal/services/tasks"
 	workspacesvc "nexusdesk/internal/services/workspace"
@@ -38,6 +40,7 @@ func NewDefaultDispatcher(deps Dependencies) *Dispatcher {
 		Tool{Descriptor: agent.ToolDescriptor{Name: "read_git_diff", Description: "Read a bounded staged/unstaged diff for one changed file.", Risk: "low", Inputs: "relPath"}, Handler: handlers.readGitDiff},
 		Tool{Descriptor: agent.ToolDescriptor{Name: "read_git_history", Description: "Read bounded Git commit history for the repository or one file.", Risk: "low", Inputs: "relPath(optional), limit(optional)"}, Handler: handlers.readGitHistory},
 		Tool{Descriptor: agent.ToolDescriptor{Name: "read_git_blame", Description: "Read bounded Git blame lines for one file.", Risk: "low", Inputs: "relPath, startLine(optional), endLine(optional)"}, Handler: handlers.readGitBlame},
+		Tool{Descriptor: agent.ToolDescriptor{Name: "read_artifact_lineage", Description: "Read the workspace artifact lineage graph with generated artifacts, sources, jobs, and task relationships.", Risk: "low", Inputs: "query(optional), includeArchived(optional)"}, Handler: handlers.readArtifactLineage},
 		Tool{Descriptor: agent.ToolDescriptor{Name: "list_tasks", Description: "List safe discovered workspace tasks.", Risk: "low", Inputs: ""}, Handler: handlers.listTasks},
 		Tool{Descriptor: agent.ToolDescriptor{Name: "run_task", Description: "Run a discovered safe workspace task when shell approval is granted.", Risk: "high", Inputs: "taskId"}, Handler: handlers.runTask},
 		Tool{Descriptor: agent.ToolDescriptor{Name: "write_file", Description: "Create or replace a text/code file inside the workspace through safe write validation and rollback.", Risk: "high", Inputs: "relPath, content, encoding(optional)"}, Handler: handlers.writeFile},
@@ -243,6 +246,60 @@ func formatGitBlameObservation(result gitsvc.BlameResult) string {
 	}
 	if result.Truncated {
 		lines = append(lines, "Blame output was truncated.")
+	}
+	return strings.Join(lines, "\n")
+}
+
+func (h defaultHandlers) readArtifactLineage(ctx context.Context, call agent.ToolCall, request agent.Request) (agent.ToolResult, error) {
+	root, err := workspaceRoot(request)
+	if err != nil {
+		return toolError(call, "low", err), err
+	}
+	store, err := artifactsSvc.NewStore(root)
+	if err != nil {
+		return toolError(call, "low", err), err
+	}
+	lineage, err := store.LineageGraph(artifactsSvc.ListOptions{Query: firstArg(call, "query", "q"), IncludeArchived: boolArg(call, "includeArchived")})
+	if err != nil {
+		return toolError(call, "low", err), err
+	}
+	return toolOK(call, "low", formatArtifactLineageObservation(lineage)), nil
+}
+
+func formatArtifactLineageObservation(lineage artifactsSvc.Lineage) string {
+	if len(lineage.Nodes) == 0 {
+		return "No artifact lineage metadata is available yet."
+	}
+	lines := []string{lineage.Message}
+	if len(lineage.RelationshipCounts) > 0 {
+		counts := make([]string, 0, len(lineage.RelationshipCounts))
+		for label, count := range lineage.RelationshipCounts {
+			counts = append(counts, fmt.Sprintf("%s=%d", label, count))
+		}
+		sort.Strings(counts)
+		lines = append(lines, "Relationship counts: "+strings.Join(counts, ", "))
+	}
+	lines = append(lines, "Nodes:")
+	for index, node := range lineage.Nodes {
+		if index >= 40 {
+			lines = append(lines, "[nodes truncated]")
+			break
+		}
+		relPath := node.RelPath
+		if relPath == "" {
+			relPath = "-"
+		}
+		lines = append(lines, fmt.Sprintf("- %s [%s] %s path=%s", node.ID, node.Kind, node.Label, relPath))
+	}
+	if len(lineage.Edges) > 0 {
+		lines = append(lines, "Relationships:")
+		for index, edge := range lineage.Edges {
+			if index >= 80 {
+				lines = append(lines, "[relationships truncated]")
+				break
+			}
+			lines = append(lines, fmt.Sprintf("- %s --%s--> %s", edge.From, edge.Label, edge.To))
+		}
 	}
 	return strings.Join(lines, "\n")
 }

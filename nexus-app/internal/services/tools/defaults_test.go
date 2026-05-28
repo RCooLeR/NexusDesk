@@ -9,6 +9,7 @@ import (
 	"testing"
 
 	"nexusdesk/internal/services/agent"
+	artifactsSvc "nexusdesk/internal/services/artifacts"
 	workspaceSvc "nexusdesk/internal/services/workspace"
 )
 
@@ -92,6 +93,35 @@ func TestDefaultDispatcherGitHistoryAndBlameTools(t *testing.T) {
 	}
 	if !strings.Contains(blame.Observation, "line two") || !strings.Contains(blame.Observation, "Requested lines: 2-2") {
 		t.Fatalf("unexpected blame observation:\n%s", blame.Observation)
+	}
+}
+
+func TestDefaultDispatcherArtifactLineageTool(t *testing.T) {
+	root := t.TempDir()
+	if err := os.WriteFile(filepath.Join(root, "README.md"), []byte("# Project\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	store, err := artifactsSvc.NewStore(root)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := store.WriteDocumentSetReport(artifactsSvc.DocumentSetReport{
+		Title:       "Project Docs",
+		Roots:       []string{"."},
+		SourcePaths: []string{"README.md"},
+		Content:     "# Project\n",
+	}); err != nil {
+		t.Fatalf("WriteDocumentSetReport returned error: %v", err)
+	}
+	dispatcher := NewDefaultDispatcher(Dependencies{Workspace: workspaceSvc.New()})
+	result, err := dispatcher.ExecuteTool(context.Background(), agent.ToolCall{Name: "read_artifact_lineage"}, agent.Request{WorkspaceRoot: root})
+	if err != nil {
+		t.Fatalf("read_artifact_lineage returned error: %v", err)
+	}
+	for _, expected := range []string{"lineage nodes", "artifact:", "source:README.md", "Relationship counts"} {
+		if !strings.Contains(result.Observation, expected) {
+			t.Fatalf("expected observation to contain %q:\n%s", expected, result.Observation)
+		}
 	}
 }
 

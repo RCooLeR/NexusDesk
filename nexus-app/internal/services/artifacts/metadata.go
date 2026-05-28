@@ -42,5 +42,10 @@ func (s *Store) readMetadata(relPath string) (Metadata, string) {
 }
 
 func isMetadataSidecar(name string) bool {
-	return strings.HasSuffix(strings.ToLower(name), ".json")
+	name = filepath.ToSlash(strings.ToLower(strings.TrimSpace(name)))
+	if !strings.HasSuffix(name, ".json") {
+		return false
+	}
+	base := strings.TrimSuffix(name, ".json")
+	return strings.HasSuffix(base, ".json") || filepath.Ext(base) != ""
 }

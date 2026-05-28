@@ -253,7 +253,7 @@ Exit criteria:
 
 Goal: restore generated-output workflows with provenance and native inspection.
 
-- [ ] Port artifact writer, metadata, search, compare, archive, delete, and lineage.
+- [x] Port artifact writer, metadata, search, compare, archive, delete, and lineage.
 - [x] Add native artifact browser for task-run report artifacts.
 - [x] Expand native artifact browser to generic artifact metadata sidecars, metadata search, archive/delete actions, and task-report lineage.
 - [x] Add first native document-set Markdown artifact writer from selected file/folder/project context with source lineage.
@@ -458,7 +458,8 @@ The Fyne migration must not drop product ambition, but this section is intention
 - [x] Unified tool registry and dispatcher for deterministic tools and model-requested tools.
 - [x] Agent tools for read context, workspace search, problems, Git status/diff, tasks, artifacts, datasets, SQLite, documents, operations files, safe writes, patches, copy/move/delete, and rollback.
 - [x] Agent tools for read-only Git history/blame.
-- [ ] Agent tools for richer artifact lineage actions, web fetch, and approved shell.
+- [x] Agent tool for read-only artifact lineage context.
+- [ ] Agent tools for artifact regeneration actions, web fetch, and approved shell.
 - [x] Live activity tail that shows compact model/tool progress while preserving persisted agent audit history.
 
 ### Artifacts And Provenance
@@ -469,7 +470,8 @@ The Fyne migration must not drop product ambition, but this section is intention
 - [ ] Complete chat/tool-run provenance coverage for every generated output type.
 - [x] Artifact browser with search, metadata, preview, compare, archive, delete, restore, and open-source navigation.
 - [x] Artifact lineage/freshness warnings for current native artifacts.
-- [ ] Artifact lineage graph import/export UI parity and regeneration workflows that reuse original source context and parameters.
+- [x] Artifact lineage graph import/export UI parity with workspace graph JSON artifacts.
+- [ ] Artifact regeneration workflows that reuse original source context and parameters.
 
 ### Operations Studio
 

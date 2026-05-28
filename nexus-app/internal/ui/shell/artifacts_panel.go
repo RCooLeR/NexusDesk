@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"path/filepath"
+	"sort"
 	"strings"
 
 	"fyne.io/fyne/v2"
@@ -31,6 +32,8 @@ func (v *View) newArtifactsPanel() fyne.CanvasObject {
 	documentReport := widget.NewButtonWithIcon("Document report", theme.DocumentCreateIcon(), v.generateDocumentSetArtifact)
 	documentExtract := widget.NewButtonWithIcon("Extract doc", theme.FileTextIcon(), v.generateDocumentExtractionArtifact)
 	exportComparison := widget.NewButtonWithIcon("Export compare", theme.DocumentSaveIcon(), v.exportArtifactComparison)
+	exportLineage := widget.NewButtonWithIcon("Export lineage", theme.DocumentSaveIcon(), v.exportArtifactLineageGraph)
+	importLineage := widget.NewButtonWithIcon("Import lineage", theme.FolderOpenIcon(), v.importArtifactLineageGraph)
 	showArchived := widget.NewCheck("Show archived", func(include bool) {
 		v.artifactIncludeArchived = include
 		v.refreshArtifactsWithQuery(search.Text)
@@ -42,7 +45,7 @@ func (v *View) newArtifactsPanel() fyne.CanvasObject {
 	search.OnSubmitted = func(string) {
 		v.refreshArtifactsWithQuery(search.Text)
 	}
-	header := container.NewBorder(nil, nil, v.artifactStatus, container.NewHBox(documentReport, documentExtract, exportComparison, showArchived, refresh), search)
+	header := container.NewBorder(nil, nil, v.artifactStatus, container.NewHBox(documentReport, documentExtract, exportComparison, exportLineage, importLineage, showArchived, refresh), search)
 	listScroll := container.NewScroll(v.artifactResults)
 	listScroll.SetMinSize(fyne.NewSize(260, 110))
 	sourceScroll := container.NewVScroll(v.artifactSources)
@@ -357,6 +360,62 @@ func (v *View) exportArtifactComparison() {
 	v.refreshArtifactsWithQuery("kind:artifact-comparison")
 }
 
+func (v *View) exportArtifactLineageGraph() {
+	workspace := v.state.Workspace()
+	if workspace.Root == "" {
+		v.addActivity("Open a workspace before exporting artifact lineage.")
+		return
+	}
+	store, err := artifactsSvc.NewStore(workspace.Root)
+	if err != nil {
+		dialog.ShowError(err, v.window)
+		return
+	}
+	lineage, err := store.LineageGraph(artifactsSvc.ListOptions{IncludeArchived: v.artifactIncludeArchived})
+	if err != nil {
+		dialog.ShowError(err, v.window)
+		return
+	}
+	artifact, err := store.WriteLineageGraphArtifact(lineage)
+	if err != nil {
+		dialog.ShowError(err, v.window)
+		return
+	}
+	v.artifactPreview.SetText(artifactLineageText(lineage))
+	v.refreshArtifactSources(nil)
+	v.artifactStatus.SetText("Exported " + artifact.RelPath)
+	v.addActivity(artifact.Message)
+	v.persistArtifactRecord(artifact)
+	v.refreshArtifactsWithQuery("kind:artifact-lineage")
+}
+
+func (v *View) importArtifactLineageGraph() {
+	workspace := v.state.Workspace()
+	if workspace.Root == "" {
+		v.addActivity("Open a workspace before importing artifact lineage.")
+		return
+	}
+	relPath := selectedPathOrEmpty(v)
+	if strings.TrimSpace(relPath) == "" {
+		v.addActivity("Select an artifact lineage JSON file before importing lineage.")
+		return
+	}
+	preview, err := v.workspaceService.PreviewFile(workspace.Root, relPath)
+	if err != nil {
+		dialog.ShowError(err, v.window)
+		return
+	}
+	result, err := artifactsSvc.ParseLineageJSON(preview.Text, preview.RelPath)
+	if err != nil {
+		dialog.ShowError(err, v.window)
+		return
+	}
+	v.artifactPreview.SetText(artifactLineageText(result.Lineage))
+	v.refreshArtifactSources(nil)
+	v.artifactStatus.SetText(result.Message)
+	v.addActivity(result.Message)
+}
+
 func artifactComparisonReady(comparison artifactsSvc.ArtifactComparison) bool {
 	return strings.TrimSpace(comparison.LeftPath) != "" &&
 		strings.TrimSpace(comparison.RightPath) != "" &&
@@ -648,11 +707,38 @@ func artifactLineageText(lineage artifactsSvc.Lineage) string {
 	}
 	var builder strings.Builder
 	builder.WriteString("Lineage\n")
+	if strings.TrimSpace(lineage.Message) != "" {
+		builder.WriteString("- ")
+		builder.WriteString(lineage.Message)
+		builder.WriteString("\n")
+	}
+	if len(lineage.RelationshipCounts) > 0 {
+		builder.WriteString("- Relationships by type: ")
+		labels := make([]string, 0, len(lineage.RelationshipCounts))
+		for label := range lineage.RelationshipCounts {
+			labels = append(labels, label)
+		}
+		sort.Strings(labels)
+		for index, label := range labels {
+			if index > 0 {
+				builder.WriteString(", ")
+			}
+			builder.WriteString(label)
+			builder.WriteString("=")
+			builder.WriteString(fmt.Sprintf("%d", lineage.RelationshipCounts[label]))
+		}
+		builder.WriteString("\n")
+	}
 	for _, node := range lineage.Nodes {
 		builder.WriteString("- ")
 		builder.WriteString(node.Kind)
 		builder.WriteString(": ")
 		builder.WriteString(node.Label)
+		if node.RelPath != "" {
+			builder.WriteString(" (")
+			builder.WriteString(node.RelPath)
+			builder.WriteString(")")
+		}
 		builder.WriteString("\n")
 	}
 	if len(lineage.Edges) > 0 {
