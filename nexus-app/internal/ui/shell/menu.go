@@ -77,7 +77,7 @@ func disabledMenuItem(label string) *fyne.MenuItem {
 func (v *View) showAbout() {
 	dialog.ShowInformation(
 		"About Nexus",
-		"Nexus Augentic Studio\nAgentic work. Augmented by context.\n\nFyne-native migration build.",
+		"Nexus Augentic Studio\nAgentic work. Augmented by context.\n\nNative local-first workbench.",
 		v.window,
 	)
 }

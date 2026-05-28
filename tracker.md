@@ -560,7 +560,7 @@ The Fyne migration must not drop product ambition, but this section is intention
 - [x] Cap `activityText` and `activityLines` growth so activity rendering remains bounded.
 - [ ] Expand append target safety sampling and encoding checks for UTF-16 and sparse/edge-case encodings.
 - [ ] Update welcome flow with immediate open action from startup screen.
-- [ ] Remove migration wording from About dialog and align with release messaging.
+- [x] Remove migration wording from About dialog and align with release messaging.
 - [ ] Define and document non-Windows CI/build support matrix and execution plan.
 - [ ] Revisit default LLM model strategy to avoid hard-coded defaults that rarely match local setups.
 - [ ] Replace locale-bound mutation-claim heuristics with mutation-observation-driven verification.
