@@ -2,7 +2,7 @@
 
 Date: 2026-05-28
 
-This document defines what Nexus Augentic Studio still needs before it can be treated as a production desktop application. `tracker.md` remains the task-level execution source of truth; this document is the release-readiness map. The broader end-to-end product plan, Claude findings integration, and JetBrains-like UI target live in [End-To-End Production Master Plan](17_END_TO_END_PRODUCTION_PLAN.md). Private-beta safe-agent guidance lives in [NexusDesk Safe Agent User Guide](18_SAFE_AGENT_USER_GUIDE.md), the feedback/release-note process lives in [NexusDesk Beta Feedback And Release Notes Guide](19_BETA_FEEDBACK_AND_RELEASE_NOTES.md), and release-candidate smoke coverage lives in [NexusDesk Clean-Machine Smoke Checklist](20_CLEAN_MACHINE_SMOKE_CHECKLIST.md).
+This document defines what Nexus Augentic Studio still needs before it can be treated as a production desktop application. `tracker.md` remains the task-level execution source of truth; this document is the release-readiness map. The broader end-to-end product plan, Claude findings integration, and JetBrains-like UI target live in [End-To-End Production Master Plan](17_END_TO_END_PRODUCTION_PLAN.md). Private-beta safe-agent guidance lives in [NexusDesk Safe Agent User Guide](18_SAFE_AGENT_USER_GUIDE.md), the feedback/release-note process lives in [NexusDesk Beta Feedback And Release Notes Guide](19_BETA_FEEDBACK_AND_RELEASE_NOTES.md), release-candidate smoke coverage lives in [NexusDesk Clean-Machine Smoke Checklist](20_CLEAN_MACHINE_SMOKE_CHECKLIST.md), and app data cleanup behavior lives in [NexusDesk App Data And Uninstall Cleanup](21_APP_DATA_AND_UNINSTALL_CLEANUP.md).
 
 ## Current State
 
@@ -110,7 +110,7 @@ Required:
 - Windows visual/manual smoke checklist for every main surface. Implemented in `docs/20_CLEAN_MACHINE_SMOKE_CHECKLIST.md` and exposed in-product from Help and the command palette.
 - Linux/macOS build investigation and explicit support matrix, defined in [Platform Support Matrix](14_PLATFORM_SUPPORT.md).
 - Antivirus false-positive mitigation notes and release-build hygiene.
-- App data path documentation and cleanup/uninstall behavior.
+- App data path documentation and cleanup/uninstall behavior. Implemented in `docs/21_APP_DATA_AND_UNINSTALL_CLEANUP.md` and exposed in-product from Help and the command palette.
 
 Exit criteria:
 

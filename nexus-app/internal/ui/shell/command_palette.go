@@ -196,6 +196,13 @@ func (v *View) commandPaletteActions() []commandPaletteAction {
 			Group:  "Help",
 			Run:    v.openSmokeChecklistGuideTab,
 		},
+		{
+			ID:     "help.app_data_cleanup",
+			Title:  "App Data & Uninstall Cleanup",
+			Detail: "Open app data paths, protected-secret storage, workspace state, uninstall, and manual cleanup guidance.",
+			Group:  "Help",
+			Run:    v.openAppDataCleanupGuideTab,
+		},
 		v.bottomPanelCommand("view.search", "Search", "Open workspace path and content search results.", "Workbench"),
 		v.bottomPanelCommand("view.problems", "Problems", "Open syntax and workspace diagnostics.", "Workbench"),
 		v.bottomPanelCommand("view.git", "Git", "Open status, diff, history, blame, and hunk actions.", "Workbench"),

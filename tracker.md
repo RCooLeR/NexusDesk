@@ -24,6 +24,7 @@ End-to-end production master plan and JetBrains-like UI target: `docs/17_END_TO_
 Safe agent user guide: `docs/18_SAFE_AGENT_USER_GUIDE.md`.
 Beta feedback and release notes guide: `docs/19_BETA_FEEDBACK_AND_RELEASE_NOTES.md`.
 Clean-machine smoke checklist: `docs/20_CLEAN_MACHINE_SMOKE_CHECKLIST.md`.
+App data and uninstall cleanup guide: `docs/21_APP_DATA_AND_UNINSTALL_CLEANUP.md`.
 
 Summary:
 
@@ -31,7 +32,7 @@ Summary:
 - Current estimate: Fyne-native migration is roughly 98% complete, Wails useful-code parity is roughly 97%, Native Parity Beta readiness is roughly 96%, and overall production readiness is roughly 95%.
 - The architecture is healthy: thin executable root, framework-free domain/services, Fyne-only UI packages, explicit approvals, safe workspace mutation boundaries, manual Git/Docker actions, durable metadata, and local-first safety rules.
 - The biggest remaining architectural risk is UI/orchestration complexity in `internal/ui/shell`; future UI work should keep extracting focused panels, controllers, and service-owned behavior.
-- The highest-priority unfinished work is migration and production readiness, not new top-level studios: applying durable slow-job routing to the remaining slow workflows, richer DOCX/PPTX template variants and cross-suite smoke beyond current native export/theme/validation baselines, deeper assistant retrieval quality beyond deterministic source coverage, signed packaging/installer validation, app data/uninstall documentation, and native UI polish.
+- The highest-priority unfinished work is migration and production readiness, not new top-level studios: applying durable slow-job routing to the remaining slow workflows, richer DOCX/PPTX template variants and cross-suite smoke beyond current native export/theme/validation baselines, deeper assistant retrieval quality beyond deterministic source coverage, signed packaging/installer validation, antivirus/release hygiene notes, and native UI polish.
 - Final UI direction is a professional JetBrains-like native workbench: top menu/toolbar, left project/tool rail, central tabbed editor, right integrated assistant, grouped bottom tool windows, compact dark theme, strong keyboard workflows, DataGrip-style data surfaces, and trust-building settings/diagnostics.
 - `app-wails/` should remain as reference until the remaining native parity blockers are completed or explicitly moved out of Native Parity Beta.
 
@@ -60,6 +61,7 @@ Immediate execution order:
 - [x] `docs/18_SAFE_AGENT_USER_GUIDE.md` documents safe agent use, approvals, rollbacks, local data, connector credentials, jobs, diagnostics, and issue-report expectations.
 - [x] `docs/19_BETA_FEEDBACK_AND_RELEASE_NOTES.md` documents private-beta feedback, release-note expectations, redacted reports, triage labels, and closeout rules.
 - [x] `docs/20_CLEAN_MACHINE_SMOKE_CHECKLIST.md` documents clean-machine release-candidate smoke coverage for install, launch, workspace, editor, assistant, data, artifacts, jobs, diagnostics, platform-specific behavior, upgrade, uninstall, and cleanup.
+- [x] `docs/21_APP_DATA_AND_UNINSTALL_CLEANUP.md` documents global config paths, protected secret storage, workspace `.nexusdesk/` state, normal uninstall expectations, full manual reset, and upgrade/backup guidance.
 - [x] `nexus-app/main.go` is the only executable root file.
 - [x] `nexus-app/go.mod` owns the new Fyne dependency graph.
 - [x] `nexus-app/internal/app/` owns desktop lifecycle and window setup.
@@ -397,7 +399,7 @@ Exit criteria:
 - [x] Windows visual/manual smoke checklist for every main surface.
 - [x] Linux/macOS build investigation and explicit support matrix.
 - [ ] Antivirus false-positive mitigation notes and release-build hygiene.
-- [ ] App data path and uninstall/cleanup documentation.
+- [x] App data path and uninstall/cleanup documentation.
 
 ### Gate 4: Private Beta
 

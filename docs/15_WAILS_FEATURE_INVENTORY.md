@@ -4,7 +4,7 @@ Date: 2026-05-28
 
 This inventory records the explicit `port`, `replace`, `drop`, or `later` decisions needed before the preserved Wails app can be frozen. It is based on static inspection of `app-wails/`, `app-wails/frontend/src/`, and the current Fyne-native `nexus-app/` implementation.
 
-For the combined end-to-end production plan, Claude findings integration, and JetBrains-like UI target, see [End-To-End Production Master Plan](17_END_TO_END_PRODUCTION_PLAN.md). For private-beta safety guidance, see [NexusDesk Safe Agent User Guide](18_SAFE_AGENT_USER_GUIDE.md). For beta feedback and release-note expectations, see [NexusDesk Beta Feedback And Release Notes Guide](19_BETA_FEEDBACK_AND_RELEASE_NOTES.md). For release-candidate smoke coverage, see [NexusDesk Clean-Machine Smoke Checklist](20_CLEAN_MACHINE_SMOKE_CHECKLIST.md).
+For the combined end-to-end production plan, Claude findings integration, and JetBrains-like UI target, see [End-To-End Production Master Plan](17_END_TO_END_PRODUCTION_PLAN.md). For private-beta safety guidance, see [NexusDesk Safe Agent User Guide](18_SAFE_AGENT_USER_GUIDE.md). For beta feedback and release-note expectations, see [NexusDesk Beta Feedback And Release Notes Guide](19_BETA_FEEDBACK_AND_RELEASE_NOTES.md). For release-candidate smoke coverage, see [NexusDesk Clean-Machine Smoke Checklist](20_CLEAN_MACHINE_SMOKE_CHECKLIST.md). For app data and uninstall cleanup behavior, see [NexusDesk App Data And Uninstall Cleanup](21_APP_DATA_AND_UNINSTALL_CLEANUP.md).
 
 ## Decision Vocabulary
 
