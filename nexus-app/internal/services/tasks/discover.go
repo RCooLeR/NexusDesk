@@ -24,6 +24,8 @@ func discover(root string) (Summary, error) {
 	packageFiles := []string{}
 	goModules := []string{}
 	goTestFilesByModule := map[string]map[string]bool{}
+	cargoFiles := []string{}
+	pythonConfigs := []string{}
 	composeFiles := []string{}
 	visited := 0
 
@@ -51,6 +53,10 @@ func discover(root string) (Summary, error) {
 			packageFiles = append(packageFiles, path)
 		case "go.mod":
 			goModules = append(goModules, path)
+		case "Cargo.toml":
+			cargoFiles = append(cargoFiles, path)
+		case "pyproject.toml", "pytest.ini", "tox.ini", "setup.cfg":
+			pythonConfigs = append(pythonConfigs, path)
 		default:
 			if isComposeFile(entry.Name()) {
 				composeFiles = append(composeFiles, path)
@@ -88,6 +94,22 @@ func discover(root string) (Summary, error) {
 		})
 	}
 	tasks = append(tasks, packageGoTestTasks(absRoot, goTestFilesByModule)...)
+	tasks = append(tasks, pythonPytestTasks(absRoot, pythonConfigs)...)
+	sort.Strings(cargoFiles)
+	for _, cargoFile := range cargoFiles {
+		if len(tasks) >= maxTasks {
+			break
+		}
+		cwd := relDir(absRoot, filepath.Dir(cargoFile))
+		tasks = append(tasks, Task{
+			ID:      taskID("cargo", cwd, "test"),
+			Kind:    "cargo-test",
+			Label:   "cargo test",
+			Command: "cargo test",
+			Cwd:     cwd,
+			Source:  relFile(absRoot, cargoFile),
+		})
+	}
 	sort.Strings(composeFiles)
 	for _, composeFile := range composeFiles {
 		if len(tasks) >= maxTasks {
@@ -114,11 +136,37 @@ func discover(root string) (Summary, error) {
 	if len(tasks) > maxTasks {
 		tasks = tasks[:maxTasks]
 	}
-	message := fmt.Sprintf("%d tasks detected from package scripts, Go tests, and Compose files.", len(tasks))
+	message := fmt.Sprintf("%d tasks detected from package scripts, Go tests, Python pytest, Cargo tests, and Compose files.", len(tasks))
 	if len(tasks) == 0 {
-		message = "No package scripts, Go tests, or Compose files detected."
+		message = "No package scripts, Go tests, Python pytest, Cargo tests, or Compose files detected."
 	}
 	return Summary{Tasks: tasks, Message: message, GeneratedAt: time.Now().UTC()}, nil
+}
+
+func pythonPytestTasks(root string, configFiles []string) []Task {
+	sort.Strings(configFiles)
+	seenDirs := map[string]bool{}
+	tasks := []Task{}
+	for _, configFile := range configFiles {
+		if len(tasks) >= maxTasks {
+			break
+		}
+		dir := filepath.Dir(configFile)
+		if seenDirs[dir] {
+			continue
+		}
+		seenDirs[dir] = true
+		cwd := relDir(root, dir)
+		tasks = append(tasks, Task{
+			ID:      taskID("pytest", cwd, "test"),
+			Kind:    "python-pytest",
+			Label:   "python -m pytest",
+			Command: "python -m pytest",
+			Cwd:     cwd,
+			Source:  relFile(root, configFile),
+		})
+	}
+	return tasks
 }
 
 func packageGoTestTasks(root string, goTestFilesByModule map[string]map[string]bool) []Task {

@@ -43,7 +43,7 @@ Implemented in `nexus-app/`:
 - Editor tab lifecycle with pinned ordering, dirty markers, safe save, revert, and explicit discard confirmation for modified tabs.
 - Search and Problems panels using bounded preview-safe reads.
 - Git status/diff panel with directory-grouped changes, unified/split/diff-only views, hunk navigation, file-level stage/unstage, and hunk stage/unstage.
-- Task discovery/run jobs for npm, Go tests, and Docker Compose config validation.
+- Task discovery/run jobs for npm, Go tests, Python pytest, Cargo tests, and Docker Compose config validation.
 - Data profiling/query/SQL/notebooks for CSV, TSV, JSON, NDJSON, XLSX, logs, Parquet metadata, and SQLite files.
 - Chart/dashboard SVG preview and artifact generation.
 - Artifact browser with metadata, lineage, comparison, archive/delete/restore, source freshness, and context pinning.

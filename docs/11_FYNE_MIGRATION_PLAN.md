@@ -112,7 +112,7 @@ The latest reviewed `nexus-app` baseline includes the original shell slice plus 
 - first native deterministic tool dispatcher with descriptors for context packs, file previews, workspace search, Problems, Git status/diff, task listing, rollback listing, approval-gated rollback application, and approval-gated task execution;
 - first native approval service and bottom Approvals tab with append-only records plus time-limited full-project access policy;
 - first native workspace context-pack builder for files, directories, and the workspace root with ignored-folder skips, file/depth/entry/byte caps, preview-safe text extraction, and assistant integration;
-- first native task discovery and safe task-run service for npm scripts, Go tests, and Docker Compose config checks;
+- first native task discovery and safe task-run service for npm scripts, Go tests, Python pytest, Cargo tests, and Docker Compose config checks;
 - first native bottom Tasks tab for discovery, confirmed task runs, and read-only last-run stdout/stderr;
 - first native in-memory Jobs service and Jobs tab for task-run status, log tail, and cancellation requests;
 - first native SQLite metadata store under `.nexusdesk/metadata` with schema/manifest creation, persisted jobs, and persisted task-run records;

@@ -9,7 +9,7 @@ import (
 	"testing"
 )
 
-func TestDiscoverListsNpmScriptsGoTestsAndCompose(t *testing.T) {
+func TestDiscoverListsSafeWorkspaceTasks(t *testing.T) {
 	root := t.TempDir()
 	mustWrite(t, filepath.Join(root, "app", "frontend", "package.json"), `{
 		"scripts": {
@@ -19,6 +19,8 @@ func TestDiscoverListsNpmScriptsGoTestsAndCompose(t *testing.T) {
 	}`)
 	mustWrite(t, filepath.Join(root, "app", "go.mod"), "module fixture\n\ngo 1.24\n")
 	mustWrite(t, filepath.Join(root, "app", "internal", "widget", "widget_test.go"), "package widget\n")
+	mustWrite(t, filepath.Join(root, "python", "pyproject.toml"), "[tool.pytest.ini_options]\n")
+	mustWrite(t, filepath.Join(root, "rust", "Cargo.toml"), "[package]\nname = \"fixture\"\nversion = \"0.1.0\"\nedition = \"2021\"\n")
 	mustWrite(t, filepath.Join(root, "services", "docker-compose.yml"), "services:\n  web:\n    image: nginx\n")
 
 	summary, err := New().Discover(root)
@@ -30,6 +32,8 @@ func TestDiscoverListsNpmScriptsGoTestsAndCompose(t *testing.T) {
 	assertTask(t, summary.Tasks, "npm-script", "npm run smoke", "app/frontend", "app/frontend/package.json")
 	assertTask(t, summary.Tasks, "go-test", "go test ./...", "app", "app/go.mod")
 	assertTask(t, summary.Tasks, "go-test", "go test ./internal/widget", "app", "app/go.mod")
+	assertTask(t, summary.Tasks, "python-pytest", "python -m pytest", "python", "python/pyproject.toml")
+	assertTask(t, summary.Tasks, "cargo-test", "cargo test", "rust", "rust/Cargo.toml")
 	assertTask(t, summary.Tasks, "compose", "docker compose config", "services", "services/docker-compose.yml")
 	if summary.Message == "" || summary.GeneratedAt.IsZero() {
 		t.Fatalf("expected message and timestamp, got %#v", summary)
@@ -152,6 +156,8 @@ func TestValidateRunnableTask(t *testing.T) {
 	for _, task := range []Task{
 		{Kind: "npm-script", Command: "npm run build", Label: "npm run build"},
 		{Kind: "go-test", Command: "go test ./...", Label: "go test ./..."},
+		{Kind: "python-pytest", Command: "python -m pytest", Source: "pyproject.toml", Label: "python -m pytest"},
+		{Kind: "cargo-test", Command: "cargo test", Source: "Cargo.toml", Label: "cargo test"},
 		{Kind: "compose", Command: "docker compose -f compose.yml config", Source: "compose.yml", Label: "docker compose config"},
 	} {
 		if err := validateRunnableTask(task); err != nil {
@@ -177,6 +183,14 @@ func TestRunnableTaskArgsAvoidShellExecution(t *testing.T) {
 			want: []string{"go", "test", "./internal/widget"},
 		},
 		{
+			task: Task{Kind: "python-pytest", Command: "python -m pytest", Source: "python/pyproject.toml", Label: "python -m pytest"},
+			want: []string{"python", "-m", "pytest"},
+		},
+		{
+			task: Task{Kind: "cargo-test", Command: "cargo test", Source: "rust/Cargo.toml", Label: "cargo test"},
+			want: []string{"cargo", "test"},
+		},
+		{
 			task: Task{Kind: "compose", Command: "docker compose -f compose.yml config", Source: "ops/compose.yml", Label: "docker compose config"},
 			want: []string{"docker", "compose", "-f", "compose.yml", "config"},
 		},
@@ -195,6 +209,12 @@ func TestRunnableTaskArgsAvoidShellExecution(t *testing.T) {
 	}
 	if _, err := runnableTaskArgs(Task{Kind: "compose", Command: "docker compose -f compose.yml config && rm -rf .", Source: "ops/compose.yml", Label: "bad"}); err == nil {
 		t.Fatal("expected unsafe compose shell payload to be rejected")
+	}
+	if _, err := runnableTaskArgs(Task{Kind: "python-pytest", Command: "python -m pytest -k injected", Source: "pyproject.toml", Label: "bad"}); err == nil {
+		t.Fatal("expected unsafe pytest argument injection to be rejected")
+	}
+	if _, err := runnableTaskArgs(Task{Kind: "cargo-test", Command: "cargo test -- --ignored", Source: "Cargo.toml", Label: "bad"}); err == nil {
+		t.Fatal("expected unsafe cargo argument injection to be rejected")
 	}
 }
 

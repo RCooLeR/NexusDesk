@@ -132,6 +132,14 @@ func runnableTaskArgs(task Task) ([]string, error) {
 		if len(parts) == 3 && parts[0] == "go" && parts[1] == "test" && strings.HasPrefix(parts[2], "./") {
 			return []string{"go", "test", parts[2]}, nil
 		}
+	case "python-pytest":
+		if strings.TrimSpace(task.Command) == "python -m pytest" && isPythonConfigFile(filepath.Base(filepath.FromSlash(task.Source))) {
+			return []string{"python", "-m", "pytest"}, nil
+		}
+	case "cargo-test":
+		if strings.TrimSpace(task.Command) == "cargo test" && filepath.Base(filepath.FromSlash(task.Source)) == "Cargo.toml" {
+			return []string{"cargo", "test"}, nil
+		}
 	case "compose":
 		fileName := filepath.Base(filepath.FromSlash(task.Source))
 		if isComposeFile(fileName) && strings.TrimSpace(task.Command) == "docker compose -f "+quotePath(fileName)+" config" {
@@ -146,6 +154,15 @@ func isSafeNpmScriptName(script string) bool {
 		return false
 	}
 	return true
+}
+
+func isPythonConfigFile(name string) bool {
+	switch strings.ToLower(name) {
+	case "pyproject.toml", "pytest.ini", "tox.ini", "setup.cfg":
+		return true
+	default:
+		return false
+	}
 }
 
 type limitWriter struct {

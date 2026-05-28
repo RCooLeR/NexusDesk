@@ -381,7 +381,7 @@ The Fyne migration must not drop product ambition, but this section is intention
 - [ ] Problems panel language diagnostics beyond lightweight local scans.
 - [x] Git status, branch, changed-file tree, staged/unstaged groups, file diff, split/unified/diff-only views, hunk actions, AI diff summary, and commit draft.
 - [ ] Git history, blame, broader AI review, test suggestions, PR draft, and destructive revert/discard actions.
-- [x] Task discovery and approved task runs for npm, Go, and Docker Compose validation.
+- [x] Task discovery and approved task runs for npm, Go, Python pytest, Cargo, and Docker Compose validation.
 
 ### Data & Analytics Studio
 
@@ -564,7 +564,7 @@ The Fyne migration must not drop product ambition, but this section is intention
 - [x] Define and document non-Windows CI/build support matrix and execution plan.
 - [x] Revisit default LLM model strategy to avoid hard-coded defaults that rarely match local setups.
 - [x] Replace locale-bound mutation-claim heuristics with mutation-observation-driven verification.
-- [ ] Expand safe task execution whitelist beyond current npm/go/compose-only support.
+- [x] Expand safe task execution whitelist beyond current npm/go/compose-only support.
 - [x] Replace shell string execution for discovered tasks with argument-based process invocation.
 - [x] Avoid schema file rewrite on every metadata `Ensure` invocation.
 - [x] Separate Ask vs Agent system prompt behavior for clearer model role control.
