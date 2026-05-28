@@ -3,6 +3,8 @@ package settings
 import (
 	"os"
 	"path/filepath"
+	"runtime"
+	"strings"
 	"testing"
 )
 
@@ -25,7 +27,6 @@ func TestStoreSavesAndLoadsSettings(t *testing.T) {
 		Protocol:              ProtocolOpenAICompatible,
 		BaseURL:               "http://localhost:1234/v1",
 		Model:                 "mistral-small:24b",
-		APIKey:                "test-api-key",
 		ContextTokens:         8192,
 		ResponseReserveTokens: 1024,
 	}
@@ -42,10 +43,89 @@ func TestStoreSavesAndLoadsSettings(t *testing.T) {
 	}
 }
 
+func TestStoreSavesAPIKeyInProtectedSidecar(t *testing.T) {
+	requireProtectedSettingsSecretStorage(t)
+	dir := t.TempDir()
+	path := filepath.Join(dir, "settings.json")
+	store := NewFileStore(path)
+
+	if err := store.Save(Settings{
+		Provider:              "custom-openai-compatible",
+		Protocol:              ProtocolOpenAICompatible,
+		BaseURL:               "https://api.example.test/v1",
+		Model:                 "model-a",
+		APIKey:                "test-api-key",
+		ContextTokens:         8192,
+		ResponseReserveTokens: 1024,
+	}); err != nil {
+		t.Fatalf("Save returned error: %v", err)
+	}
+	raw, err := os.ReadFile(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if strings.Contains(string(raw), "test-api-key") {
+		t.Fatalf("public settings file must not contain the API key: %s", string(raw))
+	}
+	if !strings.Contains(string(raw), storedAPIKeyReference) {
+		t.Fatalf("expected stored API key reference in settings file: %s", string(raw))
+	}
+	display, err := store.LoadForDisplay()
+	if err != nil {
+		t.Fatalf("LoadForDisplay returned error: %v", err)
+	}
+	if display.APIKey != RedactedAPIKey {
+		t.Fatalf("expected redacted display API key, got %#v", display)
+	}
+	resolved, err := store.Load()
+	if err != nil {
+		t.Fatalf("Load returned error: %v", err)
+	}
+	if resolved.APIKey != "test-api-key" {
+		t.Fatalf("expected resolved API key, got %#v", resolved)
+	}
+}
+
+func TestStorePreservesRedactedAPIKeyOnSave(t *testing.T) {
+	requireProtectedSettingsSecretStorage(t)
+	store := NewFileStore(filepath.Join(t.TempDir(), "settings.json"))
+	if err := store.Save(Settings{BaseURL: "https://api.example.test/v1", APIKey: "secret-one"}); err != nil {
+		t.Fatalf("initial Save returned error: %v", err)
+	}
+	if err := store.Save(Settings{BaseURL: "https://api.example.test/v2", APIKey: RedactedAPIKey}); err != nil {
+		t.Fatalf("redacted Save returned error: %v", err)
+	}
+	resolved, err := store.Load()
+	if err != nil {
+		t.Fatalf("Load returned error: %v", err)
+	}
+	if resolved.APIKey != "secret-one" || resolved.BaseURL != "https://api.example.test/v2" {
+		t.Fatalf("expected preserved secret and updated base URL, got %#v", resolved)
+	}
+}
+
+func TestStoreRejectsAPIKeyWhenProtectedStorageUnsupported(t *testing.T) {
+	if runtime.GOOS == "windows" {
+		t.Skip("unsupported-platform refusal is covered by the non-Windows build")
+	}
+	store := NewFileStore(filepath.Join(t.TempDir(), "settings.json"))
+	err := store.Save(Settings{BaseURL: "https://api.example.test/v1", APIKey: "secret"})
+	if err == nil || !strings.Contains(err.Error(), "protected secret storage is not implemented") {
+		t.Fatalf("expected protected storage refusal, got %v", err)
+	}
+}
+
 func TestStoreNormalizesInvalidTokenReserve(t *testing.T) {
 	settings := normalized(Settings{ContextTokens: 1000, ResponseReserveTokens: 1000})
 	if settings.ResponseReserveTokens != 250 {
 		t.Fatalf("expected reserve to be reduced, got %#v", settings)
+	}
+}
+
+func requireProtectedSettingsSecretStorage(t *testing.T) {
+	t.Helper()
+	if runtime.GOOS != "windows" {
+		t.Skip("protected settings secret sidecar storage is only implemented on Windows until Keychain/libsecret support lands")
 	}
 }
 

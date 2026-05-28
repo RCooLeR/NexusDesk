@@ -15,7 +15,7 @@ This inventory records the explicit `port`, `replace`, `drop`, or `later` decisi
 ## Summary
 
 - Most core backend workflows have native equivalents: workspace open/browse, safe file mutation, rollback records, search/problems, Git status/diff/hunk staging, task runs, artifacts, metadata, datasets, SQLite, external connector profile flows, settings, approvals, diagnostics, chat history, and agent audit.
-- The remaining parity blockers are concentrated in editor maturity, protected secrets, assistant profile/memory UX, deeper artifact regeneration coverage, and approval-gated web fetch.
+- The remaining parity blockers are concentrated in editor maturity, deeper artifact regeneration coverage, richer assistant quality polish, and approval-gated web fetch.
 - React/Wails shell code should not be embedded wholesale. Monaco-specific editor behavior should be replaced by a native editor strategy unless a future spike proves an embedded editor can be shipped cleanly without reviving the Wails/webview architecture.
 
 ## Inventory
@@ -33,9 +33,9 @@ This inventory records the explicit `port`, `replace`, `drop`, or `later` decisi
 | Artifact lineage graph import/export and agent context | `GetArtifactLineage`, `ExportArtifactLineageJSON`, `ImportArtifactLineageJSON`, Wails `read_artifact_lineage` | Native workspace lineage graph export/import UI and read-only agent lineage tool are implemented | `ported` | Continue graph polish only |
 | Artifact dependency rebuild/regeneration | `RebuildDatasetDependency` | Native can regenerate dataset query CSV, dataset SQL report, chart, and dashboard artifacts from dependency metadata | `ported` baseline | Continue broader regeneration coverage for notebooks, summaries, and future artifact kinds |
 | Dataset profiling, SQL, notebooks, charts, dashboards, SQLite query artifacts | `dataset_service.go`, `DataStudioPanel.tsx`, `DataOperationsPanel.tsx` | Native Data panel covers profiles, query/SQL, notebook run/export, chart/dashboard artifacts, SQLite saved queries, history, and lineage | `ported` | Continue notebook/editor UX and dump import design |
-| External database profiles and read-only query flows | `internal/dbconnector/*`, `ConnectorProfilesCard.tsx` | Native profile list/save/delete/test/inspect/query/cancel/history exists for PostgreSQL, MySQL/MariaDB, SQL Server, SQLite, and DuckDB guarded builds | `ported` for functional parity | Move credentials to protected storage before production |
-| Protected secret storage | `app-wails/internal/storage/secret_windows.go`, connector sidecar handling | Native stores non-secret settings and redacted connector profiles; OS-protected secret storage is still a gate | `port` | Windows protected storage first; explicit unsupported-platform refusal/fallback |
-| LLM settings, provider probe, model catalog, runtime diagnostics | `LLMSettingsCard.tsx`, `llmModelCatalog.ts`, `internal/llm/probe.go` | Native settings include provider/protocol/model/API key, connection test, model count, and runtime diagnostics | `ported` with follow-up | Curated model catalog and deeper GPU/runtime hints remain backlog |
+| External database profiles and read-only query flows | `internal/dbconnector/*`, `ConnectorProfilesCard.tsx` | Native profile list/save/delete/test/inspect/query/cancel/history exists for PostgreSQL, MySQL/MariaDB, SQL Server, SQLite, and DuckDB guarded builds with protected Windows credential sidecars | `ported` for functional parity | macOS Keychain and Linux Secret Service remain future platform work |
+| Protected secret storage | `app-wails/internal/storage/secret_windows.go`, connector sidecar handling | Native settings API keys and connector credentials use DPAPI-protected sidecars on Windows, redacted display values, and explicit unsupported-platform refusal elsewhere | `ported` Windows baseline | Add macOS Keychain and Linux Secret Service/libsecret before claiming full cross-platform secret support |
+| LLM settings, provider probe, model catalog, runtime diagnostics | `LLMSettingsCard.tsx`, `llmModelCatalog.ts`, `internal/llm/probe.go` | Native settings include provider/protocol/model/protected API key, connection test, model count, and runtime diagnostics | `ported` with follow-up | Curated model catalog and deeper GPU/runtime hints remain backlog |
 | Assistant chat, streaming, context pack, citations, chat persistence | `AskLLM*`, `PreviewChatContextPack`, `ChatMessageContent.tsx` | Native Ask/Agent, streaming, bounded context, source citations, weak-evidence warning, persisted chat/history, and diagnostics exist | `ported` baseline | Improve richer citations, source freshness in chat, and model diagnostics |
 | Assistant prompt profiles and memory | `internal/storage/assistant_profile.go`, `AgentPanel.tsx` | Native Fyne loads/saves the Wails-compatible assistant profile store, applies active prompt profiles to Ask requests, and exposes memory/profile controls | `ported` baseline | Add profile editing beyond default profiles if needed |
 | Assistant retry, compare latest answer, save latest answer as artifact | `AgentPanel.tsx`, `CreateChatMarkdownArtifact` | Native Fyne surfaces retry, compare, and save-latest-answer; saved answers become `chat-answer` artifacts with prompt/model/context/source metadata | `ported` baseline | Continue polishing citations and stale-source indicators |
@@ -53,10 +53,10 @@ This inventory records the explicit `port`, `replace`, `drop`, or `later` decisi
 ## Native Parity Blockers From This Inventory
 
 1. Finish the editor parity strategy: syntax highlighting, breadcrumbs/outline, encoding controls, split/editor layout decision.
-2. Implement native protected secret storage on Windows with explicit unsupported-platform behavior.
-3. Add assistant prompt profiles/memory plus retry/compare/save-answer UX.
-4. Expand artifact regeneration beyond the first dataset/query/chart rebuild baseline.
-5. Add approval-gated agent web fetch if still desired for parity.
+2. Continue assistant quality parity: richer citations, source freshness in chat, model diagnostics, and final profile/memory polish.
+3. Expand artifact regeneration beyond the first dataset/query/chart rebuild baseline.
+4. Add approval-gated agent web fetch if still desired for parity.
+5. Add macOS Keychain and Linux Secret Service/libsecret support after the Windows secret-storage baseline.
 
 ## Retirement Decision
 

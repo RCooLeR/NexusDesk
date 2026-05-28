@@ -33,7 +33,7 @@ func (v *View) openSettingsTab() {
 }
 
 func (v *View) newSettingsPanel() fyne.CanvasObject {
-	current, err := v.settingsStore.Load()
+	current, err := v.settingsStore.LoadForDisplay()
 	if err != nil {
 		current = settingsSvc.Defaults()
 		v.addActivity("Could not load settings: " + err.Error())
@@ -87,12 +87,20 @@ func (v *View) newSettingsPanel() fyne.CanvasObject {
 				dialog.ShowError(err, v.window)
 				return
 			}
+			if display, err := v.settingsStore.LoadForDisplay(); err == nil {
+				apiKey.SetText(display.APIKey)
+			}
 			v.addActivity("Settings saved.")
 		},
 		SubmitText: "Save",
 	}
 	testConnection.OnTapped = func() {
 		next, err := settingsFromForm(provider.Selected, protocol.Selected, baseURL.Text, model.Text, apiKey.Text, contextTokens.Text, responseReserve.Text)
+		if err != nil {
+			dialog.ShowError(err, v.window)
+			return
+		}
+		next, err = v.settingsStore.ResolveForUse(next)
 		if err != nil {
 			dialog.ShowError(err, v.window)
 			return
@@ -115,9 +123,11 @@ func (v *View) newSettingsPanel() fyne.CanvasObject {
 		}()
 	}
 	actions := container.NewHBox(testConnection)
+	secretNote := widget.NewLabel("API keys are stored in protected OS storage on Windows and displayed redacted after save.")
+	secretNote.Wrapping = fyne.TextWrapWord
 	return container.NewPadded(container.NewBorder(
 		widget.NewLabel("LLM Provider Settings"),
-		container.NewVBox(actions, probeStatus),
+		container.NewVBox(actions, probeStatus, secretNote),
 		nil,
 		nil,
 		form,

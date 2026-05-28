@@ -65,7 +65,7 @@ Rules:
 - mark suspected secret files as restricted
 - require confirmation before sending sensitive content to remote models
 
-Secret storage is currently a native parity gap. The preserved Wails reference has DPAPI-backed sidecar storage on Windows and refusal behavior for unsupported OS secret backends. The Fyne app should not claim equivalent credential-vault support until protected secret storage is ported into a native service.
+Secret storage has a native Windows baseline. LLM provider API keys and connector credentials are written to DPAPI-protected sidecar files, while public settings/profile files retain only redacted values or credential references. Non-Windows builds explicitly refuse to save protected secrets until macOS Keychain and Linux Secret Service/libsecret backends are implemented.
 
 ## File System Security
 

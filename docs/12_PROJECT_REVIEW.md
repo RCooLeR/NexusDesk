@@ -10,7 +10,7 @@ The product direction still makes sense. Nexus Augentic Studio should stay a nat
 
 The new app is no longer a thin skeleton. `nexus-app/` now has real native services for workspace navigation, previews, safe file mutation, editor tabs, search, problems, Git, tasks, jobs, approvals, LLM chat, agent tooling, metadata, artifacts, datasets, SQLite inspection, document extraction, operations scanning, and history. The most important remaining work is not to invent new studios yet; it is to finish parity and make the native UI feel like a serious IDE-class product.
 
-Approximate Wails-to-Fyne migration status: 70-75% of useful Wails-era backend/workflow capability has been migrated. The remaining gap is concentrated in IDE-grade editor behavior, external database profiles, native secret storage, assistant quality controls, slow-work job routing, production packaging, and UI polish.
+Approximate Wails-to-Fyne migration status: 80-85% of useful Wails-era backend/workflow capability has been migrated. The remaining gap is concentrated in IDE-grade editor behavior, richer assistant/source quality, broader artifact regeneration, optional web fetch, slow-work job routing, production packaging, and UI polish.
 
 The production release path is tracked in `docs/13_PRODUCTION_READINESS.md`.
 
@@ -30,7 +30,7 @@ Risks to watch:
 - `internal/ui/shell` is split into many files, which is good, but it still carries a lot of orchestration state. Future UI work should extract smaller controllers/models before adding deeper editor, connector, and assistant behavior.
 - Several preserved Wails docs still describe active behavior using `app/internal` and React/Wails terms. They must be treated as reference-history until rewritten.
 - The native editor is functional but not yet IDE-grade. Syntax highlighting, richer find/replace, split groups, breadcrumbs, outline, format, minimap, and language-aware actions still need a deliberate editor strategy.
-- External database profiles, credential vault behavior, and connector sync jobs are not yet native parity.
+- External database profile flows and Windows credential vault behavior have native parity baselines; connector sync jobs are still future work.
 - Long-running work is only partially routed through durable jobs. OCR, dump imports, connector pulls, report generation, indexing, and long agent runs must not be wired directly to UI callbacks.
 
 ## Native Capability Snapshot
@@ -56,16 +56,16 @@ Implemented in `nexus-app/`:
 Priority migration gaps:
 
 1. Native editor quality: syntax highlighting, find/replace, split editor groups, breadcrumbs, outline, minimap, formatting, and language-aware navigation.
-2. Native external database profiles: PostgreSQL, MySQL/MariaDB, SQL Server, and DuckDB file/profile support with protected credentials, cancellation, redacted errors, history, and artifacts.
+2. Native editor-adjacent artifact regeneration and source quality: richer stale-source chat indicators, broader regeneration coverage, and citation depth.
 3. Job routing for slow workflows: long indexing, OCR, dump imports, connector pulls, report generation, and long agent runs.
 4. Connector and dump workflows: temporary isolated database sandboxes, import lifecycle, storage limits, and read-only analysis.
-5. Assistant maturity: model context accounting, runtime diagnostics, source-citation quality, weak-evidence warnings, profile/memory parity, retry/compare, and broader tool coverage.
+5. Assistant maturity: model context accounting, runtime diagnostics, source-citation quality, source freshness in chat, and broader tool coverage.
 6. UI polish: reduce crowded action strips, use structured tabs/dialogs/split panes, improve density, align with JetBrains-class workbench expectations, and add native visual checks.
 7. Documentation cleanup: continue separating active Fyne behavior from preserved Wails history.
 
 ## Review Decision
 
-Do not retire `app-wails/` yet. It still contains reference implementations for React/Monaco editor behavior, external connector profiles, web fetch, profile/memory UX, and several mature Wails-era workflows.
+Do not retire `app-wails/` yet. It still contains reference implementations for React/Monaco editor behavior, web fetch, and several mature Wails-era workflows.
 
 Do not add new top-level studios yet. Keep the primary product surfaces as Workbench, Data & Analytics, Artifacts, and Settings with Assistant always visible. Documents, Operations, and analytics connectors should grow as capability domains inside those surfaces until they earn deeper native screens.
 
@@ -73,10 +73,10 @@ Do not add new top-level studios yet. Keep the primary product surfaces as Workb
 
 The next batches should stay migration-first:
 
-1. Create a Wails-only feature inventory and mark each item `port`, `replace`, `drop`, or `later`.
+1. Keep closing the Wails-only feature inventory instead of adding new top-level studios.
 2. Finish native editor parity and UI structure.
-3. Port native external database profile storage/query workflows.
-4. Add native protected secret storage, Windows first.
+3. Add richer assistant citations/source freshness and broader artifact regeneration coverage.
+4. Add macOS Keychain and Linux Secret Service/libsecret after the Windows protected-secret baseline.
 5. Route remaining slow workflows through durable jobs.
 6. Add dump import design and first safe job scaffold before any database mutation/import execution.
 7. Add diagnostics and release-readiness checks before private beta.

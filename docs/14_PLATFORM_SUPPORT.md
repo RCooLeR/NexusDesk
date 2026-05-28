@@ -28,7 +28,7 @@ The first non-Windows pass should be a build-smoke project, not a support promis
 1. Add CI jobs that install Fyne build prerequisites and run package-level tests.
 2. Add smoke builds without release artifacts.
 3. Document runtime/package dependencies discovered by the smoke builds.
-4. Implement explicit unsupported-platform behavior for protected secrets before enabling saved connector credentials.
+4. Keep protected-secret saves disabled on non-Windows builds until macOS Keychain and Linux Secret Service/libsecret are implemented.
 5. Add manual visual smoke checklists for native menus, dialogs, file pickers, keyboard shortcuts, charts, PDFs/images, and long-running jobs.
 6. Decide whether each platform can enter beta, stay experimental, or remain source-only.
 
