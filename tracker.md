@@ -356,7 +356,8 @@ Exit criteria:
 
 - [ ] Repeatable Windows build pipeline with icon, version metadata, installer/update plan, and code-signing path.
 - [x] First native CI smoke matrix for Windows, macOS, and Linux with gofmt, `go test ./...`, `go vet ./...`, CGO/Fyne build, and `git diff --check`.
-- [ ] Expand CI into signed release packaging and version metadata validation.
+- [x] Add ldflag-backed app version/build metadata validation to native CI builds and About metadata.
+- [ ] Expand CI into signed release packaging and installer/update validation.
 - [ ] Windows visual/manual smoke checklist for every main surface.
 - [x] Linux/macOS build investigation and explicit support matrix.
 - [ ] Antivirus false-positive mitigation notes and release-build hygiene.
@@ -572,7 +573,8 @@ The Fyne migration must not drop product ambition, but this section is intention
 - [ ] Plugin/MCP strategy after native core tools are stable.
 - [ ] Stable service interfaces for community-contributed connectors and document parsers.
 - [x] Native CI matrix for Windows, macOS, and Linux formatting, tests, static analysis, and Fyne build smoke.
-- [ ] Expand CI into signed release packaging and version metadata validation.
+- [x] Add native build metadata validation for version, commit, and build date through CI ldflags.
+- [ ] Expand CI into signed release packaging and installer/update validation.
 
 ## Claude Findings Integration
 

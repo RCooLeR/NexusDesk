@@ -55,6 +55,10 @@ if ($null -eq $gcc) {
 $env:PATH = "$ucrtBin;$usrBin;$env:PATH"
 $env:CGO_ENABLED = '1'
 $env:GOFLAGS = '-mod=readonly'
+$version = if ([string]::IsNullOrWhiteSpace($env:NEXUSDESK_VERSION)) { '0.0.0-ci' } else { $env:NEXUSDESK_VERSION }
+$commit = if ([string]::IsNullOrWhiteSpace($env:GITHUB_SHA)) { (git -C $repoRoot rev-parse --short HEAD) } else { $env:GITHUB_SHA.Substring(0, [Math]::Min(12, $env:GITHUB_SHA.Length)) }
+$buildDate = if ([string]::IsNullOrWhiteSpace($env:NEXUSDESK_BUILD_DATE)) { (Get-Date).ToUniversalTime().ToString('yyyy-MM-ddTHH:mm:ssZ') } else { $env:NEXUSDESK_BUILD_DATE }
+$ldflags = "-X nexusdesk/internal/buildinfo.Version=$version -X nexusdesk/internal/buildinfo.Commit=$commit -X nexusdesk/internal/buildinfo.BuildDate=$buildDate"
 
 Push-Location $appRoot
 try {
@@ -74,10 +78,13 @@ try {
     Write-Host 'Running static analysis...'
     go vet ./...
 
+    Write-Host 'Validating build metadata...'
+    go test -ldflags "$ldflags" ./internal/buildinfo
+
     if (-not $SkipBuild) {
         Write-Host 'Building native Windows executable...'
         New-Item -ItemType Directory -Force -Path build | Out-Null
-        go build -o build\nexusdesk.exe .
+        go build -ldflags "$ldflags" -o build\nexusdesk.exe .
     }
 
     Write-Host 'Checking diff whitespace...'

@@ -7,16 +7,16 @@ This document defines the production support stance for the Fyne-native `nexus-a
 | Platform | Status | Release Promise | Build Path | Notes |
 | --- | --- | --- | --- | --- |
 | Windows 10/11 x64 | Primary beta target | Supported first for local beta builds and release candidates | `nexus-app/scripts/dev-env.ps1 -Build` with CGO enabled and MSYS2 UCRT64 available | App icon resource generation is part of the helper path. Code signing, installer/update flow, and antivirus hygiene remain release gates. |
-| Linux x64 | Investigation target | Not supported for end users yet | Future CI smoke using CGO-enabled Fyne build dependencies | Needs package/runtime dependency notes, Secret Service/libsecret decision, visual smoke, and artifact path verification. |
-| macOS Apple Silicon / Intel | Investigation target | Not supported for end users yet | Future CI smoke using CGO-enabled Fyne build dependencies | Needs notarization/signing plan, Keychain-backed secret storage decision, app bundle packaging, and visual smoke. |
+| Linux x64 | Investigation target | Not supported for end users yet | Native CI smoke with CGO-enabled Fyne build dependencies | Needs package/runtime dependency notes, Secret Service/libsecret decision, visual smoke, and artifact path verification. |
+| macOS Apple Silicon / Intel | Investigation target | Not supported for end users yet | Native CI smoke with CGO-enabled Fyne build dependencies | Needs notarization/signing plan, Keychain-backed secret storage decision, app bundle packaging, and visual smoke. |
 
 ## Windows Release Gate
 
 Windows can move from primary beta target to supported release target only when:
 
 - `go test ./...`, `go vet ./...`, gofmt checks, and `git diff --check` pass in the Windows native CI workflow and locally.
-- The Fyne app builds from a clean checkout through the documented helper and the Windows CI smoke workflow.
-- The executable carries the approved icon and version metadata.
+- The Fyne app builds from a clean checkout through the documented helper and the native CI smoke matrix.
+- The executable carries the approved icon and ldflag-backed version metadata.
 - Manual smoke covers workspace open, quick-open, editor save/revert, assistant settings/probe, agent approvals, data preview/query, artifacts, jobs, Git, tasks, operations, rollback, and diagnostics.
 - Protected secret storage has a Windows implementation or a clearly refused fallback for secret-bearing features.
 - The release process includes signing, installer/update strategy, and antivirus false-positive notes.
@@ -36,7 +36,7 @@ The first non-Windows pass should be a build-smoke project, not a support promis
 
 The intended matrix is:
 
-- `windows-latest`: implemented first for gofmt, `go test ./...`, `go vet ./...`, `git diff --check`, and Windows Fyne build smoke. Icon/version metadata validation remains a release-packaging follow-up.
+- `windows-latest`, `macos-latest`, and `ubuntu-latest`: implemented for gofmt, `go test ./...`, `go vet ./...`, `git diff --check`, version metadata validation, and Fyne build smoke. Signed installers, notarization, code signing, and release artifact publishing remain release-packaging follow-ups.
 - `ubuntu-latest`: tests first, then CGO/Fyne build smoke once dependencies are documented.
 - `macos-latest`: tests first, then app bundle build smoke once signing/notarization requirements are documented.
 

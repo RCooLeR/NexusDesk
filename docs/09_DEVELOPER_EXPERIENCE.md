@@ -25,7 +25,7 @@ Current workstation status:
 
 - MSYS2 UCRT64 GCC is installed under `C:\msys64\ucrt64\bin`.
 - `nexus-app/scripts/dev-env.ps1` configures `PATH`, `CGO_ENABLED=1`, readonly module flags, and local Go cache/temp paths.
-- `.\scripts\dev-env.ps1 -Build` stamps the approved brand icon into `resource_windows.syso` and writes `build\nexusdesk.exe`.
+- `.\scripts\dev-env.ps1 -Build` stamps the approved brand icon into `resource_windows.syso`, injects version/commit/build-date metadata through Go ldflags, and writes `build\nexusdesk.exe`.
 - `CGO_ENABLED=0 go build .` is not expected to work because Fyne's OpenGL binding requires CGO-backed files.
 
 Legacy Wails reference checks, only when deliberately touching `app-wails/`:

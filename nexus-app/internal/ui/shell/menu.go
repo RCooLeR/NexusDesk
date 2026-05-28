@@ -4,6 +4,8 @@ import (
 	"fyne.io/fyne/v2"
 	"fyne.io/fyne/v2/dialog"
 	"fyne.io/fyne/v2/theme"
+
+	"nexusdesk/internal/buildinfo"
 )
 
 func (v *View) InstallWindowActions() {
@@ -78,7 +80,7 @@ func copyDataCellMenuItem(action func()) *fyne.MenuItem {
 func (v *View) showAbout() {
 	dialog.ShowInformation(
 		"About Nexus",
-		"Nexus Augentic Studio\nAgentic work. Augmented by context.\n\nNative local-first workbench.",
+		buildinfo.AboutText(),
 		v.window,
 	)
 }
