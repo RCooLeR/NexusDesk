@@ -316,7 +316,7 @@ Exit criteria:
 ## Next Batch
 
 1. Use the Wails inventory to close remaining Native Parity blockers: editor maturity, richer assistant/source quality, and broader artifact regeneration.
-2. Finish native editor/UI parity: syntax highlighting plan, deeper language actions, and less cramped native panels.
+2. Finish native editor/UI parity: syntax highlighting plan, future LSP/deeper cross-file language actions, and less cramped native panels.
 3. Extend protected secret storage beyond the Windows baseline with macOS Keychain and Linux Secret Service/libsecret when those platforms move toward release support.
 4. Add durable job routing for long indexing, OCR, dump imports, connector pulls, report generation, and long agent runs.
 5. Add dump import job design before any Docker/database import execution.
@@ -328,7 +328,7 @@ Exit criteria:
 ### Gate 1: Native Parity Beta
 
 - [x] Wails-only feature inventory with `port` / `replace` / `drop` / `later` decisions.
-- [ ] IDE-grade editor baseline: syntax highlighting and deeper language actions.
+- [ ] IDE-grade editor baseline: syntax highlighting and future LSP/deeper cross-file language actions.
 - [ ] Native external database profiles for PostgreSQL, MySQL/MariaDB, SQL Server, and DuckDB with read-only guards.
 - [x] Native protected secret storage for Windows; explicit refusal/fallback behavior for unsupported platforms.
 - [ ] Assistant quality parity: finer-grained citations beyond file-level sources.
@@ -381,7 +381,8 @@ The Fyne migration must not drop product ambition, but this section is intention
 - [x] Native symbol navigation parity slice with a searchable Fyne go-to-symbol dialog backed by the Wails-derived outline rules.
 - [x] Native broader-format parity slice with safe Markdown/config/SQL/Dockerfile/text whitespace formatting plus JSON workspace formatting.
 - [x] Native minimap replacement slice with a jumpable Fyne Document Map for symbols, TODO/FIXME/HACK/BUG markers, merge conflicts, and long-file anchors.
-- [ ] Multi-tab editor polish with deeper go-to-definition where native language support is available.
+- [x] Native local go-to-definition parity slice with cursor-symbol resolution against the Wails-derived outline rules.
+- [ ] Multi-tab editor polish with future LSP-backed cross-file go-to-definition where native language support is available.
 - [ ] Syntax highlighting strategy for common languages, Markdown, SQL, JSON/YAML/XML, Docker/Compose, logs, and config files.
 - [x] Markdown source/rendered toggle.
 - [x] Safe edit preview/apply/rollback for text, code, patches, appends, encoding-aware writes, and agent-safe mutation tools.

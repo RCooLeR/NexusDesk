@@ -26,3 +26,23 @@ func TestDocumentMapItemText(t *testing.T) {
 		t.Fatalf("unexpected document map text: %q", text)
 	}
 }
+
+func TestDefinitionStatusText(t *testing.T) {
+	resolved := definitionStatusText(editorSvc.DefinitionResult{
+		Query: "Start",
+		Item:  editorSvc.OutlineItem{Kind: "func", Label: "Start", Line: 7},
+	}, true)
+	if resolved != "Moved to func Start on line 7." {
+		t.Fatalf("unexpected resolved status: %q", resolved)
+	}
+
+	missing := definitionStatusText(editorSvc.DefinitionResult{Query: "Missing"}, false)
+	if missing != "No local definition found for Missing." {
+		t.Fatalf("unexpected missing status: %q", missing)
+	}
+
+	empty := definitionStatusText(editorSvc.DefinitionResult{}, false)
+	if empty != "Place the cursor on a symbol name before using Definition." {
+		t.Fatalf("unexpected empty status: %q", empty)
+	}
+}

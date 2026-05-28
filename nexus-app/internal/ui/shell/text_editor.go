@@ -115,10 +115,20 @@ func (v *View) newTextEditor(tab editorSvc.Tab, preview domain.FilePreview, onSt
 		v.openEditorSymbolDialog(tab.ID)
 	})
 	symbols.Importance = widget.LowImportance
+	definition := widget.NewButtonWithIcon("Definition", theme.NavigateNextIcon(), func() {
+		result, ok := editorSvc.ResolveDefinition(tab.RelPath, source.Text, source.CursorRow, source.CursorColumn)
+		if !ok {
+			status.SetText(definitionStatusText(result, false))
+			return
+		}
+		editorSetCursorLine(source, result.Item.Line)
+		status.SetText(definitionStatusText(result, true))
+	})
+	definition.Importance = widget.LowImportance
 
 	v.bindTextEditor(tab.ID, binding)
 
-	encodingControl := container.NewHBox(widget.NewLabel("Save as"), encodingSelect, symbols, format, revert)
+	encodingControl := container.NewHBox(widget.NewLabel("Save as"), encodingSelect, definition, symbols, format, revert)
 	sourcePanel := container.NewBorder(container.NewBorder(nil, nil, status, encodingControl), nil, nil, nil, source)
 	previewPanel := container.NewBorder(widget.NewLabel(previewHeader(preview)), nil, nil, nil, rendered.Canvas())
 	outlinePanel := container.NewBorder(outlineStatus, nil, nil, nil, container.NewVScroll(outlineList))
@@ -239,6 +249,17 @@ func outlineItemText(item editorSvc.OutlineItem) string {
 
 func documentMapItemText(item editorSvc.DocumentMapItem) string {
 	return fmt.Sprintf("%s  %s  L%d", item.Kind, item.Label, item.Line)
+}
+
+func definitionStatusText(result editorSvc.DefinitionResult, resolved bool) string {
+	query := strings.TrimSpace(result.Query)
+	if query == "" {
+		return "Place the cursor on a symbol name before using Definition."
+	}
+	if !resolved {
+		return fmt.Sprintf("No local definition found for %s.", query)
+	}
+	return fmt.Sprintf("Moved to %s %s on line %d.", result.Item.Kind, result.Item.Label, result.Item.Line)
 }
 
 func draftStatusText(tab editorSvc.Tab) string {
