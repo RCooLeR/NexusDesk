@@ -57,7 +57,7 @@ func TestNormalizeSyntaxHighlightTextUsesLF(t *testing.T) {
 
 func TestFormatLanguageActionPlanShowsStatuses(t *testing.T) {
 	text := formatLanguageActionPlan(editorSvc.BuildLanguageActionPlan("main.go", "package main\n\nfunc main() {}\n"))
-	for _, expected := range []string{"Language Actions", "Summary:", "Syntax highlighting [available]", "Definition and references [fallback]", "External LSP [planned]"} {
+	for _, expected := range []string{"Language Actions", "Summary:", "Native Parity Beta: accepted-for-native-parity-beta", "Syntax mirror", "Syntax highlighting [available]", "Definition and references [fallback]", "External LSP [planned]", "Native Parity Beta strategy [available]"} {
 		if !strings.Contains(text, expected) {
 			t.Fatalf("language action plan missing %q:\n%s", expected, text)
 		}

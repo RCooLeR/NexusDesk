@@ -20,9 +20,10 @@ type LanguageAction struct {
 }
 
 type LanguageActionPlan struct {
-	Language SyntaxLanguage
-	Actions  []LanguageAction
-	Summary  string
+	Language     SyntaxLanguage
+	Actions      []LanguageAction
+	Summary      string
+	BetaStrategy EditorParityStrategy
 }
 
 func BuildLanguageActionPlan(fileName string, content string) LanguageActionPlan {
@@ -127,10 +128,17 @@ func BuildLanguageActionPlan(fileName string, content string) LanguageActionPlan
 			Detail: "Language is marked as an LSP candidate; native editing remains framework-free until packaging and accessibility are proven.",
 		})
 	}
+	strategy := NativeParityEditorStrategy()
+	actions = append(actions, LanguageAction{
+		Name:   "Native Parity Beta strategy",
+		Status: LanguageActionAvailable,
+		Detail: strategy.Summary(),
+	})
 	return LanguageActionPlan{
-		Language: language,
-		Actions:  actions,
-		Summary:  languageActionSummary(actions),
+		Language:     language,
+		Actions:      actions,
+		Summary:      languageActionSummary(actions),
+		BetaStrategy: strategy,
 	}
 }
 

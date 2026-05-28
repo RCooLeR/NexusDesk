@@ -11,9 +11,9 @@ The active product is `nexus-app/`, the Fyne-native application. `app-wails/` is
 Approximate migration status:
 
 - Native foundation and core services: complete enough for sustained native development.
-- Fyne-native migration: roughly 96-97% complete by useful Wails-era functionality.
+- Fyne-native migration: roughly 97% complete by useful Wails-era functionality.
 - Wails-era useful workflow parity: roughly 95-96% complete.
-- Native Parity Beta readiness: roughly 91-94% complete.
+- Native Parity Beta readiness: roughly 92-94% complete.
 - Overall production readiness: roughly 88% complete.
 - Distribution and packaging readiness: roughly 65-70% complete.
 
@@ -51,11 +51,11 @@ Production-ready means:
 
 Goal: make `nexus-app/` the only app developers need during normal work.
 
-Reference: [Wails Feature Inventory](15_WAILS_FEATURE_INVENTORY.md) records the explicit port/replace/drop/later decisions needed before freezing `app-wails`.
+Reference: [Wails Feature Inventory](15_WAILS_FEATURE_INVENTORY.md) records the explicit port/replace/drop/later decisions needed before freezing `app-wails`. [Native Editor Parity Strategy](16_EDITOR_PARITY_STRATEGY.md) records the editor-specific beta replacement decision.
 
 Required:
 
-- IDE-grade editor baseline: first native lightweight syntax strategy, read-only highlighted syntax preview with cursor-aware active-line/token/symbol status, language-action readiness for formatting/highlighting/draft-diagnostics/outline/definition/reference/LSP status, live unsaved-draft diagnostics for markers/merge conflicts/JSON/Go/YAML/TOML/XML, Problems syntax diagnostics for saved JSON/Go/YAML/TOML/XML files, bounded workspace go-to-definition fallback and references search, command palette baseline, future editable-widget inline styling and LSP/cross-file language-action decisions, and continued outline/go-to-symbol/local-definition/document-map/breadcrumb/split/find/format polish.
+- IDE-grade editor baseline: first native lightweight syntax strategy, read-only highlighted syntax preview with cursor-aware active-line/token/symbol status, language-action readiness for formatting/highlighting/draft-diagnostics/outline/definition/reference/LSP status, live unsaved-draft diagnostics for markers/merge conflicts/JSON/Go/YAML/TOML/XML, Problems syntax diagnostics for saved JSON/Go/YAML/TOML/XML files, bounded workspace go-to-definition fallback and references search, command palette baseline, documented Syntax mirror/Document Map beta replacement decision, and continued outline/go-to-symbol/local-definition/document-map/breadcrumb/split/find/format polish.
 - External database profile parity: PostgreSQL, MySQL/MariaDB, SQL Server, and DuckDB file/profile read-only query flows with cancellation, caps, redacted errors, and history.
 - Native protected secret storage is implemented for provider API keys and connector credentials with Windows DPAPI, macOS Keychain, Linux Secret Service/libsecret via `secret-tool`, and explicit refusal on unsupported platforms.
 - Assistant quality parity: native Fyne now has weak-evidence warnings, retry/compare, Wails-compatible memory/profile storage, stale-source chat history warnings, Wails-compatible context-to-source fallback parsing, source/model footer diagnostics, line-aware citation refs, explicit unverified/out-of-context citation diagnostics, cited/uncited source coverage diagnostics, bounded citation snippets in saved answer artifacts, deterministic evidence-quality labels, curated model context sizing, loaded-model runtime context tuning, and save-latest-answer artifacts.
@@ -64,8 +64,8 @@ Required:
 
 Remaining blockers:
 
-- Editable-widget inline syntax styling or a documented decision that the native syntax mirror/document-map strategy is the beta replacement.
-- Future LSP/deeper cross-file language actions.
+- Post-beta editable-widget inline syntax styling if it preserves safe editing/accessibility.
+- Future LSP/deeper cross-file language actions after a packaged provider spike proves reliability.
 - Deeper assistant retrieval evidence beyond deterministic citation/source diagnostics.
 - Richer generated document artifacts and full deck/PPTX-style exports beyond the packaged presentation zip baseline.
 - Final UI polish for onboarding, empty states, settings, diagnostics, and workflow hierarchy.
@@ -140,7 +140,7 @@ Exit criteria:
 ## Immediate Production-Oriented Next Batch
 
 1. Apply the durable slow-workflow contract to concrete OCR, dump import, connector pull, long indexing, report generation, and long agent run implementations.
-2. Finalize the native editor parity strategy and explicitly document what counts for Native Parity Beta.
+2. Continue post-beta editor spikes for inline styling and packaged LSP while preserving the documented Syntax mirror/Document Map Native Parity Beta strategy.
 3. Expand richer generated document artifacts and move packaged presentation exports from native zip packages toward full deck/PPTX outputs.
 4. Build signed release packaging and installer/update validation.
 5. Run a focused UI polish pass on onboarding, empty states, settings, diagnostics, and workflow hierarchy.

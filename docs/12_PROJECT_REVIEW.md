@@ -12,8 +12,8 @@ Approximate current status:
 
 - Fyne-native migration: 96-97% complete by useful Wails-era functionality.
 - Wails useful-code parity: 94-96% complete.
-- Native Parity Beta readiness: 90-93% complete.
-- Overall production readiness: about 87% complete.
+- Native Parity Beta readiness: 92-94% complete.
+- Overall production readiness: about 88% complete.
 - Distribution/packaging readiness: about 65-70% complete.
 
 The remaining work is concentrated in final editor parity, richer generated document/presentation outputs, deeper assistant evidence quality, durable routing for slow workflows, signed packaging, onboarding, platform smoke, and final UI polish.
@@ -157,7 +157,7 @@ Build and CI:
 
 Native parity and editor:
 
-- Finish editable-widget inline syntax styling or deliberately accept the companion syntax mirror as the beta strategy.
+- Native editor beta strategy is now explicit: the Syntax mirror and Document Map are accepted for Native Parity Beta; editable-widget inline syntax styling is post-beta.
 - Decide the future LSP/deeper cross-file language action strategy.
 - Continue go-to-definition, references, minimap/document-map, and formatting depth.
 
@@ -218,7 +218,7 @@ The active product path should remain migration-first and production-first. Avoi
 ## Recommended Next Engineering Order
 
 1. Apply the durable slow-workflow contract to concrete OCR, dump import, connector pull, long indexing, long report, and long agent run implementations.
-2. Finalize the native editor parity strategy and explicitly document what counts for Native Parity Beta.
+2. Continue post-beta editor spikes for inline syntax styling and packaged LSP without blocking the documented Native Parity Beta editor baseline.
 3. Expand richer document/presentation export workflows.
 4. Build signed release packaging and installer/update validation.
 5. Validate macOS Keychain and Linux Secret Service/libsecret behavior in platform packaging smoke.

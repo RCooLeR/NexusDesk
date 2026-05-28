@@ -76,8 +76,8 @@ Current estimate:
 
 - Fyne-native migration: roughly 96-97% complete by useful Wails-era functionality.
 - Wails useful-code parity: roughly 94-96% complete.
-- Native Parity Beta readiness: roughly 90-93% complete.
-- Overall production readiness: roughly 87% complete.
+- Native Parity Beta readiness: roughly 92-94% complete.
+- Overall production readiness: roughly 88% complete.
 
 Current implemented areas include:
 
@@ -138,7 +138,7 @@ Current implemented areas include:
 
 Remaining migration blockers:
 
-- Editable-widget inline syntax styling or a documented beta replacement decision for the native syntax mirror/document-map strategy.
+- Native editor beta replacement decision is documented in `docs/16_EDITOR_PARITY_STRATEGY.md`; editable-widget inline syntax styling is now a post-beta enhancement.
 - Future LSP/deeper cross-file language action strategy.
 - Deeper assistant retrieval evidence beyond current deterministic source/citation/evidence diagnostics.
 - Richer generated document artifacts and packaged presentation exports.

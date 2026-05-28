@@ -19,14 +19,15 @@ This is a breaking migration, not an incremental UI refresh.
 Latest full project review: `docs/12_PROJECT_REVIEW.md`.
 Production-readiness gates: `docs/13_PRODUCTION_READINESS.md`.
 Wails feature inventory and retirement blockers: `docs/15_WAILS_FEATURE_INVENTORY.md`.
+Native editor parity decision: `docs/16_EDITOR_PARITY_STRATEGY.md`.
 
 Summary:
 
 - The Fyne migration remains the correct direction and `nexus-app/` is the active product.
-- Current estimate: Fyne-native migration is roughly 96-97% complete, Wails useful-code parity is roughly 95-96%, Native Parity Beta readiness is roughly 91-94%, and overall production readiness is roughly 88%.
+- Current estimate: Fyne-native migration is roughly 97% complete, Wails useful-code parity is roughly 95-96%, Native Parity Beta readiness is roughly 92-94%, and overall production readiness is roughly 88%.
 - The architecture is healthy: thin executable root, framework-free domain/services, Fyne-only UI packages, explicit approvals, safe workspace mutation boundaries, manual Git/Docker actions, durable metadata, and local-first safety rules.
 - The biggest remaining architectural risk is UI/orchestration complexity in `internal/ui/shell`; future UI work should keep extracting focused panels, controllers, and service-owned behavior.
-- The highest-priority unfinished work is migration and production readiness, not new top-level studios: final editor strategy, applying durable slow-job routing to the remaining slow workflows, richer document/PPTX exports, deeper assistant evidence quality, packaging, onboarding, and native UI polish.
+- The highest-priority unfinished work is migration and production readiness, not new top-level studios: applying durable slow-job routing to the remaining slow workflows, richer document/PPTX exports, deeper assistant evidence quality, packaging, onboarding, and native UI polish.
 - `app-wails/` should remain as reference until the remaining native parity blockers are completed or explicitly moved out of Native Parity Beta.
 
 Production direction:
@@ -40,7 +41,7 @@ Immediate execution order:
 
 - Validate macOS Keychain and Linux Secret Service/libsecret behavior during platform packaging smoke.
 - Apply the durable slow-job contract to OCR, dump imports, connector pulls, long indexing, report generation, and long agent runs as those workflows are implemented.
-- Finalize the native editor parity strategy and document the Native Parity Beta acceptance bar.
+- Keep the documented native editor parity strategy visible in Language Actions and continue post-beta LSP/inline-styling spikes without blocking Native Parity Beta.
 - Expand richer generated document artifacts and move packaged presentation exports from the native zip package baseline toward full deck/PPTX outputs.
 - Build signed release packaging and installer/update validation.
 - Run a focused UI polish pass on onboarding, empty states, settings, diagnostics, and workflow hierarchy.
@@ -348,7 +349,8 @@ Exit criteria:
 ### Gate 1: Native Parity Beta
 
 - [x] Wails-only feature inventory with `port` / `replace` / `drop` / `later` decisions.
-- [ ] IDE-grade editor baseline: native highlighted syntax preview is available; active-editor inline styling and future LSP/deeper cross-file language actions remain.
+- [x] IDE-grade editor baseline for Native Parity Beta: native highlighted Syntax mirror, Document Map, outline/symbol navigation, local/workspace definition fallback, references, formatting, draft diagnostics, and explicit Language Actions decision are accepted as the beta replacement for Monaco inline/minimap behavior.
+- [ ] Post-beta editor enhancements: active-editor inline styling and future LSP/deeper cross-file language actions.
 - [ ] Native external database profiles for PostgreSQL, MySQL/MariaDB, SQL Server, and DuckDB with read-only guards.
 - [x] Native protected secret storage for Windows DPAPI, macOS Keychain, and Linux Secret Service/libsecret, with explicit refusal on unsupported platforms.
 - [x] Assistant quality parity: line-aware citation refs beyond file-level sources in native answer footers and saved chat-answer artifacts.
@@ -411,11 +413,12 @@ The Fyne migration must not drop product ambition, but this section is intention
 - [x] Native bounded workspace go-to-definition fallback for unresolved editor symbols using workspace search, preview-safe reads, and outline matching.
 - [x] Native bounded find-references language action for cursor symbols using workspace search and jumpable preview-safe matches.
 - [x] Native editor language-action readiness slice that surfaces available formatting, highlighting, outline, definition/reference fallback, and future LSP status per active file.
+- [x] Native editor parity strategy decision surfaced in Language Actions and documented as the Native Parity Beta acceptance bar.
 - [ ] Multi-tab editor polish with future LSP-backed cross-file go-to-definition where native language support is available.
 - [x] First native lightweight syntax strategy for common languages, Markdown, SQL, JSON/YAML/XML/HTML, Docker/Compose, logs, and config files.
 - [x] Native read-only highlighted syntax preview with Wails/Monaco-inspired token colors, line numbers, and bounded token styling.
 - [x] Native Problems XML diagnostics for well-formed document/config markup.
-- [ ] Rich inline syntax styling in the active editor widget and future LSP-backed diagnostics/actions.
+- [ ] Post-beta rich inline syntax styling in the active editor widget and future LSP-backed diagnostics/actions.
 - [x] Markdown source/rendered toggle.
 - [x] Safe edit preview/apply/rollback for text, code, patches, appends, encoding-aware writes, and agent-safe mutation tools.
 - [x] Workspace search over paths, previewable text, artifacts, chat history, and lightweight regex content matches.

@@ -19,6 +19,10 @@ func TestBuildLanguageActionPlanReportsNativeGoActions(t *testing.T) {
 	assertLanguageAction(t, plan, "Outline and symbols", LanguageActionAvailable)
 	assertLanguageAction(t, plan, "Definition and references", LanguageActionFallback)
 	assertLanguageAction(t, plan, "External LSP", LanguageActionPlanned)
+	assertLanguageAction(t, plan, "Native Parity Beta strategy", LanguageActionAvailable)
+	if plan.BetaStrategy.BetaBlocker {
+		t.Fatal("native editor beta strategy should not block Native Parity Beta")
+	}
 }
 
 func TestBuildLanguageActionPlanReportsPlainTextLimits(t *testing.T) {

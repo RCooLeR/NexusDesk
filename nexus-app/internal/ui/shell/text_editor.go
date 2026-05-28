@@ -529,6 +529,17 @@ func formatLanguageActionPlan(plan editorSvc.LanguageActionPlan) string {
 	builder.WriteString("Summary: ")
 	builder.WriteString(firstNonEmptyString(plan.Summary, "no language actions"))
 	builder.WriteString("\n")
+	if strings.TrimSpace(plan.BetaStrategy.Decision) != "" {
+		builder.WriteString("Native Parity Beta: ")
+		builder.WriteString(plan.BetaStrategy.Status)
+		builder.WriteString("\n")
+		builder.WriteString(plan.BetaStrategy.Decision)
+		builder.WriteString("\n")
+		builder.WriteString(plan.BetaStrategy.InlineSyntax)
+		builder.WriteString("\n")
+		builder.WriteString(plan.BetaStrategy.LSP)
+		builder.WriteString("\n")
+	}
 	for _, action := range plan.Actions {
 		builder.WriteString("- ")
 		builder.WriteString(action.Name)
