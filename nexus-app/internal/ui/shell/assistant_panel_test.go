@@ -111,6 +111,27 @@ func TestAssistantResponseMarkdownWarnsWithoutSources(t *testing.T) {
 	}
 }
 
+func TestAssistantResponseMarkdownIncludesLineCitations(t *testing.T) {
+	text := assistantResponseMarkdown(assistantSvc.Result{
+		Message:        "Use README.md:12 and docs/guide.md#L4-L6. Ignore other.md:1.",
+		Model:          "qwen",
+		ContextRelPath: "pack: README.md, docs/guide.md",
+	})
+
+	for _, expected := range []string{"Citations: `README.md:L12`, `docs/guide.md:L4-L6`", "Sources: `README.md`, `docs/guide.md`"} {
+		if !strings.Contains(text, expected) {
+			t.Fatalf("expected citation footer to contain %q, got %q", expected, text)
+		}
+	}
+	refs := assistantCitationRefs(assistantSvc.Result{
+		Message:        "Use README.md:12 and docs/guide.md#L4-L6. Ignore other.md:1.",
+		ContextRelPath: "pack: README.md, docs/guide.md",
+	})
+	if strings.Join(refs, "|") != "README.md:L12|docs/guide.md:L4-L6" {
+		t.Fatalf("unexpected citation refs: %#v", refs)
+	}
+}
+
 func TestAssistantSourcePathsFromContextPortsWailsRules(t *testing.T) {
 	tests := []struct {
 		context string
@@ -142,6 +163,17 @@ func TestAssistantEffectiveSourcePathsFallsBackAndDedupes(t *testing.T) {
 	fallback := assistantEffectiveSourcePaths(assistantSvc.Result{ContextRelPath: "pack: README.md, docs/guide.md"})
 	if len(fallback) != 2 || fallback[0] != "README.md" || fallback[1] != "docs/guide.md" {
 		t.Fatalf("unexpected fallback source paths: %#v", fallback)
+	}
+}
+
+func TestAssistantCitationRefsDedupesAndNormalizes(t *testing.T) {
+	refs := assistantCitationRefs(assistantSvc.Result{
+		Message:     "See docs\\guide.md:10, docs/guide.md#L10, and docs/guide.md#L11-L12.",
+		SourcePaths: []string{"docs"},
+	})
+	want := []string{"docs/guide.md:L10", "docs/guide.md:L11-L12"}
+	if strings.Join(refs, "|") != strings.Join(want, "|") {
+		t.Fatalf("unexpected citation refs: %#v", refs)
 	}
 }
 

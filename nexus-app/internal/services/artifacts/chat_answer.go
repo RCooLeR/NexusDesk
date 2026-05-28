@@ -42,6 +42,7 @@ func (s *Store) WriteChatAnswer(report ChatAnswerReport) (Artifact, error) {
 		Prompt:         strings.TrimSpace(report.Prompt),
 		Model:          strings.TrimSpace(report.Model),
 		SourcePaths:    append([]string{}, report.SourcePaths...),
+		CitationRefs:   append([]string{}, report.CitationRefs...),
 		GeneratedAt:    createdAt,
 	}
 	if err := s.writeMetadata(metadata); err != nil {
@@ -76,6 +77,14 @@ func chatAnswerMarkdown(report ChatAnswerReport, title string, content string, c
 		for _, source := range report.SourcePaths {
 			builder.WriteString("- ")
 			builder.WriteString(source)
+			builder.WriteString("\n")
+		}
+	}
+	if len(report.CitationRefs) > 0 {
+		builder.WriteString("\n## Citations\n\n")
+		for _, citation := range report.CitationRefs {
+			builder.WriteString("- ")
+			builder.WriteString(citation)
 			builder.WriteString("\n")
 		}
 	}

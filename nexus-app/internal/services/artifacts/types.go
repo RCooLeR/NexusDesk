@@ -178,6 +178,7 @@ type ChatAnswerReport struct {
 	ContextRelPath string
 	Model          string
 	SourcePaths    []string
+	CitationRefs   []string
 }
 
 type OperationsServiceSummary struct {
@@ -216,6 +217,7 @@ type Metadata struct {
 	Prompt             string              `json:"prompt,omitempty"`
 	Model              string              `json:"model,omitempty"`
 	SourcePaths        []string            `json:"sourcePaths,omitempty"`
+	CitationRefs       []string            `json:"citationRefs,omitempty"`
 	SourceFingerprints []SourceFingerprint `json:"sourceFingerprints,omitempty"`
 	GeneratedAt        time.Time           `json:"generatedAt"`
 }

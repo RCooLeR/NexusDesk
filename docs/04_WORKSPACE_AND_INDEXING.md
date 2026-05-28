@@ -188,7 +188,7 @@ Current implementation:
 - creates and lists first SVG chart artifacts under `.nexusdesk/artifacts/`
 - uses Monaco for read-only text/code previews and text/code edit drafts
 - supports safe new file drafts, text/code updates, deletes, and renames/moves through backend file-operation boundaries
-- persists chat/artifact source path citations but does not yet persist line-aware chunks
+- persists chat/artifact source path citations and line-aware assistant citation refs; full retrieval chunk persistence remains future work
 
 ### Markdown
 

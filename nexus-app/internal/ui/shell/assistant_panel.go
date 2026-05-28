@@ -3,6 +3,7 @@ package shell
 import (
 	"context"
 	"fmt"
+	"regexp"
 	"strings"
 	"time"
 
@@ -26,6 +27,8 @@ import (
 const assistantConversationLimit = 24
 const assistantHistoryPreviewLimit = 6
 const defaultAgentContextMaxBytes = 96 * 1024
+
+var assistantCitationPattern = regexp.MustCompile(`(?i)([\w./\\-]+\.[A-Za-z0-9]{1,12})(?:(?:#L|:)(\d+)(?:[-:L]+(\d+))?)`)
 
 func (v *View) newAssistantPanel() fyne.CanvasObject {
 	prompt := widget.NewMultiLineEntry()
@@ -260,6 +263,7 @@ func (v *View) saveLatestAssistantAnswer() {
 		ContextRelPath: v.assistantLastResult.ContextRelPath,
 		Source:         "Nexus assistant",
 		SourcePaths:    assistantEffectiveSourcePaths(v.assistantLastResult),
+		CitationRefs:   assistantCitationRefs(v.assistantLastResult),
 	})
 	if err != nil {
 		v.addActivity("Assistant answer artifact failed: " + err.Error())
@@ -396,6 +400,10 @@ func assistantDiagnosticFooter(result assistantSvc.Result) string {
 	} else {
 		lines = append(lines, "> No explicit source context is attached to this answer.")
 	}
+	citations := assistantCitationRefs(result)
+	if len(citations) > 0 {
+		lines = append(lines, "Citations: `"+strings.Join(citations, "`, `")+"`")
+	}
 	return strings.Join(lines, "\n")
 }
 
@@ -447,6 +455,59 @@ func dedupeAssistantSourcePaths(paths []string) []string {
 		cleaned = append(cleaned, path)
 	}
 	return cleaned
+}
+
+func assistantCitationRefs(result assistantSvc.Result) []string {
+	sources := assistantEffectiveSourcePaths(result)
+	matches := assistantCitationPattern.FindAllStringSubmatch(result.Message, -1)
+	seen := map[string]bool{}
+	citations := []string{}
+	for _, match := range matches {
+		if len(match) < 3 {
+			continue
+		}
+		path := normalizeAssistantCitationPath(match[1])
+		if path == "" || !assistantCitationAllowed(path, sources) {
+			continue
+		}
+		start := strings.TrimSpace(match[2])
+		if start == "" {
+			continue
+		}
+		ref := path + ":L" + start
+		if len(match) > 3 {
+			if end := strings.TrimSpace(match[3]); end != "" && end != start {
+				ref += "-L" + end
+			}
+		}
+		if !seen[ref] {
+			seen[ref] = true
+			citations = append(citations, ref)
+		}
+	}
+	return citations
+}
+
+func normalizeAssistantCitationPath(path string) string {
+	path = strings.TrimSpace(strings.ReplaceAll(path, "\\", "/"))
+	path = strings.Trim(path, "`'\"()[]{}<>,.;")
+	if path == "" || strings.Contains(path, "://") {
+		return ""
+	}
+	return path
+}
+
+func assistantCitationAllowed(path string, sources []string) bool {
+	if len(sources) == 0 {
+		return true
+	}
+	for _, source := range sources {
+		source = normalizeAssistantCitationPath(source)
+		if source == "." || source == path || strings.HasPrefix(path, strings.TrimSuffix(source, "/")+"/") {
+			return true
+		}
+	}
+	return false
 }
 
 func compareLatestAssistantPrompt(prompt string, previousAnswer string) string {

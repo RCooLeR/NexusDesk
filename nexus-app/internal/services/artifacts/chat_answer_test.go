@@ -18,6 +18,7 @@ func TestWriteChatAnswerCreatesMarkdownAndMetadata(t *testing.T) {
 		Model:          "model-a",
 		ContextRelPath: "context: README.md",
 		SourcePaths:    []string{"README.md"},
+		CitationRefs:   []string{"README.md:L12"},
 	})
 	if err != nil {
 		t.Fatalf("WriteChatAnswer returned error: %v", err)
@@ -30,7 +31,7 @@ func TestWriteChatAnswerCreatesMarkdownAndMetadata(t *testing.T) {
 		t.Fatal(err)
 	}
 	text := string(data)
-	for _, expected := range []string{"# Assistant Answer - Summarize README", "Model:** model-a", "README.md", "## Prompt", "## Answer", "Use the setup guide."} {
+	for _, expected := range []string{"# Assistant Answer - Summarize README", "Model:** model-a", "README.md", "## Citations", "README.md:L12", "## Prompt", "## Answer", "Use the setup guide."} {
 		if !strings.Contains(text, expected) {
 			t.Fatalf("expected artifact markdown to contain %q, got %q", expected, text)
 		}
@@ -38,6 +39,9 @@ func TestWriteChatAnswerCreatesMarkdownAndMetadata(t *testing.T) {
 	metadata, _ := store.readMetadata(artifact.RelPath)
 	if metadata.Kind != "chat-answer" || metadata.Prompt != "Summarize README" || metadata.Model != "model-a" || metadata.ContextRelPath == "" {
 		t.Fatalf("unexpected metadata: %#v", metadata)
+	}
+	if len(metadata.CitationRefs) != 1 || metadata.CitationRefs[0] != "README.md:L12" {
+		t.Fatalf("expected citation refs in metadata, got %#v", metadata.CitationRefs)
 	}
 }
 

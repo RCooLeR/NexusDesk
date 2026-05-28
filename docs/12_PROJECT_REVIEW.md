@@ -10,7 +10,7 @@ The product direction still makes sense. Nexus Augentic Studio should stay a nat
 
 The new app is no longer a thin skeleton. `nexus-app/` now has real native services for workspace navigation, previews, safe file mutation, editor tabs, search, problems, Git, tasks, jobs, approvals, LLM chat, agent tooling, metadata, artifacts, datasets, SQLite inspection, document extraction, operations scanning, and history. The most important remaining work is not to invent new studios yet; it is to finish parity and make the native UI feel like a serious IDE-class product.
 
-Approximate Wails-to-Fyne migration status: 88-90% of useful Wails-era backend/workflow capability has been migrated. The remaining gap is concentrated in IDE-grade editor behavior, richer assistant/source quality, broader artifact regeneration, slow-work job routing, production packaging, and UI polish.
+Approximate Wails-to-Fyne migration status: 89-91% of useful Wails-era backend/workflow capability has been migrated. The remaining gap is concentrated in IDE-grade editor behavior, deeper source-quality UX, broader artifact regeneration, slow-work job routing, production packaging, and UI polish.
 
 The production release path is tracked in `docs/13_PRODUCTION_READINESS.md`.
 
@@ -49,14 +49,14 @@ Implemented in `nexus-app/`:
 - Artifact browser with metadata, lineage, comparison, archive/delete/restore, source freshness, and context pinning.
 - Document extraction/report artifacts for Markdown, TXT, HTML, XML, DOCX, XLSX, and PDF preview text.
 - Operations inspection for Dockerfiles, Compose, env/config/script/log files, Compose topology, safe config validation, and runbook artifacts.
-- Settings, LLM transport, streaming Ask mode, Agent mode, deterministic tools, approval queue, full-project access policy, rollback browser, history, audit, source/model answer diagnostics, and durable metadata.
+- Settings, LLM transport, streaming Ask mode, Agent mode, deterministic tools, approval queue, full-project access policy, rollback browser, history, audit, source/model answer diagnostics, line-aware citation refs, and durable metadata.
 
 ## Main Gaps
 
 Priority migration gaps:
 
 1. Native editor quality: syntax highlighting and future LSP/deeper cross-file language-aware navigation.
-2. Native editor-adjacent artifact regeneration and source quality: broader regeneration coverage and citation depth.
+2. Native editor-adjacent artifact regeneration and source quality: broader regeneration coverage and deeper retrieval/source evidence UX.
 3. Job routing for slow workflows: long indexing, OCR, dump imports, connector pulls, report generation, and long agent runs.
 4. Connector and dump workflows: temporary isolated database sandboxes, import lifecycle, storage limits, and read-only analysis.
 5. Assistant maturity: model context accounting, runtime diagnostics, source-citation quality, and broader tool coverage.
@@ -75,7 +75,7 @@ The next batches should stay migration-first:
 
 1. Keep closing the Wails-only feature inventory instead of adding new top-level studios.
 2. Finish native editor parity and UI structure.
-3. Add richer assistant citations and broader artifact regeneration coverage.
+3. Add deeper assistant source-quality UX and broader artifact regeneration coverage.
 4. Add macOS Keychain and Linux Secret Service/libsecret after the Windows protected-secret baseline.
 5. Route remaining slow workflows through durable jobs.
 6. Add dump import design and first safe job scaffold before any database mutation/import execution.
