@@ -64,6 +64,7 @@ Required:
 - Complete Wails-only feature inventory and explicit keep/drop/replace decisions.
 - Native UI cleanup pass for Workbench, Data, Artifacts, Settings, assistant, and bottom panels.
 - UI direction follows `docs/17_END_TO_END_PRODUCTION_PLAN.md`: grouped tool windows, professional settings, dense but readable data grids, integrated assistant/source diagnostics, and JetBrains-like shell hierarchy.
+- Import-boundary tests now enforce the active architecture: no Wails/webview imports, no Fyne imports in services/domain, and no UI imports from framework-free service/domain packages.
 
 Remaining blockers:
 

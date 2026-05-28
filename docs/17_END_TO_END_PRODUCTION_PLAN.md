@@ -522,11 +522,11 @@ The checklist below is intentionally large. `tracker.md` should keep task-level 
 - [x] Keep services framework-free.
 - [x] Keep Fyne imports out of domain/services.
 - [x] Keep Wails/webview out of active app.
+- [x] Add dependency guard/static import-boundary tests for forbidden Wails/webview imports, Fyne leakage outside presentation packages, and UI imports from services/domain.
 - [x] Split initial large Data panel responsibilities.
 - [ ] Continue extracting `internal/ui/shell` controllers by responsibility.
 - [ ] Define shell state ownership boundaries: workspace, editor, assistant, data, artifacts, jobs, diagnostics.
 - [ ] Add package-level architecture docs for services and UI shell.
-- [ ] Add dependency guard or static check for forbidden imports.
 - [ ] Add performance profiling harness for shell redraw, activity log, data grid, large search, and large artifacts.
 
 ### 7.3 P0: Safety And Trust

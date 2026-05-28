@@ -62,6 +62,7 @@ Immediate execution order:
 - [x] `nexus-app/internal/domain/` owns framework-free domain models.
 - [x] `nexus-app/internal/services/` owns UI-independent application services.
 - [x] `nexus-app/internal/ui/` owns Fyne views, layouts, widgets, and theme.
+- [x] `nexus-app/internal/architecture` guards import boundaries so Wails/webview cannot return and Fyne/UI cannot leak into services/domain.
 - [x] `.gitignore` covers Wails legacy build output and new Fyne build output.
 
 ## Verification
@@ -620,6 +621,7 @@ The Fyne migration must not drop product ambition, but this section is intention
 - [ ] Contributor setup guide, coding standards, tests, and architecture decision records.
 - [ ] Plugin/MCP strategy after native core tools are stable.
 - [ ] Stable service interfaces for community-contributed connectors and document parsers.
+- [x] Add dependency guard/static check for forbidden Wails/webview imports, Fyne leakage, and UI imports from services/domain.
 - [x] Native CI matrix for Windows, macOS, and Linux formatting, tests, static analysis, and Fyne build smoke.
 - [x] Add native build metadata validation for version, commit, and build date through CI ldflags.
 - [ ] Expand CI into signed release packaging and installer/update validation.
