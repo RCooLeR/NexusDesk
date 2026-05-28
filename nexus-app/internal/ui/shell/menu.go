@@ -30,6 +30,7 @@ func (v *View) mainMenu() *fyne.MainMenu {
 	appDataCleanupGuide := fyne.NewMenuItemWithIcon("App Data & Uninstall Cleanup", theme.StorageIcon(), v.openAppDataCleanupGuideTab)
 	releaseHygieneGuide := fyne.NewMenuItemWithIcon("Release Hygiene & Antivirus Notes", theme.WarningIcon(), v.openReleaseHygieneGuideTab)
 	packageOwnershipGuide := fyne.NewMenuItemWithIcon("Internal Package Ownership", theme.ListIcon(), v.openPackageOwnershipGuideTab)
+	contributorGuide := fyne.NewMenuItemWithIcon("Contributor Setup & Standards", theme.DocumentIcon(), v.openContributorGuideTab)
 	about := fyne.NewMenuItemWithIcon("About Nexus", theme.InfoIcon(), v.showAbout)
 
 	return fyne.NewMainMenu(
@@ -70,7 +71,7 @@ func (v *View) mainMenu() *fyne.MainMenu {
 			fyne.NewMenuItem("Refresh Activity", func() { v.activityLog.Refresh() }),
 			menuItem("Command Palette", shortcutCommandPalette(), v.openCommandPaletteDialog),
 		),
-		fyne.NewMenu("Help", safeAgentGuide, betaFeedbackGuide, smokeChecklistGuide, appDataCleanupGuide, releaseHygieneGuide, packageOwnershipGuide, fyne.NewMenuItemSeparator(), about),
+		fyne.NewMenu("Help", safeAgentGuide, betaFeedbackGuide, smokeChecklistGuide, appDataCleanupGuide, releaseHygieneGuide, packageOwnershipGuide, contributorGuide, fyne.NewMenuItemSeparator(), about),
 	)
 }
 
@@ -114,4 +115,8 @@ func (v *View) openReleaseHygieneGuideTab() {
 
 func (v *View) openPackageOwnershipGuideTab() {
 	v.addPlaceholderTab("Package Ownership", userGuideSvc.PackageOwnershipMarkdown())
+}
+
+func (v *View) openContributorGuideTab() {
+	v.addPlaceholderTab("Contributor Guide", userGuideSvc.ContributorMarkdown())
 }

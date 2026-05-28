@@ -116,6 +116,6 @@ Before adding or moving functionality:
 
 - Continue extracting `internal/ui/shell` controllers by responsibility.
 - Define final shell state ownership boundaries for workspace, editor, assistant, data, artifacts, jobs, diagnostics, and settings.
-- Add contributor setup, coding standards, ADR index, and test-fixture policy.
+- Expand test-fixture policy for community contributions beyond the contributor setup baseline.
 - Define stable service interfaces for future contributed connectors and parsers.
 - Define the extension security model before any third-party code execution.

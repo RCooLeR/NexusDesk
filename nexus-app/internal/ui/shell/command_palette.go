@@ -217,6 +217,13 @@ func (v *View) commandPaletteActions() []commandPaletteAction {
 			Group:  "Help",
 			Run:    v.openPackageOwnershipGuideTab,
 		},
+		{
+			ID:     "help.contributor",
+			Title:  "Contributor Setup & Standards",
+			Detail: "Open setup, coding standards, validation, documentation, ADR, and commit-discipline guidance.",
+			Group:  "Help",
+			Run:    v.openContributorGuideTab,
+		},
 		v.bottomPanelCommand("view.search", "Search", "Open workspace path and content search results.", "Workbench"),
 		v.bottomPanelCommand("view.problems", "Problems", "Open syntax and workspace diagnostics.", "Workbench"),
 		v.bottomPanelCommand("view.git", "Git", "Open status, diff, history, blame, and hunk actions.", "Workbench"),

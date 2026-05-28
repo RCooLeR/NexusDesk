@@ -96,6 +96,7 @@ The Fyne migration is correct because the desired product is native, local-first
 - `nexus-app/internal/brand`: brand assets and theme constants.
 - `app-wails/`: reference implementation only until explicit freeze/archive decision.
 - Detailed package ownership is captured in `docs/23_INTERNAL_PACKAGE_OWNERSHIP.md` and exposed in-product through Help and the command palette.
+- Contributor setup, coding standards, validation expectations, and ADR process are captured in `docs/24_CONTRIBUTOR_SETUP_AND_STANDARDS.md` and exposed in-product through Help and the command palette.
 
 ### 3.2 Non-Negotiable Architecture Rules
 
@@ -522,7 +523,7 @@ The checklist below is intentionally large. `tracker.md` should keep task-level 
 - [x] Add app data and uninstall cleanup guide and expose it in-product.
 - [ ] Keep `docs/12_PROJECT_REVIEW.md`, `docs/13_PRODUCTION_READINESS.md`, `docs/15_WAILS_FEATURE_INVENTORY.md`, and `tracker.md` synchronized after every major milestone.
 - [x] Add package ownership documentation for every major `internal/` area.
-- [ ] Add contributor setup, coding standards, and ADR index.
+- [x] Add contributor setup, coding standards, and ADR index.
 
 ### 7.2 P0: Architecture And Codebase Health
 
@@ -657,7 +658,7 @@ The checklist below is intentionally large. `tracker.md` should keep task-level 
 
 - [ ] Stable service interfaces for contributed connectors and parsers.
 - [ ] Plugin/MCP strategy after native core tools are stable.
-- [ ] Contributor setup, coding standards, and architecture decision records.
+- [x] Contributor setup, coding standards, and architecture decision records.
 - [ ] Test fixture policy for community contributions.
 - [ ] Extension security model before third-party code execution.
 

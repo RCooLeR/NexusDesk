@@ -1,0 +1,70 @@
+package userguide
+
+func ContributorGuide() Guide {
+	return Guide{
+		Title:   "Contributor Setup And Standards",
+		Summary: "A production-oriented contributor guide for building NexusDesk safely without weakening the Fyne-native architecture.",
+		Sections: []Section{
+			{
+				Title: "Active App And Reference App",
+				Body: []string{
+					"Develop in `nexus-app/`. Treat `app-wails/` as a reference implementation only until the explicit freeze/archive milestone is complete.",
+					"Port useful behavior capability-by-capability. Do not reintroduce Wails, webview, React bridge, or generated frontend dependencies into the active app.",
+				},
+			},
+			{
+				Title: "Local Setup",
+				Body: []string{
+					"Use Go with CGO enabled for Fyne builds. On Windows, use MSYS2 UCRT64 GCC and prefer `nexus-app/scripts/dev-env.ps1` for test/build/run setup.",
+					"Keep module use readonly during validation when possible: `GOFLAGS=-mod=readonly` helps catch accidental dependency drift.",
+					"After `go build .`, remove generated binaries such as `nexusdesk.exe` before committing.",
+				},
+			},
+			{
+				Title: "Coding Standards",
+				Body: []string{
+					"Put business rules, path safety, query safety, approvals, rollbacks, redaction, and persistence in services before wiring UI.",
+					"Keep services and domain packages framework-free. Fyne imports belong in app, UI, theme, brand presentation code, and UI tests only.",
+					"Keep folder open cheap: no Git, Docker, OCR, connector pulls, dump imports, model calls, shell commands, or deep indexing on workspace open.",
+					"Prefer small package-owned helpers and focused tests over adding orchestration to `internal/ui/shell`.",
+				},
+			},
+			{
+				Title: "Testing Standards",
+				Body: []string{
+					"Add focused tests for every milestone. Service tests should cover boundaries, caps, cancellation, redaction, metadata, and safety decisions.",
+					"Use small deterministic fixtures. Do not start external services unless the test name and package make that dependency explicit.",
+					"Run `gofmt`, `go test ./...`, `go build .`, and `git diff --check` before committing a milestone.",
+				},
+			},
+			{
+				Title: "Documentation And Tracker Updates",
+				Body: []string{
+					"Update `tracker.md` and the relevant docs whenever behavior, architecture, production readiness, or Wails parity changes.",
+					"Keep `docs/17_END_TO_END_PRODUCTION_PLAN.md` as the broad roadmap and `docs/13_PRODUCTION_READINESS.md` as the release-gate map.",
+					"Document new package ownership in `docs/23_INTERNAL_PACKAGE_OWNERSHIP.md` before responsibilities become tribal knowledge.",
+				},
+			},
+			{
+				Title: "ADR Process",
+				Body: []string{
+					"Create an ADR for decisions that change architecture boundaries, persistence formats, security policy, connector behavior, packaging, or extension/plugin execution.",
+					"Use `docs/adr/NNNN-short-title.md` with Context, Decision, Consequences, Status, and Date sections.",
+					"Prefer reversible decisions and document migration or rollback expectations when persistence or generated artifacts are affected.",
+				},
+			},
+			{
+				Title: "Commit Discipline",
+				Body: []string{
+					"Commit logical milestones only after validation passes. Do not amend or force-push unless explicitly requested.",
+					"Do not revert unrelated user changes. If unexpected unrelated changes appear, pause and ask how to proceed.",
+					"Use direct commit messages such as `Document contributor standards`, `Harden native artifact regeneration`, or `Polish diagnostics health cards`.",
+				},
+			},
+		},
+	}
+}
+
+func ContributorMarkdown() string {
+	return FormatMarkdown(ContributorGuide())
+}

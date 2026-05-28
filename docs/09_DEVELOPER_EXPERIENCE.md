@@ -76,7 +76,7 @@ Do not document future directories as existing until they are created.
 
 ## Architecture Rules
 
-See `docs/23_INTERNAL_PACKAGE_OWNERSHIP.md` for the detailed package ownership map and change checklist.
+See `docs/23_INTERNAL_PACKAGE_OWNERSHIP.md` for the detailed package ownership map and change checklist. See `docs/24_CONTRIBUTOR_SETUP_AND_STANDARDS.md` for setup, coding standards, testing expectations, documentation rules, and ADR process.
 
 - Keep `main.go` thin.
 - Keep framework-free domain types in `internal/domain`.
@@ -144,6 +144,12 @@ Unit tests should protect:
 - UI model state that can be tested without launching the desktop window
 
 Integration tests should use small fixtures and avoid starting external services unless the test explicitly names that dependency.
+
+## Contributor Standards
+
+The canonical contributor checklist now lives in `docs/24_CONTRIBUTOR_SETUP_AND_STANDARDS.md` and is exposed in-product from Help and the command palette. Use that guide when onboarding contributors or directing repeated development agents.
+
+Architecture decisions that affect boundaries, persistence, security policy, connector behavior, artifact formats, packaging, or extension execution should use `docs/adr/README.md` as the ADR index and template.
 
 ## Current Review Findings
 
