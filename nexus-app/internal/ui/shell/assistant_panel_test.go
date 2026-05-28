@@ -100,9 +100,48 @@ func TestAssistantResponseMarkdownWarnsWithoutSources(t *testing.T) {
 	if !strings.Contains(text, "Answer") || !strings.Contains(text, "No explicit source context") {
 		t.Fatalf("expected weak-evidence warning, got %q", text)
 	}
-	withSources := assistantResponseMarkdown(assistantSvc.Result{Message: "Answer", SourcePaths: []string{"README.md"}})
+	withSources := assistantResponseMarkdown(assistantSvc.Result{Message: "Answer", Model: "qwen", ContextRelPath: "context: README.md", SourcePaths: []string{"README.md"}})
 	if strings.Contains(withSources, "No explicit source context") {
 		t.Fatalf("did not expect weak-evidence warning with sources, got %q", withSources)
+	}
+	for _, expected := range []string{"Model: `qwen`", "Context: `context: README.md`", "Sources: `README.md`"} {
+		if !strings.Contains(withSources, expected) {
+			t.Fatalf("expected source/model footer to contain %q, got %q", expected, withSources)
+		}
+	}
+}
+
+func TestAssistantSourcePathsFromContextPortsWailsRules(t *testing.T) {
+	tests := []struct {
+		context string
+		want    []string
+	}{
+		{context: "pack: README.md, docs/guide.md", want: []string{"README.md", "docs/guide.md"}},
+		{context: "dir: docs (3 files)", want: []string{"docs"}},
+		{context: "context: README.md", want: []string{"README.md"}},
+		{context: "project: .", want: []string{"."}},
+		{context: "context: 2 roots", want: nil},
+		{context: "agent", want: nil},
+	}
+	for _, tt := range tests {
+		got := assistantSourcePathsFromContext(tt.context)
+		if strings.Join(got, "|") != strings.Join(tt.want, "|") {
+			t.Fatalf("assistantSourcePathsFromContext(%q) = %#v, want %#v", tt.context, got, tt.want)
+		}
+	}
+}
+
+func TestAssistantEffectiveSourcePathsFallsBackAndDedupes(t *testing.T) {
+	paths := assistantEffectiveSourcePaths(assistantSvc.Result{
+		ContextRelPath: "pack: README.md, docs/guide.md",
+		SourcePaths:    []string{"README.md", " README.md ", "agent", "docs/guide.md"},
+	})
+	if len(paths) != 2 || paths[0] != "README.md" || paths[1] != "docs/guide.md" {
+		t.Fatalf("unexpected explicit source paths: %#v", paths)
+	}
+	fallback := assistantEffectiveSourcePaths(assistantSvc.Result{ContextRelPath: "pack: README.md, docs/guide.md"})
+	if len(fallback) != 2 || fallback[0] != "README.md" || fallback[1] != "docs/guide.md" {
+		t.Fatalf("unexpected fallback source paths: %#v", fallback)
 	}
 }
 

@@ -331,7 +331,7 @@ Exit criteria:
 - [ ] IDE-grade editor baseline: syntax highlighting, richer find/replace, broader formatting, and split/minimap strategy.
 - [ ] Native external database profiles for PostgreSQL, MySQL/MariaDB, SQL Server, and DuckDB with read-only guards.
 - [x] Native protected secret storage for Windows; explicit refusal/fallback behavior for unsupported platforms.
-- [ ] Assistant quality parity: richer citations and clearer model diagnostics.
+- [ ] Assistant quality parity: finer-grained citations beyond file-level sources.
 - [x] Assistant Wails parity slice: profile/memory store, active prompt profile injection, weak-evidence warning, retry/compare, and save-latest-answer `chat-answer` artifacts.
 - [x] Assistant stale-source parity slice: chat context paths persist in native metadata and chat history warns when cited sources changed or disappeared.
 - [ ] Native UI cleanup pass across Workbench, Data, Artifacts, Settings, assistant, and bottom panels.
@@ -460,7 +460,8 @@ The Fyne migration must not drop product ambition, but this section is intention
 - [x] Add API key input/persistence in native settings and propagate bearer auth into OpenAI-compatible chat/probe config.
 - [ ] Deeper GPU diagnostics.
 - [x] Streaming chat with selected files/directories/project context, token-budgeted history, persisted turns, and source-path context.
-- [ ] Richer citations and model diagnostics in native assistant UI.
+- [x] Native assistant source/model diagnostics parity slice: Wails-compatible context-label source fallback parsing, source/model/context answer footer, and effective source persistence for saved answer artifacts.
+- [ ] Finer-grained citations beyond file-level sources in native assistant UI.
 - [x] Local assistant memory and prompt profiles.
 - [x] Agent runtime with plan updates, bounded observations, model-driven tool calls, no frontend iteration cap, emergency backend loop guard, and final-answer fallback behavior.
 - [x] Unified tool registry and dispatcher for deterministic tools and model-requested tools.

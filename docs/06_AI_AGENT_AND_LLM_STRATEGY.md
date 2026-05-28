@@ -390,7 +390,7 @@ The prompt should tell the model:
 
 - do not claim access to files not provided or retrieved
 - request tools when more context is needed
-- cite files, sheets, rows, pages, or logs used; current persisted answers include file-level source citations and stale-source warnings
+- cite files, sheets, rows, pages, or logs used; current persisted answers include file-level source citations, Wails-compatible context-label source fallback parsing, model/context/source footers, and stale-source warnings
 - create artifacts only through tools
 - do not ask for dangerous actions when safe alternatives exist
 

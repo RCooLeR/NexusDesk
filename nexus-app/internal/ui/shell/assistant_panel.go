@@ -142,7 +142,7 @@ func (v *View) runAssistantRequest(prompt *widget.Entry, response *widget.RichTe
 			if result.ContextWarning != "" {
 				v.addActivity(result.ContextWarning)
 			}
-			if len(result.SourcePaths) == 0 {
+			if len(assistantEffectiveSourcePaths(result)) == 0 {
 				v.addActivity("Assistant answer has no explicit source context attached.")
 			}
 			v.assistantLastPrompt = text
@@ -259,7 +259,7 @@ func (v *View) saveLatestAssistantAnswer() {
 		Model:          v.assistantLastResult.Model,
 		ContextRelPath: v.assistantLastResult.ContextRelPath,
 		Source:         "Nexus assistant",
-		SourcePaths:    append([]string{}, v.assistantLastResult.SourcePaths...),
+		SourcePaths:    assistantEffectiveSourcePaths(v.assistantLastResult),
 	})
 	if err != nil {
 		v.addActivity("Assistant answer artifact failed: " + err.Error())
@@ -307,7 +307,7 @@ func (v *View) persistAssistantExchange(prompt string, result assistantSvc.Resul
 		Content:        result.Message,
 		Model:          result.Model,
 		ContextRelPath: strings.TrimSpace(result.ContextRelPath),
-		SourcePaths:    result.SourcePaths,
+		SourcePaths:    assistantEffectiveSourcePaths(result),
 		CreatedAt:      time.Now().UTC(),
 	}); err != nil {
 		v.addActivity("Could not persist assistant chat message: " + err.Error())
@@ -375,10 +375,78 @@ func assistantResponseMarkdown(result assistantSvc.Result) string {
 	if message == "" {
 		message = "Assistant completed without a final message."
 	}
-	if len(result.SourcePaths) > 0 {
-		return message
+	footer := assistantDiagnosticFooter(result)
+	if footer != "" {
+		message += "\n\n" + footer
 	}
-	return message + "\n\n> No explicit source context is attached to this answer."
+	return message
+}
+
+func assistantDiagnosticFooter(result assistantSvc.Result) string {
+	lines := []string{}
+	if model := strings.TrimSpace(result.Model); model != "" {
+		lines = append(lines, "Model: `"+model+"`")
+	}
+	if contextPath := strings.TrimSpace(result.ContextRelPath); contextPath != "" && contextPath != "agent" {
+		lines = append(lines, "Context: `"+contextPath+"`")
+	}
+	sources := assistantEffectiveSourcePaths(result)
+	if len(sources) > 0 {
+		lines = append(lines, "Sources: `"+strings.Join(sources, "`, `")+"`")
+	} else {
+		lines = append(lines, "> No explicit source context is attached to this answer.")
+	}
+	return strings.Join(lines, "\n")
+}
+
+func assistantEffectiveSourcePaths(result assistantSvc.Result) []string {
+	paths := result.SourcePaths
+	if len(paths) == 0 {
+		paths = assistantSourcePathsFromContext(result.ContextRelPath)
+	}
+	return dedupeAssistantSourcePaths(paths)
+}
+
+func assistantSourcePathsFromContext(contextRelPath string) []string {
+	contextRelPath = strings.TrimSpace(contextRelPath)
+	if contextRelPath == "" || contextRelPath == "agent" {
+		return nil
+	}
+	if strings.HasPrefix(contextRelPath, "pack: ") {
+		return dedupeAssistantSourcePaths(strings.Split(strings.TrimPrefix(contextRelPath, "pack: "), ","))
+	}
+	if strings.HasPrefix(contextRelPath, "dir: ") {
+		value := strings.TrimPrefix(contextRelPath, "dir: ")
+		if marker := strings.LastIndex(value, " ("); marker > 0 && strings.HasSuffix(value, " files)") {
+			value = value[:marker]
+		}
+		return []string{value}
+	}
+	if strings.HasPrefix(contextRelPath, "context: ") {
+		value := strings.TrimSpace(strings.TrimPrefix(contextRelPath, "context: "))
+		if strings.HasSuffix(value, " roots") {
+			return nil
+		}
+		return []string{value}
+	}
+	if strings.HasPrefix(contextRelPath, "project: ") {
+		return []string{strings.TrimSpace(strings.TrimPrefix(contextRelPath, "project: "))}
+	}
+	return []string{contextRelPath}
+}
+
+func dedupeAssistantSourcePaths(paths []string) []string {
+	seen := map[string]bool{}
+	cleaned := make([]string, 0, len(paths))
+	for _, path := range paths {
+		path = strings.TrimSpace(path)
+		if path == "" || path == "agent" || seen[path] {
+			continue
+		}
+		seen[path] = true
+		cleaned = append(cleaned, path)
+	}
+	return cleaned
 }
 
 func compareLatestAssistantPrompt(prompt string, previousAnswer string) string {

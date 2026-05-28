@@ -49,7 +49,7 @@ Implemented in `nexus-app/`:
 - Artifact browser with metadata, lineage, comparison, archive/delete/restore, source freshness, and context pinning.
 - Document extraction/report artifacts for Markdown, TXT, HTML, XML, DOCX, XLSX, and PDF preview text.
 - Operations inspection for Dockerfiles, Compose, env/config/script/log files, Compose topology, safe config validation, and runbook artifacts.
-- Settings, LLM transport, streaming Ask mode, Agent mode, deterministic tools, approval queue, full-project access policy, rollback browser, history, audit, and durable metadata.
+- Settings, LLM transport, streaming Ask mode, Agent mode, deterministic tools, approval queue, full-project access policy, rollback browser, history, audit, source/model answer diagnostics, and durable metadata.
 
 ## Main Gaps
 
