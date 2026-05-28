@@ -42,7 +42,7 @@ func TestFormatGitDiffIncludesSectionsAndTruncation(t *testing.T) {
 		"Unstaged diff / src/app.go",
 		"+staged",
 		"+unstaged",
-		"Diff output was truncated.",
+		"Diff output was windowed",
 	} {
 		if !strings.Contains(text, expected) {
 			t.Fatalf("expected formatted diff to contain %q, got:\n%s", expected, text)

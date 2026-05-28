@@ -68,7 +68,7 @@ func formatGitDiff(diff gitSvc.FileDiff, mode gitDiffMode) string {
 		}
 	}
 	if diff.StagedDiffTruncated || diff.UnstagedDiffTruncated {
-		builder.WriteString("\nDiff output was truncated.\n")
+		builder.WriteString("\nDiff output was windowed; some hunks may be elided.\n")
 	}
 	return builder.String()
 }

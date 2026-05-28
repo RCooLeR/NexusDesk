@@ -98,7 +98,7 @@ The latest reviewed `nexus-app` baseline includes the original shell slice plus 
 - first native Problems service and bottom panel for bounded TODO/FIXME/HACK/BUG, merge-conflict, and invalid JSON scanning;
 - first native Git status service and manual bottom Git refresh panel with hidden Windows command execution;
 - directory-grouped changed-file rendering in the native Git panel;
-- first native read-only selected-file Git diff service with unified, split, and diff-only panel modes;
+- first native read-only selected-file Git diff service with hunk-windowed unified previews plus unified, split, and diff-only panel modes;
 - first native parsed diff hunk metadata and previous/next hunk selection in the Git panel;
 - first native confirmed file-level Git stage and unstage controls through the Git service boundary;
 - first native confirmed hunk-level Git stage/unstage controls through index-only `git apply` patches;

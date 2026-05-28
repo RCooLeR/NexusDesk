@@ -186,10 +186,7 @@ func cappedGitOutput(root string, args ...string) (string, bool) {
 	if err != nil {
 		return "", false
 	}
-	if len(output) <= diffMaxBytes {
-		return output, false
-	}
-	return output[:diffMaxBytes] + "\n[diff truncated]\n", true
+	return windowUnifiedDiff(output)
 }
 
 func statusMessage(branch string, changes []FileChange) string {
