@@ -14,8 +14,8 @@ Approximate migration status:
 - Fyne-native migration: roughly 98% complete by useful Wails-era functionality.
 - Wails-era useful workflow parity: roughly 97% complete.
 - Native Parity Beta readiness: roughly 96% complete.
-- Overall production readiness: roughly 92% complete.
-- Distribution and packaging readiness: roughly 65-70% complete.
+- Overall production readiness: roughly 93% complete.
+- Distribution and packaging readiness: roughly 70-75% complete.
 
 The app can already:
 
@@ -102,7 +102,7 @@ Goal: produce repeatable signed builds.
 Required:
 
 - Repeatable Windows build pipeline with app icon, version metadata, installer/update plan, and code-signing path.
-- First native CI smoke matrix for Windows, macOS, and Linux covers formatting, `go test ./...`, `go vet ./...`, CGO/Fyne build, ldflag-backed version/commit/build-date metadata validation, and `git diff --check`; signed release packaging and installer/update validation remain open.
+- First native CI smoke matrix for Windows, macOS, and Linux covers formatting, `go test ./...`, `go vet ./...`, CGO/Fyne build, ldflag-backed version/commit/build-date metadata validation, release manifest generation/validation with artifact SHA256 and size, and `git diff --check`; signed release packaging and installer/update validation remain open.
 - Windows visual/manual smoke checklist for every main surface.
 - Linux/macOS build investigation and explicit support matrix, defined in [Platform Support Matrix](14_PLATFORM_SUPPORT.md).
 - Antivirus false-positive mitigation notes and release-build hygiene.
@@ -142,7 +142,7 @@ Exit criteria:
 1. Apply the durable slow-workflow contract to concrete OCR, dump import, connector pull, long indexing, report generation, and long agent run implementations.
 2. Continue post-beta editor spikes for inline styling and packaged LSP while preserving the documented Syntax mirror/Document Map Native Parity Beta strategy.
 3. Polish generated document/deck artifacts beyond native validated/theme-backed DOCX/PPTX baselines with richer template variants, cross-suite compatibility smoke, and visual design.
-4. Build signed release packaging and installer/update validation.
+4. Build signed release packaging, installer/update validation, and artifact upload/signing around the generated release manifests.
 5. Run a focused UI polish pass on onboarding, empty states, settings, diagnostics, and workflow hierarchy.
 6. Validate macOS Keychain/Linux Secret Service behavior in platform packaging smoke runs.
 

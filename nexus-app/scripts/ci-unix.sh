@@ -19,6 +19,7 @@ ldflags="-X nexusdesk/internal/buildinfo.Version=${version} -X nexusdesk/interna
 cleanup() {
   rm -f "${APP_ROOT}/nexusdesk" "${APP_ROOT}/nexusdesk.exe"
   rm -f "${APP_ROOT}/build/nexusdesk" "${APP_ROOT}/build/nexusdesk.exe"
+  rm -f "${APP_ROOT}/build/nexusdesk-"*-manifest.json
 }
 trap cleanup EXIT
 
@@ -44,7 +45,14 @@ go test -ldflags "${ldflags}" ./internal/buildinfo
 
 echo "Building native executable..."
 mkdir -p build
-go build -ldflags "${ldflags}" -o build/nexusdesk .
+artifact_path="${APP_ROOT}/build/nexusdesk"
+manifest_platform="$(go env GOOS)"
+manifest_path="${APP_ROOT}/build/nexusdesk-${manifest_platform}-manifest.json"
+go build -ldflags "${ldflags}" -o "${artifact_path}" .
+
+echo "Generating release manifest..."
+go run ./cmd/release-manifest -artifact "${artifact_path}" -output "${manifest_path}" -platform "${manifest_platform}" -version "${version}" -commit "${commit}" -build-date "${build_date}"
+test -s "${manifest_path}"
 
 echo "Checking diff whitespace..."
 git -C "${REPO_ROOT}" diff --check

@@ -84,7 +84,15 @@ try {
     if (-not $SkipBuild) {
         Write-Host 'Building native Windows executable...'
         New-Item -ItemType Directory -Force -Path build | Out-Null
-        go build -ldflags "$ldflags" -o build\nexusdesk.exe .
+        $artifactPath = Join-Path $appRoot 'build\nexusdesk.exe'
+        $manifestPath = Join-Path $appRoot 'build\nexusdesk-windows-manifest.json'
+        go build -ldflags "$ldflags" -o $artifactPath .
+
+        Write-Host 'Generating release manifest...'
+        go run ./cmd/release-manifest -artifact $artifactPath -output $manifestPath -platform windows -version $version -commit $commit -build-date $buildDate
+        if (-not (Test-Path $manifestPath)) {
+            throw 'Release manifest was not generated.'
+        }
     }
 
     Write-Host 'Checking diff whitespace...'
@@ -92,5 +100,6 @@ try {
 } finally {
     Remove-Item -LiteralPath (Join-Path $appRoot 'nexusdesk.exe') -Force -ErrorAction SilentlyContinue
     Remove-Item -LiteralPath (Join-Path $appRoot 'build\nexusdesk.exe') -Force -ErrorAction SilentlyContinue
+    Remove-Item -LiteralPath (Join-Path $appRoot 'build\nexusdesk-windows-manifest.json') -Force -ErrorAction SilentlyContinue
     Pop-Location
 }

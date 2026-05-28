@@ -24,10 +24,10 @@ Native editor parity decision: `docs/16_EDITOR_PARITY_STRATEGY.md`.
 Summary:
 
 - The Fyne migration remains the correct direction and `nexus-app/` is the active product.
-- Current estimate: Fyne-native migration is roughly 98% complete, Wails useful-code parity is roughly 97%, Native Parity Beta readiness is roughly 96%, and overall production readiness is roughly 92%.
+- Current estimate: Fyne-native migration is roughly 98% complete, Wails useful-code parity is roughly 97%, Native Parity Beta readiness is roughly 96%, and overall production readiness is roughly 93%.
 - The architecture is healthy: thin executable root, framework-free domain/services, Fyne-only UI packages, explicit approvals, safe workspace mutation boundaries, manual Git/Docker actions, durable metadata, and local-first safety rules.
 - The biggest remaining architectural risk is UI/orchestration complexity in `internal/ui/shell`; future UI work should keep extracting focused panels, controllers, and service-owned behavior.
-- The highest-priority unfinished work is migration and production readiness, not new top-level studios: applying durable slow-job routing to the remaining slow workflows, richer DOCX/PPTX template variants and cross-suite smoke beyond current native export/theme/validation baselines, deeper assistant retrieval quality beyond deterministic source coverage, packaging, onboarding, and native UI polish.
+- The highest-priority unfinished work is migration and production readiness, not new top-level studios: applying durable slow-job routing to the remaining slow workflows, richer DOCX/PPTX template variants and cross-suite smoke beyond current native export/theme/validation baselines, deeper assistant retrieval quality beyond deterministic source coverage, signed packaging/installer validation, onboarding, and native UI polish.
 - `app-wails/` should remain as reference until the remaining native parity blockers are completed or explicitly moved out of Native Parity Beta.
 
 Production direction:
@@ -380,6 +380,7 @@ Exit criteria:
 - [ ] Repeatable Windows build pipeline with icon, version metadata, installer/update plan, and code-signing path.
 - [x] First native CI smoke matrix for Windows, macOS, and Linux with gofmt, `go test ./...`, `go vet ./...`, CGO/Fyne build, and `git diff --check`.
 - [x] Add ldflag-backed app version/build metadata validation to native CI builds and About metadata.
+- [x] Add release manifest generation/validation to native CI builds with artifact name, size, SHA256, platform, version, commit, and build date metadata.
 - [ ] Expand CI into signed release packaging and installer/update validation.
 - [ ] Windows visual/manual smoke checklist for every main surface.
 - [x] Linux/macOS build investigation and explicit support matrix.
