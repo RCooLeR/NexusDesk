@@ -74,7 +74,7 @@ Users should be able to configure:
 }
 ```
 
-The settings UI should offer a short recommended-model dropdown for local Ollama-style providers while preserving the same stored model string used by custom OpenAI-compatible endpoints. The current recommended set intentionally stays at 26B parameters or below:
+The settings UI should offer a recommended-model dropdown for local Ollama-style providers while preserving the same stored model string used by custom OpenAI-compatible endpoints. The catalog should include compact defaults for smaller machines and larger task-specific presets for production workstations:
 
 ```text
 qwen3:4b-instruct
@@ -85,9 +85,53 @@ phi4-reasoning:14b
 gpt-oss:20b
 mistral-small3.2:latest
 gemma4:26b
+qwen3-coder:30b
+gemma4:31b
+qwen3.6:27b
 ```
 
 Capabilities should be explicit. The app should not assume every model supports tool calling, vision, embeddings, or image generation.
+
+### Task-Aware Model Routing
+
+NexusDesk should let users configure different default models for different app tasks instead of using one global model for every workflow. The first production implementation should be a Settings surface for "Model Routing" or "Task Model Defaults" that remains fully user-editable and provider-agnostic.
+
+Important behavior:
+
+- A global default model remains available as the fallback.
+- Each task route can override provider, model, context tokens, response reserve, temperature, and capability expectations.
+- The app should probe whether a configured local model is installed/loaded and show warnings before a workflow starts.
+- If a route model is unavailable, the app should ask whether to use the global fallback rather than silently switching.
+- Saved chat answers, artifacts, agent runs, and audit records should store the resolved task route and model used.
+- Vision/image routes must be gated by explicit capability flags and user consent before sending screenshots or images.
+
+Initial recommended routing presets:
+
+| Task | Suggested default model |
+| --- | --- |
+| Main coding model | `qwen3-coder:30b` |
+| React / TypeScript / JavaScript | `qwen3-coder:30b` |
+| Golang backend | `qwen3-coder:30b` |
+| Python coding | `qwen3-coder:30b` |
+| PHP / Laravel | `qwen3-coder:30b` |
+| MySQL / PostgreSQL | `qwen3-coder:30b` |
+| Neo4j / Cypher | `qwen3-coder:30b` |
+| CSV / Excel data scripts | `qwen3-coder:30b` |
+| Analytics explanations | `gemma4:31b` |
+| Research / summaries | `gemma4:31b` |
+| Image / screenshot understanding | `gemma4:31b` or `qwen3.6:27b` |
+| Balanced coding + reasoning + vision | `qwen3.6:27b` |
+| Fastest practical 30B-class coding model | `qwen3-coder:30b` |
+
+The routing engine should map app surfaces to these task defaults:
+
+- editor/code actions use coding routes;
+- Git diff summaries and commit drafts use coding or review routes;
+- Data Studio SQL/data-script generation uses coding/data routes;
+- analytics explanations and report narratives use analytics/research routes;
+- document and research summaries use research routes;
+- screenshot/image understanding uses a vision route only when available and approved;
+- agent mode resolves a route per step when the planned action changes domain, but should keep the route visible in audit logs.
 
 Current native implementation:
 

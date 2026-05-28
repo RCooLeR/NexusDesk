@@ -221,6 +221,7 @@ Already available:
 Planned/remaining:
 
 - Deeper retrieval/ranking quality beyond deterministic coverage diagnostics.
+- Task-aware model routing in Settings so coding, data, analytics, research, vision/screenshot, Git, document, and agent workflows can use different user-configured default models instead of one global model.
 - Better source diagnostics for partial, stale, weak, contradictory, or missing evidence.
 - Complete tool-run provenance coverage for every generated output type.
 - Agent approved shell beyond discovered safe tasks only after shell policy, audit, job routing, and UX are mature.
@@ -404,6 +405,7 @@ Resolved or covered:
 - Streaming cancellation.
 - Extensible provider configuration.
 - Safe context-budget fallback.
+- Task-aware model routing for different app workflows and model capabilities.
 - Scoped copy shortcuts.
 - Match-centered search snippets.
 - `cleanRel` normalization.
@@ -596,6 +598,7 @@ The checklist below is intentionally large. `tracker.md` should keep task-level 
 - [ ] Add contradiction/ambiguity diagnostics when sources disagree.
 - [ ] Add richer artifact-source cross-navigation.
 - [ ] Add better context budget visualization before a run.
+- [ ] Add task-aware model defaults in Settings for coding, backend, database, analytics, research, vision/screenshot, balanced reasoning, and fast-coding routes.
 - [ ] Add assistant answer quality smoke tests with fixture workspaces.
 - [ ] Add provider-specific guidance for common local model failures.
 
