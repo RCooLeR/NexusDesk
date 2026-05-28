@@ -1,6 +1,7 @@
 package shell
 
 import (
+	"strings"
 	"testing"
 
 	editorSvc "nexusdesk/internal/services/editor"
@@ -45,4 +46,26 @@ func TestDefinitionStatusText(t *testing.T) {
 	if empty != "Place the cursor on a symbol name before using Definition." {
 		t.Fatalf("unexpected empty status: %q", empty)
 	}
+}
+
+func TestSyntaxStatusAndAnalysisText(t *testing.T) {
+	analysis := editorSvc.AnalyzeSyntax("main.go", "package main\n// hello\nfunc main() { println(\"hi\", 42) }\n")
+
+	status := syntaxStatusText(analysis)
+	if status == "" || !containsAll(status, []string{"Syntax: Go", "native lightweight tokenizer", "LSP candidate"}) {
+		t.Fatalf("unexpected syntax status: %q", status)
+	}
+	detail := formatSyntaxAnalysis(analysis)
+	if !containsAll(detail, []string{"Language: Go", "Token counts:", "keyword", "comment", "string", "number", "Tokens"}) {
+		t.Fatalf("unexpected syntax detail:\n%s", detail)
+	}
+}
+
+func containsAll(value string, parts []string) bool {
+	for _, part := range parts {
+		if !strings.Contains(value, part) {
+			return false
+		}
+	}
+	return true
 }

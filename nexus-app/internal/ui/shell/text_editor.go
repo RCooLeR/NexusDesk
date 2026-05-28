@@ -2,6 +2,7 @@ package shell
 
 import (
 	"fmt"
+	"sort"
 	"strings"
 
 	"fyne.io/fyne/v2"
@@ -21,6 +22,8 @@ type textEditorBinding struct {
 	outlineList    *fyne.Container
 	mapStatus      *widget.Label
 	mapList        *fyne.Container
+	syntaxStatus   *widget.Label
+	syntaxPreview  *widget.Label
 	relPath        string
 	sourceEncoding string
 	saveEncoding   string
@@ -36,6 +39,7 @@ func (b *textEditorBinding) applyTabState(tab editorSvc.Tab) {
 	b.rendered.SetText(tab.DraftText)
 	b.setOutline(tab.DraftText)
 	b.setDocumentMap(tab.DraftText)
+	b.setSyntax(tab.DraftText)
 	if b.onState != nil {
 		b.onState(tab, b.encodingDirty())
 	}
@@ -55,6 +59,11 @@ func (v *View) newTextEditor(tab editorSvc.Tab, preview domain.FilePreview, onSt
 	mapStatus := widget.NewLabel("")
 	mapStatus.Wrapping = fyne.TextWrapWord
 	mapList := container.NewVBox()
+	syntaxStatus := widget.NewLabel("")
+	syntaxStatus.Wrapping = fyne.TextWrapWord
+	syntaxPreview := widget.NewLabel("")
+	syntaxPreview.Wrapping = fyne.TextWrapWord
+	syntaxPreview.TextStyle = fyne.TextStyle{Monospace: true}
 	binding := &textEditorBinding{
 		source:         source,
 		status:         status,
@@ -63,6 +72,8 @@ func (v *View) newTextEditor(tab editorSvc.Tab, preview domain.FilePreview, onSt
 		outlineList:    outlineList,
 		mapStatus:      mapStatus,
 		mapList:        mapList,
+		syntaxStatus:   syntaxStatus,
+		syntaxPreview:  syntaxPreview,
 		relPath:        tab.RelPath,
 		sourceEncoding: initialEncoding,
 		saveEncoding:   initialEncoding,
@@ -83,6 +94,7 @@ func (v *View) newTextEditor(tab editorSvc.Tab, preview domain.FilePreview, onSt
 	}
 	binding.setOutline(tab.DraftText)
 	binding.setDocumentMap(tab.DraftText)
+	binding.setSyntax(tab.DraftText)
 	source.OnChanged = func(text string) {
 		if !v.editorSession.UpdateDraft(tab.ID, text) {
 			return
@@ -92,6 +104,7 @@ func (v *View) newTextEditor(tab editorSvc.Tab, preview domain.FilePreview, onSt
 			rendered.SetText(next.DraftText)
 			binding.setOutline(next.DraftText)
 			binding.setDocumentMap(next.DraftText)
+			binding.setSyntax(next.DraftText)
 			onState(next, binding.encodingDirty())
 		}
 	}
@@ -133,9 +146,11 @@ func (v *View) newTextEditor(tab editorSvc.Tab, preview domain.FilePreview, onSt
 	previewPanel := container.NewBorder(widget.NewLabel(previewHeader(preview)), nil, nil, nil, rendered.Canvas())
 	outlinePanel := container.NewBorder(outlineStatus, nil, nil, nil, container.NewVScroll(outlineList))
 	mapPanel := container.NewBorder(mapStatus, nil, nil, nil, container.NewVScroll(mapList))
+	syntaxPanel := container.NewBorder(syntaxStatus, nil, nil, nil, container.NewVScroll(syntaxPreview))
 	tabs := container.NewAppTabs(
 		container.NewTabItem("Source", sourcePanel),
 		container.NewTabItem("Preview", previewPanel),
+		container.NewTabItem("Syntax", syntaxPanel),
 		container.NewTabItem("Outline", outlinePanel),
 		container.NewTabItem("Map", mapPanel),
 	)
@@ -242,6 +257,16 @@ func (b *textEditorBinding) setDocumentMap(text string) {
 	b.mapList.Refresh()
 }
 
+func (b *textEditorBinding) setSyntax(text string) {
+	if b == nil || b.syntaxStatus == nil || b.syntaxPreview == nil {
+		return
+	}
+	analysis := editorSvc.AnalyzeSyntax(b.relPath, text)
+	b.syntaxStatus.SetText(syntaxStatusText(analysis))
+	b.syntaxPreview.SetText(formatSyntaxAnalysis(analysis))
+	b.syntaxPreview.Refresh()
+}
+
 func outlineItemText(item editorSvc.OutlineItem) string {
 	indent := strings.Repeat("  ", item.Level)
 	return fmt.Sprintf("%s%s  %s  L%d", indent, item.Kind, item.Label, item.Line)
@@ -260,6 +285,86 @@ func definitionStatusText(result editorSvc.DefinitionResult, resolved bool) stri
 		return fmt.Sprintf("No local definition found for %s.", query)
 	}
 	return fmt.Sprintf("Moved to %s %s on line %d.", result.Item.Kind, result.Item.Label, result.Item.Line)
+}
+
+func syntaxStatusText(analysis editorSvc.SyntaxAnalysis) string {
+	language := strings.TrimSpace(analysis.Language.Label)
+	if language == "" {
+		language = "Plain text"
+	}
+	strategy := "native plain-text editing"
+	if analysis.Language.NativeLight {
+		strategy = "native lightweight tokenizer"
+	}
+	if analysis.Language.FutureLSP {
+		strategy += "; LSP candidate"
+	}
+	if analysis.Truncated {
+		return fmt.Sprintf("Syntax: %s via %s. Showing first %d token(s); analysis capped for responsiveness.", language, strategy, len(analysis.Tokens))
+	}
+	return fmt.Sprintf("Syntax: %s via %s. %d token(s) across %d line(s).", language, strategy, len(analysis.Tokens), analysis.LineCount)
+}
+
+func formatSyntaxAnalysis(analysis editorSvc.SyntaxAnalysis) string {
+	var builder strings.Builder
+	builder.WriteString("Language: ")
+	builder.WriteString(firstNonEmptyString(analysis.Language.Label, "Plain text"))
+	builder.WriteString("\nMode: ")
+	if analysis.Language.NativeLight {
+		builder.WriteString("native lightweight syntax")
+	} else {
+		builder.WriteString("plain text")
+	}
+	if analysis.Language.FutureLSP {
+		builder.WriteString(" + future LSP candidate")
+	}
+	builder.WriteString("\n")
+	if len(analysis.Counts) > 0 {
+		builder.WriteString("Token counts: ")
+		builder.WriteString(syntaxCountsText(analysis.Counts))
+		builder.WriteString("\n")
+	}
+	if analysis.Truncated {
+		builder.WriteString("Note: analysis capped to keep editing responsive.\n")
+	}
+	if len(analysis.Tokens) == 0 {
+		builder.WriteString("\nNo syntax tokens detected for this file yet.\n")
+		return builder.String()
+	}
+	builder.WriteString("\nTokens\n")
+	limit := len(analysis.Tokens)
+	if limit > 80 {
+		limit = 80
+	}
+	for index := 0; index < limit; index++ {
+		token := analysis.Tokens[index]
+		builder.WriteString(fmt.Sprintf("L%d  %-7s  %s\n", token.Line, token.Kind, compactSyntaxToken(token.Text)))
+	}
+	if len(analysis.Tokens) > limit {
+		builder.WriteString(fmt.Sprintf("... %d more token(s)\n", len(analysis.Tokens)-limit))
+	}
+	return builder.String()
+}
+
+func syntaxCountsText(counts map[string]int) string {
+	keys := make([]string, 0, len(counts))
+	for key := range counts {
+		keys = append(keys, key)
+	}
+	sort.Strings(keys)
+	parts := make([]string, 0, len(keys))
+	for _, key := range keys {
+		parts = append(parts, fmt.Sprintf("%s=%d", key, counts[key]))
+	}
+	return strings.Join(parts, ", ")
+}
+
+func compactSyntaxToken(value string) string {
+	value = strings.Join(strings.Fields(value), " ")
+	if len(value) <= 80 {
+		return value
+	}
+	return value[:77] + "..."
 }
 
 func draftStatusText(tab editorSvc.Tab) string {
