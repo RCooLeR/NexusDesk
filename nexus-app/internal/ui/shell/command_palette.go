@@ -182,6 +182,13 @@ func (v *View) commandPaletteActions() []commandPaletteAction {
 			Group:  "Help",
 			Run:    v.openSafeAgentGuideTab,
 		},
+		{
+			ID:     "help.beta_feedback",
+			Title:  "Beta Feedback & Release Notes",
+			Detail: "Open private-beta reporting guidance, release-note expectations, and redacted issue-report instructions.",
+			Group:  "Help",
+			Run:    v.openBetaFeedbackGuideTab,
+		},
 		v.bottomPanelCommand("view.search", "Search", "Open workspace path and content search results.", "Workbench"),
 		v.bottomPanelCommand("view.problems", "Problems", "Open syntax and workspace diagnostics.", "Workbench"),
 		v.bottomPanelCommand("view.git", "Git", "Open status, diff, history, blame, and hunk actions.", "Workbench"),

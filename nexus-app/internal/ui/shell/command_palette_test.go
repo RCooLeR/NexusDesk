@@ -65,16 +65,25 @@ func TestCommandPaletteStatusText(t *testing.T) {
 func TestCommandPaletteIncludesSafeAgentGuide(t *testing.T) {
 	view := &View{state: NewState()}
 	commands := view.commandPaletteActions()
+	foundBetaFeedback := false
+	foundSafeAgent := false
 	for _, command := range commands {
-		if command.ID != "help.safe_agent" {
-			continue
+		switch command.ID {
+		case "help.safe_agent":
+			if command.Title != "Safe Agent Guide" || command.Group != "Help" || command.Run == nil {
+				t.Fatalf("unexpected safe-agent command: %#v", command)
+			}
+			foundSafeAgent = true
+		case "help.beta_feedback":
+			if command.Title != "Beta Feedback & Release Notes" || command.Group != "Help" || command.Run == nil {
+				t.Fatalf("unexpected beta-feedback command: %#v", command)
+			}
+			foundBetaFeedback = true
 		}
-		if command.Title != "Safe Agent Guide" || command.Group != "Help" || command.Run == nil {
-			t.Fatalf("unexpected safe-agent command: %#v", command)
-		}
-		return
 	}
-	t.Fatalf("missing safe-agent command in %#v", commands)
+	if !foundSafeAgent || !foundBetaFeedback {
+		t.Fatalf("missing help commands: safe_agent=%t beta_feedback=%t in %#v", foundSafeAgent, foundBetaFeedback, commands)
+	}
 }
 
 func TestCommandPaletteTitleMarksUnavailableCommands(t *testing.T) {

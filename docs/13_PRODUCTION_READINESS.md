@@ -2,7 +2,7 @@
 
 Date: 2026-05-28
 
-This document defines what Nexus Augentic Studio still needs before it can be treated as a production desktop application. `tracker.md` remains the task-level execution source of truth; this document is the release-readiness map. The broader end-to-end product plan, Claude findings integration, and JetBrains-like UI target live in [End-To-End Production Master Plan](17_END_TO_END_PRODUCTION_PLAN.md). Private-beta safe-agent guidance lives in [NexusDesk Safe Agent User Guide](18_SAFE_AGENT_USER_GUIDE.md).
+This document defines what Nexus Augentic Studio still needs before it can be treated as a production desktop application. `tracker.md` remains the task-level execution source of truth; this document is the release-readiness map. The broader end-to-end product plan, Claude findings integration, and JetBrains-like UI target live in [End-To-End Production Master Plan](17_END_TO_END_PRODUCTION_PLAN.md). Private-beta safe-agent guidance lives in [NexusDesk Safe Agent User Guide](18_SAFE_AGENT_USER_GUIDE.md), and the feedback/release-note process lives in [NexusDesk Beta Feedback And Release Notes Guide](19_BETA_FEEDBACK_AND_RELEASE_NOTES.md).
 
 ## Current State
 
@@ -14,7 +14,7 @@ Approximate migration status:
 - Fyne-native migration: roughly 98% complete by useful Wails-era functionality.
 - Wails-era useful workflow parity: roughly 97% complete.
 - Native Parity Beta readiness: roughly 96% complete.
-- Overall production readiness: roughly 94% complete.
+- Overall production readiness: roughly 95% complete.
 - Distribution and packaging readiness: roughly 70-75% complete.
 
 The app can already:
@@ -126,7 +126,7 @@ Required:
 - First-run diagnostics for missing model endpoint, missing compiler/build toolchain, and unavailable provider. Implemented in the Home readiness cockpit; continue deep runtime probing in Diagnostics.
 - Issue-report bundle that redacts secrets and excludes workspace contents unless explicitly included. Implemented in Diagnostics as a redacted ZIP export containing diagnostics text, activity tail, environment metadata, workspace-state file names, and no workspace file contents by default.
 - Documentation for safe agent use, approvals, rollbacks, local data, and connector credentials. Implemented in `docs/18_SAFE_AGENT_USER_GUIDE.md` and exposed in-product from Help and the command palette.
-- Beta feedback loop and release notes.
+- Beta feedback loop and release notes. Implemented in `docs/19_BETA_FEEDBACK_AND_RELEASE_NOTES.md` and exposed in-product from Help and the command palette.
 
 Exit criteria:
 

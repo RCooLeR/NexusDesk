@@ -25,6 +25,7 @@ func (v *View) mainMenu() *fyne.MainMenu {
 	revertDraft := menuItem("Revert Draft", shortcutRevertDraft(), v.revertActiveEditorDraft)
 	findReplace := menuItem("Find / Replace", shortcutFindReplace(), v.openFindReplaceDialog)
 	safeAgentGuide := fyne.NewMenuItemWithIcon("Safe Agent Guide", theme.HelpIcon(), v.openSafeAgentGuideTab)
+	betaFeedbackGuide := fyne.NewMenuItemWithIcon("Beta Feedback & Release Notes", theme.DocumentIcon(), v.openBetaFeedbackGuideTab)
 	about := fyne.NewMenuItemWithIcon("About Nexus", theme.InfoIcon(), v.showAbout)
 
 	return fyne.NewMainMenu(
@@ -65,7 +66,7 @@ func (v *View) mainMenu() *fyne.MainMenu {
 			fyne.NewMenuItem("Refresh Activity", func() { v.activityLog.Refresh() }),
 			menuItem("Command Palette", shortcutCommandPalette(), v.openCommandPaletteDialog),
 		),
-		fyne.NewMenu("Help", safeAgentGuide, fyne.NewMenuItemSeparator(), about),
+		fyne.NewMenu("Help", safeAgentGuide, betaFeedbackGuide, fyne.NewMenuItemSeparator(), about),
 	)
 }
 
@@ -89,4 +90,8 @@ func (v *View) showAbout() {
 
 func (v *View) openSafeAgentGuideTab() {
 	v.addPlaceholderTab("Safe Agent Guide", userGuideSvc.SafeAgentMarkdown())
+}
+
+func (v *View) openBetaFeedbackGuideTab() {
+	v.addPlaceholderTab("Beta Feedback", userGuideSvc.BetaFeedbackMarkdown())
 }
