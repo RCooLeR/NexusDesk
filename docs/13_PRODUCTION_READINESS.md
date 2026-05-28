@@ -124,7 +124,7 @@ Exit criteria:
 
 ## Immediate Production-Oriented Next Batch
 
-1. Close the remaining Wails inventory parity blockers: editor maturity, richer assistant/source quality, broader artifact regeneration, and optional web fetch.
+1. Close the remaining Wails inventory parity blockers: editor maturity, richer assistant/source quality, and broader artifact regeneration.
 2. Start editor parity: syntax highlighting decision and find/replace behavior.
 3. Plan macOS Keychain and Linux Secret Service/libsecret after the Windows protected-secret baseline.
 4. Define the durable job contract for OCR, dump imports, connector pulls, report generation, and long agent runs.

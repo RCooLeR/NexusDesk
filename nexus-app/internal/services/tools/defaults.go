@@ -11,6 +11,7 @@ import (
 	artifactsSvc "nexusdesk/internal/services/artifacts"
 	gitsvc "nexusdesk/internal/services/git"
 	taskssvc "nexusdesk/internal/services/tasks"
+	webfetchSvc "nexusdesk/internal/services/webfetch"
 	workspacesvc "nexusdesk/internal/services/workspace"
 )
 
@@ -41,6 +42,7 @@ func NewDefaultDispatcher(deps Dependencies) *Dispatcher {
 		Tool{Descriptor: agent.ToolDescriptor{Name: "read_git_history", Description: "Read bounded Git commit history for the repository or one file.", Risk: "low", Inputs: "relPath(optional), limit(optional)"}, Handler: handlers.readGitHistory},
 		Tool{Descriptor: agent.ToolDescriptor{Name: "read_git_blame", Description: "Read bounded Git blame lines for one file.", Risk: "low", Inputs: "relPath, startLine(optional), endLine(optional)"}, Handler: handlers.readGitBlame},
 		Tool{Descriptor: agent.ToolDescriptor{Name: "read_artifact_lineage", Description: "Read the workspace artifact lineage graph with generated artifacts, sources, jobs, and task relationships.", Risk: "low", Inputs: "query(optional), includeArchived(optional)"}, Handler: handlers.readArtifactLineage},
+		Tool{Descriptor: agent.ToolDescriptor{Name: "web_fetch", Description: "Fetch one approved HTTP(S) text-like URL with redirect, size, content-type, local-network, and optional domain allow-list guards.", Risk: "medium", Inputs: "url, allowedDomains(optional), allowLocal(optional), maxBytes(optional)"}, Handler: handlers.webFetch},
 		Tool{Descriptor: agent.ToolDescriptor{Name: "list_tasks", Description: "List safe discovered workspace tasks.", Risk: "low", Inputs: ""}, Handler: handlers.listTasks},
 		Tool{Descriptor: agent.ToolDescriptor{Name: "run_task", Description: "Run a discovered safe workspace task when shell approval is granted.", Risk: "high", Inputs: "taskId"}, Handler: handlers.runTask},
 		Tool{Descriptor: agent.ToolDescriptor{Name: "write_file", Description: "Create or replace a text/code file inside the workspace through safe write validation and rollback.", Risk: "high", Inputs: "relPath, content, encoding(optional)"}, Handler: handlers.writeFile},
@@ -300,6 +302,43 @@ func formatArtifactLineageObservation(lineage artifactsSvc.Lineage) string {
 			}
 			lines = append(lines, fmt.Sprintf("- %s --%s--> %s", edge.From, edge.Label, edge.To))
 		}
+	}
+	return strings.Join(lines, "\n")
+}
+
+func (h defaultHandlers) webFetch(ctx context.Context, call agent.ToolCall, request agent.Request) (agent.ToolResult, error) {
+	targetURL := firstArg(call, "url", "href", "target")
+	if targetURL == "" {
+		err := errors.New("URL is required")
+		return toolError(call, "medium", err), err
+	}
+	result, err := webfetchSvc.Fetch(ctx, webfetchSvc.Request{
+		URL:            targetURL,
+		AllowedDomains: listArg(call, "allowedDomains"),
+		AllowLocal:     boolArg(call, "allowLocal"),
+		MaxBytes:       intArg(call, "maxBytes", 128*1024),
+	})
+	if err != nil {
+		return toolError(call, "medium", err), err
+	}
+	return toolOK(call, "medium", formatWebFetchObservation(result)), nil
+}
+
+func formatWebFetchObservation(result webfetchSvc.Result) string {
+	lines := []string{
+		result.Message,
+		"URL: " + result.URL,
+		"Final URL: " + result.FinalURL,
+		fmt.Sprintf("Status: %d", result.Status),
+		"Content-Type: " + result.ContentType,
+		fmt.Sprintf("Redirects: %d", result.Redirects),
+		fmt.Sprintf("Truncated: %t", result.Truncated),
+	}
+	if result.Title != "" {
+		lines = append(lines, "Title: "+result.Title)
+	}
+	if strings.TrimSpace(result.Text) != "" {
+		lines = append(lines, "\nContent:\n"+result.Text)
 	}
 	return strings.Join(lines, "\n")
 }

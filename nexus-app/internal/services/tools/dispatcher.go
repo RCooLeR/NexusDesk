@@ -64,7 +64,11 @@ func (d *Dispatcher) ExecuteTool(ctx context.Context, call agent.ToolCall, reque
 }
 
 func toolRequiresPerCallApproval(tool Tool, request agent.Request) bool {
-	if strings.ToLower(strings.TrimSpace(tool.Descriptor.Risk)) != "high" {
+	risk := strings.ToLower(strings.TrimSpace(tool.Descriptor.Risk))
+	if tool.Descriptor.Name == "web_fetch" || risk == "medium" {
+		return true
+	}
+	if risk != "high" {
 		return false
 	}
 	switch tool.Descriptor.Name {
@@ -76,6 +80,9 @@ func toolRequiresPerCallApproval(tool Tool, request agent.Request) bool {
 }
 
 func requestWithPerCallApproval(request agent.Request, toolName string) agent.Request {
+	if toolName == "web_fetch" {
+		return request
+	}
 	if toolName == "run_task" {
 		request.ApproveShell = true
 		return request

@@ -315,7 +315,7 @@ Exit criteria:
 
 ## Next Batch
 
-1. Use the Wails inventory to close remaining Native Parity blockers: editor maturity, richer assistant/source quality, broader artifact regeneration, and optional web fetch.
+1. Use the Wails inventory to close remaining Native Parity blockers: editor maturity, richer assistant/source quality, and broader artifact regeneration.
 2. Finish native editor/UI parity: syntax highlighting plan, find/replace, split editor groups or equivalent layout decision, breadcrumbs/outline/minimap strategy, and less cramped native panels.
 3. Extend protected secret storage beyond the Windows baseline with macOS Keychain and Linux Secret Service/libsecret when those platforms move toward release support.
 4. Add durable job routing for long indexing, OCR, dump imports, connector pulls, report generation, and long agent runs.
@@ -461,7 +461,8 @@ The Fyne migration must not drop product ambition, but this section is intention
 - [x] Agent tools for read context, workspace search, problems, Git status/diff, tasks, artifacts, datasets, SQLite, documents, operations files, safe writes, patches, copy/move/delete, and rollback.
 - [x] Agent tools for read-only Git history/blame.
 - [x] Agent tool for read-only artifact lineage context.
-- [ ] Agent tools for artifact regeneration actions, web fetch, and approved shell.
+- [ ] Agent tools for artifact regeneration actions and approved shell.
+- [x] Approval-gated native `web_fetch` agent tool with Wails-equivalent HTTP(S), redirect, size, content-type, allow-list, and local-network guards.
 - [x] Live activity tail that shows compact model/tool progress while preserving persisted agent audit history.
 
 ### Artifacts And Provenance

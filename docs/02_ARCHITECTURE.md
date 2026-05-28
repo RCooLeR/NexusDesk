@@ -182,7 +182,7 @@ Review status as of 2026-05-27:
 
 - The product shape is still sound: a small primary rail for Workbench, Data & Analytics, Artifacts, and Settings, with the AI assistant always visible.
 - The Fyne app is now the active implementation, not a placeholder shell. `nexus-app/internal/services/` contains real workspace, editor, Git, data, artifact, metadata, LLM, agent, task, job, operations, approval, history, document, and connector slices.
-- The Wails backend still has useful reference implementations for external connector profiles, web fetch, richer profile/memory UX, and some Monaco-era editor workflows. Those should be ported capability-by-capability rather than copied as large bridge files.
+- The Wails backend still has useful reference implementations for some Monaco-era editor workflows and mature shell behavior. Those should be ported capability-by-capability rather than copied as large bridge files.
 - The React frontend has good workflow references, but it should not dictate the new native structure. Fyne UI should be rebuilt around native panels, menus, dialogs, tabs, jobs, and approval surfaces.
 - Git work is correctly manual on folder open, so opening a workspace should not launch external Git commands or desktop command windows.
 - Native agent file mutations now go through the same safe workspace mutation and rollback services as manual writes.

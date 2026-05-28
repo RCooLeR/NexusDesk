@@ -2,6 +2,8 @@ package tools
 
 import (
 	"context"
+	"net/http"
+	"net/http/httptest"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -122,6 +124,35 @@ func TestDefaultDispatcherArtifactLineageTool(t *testing.T) {
 		if !strings.Contains(result.Observation, expected) {
 			t.Fatalf("expected observation to contain %q:\n%s", expected, result.Observation)
 		}
+	}
+}
+
+func TestDefaultDispatcherWebFetchRequiresApproval(t *testing.T) {
+	server := httptest.NewServer(http.HandlerFunc(func(response http.ResponseWriter, request *http.Request) {
+		response.Header().Set("Content-Type", "text/plain")
+		_, _ = response.Write([]byte("hello from docs"))
+	}))
+	defer server.Close()
+	dispatcher := NewDefaultDispatcher(Dependencies{Workspace: workspaceSvc.New()})
+	call := agent.ToolCall{Name: "web_fetch", Args: map[string]string{"url": server.URL, "allowLocal": "true"}}
+
+	blocked, err := dispatcher.ExecuteTool(context.Background(), call, agent.Request{})
+	if err == nil || blocked.Risk != "medium" || !strings.Contains(blocked.Observation, "approval") {
+		t.Fatalf("expected approval error, got result=%#v err=%v", blocked, err)
+	}
+
+	approved := false
+	fetched, err := dispatcher.ExecuteTool(context.Background(), call, agent.Request{
+		ApproveTool: func(ctx context.Context, request agent.ToolApprovalRequest) bool {
+			approved = request.Name == "web_fetch" && request.Risk == "medium"
+			return approved
+		},
+	})
+	if err != nil {
+		t.Fatalf("web_fetch returned error: %v", err)
+	}
+	if !approved || !strings.Contains(fetched.Observation, "hello from docs") || fetched.Risk != "medium" {
+		t.Fatalf("unexpected web fetch result approved=%v result=%#v", approved, fetched)
 	}
 }
 

@@ -15,7 +15,7 @@ This inventory records the explicit `port`, `replace`, `drop`, or `later` decisi
 ## Summary
 
 - Most core backend workflows have native equivalents: workspace open/browse, safe file mutation, rollback records, search/problems, Git status/diff/hunk staging, task runs, artifacts, metadata, datasets, SQLite, external connector profile flows, settings, approvals, diagnostics, chat history, and agent audit.
-- The remaining parity blockers are concentrated in editor maturity, deeper artifact regeneration coverage, richer assistant quality polish, and approval-gated web fetch.
+- The remaining parity blockers are concentrated in editor maturity, deeper artifact regeneration coverage, and richer assistant/source quality polish.
 - React/Wails shell code should not be embedded wholesale. Monaco-specific editor behavior should be replaced by a native editor strategy unless a future spike proves an embedded editor can be shipped cleanly without reviving the Wails/webview architecture.
 
 ## Inventory
@@ -40,7 +40,7 @@ This inventory records the explicit `port`, `replace`, `drop`, or `later` decisi
 | Assistant prompt profiles and memory | `internal/storage/assistant_profile.go`, `AgentPanel.tsx` | Native Fyne loads/saves the Wails-compatible assistant profile store, applies active prompt profiles to Ask requests, and exposes memory/profile controls | `ported` baseline | Add profile editing beyond default profiles if needed |
 | Assistant retry, compare latest answer, save latest answer as artifact | `AgentPanel.tsx`, `CreateChatMarkdownArtifact` | Native Fyne surfaces retry, compare, and save-latest-answer; saved answers become `chat-answer` artifacts with prompt/model/context/source metadata | `ported` baseline | Continue polishing citations and stale-source indicators |
 | Agent tool registry for file, Git, tasks, artifacts, data, SQLite, docs, operations | `agent_runtime.go`, `internal/agenttools/*` | Native agent dispatcher covers many read/write/data/artifact/task/document/operations tools with per-call approval and audit | `ported` baseline | Fill remaining read-only context tools as scoped work |
-| Agent web fetch | `internal/webfetch/fetch.go`, Wails `agentWebFetch` | Not part of current native safe default tool set | `port` | Add approval-gated, bounded, allow-listed web text fetch with audit |
+| Agent web fetch | `internal/webfetch/fetch.go`, Wails `agentWebFetch` | Native deterministic `web_fetch` is approval-gated and preserves Wails bounds for HTTP(S), redirects, size, content type, local-network blocking, and optional domain allow-lists | `ported` | Keep browser automation/screenshots out of scope until explicitly designed |
 | Agent constrained shell | `agent_runtime_shell.go` | Native supports safe discovered task execution; arbitrary approved shell remains intentionally absent | `later` | Reconsider only after audit coverage and shell approval policy mature |
 | Access policy card / broad workspace trust UX | `AccessPolicyCard.tsx` | Native uses scoped approvals, full-project access, and per-call high-risk modals | `replace` | Keep native approval model; avoid reintroducing broad opaque trust toggles |
 | Approval log | `ApprovalLogPanel.tsx`, `internal/approval` | Native approvals panel and metadata repository exist | `ported` | Continue audit coverage for future high-risk operations |
@@ -55,8 +55,7 @@ This inventory records the explicit `port`, `replace`, `drop`, or `later` decisi
 1. Finish the editor parity strategy: syntax highlighting, breadcrumbs/outline, encoding controls, split/editor layout decision.
 2. Continue assistant quality parity: richer citations, source freshness in chat, model diagnostics, and final profile/memory polish.
 3. Expand artifact regeneration beyond the first dataset/query/chart rebuild baseline.
-4. Add approval-gated agent web fetch if still desired for parity.
-5. Add macOS Keychain and Linux Secret Service/libsecret support after the Windows secret-storage baseline.
+4. Add macOS Keychain and Linux Secret Service/libsecret support after the Windows secret-storage baseline.
 
 ## Retirement Decision
 
