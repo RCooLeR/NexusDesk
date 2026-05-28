@@ -3,6 +3,7 @@ package llm
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"net/http"
 	"net/http/httptest"
 	"strings"
@@ -95,6 +96,35 @@ func TestChatStreamCollectsDeltas(t *testing.T) {
 	}
 	if result.Message != "hello" || strings.Join(deltas, "") != "hello" {
 		t.Fatalf("unexpected stream result=%q deltas=%v", result.Message, deltas)
+	}
+}
+
+func TestChatStreamStopsWhenContextCanceledFromDeltaHandler(t *testing.T) {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "text/event-stream")
+		_, _ = w.Write([]byte("data: {\"choices\":[{\"delta\":{\"content\":\"first\"}}]}\n\n"))
+		_, _ = w.Write([]byte("data: {\"choices\":[{\"delta\":{\"content\":\"second\"}}]}\n\n"))
+		_, _ = w.Write([]byte("data: [DONE]\n\n"))
+	}))
+	defer server.Close()
+
+	ctx, cancel := context.WithCancel(context.Background())
+	var deltas []string
+	_, err := NewClientWithHTTPClient(server.Client()).ChatStream(ctx, Config{
+		Provider: "openai-compatible",
+		BaseURL:  server.URL,
+		Model:    "stream-model",
+	}, ChatRequest{Prompt: "hi"}, func(delta string) error {
+		deltas = append(deltas, delta)
+		cancel()
+		return nil
+	})
+
+	if !errors.Is(err, context.Canceled) {
+		t.Fatalf("expected context cancellation, got %v", err)
+	}
+	if strings.Join(deltas, "") != "first" {
+		t.Fatalf("expected streaming to stop after first delta, got %v", deltas)
 	}
 }
 

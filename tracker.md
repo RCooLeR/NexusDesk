@@ -551,7 +551,7 @@ The Fyne migration must not drop product ambition, but this section is intention
 - [ ] Add guardrails for empty role/action string formatting in agent/activity path rendering.
 - [x] Add settings-level LLM connection test action with model count and warning reporting.
 - [x] Surface persistence failures from repository writes in activity/diagnostics.
-- [ ] Cancel streaming LLM response handlers promptly when request context is canceled.
+- [x] Cancel streaming LLM response handlers promptly when request context is canceled.
 - [ ] Make provider configuration explicit and extensible beyond built-in options with protocol flags.
 - [x] Clamp agent context budget fallback to safe non-trivial defaults when settings become misconfigured.
 - [ ] Scope global shortcuts so native editor copy remains reliable.

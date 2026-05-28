@@ -87,7 +87,7 @@ func (c *Client) chat(ctx context.Context, config Config, chatRequest ChatReques
 
 	var message string
 	if stream {
-		message, err = readChatCompletionStream(response, onDelta)
+		message, err = readChatCompletionStream(ctx, response, onDelta)
 	} else {
 		message, err = readChatCompletionResponse(response)
 	}
@@ -126,12 +126,15 @@ func readChatCompletionResponse(response *http.Response) (string, error) {
 	return strings.TrimSpace(payload.Choices[0].Message.Content), nil
 }
 
-func readChatCompletionStream(response *http.Response, onDelta func(string) error) (string, error) {
+func readChatCompletionStream(ctx context.Context, response *http.Response, onDelta func(string) error) (string, error) {
 	scanner := bufio.NewScanner(response.Body)
 	scanner.Buffer(make([]byte, 0, 64*1024), 1024*1024)
 
 	var message strings.Builder
 	for scanner.Scan() {
+		if err := ctx.Err(); err != nil {
+			return "", err
+		}
 		line := strings.TrimSpace(scanner.Text())
 		if line == "" || !strings.HasPrefix(line, "data:") {
 			continue
@@ -157,6 +160,12 @@ func readChatCompletionStream(response *http.Response, onDelta func(string) erro
 				return "", err
 			}
 		}
+		if err := ctx.Err(); err != nil {
+			return "", err
+		}
+	}
+	if err := ctx.Err(); err != nil {
+		return "", err
 	}
 	if err := scanner.Err(); err != nil {
 		return "", err
