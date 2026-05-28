@@ -125,6 +125,66 @@ func TestArtifactMetadataRecordMapsArtifactFields(t *testing.T) {
 	}
 }
 
+func TestArtifactCanRegenerateSupportedKinds(t *testing.T) {
+	cases := []struct {
+		name     string
+		artifact artifactsSvc.Artifact
+		want     bool
+	}{
+		{
+			name:     "scan report",
+			artifact: artifactsSvc.Artifact{Kind: "scan-report"},
+			want:     true,
+		},
+		{
+			name:     "document extract with source",
+			artifact: artifactsSvc.Artifact{Kind: "document-extract", SourcePaths: []string{"docs/a.md"}},
+			want:     true,
+		},
+		{
+			name:     "document extract without source",
+			artifact: artifactsSvc.Artifact{Kind: "document-extract"},
+			want:     false,
+		},
+		{
+			name:     "archived scan report",
+			artifact: artifactsSvc.Artifact{Kind: "scan-report", Archived: true},
+			want:     false,
+		},
+		{
+			name:     "dataset artifact remains data panel rebuild",
+			artifact: artifactsSvc.Artifact{Kind: "dataset-summary", SourcePaths: []string{"data.csv"}},
+			want:     false,
+		},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			if got := artifactCanRegenerate(tc.artifact); got != tc.want {
+				t.Fatalf("artifactCanRegenerate() = %t, want %t", got, tc.want)
+			}
+		})
+	}
+}
+
+func TestArtifactRegenerationSourceUsesSourcePathsBeforeSource(t *testing.T) {
+	source, ok := artifactRegenerationSource(artifactsSvc.Artifact{
+		Source:      "fallback.md",
+		SourcePaths: []string{"docs/a.md"},
+	})
+	if !ok || source != "docs/a.md" {
+		t.Fatalf("unexpected regeneration source: %q ok=%t", source, ok)
+	}
+	if _, ok := artifactRegenerationSource(artifactsSvc.Artifact{Source: "docs/a.md, docs/b.md"}); ok {
+		t.Fatal("expected comma-separated source summary to be rejected")
+	}
+}
+
+func TestArtifactRegenerationJobLabelUsesTitle(t *testing.T) {
+	if got := artifactRegenerationJobLabel(artifactsSvc.Artifact{Kind: "scan-report", Title: "Workspace Scan"}); got != "Regenerate artifact (Workspace Scan)" {
+		t.Fatalf("unexpected regeneration label: %q", got)
+	}
+}
+
 func TestArtifactLineageTextIncludesNodesAndEdges(t *testing.T) {
 	text := artifactLineageText(artifactsSvc.Lineage{
 		Nodes: []artifactsSvc.LineageNode{{Kind: "artifact", Label: "report.md"}},

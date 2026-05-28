@@ -10,7 +10,7 @@ The product direction still makes sense. Nexus Augentic Studio should stay a nat
 
 The new app is no longer a thin skeleton. `nexus-app/` now has real native services for workspace navigation, previews, safe file mutation, editor tabs, search, problems, Git, tasks, jobs, approvals, LLM chat, agent tooling, metadata, artifacts, datasets, SQLite inspection, document extraction, operations scanning, and history. The most important remaining work is not to invent new studios yet; it is to finish parity and make the native UI feel like a serious IDE-class product.
 
-Approximate Wails-to-Fyne migration status: 92-93% of useful Wails-era backend/workflow capability has been migrated. The remaining gap is concentrated in IDE-grade editor behavior, deeper retrieval evidence, future artifact regeneration coverage, slow-work job routing, production packaging, and UI polish.
+Approximate Wails-to-Fyne migration status: 93% of useful Wails-era backend/workflow capability has been migrated. The remaining gap is concentrated in IDE-grade editor behavior, deeper retrieval evidence, future artifact regeneration coverage, slow-work job routing, production packaging, and UI polish.
 
 The production release path is tracked in `docs/13_PRODUCTION_READINESS.md`.
 
@@ -46,7 +46,7 @@ Implemented in `nexus-app/`:
 - Task discovery/run jobs for npm, Go tests, Python pytest, Cargo tests, and Docker Compose config validation.
 - Data profiling/query/SQL/notebooks for CSV, TSV, JSON, NDJSON, XLSX, logs, Parquet metadata, and SQLite files.
 - Chart/dashboard SVG preview and artifact generation.
-- Artifact browser with metadata, lineage, comparison, archive/delete/restore, source freshness, context pinning, and job-routed workspace scan reports.
+- Artifact browser with metadata, lineage, comparison, archive/delete/restore, source freshness, context pinning, job-routed workspace scan reports, and regeneration for scan/document-extraction artifacts.
 - Document extraction/report artifacts for Markdown, TXT, HTML, XML, DOCX, XLSX, and PDF preview text.
 - Operations inspection for Dockerfiles, Compose, env/config/script/log files, Compose topology, safe config validation, and runbook artifacts.
 - Settings, LLM transport, streaming Ask mode, Agent mode, deterministic tools, approval queue, full-project access policy, rollback browser, history, audit, source/model answer diagnostics, evidence-quality labels, line-aware citation refs, and durable metadata.
@@ -56,7 +56,7 @@ Implemented in `nexus-app/`:
 Priority migration gaps:
 
 1. Native editor quality: active-editor inline syntax styling and future LSP/deeper cross-file language-aware navigation.
-2. Native editor-adjacent artifact regeneration and source quality: future regeneration coverage and deeper retrieval/source evidence UX.
+2. Native editor-adjacent artifact regeneration and source quality: richer future regeneration coverage and deeper retrieval/source evidence UX.
 3. Job routing for slow workflows: long indexing, OCR, dump imports, connector pulls, report generation, and long agent runs.
 4. Connector and dump workflows: temporary isolated database sandboxes, import lifecycle, storage limits, and read-only analysis.
 5. Assistant maturity: model context accounting, runtime diagnostics, source-citation quality, and broader tool coverage.

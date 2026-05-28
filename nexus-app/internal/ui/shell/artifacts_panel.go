@@ -25,6 +25,7 @@ const (
 	artifactJobKindDocumentReport  = "artifact-document-report"
 	artifactJobKindDocumentExtract = "artifact-document-extract"
 	artifactJobKindScanReport      = "artifact-scan-report"
+	artifactJobKindRegenerate      = "artifact-regenerate"
 )
 
 func (v *View) newArtifactsPanel() fyne.CanvasObject {
@@ -325,7 +326,7 @@ func (v *View) refreshArtifactsWithQuery(query string) {
 		status += " matching " + strings.TrimSpace(query)
 	}
 	v.artifactStatus.SetText(status)
-	v.artifactResults.Objects = artifactRows(artifacts, v.previewArtifact, v.pinArtifactForAssistantContext, v.compareArtifact, v.archiveArtifact, v.restoreArtifact, v.deleteArtifact)
+	v.artifactResults.Objects = artifactRows(artifacts, v.previewArtifact, v.pinArtifactForAssistantContext, v.compareArtifact, v.regenerateArtifact, v.archiveArtifact, v.restoreArtifact, v.deleteArtifact)
 	v.artifactResults.Refresh()
 	v.persistArtifactRecords(artifacts)
 	v.addActivity(fmt.Sprintf("Loaded %d artifact(s).", len(artifacts)))
@@ -406,6 +407,74 @@ func (v *View) compareArtifact(artifact artifactsSvc.Artifact) {
 	v.artifactLastComparison = comparison
 	v.artifactStatus.SetText(comparison.Message)
 	v.addActivity(comparison.Message)
+}
+
+func (v *View) regenerateArtifact(artifact artifactsSvc.Artifact) {
+	workspace := v.state.Workspace()
+	if workspace.Root == "" {
+		v.addActivity("Open a workspace before regenerating artifacts.")
+		return
+	}
+	if !artifactCanRegenerate(artifact) {
+		v.artifactStatus.SetText("Artifact kind cannot be regenerated yet: " + artifact.Kind)
+		v.addActivity("Artifact regeneration is not available for " + artifact.Kind + ".")
+		return
+	}
+	jobLabel := artifactRegenerationJobLabel(artifact)
+	job, ctx := v.jobService.Start(artifactJobKindRegenerate, jobLabel)
+	v.jobService.AppendLog(job.ID, "Artifact: "+artifact.RelPath)
+	v.jobService.AppendLog(job.ID, "Kind: "+artifact.Kind)
+	v.artifactStatus.SetText("Regenerating " + artifact.RelPath + " as " + job.ID + ".")
+	v.addActivity("Started " + job.ID + ": " + jobLabel + ".")
+	v.refreshJobs()
+	root := workspace.Root
+	go func() {
+		rebuilt, err := v.buildRegeneratedArtifact(ctx, root, artifact)
+		fyne.Do(func() {
+			v.finishArtifactRegenerationJob(job.ID, artifact, rebuilt, err)
+		})
+	}()
+}
+
+func (v *View) buildRegeneratedArtifact(ctx context.Context, workspaceRoot string, artifact artifactsSvc.Artifact) (artifactsSvc.Artifact, error) {
+	switch strings.TrimSpace(artifact.Kind) {
+	case "scan-report":
+		return v.buildWorkspaceScanReportArtifact(ctx, workspaceRoot)
+	case "document-extract":
+		source, ok := artifactRegenerationSource(artifact)
+		if !ok {
+			return artifactsSvc.Artifact{}, fmt.Errorf("document extraction artifact %s has no source path metadata", artifact.RelPath)
+		}
+		return v.buildDocumentExtractionArtifact(ctx, workspaceRoot, source)
+	default:
+		return artifactsSvc.Artifact{}, fmt.Errorf("artifact kind %q cannot be regenerated yet", artifact.Kind)
+	}
+}
+
+func (v *View) finishArtifactRegenerationJob(jobID string, original artifactsSvc.Artifact, rebuilt artifactsSvc.Artifact, err error) {
+	if err != nil {
+		if errors.Is(err, context.Canceled) {
+			v.jobService.Finish(jobID, jobsSvc.StatusCanceled, "Artifact regeneration canceled.", nil)
+			v.artifactStatus.SetText("Artifact regeneration canceled.")
+			v.addActivity("Canceled artifact regeneration for " + original.RelPath + ".")
+		} else {
+			v.jobService.Finish(jobID, jobsSvc.StatusFailed, "Artifact regeneration failed.", err)
+			v.artifactStatus.SetText("Artifact regeneration failed for " + original.RelPath)
+			dialog.ShowError(err, v.window)
+		}
+		v.refreshJobs()
+		return
+	}
+	rebuilt.JobID = jobID
+	v.jobService.AppendLog(jobID, "Artifact: "+rebuilt.RelPath)
+	v.jobService.Finish(jobID, jobsSvc.StatusSuccess, "Regenerated "+rebuilt.RelPath+".", nil)
+	v.artifactPreview.SetText("")
+	v.refreshArtifactSources(nil)
+	v.artifactStatus.SetText("Regenerated " + rebuilt.RelPath)
+	v.addActivity("Regenerated " + original.RelPath + " to " + rebuilt.RelPath + ".")
+	v.persistArtifactRecord(rebuilt)
+	v.refreshArtifactsWithQuery("kind:" + rebuilt.Kind)
+	v.refreshJobs()
 }
 
 func (v *View) exportArtifactComparison() {
@@ -644,6 +713,7 @@ func artifactRows(
 	onPreview func(artifactsSvc.Artifact),
 	onContext func(artifactsSvc.Artifact),
 	onCompare func(artifactsSvc.Artifact),
+	onRegenerate func(artifactsSvc.Artifact),
 	onArchive func(artifactsSvc.Artifact),
 	onRestore func(artifactsSvc.Artifact),
 	onDelete func(artifactsSvc.Artifact),
@@ -666,6 +736,10 @@ func artifactRows(
 			onCompare(artifact)
 		})
 		compare.Importance = widget.LowImportance
+		regenerate := widget.NewButtonWithIcon("", theme.MediaReplayIcon(), func() {
+			onRegenerate(artifact)
+		})
+		regenerate.Importance = widget.LowImportance
 		archive := widget.NewButtonWithIcon("", theme.FolderIcon(), func() {
 			onArchive(artifact)
 		})
@@ -676,8 +750,12 @@ func artifactRows(
 		restore.Importance = widget.LowImportance
 		if artifact.Archived {
 			archive.Disable()
+			regenerate.Disable()
 		} else {
 			restore.Disable()
+		}
+		if !artifactCanRegenerate(artifact) {
+			regenerate.Disable()
 		}
 		deleteButton := widget.NewButtonWithIcon("", theme.DeleteIcon(), func() {
 			onDelete(artifact)
@@ -688,10 +766,46 @@ func artifactRows(
 		title.Truncation = fyne.TextTruncateEllipsis
 		meta := widget.NewLabel(artifactMeta(artifact))
 		meta.Truncation = fyne.TextTruncateEllipsis
-		actions := container.NewHBox(preview, context, compare, archive, restore, deleteButton)
+		actions := container.NewHBox(preview, context, compare, regenerate, archive, restore, deleteButton)
 		rows = append(rows, container.NewBorder(nil, nil, actions, nil, container.NewVBox(title, meta)))
 	}
 	return rows
+}
+
+func artifactCanRegenerate(artifact artifactsSvc.Artifact) bool {
+	if artifact.Archived {
+		return false
+	}
+	switch strings.TrimSpace(artifact.Kind) {
+	case "scan-report":
+		return true
+	case "document-extract":
+		_, ok := artifactRegenerationSource(artifact)
+		return ok
+	default:
+		return false
+	}
+}
+
+func artifactRegenerationSource(artifact artifactsSvc.Artifact) (string, bool) {
+	candidates := append([]string{}, artifact.SourcePaths...)
+	candidates = append(candidates, artifact.Source)
+	for _, candidate := range candidates {
+		candidate = filepath.ToSlash(strings.TrimSpace(candidate))
+		if candidate == "" || candidate == "." || strings.Contains(candidate, ",") {
+			continue
+		}
+		return candidate, true
+	}
+	return "", false
+}
+
+func artifactRegenerationJobLabel(artifact artifactsSvc.Artifact) string {
+	title := artifactTitle(artifact)
+	if strings.TrimSpace(title) == "" {
+		title = artifact.Kind
+	}
+	return "Regenerate artifact (" + title + ")"
 }
 
 func artifactTitle(artifact artifactsSvc.Artifact) string {
