@@ -422,7 +422,7 @@ These batches describe the next product direction. They are broader than the cur
 2. Add git repository detection, branch display, dirty summary, and file-level status badges.
 3. Add working tree/staged diff views with side-by-side and inline modes, hunk navigation, and stage/unstage/revert affordances.
 4. Add problems/search panels: path search, text/symbol/regex search, replace preview, diagnostics, and task/test output. Path/text/symbol search, regex search, replace preview, lightweight TODO/FIXME/conflict/JSON diagnostics, read-only Compose task detection, user-triggered discovered task runs, captured output, and task-run artifacts are now implemented.
-5. Continue editor improvements toward search/problems/refactoring depth. Split editor groups, pinned tabs, breadcrumbs, outline/symbol navigation, Monaco go-to-definition dispatch, safe draft formatting, encoding-aware save, and the Monaco minimap toggle are now implemented in the editor-quality foundation.
+5. Continue editor improvements toward search/problems/refactoring depth. Split editor groups, pinned tabs, breadcrumbs, outline/symbol navigation, safe draft formatting, and encoding-aware save are now implemented in the native editor-quality foundation; Monaco-specific go-to-definition and minimap behavior are being replaced with deliberate Fyne-native equivalents.
 6. Add AI code actions for review diff, explain change, generate tests, propose patch, create commit message, and summarize branch.
 
 ### Batch: Data & Analytics Expansion

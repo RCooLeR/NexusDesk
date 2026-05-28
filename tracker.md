@@ -378,7 +378,8 @@ The Fyne migration must not drop product ambition, but this section is intention
 - [x] Native editor breadcrumb and save-encoding parity slice with Wails-derived breadcrumb rules, clickable Fyne breadcrumb navigation, and explicit UTF-8/UTF-16/Windows encoding selection for safe writes.
 - [x] Native format-document parity slice with deterministic Go and JSON draft formatting from the Fyne editor.
 - [x] Native split editor parity slice with Wails-derived secondary tab resolution and Fyne read-only secondary preview selection.
-- [ ] Multi-tab editor polish with minimap, broader format coverage, and go-to-definition where available.
+- [x] Native symbol navigation parity slice with a searchable Fyne go-to-symbol dialog backed by the Wails-derived outline rules.
+- [ ] Multi-tab editor polish with minimap, broader format coverage, and deeper go-to-definition where native language support is available.
 - [ ] Syntax highlighting strategy for common languages, Markdown, SQL, JSON/YAML/XML, Docker/Compose, logs, and config files.
 - [x] Markdown source/rendered toggle.
 - [x] Safe edit preview/apply/rollback for text, code, patches, appends, encoding-aware writes, and agent-safe mutation tools.

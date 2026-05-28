@@ -138,7 +138,7 @@ Good for:
 - git diff review
 - test generation
 - commit message and PR summary drafting
-- symbol-aware navigation when language services exist
+- symbol-aware navigation through native outline/go-to-symbol today, with deeper language services when available
 
 ### Data Analyst
 

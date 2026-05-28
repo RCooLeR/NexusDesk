@@ -101,10 +101,14 @@ func (v *View) newTextEditor(tab editorSvc.Tab, preview domain.FilePreview, onSt
 		status.SetText(result.Message)
 	})
 	format.Importance = widget.LowImportance
+	symbols := widget.NewButtonWithIcon("Symbols", theme.SearchIcon(), func() {
+		v.openEditorSymbolDialog(tab.ID)
+	})
+	symbols.Importance = widget.LowImportance
 
 	v.bindTextEditor(tab.ID, binding)
 
-	encodingControl := container.NewHBox(widget.NewLabel("Save as"), encodingSelect, format, revert)
+	encodingControl := container.NewHBox(widget.NewLabel("Save as"), encodingSelect, symbols, format, revert)
 	sourcePanel := container.NewBorder(container.NewBorder(nil, nil, status, encodingControl), nil, nil, nil, source)
 	previewPanel := container.NewBorder(widget.NewLabel(previewHeader(preview)), nil, nil, nil, rendered.Canvas())
 	outlinePanel := container.NewBorder(outlineStatus, nil, nil, nil, container.NewVScroll(outlineList))
