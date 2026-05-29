@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"path/filepath"
 	"strings"
+	"sync"
 	"time"
 
 	_ "modernc.org/sqlite"
@@ -14,10 +15,13 @@ import (
 
 const maxSQLiteSampleRows = 5
 
-type Service struct{}
+type Service struct {
+	poolMu         sync.Mutex
+	connectorPools map[string]*connectorDBPool
+}
 
 func New() *Service {
-	return &Service{}
+	return &Service{connectorPools: map[string]*connectorDBPool{}}
 }
 
 func (s *Service) InspectWorkspaceSQLite(root string, relPath string) (SQLiteMetadata, error) {

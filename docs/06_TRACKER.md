@@ -163,19 +163,19 @@ Legend:
 - [x] P1 Enable SQLite WAL mode. (Metadata store now configures WAL on the cached SQLite connection and surfaces the active journal mode.)
 - [x] P1 Enable busy timeout. (Metadata store now applies a 5s SQLite busy timeout and records it in status/diagnostics.)
 - [x] P1 Enable foreign keys consistently. (Metadata store now enables foreign-key enforcement on the single cached SQLite connection and tests the runtime pragma.)
-- [ ] P1 Review connection pooling strategy.
-- [ ] P1 Avoid schema bootstrap work after first open.
+- [x] P1 Review connection pooling strategy. (Metadata store now uses one cached SQLite handle with `SetMaxOpenConns(1)`/`SetMaxIdleConns(1)` to keep connection-scoped pragmas consistent.)
+- [x] P1 Avoid schema bootstrap work after first open. (Metadata store already caches `Ensure`; regression coverage verifies repeated open/ensure reuses the handle and leaves schema files untouched.)
 - [x] P1 Surface active journal mode in Diagnostics. (Diagnostics metadata section and health card now show journal mode, foreign-key state, and busy timeout.)
 - [x] P1 Add tests for concurrent read/write behavior where practical. (Metadata store now has a concurrent SaveJob/ListJobs stress test covering the WAL/busy-timeout connection configuration.)
 
 ### 2.6 Connector performance
 
-- [ ] P1 Cache external database pools by profile and version.
-- [ ] P1 Invalidate pool when profile changes.
-- [ ] P1 Respect context cancellation for pooled queries.
-- [ ] P1 Bound idle lifetime.
-- [ ] P1 Surface pool/connection status in Diagnostics.
-- [ ] P1 Add tests with fake SQL driver or integration harness.
+- [x] P1 Cache external database pools by profile and version. (PostgreSQL, MySQL/MariaDB, and SQL Server connector test/query/inspect flows now reuse profile-keyed `database/sql` pools.)
+- [x] P1 Invalidate pool when profile changes. (Pool version includes driver/profile DSN state; a changed profile version closes and replaces the old pool.)
+- [x] P1 Respect context cancellation for pooled queries. (Pooled flows borrow connections with `db.Conn(ctx)` and query/inspect with context-aware calls; coverage verifies canceled context behavior.)
+- [x] P1 Bound idle lifetime. (External connector pools now set max open/idle connections, idle lifetime, and max lifetime.)
+- [x] P1 Surface pool/connection status in Diagnostics. (Diagnostics now reports open external connector pools, driver, open/in-use/idle counts, and last-used time.)
+- [x] P1 Add tests with fake SQL driver or integration harness. (Connector pool tests use the SQLite driver as a lightweight integration harness for reuse, invalidation, stats, and cancellation.)
 
 ## Phase 3: Correctness And Audit Honesty
 

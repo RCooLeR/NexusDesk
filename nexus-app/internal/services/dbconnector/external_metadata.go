@@ -78,11 +78,11 @@ func (s *Service) InspectConnectorProfileContext(ctx context.Context, profile Co
 	}
 	switch strings.ToLower(profile.Kind) {
 	case "postgres":
-		return inspectPostgresProfile(ctx, profile, timeout)
+		return s.inspectPostgresProfile(ctx, profile, timeout)
 	case "mysql", "mariadb":
-		return inspectMySQLProfile(ctx, profile, timeout)
+		return s.inspectMySQLProfile(ctx, profile, timeout)
 	case "sqlserver":
-		return inspectSQLServerProfile(ctx, profile, timeout)
+		return s.inspectSQLServerProfile(ctx, profile, timeout)
 	case "duckdb":
 		return inspectDuckDBProfile(ctx, profile, timeout)
 	case "sqlite":
@@ -92,15 +92,14 @@ func (s *Service) InspectConnectorProfileContext(ctx context.Context, profile Co
 	}
 }
 
-func inspectPostgresProfile(ctx context.Context, profile ConnectorProfile, timeoutSeconds int) (ConnectorMetadata, error) {
+func (s *Service) inspectPostgresProfile(ctx context.Context, profile ConnectorProfile, timeoutSeconds int) (ConnectorMetadata, error) {
 	if err := requirePostgresProfile(profile); err != nil {
 		return ConnectorMetadata{}, err
 	}
-	db, err := sql.Open("pgx", postgresDSN(profile, timeoutSeconds))
+	db, err := s.externalConnectorDB(profile, "pgx", postgresDSN(profile, timeoutSeconds))
 	if err != nil {
 		return ConnectorMetadata{}, connectorError(err)
 	}
-	defer db.Close()
 	conn, err := db.Conn(ctx)
 	if err != nil {
 		return ConnectorMetadata{}, connectorError(err)
@@ -115,15 +114,14 @@ func inspectPostgresProfile(ctx context.Context, profile ConnectorProfile, timeo
 	return inspectGenericInformationSchema(ctx, conn, profile, "postgres-readonly", "PostgreSQL", postgresInformationSchemaQueries())
 }
 
-func inspectMySQLProfile(ctx context.Context, profile ConnectorProfile, timeoutSeconds int) (ConnectorMetadata, error) {
+func (s *Service) inspectMySQLProfile(ctx context.Context, profile ConnectorProfile, timeoutSeconds int) (ConnectorMetadata, error) {
 	if err := requireMySQLProfile(profile); err != nil {
 		return ConnectorMetadata{}, err
 	}
-	db, err := sql.Open("mysql", mysqlDSN(profile, timeoutSeconds))
+	db, err := s.externalConnectorDB(profile, "mysql", mysqlDSN(profile, timeoutSeconds))
 	if err != nil {
 		return ConnectorMetadata{}, connectorError(err)
 	}
-	defer db.Close()
 	conn, err := db.Conn(ctx)
 	if err != nil {
 		return ConnectorMetadata{}, connectorError(err)
@@ -135,15 +133,14 @@ func inspectMySQLProfile(ctx context.Context, profile ConnectorProfile, timeoutS
 	return inspectGenericInformationSchema(ctx, conn, profile, mysqlEngine(profile), mysqlDisplayName(profile), mysqlInformationSchemaQueries())
 }
 
-func inspectSQLServerProfile(ctx context.Context, profile ConnectorProfile, timeoutSeconds int) (ConnectorMetadata, error) {
+func (s *Service) inspectSQLServerProfile(ctx context.Context, profile ConnectorProfile, timeoutSeconds int) (ConnectorMetadata, error) {
 	if err := requireSQLServerProfile(profile); err != nil {
 		return ConnectorMetadata{}, err
 	}
-	db, err := sql.Open("sqlserver", sqlServerDSN(profile, timeoutSeconds))
+	db, err := s.externalConnectorDB(profile, "sqlserver", sqlServerDSN(profile, timeoutSeconds))
 	if err != nil {
 		return ConnectorMetadata{}, connectorError(err)
 	}
-	defer db.Close()
 	conn, err := db.Conn(ctx)
 	if err != nil {
 		return ConnectorMetadata{}, connectorError(err)

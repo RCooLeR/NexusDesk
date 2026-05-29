@@ -117,6 +117,9 @@ func TestFormatDiagnosticsSnapshotIncludesCoreSections(t *testing.T) {
 		ConnectorProfiles: []dbconnectorSvc.ConnectorProfile{
 			{Name: "Warehouse", Kind: "postgres", SSLMode: "require"},
 		},
+		ConnectorPools: []dbconnectorSvc.ConnectorPoolStatus{
+			{Name: "Warehouse", ProfileID: "warehouse", Kind: "postgres", Driver: "pgx", MaxOpenConnections: 4, OpenConnections: 1, Idle: 1},
+		},
 		StartupRecovery: startupSvc.Status{
 			Path: "C:/Users/example/AppData/Roaming/NexusDesk/startup-session.json",
 		},
@@ -159,6 +162,8 @@ func TestFormatDiagnosticsSnapshotIncludesCoreSections(t *testing.T) {
 		"## Protected Secrets",
 		"## Connector Transport",
 		"Warehouse [postgres]: encrypted transport required",
+		"## Connector Pools",
+		"Warehouse [postgres/pgx]: open=1",
 		"## Metadata",
 		"Status: ok",
 		"Journal mode: wal",
@@ -172,6 +177,28 @@ func TestFormatDiagnosticsSnapshotIncludesCoreSections(t *testing.T) {
 	} {
 		if !strings.Contains(text, expected) {
 			t.Fatalf("expected %q in diagnostics text:\n%s", expected, text)
+		}
+	}
+}
+
+func TestFormatDiagnosticsConnectorPools(t *testing.T) {
+	empty := formatDiagnosticsConnectorPools(nil)
+	if !strings.Contains(empty, "No external connector pools") {
+		t.Fatalf("unexpected empty connector pool text: %q", empty)
+	}
+	text := formatDiagnosticsConnectorPools([]dbconnectorSvc.ConnectorPoolStatus{{
+		Name:               "Warehouse",
+		ProfileID:          "warehouse",
+		Kind:               "postgres",
+		Driver:             "pgx",
+		MaxOpenConnections: 4,
+		OpenConnections:    2,
+		InUse:              1,
+		Idle:               1,
+	}})
+	for _, expected := range []string{"1 external connector pool(s) open", "Warehouse [postgres/pgx]: open=2 in_use=1 idle=1 max=4"} {
+		if !strings.Contains(text, expected) {
+			t.Fatalf("expected %q in connector pool diagnostics:\n%s", expected, text)
 		}
 	}
 }

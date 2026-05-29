@@ -91,11 +91,11 @@ func (s *Service) TestConnectorProfileContext(ctx context.Context, profile Conne
 	}
 	switch strings.ToLower(profile.Kind) {
 	case "postgres":
-		return testPostgresProfile(ctx, profile, timeoutSeconds)
+		return s.testPostgresProfile(ctx, profile, timeoutSeconds)
 	case "mysql", "mariadb":
-		return testMySQLProfile(ctx, profile, timeoutSeconds)
+		return s.testMySQLProfile(ctx, profile, timeoutSeconds)
 	case "sqlserver":
-		return testSQLServerProfile(ctx, profile, timeoutSeconds)
+		return s.testSQLServerProfile(ctx, profile, timeoutSeconds)
 	case "duckdb":
 		return testDuckDBProfile(ctx, profile, timeoutSeconds)
 	case "sqlite":
@@ -121,11 +121,11 @@ func (s *Service) QueryConnectorProfileContext(ctx context.Context, profile Conn
 	}
 	switch strings.ToLower(profile.Kind) {
 	case "postgres":
-		return queryPostgresProfileContext(ctx, profile, request, query)
+		return s.queryPostgresProfileContext(ctx, profile, request, query)
 	case "mysql", "mariadb":
-		return queryMySQLProfileContext(ctx, profile, request, query)
+		return s.queryMySQLProfileContext(ctx, profile, request, query)
 	case "sqlserver":
-		return querySQLServerProfileContext(ctx, profile, request, query)
+		return s.querySQLServerProfileContext(ctx, profile, request, query)
 	case "duckdb":
 		return queryDuckDBProfileContext(ctx, profile, request, query)
 	case "sqlite":
@@ -135,18 +135,14 @@ func (s *Service) QueryConnectorProfileContext(ctx context.Context, profile Conn
 	}
 }
 
-func testPostgresProfile(ctx context.Context, profile ConnectorProfile, timeoutSeconds int) (ConnectorProfileStatus, error) {
+func (s *Service) testPostgresProfile(ctx context.Context, profile ConnectorProfile, timeoutSeconds int) (ConnectorProfileStatus, error) {
 	if err := requirePostgresProfile(profile); err != nil {
 		return ConnectorProfileStatus{}, err
 	}
-	db, err := sql.Open("pgx", postgresDSN(profile, timeoutSeconds))
+	db, err := s.externalConnectorDB(profile, "pgx", postgresDSN(profile, timeoutSeconds))
 	if err != nil {
 		return ConnectorProfileStatus{}, connectorError(err)
 	}
-	defer db.Close()
-	db.SetMaxOpenConns(1)
-	db.SetMaxIdleConns(1)
-	db.SetConnMaxLifetime(time.Duration(timeoutSeconds) * time.Second)
 	conn, err := db.Conn(ctx)
 	if err != nil {
 		return ConnectorProfileStatus{}, connectorError(err)
@@ -172,18 +168,14 @@ func testPostgresProfile(ctx context.Context, profile ConnectorProfile, timeoutS
 	}, nil
 }
 
-func queryPostgresProfileContext(ctx context.Context, profile ConnectorProfile, request ConnectorQueryRequest, query string) (ConnectorQueryResult, error) {
+func (s *Service) queryPostgresProfileContext(ctx context.Context, profile ConnectorProfile, request ConnectorQueryRequest, query string) (ConnectorQueryResult, error) {
 	if err := requirePostgresProfile(profile); err != nil {
 		return ConnectorQueryResult{}, err
 	}
-	db, err := sql.Open("pgx", postgresDSN(profile, request.TimeoutSeconds))
+	db, err := s.externalConnectorDB(profile, "pgx", postgresDSN(profile, request.TimeoutSeconds))
 	if err != nil {
 		return ConnectorQueryResult{}, connectorError(err)
 	}
-	defer db.Close()
-	db.SetMaxOpenConns(1)
-	db.SetMaxIdleConns(1)
-	db.SetConnMaxLifetime(time.Duration(request.TimeoutSeconds) * time.Second)
 	conn, err := db.Conn(ctx)
 	if err != nil {
 		return ConnectorQueryResult{}, connectorError(err)
@@ -198,18 +190,14 @@ func queryPostgresProfileContext(ctx context.Context, profile ConnectorProfile, 
 	return runConnectorQuery(ctx, conn, profile, request, query, "postgres-readonly", "PostgreSQL")
 }
 
-func testMySQLProfile(ctx context.Context, profile ConnectorProfile, timeoutSeconds int) (ConnectorProfileStatus, error) {
+func (s *Service) testMySQLProfile(ctx context.Context, profile ConnectorProfile, timeoutSeconds int) (ConnectorProfileStatus, error) {
 	if err := requireMySQLProfile(profile); err != nil {
 		return ConnectorProfileStatus{}, err
 	}
-	db, err := sql.Open("mysql", mysqlDSN(profile, timeoutSeconds))
+	db, err := s.externalConnectorDB(profile, "mysql", mysqlDSN(profile, timeoutSeconds))
 	if err != nil {
 		return ConnectorProfileStatus{}, connectorError(err)
 	}
-	defer db.Close()
-	db.SetMaxOpenConns(1)
-	db.SetMaxIdleConns(1)
-	db.SetConnMaxLifetime(time.Duration(timeoutSeconds) * time.Second)
 	conn, err := db.Conn(ctx)
 	if err != nil {
 		return ConnectorProfileStatus{}, connectorError(err)
@@ -236,18 +224,14 @@ func testMySQLProfile(ctx context.Context, profile ConnectorProfile, timeoutSeco
 	}, nil
 }
 
-func queryMySQLProfileContext(ctx context.Context, profile ConnectorProfile, request ConnectorQueryRequest, query string) (ConnectorQueryResult, error) {
+func (s *Service) queryMySQLProfileContext(ctx context.Context, profile ConnectorProfile, request ConnectorQueryRequest, query string) (ConnectorQueryResult, error) {
 	if err := requireMySQLProfile(profile); err != nil {
 		return ConnectorQueryResult{}, err
 	}
-	db, err := sql.Open("mysql", mysqlDSN(profile, request.TimeoutSeconds))
+	db, err := s.externalConnectorDB(profile, "mysql", mysqlDSN(profile, request.TimeoutSeconds))
 	if err != nil {
 		return ConnectorQueryResult{}, connectorError(err)
 	}
-	defer db.Close()
-	db.SetMaxOpenConns(1)
-	db.SetMaxIdleConns(1)
-	db.SetConnMaxLifetime(time.Duration(request.TimeoutSeconds) * time.Second)
 	conn, err := db.Conn(ctx)
 	if err != nil {
 		return ConnectorQueryResult{}, connectorError(err)
@@ -263,18 +247,14 @@ func queryMySQLProfileContext(ctx context.Context, profile ConnectorProfile, req
 	return runConnectorQuery(ctx, conn, profile, request, query, mysqlEngine(profile), mysqlDisplayName(profile))
 }
 
-func testSQLServerProfile(ctx context.Context, profile ConnectorProfile, timeoutSeconds int) (ConnectorProfileStatus, error) {
+func (s *Service) testSQLServerProfile(ctx context.Context, profile ConnectorProfile, timeoutSeconds int) (ConnectorProfileStatus, error) {
 	if err := requireSQLServerProfile(profile); err != nil {
 		return ConnectorProfileStatus{}, err
 	}
-	db, err := sql.Open("sqlserver", sqlServerDSN(profile, timeoutSeconds))
+	db, err := s.externalConnectorDB(profile, "sqlserver", sqlServerDSN(profile, timeoutSeconds))
 	if err != nil {
 		return ConnectorProfileStatus{}, connectorError(err)
 	}
-	defer db.Close()
-	db.SetMaxOpenConns(1)
-	db.SetMaxIdleConns(1)
-	db.SetConnMaxLifetime(time.Duration(timeoutSeconds) * time.Second)
 	conn, err := db.Conn(ctx)
 	if err != nil {
 		return ConnectorProfileStatus{}, connectorError(err)
@@ -301,18 +281,14 @@ func testSQLServerProfile(ctx context.Context, profile ConnectorProfile, timeout
 	}, nil
 }
 
-func querySQLServerProfileContext(ctx context.Context, profile ConnectorProfile, request ConnectorQueryRequest, query string) (ConnectorQueryResult, error) {
+func (s *Service) querySQLServerProfileContext(ctx context.Context, profile ConnectorProfile, request ConnectorQueryRequest, query string) (ConnectorQueryResult, error) {
 	if err := requireSQLServerProfile(profile); err != nil {
 		return ConnectorQueryResult{}, err
 	}
-	db, err := sql.Open("sqlserver", sqlServerDSN(profile, request.TimeoutSeconds))
+	db, err := s.externalConnectorDB(profile, "sqlserver", sqlServerDSN(profile, request.TimeoutSeconds))
 	if err != nil {
 		return ConnectorQueryResult{}, connectorError(err)
 	}
-	defer db.Close()
-	db.SetMaxOpenConns(1)
-	db.SetMaxIdleConns(1)
-	db.SetConnMaxLifetime(time.Duration(request.TimeoutSeconds) * time.Second)
 	conn, err := db.Conn(ctx)
 	if err != nil {
 		return ConnectorQueryResult{}, connectorError(err)

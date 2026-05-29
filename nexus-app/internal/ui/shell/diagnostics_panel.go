@@ -67,6 +67,7 @@ type diagnosticsSnapshot struct {
 	ProtectedSecretStatus   protectedsecretSvc.BackendStatus
 	ConnectorProfiles       []dbconnectorSvc.ConnectorProfile
 	ConnectorProfilesError  string
+	ConnectorPools          []dbconnectorSvc.ConnectorPoolStatus
 	RuntimeSummary          []string
 	ExternalAgentTools      []externalagentsSvc.ToolStatus
 	RecentJobFailures       []string
@@ -294,6 +295,9 @@ func (v *View) collectDiagnosticsSnapshot(root string, activityTail []string) di
 				snapshot.Warnings = append(snapshot.Warnings, fmt.Sprintf("Connector profile %q uses development plaintext transport.", firstNonEmptyString(profile.Name, profile.ID)))
 			}
 		}
+	}
+	if v.dbconnectorService != nil {
+		snapshot.ConnectorPools = v.dbconnectorService.ConnectorPoolStatuses()
 	}
 	if err := readinessSvc.ValidateProductionFailureScenarios(snapshot.FailureScenarios); err != nil {
 		snapshot.FailureScenarioIssue = err.Error()
@@ -634,6 +638,9 @@ func formatDiagnosticsSnapshot(snapshot diagnosticsSnapshot) string {
 	builder.WriteString("\n## Connector Transport\n")
 	builder.WriteString(formatDiagnosticsConnectorTransport(snapshot))
 
+	builder.WriteString("\n## Connector Pools\n")
+	builder.WriteString(formatDiagnosticsConnectorPools(snapshot.ConnectorPools))
+
 	builder.WriteString("\n## Metadata\n")
 	if snapshot.MetadataError != "" {
 		builder.WriteString("Status: warning - ")
@@ -801,6 +808,29 @@ func formatDiagnosticsConnectorTransport(snapshot diagnosticsSnapshot) string {
 		builder.WriteString(firstNonEmptyString(profile.Kind, "unknown"))
 		builder.WriteString("]: ")
 		builder.WriteString(connectorResolvedTransportLabel(profile))
+		builder.WriteString("\n")
+	}
+	return builder.String()
+}
+
+func formatDiagnosticsConnectorPools(pools []dbconnectorSvc.ConnectorPoolStatus) string {
+	if len(pools) == 0 {
+		return "No external connector pools are currently open.\n"
+	}
+	var builder strings.Builder
+	builder.WriteString(fmt.Sprintf("%d external connector pool(s) open.\n", len(pools)))
+	for _, pool := range pools {
+		builder.WriteString("- ")
+		builder.WriteString(firstNonEmptyString(pool.Name, pool.ProfileID, "connector profile"))
+		builder.WriteString(" [")
+		builder.WriteString(firstNonEmptyString(pool.Kind, "unknown"))
+		builder.WriteString("/")
+		builder.WriteString(firstNonEmptyString(pool.Driver, "driver"))
+		builder.WriteString(fmt.Sprintf("]: open=%d in_use=%d idle=%d max=%d", pool.OpenConnections, pool.InUse, pool.Idle, pool.MaxOpenConnections))
+		if !pool.LastUsed.IsZero() {
+			builder.WriteString(" last_used=")
+			builder.WriteString(pool.LastUsed.Local().Format("2006-01-02 15:04:05"))
+		}
 		builder.WriteString("\n")
 	}
 	return builder.String()
