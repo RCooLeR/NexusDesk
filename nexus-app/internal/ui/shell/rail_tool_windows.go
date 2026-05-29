@@ -42,6 +42,7 @@ func leftRailToolWindows() []leftRailToolWindow {
 func (v *View) openLeftRailToolWindow(tool leftRailToolWindow) {
 	if tool.OpenProject {
 		v.openHomeTab()
+		v.setLeftRailActive(tool.Label)
 		v.addActivity(tool.Activity)
 		return
 	}
@@ -53,5 +54,6 @@ func (v *View) openLeftRailToolWindow(tool leftRailToolWindow) {
 		v.addActivity(tool.Label + " panel is unavailable.")
 		return
 	}
+	v.setLeftRailActive(tool.Label)
 	v.addActivity(tool.Activity)
 }

@@ -158,6 +158,7 @@ Goal: preserve the old app, establish the native shell, and make the new archite
 - [x] Add first JetBrains-like left tool-window rail for Project, Search, Problems, Git, Tasks, Jobs, Data, Artifacts, Operations, and Diagnostics.
 - [x] Add first JetBrains-like right tool-window rail for Assistant, Sources, Artifact Lineage, Job Monitor, and Inspector/Diagnostics.
 - [x] Add keyboard-reachable tool-window rail shortcuts for left/right native rails.
+- [x] Add active-state polish for left/right tool-window rails when opened by rail actions, shortcuts, or grouped bottom-tab selection.
 - [x] Add keyboard shortcut registry for common IDE actions.
 - [x] Add first resizable native shell layout with a labeled product rail, resizable assistant/sidebar split, resizable bottom workbench split, and grouped Data actions.
 

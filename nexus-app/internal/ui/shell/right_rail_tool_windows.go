@@ -39,6 +39,7 @@ func (v *View) openRightRailToolWindow(tool rightRailToolWindow) {
 		if v.window != nil && v.assistantPrompt != nil {
 			v.window.Canvas().Focus(v.assistantPrompt)
 		}
+		v.setRightRailActive(tool.Label)
 		v.addActivity(tool.Activity)
 		return
 	}
@@ -50,5 +51,6 @@ func (v *View) openRightRailToolWindow(tool rightRailToolWindow) {
 		v.addActivity(tool.Label + " panel is unavailable.")
 		return
 	}
+	v.setRightRailActive(tool.Label)
 	v.addActivity(tool.Activity)
 }

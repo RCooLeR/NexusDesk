@@ -54,6 +54,10 @@ type View struct {
 	toolbarWorkspaceStatus   *widget.Label
 	toolbarBranchStatus      *widget.Label
 	toolbarProviderStatus    *widget.Label
+	leftRailButtons          map[string]*widget.Button
+	rightRailButtons         map[string]*widget.Button
+	activeLeftRailTool       string
+	activeRightRailTool      string
 	navigator                *fyne.Container
 	navigatorTree            *widget.Tree
 	navigatorStore           *treeStore

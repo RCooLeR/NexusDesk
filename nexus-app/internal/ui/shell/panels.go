@@ -16,13 +16,18 @@ func (v *View) newRail() fyne.CanvasObject {
 	logo.FillMode = canvas.ImageFillContain
 	logo.SetMinSize(fyne.NewSize(128, 38))
 	railButtons := make([]fyne.CanvasObject, 0, len(leftRailToolWindows())+4)
+	v.leftRailButtons = map[string]*widget.Button{}
+	v.activeLeftRailTool = "Project"
 	railButtons = append(railButtons, widget.NewLabelWithStyle("Tool Windows", fyne.TextAlignLeading, fyne.TextStyle{Bold: true}))
 	for _, tool := range leftRailToolWindows() {
 		tool := tool
-		railButtons = append(railButtons, widget.NewButtonWithIcon(tool.ButtonLabel(), tool.Icon, func() {
+		button := widget.NewButtonWithIcon(tool.ButtonLabel(), tool.Icon, func() {
 			v.openLeftRailToolWindow(tool)
-		}))
+		})
+		v.leftRailButtons[tool.Label] = button
+		railButtons = append(railButtons, button)
 	}
+	v.refreshRailActiveState()
 	settingsButton := widget.NewButtonWithIcon("Settings", theme.SettingsIcon(), v.openSettingsTab)
 	return container.NewPadded(container.NewVBox(
 		logo,
@@ -35,13 +40,18 @@ func (v *View) newRail() fyne.CanvasObject {
 
 func (v *View) newRightRail() fyne.CanvasObject {
 	railButtons := make([]fyne.CanvasObject, 0, len(rightRailToolWindows())+1)
+	v.rightRailButtons = map[string]*widget.Button{}
+	v.activeRightRailTool = "Assistant"
 	railButtons = append(railButtons, widget.NewLabelWithStyle("AI Tools", fyne.TextAlignCenter, fyne.TextStyle{Bold: true}))
 	for _, tool := range rightRailToolWindows() {
 		tool := tool
-		railButtons = append(railButtons, widget.NewButtonWithIcon(tool.ButtonLabel(), tool.Icon, func() {
+		button := widget.NewButtonWithIcon(tool.ButtonLabel(), tool.Icon, func() {
 			v.openRightRailToolWindow(tool)
-		}))
+		})
+		v.rightRailButtons[tool.Label] = button
+		railButtons = append(railButtons, button)
 	}
+	v.refreshRailActiveState()
 	return container.NewPadded(container.NewVBox(railButtons...))
 }
 
@@ -91,7 +101,7 @@ func (v *View) newBottomPanel() fyne.CanvasObject {
 	activity := container.NewScroll(v.activityLog)
 	activity.SetMinSize(fyne.NewSize(200, 90))
 	tabs := container.NewAppTabs(
-		bottomTabGroup("Workbench", theme.HomeIcon(),
+		v.bottomTabGroup("Workbench", theme.HomeIcon(),
 			container.NewTabItemWithIcon("Activity", theme.HistoryIcon(), activity),
 			container.NewTabItemWithIcon("Search", theme.SearchIcon(), v.newSearchPanel()),
 			container.NewTabItemWithIcon("Problems", theme.WarningIcon(), v.newProblemsPanel()),
@@ -100,28 +110,38 @@ func (v *View) newBottomPanel() fyne.CanvasObject {
 			container.NewTabItemWithIcon("Jobs", theme.ListIcon(), v.newJobsPanel()),
 			container.NewTabItemWithIcon("Rollbacks", theme.ContentUndoIcon(), v.newRollbackPanel()),
 		),
-		bottomTabGroup("Data Studio", theme.StorageIcon(),
+		v.bottomTabGroup("Data Studio", theme.StorageIcon(),
 			container.NewTabItemWithIcon("Data", theme.StorageIcon(), v.newDataPanel()),
 			container.NewTabItemWithIcon("Operations", theme.ComputerIcon(), v.newOperationsPanel()),
 			container.NewTabItemWithIcon("Artifacts", theme.DocumentIcon(), v.newArtifactsPanel()),
 		),
-		bottomTabGroup("Knowledge", theme.InfoIcon(),
+		v.bottomTabGroup("Knowledge", theme.InfoIcon(),
 			container.NewTabItemWithIcon("History", theme.InfoIcon(), v.newHistoryPanel()),
 			container.NewTabItemWithIcon("Chat", theme.MailComposeIcon(), v.newChatHistoryPanel()),
 			container.NewTabItemWithIcon("Agent Audit", theme.InfoIcon(), v.newAgentAuditPanel()),
 		),
-		bottomTabGroup("System", theme.VisibilityIcon(),
+		v.bottomTabGroup("System", theme.VisibilityIcon(),
 			container.NewTabItemWithIcon("Diagnostics", theme.VisibilityIcon(), v.newDiagnosticsPanel()),
 			container.NewTabItemWithIcon("Approvals", theme.ConfirmIcon(), v.newApprovalsPanel()),
 		),
 	)
 	tabs.SetTabLocation(container.TabLocationTop)
+	tabs.OnSelected = func(item *container.TabItem) {
+		if item != nil {
+			v.updateRailActiveStateForTab(item.Text)
+		}
+	}
 	v.bottomTabs = tabs
 	return tabs
 }
 
-func bottomTabGroup(title string, icon fyne.Resource, items ...*container.TabItem) *container.TabItem {
+func (v *View) bottomTabGroup(title string, icon fyne.Resource, items ...*container.TabItem) *container.TabItem {
 	tabs := container.NewAppTabs(items...)
 	tabs.SetTabLocation(container.TabLocationTop)
+	tabs.OnSelected = func(item *container.TabItem) {
+		if item != nil {
+			v.updateRailActiveStateForTab(item.Text)
+		}
+	}
 	return container.NewTabItemWithIcon(title, icon, tabs)
 }

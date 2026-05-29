@@ -10,7 +10,11 @@ func (v *View) selectBottomTab(title string) bool {
 	if v.bottomTabs == nil {
 		return false
 	}
-	return selectAppTabByTitle(v.bottomTabs, title)
+	if !selectAppTabByTitle(v.bottomTabs, title) {
+		return false
+	}
+	v.updateRailActiveStateForTab(title)
+	return true
 }
 
 func selectAppTabByTitle(tabs *container.AppTabs, title string) bool {
