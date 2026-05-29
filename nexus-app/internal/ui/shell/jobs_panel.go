@@ -16,35 +16,73 @@ import (
 	metadataSvc "nexusdesk/internal/services/metadata"
 )
 
+type jobsController struct {
+	view    *View
+	results *fyne.Container
+	status  *widget.Label
+}
+
+func newJobsController(view *View) *jobsController {
+	return &jobsController{
+		view:    view,
+		results: container.NewVBox(widget.NewLabel("Run a task to create a job record.")),
+		status:  widget.NewLabel("No jobs yet."),
+	}
+}
+
 func (v *View) newJobsPanel() fyne.CanvasObject {
-	refresh := widget.NewButtonWithIcon("Refresh", theme.ViewRefreshIcon(), v.refreshJobs)
-	cleanup := widget.NewButtonWithIcon("Clean Up", theme.DeleteIcon(), v.confirmPruneJobs)
-	header := container.NewBorder(nil, nil, v.jobStatus, container.NewHBox(refresh, cleanup))
-	scroll := container.NewScroll(v.jobResults)
+	return v.jobs.Panel()
+}
+
+func (v *View) refreshJobs() {
+	v.jobs.Refresh()
+}
+
+func (v *View) cancelJob(id string) {
+	v.jobs.Cancel(id)
+}
+
+func (v *View) confirmPruneJobs() {
+	v.jobs.ConfirmPrune()
+}
+
+func (v *View) confirmRetryJob(id string) {
+	v.jobs.ConfirmRetry(id)
+}
+
+func (v *View) openJobOutput(id string) {
+	v.jobs.OpenOutput(id)
+}
+
+func (c *jobsController) Panel() fyne.CanvasObject {
+	refresh := widget.NewButtonWithIcon("Refresh", theme.ViewRefreshIcon(), c.Refresh)
+	cleanup := widget.NewButtonWithIcon("Clean Up", theme.DeleteIcon(), c.ConfirmPrune)
+	header := container.NewBorder(nil, nil, c.status, container.NewHBox(refresh, cleanup))
+	scroll := container.NewScroll(c.results)
 	scroll.SetMinSize(fyne.NewSize(240, 110))
 	return container.NewBorder(header, nil, nil, nil, scroll)
 }
 
-func (v *View) refreshJobs() {
-	jobs := v.jobService.List()
+func (c *jobsController) Refresh() {
+	jobs := c.view.jobService.List()
 	status := fmt.Sprintf("%d job(s)", len(jobs))
-	if issue, ok := v.jobService.PersistenceIssue(); ok {
+	if issue, ok := c.view.jobService.PersistenceIssue(); ok {
 		status = fmt.Sprintf("%s - persistence warning on %s: %s", status, firstNonEmptyString(issue.JobID, "latest job"), issue.Error)
 	}
-	v.jobStatus.SetText(status)
-	v.jobResults.Objects = jobRows(jobs, v.cancelJob, v.confirmRetryJob, v.openJobOutput, v.taskRunsByJob(), v.artifactOutputsByJob())
-	v.jobResults.Refresh()
-	v.refreshStatusBar()
+	c.status.SetText(status)
+	c.results.Objects = jobRows(jobs, c.Cancel, c.ConfirmRetry, c.OpenOutput, c.view.taskRunsByJob(), c.view.artifactOutputsByJob())
+	c.results.Refresh()
+	c.view.refreshStatusBar()
 }
 
-func (v *View) cancelJob(id string) {
-	if v.jobService.Cancel(id) {
-		v.addActivity("Cancel requested for " + id + ".")
+func (c *jobsController) Cancel(id string) {
+	if c.view.jobService.Cancel(id) {
+		c.view.addActivity("Cancel requested for " + id + ".")
 	}
-	v.refreshJobs()
+	c.Refresh()
 }
 
-func (v *View) confirmPruneJobs() {
+func (c *jobsController) ConfirmPrune() {
 	policy := jobsSvc.DefaultRetentionPolicy()
 	message := fmt.Sprintf(
 		"Remove completed successful/canceled jobs older than %s or beyond the latest %d retained records. Running jobs and failed/timed-out jobs are kept.",
@@ -55,70 +93,70 @@ func (v *View) confirmPruneJobs() {
 		if !confirm {
 			return
 		}
-		result, err := v.jobService.Prune(policy)
+		result, err := c.view.jobService.Prune(policy)
 		if err != nil {
-			dialog.ShowError(err, v.window)
-			v.addActivity("Job history cleanup failed: " + err.Error())
+			dialog.ShowError(err, c.view.window)
+			c.view.addActivity("Job history cleanup failed: " + err.Error())
 			return
 		}
-		v.jobStatus.SetText(fmt.Sprintf("Removed %d job(s); kept %d.", result.Removed, result.Kept+result.RunningKept+result.FailuresKept))
-		v.addActivity(fmt.Sprintf("Cleaned up %d completed job(s); running and failed jobs were preserved.", result.Removed))
-		v.refreshJobs()
-	}, v.window)
+		c.status.SetText(fmt.Sprintf("Removed %d job(s); kept %d.", result.Removed, result.Kept+result.RunningKept+result.FailuresKept))
+		c.view.addActivity(fmt.Sprintf("Cleaned up %d completed job(s); running and failed jobs were preserved.", result.Removed))
+		c.Refresh()
+	}, c.view.window)
 }
 
-func (v *View) confirmRetryJob(id string) {
-	record, ok := v.latestTaskRunForJob(id)
+func (c *jobsController) ConfirmRetry(id string) {
+	record, ok := c.view.latestTaskRunForJob(id)
 	if !ok {
-		v.jobStatus.SetText("No persisted task run found for " + id + ".")
+		c.status.SetText("No persisted task run found for " + id + ".")
 		return
 	}
-	workspace := v.state.Workspace()
+	workspace := c.view.state.Workspace()
 	if workspace.Root == "" {
-		v.jobStatus.SetText("Open a workspace before retrying a job.")
+		c.status.SetText("Open a workspace before retrying a job.")
 		return
 	}
-	task, found, err := v.taskService.Find(workspace.Root, record.TaskID)
+	task, found, err := c.view.taskService.Find(workspace.Root, record.TaskID)
 	if err != nil {
-		dialog.ShowError(err, v.window)
+		dialog.ShowError(err, c.view.window)
 		return
 	}
 	if !found {
-		v.jobStatus.SetText("Task is no longer discoverable: " + record.TaskID + ".")
-		v.addActivity("Retry blocked because task is no longer discoverable: " + record.TaskID + ".")
+		c.status.SetText("Task is no longer discoverable: " + record.TaskID + ".")
+		c.view.addActivity("Retry blocked because task is no longer discoverable: " + record.TaskID + ".")
 		return
 	}
 	dialog.ShowConfirm("Retry task", "Run "+task.Label+" again?", func(confirm bool) {
 		if !confirm {
 			return
 		}
-		v.runTask(task)
-	}, v.window)
+		c.view.runTask(task)
+	}, c.view.window)
 }
 
-func (v *View) openJobOutput(id string) {
-	record, ok := v.latestTaskRunForJob(id)
+func (c *jobsController) OpenOutput(id string) {
+	record, ok := c.view.latestTaskRunForJob(id)
 	if !ok {
-		if artifact, hasArtifact := v.latestArtifactOutputForJob(id); hasArtifact {
-			if v.openArtifactOutputByPath(artifact.RelPath, "Opened artifact output "+artifact.RelPath+".") {
+		if artifact, hasArtifact := c.view.latestArtifactOutputForJob(id); hasArtifact {
+			if c.view.openArtifactOutputByPath(artifact.RelPath, "Opened artifact output "+artifact.RelPath+".") {
 				return
 			}
 		}
-		if job, hasJob := v.jobService.Get(id); hasJob {
-			v.taskOutput.SetText(formatJobRecord(job))
-			v.taskStatus.SetText("Opened job output for " + id + ".")
-			v.addActivity("Opened job output for " + id + ".")
+		if job, hasJob := c.view.jobService.Get(id); hasJob {
+			c.view.taskOutput.SetText(formatJobRecord(job))
+			c.view.taskStatus.SetText("Opened job output for " + id + ".")
+			c.view.addActivity("Opened job output for " + id + ".")
 			return
 		}
-		v.jobStatus.SetText("No persisted output found for " + id + ".")
+		c.status.SetText("No persisted output found for " + id + ".")
 		return
 	}
-	if strings.TrimSpace(record.ArtifactPath) != "" && v.openTaskRunArtifactOutput(record) {
+	if strings.TrimSpace(record.ArtifactPath) != "" && c.view.openTaskRunArtifactOutput(record) {
 		return
 	}
-	v.taskOutput.SetText(formatTaskRunRecord(record))
-	v.taskStatus.SetText("Opened task output for " + id + ".")
-	v.addActivity("Opened task output for " + id + ".")
+	c.view.taskOutput.SetText(formatTaskRunRecord(record))
+	c.view.taskStatus.SetText("Opened task output for " + id + ".")
+	c.view.addActivity("Opened task output for " + id + ".")
 }
 
 func (v *View) openTaskRunArtifactOutput(record metadataSvc.TaskRunRecord) bool {

@@ -5,9 +5,56 @@ import (
 	"testing"
 	"time"
 
+	fynetest "fyne.io/fyne/v2/test"
+
 	jobsSvc "nexusdesk/internal/services/jobs"
 	metadataSvc "nexusdesk/internal/services/metadata"
 )
+
+func TestJobsControllerInitialState(t *testing.T) {
+	_ = fynetest.NewTempApp(t)
+
+	view := &View{}
+	controller := newJobsController(view)
+
+	if controller.status.Text != "No jobs yet." {
+		t.Fatalf("expected initial jobs status, got %q", controller.status.Text)
+	}
+	if len(controller.results.Objects) != 1 {
+		t.Fatalf("expected one placeholder row, got %d", len(controller.results.Objects))
+	}
+}
+
+func TestJobsControllerRefreshEmpty(t *testing.T) {
+	_ = fynetest.NewTempApp(t)
+
+	view := &View{jobService: jobsSvc.New()}
+	controller := newJobsController(view)
+	view.jobs = controller
+
+	controller.Refresh()
+
+	if controller.status.Text != "0 job(s)" {
+		t.Fatalf("expected empty jobs status, got %q", controller.status.Text)
+	}
+	if len(controller.results.Objects) != 1 {
+		t.Fatalf("expected one empty result row, got %d", len(controller.results.Objects))
+	}
+}
+
+func TestJobsControllerOpenMissingOutputUpdatesStatus(t *testing.T) {
+	_ = fynetest.NewTempApp(t)
+
+	view := &View{jobService: jobsSvc.New()}
+	controller := newJobsController(view)
+	view.jobs = controller
+
+	controller.OpenOutput("job-missing")
+
+	if controller.status.Text != "No persisted output found for job-missing." {
+		t.Fatalf("expected missing output status, got %q", controller.status.Text)
+	}
+}
 
 func TestJobSummaryIncludesMessageErrorAndTail(t *testing.T) {
 	summary := jobSummary(jobsSvc.Job{
