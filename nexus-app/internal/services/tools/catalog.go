@@ -23,6 +23,81 @@ type ToolCatalogEntry struct {
 	Controls   []string
 }
 
+type ToolCatalogHealth struct {
+	ImplementedCount int
+	PlannedCount     int
+	Violations       []string
+}
+
+func (health ToolCatalogHealth) OK() bool {
+	return len(health.Violations) == 0
+}
+
+func ValidateDefaultToolCatalog() ToolCatalogHealth {
+	dispatcher := NewDefaultDispatcher(Dependencies{})
+	return ValidateToolCatalog(DefaultToolCatalog(), dispatcher.ToolDescriptors())
+}
+
+func ValidateToolCatalog(entries []ToolCatalogEntry, descriptors []agent.ToolDescriptor) ToolCatalogHealth {
+	health := ToolCatalogHealth{}
+	executable := map[string]bool{}
+	for _, descriptor := range descriptors {
+		name := strings.TrimSpace(descriptor.Name)
+		if name == "" {
+			health.Violations = append(health.Violations, "executable tool descriptor is missing a name")
+			continue
+		}
+		if executable[name] {
+			health.Violations = append(health.Violations, fmt.Sprintf("executable tool %q is registered more than once", name))
+		}
+		executable[name] = true
+	}
+
+	implemented := map[string]bool{}
+	planned := map[string]bool{}
+	for _, entry := range entries {
+		name := strings.TrimSpace(entry.Descriptor.Name)
+		if name == "" {
+			health.Violations = append(health.Violations, "catalog entry is missing a tool name")
+			continue
+		}
+		switch entry.Status {
+		case ToolStatusImplemented:
+			health.ImplementedCount++
+			if implemented[name] {
+				health.Violations = append(health.Violations, fmt.Sprintf("implemented tool %q appears more than once in the catalog", name))
+			}
+			implemented[name] = true
+			if !executable[name] {
+				health.Violations = append(health.Violations, fmt.Sprintf("implemented tool %q is not executable", name))
+			}
+		case ToolStatusPlanned:
+			health.PlannedCount++
+			if planned[name] {
+				health.Violations = append(health.Violations, fmt.Sprintf("planned tool %q appears more than once in the catalog", name))
+			}
+			planned[name] = true
+			if executable[name] {
+				health.Violations = append(health.Violations, fmt.Sprintf("planned tool %q is registered as executable", name))
+			}
+		default:
+			health.Violations = append(health.Violations, fmt.Sprintf("tool %q has unknown catalog status %q", name, entry.Status))
+		}
+		for _, control := range security.ControlsForRisk(entry.Descriptor.Risk) {
+			if !containsControl(entry.Controls, control) {
+				health.Violations = append(health.Violations, fmt.Sprintf("tool %q risk %q is missing control %q", name, entry.Descriptor.Risk, control))
+			}
+		}
+	}
+	for name := range executable {
+		if !implemented[name] {
+			health.Violations = append(health.Violations, fmt.Sprintf("executable tool %q is missing from the implemented catalog", name))
+		}
+	}
+	sort.Strings(health.Violations)
+	return health
+}
+
 func DefaultToolCatalog() []ToolCatalogEntry {
 	implemented := implementedToolCatalog(NewDefaultDispatcher(Dependencies{}).ToolDescriptors())
 	planned := plannedToolCatalog()
@@ -118,6 +193,15 @@ func plannedTool(category string, name string, description string, risk string, 
 		Notes:      notes,
 		Controls:   security.ControlsForRisk(risk),
 	}
+}
+
+func containsControl(controls []string, expected string) bool {
+	for _, control := range controls {
+		if control == expected {
+			return true
+		}
+	}
+	return false
 }
 
 func implementedToolCategory(name string) string {

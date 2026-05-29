@@ -409,6 +409,7 @@ Exit criteria:
 - [x] Diagnostics panel for provider status, metadata health, job history, app logs, GPU/model runtime, and recent failures.
 - [~] Audit coverage for connector jobs, OCR, dump imports, Docker mutations, shell tools, and future high-risk operations: shared threat-model/control registry now defines required controls before these workflows become executable; per-workflow audit implementations remain future work.
 - [~] Failure tests for folder open, malformed files, corrupt metadata, missing providers, and canceled long work: readiness now owns an executable failure-scenario matrix with automated/manual evidence references, and Diagnostics/first-run readiness expose those production failure gates for release smoke; continue adding scenario-specific tests as new workflows land.
+- [x] Agent tool-registry health gate validates implemented/planned drift, required risk controls, and planned-tool non-executability, with Diagnostics surfacing registry health for release-candidate smoke.
 
 ### Gate 3: Packaging And Platform Beta
 
@@ -641,6 +642,7 @@ The Fyne migration must not drop product ambition, but this section is intention
 - [~] Extend audit coverage to future connector sync jobs, OCR, dump imports, terminal session history, and Docker mutations: `docs/28_THREAT_MODEL.md` and `internal/services/security` now define required controls; concrete workflow audit records land with each future implementation.
 - [x] Add durable slow-workflow contract for future external coding-agent CLI runs, prohibited from workspace-open and requiring explicit user start/audit.
 - [x] Add shared threat-model/control matrix for filesystem, connectors, jobs, terminal/shell, browser automation, Docker/system operations, generated artifacts, and MCP/plugins.
+- [x] Add native agent tool-registry validator and Diagnostics health card so planned browser/MCP/terminal/connector tools cannot silently become executable without safety controls.
 - [x] Export/backup flows for local-first data.
 
 ### Jobs, Persistence, And Observability

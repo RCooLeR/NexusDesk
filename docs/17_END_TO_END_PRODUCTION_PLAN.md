@@ -346,6 +346,7 @@ Already available:
 - Diagnostics for provider, metadata health, jobs, tasks, SQL, agent failures, runtime state.
 - Shared slow-workflow job contract and explicit user-start enforcement.
 - Shared threat-model/control registry for filesystem, connectors, jobs, terminal/shell, browser automation, Docker/system operations, generated artifacts, and MCP/plugins.
+- Agent tool-registry health gate that validates implemented/planned drift, required risk controls, and planned-tool non-executability in Diagnostics.
 - Readiness-owned production failure scenario matrix for folder-open cheapness, malformed files, corrupt metadata, missing providers, and canceled long work, surfaced in first-run readiness and Diagnostics for release-candidate smoke.
 
 Planned/remaining:

@@ -6,6 +6,7 @@ Rules:
 
 - Implemented tools are registered in `nexus-app/internal/services/tools` and may be called by the native agent.
 - Planned tools are roadmap contracts only. They must not appear as executable tool descriptors until backend validation, approval policy, audit logging, output caps, tests, and UI affordances exist.
+- The native catalog validator checks implemented/planned drift, required risk controls, and planned-tool non-executability; Diagnostics surfaces this as the Agent tool registry health card for release-candidate smoke.
 - Services remain framework-free. Fyne imports stay in UI/app/theme packages.
 - High-risk actions require explicit approval, audit, rollback or mitigation where practical, redaction, and bounded execution.
 - Workspace open must never run Git, Docker, terminal commands, connector pulls, model calls, browser automation, OCR, dump imports, or deep indexing automatically.

@@ -61,6 +61,55 @@ func TestDefaultToolCatalogAnnotatesRiskControls(t *testing.T) {
 	}
 }
 
+func TestValidateDefaultToolCatalogEnforcesPlannedToolGate(t *testing.T) {
+	health := ValidateDefaultToolCatalog()
+	if !health.OK() {
+		t.Fatalf("expected default tool catalog to be healthy, got %#v", health.Violations)
+	}
+	if health.ImplementedCount == 0 || health.PlannedCount == 0 {
+		t.Fatalf("expected implemented and planned counts, got %#v", health)
+	}
+}
+
+func TestValidateToolCatalogRejectsExecutablePlannedTool(t *testing.T) {
+	descriptor := agent.ToolDescriptor{Name: "browser_navigate", Risk: "medium"}
+	health := ValidateToolCatalog([]ToolCatalogEntry{{
+		Descriptor: descriptor,
+		Category:   "browser",
+		Status:     ToolStatusPlanned,
+		Controls:   []string{"rooted-scope", "approval", "audit", "timeout", "cancellation", "output-cap", "redaction"},
+	}}, []agent.ToolDescriptor{descriptor})
+	if health.OK() {
+		t.Fatalf("expected planned executable violation")
+	}
+	joined := strings.Join(health.Violations, "\n")
+	if !strings.Contains(joined, "planned tool \"browser_navigate\" is registered as executable") {
+		t.Fatalf("expected planned executable violation, got:\n%s", joined)
+	}
+}
+
+func TestValidateToolCatalogRejectsMissingRiskControls(t *testing.T) {
+	descriptor := agent.ToolDescriptor{Name: "dangerous_tool", Risk: "high"}
+	health := ValidateToolCatalog([]ToolCatalogEntry{{
+		Descriptor: descriptor,
+		Category:   "test",
+		Status:     ToolStatusImplemented,
+		Controls:   []string{"approval"},
+	}}, []agent.ToolDescriptor{descriptor})
+	if health.OK() {
+		t.Fatalf("expected missing control violations")
+	}
+	joined := strings.Join(health.Violations, "\n")
+	for _, expected := range []string{
+		"missing control \"audit\"",
+		"missing control \"rollback-or-mitigation\"",
+	} {
+		if !strings.Contains(joined, expected) {
+			t.Fatalf("expected %q in violations:\n%s", expected, joined)
+		}
+	}
+}
+
 func containsToolControl(controls []string, expected string) bool {
 	for _, control := range controls {
 		if control == expected {

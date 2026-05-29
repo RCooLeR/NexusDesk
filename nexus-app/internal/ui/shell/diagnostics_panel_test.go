@@ -15,6 +15,7 @@ import (
 	perfSvc "nexusdesk/internal/services/perf"
 	settingsSvc "nexusdesk/internal/services/settings"
 	startupSvc "nexusdesk/internal/services/startup"
+	toolsSvc "nexusdesk/internal/services/tools"
 )
 
 func TestDiagnosticsStatusLineReflectsProbeAndMetadataState(t *testing.T) {
@@ -112,6 +113,8 @@ func TestFormatDiagnosticsSnapshotIncludesCoreSections(t *testing.T) {
 		"startup-ready: 600ms",
 		"## Production Failure Gates",
 		"folder-open-cheap",
+		"## Agent Tool Registry",
+		"planned tools are roadmap-only",
 		"## Metadata",
 		"Status: ok",
 		"## Jobs",
@@ -154,6 +157,8 @@ func TestDiagnosticsHealthCardsSummarizeActionsAndWarnings(t *testing.T) {
 		"Jobs and runs|action|4 non-success item(s)",
 		"Performance|warning|At least one startup or folder-open timing is over budget.",
 		"Production failure gates|ok|5 scenario(s) cover crash/hang/provider/metadata/cancel release gates.",
+		"Agent tool registry|ok|",
+		"planned tools are not executable",
 		"Startup recovery|warning|Previous run did not record a clean exit.",
 		"Issue report|ok|Redacted diagnostics export is available",
 	} {
@@ -184,11 +189,41 @@ func TestDiagnosticsHealthCardsHealthySnapshot(t *testing.T) {
 		"Jobs and runs|ok|0 recent/in-memory",
 		"Performance|ok|1 timing record(s) captured and within budget.",
 		"Production failure gates|ok|5 scenario(s) cover crash/hang/provider/metadata/cancel release gates.",
+		"Agent tool registry|ok|",
 		"Startup recovery|ok|Clean-exit markers are active.",
 	} {
 		if !strings.Contains(joined, expected) {
 			t.Fatalf("expected healthy cards to contain %q, got:\n%s", expected, joined)
 		}
+	}
+}
+
+func TestDiagnosticsToolCatalogHealthCardWarnsOnRegistryDrift(t *testing.T) {
+	cards := diagnosticsHealthCards(diagnosticsSnapshot{
+		ToolCatalogHealth: toolsSvc.ToolCatalogHealth{
+			ImplementedCount: 10,
+			PlannedCount:     2,
+			Violations:       []string{"planned tool \"browser_navigate\" is registered as executable"},
+		},
+	})
+	joined := diagnosticsHealthCardText(cards)
+	for _, expected := range []string{
+		"Agent tool registry|warning|1 registry violation(s): planned tool \"browser_navigate\" is registered as executable",
+		"Fix catalog/dispatcher drift",
+	} {
+		if !strings.Contains(joined, expected) {
+			t.Fatalf("expected tool-registry warning to contain %q, got:\n%s", expected, joined)
+		}
+	}
+	text := formatDiagnosticsSnapshot(diagnosticsSnapshot{
+		ToolCatalogHealth: toolsSvc.ToolCatalogHealth{
+			ImplementedCount: 10,
+			PlannedCount:     2,
+			Violations:       []string{"planned tool \"browser_navigate\" is registered as executable"},
+		},
+	})
+	if !strings.Contains(text, "## Agent Tool Registry") || !strings.Contains(text, "Status: warning") {
+		t.Fatalf("expected warning registry section, got:\n%s", text)
 	}
 }
 

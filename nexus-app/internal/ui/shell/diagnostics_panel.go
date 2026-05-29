@@ -20,6 +20,7 @@ import (
 	readinessSvc "nexusdesk/internal/services/readiness"
 	settingsSvc "nexusdesk/internal/services/settings"
 	startupSvc "nexusdesk/internal/services/startup"
+	toolsSvc "nexusdesk/internal/services/tools"
 )
 
 const (
@@ -57,6 +58,7 @@ type diagnosticsSnapshot struct {
 	PerformanceTimings      []perfSvc.TimingRecord
 	FailureScenarios        []readinessSvc.FailureScenario
 	FailureScenarioIssue    string
+	ToolCatalogHealth       toolsSvc.ToolCatalogHealth
 	RuntimeSummary          []string
 	ExternalAgentTools      []externalagentsSvc.ToolStatus
 	RecentJobFailures       []string
@@ -223,11 +225,15 @@ func (v *View) collectDiagnosticsSnapshot(root string, activityTail []string) di
 		StartupRecovery:    v.startupStatus,
 		PerformanceTimings: v.performanceTimings(diagnosticsPerformanceLimit),
 		FailureScenarios:   readinessSvc.ProductionFailureScenarios(),
+		ToolCatalogHealth:  toolsSvc.ValidateDefaultToolCatalog(),
 		ExternalAgentTools: externalagentsSvc.Probe(externalagentsSvc.Options{}),
 	}
 	if err := readinessSvc.ValidateProductionFailureScenarios(snapshot.FailureScenarios); err != nil {
 		snapshot.FailureScenarioIssue = err.Error()
 		snapshot.Warnings = append(snapshot.Warnings, "Failure-scenario matrix warning: "+err.Error())
+	}
+	if !snapshot.ToolCatalogHealth.OK() {
+		snapshot.Warnings = append(snapshot.Warnings, "Tool registry warning: "+strings.Join(snapshot.ToolCatalogHealth.Violations, "; "))
 	}
 	if snapshot.StartupRecovery.PreviousUnclean {
 		snapshot.Warnings = append(snapshot.Warnings, snapshot.StartupRecovery.Message)
@@ -521,6 +527,9 @@ func formatDiagnosticsSnapshot(snapshot diagnosticsSnapshot) string {
 	builder.WriteString("\n## Production Failure Gates\n")
 	builder.WriteString(readinessSvc.FormatFailureScenarioMatrix(diagnosticsFailureScenarios(snapshot)))
 
+	builder.WriteString("\n## Agent Tool Registry\n")
+	builder.WriteString(formatDiagnosticsToolCatalogHealth(snapshot.ToolCatalogHealth))
+
 	builder.WriteString("\n## Metadata\n")
 	if snapshot.MetadataError != "" {
 		builder.WriteString("Status: warning - ")
@@ -591,6 +600,7 @@ func diagnosticsHealthCards(snapshot diagnosticsSnapshot) []diagnosticsHealthCar
 		diagnosticsJobsHealthCard(snapshot),
 		diagnosticsPerformanceHealthCard(snapshot),
 		diagnosticsFailureGatesHealthCard(snapshot),
+		diagnosticsToolCatalogHealthCard(snapshot),
 		diagnosticsStartupHealthCard(snapshot),
 		{
 			Label:  "Issue report",
@@ -599,6 +609,48 @@ func diagnosticsHealthCards(snapshot diagnosticsSnapshot) []diagnosticsHealthCar
 			Action: "Use Export issue report before sharing beta bugs or release-candidate failures.",
 		},
 	}
+}
+
+func diagnosticsToolCatalogHealthCard(snapshot diagnosticsSnapshot) diagnosticsHealthCard {
+	health := diagnosticsToolCatalogHealth(snapshot.ToolCatalogHealth)
+	if !health.OK() {
+		return diagnosticsHealthCard{
+			Label:  "Agent tool registry",
+			Status: "warning",
+			Detail: fmt.Sprintf("%d registry violation(s): %s", len(health.Violations), compactDiagnosticsLine(strings.Join(health.Violations, "; "), diagnosticsCompactMessageLimit)),
+			Action: "Fix catalog/dispatcher drift before enabling additional agent tools.",
+		}
+	}
+	return diagnosticsHealthCard{
+		Label:  "Agent tool registry",
+		Status: "ok",
+		Detail: fmt.Sprintf("%d implemented and %d planned tools validated; planned tools are not executable.", health.ImplementedCount, health.PlannedCount),
+		Action: "Use list_tool_catalog for detailed implemented/planned coverage.",
+	}
+}
+
+func diagnosticsToolCatalogHealth(health toolsSvc.ToolCatalogHealth) toolsSvc.ToolCatalogHealth {
+	if health.ImplementedCount == 0 && health.PlannedCount == 0 && len(health.Violations) == 0 {
+		return toolsSvc.ValidateDefaultToolCatalog()
+	}
+	return health
+}
+
+func formatDiagnosticsToolCatalogHealth(health toolsSvc.ToolCatalogHealth) string {
+	health = diagnosticsToolCatalogHealth(health)
+	var builder strings.Builder
+	builder.WriteString(fmt.Sprintf("Implemented tools: %d\nPlanned tools: %d\n", health.ImplementedCount, health.PlannedCount))
+	if health.OK() {
+		builder.WriteString("Status: ok - planned tools are roadmap-only and are not executable until their safety gates land.\n")
+		return builder.String()
+	}
+	builder.WriteString("Status: warning\nViolations:\n")
+	for _, violation := range health.Violations {
+		builder.WriteString("- ")
+		builder.WriteString(violation)
+		builder.WriteString("\n")
+	}
+	return builder.String()
 }
 
 func diagnosticsFailureGatesHealthCard(snapshot diagnosticsSnapshot) diagnosticsHealthCard {
