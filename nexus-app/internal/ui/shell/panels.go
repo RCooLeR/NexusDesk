@@ -33,6 +33,18 @@ func (v *View) newRail() fyne.CanvasObject {
 	))
 }
 
+func (v *View) newRightRail() fyne.CanvasObject {
+	railButtons := make([]fyne.CanvasObject, 0, len(rightRailToolWindows())+1)
+	railButtons = append(railButtons, widget.NewLabelWithStyle("AI Tools", fyne.TextAlignCenter, fyne.TextStyle{Bold: true}))
+	for _, tool := range rightRailToolWindows() {
+		tool := tool
+		railButtons = append(railButtons, widget.NewButtonWithIcon(tool.ButtonLabel(), tool.Icon, func() {
+			v.openRightRailToolWindow(tool)
+		}))
+	}
+	return container.NewPadded(container.NewVBox(railButtons...))
+}
+
 func (v *View) newToolbar() fyne.CanvasObject {
 	openButton := widget.NewButtonWithIcon("Open Workspace", theme.FolderOpenIcon(), v.openWorkspaceDialog)
 	refreshButton := widget.NewButtonWithIcon("Refresh", theme.ViewRefreshIcon(), v.refreshWorkspace)

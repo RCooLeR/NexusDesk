@@ -54,7 +54,7 @@ Immediate execution order:
 - Keep the documented native editor parity strategy visible in Language Actions and continue post-beta LSP/inline-styling spikes without blocking Native Parity Beta.
 - Polish richer generated document/deck exports beyond native DOCX/PPTX baselines, including template variants, cross-suite compatibility smoke, and richer visual design.
 - Build signed release packaging and installer/update validation.
-- Continue the focused UI polish pass on tool windows, assistant/data/artifact surfaces, diagnostics, and workflow hierarchy now that the first Home readiness/onboarding cockpit, Safe Agent Guide, Settings polish, menu/toolbar, left tool-window rail, and status bar slices exist.
+- Continue the focused UI polish pass on assistant/data/artifact surfaces, diagnostics, and workflow hierarchy now that the first Home readiness/onboarding cockpit, Safe Agent Guide, Settings polish, menu/toolbar, left/right tool-window rails, and status bar slices exist.
 
 ## Repository State
 
@@ -156,6 +156,7 @@ Goal: preserve the old app, establish the native shell, and make the new archite
 - [x] Polish native top menu into IDE-style File, Edit, View, Navigate, Code, Refactor, Run, Tools, and Help groups.
 - [x] Polish native top toolbar with workspace, branch, run/task access, provider/model status, command palette, search, and settings.
 - [x] Add first JetBrains-like left tool-window rail for Project, Search, Problems, Git, Tasks, Jobs, Data, Artifacts, Operations, and Diagnostics.
+- [x] Add first JetBrains-like right tool-window rail for Assistant, Sources, Artifact Lineage, Job Monitor, and Inspector/Diagnostics.
 - [x] Add keyboard shortcut registry for common IDE actions.
 - [x] Add first resizable native shell layout with a labeled product rail, resizable assistant/sidebar split, resizable bottom workbench split, and grouped Data actions.
 

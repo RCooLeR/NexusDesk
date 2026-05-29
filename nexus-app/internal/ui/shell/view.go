@@ -368,7 +368,8 @@ func NewWithStartupStatus(window fyne.Window, startupStatus startupSvc.Status) *
 
 func (v *View) Canvas() fyne.CanvasObject {
 	rail := v.newRail()
-	mainSplit := container.NewHSplit(v.editorTabs, v.newAssistantPanel())
+	rightWorkbench := container.NewBorder(nil, nil, nil, v.newRightRail(), v.newAssistantPanel())
+	mainSplit := container.NewHSplit(v.editorTabs, rightWorkbench)
 	mainSplit.SetOffset(0.82)
 	workbenchTop := container.NewBorder(v.newToolbar(), nil, v.navigator, nil, mainSplit)
 	workbench := container.NewVSplit(workbenchTop, v.newBottomPanel())
