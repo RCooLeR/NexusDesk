@@ -36,6 +36,7 @@ func NewDefaultDispatcher(deps Dependencies) *Dispatcher {
 	}
 	handlers := defaultHandlers{deps: deps}
 	return NewDispatcher(
+		Tool{Descriptor: agent.ToolDescriptor{Name: "list_tool_catalog", Description: "List implemented and planned first-party NexusDesk agent tools by category. Planned tools are roadmap contracts and are not executable until implemented.", Risk: "low", Inputs: "status(optional), category(optional)"}, Handler: handlers.listToolCatalog},
 		Tool{Descriptor: agent.ToolDescriptor{Name: "read_context", Description: "Build a bounded context pack for a file, directory, or project root.", Risk: "low", Inputs: "relPath"}, Handler: handlers.readContext},
 		Tool{Descriptor: agent.ToolDescriptor{Name: "read_file", Description: "Read a bounded preview of one workspace file.", Risk: "low", Inputs: "relPath"}, Handler: handlers.readFile},
 		Tool{Descriptor: agent.ToolDescriptor{Name: "search_workspace", Description: "Search workspace paths and previewable text content.", Risk: "low", Inputs: "query, regex(optional)"}, Handler: handlers.searchWorkspace},
@@ -65,6 +66,23 @@ func NewDefaultDispatcher(deps Dependencies) *Dispatcher {
 
 type defaultHandlers struct {
 	deps Dependencies
+}
+
+func (h defaultHandlers) listToolCatalog(ctx context.Context, call agent.ToolCall, request agent.Request) (agent.ToolResult, error) {
+	status := strings.ToLower(strings.TrimSpace(firstArg(call, "status")))
+	category := strings.ToLower(strings.TrimSpace(firstArg(call, "category")))
+	entries := DefaultToolCatalog()
+	filtered := make([]ToolCatalogEntry, 0, len(entries))
+	for _, entry := range entries {
+		if status != "" && strings.ToLower(entry.Status) != status {
+			continue
+		}
+		if category != "" && strings.ToLower(entry.Category) != category {
+			continue
+		}
+		filtered = append(filtered, entry)
+	}
+	return toolOK(call, "low", formatToolCatalog(filtered)), nil
 }
 
 func (h defaultHandlers) readContext(ctx context.Context, call agent.ToolCall, request agent.Request) (agent.ToolResult, error) {

@@ -26,6 +26,7 @@ Beta feedback and release notes guide: `docs/19_BETA_FEEDBACK_AND_RELEASE_NOTES.
 Clean-machine smoke checklist: `docs/20_CLEAN_MACHINE_SMOKE_CHECKLIST.md`.
 App data and uninstall cleanup guide: `docs/21_APP_DATA_AND_UNINSTALL_CLEANUP.md`.
 Release hygiene and antivirus guidance: `docs/22_RELEASE_HYGIENE_AND_ANTIVIRUS.md`.
+Native agent tool registry: `docs/27_AGENT_TOOL_REGISTRY.md`.
 
 Summary:
 
@@ -558,7 +559,8 @@ The Fyne migration must not drop product ambition, but this section is intention
 - [x] Agent runtime with plan updates, bounded observations, model-driven tool calls, no frontend iteration cap, emergency backend loop guard, and final-answer fallback behavior.
 - [x] Agent runtime resolves selected task-aware model routes without UI/framework coupling and records model/route provenance in SQLite audit history.
 - [x] Unified tool registry and dispatcher for deterministic tools and model-requested tools.
-- [x] Agent tools for read context, workspace search, problems, Git status/diff, tasks, artifacts, datasets, SQLite, documents, operations files, safe writes, patches, copy/move/delete, rollback, and first-party approved terminal commands.
+- [x] Add native `list_tool_catalog` tool and `docs/27_AGENT_TOOL_REGISTRY.md` so implemented versus planned first-party LLM tools are visible to the agent and roadmap.
+- [x] Agent tools for read context, workspace search, problems, Git status/diff/history/blame, tasks, first-party approved terminal commands, artifact lineage/regeneration, safe writes, patches, copy/move/delete, and rollback.
 - [x] Agent tools for read-only Git history/blame.
 - [x] Agent tool and readiness diagnostics for optional external coding-agent CLIs (`codex`, `claude`, `opencode`) with detection-only policy until approved job/shell execution is designed.
 - [x] Add non-executing external coding-agent run plan contract with durable job kind, approval, audit, cancellation, stdin prompt delivery, and output-capture requirements.
@@ -567,6 +569,11 @@ The Fyne migration must not drop product ambition, but this section is intention
 - [x] Agent approved terminal command tool beyond discovered safe tasks, using executable name plus explicit JSON args, rooted workspace cwd, timeout/output caps, blocked shell interpreters/command paths, and persisted high-risk tool audit.
 - [x] Approval-gated native `web_fetch` agent tool with Wails-equivalent HTTP(S), redirect, size, content-type, allow-list, and local-network guards.
 - [x] Live activity tail that shows compact model/tool progress while preserving persisted agent audit history.
+- [ ] Add direct dispatcher wrappers for already-built service capabilities: dataset profile/query/SQL, SQLite inspect/query, document extraction, operations inspection/runbook, and job list/log/cancel.
+- [ ] Add mutating Git tools with preview, approval, audit, and no force/amend behavior by default.
+- [ ] Add rendered browser automation tools with isolated sessions, screenshots, page extraction, and network-log redaction.
+- [ ] Add interactive terminal sessions on top of durable jobs, with cancellation and log/history audit.
+- [ ] Add MCP/plugin discovery and approved tool execution after native core tools are stable.
 
 ### Artifacts And Provenance
 

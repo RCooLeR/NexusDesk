@@ -7,7 +7,7 @@ Reference app: `app-wails/`
 
 This document combines the latest project review, the Wails feature inventory, the production readiness plan, Claude's static findings, and the JetBrains-style UI references provided by the product owner. It exists so repeated development sessions keep the same product idea in view: NexusDesk is a native, local-first agentic workbench for code, data, documents, artifacts, operations, and assistant-assisted development.
 
-`tracker.md` remains the task-level checklist. `docs/13_PRODUCTION_READINESS.md` remains the release-gate map. `docs/18_SAFE_AGENT_USER_GUIDE.md` is the private-beta safety guide for agent use, approvals, rollbacks, local data, connector credentials, jobs, diagnostics, and issue reports. `docs/19_BETA_FEEDBACK_AND_RELEASE_NOTES.md` defines the private-beta feedback and release-note loop. `docs/20_CLEAN_MACHINE_SMOKE_CHECKLIST.md` defines release-candidate clean-machine smoke coverage. `docs/21_APP_DATA_AND_UNINSTALL_CLEANUP.md` defines app data, uninstall, and manual cleanup behavior. `docs/22_RELEASE_HYGIENE_AND_ANTIVIRUS.md` defines release artifact discipline, signing/trust expectations, antivirus false-positive triage, release-note requirements, and do-not-ship rules. `docs/26_NATIVE_THEME_TOKENS.md` defines the Fyne-native JetBrains-like theme token baseline. This file is the end-to-end product and architecture plan that explains why each remaining task matters and what finished should look like.
+`tracker.md` remains the task-level checklist. `docs/13_PRODUCTION_READINESS.md` remains the release-gate map. `docs/18_SAFE_AGENT_USER_GUIDE.md` is the private-beta safety guide for agent use, approvals, rollbacks, local data, connector credentials, jobs, diagnostics, and issue reports. `docs/19_BETA_FEEDBACK_AND_RELEASE_NOTES.md` defines the private-beta feedback and release-note loop. `docs/20_CLEAN_MACHINE_SMOKE_CHECKLIST.md` defines release-candidate clean-machine smoke coverage. `docs/21_APP_DATA_AND_UNINSTALL_CLEANUP.md` defines app data, uninstall, and manual cleanup behavior. `docs/22_RELEASE_HYGIENE_AND_ANTIVIRUS.md` defines release artifact discipline, signing/trust expectations, antivirus false-positive triage, release-note requirements, and do-not-ship rules. `docs/26_NATIVE_THEME_TOKENS.md` defines the Fyne-native JetBrains-like theme token baseline. `docs/27_AGENT_TOOL_REGISTRY.md` defines the implemented and planned first-party LLM toolbelt. This file is the end-to-end product and architecture plan that explains why each remaining task matters and what finished should look like.
 
 ## 1. Product North Star
 
@@ -215,7 +215,7 @@ Already available:
 - In-product Release Hygiene and Antivirus Notes guide from Help and the command palette.
 - Line-aware citations, bounded snippets, evidence labels, weak-evidence warnings, stale-source warnings, cited/uncited coverage, unverified/out-of-context citation diagnostics.
 - Agent runtime with plan updates, bounded observations, emergency backend loop guard, tool dispatcher, audit, final fallback.
-- Agent tools for context, search, problems, Git, tasks, first-party approved terminal commands, artifacts, datasets, SQLite, documents, operations, safe file mutations, rollback, web fetch, artifact regeneration, detection-only external coding-agent CLI readiness for Codex, Claude Code, and OpenCode, and non-executing external-agent run planning.
+- Agent tools for catalog inspection, context, search, problems, Git reads, tasks, first-party approved terminal commands, artifacts/lineage/regeneration, safe file mutations, rollback, web fetch, detection-only external coding-agent CLI readiness for Codex, Claude Code, and OpenCode, and non-executing external-agent run planning.
 - High-risk mutation tools use per-call approval modal and audit records.
 - Settings stores and exposes task-aware model defaults for coding, backend, database, analytics, research, vision/screenshot, balanced reasoning, and fast-coding routes while preserving the global model as the active fallback.
 - Ask mode exposes a model-route selector with global fallback and sends selected routes through the assistant service.
@@ -227,6 +227,7 @@ Already available:
 Planned/remaining:
 
 - Deeper retrieval/ranking quality beyond deterministic coverage diagnostics.
+- Direct dispatcher wrappers for already-built service capabilities: dataset profile/query/SQL, SQLite inspect/query, document extraction, operations inspection/runbook, and job list/log/cancel.
 - Wire route-aware model resolution into future dedicated Data, analytics, research, vision/screenshot, and document model workflows with explicit fallback/availability warnings.
 - Better source diagnostics for partial, stale, weak, contradictory, or missing evidence.
 - Complete tool-run provenance coverage for every generated output type.
