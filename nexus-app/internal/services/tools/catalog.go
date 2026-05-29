@@ -67,7 +67,6 @@ func plannedToolCatalog() []ToolCatalogEntry {
 		plannedTool("editor", "generate_tests", "Generate or update test files from selected code and project conventions.", "high", "relPath, targetRelPath(optional), instructions(optional)", "coding", "Should use safe write/patch tools and run focused tests after approval."),
 		plannedTool("editor", "review_code_selection", "Review selected code or diff with structured findings.", "low", "relPath(optional), diffScope(optional)", "coding", "Can start as an assistant workflow, then become a recorded tool output."),
 
-		plannedTool("git", "commit_changes", "Create a commit from approved staged changes.", "high", "message, body(optional)", "git parity", "Requires clean staged summary, author visibility, and no amend/force behavior."),
 		plannedTool("git", "create_branch", "Create or switch to a Git branch.", "high", "branchName, startPoint(optional)", "git parity", "Needs branch naming policy and user confirmation."),
 		plannedTool("git", "revert_changes", "Revert selected working-tree changes through an explicit preview.", "high", "relPath(optional), scope", "git parity", "Destructive; needs preview, confirmation, and audit."),
 		plannedTool("git", "resolve_conflict", "Apply an approved conflict-resolution patch.", "high", "relPath, strategyOrPatch", "git parity", "Requires merge-conflict parser and rollback."),
@@ -143,7 +142,7 @@ func implementedToolCategory(name string) string {
 		return "documents"
 	case "inspect_operations_files", "generate_runbook":
 		return "operations"
-	case "read_git_status", "read_git_diff", "read_git_history", "read_git_blame", "stage_file", "unstage_file", "stage_hunk", "unstage_hunk":
+	case "read_git_status", "read_git_diff", "read_git_history", "read_git_blame", "stage_file", "unstage_file", "stage_hunk", "unstage_hunk", "commit_changes":
 		return "git"
 	case "list_tasks", "run_task":
 		return "tasks"

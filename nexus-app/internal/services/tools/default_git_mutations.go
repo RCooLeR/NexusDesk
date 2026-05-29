@@ -27,6 +27,33 @@ func (h defaultHandlers) unstageHunk(ctx context.Context, call agent.ToolCall, r
 	return h.applyGitHunkAction(ctx, call, request, gitSvc.DiffKindStaged, gitSvc.HunkActionUnstage)
 }
 
+func (h defaultHandlers) commitChanges(ctx context.Context, call agent.ToolCall, request agent.Request) (agent.ToolResult, error) {
+	_ = ctx
+	if !request.ApproveWrites {
+		err := errors.New("approval is required before creating Git commits")
+		return agent.ToolResult{Name: call.Name, Args: call.Args, Risk: "high", Observation: err.Error(), Error: err.Error()}, err
+	}
+	root, err := workspaceRoot(request)
+	if err != nil {
+		return toolError(call, "high", err), err
+	}
+	result, err := h.deps.Git.CommitChanges(root, firstArg(call, "message", "subject", "title"), firstArg(call, "body", "description"))
+	if err != nil {
+		return toolError(call, "high", err), err
+	}
+	if result.Hash == "" {
+		err := errors.New(result.Message)
+		return toolError(call, "high", err), err
+	}
+	return agent.ToolResult{
+		Name:        call.Name,
+		Args:        call.Args,
+		Risk:        "high",
+		Mutated:     true,
+		Observation: formatGitCommitObservation(result),
+	}, nil
+}
+
 func (h defaultHandlers) applyGitFileAction(ctx context.Context, call agent.ToolCall, request agent.Request, action gitSvc.FileAction) (agent.ToolResult, error) {
 	_ = ctx
 	if !request.ApproveWrites {
@@ -134,6 +161,18 @@ func gitDiffKindArg(call agent.ToolCall, fallback gitSvc.DiffKind) (gitSvc.DiffK
 	default:
 		return "", fmt.Errorf("unsupported diffKind %q", value)
 	}
+}
+
+func formatGitCommitObservation(result gitSvc.CommitResult) string {
+	lines := []string{
+		result.Message,
+		fmt.Sprintf("Commit: %s", result.ShortHash),
+		fmt.Sprintf("Subject: %s", result.Subject),
+		"Staged changes committed:",
+		result.StagedStat,
+	}
+	lines = append(lines, formatGitMutationStatus(result.Status)...)
+	return strings.Join(lines, "\n")
 }
 
 func formatGitFileActionObservation(result gitSvc.FileActionResult) string {

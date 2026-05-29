@@ -88,6 +88,17 @@ type HunkActionResult struct {
 	GeneratedAt time.Time
 }
 
+type CommitResult struct {
+	Hash        string
+	ShortHash   string
+	Subject     string
+	Body        string
+	StagedStat  string
+	Message     string
+	Status      Status
+	GeneratedAt time.Time
+}
+
 type HistoryEntry struct {
 	Hash      string
 	ShortHash string

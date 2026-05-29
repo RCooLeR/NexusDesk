@@ -128,6 +128,53 @@ func (s *Service) ApplyFileAction(root string, relPath string, action FileAction
 	}, nil
 }
 
+func (s *Service) CommitChanges(root string, message string, body string) (CommitResult, error) {
+	generatedAt := time.Now().UTC()
+	root = strings.TrimSpace(root)
+	subject := strings.TrimSpace(message)
+	body = strings.TrimSpace(body)
+	if root == "" {
+		return CommitResult{Subject: subject, Body: body, Message: "Open a workspace before committing Git changes.", GeneratedAt: generatedAt}, nil
+	}
+	if subject == "" {
+		return CommitResult{Subject: subject, Body: body, Message: "Commit message is required.", GeneratedAt: generatedAt}, nil
+	}
+	absRoot, err := filepath.Abs(root)
+	if err != nil {
+		return CommitResult{}, err
+	}
+	if _, err := gitOutput(absRoot, "rev-parse", "--show-toplevel"); err != nil {
+		return CommitResult{Subject: subject, Body: body, Message: "Workspace is not inside a Git repository.", GeneratedAt: generatedAt}, nil
+	}
+	stagedStat := strings.TrimSpace(mustGitOutput(absRoot, "diff", "--cached", "--stat"))
+	if stagedStat == "" {
+		return CommitResult{Subject: subject, Body: body, Message: "No staged changes are available to commit.", GeneratedAt: generatedAt}, nil
+	}
+	args := []string{"commit", "-m", subject}
+	if body != "" {
+		args = append(args, "-m", body)
+	}
+	if _, err := gitOutput(absRoot, args...); err != nil {
+		return CommitResult{}, err
+	}
+	hash := strings.TrimSpace(mustGitOutput(absRoot, "rev-parse", "HEAD"))
+	shortHash := strings.TrimSpace(mustGitOutput(absRoot, "rev-parse", "--short", "HEAD"))
+	status, err := s.Status(absRoot)
+	if err != nil {
+		return CommitResult{}, err
+	}
+	return CommitResult{
+		Hash:        hash,
+		ShortHash:   shortHash,
+		Subject:     subject,
+		Body:        body,
+		StagedStat:  stagedStat,
+		Message:     "Committed staged changes.",
+		Status:      status,
+		GeneratedAt: generatedAt,
+	}, nil
+}
+
 func runFileAction(root string, relPath string, action FileAction) error {
 	switch action {
 	case FileActionStage:

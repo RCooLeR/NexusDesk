@@ -568,6 +568,49 @@ func TestDefaultDispatcherGitIndexMutationTools(t *testing.T) {
 	}
 }
 
+func TestDefaultDispatcherCommitChangesTool(t *testing.T) {
+	if _, err := exec.LookPath("git"); err != nil {
+		t.Skip("git executable is not available")
+	}
+	root := t.TempDir()
+	runToolTestGit(t, root, "init")
+	runToolTestGit(t, root, "config", "user.email", "test@example.com")
+	runToolTestGit(t, root, "config", "user.name", "Test User")
+	path := filepath.Join(root, "notes.txt")
+	if err := os.WriteFile(path, []byte("line one\n"), 0o644); err != nil {
+		t.Fatalf("write notes file: %v", err)
+	}
+	runToolTestGit(t, root, "add", "notes.txt")
+	runToolTestGit(t, root, "commit", "-m", "initial notes")
+	if err := os.WriteFile(path, []byte("line one\nline two\n"), 0o644); err != nil {
+		t.Fatalf("modify notes file: %v", err)
+	}
+	runToolTestGit(t, root, "add", "notes.txt")
+	dispatcher := NewDefaultDispatcher(Dependencies{Workspace: workspaceSvc.New()})
+
+	blocked, err := dispatcher.ExecuteTool(context.Background(), agent.ToolCall{Name: "commit_changes", Args: map[string]string{"message": "Add line two"}}, agent.Request{WorkspaceRoot: root})
+	if err == nil || blocked.Risk != "high" || !strings.Contains(blocked.Observation, "approval") {
+		t.Fatalf("expected commit_changes approval block, got result=%#v err=%v", blocked, err)
+	}
+
+	committed, err := dispatcher.ExecuteTool(context.Background(), agent.ToolCall{Name: "commit_changes", Args: map[string]string{"message": "Add line two", "body": "Body text"}}, agent.Request{
+		WorkspaceRoot: root,
+		ApproveTool: func(ctx context.Context, request agent.ToolApprovalRequest) bool {
+			return request.Name == "commit_changes" && request.Risk == "high"
+		},
+	})
+	if err != nil {
+		t.Fatalf("commit_changes returned error: %v", err)
+	}
+	if !committed.Mutated || !strings.Contains(committed.Observation, "Committed staged changes.") || !strings.Contains(committed.Observation, "Subject: Add line two") || !strings.Contains(committed.Observation, "notes.txt") {
+		t.Fatalf("unexpected commit observation:\n%s", committed.Observation)
+	}
+	log := runToolTestGitOutput(t, root, "log", "-1", "--pretty=%s%n%b")
+	if !strings.Contains(log, "Add line two") || !strings.Contains(log, "Body text") {
+		t.Fatalf("commit message/body were not persisted:\n%s", log)
+	}
+}
+
 func TestDefaultDispatcherArtifactLineageTool(t *testing.T) {
 	root := t.TempDir()
 	if err := os.WriteFile(filepath.Join(root, "README.md"), []byte("# Project\n"), 0o644); err != nil {
@@ -965,12 +1008,18 @@ func TestRunTaskRequiresApproval(t *testing.T) {
 
 func runToolTestGit(t *testing.T, root string, args ...string) {
 	t.Helper()
+	_ = runToolTestGitOutput(t, root, args...)
+}
+
+func runToolTestGitOutput(t *testing.T, root string, args ...string) string {
+	t.Helper()
 	command := exec.Command("git", args...)
 	command.Dir = root
 	output, err := command.CombinedOutput()
 	if err != nil {
 		t.Fatalf("git %v failed: %v\n%s", args, err, output)
 	}
+	return string(output)
 }
 
 func TestDefaultDispatcherWriteToolsRequireApprovalAndCreateRollback(t *testing.T) {
