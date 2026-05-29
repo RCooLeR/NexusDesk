@@ -110,6 +110,8 @@ func TestFormatDiagnosticsSnapshotIncludesCoreSections(t *testing.T) {
 		"Status: ok - clean-exit markers are active.",
 		"## Performance Timings",
 		"startup-ready: 600ms",
+		"## Production Failure Gates",
+		"folder-open-cheap",
 		"## Metadata",
 		"Status: ok",
 		"## Jobs",
@@ -151,6 +153,7 @@ func TestDiagnosticsHealthCardsSummarizeActionsAndWarnings(t *testing.T) {
 		"Metadata|action|no such table: jobs|Export metadata backup",
 		"Jobs and runs|action|4 non-success item(s)",
 		"Performance|warning|At least one startup or folder-open timing is over budget.",
+		"Production failure gates|ok|5 scenario(s) cover crash/hang/provider/metadata/cancel release gates.",
 		"Startup recovery|warning|Previous run did not record a clean exit.",
 		"Issue report|ok|Redacted diagnostics export is available",
 	} {
@@ -180,10 +183,26 @@ func TestDiagnosticsHealthCardsHealthySnapshot(t *testing.T) {
 		"Metadata|ok|1 table(s). SQLite metadata store is active.|",
 		"Jobs and runs|ok|0 recent/in-memory",
 		"Performance|ok|1 timing record(s) captured and within budget.",
+		"Production failure gates|ok|5 scenario(s) cover crash/hang/provider/metadata/cancel release gates.",
 		"Startup recovery|ok|Clean-exit markers are active.",
 	} {
 		if !strings.Contains(joined, expected) {
 			t.Fatalf("expected healthy cards to contain %q, got:\n%s", expected, joined)
+		}
+	}
+}
+
+func TestDiagnosticsFailureGatesHealthCardWarnsOnInvalidMatrix(t *testing.T) {
+	cards := diagnosticsHealthCards(diagnosticsSnapshot{
+		FailureScenarioIssue: "production failure scenario matrix is empty",
+	})
+	joined := diagnosticsHealthCardText(cards)
+	for _, expected := range []string{
+		"Production failure gates|warning|Failure-scenario matrix is incomplete: production failure scenario matrix is empty",
+		"Update readiness failure scenarios",
+	} {
+		if !strings.Contains(joined, expected) {
+			t.Fatalf("expected failure-gates warning to contain %q, got:\n%s", expected, joined)
 		}
 	}
 }

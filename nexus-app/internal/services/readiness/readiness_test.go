@@ -26,6 +26,7 @@ func TestCollectFlagsFirstRunActions(t *testing.T) {
 	assertItemStatus(t, snapshot, "model", StatusAction)
 	assertItemStatus(t, snapshot, "toolchain", StatusAction)
 	assertItemStatus(t, snapshot, "external-agents", StatusAction)
+	assertItemStatus(t, snapshot, "failure-scenarios", StatusOK)
 	if snapshot.SettingsLoaded != true {
 		t.Fatalf("expected default settings to be treated as loaded")
 	}
@@ -50,6 +51,26 @@ func TestCollectReportsExternalAgentCLIs(t *testing.T) {
 	assertItemStatus(t, snapshot, "external-agents", StatusWarning)
 	if !strings.Contains(FormatMarkdown(snapshot), "Codex CLI") {
 		t.Fatalf("expected Codex CLI in readiness markdown")
+	}
+}
+
+func TestFormatMarkdownIncludesFailureScenarioMatrix(t *testing.T) {
+	snapshot := Collect(Options{
+		Settings:   settingsSvc.Settings{Model: "qwen3-coder:30b"},
+		GOOS:       "linux",
+		LookupPath: fixedPath("/usr/bin/gcc"),
+	})
+	text := FormatMarkdown(snapshot)
+	for _, expected := range []string{
+		"Production failure gates",
+		"Production failure scenarios",
+		"folder-open-cheap",
+		"canceled-long-work",
+		"docs/20_CLEAN_MACHINE_SMOKE_CHECKLIST.md",
+	} {
+		if !strings.Contains(text, expected) {
+			t.Fatalf("expected %q in readiness markdown:\n%s", expected, text)
+		}
 	}
 }
 

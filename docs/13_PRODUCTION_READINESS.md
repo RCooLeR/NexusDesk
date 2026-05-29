@@ -99,7 +99,7 @@ Required:
 - Startup recovery markers and crash/hang triage visibility: launch writes a local session marker, clean exit closes it, and Home/Diagnostics warn when the previous run did not shut down cleanly.
 - Threat model and control matrix for connector jobs, OCR, dump imports, Docker mutations, richer terminal sessions, rendered browser automation, generated artifacts, MCP/plugins, and future high-risk operations.
 - Audit coverage for connector jobs, OCR, dump imports, Docker mutations, richer terminal sessions, and future high-risk operations as those workflows become executable.
-- Crash/hang checks for folder open, malformed files, corrupt metadata, missing providers, and canceled long work, backed by the readiness failure-scenario matrix and expanded with workflow-specific tests as new slow/high-risk workflows ship.
+- Crash/hang checks for folder open, malformed files, corrupt metadata, missing providers, and canceled long work, backed by the readiness failure-scenario matrix, surfaced in Diagnostics/first-run readiness for release smoke, and expanded with workflow-specific tests as new slow/high-risk workflows ship.
 
 Exit criteria:
 

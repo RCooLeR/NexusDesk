@@ -17,6 +17,7 @@ import (
 	llmSvc "nexusdesk/internal/services/llm"
 	metadataSvc "nexusdesk/internal/services/metadata"
 	perfSvc "nexusdesk/internal/services/perf"
+	readinessSvc "nexusdesk/internal/services/readiness"
 	settingsSvc "nexusdesk/internal/services/settings"
 	startupSvc "nexusdesk/internal/services/startup"
 )
@@ -54,6 +55,8 @@ type diagnosticsSnapshot struct {
 	RecentArtifacts         int
 	StartupRecovery         startupSvc.Status
 	PerformanceTimings      []perfSvc.TimingRecord
+	FailureScenarios        []readinessSvc.FailureScenario
+	FailureScenarioIssue    string
 	RuntimeSummary          []string
 	ExternalAgentTools      []externalagentsSvc.ToolStatus
 	RecentJobFailures       []string
@@ -219,7 +222,12 @@ func (v *View) collectDiagnosticsSnapshot(root string, activityTail []string) di
 		ActivityTail:       append([]string(nil), activityTail...),
 		StartupRecovery:    v.startupStatus,
 		PerformanceTimings: v.performanceTimings(diagnosticsPerformanceLimit),
+		FailureScenarios:   readinessSvc.ProductionFailureScenarios(),
 		ExternalAgentTools: externalagentsSvc.Probe(externalagentsSvc.Options{}),
+	}
+	if err := readinessSvc.ValidateProductionFailureScenarios(snapshot.FailureScenarios); err != nil {
+		snapshot.FailureScenarioIssue = err.Error()
+		snapshot.Warnings = append(snapshot.Warnings, "Failure-scenario matrix warning: "+err.Error())
 	}
 	if snapshot.StartupRecovery.PreviousUnclean {
 		snapshot.Warnings = append(snapshot.Warnings, snapshot.StartupRecovery.Message)
@@ -510,6 +518,9 @@ func formatDiagnosticsSnapshot(snapshot diagnosticsSnapshot) string {
 		}
 	}
 
+	builder.WriteString("\n## Production Failure Gates\n")
+	builder.WriteString(readinessSvc.FormatFailureScenarioMatrix(diagnosticsFailureScenarios(snapshot)))
+
 	builder.WriteString("\n## Metadata\n")
 	if snapshot.MetadataError != "" {
 		builder.WriteString("Status: warning - ")
@@ -579,6 +590,7 @@ func diagnosticsHealthCards(snapshot diagnosticsSnapshot) []diagnosticsHealthCar
 		diagnosticsMetadataHealthCard(snapshot),
 		diagnosticsJobsHealthCard(snapshot),
 		diagnosticsPerformanceHealthCard(snapshot),
+		diagnosticsFailureGatesHealthCard(snapshot),
 		diagnosticsStartupHealthCard(snapshot),
 		{
 			Label:  "Issue report",
@@ -587,6 +599,39 @@ func diagnosticsHealthCards(snapshot diagnosticsSnapshot) []diagnosticsHealthCar
 			Action: "Use Export issue report before sharing beta bugs or release-candidate failures.",
 		},
 	}
+}
+
+func diagnosticsFailureGatesHealthCard(snapshot diagnosticsSnapshot) diagnosticsHealthCard {
+	scenarios := diagnosticsFailureScenarios(snapshot)
+	if strings.TrimSpace(snapshot.FailureScenarioIssue) != "" {
+		return diagnosticsHealthCard{
+			Label:  "Production failure gates",
+			Status: "warning",
+			Detail: "Failure-scenario matrix is incomplete: " + compactDiagnosticsLine(snapshot.FailureScenarioIssue, diagnosticsCompactMessageLimit),
+			Action: "Update readiness failure scenarios before release-candidate smoke.",
+		}
+	}
+	if err := readinessSvc.ValidateProductionFailureScenarios(scenarios); err != nil {
+		return diagnosticsHealthCard{
+			Label:  "Production failure gates",
+			Status: "warning",
+			Detail: "Failure-scenario matrix is incomplete: " + compactDiagnosticsLine(err.Error(), diagnosticsCompactMessageLimit),
+			Action: "Update readiness failure scenarios before release-candidate smoke.",
+		}
+	}
+	return diagnosticsHealthCard{
+		Label:  "Production failure gates",
+		Status: "ok",
+		Detail: fmt.Sprintf("%d scenario(s) cover crash/hang/provider/metadata/cancel release gates.", len(scenarios)),
+		Action: "Use this section during clean-machine and release-candidate smoke.",
+	}
+}
+
+func diagnosticsFailureScenarios(snapshot diagnosticsSnapshot) []readinessSvc.FailureScenario {
+	if len(snapshot.FailureScenarios) > 0 {
+		return snapshot.FailureScenarios
+	}
+	return readinessSvc.ProductionFailureScenarios()
 }
 
 func diagnosticsExternalAgentsHealthCard(snapshot diagnosticsSnapshot) diagnosticsHealthCard {

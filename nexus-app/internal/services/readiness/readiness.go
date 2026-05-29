@@ -56,6 +56,7 @@ type Snapshot struct {
 	Toolchain        ToolchainStatus
 	ExternalAgents   []externalagentsSvc.ToolStatus
 	StartupRecovery  startupSvc.Status
+	FailureScenarios []FailureScenario
 	Items            []Item
 }
 
@@ -102,6 +103,7 @@ func Collect(options Options) Snapshot {
 		Toolchain:        inspectToolchain(options),
 		ExternalAgents:   externalagentsSvc.Probe(externalagentsSvc.Options{LookupPath: options.ExternalAgentLookupPath}),
 		StartupRecovery:  options.StartupRecovery,
+		FailureScenarios: ProductionFailureScenarios(),
 	}
 	snapshot.Items = append(snapshot.Items,
 		workspaceItem(snapshot),
@@ -111,6 +113,7 @@ func Collect(options Options) Snapshot {
 		toolchainItem(snapshot.Toolchain),
 		externalAgentsItem(snapshot.ExternalAgents),
 		startupRecoveryItem(snapshot.StartupRecovery),
+		failureScenariosItem(snapshot.FailureScenarios),
 		safetyItem(),
 	)
 	return snapshot
@@ -128,6 +131,8 @@ func FormatMarkdown(snapshot Snapshot) string {
 		}
 		builder.WriteString("\n")
 	}
+	builder.WriteString("\n")
+	builder.WriteString(FormatFailureScenarioMatrix(snapshot.FailureScenarios))
 	return builder.String()
 }
 
@@ -323,6 +328,24 @@ func startupRecoveryItem(status startupSvc.Status) Item {
 		Label:  "Startup recovery",
 		Status: StatusOK,
 		Detail: "Clean-exit markers are active for crash and hang triage.",
+	}
+}
+
+func failureScenariosItem(scenarios []FailureScenario) Item {
+	if err := ValidateProductionFailureScenarios(scenarios); err != nil {
+		return Item{
+			ID:     "failure-scenarios",
+			Label:  "Production failure gates",
+			Status: StatusWarning,
+			Detail: "Failure-scenario matrix is incomplete: " + err.Error(),
+			Action: "Update readiness failure scenarios before release-candidate smoke.",
+		}
+	}
+	return Item{
+		ID:     "failure-scenarios",
+		Label:  "Production failure gates",
+		Status: StatusOK,
+		Detail: fmt.Sprintf("%d failure scenario(s) have automated and manual evidence references.", len(scenarios)),
 	}
 }
 
