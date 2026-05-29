@@ -10,9 +10,17 @@ import (
 	"strings"
 
 	"nexusdesk/internal/domain"
+	"nexusdesk/internal/services/safearchive"
 )
 
 const documentPreviewMaxChars = 20000
+
+const (
+	docxMaxZipFiles               = 2048
+	docxMaxTotalUncompressedBytes = 128 * 1024 * 1024
+	docxMaxPackageMemberBytes     = 64 * 1024 * 1024
+	docxMaxDocumentXMLBytes       = 16 * 1024 * 1024
+)
 
 func decodeDocument(content []byte, relPath string) (*domain.DocumentPreview, error) {
 	if strings.EqualFold(filepath.Ext(relPath), ".docx") {
@@ -26,6 +34,13 @@ func decodeDOCX(content []byte) (*domain.DocumentPreview, error) {
 	if err != nil {
 		return nil, err
 	}
+	if err := safearchive.ValidateZipFiles(reader.File, safearchive.ZipLimits{
+		MaxFiles:                   docxMaxZipFiles,
+		MaxMemberUncompressedBytes: docxMaxPackageMemberBytes,
+		MaxTotalUncompressedBytes:  docxMaxTotalUncompressedBytes,
+	}); err != nil {
+		return nil, err
+	}
 	for _, file := range reader.File {
 		if file.Name == "word/document.xml" {
 			return extractDOCXText(file)
@@ -35,13 +50,12 @@ func decodeDOCX(content []byte) (*domain.DocumentPreview, error) {
 }
 
 func extractDOCXText(file *zip.File) (*domain.DocumentPreview, error) {
-	body, err := file.Open()
+	body, err := safearchive.ReadZipFile(file, docxMaxDocumentXMLBytes)
 	if err != nil {
 		return nil, err
 	}
-	defer body.Close()
 
-	decoder := xml.NewDecoder(body)
+	decoder := xml.NewDecoder(bytes.NewReader(body))
 	var builder strings.Builder
 	truncated := false
 	for {

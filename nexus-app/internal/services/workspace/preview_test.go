@@ -221,6 +221,16 @@ func TestPreviewFileReturnsDOCXText(t *testing.T) {
 	}
 }
 
+func TestPreviewFileRejectsOversizedDOCXDocumentXML(t *testing.T) {
+	root := t.TempDir()
+	writeBytes(t, filepath.Join(root, "huge.docx"), makeDOCX(t, strings.Repeat("a", int(docxMaxDocumentXMLBytes)+1)))
+
+	_, err := New().PreviewFile(root, "huge.docx")
+	if err == nil || !strings.Contains(err.Error(), "document.xml") {
+		t.Fatalf("expected DOCX document safety cap error, got %v", err)
+	}
+}
+
 func TestPreviewFileReturnsPDFText(t *testing.T) {
 	root := t.TempDir()
 	writeFile(t, filepath.Join(root, "brief.pdf"), "%PDF-1.7\n/Type /Page\nBT (Hello from PDF) Tj ET\n")

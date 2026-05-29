@@ -2,6 +2,7 @@ package spreadsheets
 
 import (
 	"archive/zip"
+	"bytes"
 	"encoding/xml"
 	"io"
 	"path"
@@ -38,7 +39,7 @@ type worksheetRows struct {
 }
 
 func parseWorkbookXML(file *zip.File) (workbookXML, error) {
-	body, err := readZipFile(file)
+	body, err := readZipFile(file, xlsxMaxMetadataXMLBytes)
 	if err != nil {
 		return workbookXML{}, err
 	}
@@ -51,7 +52,7 @@ func parseRelationships(file *zip.File, baseDir string) (map[string]string, erro
 	if file == nil {
 		return map[string]string{}, nil
 	}
-	body, err := readZipFile(file)
+	body, err := readZipFile(file, xlsxMaxMetadataXMLBytes)
 	if err != nil {
 		return nil, err
 	}
@@ -82,13 +83,12 @@ func parseSharedStrings(file *zip.File) ([]string, error) {
 	if file == nil {
 		return nil, nil
 	}
-	body, err := file.Open()
+	body, err := readZipFile(file, xlsxMaxMetadataXMLBytes)
 	if err != nil {
 		return nil, err
 	}
-	defer body.Close()
 
-	decoder := xml.NewDecoder(body)
+	decoder := xml.NewDecoder(bytes.NewReader(body))
 	values := []string{}
 	var builder strings.Builder
 	inString := false
@@ -127,13 +127,12 @@ func parseSharedStrings(file *zip.File) ([]string, error) {
 }
 
 func parseWorksheet(file *zip.File, sharedStrings []string, options Options) (worksheetRows, error) {
-	body, err := file.Open()
+	body, err := readZipFile(file, xlsxMaxWorksheetXMLBytes)
 	if err != nil {
 		return worksheetRows{}, err
 	}
-	defer body.Close()
 
-	decoder := xml.NewDecoder(body)
+	decoder := xml.NewDecoder(bytes.NewReader(body))
 	rows := [][]string{}
 	var currentRow []string
 	var currentCell cellState

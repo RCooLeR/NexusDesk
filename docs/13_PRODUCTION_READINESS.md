@@ -14,13 +14,13 @@ Approximate migration status:
 - Fyne-native migration: roughly 98% complete by useful Wails-era functionality.
 - Wails-era useful workflow parity: roughly 97% complete.
 - Native Parity Beta readiness: roughly 96% complete.
-- Overall production readiness: roughly 95% complete.
+- Overall production readiness: roughly 96% complete.
 - Distribution and packaging readiness: roughly 80% complete.
 
 The app can already:
 
 - open and browse real workspaces;
-- preview common files and documents;
+- preview common files and documents, with capped structured package loading and Office zip expansion guards;
 - safely edit text/code with rollback records;
 - search paths/text and scan lightweight problems;
 - use quick-open, command palette, native IDE-style status bar, breadcrumbs, split preview, find/replace, formatting, outline, document map, go-to-symbol, local definition, bounded workspace definition fallback, references search, syntax mirror, cursor-aware token/symbol status, and live draft diagnostics;
@@ -150,7 +150,6 @@ Exit criteria:
 - Long-running jobs cannot freeze folder open or block the main UI.
 - Destructive operations lack approval, audit, and rollback/mitigation where practical.
 - Packaging lacks a repeatable build and versioned release process.
-- Zip-based document/spreadsheet/presentation previews can decompress unbounded workspace input.
 - macOS Keychain, Windows DPAPI, web fetch, and connector TLS defaults are not hardened to the latest review standard.
 - Streaming, activity rendering, search, and editor save paths can visibly stall large sessions.
 

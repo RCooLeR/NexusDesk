@@ -33,14 +33,14 @@ Threat model and control matrix: `docs/28_THREAT_MODEL.md`.
 Summary:
 
 - The Fyne migration remains the correct direction and `nexus-app/` is the active product.
-- Current estimate: Fyne-native migration is roughly 98% complete, Wails useful-code parity is roughly 97%, Native Parity Beta readiness is roughly 96%, and overall production readiness is roughly 95%.
+- Current estimate: Fyne-native migration is roughly 98% complete, Wails useful-code parity is roughly 97%, Native Parity Beta readiness is roughly 96%, and overall production readiness is roughly 96%.
 - The architecture is healthy: thin executable root, framework-free domain/services, Fyne-only UI packages, explicit approvals, safe workspace mutation boundaries, manual Git/Docker actions, durable metadata, and local-first safety rules.
 - The biggest remaining architectural risk is UI/orchestration complexity in `internal/ui/shell`; future UI work should keep extracting focused panels, controllers, and service-owned behavior.
 - The highest-priority unfinished work is migration and production readiness, not new top-level studios: applying durable slow-job routing to the remaining slow workflows, richer DOCX/PPTX template variants and cross-suite smoke beyond current native export/theme/validation baselines, deeper assistant retrieval quality beyond deterministic source coverage, signed packaging/installer validation, and native UI polish.
 - Final UI direction is a professional JetBrains-like native workbench: top menu/toolbar, left project/tool rail, central tabbed editor, right integrated assistant, grouped bottom tool windows, compact dark theme, strong keyboard workflows, DataGrip-style data surfaces, and trust-building settings/diagnostics.
 - Native theme token baseline is defined in `docs/26_NATIVE_THEME_TOKENS.md` and implemented in `nexus-app/internal/ui/theme`; future UI polish should reuse those tokens rather than adding ad hoc colors.
 - Compact and comfortable density modes are defined in `nexus-app/internal/ui/theme`; compact remains the production default while comfortable is ready for future preferences/onboarding work.
-- The latest Claude findings are now consolidated into `docs/29_FULL_PROJECT_REVIEW_AND_ROADMAP.md`; the top production risks are preview truncation data loss, zip decompression caps, platform secret hardening, DNS-rebinding SSRF hardening, workspace search performance, connector TLS defaults, metadata WAL/busy timeout, streaming/activity throttling, editor-save threading, and UI shell controller extraction.
+- The latest Claude findings are now consolidated into `docs/29_FULL_PROJECT_REVIEW_AND_ROADMAP.md`; the top production risks are platform secret hardening, DNS-rebinding SSRF hardening, workspace search performance, connector TLS defaults, metadata WAL/busy timeout, streaming/activity throttling, editor-save threading, and UI shell controller extraction.
 - `app-wails/` should remain as reference until the remaining native parity blockers are completed or explicitly moved out of Native Parity Beta.
 
 Production direction:
@@ -54,7 +54,7 @@ Immediate execution order:
 
 - Keep `docs/17_END_TO_END_PRODUCTION_PLAN.md` current as the product north star for all repeated development sessions.
 - Use `docs/29_FULL_PROJECT_REVIEW_AND_ROADMAP.md` as the current consolidated review snapshot when choosing the next safety, parity, UI, packaging, or production milestone.
-- Fix the remaining P0 Claude/Codex review items before broad new feature work: zip decompression caps, macOS Keychain argv hardening, Windows DPAPI KeepAlive, DNS-rebinding SSRF hardening, and workspace search fast path.
+- Fix the remaining P0 Claude/Codex review items before broad new feature work: macOS Keychain argv hardening, Windows DPAPI KeepAlive, DNS-rebinding SSRF hardening, and workspace search fast path.
 - Validate macOS Keychain and Linux Secret Service/libsecret behavior during platform packaging smoke.
 - Apply the durable slow-job contract to OCR, dump imports, connector pulls, long indexing, report generation, and long agent runs as those workflows are implemented.
 - Keep the documented native editor parity strategy visible in Language Actions and continue post-beta LSP/inline-styling spikes without blocking Native Parity Beta.
@@ -755,7 +755,7 @@ Source: `claude-findings.md`. Detailed plan context lives in `docs/29_FULL_PROJE
 
 - [ ] C-1.1 Workspace search full-decodes every candidate file: implement byte/chunk search fast path, binary skips, matcher reuse, latest-request cancellation/singleflight, and optional mtime/size cache.
 - [ ] C-1.2 macOS Keychain passes secrets on process argv: feed secrets through stdin or Security.framework and add regression coverage.
-- [ ] C-1.3 XLSX/DOCX/PPTX zip preview has no decompression caps: limit member reads, cap total uncompressed size, reject suspicious archives, and test zip-bomb fixtures.
+- [x] C-1.3 XLSX/DOCX/PPTX zip preview has decompression caps: shared safe zip guards now cap file count, total uncompressed size, package members, XLSX metadata/worksheet reads, DOCX body reads, and structured preview compressed package size; DOCX/PPTX generated export validation already enforces required-part/XML caps.
 - [ ] C-1.4 Windows DPAPI blob calls do not pin input buffers: add `runtime.KeepAlive` or use official Windows wrappers and harden `LocalFree` handling.
 - [ ] C-1.5 UI shell `View` is a god object: extract controllers/state for Data, Assistant, Git, Editor, Artifacts, Diagnostics, Jobs, and Settings.
 

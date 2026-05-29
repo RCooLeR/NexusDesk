@@ -5,9 +5,18 @@ import (
 	"bytes"
 	"errors"
 	"fmt"
-	"io"
 	"path/filepath"
 	"strings"
+
+	"nexusdesk/internal/services/safearchive"
+)
+
+const (
+	xlsxMaxZipFiles               = 2048
+	xlsxMaxTotalUncompressedBytes = 128 * 1024 * 1024
+	xlsxMaxPackageMemberBytes     = 64 * 1024 * 1024
+	xlsxMaxMetadataXMLBytes       = 16 * 1024 * 1024
+	xlsxMaxWorksheetXMLBytes      = 64 * 1024 * 1024
 )
 
 func ParseXLSX(content []byte, options Options) (Workbook, error) {
@@ -19,6 +28,13 @@ func ParseXLSX(content []byte, options Options) (Workbook, error) {
 	}
 	reader, err := zip.NewReader(bytes.NewReader(content), int64(len(content)))
 	if err != nil {
+		return Workbook{}, err
+	}
+	if err := safearchive.ValidateZipFiles(reader.File, safearchive.ZipLimits{
+		MaxFiles:                   xlsxMaxZipFiles,
+		MaxMemberUncompressedBytes: xlsxMaxPackageMemberBytes,
+		MaxTotalUncompressedBytes:  xlsxMaxTotalUncompressedBytes,
+	}); err != nil {
 		return Workbook{}, err
 	}
 	files := mapZipFiles(reader.File)
@@ -68,11 +84,6 @@ func mapZipFiles(files []*zip.File) map[string]*zip.File {
 	return mapped
 }
 
-func readZipFile(file *zip.File) ([]byte, error) {
-	body, err := file.Open()
-	if err != nil {
-		return nil, err
-	}
-	defer body.Close()
-	return io.ReadAll(body)
+func readZipFile(file *zip.File, maxUncompressedBytes uint64) ([]byte, error) {
+	return safearchive.ReadZipFile(file, maxUncompressedBytes)
 }

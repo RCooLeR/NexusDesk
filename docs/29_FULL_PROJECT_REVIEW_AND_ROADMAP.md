@@ -266,7 +266,7 @@ The latest `claude-findings.md` is useful and should be treated as the current r
 ### 6.1 Critical / P0 Findings To Prioritize
 
 1. Preview truncation data-loss path: add top-level truncation metadata to `domain.FilePreview`, disable inline save for truncated files, and surface the partial-read state to agent observations.
-2. XLSX/DOCX/PPTX zip decompression caps: reject oversized or suspicious zip members and total uncompressed size before parsing.
+2. XLSX/DOCX/PPTX zip decompression caps: implemented shared zip file-count, package-member, total-uncompressed, XLSX XML-member, DOCX body, and structured-preview compressed-size caps before parsing.
 3. macOS Keychain argv secret leak: stop passing secrets through command arguments; use stdin or Security.framework bindings.
 4. Windows DPAPI buffer pinning: add `runtime.KeepAlive` or switch to official Windows wrappers for DPAPI blobs.
 5. DNS rebinding SSRF in `web_fetch`: enforce private-range rejection at dial time, not only lookup/URL validation time.
@@ -319,7 +319,7 @@ Every current `claude-findings.md` item is tracked here so no finding is lost wh
 
 - [ ] C-1.1 Workspace search full-decodes every candidate file: add byte/chunk search fast path, binary skips, matcher reuse, latest-request cancellation/singleflight, and optional mtime/size cache.
 - [ ] C-1.2 macOS Keychain passes secrets on process argv: feed secrets through stdin or Security.framework and add regression coverage.
-- [ ] C-1.3 XLSX/DOCX/PPTX zip preview has no decompression caps: limit member reads, cap total uncompressed size, reject suspicious archives, and test zip-bomb fixtures.
+- [x] C-1.3 XLSX/DOCX/PPTX zip preview has decompression caps: shared safe zip guards cap file count, total uncompressed size, package members, XLSX metadata/worksheet reads, DOCX body reads, and structured preview compressed package size; DOCX/PPTX generated export validation already enforces required-part/XML caps.
 - [ ] C-1.4 Windows DPAPI blob calls do not pin input buffers: add `runtime.KeepAlive` or use official Windows wrappers and harden `LocalFree` handling.
 - [ ] C-1.5 UI shell `View` is a god object: extract controllers/state for Data, Assistant, Git, Editor, Artifacts, Diagnostics, Jobs, and Settings.
 
@@ -407,17 +407,16 @@ Every current `claude-findings.md` item is tracked here so no finding is lost wh
 
 Future development sessions should pick one logical milestone from this order:
 
-1. Add zip decompression caps for XLSX/DOCX/PPTX preview/extraction paths.
-2. Harden macOS Keychain and Windows DPAPI protected-secret implementations.
-3. Harden `web_fetch` against DNS rebinding SSRF.
-4. Replace workspace search preview-decode path with a fast bounded byte/chunk search path.
-5. Enforce safer connector TLS defaults with explicit audited plaintext opt-in.
-6. Add metadata WAL/busy timeout and diagnostics visibility.
-7. Throttle assistant streaming, agent events, and activity rendering.
-8. Move editor save/diff/rollback off the UI thread and preserve editor state after save.
-9. Start UI shell controller extraction with Data, Assistant, Artifacts, Diagnostics, and Editor controllers.
-10. Wire signed packaging, installer/update/uninstall evidence into CI/release using the packaging readiness gate.
-11. Continue JetBrains-like UI polish once the above trust/performance risks are under control.
+1. Harden macOS Keychain and Windows DPAPI protected-secret implementations.
+2. Harden `web_fetch` against DNS rebinding SSRF.
+3. Replace workspace search preview-decode path with a fast bounded byte/chunk search path.
+4. Enforce safer connector TLS defaults with explicit audited plaintext opt-in.
+5. Add metadata WAL/busy timeout and diagnostics visibility.
+6. Throttle assistant streaming, agent events, and activity rendering.
+7. Move editor save/diff/rollback off the UI thread and preserve editor state after save.
+8. Start UI shell controller extraction with Data, Assistant, Artifacts, Diagnostics, and Editor controllers.
+9. Wire signed packaging, installer/update/uninstall evidence into CI/release using the packaging readiness gate.
+10. Continue JetBrains-like UI polish once the above trust/performance risks are under control.
 
 ## 8. Keep-Going Prompt
 

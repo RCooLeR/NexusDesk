@@ -3,6 +3,7 @@ package spreadsheets
 import (
 	"archive/zip"
 	"bytes"
+	"strings"
 	"testing"
 )
 
@@ -43,6 +44,20 @@ func TestParseXLSXMarksTruncatedRows(t *testing.T) {
 	}
 	if !workbook.Sheets[0].Truncated {
 		t.Fatal("expected truncated sheet")
+	}
+}
+
+func TestParseXLSXRejectsOversizedSharedStrings(t *testing.T) {
+	content := buildXLSX(t, map[string]string{
+		"xl/workbook.xml":            `<workbook xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships"><sheets><sheet name="Data" r:id="rId1"/></sheets></workbook>`,
+		"xl/_rels/workbook.xml.rels": `<Relationships><Relationship Id="rId1" Target="worksheets/sheet1.xml"/></Relationships>`,
+		"xl/sharedStrings.xml":       `<sst><si><t>` + strings.Repeat("a", int(xlsxMaxMetadataXMLBytes)+1) + `</t></si></sst>`,
+		"xl/worksheets/sheet1.xml":   `<worksheet><sheetData><row><c r="A1" t="s"><v>0</v></c></row></sheetData></worksheet>`,
+	})
+
+	_, err := ParseXLSX(content, Options{MaxRows: 10, MaxColumns: 10})
+	if err == nil || !strings.Contains(err.Error(), "sharedStrings.xml") {
+		t.Fatalf("expected shared string safety cap error, got %v", err)
 	}
 }
 

@@ -3,6 +3,7 @@ package workspace
 import (
 	"bytes"
 	"errors"
+	"fmt"
 	"io"
 	"mime"
 	"os"
@@ -12,6 +13,8 @@ import (
 
 	"nexusdesk/internal/domain"
 )
+
+const structuredPreviewMaxBytes = 32 * 1024 * 1024
 
 func (s *Service) PreviewFile(root string, relPath string) (domain.FilePreview, error) {
 	target, cleanRelPath, info, err := resolveFile(root, relPath)
@@ -34,7 +37,10 @@ func (s *Service) PreviewFile(root string, relPath string) (domain.FilePreview, 
 	if kind == domain.PreviewBinary && isOversized {
 		return domain.FilePreview{}, errors.New("file is too large for inline preview")
 	}
-	if kind != domain.PreviewText && isOversized {
+	if isStructuredPreviewKind(kind) {
+		if info.Size() > structuredPreviewMaxBytes {
+			return domain.FilePreview{}, fmt.Errorf("file is too large for structured preview: %d bytes exceeds %d byte cap", info.Size(), structuredPreviewMaxBytes)
+		}
 		content, err = os.ReadFile(target)
 		if err != nil {
 			return domain.FilePreview{}, err
@@ -103,6 +109,15 @@ func (s *Service) PreviewFile(root string, relPath string) (domain.FilePreview, 
 	preview.Truncated = isOversized
 	preview.Encoding = encoding
 	return preview, nil
+}
+
+func isStructuredPreviewKind(kind domain.PreviewKind) bool {
+	switch kind {
+	case domain.PreviewImage, domain.PreviewPDF, domain.PreviewTable, domain.PreviewDoc:
+		return true
+	default:
+		return false
+	}
 }
 
 func readFilePrefix(path string, limit int64) ([]byte, error) {

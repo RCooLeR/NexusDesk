@@ -3,8 +3,6 @@ package artifacts
 import (
 	"errors"
 	"fmt"
-	"os"
-	"path/filepath"
 	"strings"
 	"time"
 )
@@ -23,13 +21,8 @@ func (s *Store) WriteChatAnswer(report ChatAnswerReport) (Artifact, error) {
 	if title == "" {
 		title = chatAnswerTitle(report.Prompt)
 	}
-	relPath := s.relPath("chat-answers", fmt.Sprintf("%s-%s.md", artifactTimestamp(createdAt), safeName(title)))
-	absPath := s.absPath(relPath)
-	if err := os.MkdirAll(filepath.Dir(absPath), 0o755); err != nil {
-		return Artifact{}, err
-	}
 	markdown := chatAnswerMarkdown(report, title, content, createdAt)
-	file, err := os.OpenFile(absPath, os.O_WRONLY|os.O_CREATE|os.O_EXCL, 0o644)
+	relPath, absPath, file, err := s.createUniqueArtifactFile("chat-answers", title, ".md", createdAt)
 	if err != nil {
 		return Artifact{}, err
 	}
