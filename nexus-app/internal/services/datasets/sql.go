@@ -9,11 +9,11 @@ import (
 	"strconv"
 	"strings"
 	"time"
+
+	"nexusdesk/internal/services/sqlguard"
 )
 
 const nativeDatasetSQLEngine = "native-dataset-sql"
-
-var blockedSQLPattern = regexp.MustCompile(`(?i)\b(insert|update|delete|drop|alter|create|truncate|replace|merge|attach|detach|vacuum|pragma)\b`)
 
 func (s *Service) QuerySQL(root string, relPath string, sqlText string) (SQLResult, error) {
 	return s.QuerySQLContext(context.Background(), root, relPath, sqlText)
@@ -69,13 +69,15 @@ type parsedDatasetSQL struct {
 }
 
 func parseDatasetSQL(sqlText string, relPath string) (parsedDatasetSQL, error) {
-	sqlText = strings.TrimSpace(strings.TrimSuffix(strings.TrimSpace(sqlText), ";"))
-	if sqlText == "" {
-		return parsedDatasetSQL{}, errors.New("SQL text is required")
+	normalized, err := sqlguard.NormalizeReadOnly(sqlText, sqlguard.Options{
+		UnsupportedMessage: "native dataset SQL must start with SELECT",
+		BlockedMessage:     "native dataset SQL is read-only and accepts SELECT only",
+		EmptyMessage:       "SQL text is required",
+	})
+	if err != nil {
+		return parsedDatasetSQL{}, err
 	}
-	if blockedSQLPattern.MatchString(sqlText) {
-		return parsedDatasetSQL{}, errors.New("native dataset SQL is read-only and accepts SELECT only")
-	}
+	sqlText = sqlguard.StripComments(normalized)
 	lower := strings.ToLower(sqlText)
 	if !strings.HasPrefix(lower, "select ") {
 		return parsedDatasetSQL{}, errors.New("native dataset SQL must start with SELECT")

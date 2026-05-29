@@ -181,13 +181,13 @@ Legend:
 
 ### 3.1 SQL safety correctness
 
-- [ ] P1 Extract shared SQL read-only analyzer.
-- [ ] P1 Replace dataset raw keyword blocklist with token-aware analyzer.
-- [ ] P1 Keep connector and dataset behavior consistent.
-- [ ] P1 Add string-literal keyword tests.
-- [ ] P1 Add comment keyword tests.
-- [ ] P1 Add multi-statement rejection tests.
-- [ ] P1 Add fuzz test seed corpus.
+- [x] P1 Extract shared SQL read-only analyzer.
+- [x] P1 Replace dataset raw keyword blocklist with token-aware analyzer.
+- [x] P1 Keep connector and dataset behavior consistent.
+- [x] P1 Add string-literal keyword tests.
+- [x] P1 Add comment keyword tests.
+- [x] P1 Add multi-statement rejection tests.
+- [x] P1 Add fuzz test seed corpus.
 
 ### 3.2 Agent bounds and context
 

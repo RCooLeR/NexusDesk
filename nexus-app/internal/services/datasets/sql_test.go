@@ -30,6 +30,25 @@ func TestQuerySQLRejectsMutationKeywords(t *testing.T) {
 	}
 }
 
+func TestQuerySQLIgnoresMutationWordsInsideStringsAndComments(t *testing.T) {
+	root := t.TempDir()
+	writeTestFile(t, root, "sales.csv", "channel,note\nsearch,delete from dataset\nemail,ok\n")
+
+	result, err := New(nil).QuerySQL(root, "sales.csv", "/* delete from dataset */ select channel from dataset where note = 'delete from dataset' limit 1")
+	if err != nil {
+		t.Fatalf("expected string/comment mutation words to pass: %v", err)
+	}
+	if len(result.Rows) != 1 || result.Rows[0][0] != "search" {
+		t.Fatalf("unexpected SQL result: %#v", result.Rows)
+	}
+}
+
+func TestQuerySQLRejectsMultipleStatements(t *testing.T) {
+	if _, err := New(nil).QuerySQL(t.TempDir(), "sales.csv", "select * from dataset; select * from dataset"); err == nil || !strings.Contains(err.Error(), "single SQL statement") {
+		t.Fatalf("expected multi-statement rejection, got %v", err)
+	}
+}
+
 func TestQuerySQLRequiresSelectedSource(t *testing.T) {
 	if _, err := New(nil).QuerySQL(t.TempDir(), "sales.csv", "select * from other"); err == nil || !strings.Contains(err.Error(), "selected dataset") {
 		t.Fatalf("expected selected source rejection, got %v", err)
