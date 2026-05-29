@@ -92,7 +92,7 @@ Full Fyne app run/build requires CGO and a C compiler on Windows:
 ```powershell
 cd nexus-app
 $env:CGO_ENABLED='1'
-.\scripts\dev-env.ps1 -Build
+.\scripts\dev-env.ps1 -BuildCheck
 ```
 
 Current build reality on this workstation:
@@ -100,6 +100,7 @@ Current build reality on this workstation:
 - MSYS2 is installed at `C:\msys64`, and UCRT64 GCC is available at `C:\msys64\ucrt64\bin\gcc.exe`.
 - `nexus-app/scripts/dev-env.ps1` configures the current PowerShell session with the MSYS2 compiler path, `CGO_ENABLED=1`, and default readonly module flags.
 - `nexus-app/scripts/build-windows-icon.ps1` generates `resource_windows.syso` from the approved brand PNG so the Windows `.exe` is stamped with the app icon.
+- `.\scripts\dev-env.ps1 -BuildCheck` performs routine build validation in a temporary folder and removes the unsigned executable immediately to reduce Norton/SmartScreen noise from fresh local hashes.
 - `.\scripts\dev-env.ps1 -Build` succeeds and writes `build\nexusdesk.exe` with the executable icon resource.
 - `go run .` has been smoke-verified by staying alive for 5 seconds under the configured CGO toolchain.
 - `CGO_ENABLED=0 go build .` still fails because Fyne's OpenGL binding excludes all Go files without CGO.
@@ -109,6 +110,7 @@ Use the helper for native service tests, full builds, and local runs:
 ```powershell
 cd nexus-app
 .\scripts\dev-env.ps1 -Test
+.\scripts\dev-env.ps1 -BuildCheck
 .\scripts\dev-env.ps1 -Build
 .\scripts\dev-env.ps1 -Run
 ```
@@ -407,6 +409,7 @@ Exit criteria:
 ### Gate 3: Packaging And Platform Beta
 
 - [ ] Repeatable Windows build pipeline with icon, version metadata, installer/update plan, and code-signing path.
+- [x] Reduce local Windows antivirus noise by adding temporary `-BuildCheck` validation and ignoring root-level ad-hoc `nexus-app/*.exe` outputs.
 - [x] First native CI smoke matrix for Windows, macOS, and Linux with gofmt, `go test ./...`, `go vet ./...`, CGO/Fyne build, and `git diff --check`.
 - [x] Harden native CI portability after matrix failures: POSIX-safe Unix gofmt check, Windows-path connector scope matching on non-Windows runners, and graceful Linux protected-secret refusal when `secret-tool` is unavailable.
 - [x] Add ldflag-backed app version/build metadata validation to native CI builds and About metadata.

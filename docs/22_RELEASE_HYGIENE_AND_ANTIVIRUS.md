@@ -14,6 +14,19 @@ This document defines how NexusDesk should prepare, verify, communicate, and sup
 - Generated binaries such as local `nexusdesk.exe` files must not be committed.
 - Debug-only files, local logs, temporary package directories, secrets, test workspaces, and developer machine paths must not be bundled.
 
+## 1.1 Local Developer Build Hygiene
+
+Local Windows developer builds are usually unsigned and change hash on every commit. Norton, SmartScreen, and other reputation-based scanners may flag each fresh executable even when the source is clean.
+
+Recommended local workflow:
+
+- Use `nexus-app/scripts/dev-env.ps1 -BuildCheck` for routine validation; it writes the executable to a temporary folder and removes it immediately.
+- Use `nexus-app/scripts/dev-env.ps1 -Build` only when a runnable local artifact is intentionally needed.
+- Do not run raw `go build .` as the default milestone check because it leaves `nexus-app/nexusdesk.exe` in the source tree.
+- Keep local build outputs under ignored paths such as `nexus-app/build/` or temporary folders.
+- Do not share local ad-hoc binaries with testers. Share only CI/release artifacts with manifests and documented signing state.
+- If a local scanner quarantines a dev artifact, treat it as a developer-machine nuisance unless the same committed CI artifact and SHA256 also reproduce the detection.
+
 ## 2. Signing And Platform Trust
 
 Windows:

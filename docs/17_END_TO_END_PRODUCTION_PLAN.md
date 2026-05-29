@@ -726,10 +726,11 @@ Code milestones:
 cd nexus-app
 gofmt -w <changed-go-files>
 go test ./...
-go build .
+.\scripts\dev-env.ps1 -BuildCheck
 git diff --check
-Remove-Item .\nexusdesk.exe -ErrorAction SilentlyContinue
 ```
+
+Avoid raw `go build .` during routine Windows milestones because it leaves a fresh unsigned `nexusdesk.exe` in the app root and can trigger Norton or SmartScreen reputation prompts on every hash change. Use `-BuildCheck` for validation because it builds to a temporary directory and deletes the unsigned artifact immediately. Use `.\scripts\dev-env.ps1 -Build` only when a local runnable artifact is explicitly needed; public/private-beta artifacts must come from the signed or documented release pipeline.
 
 Docs-only milestones:
 

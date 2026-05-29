@@ -20,6 +20,7 @@ Use the bundled scripts whenever possible:
 ```powershell
 cd nexus-app
 .\scripts\dev-env.ps1 -Test
+.\scripts\dev-env.ps1 -BuildCheck
 .\scripts\dev-env.ps1 -Build
 .\scripts\dev-env.ps1 -Run
 ```
@@ -30,7 +31,7 @@ Windows Fyne builds require CGO and a C compiler. The current development path e
 C:\msys64\ucrt64\bin
 ```
 
-The helper script configures `PATH`, `CGO_ENABLED=1`, readonly module flags, local Go cache/temp paths, build metadata, and Windows icon stamping.
+The helper script configures `PATH`, `CGO_ENABLED=1`, readonly module flags, local Go cache/temp paths, build metadata, and Windows icon stamping. Prefer `-BuildCheck` for routine validation because it writes the unsigned executable to a temporary folder and removes it immediately. Use `-Build` only when you intentionally need a local runnable artifact in `nexus-app/build/`.
 
 ### macOS And Linux
 
@@ -54,17 +55,20 @@ Run full validation before committing:
 cd nexus-app
 gofmt -w <changed-go-files>
 go test ./...
-go build .
+.\scripts\dev-env.ps1 -BuildCheck
 cd ..
 git diff --check
 ```
 
-After `go build .`, remove generated binaries such as:
+If you intentionally run `go build .` or `.\scripts\dev-env.ps1 -Build`, remove generated binaries such as:
 
 ```text
 nexus-app/nexusdesk.exe
 nexus-app/nexusdesk
+nexus-app/build/nexusdesk.exe
 ```
+
+Unsigned local Windows builds can trigger Norton, SmartScreen, or other reputation-based scanners on every commit because each build has a fresh hash and no production signing reputation. Do not ask users to disable antivirus globally. For local development, prefer `-BuildCheck`, keep generated binaries out of the source tree, and reserve signed CI/release artifacts for sharing outside the development machine.
 
 ## Coding Standards
 
@@ -157,7 +161,7 @@ Prefer reversible decisions and document migration or rollback expectations when
 - Focused tests passed.
 - `gofmt` applied.
 - `go test ./...` passed.
-- `go build .` passed.
+- `.\scripts\dev-env.ps1 -BuildCheck` passed, or a documented platform build check passed.
 - Generated binaries removed.
 - `git diff --check` passed.
 - Commit message describes one logical milestone.

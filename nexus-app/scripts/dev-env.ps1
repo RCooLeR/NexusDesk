@@ -1,5 +1,6 @@
 param(
     [switch]$Build,
+    [switch]$BuildCheck,
     [switch]$Test,
     [switch]$Run
 )
@@ -44,6 +45,23 @@ if ($Build) {
         & (Join-Path $PSScriptRoot 'build-windows-icon.ps1')
     }
     go build -ldflags "$ldflags" -o build\nexusdesk.exe .
+}
+
+if ($BuildCheck) {
+    $checkRoot = Join-Path ([System.IO.Path]::GetTempPath()) ("nexusdesk-build-check-" + [guid]::NewGuid().ToString("N"))
+    New-Item -ItemType Directory -Force -Path $checkRoot | Out-Null
+    try {
+        if ($IsWindows -or $env:OS -eq 'Windows_NT') {
+            & (Join-Path $PSScriptRoot 'build-windows-icon.ps1')
+            $checkArtifact = Join-Path $checkRoot 'nexusdesk-build-check.exe'
+        } else {
+            $checkArtifact = Join-Path $checkRoot 'nexusdesk-build-check'
+        }
+        go build -ldflags "$ldflags" -o $checkArtifact .
+        Write-Host "Build check passed; removed temporary unsigned artifact at $checkArtifact."
+    } finally {
+        Remove-Item -Recurse -Force -LiteralPath $checkRoot -ErrorAction SilentlyContinue
+    }
 }
 
 if ($Run) {

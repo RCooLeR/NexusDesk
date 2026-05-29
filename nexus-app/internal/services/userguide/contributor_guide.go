@@ -17,7 +17,8 @@ func ContributorGuide() Guide {
 				Body: []string{
 					"Use Go with CGO enabled for Fyne builds. On Windows, use MSYS2 UCRT64 GCC and prefer `nexus-app/scripts/dev-env.ps1` for test/build/run setup.",
 					"Keep module use readonly during validation when possible: `GOFLAGS=-mod=readonly` helps catch accidental dependency drift.",
-					"After `go build .`, remove generated binaries such as `nexusdesk.exe` before committing.",
+					"Prefer `nexus-app/scripts/dev-env.ps1 -BuildCheck` for routine validation because it builds to a temporary folder and removes the unsigned executable immediately. Use `-Build` only when a local runnable artifact is intentionally needed.",
+					"After raw `go build .` or `-Build`, remove generated binaries such as `nexusdesk.exe` before committing. Unsigned local Windows builds can trigger Norton or SmartScreen on every fresh hash; production trust needs signed release artifacts, not antivirus bypasses.",
 				},
 			},
 			{
@@ -34,7 +35,7 @@ func ContributorGuide() Guide {
 				Body: []string{
 					"Add focused tests for every milestone. Service tests should cover boundaries, caps, cancellation, redaction, metadata, and safety decisions.",
 					"Use small deterministic fixtures. Do not start external services unless the test name and package make that dependency explicit.",
-					"Run `gofmt`, `go test ./...`, `go build .`, and `git diff --check` before committing a milestone.",
+					"Run `gofmt`, `go test ./...`, `nexus-app/scripts/dev-env.ps1 -BuildCheck`, and `git diff --check` before committing a milestone.",
 				},
 			},
 			{

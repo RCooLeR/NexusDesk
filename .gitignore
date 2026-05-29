@@ -40,6 +40,7 @@ app/build/bin/
 app-wails/build/bin/
 nexus-app/bin/
 nexus-app/build/
+nexus-app/*.exe
 
 # Local app data and generated artifacts
 .nexusdesk/
