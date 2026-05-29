@@ -26,7 +26,7 @@ The implemented registry is exposed to the agent through `ToolDescriptors()` and
 | Data | `profile_dataset`, `query_dataset`, `query_dataset_sql` | Local dataset profiling, bounded row queries, and medium-risk approval-gated SELECT-only dataset SQL. |
 | Database | `inspect_sqlite`, `query_sqlite` | Medium-risk approval-gated workspace SQLite schema inspection and bounded read-only SELECT/WITH queries. |
 | Documents | `extract_document` | Bounded text and metadata extraction for supported workspace documents. |
-| Operations | `inspect_operations_files` | Read-only operations file scan/inspection with secret redaction and no Docker/shell execution. |
+| Operations | `inspect_operations_files`, `generate_runbook` | Read-only operations file scan/inspection plus approval-gated runbook artifact generation from redacted evidence; no Docker/shell execution. |
 | External agent readiness | `list_external_agent_tools`, `plan_external_agent_run` | Detection/planning only for optional Codex, Claude Code, and OpenCode integrations. NexusDesk's own tools remain primary. |
 
 ## Planned Complete Toolbelt
@@ -91,7 +91,7 @@ The planned registry should be implemented in priority order, with tests and doc
 
 ### Operations And Security
 
-- `generate_runbook`, `docker_compose_config`, `docker_compose_logs`, `docker_compose_lifecycle`: redacted operations tooling and approved Docker workflows.
+- `docker_compose_config`, `docker_compose_logs`, `docker_compose_lifecycle`: redacted operations tooling and approved Docker workflows.
 - `request_approval`, `list_approvals`, `redact_text`: approval and redaction primitives for multi-step tool plans.
 
 ## Implementation Gate For Each Tool
@@ -110,7 +110,7 @@ Before a planned tool becomes executable, it needs:
 
 ## Priority Order
 
-1. Expose the next already-built service capabilities as direct agent tools: operations runbook export, artifact-backed dataset chart generation, and job list/log/cancel.
+1. Expose the next already-built service capabilities as direct agent tools: artifact-backed dataset chart generation and job list/log/cancel.
 2. Add mutating Git tools with preview/approval/audit.
 3. Add browser automation with screenshots and rendered-page extraction.
 4. Add interactive terminal sessions on top of durable jobs.

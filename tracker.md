@@ -563,7 +563,7 @@ The Fyne migration must not drop product ambition, but this section is intention
 - [x] Agent runtime resolves selected task-aware model routes without UI/framework coupling and records model/route provenance in SQLite audit history.
 - [x] Unified tool registry and dispatcher for deterministic tools and model-requested tools.
 - [x] Add native `list_tool_catalog` tool and `docs/27_AGENT_TOOL_REGISTRY.md` so implemented versus planned first-party LLM tools are visible to the agent and roadmap.
-- [x] Agent tools for read context, workspace search, problems, Git status/diff/history/blame, local dataset profile/query/SELECT-only SQL, workspace SQLite schema/query, document extraction, read-only operations scan/inspection, tasks, first-party approved terminal commands, artifact lineage/regeneration, safe writes, patches, copy/move/delete, and rollback.
+- [x] Agent tools for read context, workspace search, problems, Git status/diff/history/blame, local dataset profile/query/SELECT-only SQL, workspace SQLite schema/query, document extraction, read-only operations scan/inspection/runbook generation, tasks, first-party approved terminal commands, artifact lineage/regeneration, safe writes, patches, copy/move/delete, and rollback.
 - [x] Agent tools for read-only Git history/blame.
 - [x] Agent tool and readiness diagnostics for optional external coding-agent CLIs (`codex`, `claude`, `opencode`) with detection-only policy until approved job/shell execution is designed.
 - [x] Add non-executing external coding-agent run plan contract with durable job kind, approval, audit, cancellation, stdin prompt delivery, and output-capture requirements.
@@ -572,8 +572,8 @@ The Fyne migration must not drop product ambition, but this section is intention
 - [x] Agent approved terminal command tool beyond discovered safe tasks, using executable name plus explicit JSON args, rooted workspace cwd, timeout/output caps, blocked shell interpreters/command paths, and persisted high-risk tool audit.
 - [x] Approval-gated native `web_fetch` agent tool with Wails-equivalent HTTP(S), redirect, size, content-type, allow-list, and local-network guards.
 - [x] Live activity tail that shows compact model/tool progress while preserving persisted agent audit history.
-- [x] Add direct dispatcher wrappers for local dataset profile/query/SELECT-only SQL, document extraction, and read-only operations scan/inspection.
-- [ ] Add direct dispatcher wrappers for remaining already-built service capabilities: operations runbook export, artifact-backed dataset chart generation, and job list/log/cancel.
+- [x] Add direct dispatcher wrappers for local dataset profile/query/SELECT-only SQL, document extraction, and read-only operations scan/inspection/runbook generation.
+- [ ] Add direct dispatcher wrappers for remaining already-built service capabilities: artifact-backed dataset chart generation and job list/log/cancel.
 - [ ] Add mutating Git tools with preview, approval, audit, and no force/amend behavior by default.
 - [ ] Add rendered browser automation tools with isolated sessions, screenshots, page extraction, and network-log redaction.
 - [ ] Add interactive terminal sessions on top of durable jobs, with cancellation and log/history audit.

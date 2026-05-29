@@ -202,6 +202,59 @@ func TestDefaultDispatcherDocumentAndOperationsTools(t *testing.T) {
 	}
 }
 
+func TestDefaultDispatcherGenerateRunbookTool(t *testing.T) {
+	root := t.TempDir()
+	compose := `services:
+  api:
+    image: example/api:latest
+    ports:
+      - "8080:80"
+    environment:
+      API_KEY: super-secret-token
+`
+	if err := os.WriteFile(filepath.Join(root, "compose.yml"), []byte(compose), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	dispatcher := NewDefaultDispatcher(Dependencies{Workspace: workspaceSvc.New()})
+	call := agent.ToolCall{Name: "generate_runbook", Args: map[string]string{"relPath": "compose.yml"}}
+
+	blocked, err := dispatcher.ExecuteTool(context.Background(), call, agent.Request{WorkspaceRoot: root})
+	if err == nil || blocked.Risk != "high" || !strings.Contains(blocked.Observation, "approval") {
+		t.Fatalf("expected generate_runbook approval block, got result=%#v err=%v", blocked, err)
+	}
+
+	generated, err := dispatcher.ExecuteTool(context.Background(), call, agent.Request{WorkspaceRoot: root, ApproveWrites: true})
+	if err != nil {
+		t.Fatalf("generate_runbook returned error: %v", err)
+	}
+	if !generated.Mutated || !strings.Contains(generated.Observation, "Generated operations runbook artifact") || !strings.Contains(generated.Observation, "compose.yml") {
+		t.Fatalf("unexpected runbook result: %#v", generated)
+	}
+	store, err := artifactsSvc.NewStore(root)
+	if err != nil {
+		t.Fatal(err)
+	}
+	matches, err := store.ListArtifacts(artifactsSvc.ListOptions{Query: "kind:operations-runbook"})
+	if err != nil {
+		t.Fatalf("ListArtifacts returned error: %v", err)
+	}
+	if len(matches) != 1 {
+		t.Fatalf("expected one operations runbook artifact, got %d", len(matches))
+	}
+	text, err := store.ReadArtifactText(matches[0].RelPath)
+	if err != nil {
+		t.Fatalf("ReadArtifactText returned error: %v", err)
+	}
+	for _, expected := range []string{"Operations Runbook", "api", "8080:80", "[REDACTED]"} {
+		if !strings.Contains(text, expected) {
+			t.Fatalf("expected runbook text to contain %q:\n%s", expected, text)
+		}
+	}
+	if strings.Contains(text, "super-secret-token") {
+		t.Fatalf("runbook leaked unredacted secret:\n%s", text)
+	}
+}
+
 func writeToolSQLiteFixture(t *testing.T, path string) {
 	t.Helper()
 	if err := os.MkdirAll(filepath.Dir(path), 0o755); err != nil {

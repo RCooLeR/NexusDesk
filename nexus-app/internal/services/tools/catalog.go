@@ -119,7 +119,6 @@ func plannedToolCatalog() []ToolCatalogEntry {
 		plannedTool("automation", "pause_automation", "Pause or resume an automation.", "high", "automationId, status", "automation", "Requires clear ownership and audit."),
 		plannedTool("automation", "run_automation_now", "Trigger an automation manually.", "high", "automationId", "automation", "Must reuse normal approval/job rules."),
 
-		plannedTool("operations", "generate_runbook", "Generate an operations runbook artifact from inspected service files.", "high", "relPath(optional)", "operations", "Service/artifact slices exist; direct agent wrapper should preserve lineage."),
 		plannedTool("operations", "docker_compose_config", "Run approved `docker compose config` for validation.", "high", "composeRelPath", "operations", "Can route through discovered task/job contract."),
 		plannedTool("operations", "docker_compose_logs", "Read capped Docker Compose logs.", "high", "service(optional), tail(optional)", "operations", "Requires Docker policy, redaction, and user approval."),
 		plannedTool("operations", "docker_compose_lifecycle", "Start/stop/restart approved Compose services.", "high", "action, service(optional)", "operations", "Destructive/system-impacting; requires explicit UX and rollback/mitigation notes."),
@@ -150,7 +149,7 @@ func implementedToolCategory(name string) string {
 		return "database"
 	case "extract_document":
 		return "documents"
-	case "inspect_operations_files":
+	case "inspect_operations_files", "generate_runbook":
 		return "operations"
 	case "read_git_status", "read_git_diff", "read_git_history", "read_git_blame":
 		return "git"

@@ -7,6 +7,7 @@ import (
 	"strings"
 
 	"nexusdesk/internal/services/agent"
+	artifactsSvc "nexusdesk/internal/services/artifacts"
 	datasetsSvc "nexusdesk/internal/services/datasets"
 	dbconnectorSvc "nexusdesk/internal/services/dbconnector"
 	documentsSvc "nexusdesk/internal/services/documents"
@@ -119,6 +120,42 @@ func (h defaultHandlers) inspectOperationsFiles(ctx context.Context, call agent.
 		return toolError(call, "low", err), err
 	}
 	return toolOK(call, "low", formatOperationsInspection(inspection)), nil
+}
+
+func (h defaultHandlers) generateRunbook(ctx context.Context, call agent.ToolCall, request agent.Request) (agent.ToolResult, error) {
+	root, relPath, err := requiredWorkspacePath(call, request, "relPath", "path")
+	if err != nil {
+		return toolError(call, "high", err), err
+	}
+	inspection, err := operationsSvc.New().InspectContext(ctx, root, relPath)
+	if err != nil {
+		return toolError(call, "high", err), err
+	}
+	if err := ctx.Err(); err != nil {
+		return toolError(call, "high", err), err
+	}
+	store, err := artifactsSvc.NewStore(root)
+	if err != nil {
+		return toolError(call, "high", err), err
+	}
+	artifact, err := store.WriteOperationsRunbook(operationsRunbookArtifactInput(inspection))
+	if err != nil {
+		return toolError(call, "high", err), err
+	}
+	return agent.ToolResult{
+		Name:    call.Name,
+		Args:    call.Args,
+		Risk:    "high",
+		Mutated: true,
+		Observation: fmt.Sprintf(
+			"Generated operations runbook artifact.\nSource: %s\nArtifact: %s\nKind: %s\nServices: %d\nWarnings: %d",
+			inspection.File.RelPath,
+			artifact.RelPath,
+			inspection.File.Kind,
+			len(inspection.Services),
+			len(inspection.Warnings)+len(inspection.Topology.Warnings),
+		),
+	}, nil
 }
 
 func requiredWorkspacePath(call agent.ToolCall, request agent.Request, keys ...string) (string, string, error) {
