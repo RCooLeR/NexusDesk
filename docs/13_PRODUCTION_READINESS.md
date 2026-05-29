@@ -151,7 +151,7 @@ Exit criteria:
 - Destructive operations lack approval, audit, and rollback/mitigation where practical.
 - Packaging lacks a repeatable build and versioned release process.
 - Connector TLS defaults are not hardened to the latest review standard.
-- Streaming, activity rendering, search, and editor save paths can visibly stall large sessions.
+- Streaming, activity rendering, and editor save paths can visibly stall large sessions.
 
 ## Immediate Production-Oriented Next Batch
 

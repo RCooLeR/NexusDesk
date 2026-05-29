@@ -97,6 +97,59 @@ func TestSearchReturnsMultipleContentMatchesPerFile(t *testing.T) {
 	}
 }
 
+func TestSearchUsesFastTextPathForCSV(t *testing.T) {
+	root := t.TempDir()
+	writeFile(t, filepath.Join(root, "data", "people.csv"), "id,name\n1,needle\n")
+
+	results, err := New().Search(root, "needle", SearchOptions{})
+	if err != nil {
+		t.Fatalf("Search returned error: %v", err)
+	}
+	assertSearchContains(t, results, "data/people.csv", "content")
+}
+
+func TestSearchSkipsBinaryContent(t *testing.T) {
+	root := t.TempDir()
+	writeBytes(t, filepath.Join(root, "blob.bin"), []byte{'n', 'e', 'e', 'd', 'l', 'e', 0x00, 'x'})
+
+	results, err := New().Search(root, "needle", SearchOptions{})
+	if err != nil {
+		t.Fatalf("Search returned error: %v", err)
+	}
+	if len(results) != 0 {
+		t.Fatalf("expected binary content to be skipped, got %#v", results)
+	}
+}
+
+func TestSearchSkipsStructuredPreviewFormats(t *testing.T) {
+	root := t.TempDir()
+	writeBytes(t, filepath.Join(root, "book.xlsx"), []byte("needle in fake structured package"))
+	writeBytes(t, filepath.Join(root, "brief.docx"), []byte("needle in fake document"))
+	writeBytes(t, filepath.Join(root, "brief.pdf"), []byte("%PDF needle"))
+
+	results, err := New().Search(root, "needle", SearchOptions{})
+	if err != nil {
+		t.Fatalf("Search returned error: %v", err)
+	}
+	if len(results) != 0 {
+		t.Fatalf("expected structured preview formats to be skipped, got %#v", results)
+	}
+}
+
+func TestSearchScansOnlyBoundedPrefix(t *testing.T) {
+	root := t.TempDir()
+	content := strings.Repeat("a", searchPreviewMaxBytes+32) + "\nneedle after cap\n"
+	writeFile(t, filepath.Join(root, "large.txt"), content)
+
+	results, err := New().Search(root, "needle", SearchOptions{})
+	if err != nil {
+		t.Fatalf("Search returned error: %v", err)
+	}
+	if len(results) != 0 {
+		t.Fatalf("expected content beyond search prefix cap to be skipped, got %#v", results)
+	}
+}
+
 func TestSearchCapsContentMatchesPerFile(t *testing.T) {
 	root := t.TempDir()
 	content := ""

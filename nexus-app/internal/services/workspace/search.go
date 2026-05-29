@@ -2,6 +2,7 @@ package workspace
 
 import (
 	"io/fs"
+	"os"
 	"path/filepath"
 	"regexp"
 	"sort"
@@ -62,8 +63,6 @@ func (s *Service) SearchWithMetadata(root string, query string, options SearchOp
 		return nil, metadata, err
 	}
 
-	searchService := *s
-	searchService.previewByteLimit = searchPreviewMaxBytes
 	stats := searchStats{}
 	results := []SearchResult{}
 	err = filepath.WalkDir(absRoot, func(path string, entry fs.DirEntry, walkErr error) error {
@@ -110,7 +109,7 @@ func (s *Service) SearchWithMetadata(root string, query string, options SearchOp
 		if !entry.IsDir() {
 			remaining := maxResults - len(results)
 			stats.FilesScanned++
-			matches := searchService.searchFileContent(absRoot, relPath, matcher, remaining)
+			matches := searchFileContentFast(absRoot, relPath, matcher, remaining)
 			if len(matches) > 0 {
 				stats.FilesWithContentMatches++
 				stats.ContentMatches += len(matches)
@@ -137,15 +136,24 @@ func (s *Service) SearchWithMetadata(root string, query string, options SearchOp
 	return results, metadata, nil
 }
 
-func (s *Service) searchFileContent(root string, relPath string, matcher searchMatcher, maxResults int) []SearchResult {
+func searchFileContentFast(root string, relPath string, matcher searchMatcher, maxResults int) []SearchResult {
 	if maxResults <= 0 {
 		return nil
 	}
-	preview, err := s.PreviewFile(root, relPath)
-	if err != nil || strings.TrimSpace(preview.Text) == "" {
+	absPath := filepath.Join(root, filepath.FromSlash(relPath))
+	info, err := os.Lstat(absPath)
+	if err != nil || info.IsDir() || info.Mode()&fs.ModeSymlink != 0 {
 		return nil
 	}
-	lines := strings.Split(preview.Text, "\n")
+	content, err := readFilePrefix(absPath, searchPreviewMaxBytes)
+	if err != nil || len(content) == 0 || !isSearchableContent(relPath, content) {
+		return nil
+	}
+	text, _, err := decodeText(content)
+	if err != nil || strings.TrimSpace(text) == "" {
+		return nil
+	}
+	lines := strings.Split(text, "\n")
 	results := make([]SearchResult, 0, min(maxResults, defaultSearchPerFileMax))
 	for index, line := range lines {
 		matchStart, isMatch := matcher.match(line)
@@ -153,10 +161,10 @@ func (s *Service) searchFileContent(root string, relPath string, matcher searchM
 			continue
 		}
 		results = append(results, SearchResult{
-			RelPath:   preview.RelPath,
-			Name:      preview.Name,
-			Kind:      string(preview.Kind),
-			MediaType: preview.MediaType,
+			RelPath:   relPath,
+			Name:      filepath.Base(filepath.FromSlash(relPath)),
+			Kind:      "file",
+			MediaType: mediaType(relPath),
 			MatchType: matcher.matchType("content"),
 			Line:      index + 1,
 			Snippet:   trimSearchSnippet(line, matchStart),
@@ -166,6 +174,23 @@ func (s *Service) searchFileContent(root string, relPath string, matcher searchM
 		}
 	}
 	return results
+}
+
+func isSearchableContent(relPath string, content []byte) bool {
+	extension := strings.ToLower(filepath.Ext(relPath))
+	if isImageExtension(extension) || isPDFExtension(extension) || isDocumentExtension(extension) || extension == ".xlsx" {
+		return false
+	}
+	if looksLikeUTF16LE(content) || looksLikeUTF16BE(content) {
+		return true
+	}
+	if looksBinary(content) {
+		return false
+	}
+	if isTextLikePath(relPath) || extension == ".csv" || extension == ".tsv" {
+		return true
+	}
+	return true
 }
 
 type searchMatcher struct {
