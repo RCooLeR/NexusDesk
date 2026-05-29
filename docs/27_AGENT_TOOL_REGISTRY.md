@@ -19,7 +19,7 @@ The implemented registry is exposed to the agent through `ToolDescriptors()` and
 | Registry | `list_tool_catalog` | Lists implemented and planned first-party tools by category/status. |
 | Workspace | `read_context`, `read_file`, `search_workspace`, `read_problems` | Bounded workspace reads, search, context packs, and lightweight diagnostics. |
 | Files | `write_file`, `append_file`, `copy_file`, `move_file`, `delete_file`, `apply_patch`, `list_rollbacks`, `rollback_file_mutation` | Approval-gated safe mutation tools with path validation and rollback snapshots. |
-| Git | `read_git_status`, `read_git_diff`, `read_git_history`, `read_git_blame` | Read-only repository context. Mutating Git actions remain planned. |
+| Git | `read_git_status`, `read_git_diff`, `read_git_history`, `read_git_blame`, `stage_file`, `unstage_file`, `stage_hunk`, `unstage_hunk` | Read-only repository context plus approval-gated index-only staging/unstaging. Commit, branch, and destructive Git actions remain planned. |
 | Terminal/tasks | `list_tasks`, `run_task`, `run_terminal_command` | Discovered safe tasks and one-shot approved terminal commands by executable name plus explicit JSON args. Shell interpreters and command paths are blocked. |
 | Jobs | `list_jobs`, `read_job_logs`, `cancel_job` | Redacted durable job status/log access plus approval-gated cancellation for running jobs. |
 | Browser/web | `web_fetch` | Approval-gated HTTP(S) text fetch only. Rendered browser automation remains planned. |
@@ -54,7 +54,6 @@ The planned registry should be implemented in priority order, with tests and doc
 
 ### Git And Collaboration
 
-- `stage_file`, `unstage_file`, `stage_hunk`: approved index operations.
 - `commit_changes`: commit approved staged changes.
 - `create_branch`: create/switch branch with naming policy.
 - `revert_changes`: destructive revert/discard through explicit preview.

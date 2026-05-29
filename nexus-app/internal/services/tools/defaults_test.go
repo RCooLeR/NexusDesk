@@ -502,6 +502,72 @@ func TestDefaultDispatcherGitHistoryAndBlameTools(t *testing.T) {
 	}
 }
 
+func TestDefaultDispatcherGitIndexMutationTools(t *testing.T) {
+	if _, err := exec.LookPath("git"); err != nil {
+		t.Skip("git executable is not available")
+	}
+	root := t.TempDir()
+	runToolTestGit(t, root, "init")
+	runToolTestGit(t, root, "config", "user.email", "test@example.com")
+	runToolTestGit(t, root, "config", "user.name", "Test User")
+	path := filepath.Join(root, "notes.txt")
+	if err := os.WriteFile(path, []byte("line one\nline two\nline three\n"), 0o644); err != nil {
+		t.Fatalf("write notes file: %v", err)
+	}
+	runToolTestGit(t, root, "add", "notes.txt")
+	runToolTestGit(t, root, "commit", "-m", "initial notes")
+	if err := os.WriteFile(path, []byte("line one\nline two edited\nline three\n"), 0o644); err != nil {
+		t.Fatalf("modify notes file: %v", err)
+	}
+	dispatcher := NewDefaultDispatcher(Dependencies{Workspace: workspaceSvc.New()})
+
+	blocked, err := dispatcher.ExecuteTool(context.Background(), agent.ToolCall{Name: "stage_file", Args: map[string]string{"relPath": "notes.txt"}}, agent.Request{WorkspaceRoot: root})
+	if err == nil || blocked.Risk != "high" || !strings.Contains(blocked.Observation, "approval") {
+		t.Fatalf("expected stage_file approval block, got result=%#v err=%v", blocked, err)
+	}
+	notRepo, err := dispatcher.ExecuteTool(context.Background(), agent.ToolCall{Name: "stage_file", Args: map[string]string{"relPath": "notes.txt"}}, agent.Request{WorkspaceRoot: t.TempDir(), ApproveWrites: true})
+	if err == nil || notRepo.Mutated || !strings.Contains(notRepo.Observation, "Git repository") {
+		t.Fatalf("expected stage_file to reject non-repo workspace without mutation, got result=%#v err=%v", notRepo, err)
+	}
+
+	staged, err := dispatcher.ExecuteTool(context.Background(), agent.ToolCall{Name: "stage_file", Args: map[string]string{"relPath": "notes.txt"}}, agent.Request{
+		WorkspaceRoot: root,
+		ApproveTool: func(ctx context.Context, request agent.ToolApprovalRequest) bool {
+			return request.Name == "stage_file" && request.Risk == "high"
+		},
+	})
+	if err != nil {
+		t.Fatalf("stage_file returned error: %v", err)
+	}
+	if !staged.Mutated || !strings.Contains(staged.Observation, "Staged notes.txt.") || !strings.Contains(staged.Observation, "staged=1 unstaged=0") {
+		t.Fatalf("unexpected stage_file observation:\n%s", staged.Observation)
+	}
+
+	unstaged, err := dispatcher.ExecuteTool(context.Background(), agent.ToolCall{Name: "unstage_file", Args: map[string]string{"relPath": "notes.txt"}}, agent.Request{WorkspaceRoot: root, ApproveWrites: true})
+	if err != nil {
+		t.Fatalf("unstage_file returned error: %v", err)
+	}
+	if !strings.Contains(unstaged.Observation, "Unstaged notes.txt.") || !strings.Contains(unstaged.Observation, "staged=0 unstaged=1") {
+		t.Fatalf("unexpected unstage_file observation:\n%s", unstaged.Observation)
+	}
+
+	hunkStaged, err := dispatcher.ExecuteTool(context.Background(), agent.ToolCall{Name: "stage_hunk", Args: map[string]string{"relPath": "notes.txt", "hunkId": "1"}}, agent.Request{WorkspaceRoot: root, ApproveWrites: true})
+	if err != nil {
+		t.Fatalf("stage_hunk returned error: %v", err)
+	}
+	if !strings.Contains(hunkStaged.Observation, "Staged hunk 1 in notes.txt.") || !strings.Contains(hunkStaged.Observation, "Diff kind: unstaged") {
+		t.Fatalf("unexpected stage_hunk observation:\n%s", hunkStaged.Observation)
+	}
+
+	hunkUnstaged, err := dispatcher.ExecuteTool(context.Background(), agent.ToolCall{Name: "unstage_hunk", Args: map[string]string{"relPath": "notes.txt", "hunkIndex": "0"}}, agent.Request{WorkspaceRoot: root, ApproveWrites: true})
+	if err != nil {
+		t.Fatalf("unstage_hunk returned error: %v", err)
+	}
+	if !strings.Contains(hunkUnstaged.Observation, "Unstaged hunk 1 in notes.txt.") || !strings.Contains(hunkUnstaged.Observation, "Diff kind: staged") {
+		t.Fatalf("unexpected unstage_hunk observation:\n%s", hunkUnstaged.Observation)
+	}
+}
+
 func TestDefaultDispatcherArtifactLineageTool(t *testing.T) {
 	root := t.TempDir()
 	if err := os.WriteFile(filepath.Join(root, "README.md"), []byte("# Project\n"), 0o644); err != nil {
