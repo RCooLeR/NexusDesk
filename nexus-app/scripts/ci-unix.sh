@@ -24,9 +24,9 @@ cleanup() {
 trap cleanup EXIT
 
 echo "Checking gofmt..."
-mapfile -t go_files < <(git ls-files '*.go')
-if ((${#go_files[@]} > 0)); then
-  unformatted="$(gofmt -l "${go_files[@]}")"
+go_files="$(git ls-files '*.go')"
+if [[ -n "${go_files}" ]]; then
+  unformatted="$(printf '%s\n' "${go_files}" | xargs gofmt -l)"
   if [[ -n "${unformatted}" ]]; then
     echo "${unformatted}" >&2
     echo "gofmt check failed." >&2

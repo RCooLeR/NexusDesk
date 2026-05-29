@@ -6,6 +6,7 @@ import (
 	"bytes"
 	"errors"
 	"fmt"
+	"os"
 	"os/exec"
 )
 
@@ -14,6 +15,9 @@ const linuxBackend = "linux-secret-service"
 var secretToolCommand = "secret-tool"
 
 func Protect(purpose string, data []byte) ([]byte, error) {
+	if _, err := exec.LookPath(secretToolCommand); err != nil {
+		return nil, fmt.Errorf("protected secret storage is unavailable: %s was not found in PATH", secretToolCommand)
+	}
 	token, err := newToken(linuxBackend, purpose)
 	if err != nil {
 		return nil, err
@@ -25,6 +29,9 @@ func Protect(purpose string, data []byte) ([]byte, error) {
 }
 
 func Unprotect(data []byte) ([]byte, error) {
+	if _, err := exec.LookPath(secretToolCommand); err != nil {
+		return nil, fmt.Errorf("protected secret storage is unavailable: %s was not found in PATH", secretToolCommand)
+	}
 	token, ok, err := decodeToken(data)
 	if err != nil {
 		return nil, err
@@ -40,6 +47,12 @@ func Unprotect(data []byte) ([]byte, error) {
 }
 
 func Delete(data []byte) error {
+	if _, err := exec.LookPath(secretToolCommand); err != nil {
+		if len(bytes.TrimSpace(data)) == 0 || errors.Is(err, os.ErrNotExist) || errors.Is(err, exec.ErrNotFound) {
+			return nil
+		}
+		return fmt.Errorf("protected secret storage is unavailable: %s was not found in PATH", secretToolCommand)
+	}
 	token, ok, err := decodeToken(data)
 	if err != nil || !ok || token.Backend != linuxBackend {
 		return err

@@ -113,7 +113,7 @@ func TestStoreRejectsAPIKeyWhenProtectedStorageUnsupported(t *testing.T) {
 	}
 	store := NewFileStore(filepath.Join(t.TempDir(), "settings.json"))
 	err := store.Save(Settings{BaseURL: "https://api.example.test/v1", APIKey: "secret"})
-	if err == nil || !strings.Contains(err.Error(), "protected secret storage is not implemented") {
+	if err == nil || !strings.Contains(err.Error(), "protected secret storage") {
 		t.Fatalf("expected protected storage refusal, got %v", err)
 	}
 }

@@ -398,6 +398,7 @@ Exit criteria:
 
 - [ ] Repeatable Windows build pipeline with icon, version metadata, installer/update plan, and code-signing path.
 - [x] First native CI smoke matrix for Windows, macOS, and Linux with gofmt, `go test ./...`, `go vet ./...`, CGO/Fyne build, and `git diff --check`.
+- [x] Harden native CI portability after matrix failures: POSIX-safe Unix gofmt check, Windows-path connector scope matching on non-Windows runners, and graceful Linux protected-secret refusal when `secret-tool` is unavailable.
 - [x] Add ldflag-backed app version/build metadata validation to native CI builds and About metadata.
 - [x] Add release manifest generation/validation to native CI builds with artifact name, size, SHA256, platform, version, commit, and build date metadata.
 - [ ] Expand CI into signed release packaging and installer/update validation.

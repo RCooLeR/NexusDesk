@@ -6,6 +6,7 @@ import (
 	"errors"
 	"fmt"
 	"os"
+	"path"
 	"path/filepath"
 	"regexp"
 	"runtime"
@@ -407,17 +408,30 @@ func workspaceScopeMatches(profileScope string, workspaceRoot string) bool {
 	return profileScope == workspaceRoot
 }
 
-func normalizeWorkspaceScopePath(path string) string {
-	path = strings.TrimSpace(path)
-	if path == "" {
+func normalizeWorkspaceScopePath(scopePath string) string {
+	value := strings.TrimSpace(scopePath)
+	if value == "" {
 		return ""
 	}
-	cleaned := filepath.Clean(path)
-	normalized := strings.ReplaceAll(cleaned, "\\", "/")
-	if runtime.GOOS == "windows" {
+	windowsLike := isWindowsScopePath(value)
+	normalized := strings.ReplaceAll(value, "\\", "/")
+	normalized = path.Clean(normalized)
+	if runtime.GOOS == "windows" || windowsLike {
 		normalized = strings.ToLower(normalized)
 	}
 	return normalized
+}
+
+func isWindowsScopePath(value string) bool {
+	value = strings.TrimSpace(value)
+	if strings.Contains(value, "\\") {
+		return true
+	}
+	if len(value) >= 2 && value[1] == ':' {
+		first := value[0]
+		return (first >= 'A' && first <= 'Z') || (first >= 'a' && first <= 'z')
+	}
+	return false
 }
 
 func validateConnectorProfile(profile ConnectorProfile) error {
