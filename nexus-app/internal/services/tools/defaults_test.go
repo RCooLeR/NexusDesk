@@ -47,6 +47,25 @@ func TestDefaultDispatcherReadAndSearchTools(t *testing.T) {
 	}
 }
 
+func TestDefaultDispatcherReadFileReportsTruncatedPreview(t *testing.T) {
+	root := t.TempDir()
+	if err := os.WriteFile(filepath.Join(root, "large.txt"), []byte(strings.Repeat("x", 300*1024)), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	dispatcher := NewDefaultDispatcher(Dependencies{Workspace: workspaceSvc.New()})
+	request := agent.Request{WorkspaceRoot: root}
+
+	read, err := dispatcher.ExecuteTool(context.Background(), agent.ToolCall{Name: "read_file", Args: map[string]string{"relPath": "large.txt"}}, request)
+	if err != nil {
+		t.Fatalf("read_file returned error: %v", err)
+	}
+	for _, expected := range []string{"File: large.txt", "Truncated: true", "TextBytes: 262144"} {
+		if !strings.Contains(read.Observation, expected) {
+			t.Fatalf("expected %q in read observation:\n%s", expected, read.Observation)
+		}
+	}
+}
+
 func TestDefaultDispatcherContextAndProblemsTools(t *testing.T) {
 	root := t.TempDir()
 	if err := os.WriteFile(filepath.Join(root, "notes.md"), []byte("FIXME: check dispatcher\n"), 0o644); err != nil {

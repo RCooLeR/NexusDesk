@@ -4,6 +4,7 @@ import (
 	"strings"
 	"testing"
 
+	"nexusdesk/internal/domain"
 	editorSvc "nexusdesk/internal/services/editor"
 )
 
@@ -25,6 +26,21 @@ func TestDocumentMapItemText(t *testing.T) {
 
 	if text != "todo  TODO: wire startup  L12" {
 		t.Fatalf("unexpected document map text: %q", text)
+	}
+}
+
+func TestEditorSaveAllowedBlocksTruncatedPreview(t *testing.T) {
+	tab := editorSvc.Tab{Dirty: true}
+	preview := domain.FilePreview{Kind: domain.PreviewText, Truncated: true}
+
+	if editorSaveAllowed(tab, preview, false) {
+		t.Fatal("expected save to be blocked for truncated preview")
+	}
+	if editorSaveAllowed(editorSvc.Tab{}, preview, true) {
+		t.Fatal("expected encoding-only save to be blocked for truncated preview")
+	}
+	if !editorSaveAllowed(tab, domain.FilePreview{Kind: domain.PreviewText}, false) {
+		t.Fatal("expected dirty full preview to be saveable")
 	}
 }
 

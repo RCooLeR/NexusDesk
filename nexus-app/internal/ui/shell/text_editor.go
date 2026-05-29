@@ -111,6 +111,11 @@ func (v *View) newTextEditor(tab editorSvc.Tab, preview domain.FilePreview, onSt
 			onState(next, binding.encodingDirty())
 		}
 	}
+	if preview.Truncated {
+		source.Disable()
+		encodingSelect.Disable()
+		status.SetText("Read-only partial preview. Inline editing is disabled to protect the full file.")
+	}
 	binding.setOutline(tab.DraftText)
 	binding.setDocumentMap(tab.DraftText)
 	binding.setDiagnostics(tab.DraftText)
@@ -148,6 +153,9 @@ func (v *View) newTextEditor(tab editorSvc.Tab, preview domain.FilePreview, onSt
 		status.SetText(result.Message)
 	})
 	format.Importance = widget.LowImportance
+	if preview.Truncated {
+		format.Disable()
+	}
 	symbols := widget.NewButtonWithIcon("Symbols", theme.SearchIcon(), func() {
 		v.openEditorSymbolDialog(tab.ID)
 	})
@@ -197,6 +205,9 @@ func (v *View) newTextEditor(tab editorSvc.Tab, preview domain.FilePreview, onSt
 
 	v.bindTextEditor(tab.ID, binding)
 
+	if preview.Truncated {
+		revert.Disable()
+	}
 	encodingControl := container.NewHBox(widget.NewLabel("Save as"), encodingSelect, definition, references, symbols, format, revert)
 	sourcePanel := container.NewBorder(container.NewBorder(nil, nil, status, encodingControl), nil, nil, nil, source)
 	previewPanel := container.NewBorder(widget.NewLabel(previewHeader(preview)), nil, nil, nil, rendered.Canvas())

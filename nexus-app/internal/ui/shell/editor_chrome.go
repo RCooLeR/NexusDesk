@@ -23,7 +23,7 @@ func (v *View) newEditorPanel(tab editorSvc.Tab, preview domain.FilePreview) fyn
 		v.saveEditorDraft(tab.ID)
 	})
 	save.Importance = widget.MediumImportance
-	setSaveEnabled(save, tab.Dirty)
+	setSaveEnabled(save, editorSaveAllowed(tab, preview, false))
 	pin := widget.NewButtonWithIcon("", theme.ConfirmIcon(), func() {
 		if next, ok := v.editorSession.TogglePinned(tab.ID); ok {
 			state.SetText(editorStateText(next))
@@ -35,7 +35,7 @@ func (v *View) newEditorPanel(tab editorSvc.Tab, preview domain.FilePreview) fyn
 	if preview.Kind == domain.PreviewText {
 		content = v.newTextEditor(tab, preview, func(next editorSvc.Tab, encodingDirty bool) {
 			state.SetText(editorStateText(next))
-			setSaveEnabled(save, next.Dirty || encodingDirty)
+			setSaveEnabled(save, editorSaveAllowed(next, preview, encodingDirty))
 			v.updateEditorTabState(next)
 		})
 	} else {
@@ -195,6 +195,11 @@ func (v *View) saveEditorDraft(tabID string) {
 		v.addActivity("Could not resolve editor preview for saving " + tab.Title + ".")
 		return
 	}
+	if preview.Truncated {
+		v.addActivity("Save blocked for " + tab.RelPath + ": preview is truncated, so inline editing is read-only.")
+		dialog.ShowInformation("Save blocked", "This file preview is truncated. Inline editing is disabled so NexusDesk does not overwrite the full file with a capped prefix.", v.window)
+		return
+	}
 	encoding := preview.Encoding
 	if editor, ok := v.textEditor(tab.ID); ok {
 		encoding = editor.writeEncoding()
@@ -266,6 +271,10 @@ func setSaveEnabled(button *widget.Button, enabled bool) {
 		return
 	}
 	button.Disable()
+}
+
+func editorSaveAllowed(tab editorSvc.Tab, preview domain.FilePreview, encodingDirty bool) bool {
+	return !preview.Truncated && (tab.Dirty || encodingDirty)
 }
 
 func (v *View) updateEditorTabState(tab editorSvc.Tab) {

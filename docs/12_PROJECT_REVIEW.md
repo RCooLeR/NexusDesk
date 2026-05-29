@@ -4,7 +4,7 @@ Date: 2026-05-28
 
 This review records the current state of Nexus Augentic Studio after the latest Fyne migration and production-readiness work. It is intentionally explicit: `nexus-app/` is the active product, while `app-wails/` remains the reference implementation until remaining native parity blockers are either completed or deliberately moved out of Native Parity Beta.
 
-For the current end-to-end execution plan, Claude findings integration, and JetBrains-like UI target, use [End-To-End Production Master Plan](17_END_TO_END_PRODUCTION_PLAN.md). This review is a snapshot; the master plan and `tracker.md` are the active steering documents.
+For the current end-to-end execution plan, Claude findings integration, and JetBrains-like UI target, use [End-To-End Production Master Plan](17_END_TO_END_PRODUCTION_PLAN.md). For the latest consolidated full review, implemented capability inventory, planned functionality, Claude findings triage, and keep-going prompt, use [Full Project Review And Roadmap](29_FULL_PROJECT_REVIEW_AND_ROADMAP.md). This review is a snapshot; the master plan, consolidated review, and `tracker.md` are the active steering documents.
 
 ## Executive Summary
 

@@ -33,6 +33,11 @@ func newFilePreview(preview domain.FilePreview) fyne.CanvasObject {
 	content.SetText(preview.Text)
 	content.Wrapping = fyne.TextWrapOff
 	content.Disable()
+	if preview.Truncated {
+		warning := widget.NewLabel("Partial preview only. Inline editing is disabled to avoid overwriting the full file with a capped prefix.")
+		warning.Wrapping = fyne.TextWrapWord
+		return container.NewBorder(container.NewVBox(header, warning), nil, nil, nil, content)
+	}
 	return container.NewBorder(header, nil, nil, nil, content)
 }
 
@@ -135,8 +140,16 @@ func maxInt(left, right int) int {
 }
 
 func previewHeader(preview domain.FilePreview) string {
-	if preview.Encoding == "" {
-		return fmt.Sprintf("%s - %d bytes - %s", preview.RelPath, preview.Size, preview.MediaType)
+	suffix := ""
+	if preview.Truncated {
+		shown := preview.TextBytes
+		if shown <= 0 {
+			shown = int64(len([]byte(preview.Text)))
+		}
+		suffix = fmt.Sprintf(" - truncated preview: %d of %d bytes", shown, preview.Size)
 	}
-	return fmt.Sprintf("%s - %d bytes - %s - %s", preview.RelPath, preview.Size, preview.MediaType, preview.Encoding)
+	if preview.Encoding == "" {
+		return fmt.Sprintf("%s - %d bytes - %s%s", preview.RelPath, preview.Size, preview.MediaType, suffix)
+	}
+	return fmt.Sprintf("%s - %d bytes - %s - %s%s", preview.RelPath, preview.Size, preview.MediaType, preview.Encoding, suffix)
 }

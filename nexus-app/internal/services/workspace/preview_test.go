@@ -101,8 +101,8 @@ func TestPreviewFileRejectsOversizedFiles(t *testing.T) {
 	if err != nil {
 		t.Fatalf("preview failed: %v", err)
 	}
-	if preview.Kind != "text" || preview.Text != "xxxx" {
-		t.Fatalf("expected truncated text preview, got kind=%s text=%q", preview.Kind, preview.Text)
+	if preview.Kind != "text" || preview.Text != "xxxx" || !preview.Truncated || preview.TextBytes != 4 {
+		t.Fatalf("expected truncated text preview, got kind=%s text=%q truncated=%t textBytes=%d", preview.Kind, preview.Text, preview.Truncated, preview.TextBytes)
 	}
 }
 

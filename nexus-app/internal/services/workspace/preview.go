@@ -61,6 +61,8 @@ func (s *Service) PreviewFile(root string, relPath string) (domain.FilePreview, 
 		pdf := decodePDF(content)
 		preview.Bytes = content
 		preview.Text = pdf.Text
+		preview.TextBytes = int64(len([]byte(pdf.Text)))
+		preview.Truncated = pdf.Truncated
 		preview.PDF = pdf
 		return preview, nil
 	}
@@ -70,6 +72,10 @@ func (s *Service) PreviewFile(root string, relPath string) (domain.FilePreview, 
 			return domain.FilePreview{}, err
 		}
 		preview.Text = text
+		preview.TextBytes = int64(len(content))
+		if table != nil {
+			preview.Truncated = table.Truncated
+		}
 		preview.Encoding = encoding
 		preview.Table = table
 		return preview, nil
@@ -80,6 +86,8 @@ func (s *Service) PreviewFile(root string, relPath string) (domain.FilePreview, 
 			return domain.FilePreview{}, err
 		}
 		preview.Text = document.Text
+		preview.TextBytes = int64(len([]byte(document.Text)))
+		preview.Truncated = document.Truncated
 		preview.Document = document
 		return preview, nil
 	}
@@ -91,6 +99,8 @@ func (s *Service) PreviewFile(root string, relPath string) (domain.FilePreview, 
 		return domain.FilePreview{}, err
 	}
 	preview.Text = text
+	preview.TextBytes = int64(len(content))
+	preview.Truncated = isOversized
 	preview.Encoding = encoding
 	return preview, nil
 }

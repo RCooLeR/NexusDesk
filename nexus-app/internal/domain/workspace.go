@@ -41,6 +41,8 @@ type FilePreview struct {
 	MediaType string
 	Encoding  string
 	Text      string
+	TextBytes int64
+	Truncated bool
 	Bytes     []byte
 	Table     *TablePreview
 	Document  *DocumentPreview

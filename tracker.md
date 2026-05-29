@@ -1,4 +1,4 @@
-# Nexus Augentic Studio Tracker
+﻿# Nexus Augentic Studio Tracker
 
 This tracker is now centered on the Fyne migration. The Wails/React application is preserved as `app-wails/` and remains the reference implementation until feature parity is intentionally restored in `nexus-app/`.
 
@@ -17,6 +17,7 @@ This is a breaking migration, not an incremental UI refresh.
 ## Current Review
 
 Latest full project review: `docs/12_PROJECT_REVIEW.md`.
+Latest consolidated full review and roadmap: `docs/29_FULL_PROJECT_REVIEW_AND_ROADMAP.md`.
 Production-readiness gates: `docs/13_PRODUCTION_READINESS.md`.
 Wails feature inventory and retirement blockers: `docs/15_WAILS_FEATURE_INVENTORY.md`.
 Native editor parity decision: `docs/16_EDITOR_PARITY_STRATEGY.md`.
@@ -39,6 +40,7 @@ Summary:
 - Final UI direction is a professional JetBrains-like native workbench: top menu/toolbar, left project/tool rail, central tabbed editor, right integrated assistant, grouped bottom tool windows, compact dark theme, strong keyboard workflows, DataGrip-style data surfaces, and trust-building settings/diagnostics.
 - Native theme token baseline is defined in `docs/26_NATIVE_THEME_TOKENS.md` and implemented in `nexus-app/internal/ui/theme`; future UI polish should reuse those tokens rather than adding ad hoc colors.
 - Compact and comfortable density modes are defined in `nexus-app/internal/ui/theme`; compact remains the production default while comfortable is ready for future preferences/onboarding work.
+- The latest Claude findings are now consolidated into `docs/29_FULL_PROJECT_REVIEW_AND_ROADMAP.md`; the top production risks are preview truncation data loss, zip decompression caps, platform secret hardening, DNS-rebinding SSRF hardening, workspace search performance, connector TLS defaults, metadata WAL/busy timeout, streaming/activity throttling, editor-save threading, and UI shell controller extraction.
 - `app-wails/` should remain as reference until the remaining native parity blockers are completed or explicitly moved out of Native Parity Beta.
 
 Production direction:
@@ -51,6 +53,8 @@ Production direction:
 Immediate execution order:
 
 - Keep `docs/17_END_TO_END_PRODUCTION_PLAN.md` current as the product north star for all repeated development sessions.
+- Use `docs/29_FULL_PROJECT_REVIEW_AND_ROADMAP.md` as the current consolidated review snapshot when choosing the next safety, parity, UI, packaging, or production milestone.
+- Fix the remaining P0 Claude/Codex review items before broad new feature work: zip decompression caps, macOS Keychain argv hardening, Windows DPAPI KeepAlive, DNS-rebinding SSRF hardening, and workspace search fast path.
 - Validate macOS Keychain and Linux Secret Service/libsecret behavior during platform packaging smoke.
 - Apply the durable slow-job contract to OCR, dump imports, connector pulls, long indexing, report generation, and long agent runs as those workflows are implemented.
 - Keep the documented native editor parity strategy visible in Language Actions and continue post-beta LSP/inline-styling spikes without blocking Native Parity Beta.
@@ -742,3 +746,95 @@ The Fyne migration must not drop product ambition, but this section is intention
 - [x] Separate Ask vs Agent system prompt behavior for clearer model role control.
 - [x] Add quick-open keyboard workflow (e.g., Ctrl+P) for direct file navigation.
 - [x] Close welcome tab on first workspace open or repurpose into workspace-aware home surface.
+
+## Claude Findings 2026-05-29 Complete Backlog
+
+Source: `claude-findings.md`. Detailed plan context lives in `docs/29_FULL_PROJECT_REVIEW_AND_ROADMAP.md`. These items intentionally include every current Claude finding so future work can close them explicitly rather than relying on the raw report.
+
+### Critical / P0
+
+- [ ] C-1.1 Workspace search full-decodes every candidate file: implement byte/chunk search fast path, binary skips, matcher reuse, latest-request cancellation/singleflight, and optional mtime/size cache.
+- [ ] C-1.2 macOS Keychain passes secrets on process argv: feed secrets through stdin or Security.framework and add regression coverage.
+- [ ] C-1.3 XLSX/DOCX/PPTX zip preview has no decompression caps: limit member reads, cap total uncompressed size, reject suspicious archives, and test zip-bomb fixtures.
+- [ ] C-1.4 Windows DPAPI blob calls do not pin input buffers: add `runtime.KeepAlive` or use official Windows wrappers and harden `LocalFree` handling.
+- [ ] C-1.5 UI shell `View` is a god object: extract controllers/state for Data, Assistant, Git, Editor, Artifacts, Diagnostics, Jobs, and Settings.
+
+### High / P1
+
+- [ ] H-2.1 Editor save runs on the UI thread: make save/diff/rollback async, show saving state, and avoid full panel rebuild after save.
+- [ ] H-2.2 SQLite metadata store lacks WAL/busy timeout: open with WAL/foreign-key/busy-timeout pragmas and surface journal mode in Diagnostics.
+- [ ] H-2.3 Streaming chat reparses Markdown per delta: coalesce updates, throttle UI refresh, and render final Markdown once.
+- [x] H-2.4 Top-level text preview truncation is surfaced: `FilePreview.Truncated`/byte metadata exists, truncated editor previews are read-only/save-blocked, and agent `read_file` observations disclose partial reads.
+- [ ] H-2.5 Activity log still reparses the whole bounded Markdown buffer: move to list/per-line rendering or throttled incremental rendering.
+- [ ] H-2.6 External DB connector defaults can downgrade to plaintext: default PostgreSQL/MySQL/SQL Server to encrypted connections and require audited plaintext opt-in.
+- [ ] H-2.7 Mutating tool verification whitelist is incomplete: trust `ToolResult.Mutated`, mark every mutating handler correctly, and remove fragile whitelist behavior.
+- [ ] H-2.8 `web_fetch` is vulnerable to DNS rebinding SSRF: enforce private/link-local/multicast rejection at dial time and cover redirects/tests.
+- [ ] H-2.9 LCS diff and rollback snapshots can consume too much memory/disk: add bounded diff strategy, content-addressable rollback storage, and rollback usage diagnostics.
+- [ ] H-2.10 Two-layer bottom tab navigation still hides functions: continue bottom tool-window grouping and one-click discoverability polish.
+- [ ] H-2.11 SQL guard can block valid keywords inside string literals: improve tokenizer/parser behavior and add fuzz/property tests.
+- [ ] H-2.12 Git commands use a universal four-second timeout: make timeouts command-aware and improve long-repo error handling.
+
+### Medium / P2
+
+- [ ] M-3.1 `webfetch` recompiles regexes per call: move regexes to package-level compiled values.
+- [ ] M-3.2 `web_fetch.extractTitle` returns first body line instead of HTML title: parse `<title>` before stripping HTML.
+- [ ] M-3.3 Metadata store still has per-call connection/ensure contention: reduce locking with once/cached DB behavior and diagnostics.
+- [ ] M-3.4 Job log tail is too short: raise tail size, persist full logs, and add "view full log" UX.
+- [ ] M-3.5 Task runner can use shell wrappers for script names: switch discovered tasks to argv execution by task kind.
+- [ ] M-3.6 Connector pool is not closed/cached cleanly between profile tests: add keyed TTL cache and invalidation on save.
+- [ ] M-3.7 Split-editor secondary preview can go stale after save: refresh secondary pane on save or tab selection events.
+- [ ] M-3.8 Search preview cap can silently miss matches past 64 KB: replace preview-based content search with bounded streaming search.
+- [ ] M-3.9 `cleanRel` needs Windows drive/ADS/reserved-name hardening: reject colon paths and reserved device names where appropriate.
+- [ ] M-3.10 Windows-1251 fallback remains too implicit: add encoding confidence/selection UX or stricter fallback diagnostics.
+- [ ] M-3.11 Git dubious-ownership handling is generic: detect `safe.directory` failures and show targeted remediation.
+- [ ] M-3.12 Agent runs lack a wall-clock limit: add deadline settings and graceful partial-result wrap-up.
+- [ ] M-3.13 Job IDs can collide and have a 9,999 visual wall: switch to ULID or unbounded monotonic IDs.
+- [ ] M-3.14 Connector profile plaintext sidecar errors are swallowed: preflight protected secret availability and show remediation.
+- [ ] M-3.15 Streamed agent observer can race when events outrun UI queue: throttle/coalesce agent event updates.
+
+### Low / UX / Polish
+
+- [ ] L-4.1 Rail button maps rely on UI-thread-only access: document or wrap with an explicit registry/mutex.
+- [ ] L-4.2 Recent workspace list does not validate existence on load: tag or prune missing paths.
+- [ ] L-4.3 Live editor syntax highlighting remains separate from the editable tab: keep as post-beta spike with accessibility/performance proof.
+- [ ] L-4.4 Issue report filenames use local time while logs use UTC: use UTC timestamps for bundle filenames.
+- [ ] L-4.5 Welcome tab persists after first workspace open in the latest static review: verify behavior and add regression coverage.
+- [ ] L-4.6 Agent observation history is fixed at 10 entries: make history budget context-aware.
+- [ ] L-4.7 Unsupported notebook cell kinds are silently dropped: record skipped cells and show a banner.
+- [ ] L-4.8 Data connector active selection can stale after profile list rebuild: reconcile active ID after refresh.
+- [ ] L-4.9 SSE reader assumes `data:` only: document provider compatibility and optionally handle `event:`/`id:` metadata.
+- [ ] L-4.10 Agent prompt repeats ReAct format hints each iteration: send full format instruction once and trim later prompts.
+- [ ] L-4.11 Chart rendering uses hardcoded colors: plumb theme tokens and validate safe color ranges.
+- [ ] L-4.12 Fresh install has no default model selection flow: probe local provider and offer guided first model selection.
+
+### Documentation
+
+- [ ] D-5.1 Production-readiness percentages are unverifiable: replace or back them with generated gate/item counts.
+- [ ] D-5.2 Tracker open items need priority/gate labels: add "Now in flight" and P0/P1/P2/gate tags for open work.
+- [ ] D-5.3 Agent tool registry docs can drift from code: generate docs/table from `internal/services/tools/catalog.go` and check drift in CI.
+- [ ] D-5.4 Threat model needs explicit generated-artifact mutation row for `regenerate_artifact`: add controls for approval, lineage, rollback/mitigation, and redaction.
+- [ ] D-5.5 LLM strategy provider docs drift from implemented provider profiles: update provider type language.
+- [ ] D-5.6 `app-wails/` freeze state is not explicit: add freeze marker and CI guard once parity is declared.
+
+### Architecture / Long-Term Design
+
+- [ ] A-6.1 Evaluate extracting a `nexus-core` Go module for services/tools/domain and optional CLI/server reuse.
+- [ ] A-6.2 Replace repeated panel/list/detail patterns with a typed tool-window abstraction.
+- [ ] A-6.3 Introduce a small shell event bus to decouple controllers and panel refreshes.
+- [ ] A-6.4 Add structured/native tool-call agent protocol behind model-route feature flags while retaining ReAct fallback.
+- [ ] A-6.5 Add rollback/snapshot behavior for artifact archive/restore/delete/regeneration mutations.
+- [ ] A-6.6 Extend `protectedsecret` into the single vault for future GitHub, browser, MCP, plugin, and connector secrets.
+
+### Testing And CI
+
+- [ ] T-7.1 Exercise platform-specific protected-secret paths in CI with Linux `secret-tool` and macOS test keychain coverage.
+- [ ] T-7.2 Add fuzz/property tests for SQL guard tokenizer behavior.
+- [ ] T-7.3 Add integration test proving workspace open runs no shell, Git, Docker, connector, OCR, browser, model, or deep-index work.
+- [ ] T-7.4 Add long-agent-run stress test with repeated tool requests, wall-clock stop, and safe wrap-up.
+
+### Operational / Packaging
+
+- [ ] O-8.1 Add SBOM, provenance attestation, signed release artifacts, and reproducible build guidance.
+- [ ] O-8.2 Define and implement macOS notarization plus Linux package strategy and smoke.
+- [ ] O-8.3 Keep no-telemetry posture but add opt-in quick diagnostics sharing via user-controlled URL/bundle flow.
+- [ ] O-8.4 Add update visibility: minimal GitHub releases link first, later optional semver check service.
