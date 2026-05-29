@@ -401,7 +401,7 @@ Claude's report from `claude-findings.md` was valuable because it highlighted co
 - Approval log re-saves all records: resolved by persisting only new records and serializing writes.
 - Folder-only browse: resolved with single-file open/quick-open.
 - Bottom panel overload: improved by consolidation/grouping; continue UI polish toward JetBrains-like tool-window model.
-- Large `data_panel.go`: split work has landed and Data/Settings panel state now lives in focused controllers; continue extracting remaining small shell ownership clusters.
+- Large `data_panel.go`: split work has landed and Data/Settings/Operations panel state now lives in focused controllers; continue extracting remaining small shell ownership clusters.
 
 ### 5.3 Medium/Polish Findings Status
 
@@ -550,7 +550,7 @@ The checklist below is intentionally large. `tracker.md` should keep task-level 
 - [x] Add dependency guard/static import-boundary tests for forbidden Wails/webview imports, Fyne leakage outside presentation packages, and UI imports from services/domain.
 - [x] Split initial large Data panel responsibilities.
 - [ ] Continue extracting `internal/ui/shell` controllers by responsibility.
-- [ ] Define shell state ownership boundaries: workspace and remaining small shell clusters remain to formalize; editor, assistant, data, settings, artifacts, jobs, diagnostics, search, Git, and rollbacks now have focused controller ownership.
+- [ ] Define shell state ownership boundaries: workspace and remaining small shell clusters remain to formalize; editor, assistant, data, settings, operations, artifacts, jobs, diagnostics, search, Git, and rollbacks now have focused controller ownership.
 - [x] Add package-level architecture docs for services and UI shell.
 - [x] Add performance profiling harness for shell redraw, activity log, data grid, large search, and large artifacts.
 

@@ -23,16 +23,36 @@ const (
 	operationsRunbookJobKind = "operations-runbook"
 )
 
+type operationsController struct {
+	view    *View
+	results *fyne.Container
+	status  *widget.Label
+	detail  *widget.Entry
+}
+
+func newOperationsController(view *View) *operationsController {
+	detail := widget.NewMultiLineEntry()
+	detail.TextStyle = fyne.TextStyle{Monospace: true}
+	detail.Wrapping = fyne.TextWrapWord
+	detail.Disable()
+	return &operationsController{
+		view:    view,
+		results: container.NewVBox(widget.NewLabel("Scan the workspace to inspect Docker, Compose, env, config, script, and log files.")),
+		status:  widget.NewLabel("Operations scan has not been run."),
+		detail:  detail,
+	}
+}
+
 func (v *View) newOperationsPanel() fyne.CanvasObject {
 	scanButton := widget.NewButtonWithIcon("Scan ops files", theme.SearchIcon(), v.scanOperationsFiles)
 	inspectButton := widget.NewButtonWithIcon("Inspect selected", theme.DocumentIcon(), v.inspectSelectedOperationsFile)
 	validateButton := widget.NewButtonWithIcon("Validate Compose", theme.ConfirmIcon(), v.validateSelectedComposeConfig)
 	exportButton := widget.NewButtonWithIcon("Export runbook", theme.DocumentSaveIcon(), v.exportSelectedOperationsRunbook)
 	actions := container.NewHBox(scanButton, inspectButton, validateButton, exportButton)
-	header := container.NewBorder(nil, nil, nil, actions, v.operationsStatus)
-	results := container.NewScroll(v.operationsResults)
+	header := container.NewBorder(nil, nil, nil, actions, v.operations.status)
+	results := container.NewScroll(v.operations.results)
 	results.SetMinSize(fyne.NewSize(280, 120))
-	detail := container.NewScroll(v.operationsDetail)
+	detail := container.NewScroll(v.operations.detail)
 	detail.SetMinSize(fyne.NewSize(360, 140))
 	return container.NewHSplit(results, container.NewBorder(header, nil, nil, nil, detail))
 }
@@ -40,13 +60,13 @@ func (v *View) newOperationsPanel() fyne.CanvasObject {
 func (v *View) scanOperationsFiles() {
 	workspace := v.state.Workspace()
 	if workspace.Root == "" {
-		v.operationsStatus.SetText("Open a workspace before scanning operations files.")
+		v.operations.status.SetText("Open a workspace before scanning operations files.")
 		return
 	}
 	jobLabel := operationsScanJobLabel()
 	job, ctx := v.jobService.Start(operationsScanJobKind, jobLabel)
 	v.jobService.AppendLog(job.ID, "Workspace: "+workspace.Root)
-	v.operationsStatus.SetText("Scanning operations files as " + job.ID + ".")
+	v.operations.status.SetText("Scanning operations files as " + job.ID + ".")
 	v.addActivity("Started " + job.ID + ": " + jobLabel + ".")
 	v.refreshJobs()
 	root := workspace.Root
@@ -61,7 +81,7 @@ func (v *View) scanOperationsFiles() {
 func (v *View) inspectSelectedOperationsFile() {
 	selected := selectedPathOrEmpty(v)
 	if selected == "" {
-		v.operationsStatus.SetText("Select an operations file before inspecting it.")
+		v.operations.status.SetText("Select an operations file before inspecting it.")
 		return
 	}
 	v.inspectOperationsFile(selected)
@@ -70,13 +90,13 @@ func (v *View) inspectSelectedOperationsFile() {
 func (v *View) inspectOperationsFile(relPath string) {
 	workspace := v.state.Workspace()
 	if workspace.Root == "" {
-		v.operationsStatus.SetText("Open a workspace before inspecting operations files.")
+		v.operations.status.SetText("Open a workspace before inspecting operations files.")
 		return
 	}
 	jobLabel := operationsInspectJobLabel(relPath)
 	job, ctx := v.jobService.Start(operationsInspectJobKind, jobLabel)
 	v.jobService.AppendLog(job.ID, "Path: "+strings.TrimSpace(relPath))
-	v.operationsStatus.SetText("Inspecting operations file as " + job.ID + ".")
+	v.operations.status.SetText("Inspecting operations file as " + job.ID + ".")
 	v.addActivity("Started " + job.ID + ": " + jobLabel + ".")
 	v.refreshJobs()
 	root := workspace.Root
@@ -91,22 +111,22 @@ func (v *View) inspectOperationsFile(relPath string) {
 func (v *View) validateSelectedComposeConfig() {
 	workspace := v.state.Workspace()
 	if workspace.Root == "" {
-		v.operationsStatus.SetText("Open a workspace before validating Compose config.")
+		v.operations.status.SetText("Open a workspace before validating Compose config.")
 		return
 	}
 	selected := selectedPathOrEmpty(v)
 	if selected == "" {
-		v.operationsStatus.SetText("Select a Compose file before validating it.")
+		v.operations.status.SetText("Select a Compose file before validating it.")
 		return
 	}
 	inspection, err := v.operationsService.Inspect(workspace.Root, selected)
 	if err != nil {
-		v.operationsStatus.SetText("Compose validation could not inspect " + selected)
+		v.operations.status.SetText("Compose validation could not inspect " + selected)
 		dialog.ShowError(err, v.window)
 		return
 	}
 	if inspection.File.Kind != operationsSvc.FileKindCompose {
-		v.operationsStatus.SetText("Select a Compose file before validating it.")
+		v.operations.status.SetText("Select a Compose file before validating it.")
 		return
 	}
 	task, ok, err := v.taskService.FindBySource(workspace.Root, "compose", inspection.File.RelPath)
@@ -115,7 +135,7 @@ func (v *View) validateSelectedComposeConfig() {
 		return
 	}
 	if !ok {
-		v.operationsStatus.SetText("No safe Compose validation task found for " + inspection.File.RelPath + ".")
+		v.operations.status.SetText("No safe Compose validation task found for " + inspection.File.RelPath + ".")
 		return
 	}
 	message := "Run read-only `docker compose config` for " + inspection.File.RelPath + "?"
@@ -123,7 +143,7 @@ func (v *View) validateSelectedComposeConfig() {
 		if !confirm {
 			return
 		}
-		v.operationsStatus.SetText("Validating Compose config " + inspection.File.RelPath + " as a job.")
+		v.operations.status.SetText("Validating Compose config " + inspection.File.RelPath + " as a job.")
 		v.runTask(task)
 	}, v.window)
 }
@@ -131,18 +151,18 @@ func (v *View) validateSelectedComposeConfig() {
 func (v *View) exportSelectedOperationsRunbook() {
 	workspace := v.state.Workspace()
 	if workspace.Root == "" {
-		v.operationsStatus.SetText("Open a workspace before exporting an operations runbook.")
+		v.operations.status.SetText("Open a workspace before exporting an operations runbook.")
 		return
 	}
 	selected := selectedPathOrEmpty(v)
 	if selected == "" {
-		v.operationsStatus.SetText("Select an operations file before exporting a runbook.")
+		v.operations.status.SetText("Select an operations file before exporting a runbook.")
 		return
 	}
 	jobLabel := operationsRunbookJobLabel(selected)
 	job, ctx := v.jobService.Start(operationsRunbookJobKind, jobLabel)
 	v.jobService.AppendLog(job.ID, "Path: "+strings.TrimSpace(selected))
-	v.operationsStatus.SetText("Exporting operations runbook as " + job.ID + ".")
+	v.operations.status.SetText("Exporting operations runbook as " + job.ID + ".")
 	v.addActivity("Started " + job.ID + ": " + jobLabel + ".")
 	v.refreshJobs()
 	root := workspace.Root
@@ -158,11 +178,11 @@ func (v *View) finishOperationsScanJob(jobID string, result operationsSvc.ScanRe
 	if err != nil {
 		if isOperationsJobCanceled(err) {
 			v.jobService.Finish(jobID, jobsSvc.StatusCanceled, "Operations scan cancelled.", nil)
-			v.operationsStatus.SetText("Operations scan cancelled.")
+			v.operations.status.SetText("Operations scan cancelled.")
 			v.addActivity("Operations scan cancelled.")
 		} else {
 			v.jobService.Finish(jobID, jobsSvc.StatusFailed, "Operations scan failed.", err)
-			v.operationsStatus.SetText("Operations scan failed.")
+			v.operations.status.SetText("Operations scan failed.")
 			dialog.ShowError(err, v.window)
 		}
 		v.refreshJobs()
@@ -170,10 +190,10 @@ func (v *View) finishOperationsScanJob(jobID string, result operationsSvc.ScanRe
 	}
 	v.jobService.AppendLog(jobID, fmt.Sprintf("Files=%d compose=%d docker=%d", result.Summary.Files, result.Summary.Compose, result.Summary.Dockerfiles))
 	v.jobService.Finish(jobID, jobsSvc.StatusSuccess, firstNonEmptyString(result.Message, "Operations scan completed."), nil)
-	v.operationsStatus.SetText(formatOperationsScanStatus(result))
-	v.operationsResults.Objects = nil
+	v.operations.status.SetText(formatOperationsScanStatus(result))
+	v.operations.results.Objects = nil
 	if len(result.Files) == 0 {
-		v.operationsResults.Add(widget.NewLabel("No Docker, Compose, env, config, script, or log files found."))
+		v.operations.results.Add(widget.NewLabel("No Docker, Compose, env, config, script, or log files found."))
 	} else {
 		for _, file := range result.Files {
 			opsFile := file
@@ -182,10 +202,10 @@ func (v *View) finishOperationsScanJob(jobID string, result operationsSvc.ScanRe
 				v.inspectOperationsFile(opsFile.RelPath)
 			})
 			button.Alignment = widget.ButtonAlignLeading
-			v.operationsResults.Add(button)
+			v.operations.results.Add(button)
 		}
 	}
-	v.operationsResults.Refresh()
+	v.operations.results.Refresh()
 	v.addActivity("Scanned workspace operations files.")
 	v.refreshJobs()
 }
@@ -194,11 +214,11 @@ func (v *View) finishOperationsInspectJob(jobID string, relPath string, inspecti
 	if err != nil {
 		if isOperationsJobCanceled(err) {
 			v.jobService.Finish(jobID, jobsSvc.StatusCanceled, "Operations inspection cancelled.", nil)
-			v.operationsStatus.SetText("Operations inspection cancelled for " + relPath + ".")
+			v.operations.status.SetText("Operations inspection cancelled for " + relPath + ".")
 			v.addActivity("Operations inspection cancelled for " + relPath + ".")
 		} else {
 			v.jobService.Finish(jobID, jobsSvc.StatusFailed, "Operations inspection failed.", err)
-			v.operationsStatus.SetText("Operations inspection failed for " + relPath)
+			v.operations.status.SetText("Operations inspection failed for " + relPath)
 			dialog.ShowError(err, v.window)
 		}
 		v.refreshJobs()
@@ -206,8 +226,8 @@ func (v *View) finishOperationsInspectJob(jobID string, relPath string, inspecti
 	}
 	v.jobService.AppendLog(jobID, fmt.Sprintf("Kind=%s services=%d warnings=%d", inspection.File.Kind, len(inspection.Services), len(inspection.Warnings)))
 	v.jobService.Finish(jobID, jobsSvc.StatusSuccess, "Operations inspection completed for "+inspection.File.RelPath+".", nil)
-	v.operationsStatus.SetText(formatOperationsInspectionStatus(inspection))
-	v.operationsDetail.SetText(formatOperationsInspection(inspection))
+	v.operations.status.SetText(formatOperationsInspectionStatus(inspection))
+	v.operations.detail.SetText(formatOperationsInspection(inspection))
 	v.addActivity("Inspected operations file " + inspection.File.RelPath + ".")
 	v.refreshJobs()
 }
@@ -242,11 +262,11 @@ func (v *View) finishOperationsRunbookJob(jobID string, selected string, inspect
 	if err != nil {
 		if isOperationsJobCanceled(err) {
 			v.jobService.Finish(jobID, jobsSvc.StatusCanceled, "Operations runbook export cancelled.", nil)
-			v.operationsStatus.SetText("Operations runbook export cancelled for " + selected + ".")
+			v.operations.status.SetText("Operations runbook export cancelled for " + selected + ".")
 			v.addActivity("Operations runbook export cancelled for " + selected + ".")
 		} else {
 			v.jobService.Finish(jobID, jobsSvc.StatusFailed, "Operations runbook export failed.", err)
-			v.operationsStatus.SetText("Operations runbook export failed for " + selected)
+			v.operations.status.SetText("Operations runbook export failed for " + selected)
 			dialog.ShowError(err, v.window)
 		}
 		v.refreshJobs()
@@ -255,8 +275,8 @@ func (v *View) finishOperationsRunbookJob(jobID string, selected string, inspect
 	artifact.JobID = jobID
 	v.jobService.AppendLog(jobID, "Artifact: "+artifact.RelPath)
 	v.jobService.Finish(jobID, jobsSvc.StatusSuccess, "Created operations runbook "+artifact.RelPath+".", nil)
-	v.operationsStatus.SetText("Created operations runbook " + artifact.RelPath)
-	v.operationsDetail.SetText(formatOperationsInspection(inspection))
+	v.operations.status.SetText("Created operations runbook " + artifact.RelPath)
+	v.operations.detail.SetText(formatOperationsInspection(inspection))
 	v.persistArtifactRecord(artifact)
 	v.addActivity(artifact.Message)
 	v.refreshArtifacts()

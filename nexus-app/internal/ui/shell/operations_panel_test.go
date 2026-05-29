@@ -8,6 +8,20 @@ import (
 	operationsSvc "nexusdesk/internal/services/operations"
 )
 
+func TestNewOperationsControllerOwnsPanelState(t *testing.T) {
+	view := &View{}
+	controller := newOperationsController(view)
+	if controller.view != view {
+		t.Fatal("expected operations controller to keep owning view reference")
+	}
+	if controller.results == nil || controller.status == nil || controller.detail == nil {
+		t.Fatal("expected operations controller to initialize panel widgets")
+	}
+	if controller.status.Text != "Operations scan has not been run." {
+		t.Fatalf("unexpected initial operations status: %q", controller.status.Text)
+	}
+}
+
 func TestFormatOperationsInspectionIncludesServicesAndWarnings(t *testing.T) {
 	text := formatOperationsInspection(operationsSvc.Inspection{
 		File: operationsSvc.File{RelPath: "compose.yml", Kind: operationsSvc.FileKindCompose, Size: 42},

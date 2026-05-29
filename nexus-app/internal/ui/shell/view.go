@@ -74,9 +74,7 @@ type View struct {
 	data                    *dataController
 	compatibilityImportMu   sync.Mutex
 	compatibilityImportByWS map[string]bool
-	operationsResults       *fyne.Container
-	operationsStatus        *widget.Label
-	operationsDetail        *widget.Entry
+	operations              *operationsController
 	git                     *gitController
 	gitFileBadges           map[string]string
 	taskResults             *fyne.Container
@@ -167,10 +165,6 @@ func NewWithStartupStatus(window fyne.Window, startupStatus startupSvc.Status) *
 	if err != nil {
 		connectorProfileStore = dbconnectorSvc.NewConnectorProfileStore("nexus-connector-profiles.json")
 	}
-	operationsDetail := widget.NewMultiLineEntry()
-	operationsDetail.TextStyle = fyne.TextStyle{Monospace: true}
-	operationsDetail.Wrapping = fyne.TextWrapWord
-	operationsDetail.Disable()
 	view = &View{
 		window:                  window,
 		state:                   NewState(),
@@ -196,9 +190,6 @@ func NewWithStartupStatus(window fyne.Window, startupStatus startupSvc.Status) *
 		activityLines:           []string{"Ready."},
 		problemResults:          container.NewVBox(widget.NewLabel("Run a scan to inspect lightweight workspace problems.")),
 		problemStatus:           widget.NewLabel("No problem scan yet."),
-		operationsResults:       container.NewVBox(widget.NewLabel("Scan the workspace to inspect Docker, Compose, env, config, script, and log files.")),
-		operationsStatus:        widget.NewLabel("Operations scan has not been run."),
-		operationsDetail:        operationsDetail,
 		compatibilityImportByWS: map[string]bool{},
 		gitFileBadges:           map[string]string{},
 		taskResults:             container.NewVBox(widget.NewLabel("Discover workspace tasks to run tests, scripts, or Compose checks.")),
@@ -229,6 +220,7 @@ func NewWithStartupStatus(window fyne.Window, startupStatus startupSvc.Status) *
 	view.editor = newEditorController(view, welcome.ID, welcomeItem)
 	view.search = newSearchController(view)
 	view.data = newDataController(view)
+	view.operations = newOperationsController(view)
 	view.jobs = newJobsController(view)
 	view.rollbacks = newRollbackController(view)
 	view.diagnostics = newDiagnosticsController(view)
