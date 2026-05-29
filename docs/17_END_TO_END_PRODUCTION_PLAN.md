@@ -147,11 +147,11 @@ Already available:
 - Renders lazy project tree with ignored-path handling, entry caps, refresh, reveal, collapse, and context actions.
 - Supports single-file open and quick-open workflows.
 - Keeps folder open fast by avoiding automatic expensive or external operations.
-- Provides JetBrains-like top menu groups, a workspace/branch/task/provider toolbar, shortcuts, command palette baseline, activity, native status bar, bottom panels, and assistant integration.
+- Provides JetBrains-like top menu groups, a workspace/branch/task/provider toolbar, a first left tool-window rail, shortcuts, command palette baseline, activity, native status bar, bottom panels, and assistant integration.
 
 Planned/remaining:
 
-- More JetBrains-like tool-window grouping and rail polish.
+- More JetBrains-like right-side rail, active-state polish, and deeper tool-window grouping.
 - Continue polishing the workspace home surface after the first-run readiness cockpit baseline.
 - Continued global health indicator polish beyond the first native status bar.
 - More consistent keyboard navigation/focus behavior across all panes.
@@ -568,8 +568,9 @@ The checklist below is intentionally large. `tracker.md` should keep task-level 
 - [x] Define compact density and comfortable density modes.
 - [x] Polish top menu to include File, Edit, View, Navigate, Code, Refactor, Run, Tools, Help where supported.
 - [x] Polish top toolbar with workspace, branch, run/task, provider/model status, search, settings.
-- [ ] Convert crowded bottom tabs into grouped tool windows.
-- [ ] Add left/right tool-window rails with consistent icons, labels, shortcuts, and active states.
+- [x] Convert crowded bottom tabs into grouped tool windows.
+- [x] Add first left tool-window rail with consistent icons, labels, and shortcut hints for Project/Search/Problems/Git/Tasks/Jobs/Data/Artifacts/Operations/Diagnostics.
+- [ ] Add right-side rail and active-state polish for assistant, sources, lineage, monitor, and inspector surfaces.
 - [x] Add status bar with workspace, provider, branch from last manual Git refresh, jobs, warnings, selected path, encoding, line ending, and app version.
 - [x] Improve Settings into searchable grouped preferences with inline validation.
 - [x] Improve onboarding Home tab with recent workspaces, model setup, safety explanation, and first actions.

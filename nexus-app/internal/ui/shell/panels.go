@@ -15,26 +15,22 @@ func (v *View) newRail() fyne.CanvasObject {
 	logo := canvas.NewImageFromResource(brand.HorizontalLogo())
 	logo.FillMode = canvas.ImageFillContain
 	logo.SetMinSize(fyne.NewSize(128, 38))
-	workspaceButton := widget.NewButtonWithIcon("Workbench", theme.HomeIcon(), func() {
-		v.openHomeTab()
-		v.addActivity("Home selected.")
-	})
-	dataButton := widget.NewButtonWithIcon("Data", theme.StorageIcon(), func() {
-		if !v.selectBottomTab("Data") {
-			v.addActivity("Data panel is unavailable.")
-			return
-		}
-		v.addActivity("Data & Analytics selected.")
-	})
-	artifactsButton := widget.NewButtonWithIcon("Artifacts", theme.DocumentIcon(), func() {
-		if !v.selectBottomTab("Artifacts") {
-			v.addActivity("Artifacts panel is unavailable.")
-			return
-		}
-		v.addActivity("Artifacts selected.")
-	})
+	railButtons := make([]fyne.CanvasObject, 0, len(leftRailToolWindows())+4)
+	railButtons = append(railButtons, widget.NewLabelWithStyle("Tool Windows", fyne.TextAlignLeading, fyne.TextStyle{Bold: true}))
+	for _, tool := range leftRailToolWindows() {
+		tool := tool
+		railButtons = append(railButtons, widget.NewButtonWithIcon(tool.ButtonLabel(), tool.Icon, func() {
+			v.openLeftRailToolWindow(tool)
+		}))
+	}
 	settingsButton := widget.NewButtonWithIcon("Settings", theme.SettingsIcon(), v.openSettingsTab)
-	return container.NewPadded(container.NewVBox(logo, widget.NewSeparator(), workspaceButton, dataButton, artifactsButton, layout.NewSpacer(), settingsButton))
+	return container.NewPadded(container.NewVBox(
+		logo,
+		widget.NewSeparator(),
+		container.NewVBox(railButtons...),
+		layout.NewSpacer(),
+		settingsButton,
+	))
 }
 
 func (v *View) newToolbar() fyne.CanvasObject {

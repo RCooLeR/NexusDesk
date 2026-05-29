@@ -64,7 +64,7 @@ Required:
 - Task-aware model defaults are now stored and editable in searchable grouped Settings with inline readiness validation for coding, backend, database, analytics, research, vision/screenshot, balanced reasoning, and fast-coding routes while preserving a global fallback. Ask mode exposes an auto/global/manual route selector with pre-run route and context-budget visibility, assistant/agent auto-routing infers data, SQL, document, image/screenshot, and code routes from selected context or prompt signals, Git AI diff summary/commit drafting resolves the main coding route, Agent mode resolves the selected route with audit provenance, and saved chat-answer artifacts can preserve route metadata; future dedicated Data/document/vision model workflow resolution remains planned.
 - Complete Wails-only feature inventory and explicit keep/drop/replace decisions.
 - Native UI cleanup pass for Workbench, Data, Artifacts, Settings, assistant, and bottom panels.
-- UI direction follows `docs/17_END_TO_END_PRODUCTION_PLAN.md` and the token baseline in `docs/26_NATIVE_THEME_TOKENS.md`: JetBrains-like menu/toolbar/status shell hierarchy, grouped tool windows, professional settings, dense but readable data grids, and integrated assistant/source diagnostics.
+- UI direction follows `docs/17_END_TO_END_PRODUCTION_PLAN.md` and the token baseline in `docs/26_NATIVE_THEME_TOKENS.md`: JetBrains-like menu/toolbar/status shell hierarchy, grouped tool windows, first left tool-window rail, professional settings, dense but readable data grids, and integrated assistant/source diagnostics.
 - Import-boundary tests now enforce the active architecture: no Wails/webview imports, no Fyne imports in services/domain, and no UI imports from framework-free service/domain packages.
 
 Remaining blockers:
@@ -73,7 +73,7 @@ Remaining blockers:
 - Future LSP/deeper cross-file language actions after a packaged provider spike proves reliability.
 - Deeper assistant retrieval/ranking quality beyond deterministic citation/source coverage diagnostics.
 - Richer DOCX/PPTX generated-output template variants, cross-suite compatibility smoke, and visual polish beyond the native validated/theme-backed document-export and presentation-deck baselines.
-- Final UI polish for empty states, settings, diagnostics, and workflow hierarchy after the first native Home readiness/onboarding cockpit baseline.
+- Final UI polish for empty states, right-side rail/assistant hierarchy, data/artifact/diagnostics surfaces, and workflow hierarchy after the first native Home readiness/onboarding cockpit and left tool-window rail baselines.
 
 Exit criteria:
 
