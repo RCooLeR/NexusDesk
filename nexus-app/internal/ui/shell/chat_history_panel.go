@@ -79,13 +79,13 @@ func (v *View) openChatHistoryRecord(record metadataSvc.ChatMessageRecord) {
 }
 
 func (v *View) useChatHistoryRecordForAssistant(record metadataSvc.ChatMessageRecord) {
-	if v.assistantPrompt == nil {
+	if v.assistant == nil || v.assistant.prompt == nil {
 		v.addActivity("Assistant composer is not ready yet.")
 		return
 	}
-	v.assistantPrompt.SetText(chatHistorySeedPrompt(record))
-	if v.assistantMode != nil {
-		v.assistantMode.SetSelected("Agent")
+	v.assistant.prompt.SetText(chatHistorySeedPrompt(record))
+	if v.assistant.mode != nil {
+		v.assistant.mode.SetSelected("Agent")
 	}
 	pinned := 0
 	for _, source := range record.SourcePaths {

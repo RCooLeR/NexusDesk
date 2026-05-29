@@ -36,8 +36,8 @@ func rightRailToolWindows() []rightRailToolWindow {
 
 func (v *View) openRightRailToolWindow(tool rightRailToolWindow) {
 	if tool.FocusAssistant {
-		if v.window != nil && v.assistantPrompt != nil {
-			v.window.Canvas().Focus(v.assistantPrompt)
+		if v.window != nil && v.assistant != nil && v.assistant.prompt != nil {
+			v.window.Canvas().Focus(v.assistant.prompt)
 		}
 		v.setRightRailActive(tool.Label)
 		v.addActivity(tool.Activity)

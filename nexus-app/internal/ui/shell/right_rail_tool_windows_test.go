@@ -75,10 +75,10 @@ func TestOpenRightRailToolWindowSelectsNestedPanel(t *testing.T) {
 func TestRightRailAssistantFocusRecordsActivity(t *testing.T) {
 	_ = fynetest.NewTempApp(t)
 	view := &View{
-		assistantPrompt: widget.NewMultiLineEntry(),
-		activityLog:     widget.NewRichTextFromMarkdown("Ready."),
-		activityText:    "Ready.",
-		activityLines:   []string{"Ready."},
+		assistant:     &assistantController{prompt: widget.NewMultiLineEntry()},
+		activityLog:   widget.NewRichTextFromMarkdown("Ready."),
+		activityText:  "Ready.",
+		activityLines: []string{"Ready."},
 	}
 
 	view.openRightRailToolWindow(rightRailToolWindow{Label: "Assistant", Activity: "Assistant selected.", FocusAssistant: true})

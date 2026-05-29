@@ -43,19 +43,41 @@ type assistantCitationPreviewer interface {
 	PreviewFile(root string, relPath string) (domain.FilePreview, error)
 }
 
+type assistantController struct {
+	view            *View
+	contextStatus   *widget.Label
+	contextList     *fyne.Container
+	historyStatus   *widget.Label
+	historyList     *fyne.Container
+	prompt          *widget.Entry
+	mode            *widget.Select
+	runTaskApproval *widget.Check
+	profile         assistantSvc.Profile
+	profileSelect   *widget.Select
+	modelRoute      *widget.Select
+	runStatus       *widget.Label
+	memory          *widget.Entry
+	lastPrompt      string
+	lastResult      assistantSvc.Result
+}
+
+func newAssistantController(view *View) *assistantController {
+	return &assistantController{view: view}
+}
+
 func (v *View) newAssistantPanel() fyne.CanvasObject {
 	prompt := widget.NewMultiLineEntry()
 	prompt.SetPlaceHolder("Ask Nexus about this workspace")
 	prompt.Wrapping = fyne.TextWrapWord
 	prompt.SetMinRowsVisible(3)
-	v.assistantPrompt = prompt
+	v.assistant.prompt = prompt
 	response := widget.NewRichTextFromMarkdown("Assistant output will stream here.")
-	v.assistantContextStatus = widget.NewLabel("")
-	v.assistantContextStatus.Wrapping = fyne.TextWrapWord
-	v.assistantContextList = container.NewVBox()
-	v.assistantHistoryStatus = widget.NewLabel("")
-	v.assistantHistoryStatus.Wrapping = fyne.TextWrapWord
-	v.assistantHistoryList = container.NewVBox()
+	v.assistant.contextStatus = widget.NewLabel("")
+	v.assistant.contextStatus.Wrapping = fyne.TextWrapWord
+	v.assistant.contextList = container.NewVBox()
+	v.assistant.historyStatus = widget.NewLabel("")
+	v.assistant.historyStatus.Wrapping = fyne.TextWrapWord
+	v.assistant.historyList = container.NewVBox()
 	pinSelection := widget.NewButton("Pin selection", v.pinSelectedAssistantContext)
 	pinProject := widget.NewButton("Pin project", func() {
 		v.pinAssistantContextPath(".")
@@ -63,21 +85,21 @@ func (v *View) newAssistantPanel() fyne.CanvasObject {
 	clearPins := widget.NewButton("Clear", v.clearAssistantContextPins)
 	contextBar := container.NewVBox(
 		container.NewHBox(pinSelection, pinProject, clearPins),
-		v.assistantContextStatus,
-		v.assistantContextList,
+		v.assistant.contextStatus,
+		v.assistant.contextList,
 	)
 	historyBar := container.NewVBox(
-		v.assistantHistoryStatus,
-		v.assistantHistoryList,
+		v.assistant.historyStatus,
+		v.assistant.historyList,
 	)
 	profileSelect := widget.NewSelect(nil, func(profileID string) {
 		v.updateAssistantProfileSelection(profileID)
 	})
-	v.assistantProfileSelect = profileSelect
+	v.assistant.profileSelect = profileSelect
 	memory := widget.NewMultiLineEntry()
 	memory.SetPlaceHolder("Assistant memory and preferences")
 	memory.SetMinRowsVisible(2)
-	v.assistantMemory = memory
+	v.assistant.memory = memory
 	saveProfile := widget.NewButtonWithIcon("Save memory", theme.DocumentSaveIcon(), v.saveAssistantProfile)
 	profileBar := container.NewVBox(
 		widget.NewLabel("Prompt profile"),
@@ -90,16 +112,16 @@ func (v *View) newAssistantPanel() fyne.CanvasObject {
 		v.refreshAssistantRunStatus()
 	})
 	modelRoute.SetSelected(assistantAutoModelRouteLabel)
-	v.assistantModelRoute = modelRoute
+	v.assistant.modelRoute = modelRoute
 	mode := widget.NewSelect([]string{"Ask", "Agent"}, func(string) {
 		v.refreshAssistantRunStatus()
 	})
 	mode.SetSelected("Ask")
-	v.assistantMode = mode
+	v.assistant.mode = mode
 	agentTaskApproval := widget.NewCheck("Allow task tool this run", nil)
-	v.assistantRunTaskApproval = agentTaskApproval
-	v.assistantRunStatus = widget.NewLabel("")
-	v.assistantRunStatus.Wrapping = fyne.TextWrapWord
+	v.assistant.runTaskApproval = agentTaskApproval
+	v.assistant.runStatus = widget.NewLabel("")
+	v.assistant.runStatus.Wrapping = fyne.TextWrapWord
 	send := widget.NewButtonWithIcon("", theme.MailSendIcon(), nil)
 	send.OnTapped = func() {
 		v.runAssistantRequest(prompt, response, send, mode.Selected)
@@ -117,7 +139,7 @@ func (v *View) newAssistantPanel() fyne.CanvasObject {
 	pinSources := widget.NewButtonWithIcon("Pin sources", theme.ContentAddIcon(), v.pinLatestAssistantSources)
 	sourceDigest := widget.NewButtonWithIcon("Source digest", theme.SearchIcon(), v.showLatestAssistantSourceDigest)
 	assistantActions := container.NewHBox(retry, compare, saveAnswer, openSources, pinSources, sourceDigest)
-	composerControls := container.NewVBox(mode, modelRoute, agentTaskApproval, v.assistantRunStatus)
+	composerControls := container.NewVBox(mode, modelRoute, agentTaskApproval, v.assistant.runStatus)
 	composer := container.NewBorder(assistantActions, nil, composerControls, send, prompt)
 	composer = container.NewPadded(composer)
 	sidebar := container.NewVBox(profileBar, widget.NewSeparator(), contextBar, widget.NewSeparator(), historyBar)
@@ -183,8 +205,8 @@ func (v *View) runAssistantRequest(prompt *widget.Entry, response *widget.RichTe
 			if len(assistantEffectiveSourcePaths(result)) == 0 {
 				v.addActivity("Assistant answer has no explicit source context attached.")
 			}
-			v.assistantLastPrompt = text
-			v.assistantLastResult = result
+			v.assistant.lastPrompt = text
+			v.assistant.lastResult = result
 			v.persistAssistantExchange(text, result, startedAt)
 			v.addActivity("Assistant response completed with " + result.Model + ".")
 		})
@@ -195,11 +217,11 @@ const assistantAutoModelRouteLabel = "Auto by selected context"
 const assistantGlobalModelRouteLabel = "Global model fallback"
 
 func (v *View) selectedAssistantModelRouteID(prompt string) string {
-	if v == nil || v.assistantModelRoute == nil {
+	if v == nil || v.assistant == nil || v.assistant.modelRoute == nil {
 		return ""
 	}
 	routes := assistantModelRoutesForStore(v.settingsStore)
-	option := strings.TrimSpace(v.assistantModelRoute.Selected)
+	option := strings.TrimSpace(v.assistant.modelRoute.Selected)
 	if option == assistantAutoModelRouteLabel {
 		return inferAssistantModelRouteID(prompt, v.state.AssistantContextPaths(), v.state.SelectedPath())
 	}
@@ -441,43 +463,43 @@ func assistantContextBudgetBytes(settings settingsSvc.Settings) int {
 
 func (v *View) loadAssistantProfile() {
 	if v.assistantProfileStore == nil {
-		v.assistantProfile = assistantSvc.DefaultProfile()
+		v.assistant.profile = assistantSvc.DefaultProfile()
 		v.refreshAssistantProfileControls()
 		return
 	}
 	profile, err := v.assistantProfileStore.Get()
 	if err != nil {
-		v.assistantProfile = assistantSvc.DefaultProfile()
+		v.assistant.profile = assistantSvc.DefaultProfile()
 		v.addActivity("Assistant profile defaults loaded: " + err.Error())
 	} else {
-		v.assistantProfile = profile
+		v.assistant.profile = profile
 	}
 	v.refreshAssistantProfileControls()
 }
 
 func (v *View) refreshAssistantProfileControls() {
-	if v.assistantProfileSelect == nil || v.assistantMemory == nil {
+	if v.assistant.profileSelect == nil || v.assistant.memory == nil {
 		return
 	}
-	profile := assistantSvc.NormalizeProfile(v.assistantProfile)
+	profile := assistantSvc.NormalizeProfile(v.assistant.profile)
 	options := make([]string, 0, len(profile.PromptProfiles))
 	for _, item := range profile.PromptProfiles {
 		options = append(options, assistantProfileOption(item))
 	}
-	v.assistantProfileSelect.Options = options
+	v.assistant.profileSelect.Options = options
 	if active := assistantSvc.ActivePromptProfile(profile); active.ID != "" {
-		v.assistantProfileSelect.SetSelected(assistantProfileOption(active))
+		v.assistant.profileSelect.SetSelected(assistantProfileOption(active))
 	}
-	v.assistantMemory.SetText(profile.Memory)
-	v.assistantProfile = profile
+	v.assistant.memory.SetText(profile.Memory)
+	v.assistant.profile = profile
 }
 
 func (v *View) updateAssistantProfileSelection(option string) {
-	profileID := assistantProfileIDFromOption(option, v.assistantProfile)
+	profileID := assistantProfileIDFromOption(option, v.assistant.profile)
 	if profileID == "" {
 		return
 	}
-	v.assistantProfile.ActiveProfileID = profileID
+	v.assistant.profile.ActiveProfileID = profileID
 }
 
 func (v *View) saveAssistantProfile() {
@@ -485,12 +507,12 @@ func (v *View) saveAssistantProfile() {
 		v.addActivity("Assistant profile store is unavailable.")
 		return
 	}
-	profile := v.assistantProfile
-	if v.assistantProfileSelect != nil && strings.TrimSpace(v.assistantProfileSelect.Selected) != "" {
-		profile.ActiveProfileID = assistantProfileIDFromOption(v.assistantProfileSelect.Selected, profile)
+	profile := v.assistant.profile
+	if v.assistant.profileSelect != nil && strings.TrimSpace(v.assistant.profileSelect.Selected) != "" {
+		profile.ActiveProfileID = assistantProfileIDFromOption(v.assistant.profileSelect.Selected, profile)
 	}
-	if v.assistantMemory != nil {
-		profile.Memory = v.assistantMemory.Text
+	if v.assistant.memory != nil {
+		profile.Memory = v.assistant.memory.Text
 	}
 	if len(profile.PromptProfiles) == 0 {
 		profile.PromptProfiles = assistantSvc.DefaultProfile().PromptProfiles
@@ -500,26 +522,26 @@ func (v *View) saveAssistantProfile() {
 		v.addActivity("Assistant profile save failed: " + err.Error())
 		return
 	}
-	v.assistantProfile = saved
+	v.assistant.profile = saved
 	v.refreshAssistantProfileControls()
 	v.addActivity("Assistant profile saved: " + assistantSvc.ActivePromptProfile(saved).Name + ".")
 }
 
 func (v *View) retryLatestAssistantAnswer(prompt *widget.Entry, response *widget.RichText, send *widget.Button) {
-	if strings.TrimSpace(v.assistantLastPrompt) == "" {
+	if strings.TrimSpace(v.assistant.lastPrompt) == "" {
 		v.addActivity("No assistant answer is available to retry yet.")
 		return
 	}
-	prompt.SetText(v.assistantLastPrompt)
+	prompt.SetText(v.assistant.lastPrompt)
 	v.runAssistantRequest(prompt, response, send, "Ask")
 }
 
 func (v *View) compareLatestAssistantAnswer(prompt *widget.Entry, response *widget.RichText, send *widget.Button) {
-	if strings.TrimSpace(v.assistantLastPrompt) == "" || strings.TrimSpace(v.assistantLastResult.Message) == "" {
+	if strings.TrimSpace(v.assistant.lastPrompt) == "" || strings.TrimSpace(v.assistant.lastResult.Message) == "" {
 		v.addActivity("No assistant answer is available to compare yet.")
 		return
 	}
-	comparePrompt := compareLatestAssistantPrompt(v.assistantLastPrompt, v.assistantLastResult.Message)
+	comparePrompt := compareLatestAssistantPrompt(v.assistant.lastPrompt, v.assistant.lastResult.Message)
 	prompt.SetText(comparePrompt)
 	v.runAssistantRequest(prompt, response, send, "Ask")
 }
@@ -530,7 +552,7 @@ func (v *View) saveLatestAssistantAnswer() {
 		v.addActivity("Open a workspace before saving an assistant answer artifact.")
 		return
 	}
-	if strings.TrimSpace(v.assistantLastResult.Message) == "" {
+	if strings.TrimSpace(v.assistant.lastResult.Message) == "" {
 		v.addActivity("No assistant answer is available to save yet.")
 		return
 	}
@@ -539,19 +561,19 @@ func (v *View) saveLatestAssistantAnswer() {
 		v.addActivity("Assistant answer artifact failed: " + err.Error())
 		return
 	}
-	diagnostic := assistantEvidenceDiagnosticForResult(v.assistantLastResult)
-	citationSnippets := assistantCitationSnippets(workspace.Root, v.assistantLastResult, v.workspaceService)
+	diagnostic := assistantEvidenceDiagnosticForResult(v.assistant.lastResult)
+	citationSnippets := assistantCitationSnippets(workspace.Root, v.assistant.lastResult, v.workspaceService)
 	artifact, err := store.WriteChatAnswer(artifactsSvc.ChatAnswerReport{
-		Prompt:                 v.assistantLastPrompt,
-		Content:                v.assistantLastResult.Message,
-		Model:                  v.assistantLastResult.Model,
-		ModelRouteID:           v.assistantLastResult.ModelRouteID,
-		ModelRoute:             v.assistantLastResult.ModelRoute,
-		ContextRelPath:         v.assistantLastResult.ContextRelPath,
+		Prompt:                 v.assistant.lastPrompt,
+		Content:                v.assistant.lastResult.Message,
+		Model:                  v.assistant.lastResult.Model,
+		ModelRouteID:           v.assistant.lastResult.ModelRouteID,
+		ModelRoute:             v.assistant.lastResult.ModelRoute,
+		ContextRelPath:         v.assistant.lastResult.ContextRelPath,
 		Source:                 "Nexus assistant",
-		SourcePaths:            assistantEffectiveSourcePaths(v.assistantLastResult),
-		CitationRefs:           assistantCitationRefs(v.assistantLastResult),
-		UnverifiedCitationRefs: assistantUnverifiedCitationRefs(v.assistantLastResult),
+		SourcePaths:            assistantEffectiveSourcePaths(v.assistant.lastResult),
+		CitationRefs:           assistantCitationRefs(v.assistant.lastResult),
+		UnverifiedCitationRefs: assistantUnverifiedCitationRefs(v.assistant.lastResult),
 		CitationSnippets:       citationSnippets,
 		CitedSourcePaths:       diagnostic.CitedSourcePaths,
 		UncitedSourcePaths:     diagnostic.UncitedSourcePaths,
@@ -573,7 +595,7 @@ func (v *View) openLatestAssistantSources() {
 		v.addActivity("Open a workspace before opening assistant sources.")
 		return
 	}
-	paths := assistantActionableSourcePaths(v.assistantLastResult, assistantSourceActionLimit)
+	paths := assistantActionableSourcePaths(v.assistant.lastResult, assistantSourceActionLimit)
 	if len(paths) == 0 {
 		v.addActivity("No assistant sources are available to open.")
 		return
@@ -599,7 +621,7 @@ func (v *View) pinLatestAssistantSources() {
 		v.addActivity("Open a workspace before pinning assistant sources.")
 		return
 	}
-	paths := assistantActionableSourcePaths(v.assistantLastResult, assistantSourceActionLimit)
+	paths := assistantActionableSourcePaths(v.assistant.lastResult, assistantSourceActionLimit)
 	if len(paths) == 0 {
 		v.addActivity("No assistant sources are available to pin.")
 		return
@@ -615,11 +637,11 @@ func (v *View) pinLatestAssistantSources() {
 }
 
 func (v *View) showLatestAssistantSourceDigest() {
-	if strings.TrimSpace(v.assistantLastResult.Message) == "" {
+	if strings.TrimSpace(v.assistant.lastResult.Message) == "" {
 		v.addActivity("No assistant answer is available for source digest yet.")
 		return
 	}
-	markdown := assistantSourceDigestMarkdown(v.assistantLastResult)
+	markdown := assistantSourceDigestMarkdown(v.assistant.lastResult)
 	if v.window == nil {
 		v.addActivity("Assistant source digest is unavailable without a window.")
 		return
@@ -680,18 +702,18 @@ func (v *View) persistAssistantExchange(prompt string, result assistantSvc.Resul
 }
 
 func (v *View) refreshAssistantHistory() {
-	if v.assistantHistoryStatus == nil || v.assistantHistoryList == nil {
+	if v.assistant.historyStatus == nil || v.assistant.historyList == nil {
 		return
 	}
 	turns := v.state.AssistantConversation()
-	v.assistantHistoryList.Objects = nil
+	v.assistant.historyList.Objects = nil
 	if len(turns) == 0 {
-		v.assistantHistoryStatus.SetText("Chat history: no persisted workspace turns yet.")
-		v.assistantHistoryList.Add(widget.NewLabel("Ask a question to start history."))
-		v.assistantHistoryList.Refresh()
+		v.assistant.historyStatus.SetText("Chat history: no persisted workspace turns yet.")
+		v.assistant.historyList.Add(widget.NewLabel("Ask a question to start history."))
+		v.assistant.historyList.Refresh()
 		return
 	}
-	v.assistantHistoryStatus.SetText(fmt.Sprintf("Chat history: %d recent persisted turn(s).", len(turns)))
+	v.assistant.historyStatus.SetText(fmt.Sprintf("Chat history: %d recent persisted turn(s).", len(turns)))
 	start := len(turns) - assistantHistoryPreviewLimit
 	if start < 0 {
 		start = 0
@@ -699,9 +721,9 @@ func (v *View) refreshAssistantHistory() {
 	for _, turn := range turns[start:] {
 		label := widget.NewLabel(chatTurnPreview(turn))
 		label.Truncation = fyne.TextTruncateEllipsis
-		v.assistantHistoryList.Add(label)
+		v.assistant.historyList.Add(label)
 	}
-	v.assistantHistoryList.Refresh()
+	v.assistant.historyList.Refresh()
 }
 
 func chatTurnsFromMetadata(records []metadataSvc.ChatMessageRecord) []llmSvc.ChatTurn {
@@ -1253,25 +1275,25 @@ func (v *View) clearAssistantContextPins() {
 }
 
 func (v *View) refreshAssistantContextPins() {
-	if v.assistantContextStatus == nil || v.assistantContextList == nil {
+	if v.assistant.contextStatus == nil || v.assistant.contextList == nil {
 		return
 	}
 	paths := v.state.AssistantContextPaths()
 	selected := selectedPathOrEmpty(v)
 	budgetLine := assistantRouteBudgetLine(v.settingsStore, selectedAssistantModelRouteOption(v), "", paths, selected)
-	v.assistantContextList.Objects = nil
+	v.assistant.contextList.Objects = nil
 	if len(paths) == 0 {
 		if selected == "" {
-			v.assistantContextStatus.SetText("Context: pin files, folders, or the project root before sending. " + budgetLine)
+			v.assistant.contextStatus.SetText("Context: pin files, folders, or the project root before sending. " + budgetLine)
 		} else {
-			v.assistantContextStatus.SetText("Context: selected item will be used unless pins are added: " + selected + ". " + budgetLine)
+			v.assistant.contextStatus.SetText("Context: selected item will be used unless pins are added: " + selected + ". " + budgetLine)
 		}
-		v.assistantContextList.Add(widget.NewLabel("No pinned context."))
-		v.assistantContextList.Refresh()
+		v.assistant.contextList.Add(widget.NewLabel("No pinned context."))
+		v.assistant.contextList.Refresh()
 		v.refreshAssistantRunStatus()
 		return
 	}
-	v.assistantContextStatus.SetText(fmt.Sprintf("Context pack: %d pinned root(s). %s", len(paths), budgetLine))
+	v.assistant.contextStatus.SetText(fmt.Sprintf("Context pack: %d pinned root(s). %s", len(paths), budgetLine))
 	for _, relPath := range paths {
 		pinnedPath := relPath
 		label := widget.NewLabel(pinnedPath)
@@ -1279,28 +1301,28 @@ func (v *View) refreshAssistantContextPins() {
 		remove := widget.NewButtonWithIcon("", theme.DeleteIcon(), func() {
 			v.removeAssistantContextPin(pinnedPath)
 		})
-		v.assistantContextList.Add(container.NewBorder(nil, nil, nil, remove, label))
+		v.assistant.contextList.Add(container.NewBorder(nil, nil, nil, remove, label))
 	}
-	v.assistantContextList.Refresh()
+	v.assistant.contextList.Refresh()
 	v.refreshAssistantRunStatus()
 }
 
 func selectedAssistantModelRouteOption(v *View) string {
-	if v == nil || v.assistantModelRoute == nil {
+	if v == nil || v.assistant == nil || v.assistant.modelRoute == nil {
 		return assistantAutoModelRouteLabel
 	}
-	return strings.TrimSpace(v.assistantModelRoute.Selected)
+	return strings.TrimSpace(v.assistant.modelRoute.Selected)
 }
 
 func (v *View) refreshAssistantRunStatus() {
-	if v == nil || v.assistantRunStatus == nil {
+	if v == nil || v.assistant == nil || v.assistant.runStatus == nil {
 		return
 	}
 	mode := "Ask"
-	if v.assistantMode != nil && strings.TrimSpace(v.assistantMode.Selected) != "" {
-		mode = strings.TrimSpace(v.assistantMode.Selected)
+	if v.assistant.mode != nil && strings.TrimSpace(v.assistant.mode.Selected) != "" {
+		mode = strings.TrimSpace(v.assistant.mode.Selected)
 	}
-	v.assistantRunStatus.SetText(assistantPreRunStatusLine(
+	v.assistant.runStatus.SetText(assistantPreRunStatusLine(
 		v.settingsStore,
 		mode,
 		selectedAssistantModelRouteOption(v),
@@ -1311,10 +1333,10 @@ func (v *View) refreshAssistantRunStatus() {
 }
 
 func (v *View) setAssistantRunStatus(status string) {
-	if v == nil || v.assistantRunStatus == nil {
+	if v == nil || v.assistant == nil || v.assistant.runStatus == nil {
 		return
 	}
-	v.assistantRunStatus.SetText(strings.TrimSpace(status))
+	v.assistant.runStatus.SetText(strings.TrimSpace(status))
 }
 
 func (v *View) runAgentRequest(text string, response *widget.RichText, send *widget.Button) {
@@ -1359,8 +1381,8 @@ func (v *View) runAgentRequest(text string, response *widget.RichText, send *wid
 		})
 		fyne.Do(func() {
 			defer send.Enable()
-			if v.assistantRunTaskApproval != nil && !v.approvalService.HasFullProjectAccess(workspace.Root) {
-				v.assistantRunTaskApproval.SetChecked(false)
+			if v.assistant.runTaskApproval != nil && !v.approvalService.HasFullProjectAccess(workspace.Root) {
+				v.assistant.runTaskApproval.SetChecked(false)
 			}
 			if err != nil {
 				message := "Agent request failed: " + err.Error()
@@ -1387,10 +1409,13 @@ func (v *View) runAgentRequest(text string, response *widget.RichText, send *wid
 }
 
 func (v *View) assistantRunTaskApprovalChecked() bool {
-	if v.assistantRunTaskApproval == nil {
+	if v.assistant == nil || v.assistant.runTaskApproval == nil {
 		return false
 	}
-	return v.assistantRunTaskApproval.Checked || v.approvalService.HasFullProjectAccess(v.state.Workspace().Root)
+	if v.approvalService == nil {
+		return v.assistant.runTaskApproval.Checked
+	}
+	return v.assistant.runTaskApproval.Checked || v.approvalService.HasFullProjectAccess(v.state.Workspace().Root)
 }
 
 func (v *View) confirmAgentToolApproval(ctx context.Context, request agentSvc.ToolApprovalRequest) bool {

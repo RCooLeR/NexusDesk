@@ -13,6 +13,27 @@ import (
 	settingsSvc "nexusdesk/internal/services/settings"
 )
 
+func TestAssistantControllerInitialState(t *testing.T) {
+	view := &View{}
+	controller := newAssistantController(view)
+
+	if controller.view != view {
+		t.Fatal("expected controller to retain parent view")
+	}
+	if controller.prompt != nil || controller.runStatus != nil || controller.modelRoute != nil {
+		t.Fatalf("expected lazy widget state before panel construction, got %#v", controller)
+	}
+}
+
+func TestSelectedAssistantModelRouteOptionHandlesMissingController(t *testing.T) {
+	if got := selectedAssistantModelRouteOption(&View{}); got != assistantAutoModelRouteLabel {
+		t.Fatalf("expected auto route without assistant controller, got %q", got)
+	}
+	if got := (&View{}).selectedAssistantModelRouteID("write Go tests"); got != "" {
+		t.Fatalf("expected no explicit route without assistant controller, got %q", got)
+	}
+}
+
 func TestAgentActivityTailKeepsLastTwoMessages(t *testing.T) {
 	tail := agentActivityTail{}
 	tail.Add("one")
