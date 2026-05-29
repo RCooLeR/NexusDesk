@@ -74,8 +74,7 @@ type View struct {
 	activityLog              *widget.RichText
 	activityText             string
 	activityLines            []string
-	searchResults            *fyne.Container
-	searchStatus             *widget.Label
+	search                   *searchController
 	problemResults           *fyne.Container
 	problemStatus            *widget.Label
 	dataProfileStatus        *widget.Label
@@ -307,8 +306,6 @@ func NewWithStartupStatus(window fyne.Window, startupStatus startupSvc.Status) *
 		activityLog:           widget.NewRichTextFromMarkdown("Ready."),
 		activityText:          "Ready.",
 		activityLines:         []string{"Ready."},
-		searchResults:         container.NewVBox(widget.NewLabel("Search results will appear here.")),
-		searchStatus:          widget.NewLabel("No search yet."),
 		problemResults:        container.NewVBox(widget.NewLabel("Run a scan to inspect lightweight workspace problems.")),
 		problemStatus:         widget.NewLabel("No problem scan yet."),
 		dataProfileStatus: widget.NewLabel(
@@ -374,6 +371,7 @@ func NewWithStartupStatus(window fyne.Window, startupStatus startupSvc.Status) *
 		startupStatus:       startupStatus,
 		performanceRecorder: perfSvc.NewRecorder(64),
 	}
+	view.search = newSearchController(view)
 	welcomeItem.Content = view.newWelcomePanel()
 	view.configureEditorTabs()
 	view.refreshStatusBar()

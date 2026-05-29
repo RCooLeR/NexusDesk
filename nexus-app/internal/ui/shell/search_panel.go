@@ -12,49 +12,75 @@ import (
 	workspaceSvc "nexusdesk/internal/services/workspace"
 )
 
+type searchController struct {
+	view    *View
+	results *fyne.Container
+	status  *widget.Label
+}
+
+func newSearchController(view *View) *searchController {
+	return &searchController{
+		view:    view,
+		results: container.NewVBox(widget.NewLabel("Search results will appear here.")),
+		status:  widget.NewLabel("No search yet."),
+	}
+}
+
 func (v *View) newSearchPanel() fyne.CanvasObject {
-	scroll := container.NewScroll(v.searchResults)
-	scroll.SetMinSize(fyne.NewSize(240, 110))
-	return container.NewBorder(v.searchStatus, nil, nil, nil, scroll)
+	return v.search.Panel()
 }
 
 func (v *View) searchWorkspace(query string) {
-	workspace := v.state.Workspace()
+	v.search.Search(query)
+}
+
+func (v *View) openSearchResult(result workspaceSvc.SearchResult) {
+	v.search.OpenResult(result)
+}
+
+func (c *searchController) Panel() fyne.CanvasObject {
+	scroll := container.NewScroll(c.results)
+	scroll.SetMinSize(fyne.NewSize(240, 110))
+	return container.NewBorder(c.status, nil, nil, nil, scroll)
+}
+
+func (c *searchController) Search(query string) {
+	workspace := c.view.state.Workspace()
 	if workspace.Root == "" {
-		v.searchStatus.SetText("Open a workspace before searching.")
-		v.addActivity("Open a workspace before searching.")
+		c.status.SetText("Open a workspace before searching.")
+		c.view.addActivity("Open a workspace before searching.")
 		return
 	}
-	results, metadata, err := v.workspaceService.SearchWithMetadata(workspace.Root, query, workspaceSvc.SearchOptions{MaxResults: 80})
+	results, metadata, err := c.view.workspaceService.SearchWithMetadata(workspace.Root, query, workspaceSvc.SearchOptions{MaxResults: 80})
 	if err != nil {
-		dialog.ShowError(err, v.window)
+		dialog.ShowError(err, c.view.window)
 		return
 	}
-	export, exportErr := v.workspaceService.WriteSearchMetadata(workspace.Root, metadata)
+	export, exportErr := c.view.workspaceService.WriteSearchMetadata(workspace.Root, metadata)
 	status := fmt.Sprintf("%d result(s) for %q. Indexed %d file(s). Metadata: %s.", len(results), query, metadata.FilesScanned, export.RelPath)
 	if exportErr != nil {
 		status = fmt.Sprintf("%d result(s) for %q. Metadata export failed: %v.", len(results), query, exportErr)
 	} else if export.Recovered {
 		status = fmt.Sprintf("%s Recovered corrupt metadata to %s.", status, export.RecoveredRelPath)
 	}
-	v.searchStatus.SetText(status)
-	v.searchResults.Objects = searchResultRows(results, v.openSearchResult)
-	v.searchResults.Refresh()
-	v.addActivity(status)
+	c.status.SetText(status)
+	c.results.Objects = searchResultRows(results, c.OpenResult)
+	c.results.Refresh()
+	c.view.addActivity(status)
 }
 
-func (v *View) openSearchResult(result workspaceSvc.SearchResult) {
-	workspace := v.state.Workspace()
+func (c *searchController) OpenResult(result workspaceSvc.SearchResult) {
+	workspace := c.view.state.Workspace()
 	if workspace.Root == "" || result.Kind == "directory" {
 		return
 	}
-	preview, err := v.workspaceService.PreviewFile(workspace.Root, result.RelPath)
+	preview, err := c.view.workspaceService.PreviewFile(workspace.Root, result.RelPath)
 	if err != nil {
-		dialog.ShowError(err, v.window)
+		dialog.ShowError(err, c.view.window)
 		return
 	}
-	v.openPreviewTab(preview)
-	v.addActivity(fmt.Sprintf("Opened search result %s.", result.RelPath))
+	c.view.openPreviewTab(preview)
+	c.view.addActivity(fmt.Sprintf("Opened search result %s.", result.RelPath))
 }
 
 func searchResultRows(results []workspaceSvc.SearchResult, onOpen func(workspaceSvc.SearchResult)) []fyne.CanvasObject {
