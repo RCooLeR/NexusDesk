@@ -647,7 +647,7 @@ The Fyne migration must not drop product ambition, but this section is intention
 - [x] Search index metadata and recovery/export flows: explicit workspace searches now persist a bounded `.nexusdesk/search/index-metadata.json` manifest with counts, caps, result paths/lines, and corrupt-manifest quarantine under `.nexusdesk/search/recovery/`.
 - [x] JSON compatibility import from Wails-era workspaces for chat history, approvals, artifact sidecars, and tool-run logs.
 - [x] Legacy Wails SQLite dataset SQL run and dataset dependency import into native SQLite metadata.
-- [x] First durable job monitor with progress log tail, cancellation, retry from persisted task runs, and task-report output opening.
+- [x] First durable job monitor with progress log tail, cancellation, retry from persisted task runs, task-report output opening, and visible persistence warnings when job repository saves fail.
 - [x] Shared slow-workflow job contract with explicit-user-start enforcement and workspace-open prohibition for OCR, dump imports, connector pulls, long indexing, report generation, long agent runs, and packaged exports.
 - [x] First Diagnostics surface for provider probe/runtime status, metadata health, and recent persisted job/task/SQL/agent failure snapshots.
 - [x] Diagnostics quick actions and recommended-remediation hints for provider/settings, metadata health, and recent failure triage.

@@ -42,6 +42,7 @@ type diagnosticsSnapshot struct {
 	InMemoryJobs            int
 	InMemoryRunningJobs     int
 	InMemoryFailedJobs      int
+	JobPersistenceIssue     string
 	RecentPersistedJobs     int
 	RecentPersistedFailures int
 	RecentTaskRuns          int
@@ -230,6 +231,10 @@ func (v *View) collectDiagnosticsSnapshot(root string, activityTail []string) di
 	}
 	inMemoryJobs := v.jobService.List()
 	snapshot.InMemoryJobs = len(inMemoryJobs)
+	if issue, ok := v.jobService.PersistenceIssue(); ok {
+		snapshot.JobPersistenceIssue = fmt.Sprintf("%s: %s", firstNonEmptyString(issue.JobID, "latest job"), issue.Error)
+		snapshot.Warnings = append(snapshot.Warnings, "Job persistence warning: "+snapshot.JobPersistenceIssue)
+	}
 	for _, job := range inMemoryJobs {
 		switch job.Status {
 		case jobsSvc.StatusRunning:
@@ -675,6 +680,14 @@ func diagnosticsMetadataHealthCard(snapshot diagnosticsSnapshot) diagnosticsHeal
 func diagnosticsJobsHealthCard(snapshot diagnosticsSnapshot) diagnosticsHealthCard {
 	failures := snapshot.InMemoryFailedJobs + snapshot.RecentPersistedFailures + snapshot.RecentTaskFailures + snapshot.RecentSQLFailures + snapshot.RecentAgentFailures
 	total := snapshot.InMemoryJobs + snapshot.RecentPersistedJobs + snapshot.RecentTaskRuns + snapshot.RecentSQLRuns + snapshot.RecentAgentRuns
+	if strings.TrimSpace(snapshot.JobPersistenceIssue) != "" {
+		return diagnosticsHealthCard{
+			Label:  "Jobs and runs",
+			Status: "warning",
+			Detail: "Latest job metadata save failed: " + compactDiagnosticsLine(snapshot.JobPersistenceIssue, diagnosticsCompactMessageLimit),
+			Action: "Check disk space and metadata health, then retry or export an issue report.",
+		}
+	}
 	if failures > 0 {
 		return diagnosticsHealthCard{
 			Label:  "Jobs and runs",

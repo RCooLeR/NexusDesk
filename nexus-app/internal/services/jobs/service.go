@@ -11,11 +11,12 @@ import (
 const maxLogLines = 12
 
 type Service struct {
-	mu      sync.Mutex
-	nextID  int
-	jobs    []Job
-	cancels map[string]context.CancelFunc
-	repo    Repository
+	mu               sync.Mutex
+	nextID           int
+	jobs             []Job
+	cancels          map[string]context.CancelFunc
+	repo             Repository
+	persistenceIssue PersistenceIssue
 }
 
 type Repository interface {
@@ -154,6 +155,15 @@ func (s *Service) Get(id string) (Job, bool) {
 	return job, true
 }
 
+func (s *Service) PersistenceIssue() (PersistenceIssue, bool) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	if s.persistenceIssue.Error == "" {
+		return PersistenceIssue{}, false
+	}
+	return s.persistenceIssue, true
+}
+
 func (s *Service) Prune(policy RetentionPolicy) (RetentionResult, error) {
 	policy = normalizeRetentionPolicy(policy)
 	s.mu.Lock()
@@ -230,7 +240,16 @@ func (s *Service) persistLocked(job Job) {
 	if s.repo == nil {
 		return
 	}
-	_ = s.repo.SaveJob(job)
+	if err := s.repo.SaveJob(job); err != nil {
+		s.persistenceIssue = PersistenceIssue{
+			JobID:     job.ID,
+			Operation: "save job",
+			Error:     err.Error(),
+			At:        time.Now().UTC(),
+		}
+		return
+	}
+	s.persistenceIssue = PersistenceIssue{}
 }
 
 func DefaultRetentionPolicy() RetentionPolicy {

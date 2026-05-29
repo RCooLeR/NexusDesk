@@ -24,6 +24,13 @@ type Job struct {
 	CompletedAt time.Time
 }
 
+type PersistenceIssue struct {
+	JobID     string
+	Operation string
+	Error     string
+	At        time.Time
+}
+
 type RetentionPolicy struct {
 	KeepRecent      int
 	MaxAge          time.Duration

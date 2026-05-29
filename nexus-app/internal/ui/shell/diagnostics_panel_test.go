@@ -188,6 +188,26 @@ func TestDiagnosticsHealthCardsHealthySnapshot(t *testing.T) {
 	}
 }
 
+func TestDiagnosticsHealthCardsSurfaceJobPersistenceIssue(t *testing.T) {
+	cards := diagnosticsHealthCards(diagnosticsSnapshot{
+		ProbeResult:         &llmSvc.ProbeResult{OK: true, Message: "Connected."},
+		JobPersistenceIssue: "job-0003: disk full",
+		MetadataStatus: &metadataSvc.Status{
+			Tables:  []string{"jobs"},
+			Message: "SQLite metadata store is active.",
+		},
+	})
+	joined := diagnosticsHealthCardText(cards)
+	for _, expected := range []string{
+		"Jobs and runs|warning|Latest job metadata save failed: job-0003: disk full",
+		"Check disk space and metadata health",
+	} {
+		if !strings.Contains(joined, expected) {
+			t.Fatalf("expected job persistence warning card to contain %q, got:\n%s", expected, joined)
+		}
+	}
+}
+
 func diagnosticsHealthCardText(cards []diagnosticsHealthCard) string {
 	lines := make([]string, 0, len(cards))
 	for _, card := range cards {

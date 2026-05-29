@@ -408,7 +408,7 @@ Resolved or covered:
 - Hunk-windowed diffs and large-file elision.
 - Empty role/action guardrails.
 - Settings-level LLM connection test.
-- Persistence failure surfacing.
+- Persistence failure surfacing in approval/job persistence; job repository-save failures are retained in the job service and surfaced in the Jobs panel plus Diagnostics instead of being silently dropped.
 - Streaming cancellation.
 - Extensible provider configuration.
 - Safe context-budget fallback.

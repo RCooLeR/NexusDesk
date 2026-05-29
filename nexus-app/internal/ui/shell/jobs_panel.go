@@ -27,7 +27,11 @@ func (v *View) newJobsPanel() fyne.CanvasObject {
 
 func (v *View) refreshJobs() {
 	jobs := v.jobService.List()
-	v.jobStatus.SetText(fmt.Sprintf("%d job(s)", len(jobs)))
+	status := fmt.Sprintf("%d job(s)", len(jobs))
+	if issue, ok := v.jobService.PersistenceIssue(); ok {
+		status = fmt.Sprintf("%s - persistence warning on %s: %s", status, firstNonEmptyString(issue.JobID, "latest job"), issue.Error)
+	}
+	v.jobStatus.SetText(status)
 	v.jobResults.Objects = jobRows(jobs, v.cancelJob, v.confirmRetryJob, v.openJobOutput, v.taskRunsByJob(), v.artifactOutputsByJob())
 	v.jobResults.Refresh()
 	v.refreshStatusBar()

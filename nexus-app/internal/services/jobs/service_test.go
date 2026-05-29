@@ -70,6 +70,29 @@ func TestServicePersistsJobsWhenRepositoryAttached(t *testing.T) {
 	}
 }
 
+func TestServiceSurfacesJobPersistenceFailures(t *testing.T) {
+	repo := &fakeJobRepository{saveErr: errors.New("disk full")}
+	service := NewWithRepository(repo)
+	job, _ := service.Start("task", "go test")
+
+	issue, ok := service.PersistenceIssue()
+	if !ok {
+		t.Fatal("expected persistence issue")
+	}
+	if issue.JobID != job.ID || issue.Operation != "save job" || issue.Error != "disk full" || issue.At.IsZero() {
+		t.Fatalf("unexpected persistence issue: %#v", issue)
+	}
+	if got, ok := service.Get(job.ID); !ok || got.Status != StatusRunning {
+		t.Fatalf("job should remain available in memory after persistence failure: %#v", got)
+	}
+
+	repo.saveErr = nil
+	service.AppendLog(job.ID, "retry save")
+	if issue, ok := service.PersistenceIssue(); ok {
+		t.Fatalf("expected successful save to clear persistence issue, got %#v", issue)
+	}
+}
+
 func TestServiceLoadsPersistedJobsAndContinuesIDs(t *testing.T) {
 	repo := &fakeJobRepository{listed: []Job{{ID: "job-0007", Kind: "task", Label: "old", Status: StatusSuccess}}}
 	service := NewWithRepository(repo)
@@ -191,9 +214,13 @@ type fakeJobRepository struct {
 	listed  []Job
 	saved   []Job
 	deleted []string
+	saveErr error
 }
 
 func (r *fakeJobRepository) SaveJob(job Job) error {
+	if r.saveErr != nil {
+		return r.saveErr
+	}
 	r.saved = append(r.saved, job)
 	return nil
 }
