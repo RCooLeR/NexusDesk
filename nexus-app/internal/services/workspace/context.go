@@ -168,6 +168,10 @@ func (s *Service) BuildContextPack(root string, relPaths []string, options Conte
 			truncated = true
 			continue
 		}
+		if preview.Truncated {
+			content += "\n\n[preview truncated: this context contains only the capped file preview]"
+			truncated = true
+		}
 		section := "\n---\nWorkspace context: " + file.RelPath + "\n\n" + content + "\n"
 		if builder.Len()+len(section) > maxBytes {
 			remaining := maxBytes - builder.Len()

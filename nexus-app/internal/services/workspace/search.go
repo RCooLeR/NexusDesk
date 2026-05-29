@@ -1,25 +1,35 @@
 package workspace
 
 import (
+	"bufio"
+	"context"
+	"errors"
+	"io"
 	"io/fs"
 	"os"
 	"path/filepath"
 	"regexp"
 	"sort"
 	"strings"
+	"time"
 )
 
 const (
 	defaultSearchMaxResults = 100
 	defaultSearchMaxDepth   = 20
 	defaultSearchPerFileMax = 10
-	searchPreviewMaxBytes   = 64 * 1024
+	defaultSearchMaxTime    = 2 * time.Second
+	searchContentMaxBytes   = 8 * 1024 * 1024
+	searchBinarySampleBytes = 8192
+	searchMaxLineBytes      = 256 * 1024
 	searchSnippetMaxRunes   = 160
 )
 
 type SearchOptions struct {
-	MaxResults int
-	Regex      bool
+	MaxResults     int
+	Regex          bool
+	MaxDuration    time.Duration
+	ResultCallback func([]SearchResult)
 }
 
 type SearchResult struct {
@@ -38,12 +48,20 @@ func (s *Service) Search(root string, query string, options SearchOptions) ([]Se
 }
 
 func (s *Service) SearchWithMetadata(root string, query string, options SearchOptions) ([]SearchResult, SearchMetadata, error) {
+	return s.SearchWithMetadataContext(context.Background(), root, query, options)
+}
+
+func (s *Service) SearchWithMetadataContext(ctx context.Context, root string, query string, options SearchOptions) ([]SearchResult, SearchMetadata, error) {
+	if ctx == nil {
+		ctx = context.Background()
+	}
 	query = strings.TrimSpace(query)
+	started := nowUTC()
 	metadata := SearchMetadata{
 		Version:     searchMetadataVersion,
 		Query:       query,
 		Regex:       options.Regex,
-		GeneratedAt: nowUTC(),
+		GeneratedAt: started,
 	}
 	if query == "" {
 		return []SearchResult{}, metadata, nil
@@ -56,6 +74,11 @@ func (s *Service) SearchWithMetadata(root string, query string, options SearchOp
 	if maxResults <= 0 {
 		maxResults = defaultSearchMaxResults
 	}
+	maxDuration := options.MaxDuration
+	if maxDuration <= 0 {
+		maxDuration = defaultSearchMaxTime
+	}
+	deadline := started.Add(maxDuration)
 	metadata.WorkspaceName = filepath.Base(absRoot)
 	metadata.MaxResults = maxResults
 	matcher, err := newSearchMatcher(query, options.Regex)
@@ -66,6 +89,13 @@ func (s *Service) SearchWithMetadata(root string, query string, options SearchOp
 	stats := searchStats{}
 	results := []SearchResult{}
 	err = filepath.WalkDir(absRoot, func(path string, entry fs.DirEntry, walkErr error) error {
+		if err := ctx.Err(); err != nil {
+			return err
+		}
+		if searchDeadlineExceeded(deadline) {
+			stats.TimedOut = true
+			return errSearchDeadlineExceeded
+		}
 		if walkErr != nil || path == absRoot {
 			return nil
 		}
@@ -109,16 +139,28 @@ func (s *Service) SearchWithMetadata(root string, query string, options SearchOp
 		if !entry.IsDir() {
 			remaining := maxResults - len(results)
 			stats.FilesScanned++
+			if err := ctx.Err(); err != nil {
+				return err
+			}
+			if searchDeadlineExceeded(deadline) {
+				stats.TimedOut = true
+				return errSearchDeadlineExceeded
+			}
 			matches := searchFileContentFast(absRoot, relPath, matcher, remaining)
 			if len(matches) > 0 {
 				stats.FilesWithContentMatches++
 				stats.ContentMatches += len(matches)
 			}
 			results = append(results, matches...)
+			if len(matches) > 0 && options.ResultCallback != nil {
+				options.ResultCallback(append([]SearchResult(nil), results...))
+			}
 		}
 		return nil
 	})
-	if err != nil {
+	if errors.Is(err, errSearchDeadlineExceeded) {
+		err = nil
+	} else if err != nil {
 		return nil, metadata, err
 	}
 
@@ -131,9 +173,16 @@ func (s *Service) SearchWithMetadata(root string, query string, options SearchOp
 	if len(results) > maxResults {
 		results = results[:maxResults]
 	}
-	stats.Truncated = len(results) >= maxResults
+	stats.DurationMs = nowUTC().Sub(started).Milliseconds()
+	stats.Truncated = len(results) >= maxResults || stats.TimedOut
 	metadata = metadata.withResults(results, stats)
 	return results, metadata, nil
+}
+
+var errSearchDeadlineExceeded = errors.New("search deadline exceeded")
+
+func searchDeadlineExceeded(deadline time.Time) bool {
+	return !deadline.IsZero() && nowUTC().After(deadline)
 }
 
 func searchFileContentFast(root string, relPath string, matcher searchMatcher, maxResults int) []SearchResult {
@@ -145,30 +194,79 @@ func searchFileContentFast(root string, relPath string, matcher searchMatcher, m
 	if err != nil || info.IsDir() || info.Mode()&fs.ModeSymlink != 0 {
 		return nil
 	}
-	content, err := readFilePrefix(absPath, searchPreviewMaxBytes)
-	if err != nil || len(content) == 0 || !isSearchableContent(relPath, content) {
+	if isKnownBinarySearchPath(relPath) {
 		return nil
 	}
-	text, _, err := decodeText(content)
-	if err != nil || strings.TrimSpace(text) == "" {
+	if info.Size() > searchContentMaxBytes {
 		return nil
 	}
+	return searchFileContentStreaming(absPath, relPath, info.Size(), matcher, maxResults)
+}
+
+func searchFileContentStreaming(absPath string, relPath string, size int64, matcher searchMatcher, maxResults int) []SearchResult {
+	file, err := os.Open(absPath)
+	if err != nil {
+		return nil
+	}
+	defer file.Close()
+	sampleLimit := searchBinarySampleBytes
+	if size < int64(sampleLimit) {
+		sampleLimit = int(size)
+	}
+	sample := make([]byte, sampleLimit)
+	read, err := io.ReadFull(file, sample)
+	if err != nil && !errors.Is(err, io.ErrUnexpectedEOF) && !errors.Is(err, io.EOF) {
+		return nil
+	}
+	sample = sample[:read]
+	if len(sample) == 0 || !isSearchableContent(relPath, sample) {
+		return nil
+	}
+	if looksLikeUTF16LE(sample) || looksLikeUTF16BE(sample) {
+		if size > writeContentMaxBytes {
+			return nil
+		}
+		content, err := os.ReadFile(absPath)
+		if err != nil {
+			return nil
+		}
+		text, _, err := decodeText(content)
+		if err != nil || strings.TrimSpace(text) == "" {
+			return nil
+		}
+		return searchTextLines(relPath, text, matcher, maxResults)
+	}
+	if _, err := file.Seek(0, io.SeekStart); err != nil {
+		return nil
+	}
+	results := make([]SearchResult, 0, min(maxResults, defaultSearchPerFileMax))
+	reader := bufio.NewReaderSize(file, 32*1024)
+	lineNumber := 0
+	for len(results) < maxResults && len(results) < defaultSearchPerFileMax {
+		line, err := reader.ReadString('\n')
+		if line != "" {
+			lineNumber++
+			if len(line) > searchMaxLineBytes {
+				line = line[:searchMaxLineBytes]
+			}
+			if result, ok := searchLineResult(relPath, line, lineNumber, matcher); ok {
+				results = append(results, result)
+			}
+		}
+		if err != nil {
+			break
+		}
+	}
+	return results
+}
+
+func searchTextLines(relPath string, text string, matcher searchMatcher, maxResults int) []SearchResult {
 	lines := strings.Split(text, "\n")
 	results := make([]SearchResult, 0, min(maxResults, defaultSearchPerFileMax))
 	for index, line := range lines {
-		matchStart, isMatch := matcher.match(line)
-		if !isMatch {
-			continue
+		if result, ok := searchLineResult(relPath, line, index+1, matcher); ok {
+			results = append(results, result)
 		}
-		results = append(results, SearchResult{
-			RelPath:   relPath,
-			Name:      filepath.Base(filepath.FromSlash(relPath)),
-			Kind:      "file",
-			MediaType: mediaType(relPath),
-			MatchType: matcher.matchType("content"),
-			Line:      index + 1,
-			Snippet:   trimSearchSnippet(line, matchStart),
-		})
 		if len(results) >= maxResults || len(results) >= defaultSearchPerFileMax {
 			break
 		}
@@ -176,11 +274,28 @@ func searchFileContentFast(root string, relPath string, matcher searchMatcher, m
 	return results
 }
 
+func searchLineResult(relPath string, line string, lineNumber int, matcher searchMatcher) (SearchResult, bool) {
+	line = strings.TrimRight(line, "\r\n")
+	matchStart, isMatch := matcher.match(line)
+	if !isMatch {
+		return SearchResult{}, false
+	}
+	return SearchResult{
+		RelPath:   relPath,
+		Name:      filepath.Base(filepath.FromSlash(relPath)),
+		Kind:      "file",
+		MediaType: mediaType(relPath),
+		MatchType: matcher.matchType("content"),
+		Line:      lineNumber,
+		Snippet:   trimSearchSnippet(line, matchStart),
+	}, true
+}
+
 func isSearchableContent(relPath string, content []byte) bool {
-	extension := strings.ToLower(filepath.Ext(relPath))
-	if isImageExtension(extension) || isPDFExtension(extension) || isDocumentExtension(extension) || extension == ".xlsx" {
+	if isKnownBinarySearchPath(relPath) {
 		return false
 	}
+	extension := strings.ToLower(filepath.Ext(relPath))
 	if looksLikeUTF16LE(content) || looksLikeUTF16BE(content) {
 		return true
 	}
@@ -191,6 +306,19 @@ func isSearchableContent(relPath string, content []byte) bool {
 		return true
 	}
 	return true
+}
+
+func isKnownBinarySearchPath(relPath string) bool {
+	extension := strings.ToLower(filepath.Ext(relPath))
+	if isImageExtension(extension) || isPDFExtension(extension) || isDocumentExtension(extension) || extension == ".xlsx" {
+		return true
+	}
+	switch extension {
+	case ".zip", ".gz", ".tgz", ".rar", ".7z", ".tar", ".exe", ".dll", ".so", ".dylib", ".bin", ".wasm", ".class", ".jar":
+		return true
+	default:
+		return false
+	}
 }
 
 type searchMatcher struct {

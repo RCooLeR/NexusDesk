@@ -3,6 +3,7 @@ package spreadsheets
 import (
 	"archive/zip"
 	"bytes"
+	"strconv"
 	"strings"
 	"testing"
 )
@@ -58,6 +59,23 @@ func TestParseXLSXRejectsOversizedSharedStrings(t *testing.T) {
 	_, err := ParseXLSX(content, Options{MaxRows: 10, MaxColumns: 10})
 	if err == nil || !strings.Contains(err.Error(), "sharedStrings.xml") {
 		t.Fatalf("expected shared string safety cap error, got %v", err)
+	}
+}
+
+func TestParseXLSXRejectsTooManyZipMembers(t *testing.T) {
+	entries := map[string]string{
+		"xl/workbook.xml":            `<workbook xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships"><sheets><sheet name="Data" r:id="rId1"/></sheets></workbook>`,
+		"xl/_rels/workbook.xml.rels": `<Relationships><Relationship Id="rId1" Target="worksheets/sheet1.xml"/></Relationships>`,
+		"xl/worksheets/sheet1.xml":   `<worksheet><sheetData><row><c r="A1"><v>1</v></c></row></sheetData></worksheet>`,
+	}
+	for index := 0; index <= xlsxMaxZipFiles; index++ {
+		entries["xl/extra/part"+strconv.Itoa(index)+".xml"] = `<extra/>`
+	}
+	content := buildXLSX(t, entries)
+
+	_, err := ParseXLSX(content, Options{MaxRows: 10, MaxColumns: 10})
+	if err == nil || !strings.Contains(err.Error(), "exceeding safety cap") {
+		t.Fatalf("expected ZIP member safety cap error, got %v", err)
 	}
 }
 

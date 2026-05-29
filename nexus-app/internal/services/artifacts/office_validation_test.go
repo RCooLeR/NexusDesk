@@ -4,6 +4,7 @@ import (
 	"archive/zip"
 	"os"
 	"path/filepath"
+	"strconv"
 	"strings"
 	"testing"
 )
@@ -64,6 +65,34 @@ func TestValidateOfficePackageRejectsBrokenPPTXSlideRelationship(t *testing.T) {
 		t.Fatal("expected missing PPTX slide relationship to fail validation")
 	}
 	if validation.Valid || !strings.Contains(validation.Message, "relationship is missing target slides/slide1.xml") {
+		t.Fatalf("unexpected validation result: %#v", validation)
+	}
+}
+
+func TestValidateOfficePackageRejectsTooManyZipMembers(t *testing.T) {
+	path := filepath.Join(t.TempDir(), "too-many.pptx")
+	file, err := os.Create(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	writer := zip.NewWriter(file)
+	for index := 0; index <= maxOfficeZipFiles; index++ {
+		if err := addZipText(writer, filepath.ToSlash(filepath.Join("ppt", "extra", "part"+strconv.Itoa(index)+".txt")), "x"); err != nil {
+			t.Fatal(err)
+		}
+	}
+	if err := writer.Close(); err != nil {
+		t.Fatal(err)
+	}
+	if err := file.Close(); err != nil {
+		t.Fatal(err)
+	}
+
+	validation, err := ValidateOfficePackage(path, presentationDeckFormat, nil)
+	if err == nil {
+		t.Fatal("expected ZIP member cap to fail validation")
+	}
+	if validation.Valid || !strings.Contains(validation.Message, "ZIP safety limits") {
 		t.Fatalf("unexpected validation result: %#v", validation)
 	}
 }

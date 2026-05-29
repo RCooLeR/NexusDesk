@@ -1,7 +1,10 @@
 package shell
 
 import (
+	"context"
 	"fmt"
+	"sync"
+	"time"
 
 	"fyne.io/fyne/v2"
 	"fyne.io/fyne/v2/container"
@@ -13,9 +16,12 @@ import (
 )
 
 type searchController struct {
-	view    *View
-	results *fyne.Container
-	status  *widget.Label
+	view       *View
+	results    *fyne.Container
+	status     *widget.Label
+	mu         sync.Mutex
+	cancel     context.CancelFunc
+	generation uint64
 }
 
 func newSearchController(view *View) *searchController {
@@ -51,22 +57,81 @@ func (c *searchController) Search(query string) {
 		c.view.addActivity("Open a workspace before searching.")
 		return
 	}
-	results, metadata, err := c.view.workspaceService.SearchWithMetadata(workspace.Root, query, workspaceSvc.SearchOptions{MaxResults: 80})
+	c.mu.Lock()
+	if c.cancel != nil {
+		c.cancel()
+	}
+	ctx, cancel := context.WithCancel(context.Background())
+	c.cancel = cancel
+	c.generation++
+	generation := c.generation
+	c.mu.Unlock()
+	c.status.SetText(fmt.Sprintf("Searching for %q...", query))
+	go c.runSearch(ctx, generation, workspace.Root, query)
+}
+
+func (c *searchController) runSearch(ctx context.Context, generation uint64, root string, query string) {
+	options := workspaceSvc.SearchOptions{
+		MaxResults:  80,
+		MaxDuration: 2 * time.Second,
+		ResultCallback: func(partial []workspaceSvc.SearchResult) {
+			if ctx.Err() != nil || !c.isLatestSearch(generation) {
+				return
+			}
+			snapshot := append([]workspaceSvc.SearchResult(nil), partial...)
+			fyne.Do(func() {
+				if !c.isLatestSearch(generation) {
+					return
+				}
+				c.status.SetText(fmt.Sprintf("Searching for %q... %d partial result(s).", query, len(snapshot)))
+				c.results.Objects = searchResultRows(snapshot, c.OpenResult)
+				c.results.Refresh()
+			})
+		},
+	}
+	results, metadata, err := c.view.workspaceService.SearchWithMetadataContext(ctx, root, query, options)
 	if err != nil {
-		dialog.ShowError(err, c.view.window)
+		if ctx.Err() != nil {
+			return
+		}
+		fyne.Do(func() {
+			if c.isLatestSearch(generation) {
+				dialog.ShowError(err, c.view.window)
+			}
+		})
 		return
 	}
-	export, exportErr := c.view.workspaceService.WriteSearchMetadata(workspace.Root, metadata)
+	if ctx.Err() != nil || !c.isLatestSearch(generation) {
+		return
+	}
+	export, exportErr := c.view.workspaceService.WriteSearchMetadata(root, metadata)
+	if ctx.Err() != nil || !c.isLatestSearch(generation) {
+		return
+	}
 	status := fmt.Sprintf("%d result(s) for %q. Indexed %d file(s). Metadata: %s.", len(results), query, metadata.FilesScanned, export.RelPath)
+	if metadata.TimedOut {
+		status = fmt.Sprintf("%d partial result(s) for %q. Search timed out after %d ms. Metadata: %s.", len(results), query, metadata.DurationMs, export.RelPath)
+	}
 	if exportErr != nil {
 		status = fmt.Sprintf("%d result(s) for %q. Metadata export failed: %v.", len(results), query, exportErr)
 	} else if export.Recovered {
 		status = fmt.Sprintf("%s Recovered corrupt metadata to %s.", status, export.RecoveredRelPath)
 	}
-	c.status.SetText(status)
-	c.results.Objects = searchResultRows(results, c.OpenResult)
-	c.results.Refresh()
-	c.view.addActivity(status)
+	fyne.Do(func() {
+		if !c.isLatestSearch(generation) {
+			return
+		}
+		c.status.SetText(status)
+		c.results.Objects = searchResultRows(results, c.OpenResult)
+		c.results.Refresh()
+		c.view.addActivity(status)
+	})
+}
+
+func (c *searchController) isLatestSearch(generation uint64) bool {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	return c.generation == generation
 }
 
 func (c *searchController) OpenResult(result workspaceSvc.SearchResult) {

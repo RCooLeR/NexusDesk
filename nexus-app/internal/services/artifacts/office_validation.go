@@ -2,6 +2,7 @@ package artifacts
 
 import (
 	"archive/zip"
+	"bytes"
 	"encoding/xml"
 	"errors"
 	"fmt"
@@ -10,9 +11,16 @@ import (
 	"sort"
 	"strings"
 	"time"
+
+	"nexusdesk/internal/services/safearchive"
 )
 
-const maxOfficeXMLValidationBytes = 4 * 1024 * 1024
+const (
+	maxOfficeZipFiles               = 2048
+	maxOfficePackageMemberBytes     = 64 * 1024 * 1024
+	maxOfficeTotalUncompressedBytes = 128 * 1024 * 1024
+	maxOfficeXMLValidationBytes     = 4 * 1024 * 1024
+)
 
 func ValidateOfficePackage(absPath string, format string, requiredFiles []string) (PackageValidation, error) {
 	format = strings.ToLower(strings.TrimSpace(format))
@@ -30,6 +38,14 @@ func ValidateOfficePackage(absPath string, format string, requiredFiles []string
 		return validation, err
 	}
 	defer reader.Close()
+	if err := safearchive.ValidateZipFiles(reader.File, safearchive.ZipLimits{
+		MaxFiles:                   maxOfficeZipFiles,
+		MaxMemberUncompressedBytes: maxOfficePackageMemberBytes,
+		MaxTotalUncompressedBytes:  maxOfficeTotalUncompressedBytes,
+	}); err != nil {
+		validation.Message = "Office package exceeds ZIP safety limits: " + err.Error() + "."
+		return validation, errors.New(validation.Message)
+	}
 
 	parts := make(map[string]*zip.File, len(reader.File))
 	for _, file := range reader.File {
@@ -124,15 +140,11 @@ func officePartShouldValidateXML(name string) bool {
 }
 
 func validateOfficeXMLPart(file *zip.File) error {
-	if file.UncompressedSize64 > maxOfficeXMLValidationBytes {
-		return fmt.Errorf("XML part is too large to validate (%d bytes)", file.UncompressedSize64)
-	}
-	reader, err := file.Open()
+	data, err := safearchive.ReadZipFile(file, maxOfficeXMLValidationBytes)
 	if err != nil {
 		return err
 	}
-	defer reader.Close()
-	decoder := xml.NewDecoder(io.LimitReader(reader, maxOfficeXMLValidationBytes+1))
+	decoder := xml.NewDecoder(bytes.NewReader(data))
 	for {
 		if _, err := decoder.Token(); err != nil {
 			if errors.Is(err, io.EOF) {
@@ -169,20 +181,9 @@ func readOfficeZipText(parts map[string]*zip.File, name string) (string, error) 
 	if !ok {
 		return "", fmt.Errorf("Office package part %s is missing", name)
 	}
-	if file.UncompressedSize64 > maxOfficeXMLValidationBytes {
-		return "", fmt.Errorf("Office package part %s is too large to validate", name)
-	}
-	reader, err := file.Open()
+	data, err := safearchive.ReadZipFile(file, maxOfficeXMLValidationBytes)
 	if err != nil {
 		return "", err
-	}
-	defer reader.Close()
-	data, err := io.ReadAll(io.LimitReader(reader, maxOfficeXMLValidationBytes+1))
-	if err != nil {
-		return "", err
-	}
-	if len(data) > maxOfficeXMLValidationBytes {
-		return "", fmt.Errorf("Office package part %s is too large to validate", name)
 	}
 	return string(data), nil
 }

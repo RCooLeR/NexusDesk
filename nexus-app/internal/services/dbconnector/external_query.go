@@ -523,10 +523,7 @@ func postgresDSN(profile ConnectorProfile, timeoutSeconds int) string {
 	if port <= 0 {
 		port = 5432
 	}
-	sslMode := strings.TrimSpace(profile.SSLMode)
-	if sslMode == "" {
-		sslMode = "prefer"
-	}
+	sslMode := postgresSSLMode(NormalizeConnectorSSLMode("postgres", profile.SSLMode))
 	dsn := url.URL{
 		Scheme: "postgres",
 		Host:   net.JoinHostPort(profile.Host, strconv.Itoa(port)),
@@ -545,6 +542,17 @@ func postgresDSN(profile ConnectorProfile, timeoutSeconds int) string {
 	query.Set("application_name", "NexusDesk")
 	dsn.RawQuery = query.Encode()
 	return dsn.String()
+}
+
+func postgresSSLMode(sslMode string) string {
+	switch NormalizeConnectorSSLMode("postgres", sslMode) {
+	case ConnectorSSLModeDevelopmentPlaintext:
+		return "disable"
+	case "verify-ca", "verify-full":
+		return strings.ToLower(strings.TrimSpace(sslMode))
+	default:
+		return ConnectorSSLModeRequire
+	}
 }
 
 func requireMySQLProfile(profile ConnectorProfile) error {
@@ -587,17 +595,15 @@ func mysqlDSN(profile ConnectorProfile, timeoutSeconds int) string {
 }
 
 func mysqlTLSMode(sslMode string) string {
-	switch strings.ToLower(strings.TrimSpace(sslMode)) {
-	case "disable", "false", "off":
+	switch NormalizeConnectorSSLMode("mysql", sslMode) {
+	case ConnectorSSLModeDevelopmentPlaintext:
 		return "false"
-	case "require", "true", "on":
+	case ConnectorSSLModeRequire:
 		return "true"
-	case "skip-verify":
+	case ConnectorSSLModeSkipVerify:
 		return "skip-verify"
-	case "preferred", "prefer":
-		return "preferred"
 	default:
-		return ""
+		return "true"
 	}
 }
 
@@ -651,10 +657,8 @@ func sqlServerDSN(profile ConnectorProfile, timeoutSeconds int) string {
 	query.Set("database", profile.Database)
 	query.Set("connection timeout", strconv.Itoa(timeoutSeconds))
 	query.Set("app name", "NexusDesk")
-	if encrypt := sqlServerEncryptMode(profile.SSLMode); encrypt != "" {
-		query.Set("encrypt", encrypt)
-	}
-	if strings.EqualFold(strings.TrimSpace(profile.SSLMode), "skip-verify") {
+	query.Set("encrypt", sqlServerEncryptMode(profile.SSLMode))
+	if NormalizeConnectorSSLMode("sqlserver", profile.SSLMode) == ConnectorSSLModeSkipVerify {
 		query.Set("TrustServerCertificate", "true")
 	}
 	dsn.RawQuery = query.Encode()
@@ -662,17 +666,11 @@ func sqlServerDSN(profile ConnectorProfile, timeoutSeconds int) string {
 }
 
 func sqlServerEncryptMode(sslMode string) string {
-	switch strings.ToLower(strings.TrimSpace(sslMode)) {
-	case "disable", "false", "off":
+	switch NormalizeConnectorSSLMode("sqlserver", sslMode) {
+	case ConnectorSSLModeDevelopmentPlaintext:
 		return "disable"
-	case "require", "true", "on":
-		return "true"
-	case "prefer", "preferred":
-		return "false"
-	case "skip-verify":
-		return "true"
 	default:
-		return ""
+		return "true"
 	}
 }
 

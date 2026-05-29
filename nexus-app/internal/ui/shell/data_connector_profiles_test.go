@@ -39,6 +39,46 @@ func TestFormatConnectorProfiles(t *testing.T) {
 	if !strings.Contains(text, "Scope: c:/workspaces/app") {
 		t.Fatalf("missing scope line in output: %q", text)
 	}
+	if !strings.Contains(text, "Transport: encrypted transport required (mode require)") {
+		t.Fatalf("missing resolved transport line in output: %q", text)
+	}
+}
+
+func TestConnectorResolvedTransportLabel(t *testing.T) {
+	cases := []struct {
+		name    string
+		profile dbconnectorSvc.ConnectorProfile
+		want    string
+	}{
+		{
+			name:    "default postgres",
+			profile: dbconnectorSvc.ConnectorProfile{Kind: "postgres"},
+			want:    "encrypted transport required",
+		},
+		{
+			name:    "plaintext mysql",
+			profile: dbconnectorSvc.ConnectorProfile{Kind: "mysql", SSLMode: dbconnectorSvc.ConnectorSSLModeDevelopmentPlaintext},
+			want:    "development plaintext, encryption disabled",
+		},
+		{
+			name:    "local sqlite",
+			profile: dbconnectorSvc.ConnectorProfile{Kind: "sqlite"},
+			want:    "local file",
+		},
+		{
+			name:    "postgres verify full",
+			profile: dbconnectorSvc.ConnectorProfile{Kind: "postgres", SSLMode: "verify-full"},
+			want:    "full certificate verification",
+		},
+	}
+	for _, tt := range cases {
+		t.Run(tt.name, func(t *testing.T) {
+			got := connectorResolvedTransportLabel(tt.profile)
+			if !strings.Contains(got, tt.want) {
+				t.Fatalf("expected %q in %q", tt.want, got)
+			}
+		})
+	}
 }
 
 func TestFormatConnectorProfilesEmpty(t *testing.T) {
@@ -327,5 +367,30 @@ func TestFinishConnectorProfileInspectJobPersistsCanceledDependencyMetadata(t *t
 	}
 	if !found {
 		t.Fatalf("missing connector-profile-inspect dependency in %#v", records)
+	}
+}
+
+func TestConnectorPlaintextAuditRecordTracksToggleChanges(t *testing.T) {
+	previous := dbconnectorSvc.ConnectorProfile{ID: "profile-1", Name: "Analytics", Kind: "postgres", SSLMode: dbconnectorSvc.ConnectorSSLModeRequire}
+	saved := previous
+	saved.SSLMode = dbconnectorSvc.ConnectorSSLModeDevelopmentPlaintext
+
+	record, ok := connectorPlaintextAuditRecord(previous, saved)
+	if !ok {
+		t.Fatal("expected plaintext enable audit record")
+	}
+	if record.Action != "connector.plaintext.enabled" || record.Risk != "high" || record.Decision != "applied" {
+		t.Fatalf("unexpected audit record: %#v", record)
+	}
+	if !strings.Contains(record.Target, "profile-1") || !strings.Contains(record.Message, "Development plaintext transport enabled") {
+		t.Fatalf("unexpected audit target/message: %#v", record)
+	}
+
+	disabled, ok := connectorPlaintextAuditRecord(saved, previous)
+	if !ok || disabled.Action != "connector.plaintext.disabled" {
+		t.Fatalf("expected plaintext disable audit record, got %#v ok=%t", disabled, ok)
+	}
+	if _, ok := connectorPlaintextAuditRecord(previous, previous); ok {
+		t.Fatal("did not expect audit record when SSL mode is unchanged")
 	}
 }

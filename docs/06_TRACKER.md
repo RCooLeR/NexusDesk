@@ -25,91 +25,92 @@ Legend:
 - [x] P1 Update root `tracker.md` to point to this canonical tracker.
 - [x] P1 Update root `README.md` links if doc filenames changed.
 - [x] P1 Run docs reference sweep.
+- [x] P1 Remove Wails/webview-era code, docs, and build metadata. (Repository sweep found no Wails/WailsJS/webview references; stale `frontend/dist`, `build/bin`, and `app/build/bin` ignore entries were removed so the repo reflects the Fyne-native app layout.)
 - [x] P1 Run `git diff --check`.
 
 ## Phase 1: Safety Lockdown
 
 ### 1.1 File preview and save safety
 
-- [ ] P0 Add top-level `Truncated` metadata to file preview domain model.
-- [ ] P0 Add top-level text byte count/source byte count metadata to file previews.
-- [ ] P0 Mark previews partial when read caps are hit.
-- [ ] P0 Disable inline save for partial previews.
-- [ ] P0 Show editor banner for partial/truncated files.
-- [ ] P0 Add explicit open-external or full-load option only if safe.
-- [ ] P0 Include truncation state in `read_file` tool observations.
-- [ ] P0 Ensure assistant context packs preserve truncation warnings.
-- [ ] P0 Add tests for large text file preview.
-- [ ] P0 Add tests that save is blocked for partial preview.
-- [ ] P0 Add tests that agent read observation exposes truncation.
+- [x] P0 Add top-level `Truncated` metadata to file preview domain model.
+- [x] P0 Add top-level text byte count/source byte count metadata to file previews.
+- [x] P0 Mark previews partial when read caps are hit.
+- [x] P0 Disable inline save for partial previews.
+- [x] P0 Show editor banner for partial/truncated files.
+- [x] P0 Add explicit open-external or full-load option only if safe.
+- [x] P0 Include truncation state in `read_file` tool observations.
+- [x] P0 Ensure assistant context packs preserve truncation warnings.
+- [x] P0 Add tests for large text file preview.
+- [x] P0 Add tests that save is blocked for partial preview.
+- [x] P0 Add tests that agent read observation exposes truncation.
 
 ### 1.2 Archive and document container caps
 
-- [ ] P0 Add total uncompressed cap for XLSX parsing.
-- [ ] P0 Add per-entry cap for XLSX shared strings.
-- [ ] P0 Add per-entry cap for XLSX worksheets.
-- [ ] P0 Add cap tests for malicious XLSX containers.
-- [ ] P0 Review DOCX extraction for unbounded zip entry reads.
-- [ ] P0 Add DOCX extraction caps.
-- [ ] P0 Review PPTX generation/validation for bounded zip handling.
-- [ ] P1 Document archive/container caps in architecture or safety notes.
+- [x] P0 Add total uncompressed cap for XLSX parsing.
+- [x] P0 Add per-entry cap for XLSX shared strings.
+- [x] P0 Add per-entry cap for XLSX worksheets.
+- [x] P0 Add cap tests for malicious XLSX containers.
+- [x] P0 Review DOCX extraction for unbounded zip entry reads.
+- [x] P0 Add DOCX extraction caps.
+- [x] P0 Review PPTX generation/validation for bounded zip handling.
+- [x] P1 Document archive/container caps in architecture or safety notes.
 
 ### 1.3 Protected secret hardening
 
-- [ ] P0 Ensure macOS secret storage never passes secret value in process arguments.
-- [ ] P0 Add macOS command-argument exposure test or documented smoke.
-- [ ] P0 Add `runtime.KeepAlive` or safer wrapper for Windows DPAPI input buffers.
-- [ ] P0 Add Windows DPAPI stress test.
-- [ ] P0 Ensure Linux protected storage failure is explicit and actionable.
-- [ ] P1 Add diagnostics card for protected secret backend status.
-- [ ] P1 Add cross-platform protected secret CI/smoke plan.
+- [x] P0 Ensure macOS secret storage never passes secret value in process arguments.
+- [x] P0 Add macOS command-argument exposure test or documented smoke.
+- [x] P0 Add `runtime.KeepAlive` or safer wrapper for Windows DPAPI input buffers.
+- [x] P0 Add Windows DPAPI stress test.
+- [x] P0 Ensure Linux protected storage failure is explicit and actionable.
+- [x] P1 Add diagnostics card for protected secret backend status. (Diagnostics now reports DPAPI/Keychain/Secret Service backend status, remediation, health-card state, and recommended actions.)
+- [x] P1 Add cross-platform protected secret CI/smoke plan.
 
 ### 1.4 Network and connector safety
 
-- [ ] P0 Replace pre-lookup-only private IP checks in web fetch with actual dial-address checks.
-- [ ] P0 Cover IPv4 private, loopback, link-local, multicast ranges.
-- [ ] P0 Cover IPv6 loopback, link-local, multicast, and ULA ranges.
-- [ ] P0 Recheck safety after redirects.
-- [ ] P0 Add DNS rebinding regression tests.
-- [ ] P0 Default PostgreSQL profiles to encrypted transport.
-- [ ] P0 Default MySQL/MariaDB profiles to encrypted transport.
-- [ ] P0 Default SQL Server profiles to encrypted transport.
-- [ ] P0 Add explicit development-only plaintext toggle.
-- [ ] P0 Audit plaintext toggle changes.
-- [ ] P1 Show resolved transport mode in connector profile UI.
-- [ ] P1 Show resolved transport mode in Diagnostics.
+- [x] P0 Replace pre-lookup-only private IP checks in web fetch with actual dial-address checks.
+- [x] P0 Cover IPv4 private, loopback, link-local, multicast ranges.
+- [x] P0 Cover IPv6 loopback, link-local, multicast, and ULA ranges.
+- [x] P0 Recheck safety after redirects.
+- [x] P0 Add DNS rebinding regression tests.
+- [x] P0 Default PostgreSQL profiles to encrypted transport.
+- [x] P0 Default MySQL/MariaDB profiles to encrypted transport.
+- [x] P0 Default SQL Server profiles to encrypted transport.
+- [x] P0 Add explicit development-only plaintext toggle.
+- [x] P0 Audit plaintext toggle changes.
+- [x] P1 Show resolved transport mode in connector profile UI. (Data Sources now displays normalized transport state, including secure defaults, certificate-skip mode, and explicit development plaintext.)
+- [x] P1 Show resolved transport mode in Diagnostics. (Diagnostics now includes a connector transport health card, report section, plaintext warning, and remediation action.)
 
 ### 1.5 Agent mutation honesty
 
-- [ ] P0 Ensure file mutation tools set `Mutated` accurately.
-- [ ] P0 Ensure formatter tool sets `Mutated` when it writes.
-- [ ] P0 Ensure Git staging tools set `Mutated` accurately.
-- [ ] P0 Ensure commit and branch tools set `Mutated` accurately.
-- [ ] P0 Ensure conflict resolution tools set `Mutated` accurately.
-- [ ] P0 Ensure artifact regeneration sets `Mutated` accurately.
-- [ ] P0 Ensure project memory updates set `Mutated` accurately.
-- [ ] P0 Make agent final verification use tool result mutation flags instead of fragile tool name lists.
-- [ ] P0 Add tests for verification messages after representative mutating tools.
+- [x] P0 Ensure file mutation tools set `Mutated` accurately.
+- [x] P0 Ensure formatter tool sets `Mutated` when it writes.
+- [x] P0 Ensure Git staging tools set `Mutated` accurately.
+- [x] P0 Ensure commit and branch tools set `Mutated` accurately.
+- [x] P0 Ensure conflict resolution tools set `Mutated` accurately.
+- [x] P0 Ensure artifact regeneration sets `Mutated` accurately.
+- [x] P0 Ensure project memory updates set `Mutated` accurately.
+- [x] P0 Make agent final verification use tool result mutation flags instead of fragile tool name lists.
+- [x] P0 Add tests for verification messages after representative mutating tools.
 
 ### 1.6 Task and terminal safety
 
-- [ ] P0 Ensure discovered task execution uses argv, not shell strings.
-- [ ] P0 Add tests for task names containing shell metacharacters.
-- [ ] P0 Keep one-shot terminal command rooted to workspace or explicit safe cwd.
-- [ ] P0 Keep one-shot terminal command approval-gated.
-- [ ] P0 Keep one-shot terminal command output-capped.
-- [ ] P0 Keep one-shot terminal command timeout-bound.
-- [ ] P0 Keep one-shot terminal command audited.
-- [ ] P0 Reject shell interpreter shortcuts unless explicitly designed and approved.
+- [x] P0 Ensure discovered task execution uses argv, not shell strings.
+- [x] P0 Add tests for task names containing shell metacharacters.
+- [x] P0 Keep one-shot terminal command rooted to workspace or explicit safe cwd.
+- [x] P0 Keep one-shot terminal command approval-gated.
+- [x] P0 Keep one-shot terminal command output-capped.
+- [x] P0 Keep one-shot terminal command timeout-bound.
+- [x] P0 Keep one-shot terminal command audited.
+- [x] P0 Reject shell interpreter shortcuts unless explicitly designed and approved.
 
 ### 1.7 Workspace path safety
 
-- [ ] P0 Re-audit read and write paths for symlink escape behavior.
-- [ ] P0 Add tests for symlink parent components.
-- [ ] P0 Add tests for symlink file targets outside root.
-- [ ] P0 Reject Windows alternate data stream path forms where relevant.
-- [ ] P0 Reject Windows reserved device names where relevant.
-- [ ] P1 Ensure error messages explain rejected path cause.
+- [x] P0 Re-audit read and write paths for symlink escape behavior.
+- [x] P0 Add tests for symlink parent components.
+- [x] P0 Add tests for symlink file targets outside root.
+- [x] P0 Reject Windows alternate data stream path forms where relevant.
+- [x] P0 Reject Windows reserved device names where relevant.
+- [x] P1 Ensure error messages explain rejected path cause.
 
 ## Phase 2: Performance Floor
 
@@ -146,26 +147,26 @@ Legend:
 
 ### 2.4 Workspace search performance
 
-- [ ] P1 Stop using full file preview for content search.
-- [ ] P1 Add streaming byte-level literal search.
-- [ ] P1 Add streaming regex search with bounds.
-- [ ] P1 Skip known binary files before opening.
-- [ ] P1 Increase per-file cap safely.
-- [ ] P1 Add total search wall-clock limit.
-- [ ] P1 Add cancellation/singleflight for search while typing.
-- [ ] P1 Stream results to UI.
-- [ ] P1 Add tests for matches beyond old preview cap.
-- [ ] P1 Add benchmark or synthetic large workspace test.
+- [x] P1 Stop using full file preview for content search. (Content search now reads bounded safe text directly instead of going through capped preview text.)
+- [x] P1 Add streaming byte-level literal search. (Search now scans UTF-8 text line-by-line up to an 8 MiB per-file cap and finds matches beyond the safe write-preview cap.)
+- [x] P1 Add streaming regex search with bounds. (Regex content search uses the same streaming path with a per-line cap to bound matching work.)
+- [x] P1 Skip known binary files before opening. (Search now rejects known binary/container extensions before content reads, with coverage for image/archive/wasm paths.)
+- [x] P1 Increase per-file cap safely. (Search content cap increased to 8 MiB with extension pre-skip, binary sampling, and UTF-16 fallback kept at the safe write cap.)
+- [x] P1 Add total search wall-clock limit. (Workspace search now applies a default 2s wall-clock budget, exits traversal cleanly, and records timed-out/truncated metadata.)
+- [x] P1 Add cancellation/singleflight for search while typing. (Workspace search now accepts context cancellation, and the search panel cancels/suppresses stale searches before updating results.)
+- [x] P1 Stream results to UI. (Workspace search now emits partial result callbacks, and the Search panel renders partial snapshots while preserving stale-search cancellation.)
+- [x] P1 Add tests for matches beyond old preview cap.
+- [x] P1 Add benchmark or synthetic large workspace test. (Workspace search now has a synthetic large-workspace test covering result caps, ignored directories, and metadata.)
 
 ### 2.5 Metadata store performance
 
-- [ ] P1 Enable SQLite WAL mode.
-- [ ] P1 Enable busy timeout.
-- [ ] P1 Enable foreign keys consistently.
+- [x] P1 Enable SQLite WAL mode. (Metadata store now configures WAL on the cached SQLite connection and surfaces the active journal mode.)
+- [x] P1 Enable busy timeout. (Metadata store now applies a 5s SQLite busy timeout and records it in status/diagnostics.)
+- [x] P1 Enable foreign keys consistently. (Metadata store now enables foreign-key enforcement on the single cached SQLite connection and tests the runtime pragma.)
 - [ ] P1 Review connection pooling strategy.
 - [ ] P1 Avoid schema bootstrap work after first open.
-- [ ] P1 Surface active journal mode in Diagnostics.
-- [ ] P1 Add tests for concurrent read/write behavior where practical.
+- [x] P1 Surface active journal mode in Diagnostics. (Diagnostics metadata section and health card now show journal mode, foreign-key state, and busy timeout.)
+- [x] P1 Add tests for concurrent read/write behavior where practical. (Metadata store now has a concurrent SaveJob/ListJobs stress test covering the WAL/busy-timeout connection configuration.)
 
 ### 2.6 Connector performance
 

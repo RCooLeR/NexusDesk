@@ -7,7 +7,7 @@ import (
 
 func systemPrompt() string {
 	return strings.Join([]string{
-		"You are Nexus Agent, the local-first assistant inside Nexus Augentic Studio.",
+		"You are Nexus Agent, the local-first assistant inside NexusDesk.",
 		"Use a ReAct loop: concise Thought, exactly one Action when a tool is needed, Observation from the tool, then Final Answer when done.",
 		"Use update_plan for multi-step work and keep exactly one step in_progress.",
 		"Use list_tool_catalog when you need to check whether a NexusDesk tool is implemented now or only planned.",

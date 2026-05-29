@@ -106,6 +106,27 @@ func TestPreviewFileRejectsOversizedFiles(t *testing.T) {
 	}
 }
 
+func TestFullTextPreviewFileLoadsFullTextWithinSafeWriteCap(t *testing.T) {
+	root := t.TempDir()
+	writeFile(t, filepath.Join(root, "large.txt"), strings.Repeat("x", 8))
+	service := &Service{entryLimit: 10, previewByteLimit: 4}
+
+	partial, err := service.PreviewFile(root, "large.txt")
+	if err != nil {
+		t.Fatalf("PreviewFile failed: %v", err)
+	}
+	if !partial.Truncated || partial.Text != "xxxx" {
+		t.Fatalf("expected partial preview, got %#v", partial)
+	}
+	full, err := service.FullTextPreviewFile(root, "large.txt")
+	if err != nil {
+		t.Fatalf("FullTextPreviewFile failed: %v", err)
+	}
+	if full.Truncated || full.Text != strings.Repeat("x", 8) || full.TextBytes != 8 {
+		t.Fatalf("expected safe full preview, got %#v", full)
+	}
+}
+
 func TestPreviewFileRejectsOversizedBinaryFiles(t *testing.T) {
 	root := t.TempDir()
 	writeBytes(t, filepath.Join(root, "large.bin"), []byte{0x00, 0x01, 0x02, 0x03, 0x00, 0x01, 0x02, 0x03})

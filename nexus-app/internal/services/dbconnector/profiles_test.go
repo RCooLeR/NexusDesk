@@ -181,6 +181,30 @@ func TestConnectorProfileStoreNormalizesLimitsAndRejectsUnsupportedKind(t *testi
 	}
 }
 
+func TestNormalizeConnectorProfileDefaultsNetworkProfilesToEncryptedTransport(t *testing.T) {
+	for _, kind := range []string{"postgres", "mysql", "mariadb", "sqlserver"} {
+		profile := normalizeConnectorProfile(ConnectorProfile{Kind: kind})
+		if profile.SSLMode != ConnectorSSLModeRequire {
+			t.Fatalf("expected %s default SSL mode %q, got %q", kind, ConnectorSSLModeRequire, profile.SSLMode)
+		}
+	}
+	for _, kind := range []string{"sqlite", "duckdb"} {
+		profile := normalizeConnectorProfile(ConnectorProfile{Kind: kind})
+		if profile.SSLMode != "" {
+			t.Fatalf("expected local %s profile to have no SSL mode, got %q", kind, profile.SSLMode)
+		}
+	}
+}
+
+func TestNormalizeConnectorProfileMakesPlaintextModeExplicit(t *testing.T) {
+	for _, input := range []string{"disable", "false", "off", "plaintext", "development-plaintext"} {
+		profile := normalizeConnectorProfile(ConnectorProfile{Kind: "postgres", SSLMode: input})
+		if profile.SSLMode != ConnectorSSLModeDevelopmentPlaintext {
+			t.Fatalf("expected %q to normalize to explicit plaintext mode, got %q", input, profile.SSLMode)
+		}
+	}
+}
+
 func TestNormalizeExternalReadOnlySQL(t *testing.T) {
 	sqlText, err := NormalizeExternalReadOnlySQL("with q as (select 1 as a) select * from q;")
 	if err != nil {

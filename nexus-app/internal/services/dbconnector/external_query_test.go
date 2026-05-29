@@ -2,6 +2,7 @@ package dbconnector
 
 import (
 	"errors"
+	"net/url"
 	"os"
 	"path/filepath"
 	"strings"
@@ -102,6 +103,69 @@ func TestDuckDBProfilePathAndDSN(t *testing.T) {
 	}
 	if _, err := duckDBProfilePath(ConnectorProfile{ID: "bad", Kind: "duckdb", Database: filepath.Join(dir, "bad.txt")}); err == nil {
 		t.Fatal("expected non-duckdb extension to fail")
+	}
+}
+
+func TestNetworkConnectorDSNsRequireEncryptedTransportByDefault(t *testing.T) {
+	postgres, err := url.Parse(postgresDSN(ConnectorProfile{
+		Host:     "db.example.test",
+		Database: "app",
+		Username: "analyst",
+	}, 15))
+	if err != nil {
+		t.Fatalf("postgres DSN did not parse: %v", err)
+	}
+	if got := postgres.Query().Get("sslmode"); got != "require" {
+		t.Fatalf("expected postgres sslmode=require, got %q in %s", got, postgres.String())
+	}
+
+	mysql := mysqlDSN(ConnectorProfile{
+		Host:     "db.example.test",
+		Database: "app",
+		Username: "analyst",
+	}, 15)
+	if !strings.Contains(mysql, "tls=true") {
+		t.Fatalf("expected MySQL DSN to require TLS by default, got %q", mysql)
+	}
+
+	sqlserver, err := url.Parse(sqlServerDSN(ConnectorProfile{
+		Host:     "db.example.test",
+		Database: "app",
+		Username: "analyst",
+	}, 15))
+	if err != nil {
+		t.Fatalf("sqlserver DSN did not parse: %v", err)
+	}
+	if got := sqlserver.Query().Get("encrypt"); got != "true" {
+		t.Fatalf("expected SQL Server encrypt=true, got %q in %s", got, sqlserver.String())
+	}
+}
+
+func TestNetworkConnectorDSNsAllowExplicitDevelopmentPlaintext(t *testing.T) {
+	postgres, err := url.Parse(postgresDSN(ConnectorProfile{
+		Host:     "db.example.test",
+		Database: "app",
+		SSLMode:  ConnectorSSLModeDevelopmentPlaintext,
+	}, 15))
+	if err != nil {
+		t.Fatalf("postgres DSN did not parse: %v", err)
+	}
+	if got := postgres.Query().Get("sslmode"); got != "disable" {
+		t.Fatalf("expected postgres plaintext sslmode=disable, got %q", got)
+	}
+	if mysql := mysqlDSN(ConnectorProfile{Host: "db.example.test", Database: "app", SSLMode: ConnectorSSLModeDevelopmentPlaintext}, 15); !strings.Contains(mysql, "tls=false") {
+		t.Fatalf("expected MySQL explicit plaintext tls=false, got %q", mysql)
+	}
+	sqlserver, err := url.Parse(sqlServerDSN(ConnectorProfile{
+		Host:     "db.example.test",
+		Database: "app",
+		SSLMode:  ConnectorSSLModeDevelopmentPlaintext,
+	}, 15))
+	if err != nil {
+		t.Fatalf("sqlserver DSN did not parse: %v", err)
+	}
+	if got := sqlserver.Query().Get("encrypt"); got != "disable" {
+		t.Fatalf("expected SQL Server explicit plaintext encrypt=disable, got %q", got)
 	}
 }
 

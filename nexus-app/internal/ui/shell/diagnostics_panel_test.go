@@ -11,9 +11,11 @@ import (
 	fynetest "fyne.io/fyne/v2/test"
 
 	artifactsSvc "nexusdesk/internal/services/artifacts"
+	dbconnectorSvc "nexusdesk/internal/services/dbconnector"
 	llmSvc "nexusdesk/internal/services/llm"
 	metadataSvc "nexusdesk/internal/services/metadata"
 	perfSvc "nexusdesk/internal/services/perf"
+	protectedsecretSvc "nexusdesk/internal/services/protectedsecret"
 	settingsSvc "nexusdesk/internal/services/settings"
 	startupSvc "nexusdesk/internal/services/startup"
 	toolsSvc "nexusdesk/internal/services/tools"
@@ -87,9 +89,12 @@ func TestFormatDiagnosticsSnapshotIncludesCoreSections(t *testing.T) {
 			"Selected model: qwen2.5-coder:14b (loaded=true, vram=4.00 GiB)",
 		},
 		MetadataStatus: &metadataSvc.Status{
-			Path:    "E:/workspace/.nexusdesk/metadata/nexusdesk.sqlite",
-			Tables:  []string{"jobs", "task_runs"},
-			Message: "SQLite metadata store is active.",
+			Path:          "E:/workspace/.nexusdesk/metadata/nexusdesk.sqlite",
+			JournalMode:   "wal",
+			ForeignKeys:   true,
+			BusyTimeoutMS: 5000,
+			Tables:        []string{"jobs", "task_runs"},
+			Message:       "SQLite metadata store is active.",
 		},
 		InMemoryJobs:            2,
 		InMemoryRunningJobs:     1,
@@ -109,6 +114,9 @@ func TestFormatDiagnosticsSnapshotIncludesCoreSections(t *testing.T) {
 		RecentAgentFailuresList: []string{"agent-5 [failed] iter 8 stop max_iterations: loop guard triggered"},
 		ActivityTail:            []string{"Opened workspace E:/workspace", "Ran read-only SQLite query for sample.db"},
 		ProviderGuidance:        []string{"For Ollama, start the runtime with \"ollama serve\" and verify installed models with \"ollama list\"."},
+		ConnectorProfiles: []dbconnectorSvc.ConnectorProfile{
+			{Name: "Warehouse", Kind: "postgres", SSLMode: "require"},
+		},
 		StartupRecovery: startupSvc.Status{
 			Path: "C:/Users/example/AppData/Roaming/NexusDesk/startup-session.json",
 		},
@@ -131,7 +139,7 @@ func TestFormatDiagnosticsSnapshotIncludesCoreSections(t *testing.T) {
 		"## Provider",
 		"## Health Cards",
 		"**[OK] Provider:** Connected to provider.",
-		"**[OK] Metadata:** 2 table(s). SQLite metadata store is active.",
+		"**[OK] Metadata:** 2 table(s). journal=wal foreign_keys=true busy_timeout=5000ms. SQLite metadata store is active.",
 		"**[ACTION] Jobs and runs:** 5 non-success item(s)",
 		"**[OK] Issue report:** Redacted diagnostics export is available",
 		"Probe: ok",
@@ -148,8 +156,12 @@ func TestFormatDiagnosticsSnapshotIncludesCoreSections(t *testing.T) {
 		"planned tools are roadmap-only",
 		"## Artifact Provenance",
 		"No native artifacts are present yet.",
+		"## Protected Secrets",
+		"## Connector Transport",
+		"Warehouse [postgres]: encrypted transport required",
 		"## Metadata",
 		"Status: ok",
+		"Journal mode: wal",
 		"## Jobs",
 		"Task runs (recent): 8 total, 2 non-success",
 		"## Recommended Actions",
@@ -193,6 +205,8 @@ func TestDiagnosticsHealthCardsSummarizeActionsAndWarnings(t *testing.T) {
 		"Agent tool registry|ok|",
 		"planned tools are not executable",
 		"Artifact provenance|ok|No native artifacts are present yet.",
+		"Protected secrets|warning|OS protected secret storage is unavailable.|Fix protected credential storage",
+		"Connector transport|ok|No external connector profiles are configured.",
 		"Startup recovery|warning|Previous run did not record a clean exit.",
 		"Issue report|ok|Redacted diagnostics export is available",
 	} {
@@ -202,12 +216,106 @@ func TestDiagnosticsHealthCardsSummarizeActionsAndWarnings(t *testing.T) {
 	}
 }
 
+func TestDiagnosticsProtectedSecretHealthCard(t *testing.T) {
+	healthy := diagnosticsHealthCardText(diagnosticsHealthCards(diagnosticsSnapshot{
+		ProtectedSecretStatus: protectedsecretSvc.BackendStatus{
+			Backend:   "Windows DPAPI",
+			Available: true,
+			Message:   "Windows DPAPI protected storage is available.",
+		},
+	}))
+	if !strings.Contains(healthy, "Protected secrets|ok|Windows DPAPI protected storage is available.") {
+		t.Fatalf("expected protected secret OK card, got:\n%s", healthy)
+	}
+
+	warning := diagnosticsHealthCardText(diagnosticsHealthCards(diagnosticsSnapshot{
+		ProtectedSecretStatus: protectedsecretSvc.BackendStatus{
+			Backend:   "Linux Secret Service",
+			Available: false,
+			Message:   "Linux Secret Service protected storage is unavailable because secret-tool was not found in PATH.",
+			Action:    "Install libsecret secret-tool.",
+		},
+	}))
+	for _, expected := range []string{
+		"Protected secrets|warning|Linux Secret Service protected storage is unavailable",
+		"Install libsecret secret-tool.",
+	} {
+		if !strings.Contains(warning, expected) {
+			t.Fatalf("expected protected secret warning %q, got:\n%s", expected, warning)
+		}
+	}
+
+	report := formatDiagnosticsSnapshot(diagnosticsSnapshot{
+		ProtectedSecretStatus: protectedsecretSvc.BackendStatus{
+			Backend:   "Linux Secret Service",
+			Available: false,
+			Message:   "Linux Secret Service protected storage is unavailable because secret-tool was not found in PATH.",
+			Action:    "Install libsecret secret-tool.",
+		},
+	})
+	for _, expected := range []string{
+		"## Protected Secrets",
+		"Backend: Linux Secret Service",
+		"Status: warning - Linux Secret Service protected storage is unavailable",
+		"Next: Install libsecret secret-tool.",
+	} {
+		if !strings.Contains(report, expected) {
+			t.Fatalf("expected %q in diagnostics report:\n%s", expected, report)
+		}
+	}
+}
+
+func TestDiagnosticsConnectorTransportHealthCard(t *testing.T) {
+	cards := diagnosticsHealthCards(diagnosticsSnapshot{
+		ConnectorProfiles: []dbconnectorSvc.ConnectorProfile{
+			{Name: "Warehouse", Kind: "postgres", SSLMode: "require"},
+			{Name: "Local cache", Kind: "sqlite"},
+		},
+	})
+	joined := diagnosticsHealthCardText(cards)
+	if !strings.Contains(joined, "Connector transport|ok|2 profile(s) checked: 1 encrypted, 1 local, 0 plaintext.") {
+		t.Fatalf("expected connector transport OK card, got:\n%s", joined)
+	}
+
+	warningCards := diagnosticsHealthCards(diagnosticsSnapshot{
+		ConnectorProfiles: []dbconnectorSvc.ConnectorProfile{
+			{Name: "Dev MySQL", Kind: "mysql", SSLMode: dbconnectorSvc.ConnectorSSLModeDevelopmentPlaintext},
+		},
+	})
+	warning := diagnosticsHealthCardText(warningCards)
+	for _, expected := range []string{
+		"Connector transport|warning|1 profile(s) use development plaintext transport",
+		"switch production connector profiles to encrypted transport",
+	} {
+		if !strings.Contains(warning, expected) {
+			t.Fatalf("expected connector transport warning %q, got:\n%s", expected, warning)
+		}
+	}
+
+	report := formatDiagnosticsConnectorTransport(diagnosticsSnapshot{
+		ConnectorProfiles: []dbconnectorSvc.ConnectorProfile{
+			{Name: "Dev MySQL", Kind: "mysql", SSLMode: dbconnectorSvc.ConnectorSSLModeDevelopmentPlaintext},
+		},
+	})
+	for _, expected := range []string{
+		"Status: warning - 1 profile(s), 0 encrypted, 1 plaintext",
+		"Dev MySQL [mysql]: development plaintext, encryption disabled",
+	} {
+		if !strings.Contains(report, expected) {
+			t.Fatalf("expected %q in connector transport report:\n%s", expected, report)
+		}
+	}
+}
+
 func TestDiagnosticsHealthCardsHealthySnapshot(t *testing.T) {
 	cards := diagnosticsHealthCards(diagnosticsSnapshot{
 		ProbeResult: &llmSvc.ProbeResult{OK: true, Message: "Connected."},
 		MetadataStatus: &metadataSvc.Status{
-			Tables:  []string{"jobs"},
-			Message: "SQLite metadata store is active.",
+			JournalMode:   "wal",
+			ForeignKeys:   true,
+			BusyTimeoutMS: 5000,
+			Tables:        []string{"jobs"},
+			Message:       "SQLite metadata store is active.",
 		},
 		PerformanceTimings: []perfSvc.TimingRecord{{
 			Name:         perfSvc.TimingWorkspaceOpen,
@@ -219,7 +327,7 @@ func TestDiagnosticsHealthCardsHealthySnapshot(t *testing.T) {
 	joined := diagnosticsHealthCardText(cards)
 	for _, expected := range []string{
 		"Provider|ok|Connected.|",
-		"Metadata|ok|1 table(s). SQLite metadata store is active.|",
+		"Metadata|ok|1 table(s). journal=wal foreign_keys=true busy_timeout=5000ms. SQLite metadata store is active.|",
 		"Jobs and runs|ok|0 recent/in-memory",
 		"Performance|ok|1 timing record(s) captured and within budget.",
 		"Production failure gates|ok|5 scenario(s) cover crash/hang/provider/metadata/cancel release gates.",
@@ -323,8 +431,11 @@ func TestDiagnosticsHealthCardsSurfaceJobPersistenceIssue(t *testing.T) {
 		ProbeResult:         &llmSvc.ProbeResult{OK: true, Message: "Connected."},
 		JobPersistenceIssue: "job-0003: disk full",
 		MetadataStatus: &metadataSvc.Status{
-			Tables:  []string{"jobs"},
-			Message: "SQLite metadata store is active.",
+			JournalMode:   "wal",
+			ForeignKeys:   true,
+			BusyTimeoutMS: 5000,
+			Tables:        []string{"jobs"},
+			Message:       "SQLite metadata store is active.",
 		},
 	})
 	joined := diagnosticsHealthCardText(cards)

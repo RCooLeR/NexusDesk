@@ -44,6 +44,7 @@ func (v *View) promptSaveConnectorProfile() {
 	base := v.selectedConnectorProfile()
 	name := widget.NewEntry()
 	name.SetText(base.Name)
+	var previousSSLDefault string
 	kind := widget.NewSelect([]string{"postgres", "mysql", "mariadb", "sqlserver", "duckdb", "sqlite"}, nil)
 	kind.SetSelected(firstNonEmptyString(base.Kind, "postgres"))
 	host := widget.NewEntry()
@@ -57,7 +58,16 @@ func (v *View) promptSaveConnectorProfile() {
 	password := widget.NewPasswordEntry()
 	password.SetText(base.Password)
 	sslMode := widget.NewEntry()
-	sslMode.SetText(firstNonEmptyString(base.SSLMode, "prefer"))
+	previousSSLDefault = dbconnectorSvc.DefaultConnectorSSLMode(kind.Selected)
+	sslMode.SetText(firstNonEmptyString(base.SSLMode, previousSSLDefault))
+	kind.OnChanged = func(value string) {
+		nextDefault := dbconnectorSvc.DefaultConnectorSSLMode(value)
+		current := strings.TrimSpace(sslMode.Text)
+		if current == "" || current == previousSSLDefault {
+			sslMode.SetText(nextDefault)
+		}
+		previousSSLDefault = nextDefault
+	}
 	resultLimit := widget.NewEntry()
 	resultLimit.SetText(strconv.Itoa(valueOrDefault(base.ResultLimit, dbconnectorDefaultResultLimit())))
 	timeout := widget.NewEntry()
@@ -118,10 +128,52 @@ func (v *View) promptSaveConnectorProfile() {
 			return
 		}
 		v.data.dataConnectorProfileID = saved.ID
+		v.auditConnectorPlaintextModeChange(base, saved)
 		v.data.dataProfileStatus.SetText("Saved external connector profile " + saved.Name + ".")
 		v.addActivity("Saved external connector profile " + saved.Name + ".")
 		v.listConnectorProfiles()
 	}, v.window)
+}
+
+func (v *View) auditConnectorPlaintextModeChange(previous dbconnectorSvc.ConnectorProfile, saved dbconnectorSvc.ConnectorProfile) {
+	if v.metadataStore == nil {
+		return
+	}
+	record, ok := connectorPlaintextAuditRecord(previous, saved)
+	if !ok {
+		return
+	}
+	if err := v.metadataStore.SaveApprovalRecord(record); err != nil {
+		v.addActivity("Could not persist connector plaintext audit: " + err.Error())
+	}
+}
+
+func connectorPlaintextAuditRecord(previous dbconnectorSvc.ConnectorProfile, saved dbconnectorSvc.ConnectorProfile) (metadataSvc.ApprovalRecord, bool) {
+	previousMode := dbconnectorSvc.NormalizeConnectorSSLMode(previous.Kind, previous.SSLMode)
+	nextMode := dbconnectorSvc.NormalizeConnectorSSLMode(saved.Kind, saved.SSLMode)
+	if previousMode == nextMode {
+		return metadataSvc.ApprovalRecord{}, false
+	}
+	action := ""
+	switch {
+	case nextMode == dbconnectorSvc.ConnectorSSLModeDevelopmentPlaintext:
+		action = "enabled"
+	case previousMode == dbconnectorSvc.ConnectorSSLModeDevelopmentPlaintext:
+		action = "disabled"
+	default:
+		return metadataSvc.ApprovalRecord{}, false
+	}
+	name := strings.TrimSpace(firstNonEmptyString(saved.Name, saved.ID, "connector profile"))
+	kind := strings.TrimSpace(firstNonEmptyString(saved.Kind, previous.Kind, "connector"))
+	id := strings.TrimSpace(firstNonEmptyString(saved.ID, previous.ID, "connector"))
+	return metadataSvc.ApprovalRecord{
+		Action:    "connector.plaintext." + action,
+		Target:    "connector:" + id,
+		Risk:      "high",
+		Decision:  "applied",
+		Message:   fmt.Sprintf("Development plaintext transport %s for external %s profile %q.", action, kind, name),
+		CreatedAt: time.Now().UTC(),
+	}, true
 }
 
 func (v *View) deleteSelectedConnectorProfile() {
@@ -412,7 +464,7 @@ func formatConnectorProfiles(profiles []dbconnectorSvc.ConnectorProfile) string 
 	for _, profile := range profiles {
 		builder.WriteString(fmt.Sprintf("- %s [%s]\n", profile.Name, profile.Kind))
 		builder.WriteString(fmt.Sprintf("  Host: %s  Port: %d  DB: %s\n", profile.Host, profile.Port, profile.Database))
-		builder.WriteString(fmt.Sprintf("  User: %s  SSL: %s  Read-only: %t\n", profile.Username, profile.SSLMode, profile.ReadOnly))
+		builder.WriteString(fmt.Sprintf("  User: %s  Transport: %s  Read-only: %t\n", profile.Username, connectorResolvedTransportLabel(profile), profile.ReadOnly))
 		builder.WriteString(fmt.Sprintf("  Cap: %d rows  Timeout: %ds\n", profile.ResultLimit, profile.TimeoutSeconds))
 		scope := strings.TrimSpace(profile.WorkspaceScope)
 		if scope == "" {
@@ -428,6 +480,31 @@ func formatConnectorProfiles(profiles []dbconnectorSvc.ConnectorProfile) string 
 		}
 	}
 	return builder.String()
+}
+
+func connectorResolvedTransportLabel(profile dbconnectorSvc.ConnectorProfile) string {
+	kind := strings.ToLower(strings.TrimSpace(profile.Kind))
+	mode := dbconnectorSvc.NormalizeConnectorSSLMode(kind, profile.SSLMode)
+	switch kind {
+	case "sqlite", "duckdb":
+		return "local file (no network transport)"
+	}
+	switch mode {
+	case dbconnectorSvc.ConnectorSSLModeRequire:
+		return "encrypted transport required (mode require)"
+	case dbconnectorSvc.ConnectorSSLModeSkipVerify:
+		return "encrypted transport with certificate verification disabled (mode skip-verify)"
+	case dbconnectorSvc.ConnectorSSLModeDevelopmentPlaintext:
+		return "development plaintext, encryption disabled (mode development-plaintext)"
+	case "verify-ca":
+		return "encrypted transport with CA verification (mode verify-ca)"
+	case "verify-full":
+		return "encrypted transport with full certificate verification (mode verify-full)"
+	case "":
+		return "default local transport"
+	default:
+		return "custom transport mode " + mode
+	}
 }
 
 func formatConnectorSQLValidation(profileName string, query string) string {

@@ -33,6 +33,8 @@ type SearchMetadata struct {
 	FilesWithContentMatches int                    `json:"filesWithContentMatches"`
 	DirectoriesSkipped      int                    `json:"directoriesSkipped"`
 	Truncated               bool                   `json:"truncated"`
+	TimedOut                bool                   `json:"timedOut,omitempty"`
+	DurationMs              int64                  `json:"durationMs,omitempty"`
 	GeneratedAt             time.Time              `json:"generatedAt"`
 	Results                 []SearchMetadataResult `json:"results,omitempty"`
 }
@@ -60,6 +62,8 @@ type searchStats struct {
 	FilesWithContentMatches int
 	DirectoriesSkipped      int
 	Truncated               bool
+	TimedOut                bool
+	DurationMs              int64
 }
 
 func (m SearchMetadata) withResults(results []SearchResult, stats searchStats) SearchMetadata {
@@ -70,6 +74,8 @@ func (m SearchMetadata) withResults(results []SearchResult, stats searchStats) S
 	m.FilesWithContentMatches = stats.FilesWithContentMatches
 	m.DirectoriesSkipped = stats.DirectoriesSkipped
 	m.Truncated = stats.Truncated
+	m.TimedOut = stats.TimedOut
+	m.DurationMs = stats.DurationMs
 	m.Results = searchMetadataResults(results)
 	return m
 }

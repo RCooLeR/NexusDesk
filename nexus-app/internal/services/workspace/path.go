@@ -42,7 +42,46 @@ func cleanRel(relPath string) (string, error) {
 	if filepath.IsAbs(relPath) {
 		return "", errors.New("workspace path must be relative")
 	}
+	if err := validateWorkspacePathComponents(relPath); err != nil {
+		return "", err
+	}
 	return relPath, nil
+}
+
+func validateWorkspacePathComponents(relPath string) error {
+	for _, component := range strings.Split(filepath.ToSlash(relPath), "/") {
+		if component == "" || component == "." {
+			continue
+		}
+		if strings.TrimSpace(component) != component {
+			return errors.New("workspace path component cannot start or end with whitespace")
+		}
+		if strings.Contains(component, ":") {
+			return errors.New("workspace path cannot use Windows drive or alternate-data-stream syntax")
+		}
+		if strings.TrimRight(component, " .") != component {
+			return errors.New("workspace path component cannot end with a space or dot")
+		}
+		if isWindowsReservedPathComponent(component) {
+			return errors.New("workspace path cannot use a Windows reserved device name")
+		}
+	}
+	return nil
+}
+
+func isWindowsReservedPathComponent(component string) bool {
+	base := strings.ToUpper(strings.TrimRight(component, " ."))
+	if dot := strings.IndexByte(base, '.'); dot >= 0 {
+		base = base[:dot]
+	}
+	switch base {
+	case "CON", "PRN", "AUX", "NUL", "CLOCK$":
+		return true
+	}
+	if len(base) == 4 && (strings.HasPrefix(base, "COM") || strings.HasPrefix(base, "LPT")) {
+		return base[3] >= '1' && base[3] <= '9'
+	}
+	return false
 }
 
 func resolveFile(root string, relPath string) (string, string, os.FileInfo, error) {

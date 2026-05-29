@@ -19,6 +19,9 @@ import (
 const (
 	RedactedSecret                       = "********"
 	connectorCredentialReferencePrefix   = "nexus:connector-profile:"
+	ConnectorSSLModeRequire              = "require"
+	ConnectorSSLModeSkipVerify           = "skip-verify"
+	ConnectorSSLModeDevelopmentPlaintext = "development-plaintext"
 	defaultConnectorResultLimit          = 1000
 	maxConnectorResultLimit              = 10000
 	defaultConnectorTimeoutSeconds       = 30
@@ -366,7 +369,6 @@ func normalizeConnectorProfile(profile ConnectorProfile) ConnectorProfile {
 	profile.Username = strings.TrimSpace(profile.Username)
 	profile.Password = strings.TrimSpace(profile.Password)
 	profile.CredentialRef = strings.TrimSpace(profile.CredentialRef)
-	profile.SSLMode = strings.TrimSpace(profile.SSLMode)
 	profile.WorkspaceScope = normalizeWorkspaceScopePath(profile.WorkspaceScope)
 	if profile.Kind == "" {
 		profile.Kind = "postgres"
@@ -377,9 +379,7 @@ func normalizeConnectorProfile(profile ConnectorProfile) ConnectorProfile {
 	if profile.Name == "" {
 		profile.Name = defaultConnectorProfileName(profile)
 	}
-	if profile.SSLMode == "" {
-		profile.SSLMode = "prefer"
-	}
+	profile.SSLMode = NormalizeConnectorSSLMode(profile.Kind, profile.SSLMode)
 	profile.ReadOnly = true
 	if profile.ResultLimit <= 0 {
 		profile.ResultLimit = defaultConnectorResultLimit
@@ -394,6 +394,40 @@ func normalizeConnectorProfile(profile ConnectorProfile) ConnectorProfile {
 		profile.TimeoutSeconds = maxConnectorTimeoutSeconds
 	}
 	return profile
+}
+
+func DefaultConnectorSSLMode(kind string) string {
+	switch strings.ToLower(strings.TrimSpace(kind)) {
+	case "postgres", "mysql", "mariadb", "sqlserver":
+		return ConnectorSSLModeRequire
+	default:
+		return ""
+	}
+}
+
+func NormalizeConnectorSSLMode(kind string, value string) string {
+	kind = strings.ToLower(strings.TrimSpace(kind))
+	value = strings.ToLower(strings.TrimSpace(value))
+	if kind == "sqlite" || kind == "duckdb" {
+		return ""
+	}
+	switch value {
+	case "":
+		return DefaultConnectorSSLMode(kind)
+	case "disable", "disabled", "false", "off", "plaintext", "plain-text", "development", "dev-plaintext", ConnectorSSLModeDevelopmentPlaintext:
+		return ConnectorSSLModeDevelopmentPlaintext
+	case "true", "on", ConnectorSSLModeRequire:
+		return ConnectorSSLModeRequire
+	case ConnectorSSLModeSkipVerify, "skip_verify", "skip verify":
+		return ConnectorSSLModeSkipVerify
+	case "verify-ca", "verify-full":
+		if kind == "postgres" {
+			return value
+		}
+		return ConnectorSSLModeRequire
+	default:
+		return value
+	}
 }
 
 func workspaceScopeMatches(profileScope string, workspaceRoot string) bool {

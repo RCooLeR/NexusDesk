@@ -1,9 +1,12 @@
 package workspace
 
 import (
+	"context"
+	"fmt"
 	"path/filepath"
 	"strings"
 	"testing"
+	"time"
 )
 
 func TestSearchFindsPathAndContentMatches(t *testing.T) {
@@ -136,17 +139,68 @@ func TestSearchSkipsStructuredPreviewFormats(t *testing.T) {
 	}
 }
 
-func TestSearchScansOnlyBoundedPrefix(t *testing.T) {
+func TestSearchSkipsKnownBinaryExtensionsBeforeContentMatch(t *testing.T) {
 	root := t.TempDir()
-	content := strings.Repeat("a", searchPreviewMaxBytes+32) + "\nneedle after cap\n"
-	writeFile(t, filepath.Join(root, "large.txt"), content)
+	writeBytes(t, filepath.Join(root, "asset.png"), []byte("needle in fake image"))
+	writeBytes(t, filepath.Join(root, "bundle.zip"), []byte("needle in fake archive"))
+	writeBytes(t, filepath.Join(root, "module.wasm"), []byte("needle in fake wasm"))
 
 	results, err := New().Search(root, "needle", SearchOptions{})
 	if err != nil {
 		t.Fatalf("Search returned error: %v", err)
 	}
 	if len(results) != 0 {
-		t.Fatalf("expected content beyond search prefix cap to be skipped, got %#v", results)
+		t.Fatalf("expected known binary extensions to be skipped before content matching, got %#v", results)
+	}
+}
+
+func TestSearchScansFullSafeTextFile(t *testing.T) {
+	root := t.TempDir()
+	content := strings.Repeat("a", 80*1024) + "\nneedle after old prefix cap\n"
+	writeFile(t, filepath.Join(root, "large.txt"), content)
+
+	results, err := New().Search(root, "needle", SearchOptions{})
+	if err != nil {
+		t.Fatalf("Search returned error: %v", err)
+	}
+	if len(results) != 1 || results[0].RelPath != "large.txt" {
+		t.Fatalf("expected full safe text search to find late content, got %#v", results)
+	}
+}
+
+func TestSearchStreamsLiteralMatchBeyondWritePreviewCap(t *testing.T) {
+	root := t.TempDir()
+	var builder strings.Builder
+	for builder.Len() <= writeContentMaxBytes+64*1024 {
+		builder.WriteString("ordinary filler line with no marker\n")
+	}
+	builder.WriteString("needle after safe write cap\n")
+	writeFile(t, filepath.Join(root, "large.txt"), builder.String())
+
+	results, err := New().Search(root, "needle", SearchOptions{})
+	if err != nil {
+		t.Fatalf("Search returned error: %v", err)
+	}
+	if len(results) != 1 || results[0].RelPath != "large.txt" || !strings.Contains(results[0].Snippet, "needle") {
+		t.Fatalf("expected streaming literal search to find late content, got %#v", results)
+	}
+}
+
+func TestSearchStreamsRegexMatchWithLineBound(t *testing.T) {
+	root := t.TempDir()
+	var builder strings.Builder
+	for builder.Len() <= writeContentMaxBytes+64*1024 {
+		builder.WriteString("ordinary filler line with no marker\n")
+	}
+	builder.WriteString("const SearchPanel = true\n")
+	writeFile(t, filepath.Join(root, "large.ts"), builder.String())
+
+	results, err := New().Search(root, "search[-_]?panel", SearchOptions{Regex: true})
+	if err != nil {
+		t.Fatalf("Search returned error: %v", err)
+	}
+	if len(results) != 1 || results[0].RelPath != "large.ts" || results[0].MatchType != "content-regex" {
+		t.Fatalf("expected streaming regex search to find late content, got %#v", results)
 	}
 }
 
@@ -170,6 +224,106 @@ func TestSearchCapsContentMatchesPerFile(t *testing.T) {
 	}
 	if contentMatches != defaultSearchPerFileMax {
 		t.Fatalf("expected per-file cap %d, got %d", defaultSearchPerFileMax, contentMatches)
+	}
+}
+
+func TestSearchStopsAtWallClockLimit(t *testing.T) {
+	root := t.TempDir()
+	writeFile(t, filepath.Join(root, "a.txt"), "needle\n")
+	writeFile(t, filepath.Join(root, "b.txt"), "needle\n")
+
+	base := time.Date(2026, 5, 29, 10, 0, 0, 0, time.UTC)
+	calls := 0
+	oldNow := nowUTC
+	nowUTC = func() time.Time {
+		calls++
+		return base.Add(time.Duration(calls) * time.Millisecond)
+	}
+	t.Cleanup(func() {
+		nowUTC = oldNow
+	})
+
+	_, metadata, err := New().SearchWithMetadata(root, "needle", SearchOptions{MaxDuration: time.Nanosecond})
+	if err != nil {
+		t.Fatalf("SearchWithMetadata returned error: %v", err)
+	}
+	if !metadata.TimedOut || !metadata.Truncated {
+		t.Fatalf("expected timed out truncated metadata, got %#v", metadata)
+	}
+	if metadata.DurationMs <= 0 {
+		t.Fatalf("expected duration metadata, got %#v", metadata)
+	}
+}
+
+func TestSearchWithMetadataContextHonorsCancellation(t *testing.T) {
+	root := t.TempDir()
+	writeFile(t, filepath.Join(root, "a.txt"), "needle\n")
+	ctx, cancel := context.WithCancel(context.Background())
+	cancel()
+
+	_, _, err := New().SearchWithMetadataContext(ctx, root, "needle", SearchOptions{})
+	if err == nil || err != context.Canceled {
+		t.Fatalf("expected context canceled error, got %v", err)
+	}
+}
+
+func TestSearchStreamsPartialResultsCallback(t *testing.T) {
+	root := t.TempDir()
+	writeFile(t, filepath.Join(root, "a.txt"), "needle one\n")
+	writeFile(t, filepath.Join(root, "b.txt"), "needle two\n")
+	var snapshots [][]SearchResult
+
+	results, _, err := New().SearchWithMetadata(root, "needle", SearchOptions{
+		ResultCallback: func(partial []SearchResult) {
+			snapshots = append(snapshots, append([]SearchResult(nil), partial...))
+		},
+	})
+	if err != nil {
+		t.Fatalf("SearchWithMetadata returned error: %v", err)
+	}
+	if len(results) != 2 {
+		t.Fatalf("expected final results, got %#v", results)
+	}
+	if len(snapshots) == 0 {
+		t.Fatal("expected partial result callback")
+	}
+	if len(snapshots[len(snapshots)-1]) != len(results) {
+		t.Fatalf("expected final callback snapshot to match final results, got %#v vs %#v", snapshots[len(snapshots)-1], results)
+	}
+}
+
+func TestSearchSyntheticLargeWorkspaceStaysBounded(t *testing.T) {
+	root := t.TempDir()
+	for dirIndex := 0; dirIndex < 12; dirIndex++ {
+		for fileIndex := 0; fileIndex < 20; fileIndex++ {
+			content := "ordinary line\n"
+			if fileIndex%9 == 0 {
+				content += "needle in larger workspace\n"
+			}
+			writeFile(t, filepath.Join(root, "pkg", fmt.Sprintf("dir-%02d", dirIndex), fmt.Sprintf("file-%02d.txt", fileIndex)), content)
+		}
+	}
+	for fileIndex := 0; fileIndex < 50; fileIndex++ {
+		writeFile(t, filepath.Join(root, "node_modules", "pkg", fmt.Sprintf("ignored-%02d.js", fileIndex)), "needle ignored\n")
+	}
+
+	results, metadata, err := New().SearchWithMetadata(root, "needle", SearchOptions{MaxResults: 25})
+	if err != nil {
+		t.Fatalf("SearchWithMetadata returned error: %v", err)
+	}
+	if len(results) != 25 {
+		t.Fatalf("expected result cap to apply, got %d result(s)", len(results))
+	}
+	if !metadata.Truncated || metadata.ResultCount != 25 {
+		t.Fatalf("expected truncated metadata at cap, got %#v", metadata)
+	}
+	if metadata.DirectoriesSkipped == 0 {
+		t.Fatalf("expected ignored directories to be skipped, got %#v", metadata)
+	}
+	for _, result := range results {
+		if strings.Contains(result.RelPath, "node_modules") {
+			t.Fatalf("ignored dependency folder leaked into results: %#v", results)
+		}
 	}
 }
 

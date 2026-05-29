@@ -16,7 +16,16 @@ import (
 	_ "modernc.org/sqlite"
 )
 
-const metadataDirRelPath = ".nexusdesk/metadata"
+const (
+	metadataDirRelPath          = ".nexusdesk/metadata"
+	metadataSQLiteBusyTimeoutMS = 5000
+)
+
+type sqliteRuntimeStatus struct {
+	JournalMode   string
+	ForeignKeys   bool
+	BusyTimeoutMS int
+}
 
 type Store struct {
 	root    string
@@ -56,7 +65,7 @@ func (s *Store) ensureLocked() (Status, error) {
 		return Status{}, err
 	}
 	message := "SQLite metadata store is active."
-	tables, err := s.ensureSQLiteSchemaLocked()
+	tables, runtimeStatus, err := s.ensureSQLiteSchemaLocked()
 	if err != nil {
 		if !isMetadataCorruptionError(err) {
 			return Status{}, err
@@ -68,7 +77,7 @@ func (s *Store) ensureLocked() (Status, error) {
 		if archiveErr != nil {
 			return Status{}, fmt.Errorf("metadata store is corrupted (%v) and archival failed: %w", err, archiveErr)
 		}
-		tables, err = s.ensureSQLiteSchemaLocked()
+		tables, runtimeStatus, err = s.ensureSQLiteSchemaLocked()
 		if err != nil {
 			return Status{}, err
 		}
@@ -80,6 +89,9 @@ func (s *Store) ensureLocked() (Status, error) {
 		SchemaPath:    schemaPath,
 		SchemaVersion: schemaVersion,
 		SchemaHash:    schemaHash(),
+		JournalMode:   runtimeStatus.JournalMode,
+		ForeignKeys:   runtimeStatus.ForeignKeys,
+		BusyTimeoutMS: runtimeStatus.BusyTimeoutMS,
 		Tables:        tables,
 		Message:       message,
 		UpdatedAt:     now,
@@ -92,19 +104,19 @@ func (s *Store) ensureLocked() (Status, error) {
 	return status, nil
 }
 
-func (s *Store) ensureSQLiteSchemaLocked() ([]string, error) {
+func (s *Store) ensureSQLiteSchemaLocked() ([]string, sqliteRuntimeStatus, error) {
 	db, err := s.databaseLocked()
 	if err != nil {
-		return nil, err
+		return nil, sqliteRuntimeStatus{}, err
 	}
 	if _, err := db.Exec(schemaSQL); err != nil {
-		return nil, err
+		return nil, sqliteRuntimeStatus{}, err
 	}
 	if err := ensureColumn(db, "task_runs", "artifact_path", "TEXT"); err != nil {
-		return nil, err
+		return nil, sqliteRuntimeStatus{}, err
 	}
 	if err := ensureColumn(db, "chat_messages", "context_rel_path", "TEXT"); err != nil {
-		return nil, err
+		return nil, sqliteRuntimeStatus{}, err
 	}
 	for _, column := range []struct {
 		name       string
@@ -116,7 +128,7 @@ func (s *Store) ensureSQLiteSchemaLocked() ([]string, error) {
 		{name: "route_warning", definition: "TEXT"},
 	} {
 		if err := ensureColumn(db, "agent_runs", column.name, column.definition); err != nil {
-			return nil, err
+			return nil, sqliteRuntimeStatus{}, err
 		}
 	}
 	now := time.Now().UTC()
@@ -126,13 +138,17 @@ func (s *Store) ensureSQLiteSchemaLocked() ([]string, error) {
 		 ON CONFLICT(root) DO UPDATE SET name = excluded.name, opened_at = excluded.opened_at`,
 		hashID(s.root), s.root, filepath.Base(s.root), formatTime(now),
 	); err != nil {
-		return nil, err
+		return nil, sqliteRuntimeStatus{}, err
 	}
 	tables, err := listTables(db)
 	if err != nil {
-		return nil, err
+		return nil, sqliteRuntimeStatus{}, err
 	}
-	return tables, nil
+	runtimeStatus, err := sqliteRuntime(db)
+	if err != nil {
+		return nil, sqliteRuntimeStatus{}, err
+	}
+	return tables, runtimeStatus, nil
 }
 
 func isMetadataCorruptionError(err error) bool {
@@ -209,8 +225,43 @@ func (s *Store) databaseLocked() (*sql.DB, error) {
 	if err != nil {
 		return nil, err
 	}
+	db.SetMaxOpenConns(1)
+	db.SetMaxIdleConns(1)
+	if err := configureSQLiteRuntime(db); err != nil {
+		_ = db.Close()
+		return nil, err
+	}
 	s.db = db
 	return db, nil
+}
+
+func configureSQLiteRuntime(db *sql.DB) error {
+	if _, err := db.Exec(fmt.Sprintf("PRAGMA busy_timeout = %d", metadataSQLiteBusyTimeoutMS)); err != nil {
+		return err
+	}
+	if _, err := db.Exec("PRAGMA foreign_keys = ON"); err != nil {
+		return err
+	}
+	if _, err := db.Exec("PRAGMA journal_mode = WAL"); err != nil {
+		return err
+	}
+	return nil
+}
+
+func sqliteRuntime(db *sql.DB) (sqliteRuntimeStatus, error) {
+	status := sqliteRuntimeStatus{}
+	if err := db.QueryRow("PRAGMA journal_mode").Scan(&status.JournalMode); err != nil {
+		return sqliteRuntimeStatus{}, err
+	}
+	foreignKeys := 0
+	if err := db.QueryRow("PRAGMA foreign_keys").Scan(&foreignKeys); err != nil {
+		return sqliteRuntimeStatus{}, err
+	}
+	status.ForeignKeys = foreignKeys == 1
+	if err := db.QueryRow("PRAGMA busy_timeout").Scan(&status.BusyTimeoutMS); err != nil {
+		return sqliteRuntimeStatus{}, err
+	}
+	return status, nil
 }
 
 func (s *Store) closeCachedDB() error {
@@ -239,6 +290,9 @@ func (s *Store) writeManifest(status Status) error {
 		SchemaPath    string   `json:"schemaPath"`
 		SchemaVersion int      `json:"schemaVersion"`
 		SchemaHash    string   `json:"schemaHash"`
+		JournalMode   string   `json:"journalMode"`
+		ForeignKeys   bool     `json:"foreignKeys"`
+		BusyTimeoutMS int      `json:"busyTimeoutMs"`
 		Tables        []string `json:"tables"`
 		Message       string   `json:"message"`
 		UpdatedAt     string   `json:"updatedAt"`
@@ -247,6 +301,9 @@ func (s *Store) writeManifest(status Status) error {
 		SchemaPath:    status.SchemaPath,
 		SchemaVersion: status.SchemaVersion,
 		SchemaHash:    status.SchemaHash,
+		JournalMode:   status.JournalMode,
+		ForeignKeys:   status.ForeignKeys,
+		BusyTimeoutMS: status.BusyTimeoutMS,
 		Tables:        status.Tables,
 		Message:       status.Message,
 		UpdatedAt:     formatTime(status.UpdatedAt),

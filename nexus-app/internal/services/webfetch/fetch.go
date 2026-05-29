@@ -75,7 +75,7 @@ func Fetch(ctx context.Context, request Request) (Result, error) {
 			if len(via) >= maxRedirects {
 				return errors.New("web fetch redirect limit reached")
 			}
-			if _, err := validateURL(req.URL.String(), request.AllowedDomains, request.AllowLocal); err != nil {
+			if err := validateRedirectURL(req, request.AllowedDomains, request.AllowLocal); err != nil {
 				return err
 			}
 			return nil
@@ -155,6 +155,14 @@ func validateURL(rawURL string, allowedDomains []string, allowLocal bool) (*url.
 		}
 	}
 	return parsed, nil
+}
+
+func validateRedirectURL(req *http.Request, allowedDomains []string, allowLocal bool) error {
+	if req == nil || req.URL == nil {
+		return errors.New("web fetch redirect URL is required")
+	}
+	_, err := validateURL(req.URL.String(), allowedDomains, allowLocal)
+	return err
 }
 
 func hostAllowed(host string, allowedDomains []string) bool {

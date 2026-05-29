@@ -275,11 +275,12 @@ Implemented:
 - Cancellation.
 - Redacted errors.
 - Query history.
+- Encrypted transport defaults for PostgreSQL, MySQL/MariaDB, and SQL Server profiles.
+- Explicit `development-plaintext` opt-in for local non-production database connections.
 
 Planned:
 
-- Encrypted transport defaults for all network databases.
-- Loud audited development-only plaintext opt-in.
+- Audited development-only plaintext opt-in.
 - Connector pool reuse with short TTL.
 - Better profile inspector showing resolved TLS/read-only mode.
 - Cross-platform credential smoke.

@@ -6,6 +6,7 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+	"sync"
 	"testing"
 	"time"
 
@@ -33,6 +34,78 @@ func TestEnsureCreatesSQLiteStoreAndManifest(t *testing.T) {
 	}
 	if len(status.Tables) < 5 {
 		t.Fatalf("expected core tables, got %#v", status.Tables)
+	}
+	if strings.ToLower(status.JournalMode) != "wal" || !status.ForeignKeys || status.BusyTimeoutMS < metadataSQLiteBusyTimeoutMS {
+		t.Fatalf("expected WAL, foreign keys, and busy timeout in status, got %#v", status)
+	}
+}
+
+func TestEnsureConfiguresSQLiteRuntimePragmas(t *testing.T) {
+	store := mustStore(t)
+	db, err := store.open()
+	if err != nil {
+		t.Fatalf("open returned error: %v", err)
+	}
+	runtimeStatus, err := sqliteRuntime(db)
+	if err != nil {
+		t.Fatalf("sqliteRuntime returned error: %v", err)
+	}
+	if strings.ToLower(runtimeStatus.JournalMode) != "wal" {
+		t.Fatalf("expected WAL journal mode, got %#v", runtimeStatus)
+	}
+	if !runtimeStatus.ForeignKeys {
+		t.Fatalf("expected foreign keys enabled, got %#v", runtimeStatus)
+	}
+	if runtimeStatus.BusyTimeoutMS < metadataSQLiteBusyTimeoutMS {
+		t.Fatalf("expected busy timeout >= %d, got %#v", metadataSQLiteBusyTimeoutMS, runtimeStatus)
+	}
+}
+
+func TestStoreSupportsConcurrentReadsAndWrites(t *testing.T) {
+	store := mustStore(t)
+	const workers = 6
+	const iterations = 12
+	start := time.Date(2026, 5, 29, 10, 0, 0, 0, time.UTC)
+	var wg sync.WaitGroup
+	errs := make(chan error, workers*iterations*2)
+	for worker := 0; worker < workers; worker++ {
+		worker := worker
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			for index := 0; index < iterations; index++ {
+				id := strings.Join([]string{"job", string(rune('a' + worker)), string(rune('a' + index))}, "-")
+				if err := store.SaveJob(jobssvc.Job{
+					ID:        id,
+					Kind:      "test",
+					Label:     id,
+					Status:    jobssvc.StatusSuccess,
+					Message:   "ok",
+					StartedAt: start.Add(time.Duration(worker*iterations+index) * time.Millisecond),
+				}); err != nil {
+					errs <- err
+					return
+				}
+				if _, err := store.ListJobs(); err != nil {
+					errs <- err
+					return
+				}
+			}
+		}()
+	}
+	wg.Wait()
+	close(errs)
+	for err := range errs {
+		if err != nil {
+			t.Fatalf("concurrent metadata operation failed: %v", err)
+		}
+	}
+	jobs, err := store.ListJobs()
+	if err != nil {
+		t.Fatalf("ListJobs returned error: %v", err)
+	}
+	if len(jobs) != workers*iterations {
+		t.Fatalf("expected %d jobs after concurrent writes, got %d", workers*iterations, len(jobs))
 	}
 }
 

@@ -227,7 +227,7 @@ func chatSystemPrompt(systemPrompt string) string {
 	if systemPrompt != "" {
 		return systemPrompt
 	}
-	return "You are Nexus, the assistant inside Nexus Augentic Studio. Answer from provided workspace context when it is present. If more source context is needed, say what to select or inspect next. Do not claim access to files that were not provided."
+	return "You are Nexus, the assistant inside NexusDesk. Answer from provided workspace context when it is present. If more source context is needed, say what to select or inspect next. Do not claim access to files that were not provided."
 }
 
 func shouldSendOllamaOptions(config Config) bool {

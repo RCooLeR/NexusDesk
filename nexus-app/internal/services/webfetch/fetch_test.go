@@ -76,6 +76,41 @@ func TestFetchBlocksMulticastAtDialTime(t *testing.T) {
 	}
 }
 
+func TestRedirectValidationBlocksPrivateTargets(t *testing.T) {
+	request := httptest.NewRequest(http.MethodGet, "http://127.0.0.1/private", nil)
+	err := validateRedirectURL(request, nil, false)
+	if err == nil || !strings.Contains(err.Error(), "blocks private") {
+		t.Fatalf("expected private redirect target rejection, got %v", err)
+	}
+}
+
+func TestBlockedLocalIPCoversPrivateAndSpecialRanges(t *testing.T) {
+	for _, rawIP := range []string{
+		"0.0.0.0",
+		"10.1.2.3",
+		"127.0.0.1",
+		"169.254.10.20",
+		"172.16.1.1",
+		"192.168.1.10",
+		"224.0.0.1",
+		"::",
+		"::1",
+		"fc00::1",
+		"fe80::1",
+		"ff02::1",
+	} {
+		if !blockedLocalIP(net.ParseIP(rawIP)) {
+			t.Fatalf("expected %s to be blocked", rawIP)
+		}
+	}
+	if blockedLocalIP(net.ParseIP("93.184.216.34")) {
+		t.Fatal("expected public IPv4 address to be allowed")
+	}
+	if blockedLocalIP(net.ParseIP("2606:2800:220:1:248:1893:25c8:1946")) {
+		t.Fatal("expected public IPv6 address to be allowed")
+	}
+}
+
 func TestFetchReadsTextWhenLocalAllowed(t *testing.T) {
 	server := httptest.NewServer(http.HandlerFunc(func(response http.ResponseWriter, request *http.Request) {
 		response.Header().Set("Content-Type", "text/html; charset=utf-8")

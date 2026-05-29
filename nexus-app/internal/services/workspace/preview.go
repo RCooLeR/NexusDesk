@@ -111,6 +111,24 @@ func (s *Service) PreviewFile(root string, relPath string) (domain.FilePreview, 
 	return preview, nil
 }
 
+func (s *Service) FullTextPreviewFile(root string, relPath string) (domain.FilePreview, error) {
+	read, err := s.ReadTextFile(root, relPath)
+	if err != nil {
+		return domain.FilePreview{}, err
+	}
+	return domain.FilePreview{
+		RelPath:   read.RelPath,
+		Name:      filepath.Base(read.RelPath),
+		Size:      read.Size,
+		Kind:      domain.PreviewText,
+		MediaType: mediaType(read.RelPath),
+		Encoding:  read.Encoding,
+		Text:      read.Content,
+		TextBytes: read.Size,
+		Truncated: false,
+	}, nil
+}
+
 func isStructuredPreviewKind(kind domain.PreviewKind) bool {
 	switch kind {
 	case domain.PreviewImage, domain.PreviewPDF, domain.PreviewTable, domain.PreviewDoc:

@@ -12,12 +12,14 @@ import (
 	"fyne.io/fyne/v2/widget"
 
 	artifactsSvc "nexusdesk/internal/services/artifacts"
+	dbconnectorSvc "nexusdesk/internal/services/dbconnector"
 	externalagentsSvc "nexusdesk/internal/services/externalagents"
 	issueReportSvc "nexusdesk/internal/services/issuereport"
 	jobsSvc "nexusdesk/internal/services/jobs"
 	llmSvc "nexusdesk/internal/services/llm"
 	metadataSvc "nexusdesk/internal/services/metadata"
 	perfSvc "nexusdesk/internal/services/perf"
+	protectedsecretSvc "nexusdesk/internal/services/protectedsecret"
 	readinessSvc "nexusdesk/internal/services/readiness"
 	settingsSvc "nexusdesk/internal/services/settings"
 	startupSvc "nexusdesk/internal/services/startup"
@@ -62,6 +64,9 @@ type diagnosticsSnapshot struct {
 	ToolCatalogHealth       toolsSvc.ToolCatalogHealth
 	ArtifactProvenance      artifactsSvc.ProvenanceSummary
 	ArtifactProvenanceError string
+	ProtectedSecretStatus   protectedsecretSvc.BackendStatus
+	ConnectorProfiles       []dbconnectorSvc.ConnectorProfile
+	ConnectorProfilesError  string
 	RuntimeSummary          []string
 	ExternalAgentTools      []externalagentsSvc.ToolStatus
 	RecentJobFailures       []string
@@ -264,14 +269,31 @@ func (c *diagnosticsController) Refresh() {
 
 func (v *View) collectDiagnosticsSnapshot(root string, activityTail []string) diagnosticsSnapshot {
 	snapshot := diagnosticsSnapshot{
-		CollectedAt:        time.Now().UTC(),
-		WorkspaceRoot:      root,
-		ActivityTail:       append([]string(nil), activityTail...),
-		StartupRecovery:    v.startupStatus,
-		PerformanceTimings: v.performanceTimings(diagnosticsPerformanceLimit),
-		FailureScenarios:   readinessSvc.ProductionFailureScenarios(),
-		ToolCatalogHealth:  toolsSvc.ValidateDefaultToolCatalog(),
-		ExternalAgentTools: externalagentsSvc.Probe(externalagentsSvc.Options{}),
+		CollectedAt:           time.Now().UTC(),
+		WorkspaceRoot:         root,
+		ActivityTail:          append([]string(nil), activityTail...),
+		StartupRecovery:       v.startupStatus,
+		PerformanceTimings:    v.performanceTimings(diagnosticsPerformanceLimit),
+		FailureScenarios:      readinessSvc.ProductionFailureScenarios(),
+		ToolCatalogHealth:     toolsSvc.ValidateDefaultToolCatalog(),
+		ExternalAgentTools:    externalagentsSvc.Probe(externalagentsSvc.Options{}),
+		ProtectedSecretStatus: protectedsecretSvc.Status(),
+	}
+	if !snapshot.ProtectedSecretStatus.Available {
+		snapshot.Warnings = append(snapshot.Warnings, "Protected secret storage warning: "+snapshot.ProtectedSecretStatus.Message)
+	}
+	if v.connectorProfileStore == nil {
+		snapshot.ConnectorProfilesError = "connector profile store is unavailable"
+	} else if profiles, err := v.connectorProfileStore.ListForWorkspace(root); err != nil {
+		snapshot.ConnectorProfilesError = err.Error()
+		snapshot.Warnings = append(snapshot.Warnings, "Connector profile transport warning: "+err.Error())
+	} else {
+		snapshot.ConnectorProfiles = profiles
+		for _, profile := range profiles {
+			if dbconnectorSvc.NormalizeConnectorSSLMode(profile.Kind, profile.SSLMode) == dbconnectorSvc.ConnectorSSLModeDevelopmentPlaintext {
+				snapshot.Warnings = append(snapshot.Warnings, fmt.Sprintf("Connector profile %q uses development plaintext transport.", firstNonEmptyString(profile.Name, profile.ID)))
+			}
+		}
 	}
 	if err := readinessSvc.ValidateProductionFailureScenarios(snapshot.FailureScenarios); err != nil {
 		snapshot.FailureScenarioIssue = err.Error()
@@ -592,6 +614,26 @@ func formatDiagnosticsSnapshot(snapshot diagnosticsSnapshot) string {
 	builder.WriteString("\n## Artifact Provenance\n")
 	builder.WriteString(formatDiagnosticsArtifactProvenance(snapshot))
 
+	builder.WriteString("\n## Protected Secrets\n")
+	builder.WriteString("Backend: ")
+	builder.WriteString(firstNonEmptyString(snapshot.ProtectedSecretStatus.Backend, "unknown"))
+	builder.WriteString("\nStatus: ")
+	if snapshot.ProtectedSecretStatus.Available {
+		builder.WriteString("ok")
+	} else {
+		builder.WriteString("warning")
+	}
+	builder.WriteString(" - ")
+	builder.WriteString(firstNonEmptyString(snapshot.ProtectedSecretStatus.Message, "Protected secret status is unavailable."))
+	if action := strings.TrimSpace(snapshot.ProtectedSecretStatus.Action); action != "" {
+		builder.WriteString("\nNext: ")
+		builder.WriteString(action)
+	}
+	builder.WriteString("\n")
+
+	builder.WriteString("\n## Connector Transport\n")
+	builder.WriteString(formatDiagnosticsConnectorTransport(snapshot))
+
 	builder.WriteString("\n## Metadata\n")
 	if snapshot.MetadataError != "" {
 		builder.WriteString("Status: warning - ")
@@ -600,6 +642,9 @@ func formatDiagnosticsSnapshot(snapshot diagnosticsSnapshot) string {
 	} else if snapshot.MetadataStatus != nil {
 		builder.WriteString("Status: ok\nPath: ")
 		builder.WriteString(snapshot.MetadataStatus.Path)
+		builder.WriteString("\nJournal mode: ")
+		builder.WriteString(firstNonEmptyString(snapshot.MetadataStatus.JournalMode, "unknown"))
+		builder.WriteString(fmt.Sprintf("\nForeign keys: %t\nBusy timeout: %d ms", snapshot.MetadataStatus.ForeignKeys, snapshot.MetadataStatus.BusyTimeoutMS))
 		builder.WriteString("\nTables: ")
 		builder.WriteString(fmt.Sprintf("%d", len(snapshot.MetadataStatus.Tables)))
 		builder.WriteString("\nMessage: ")
@@ -664,6 +709,8 @@ func diagnosticsHealthCards(snapshot diagnosticsSnapshot) []diagnosticsHealthCar
 		diagnosticsFailureGatesHealthCard(snapshot),
 		diagnosticsToolCatalogHealthCard(snapshot),
 		diagnosticsArtifactProvenanceHealthCard(snapshot),
+		diagnosticsProtectedSecretHealthCard(snapshot),
+		diagnosticsConnectorTransportHealthCard(snapshot),
 		diagnosticsStartupHealthCard(snapshot),
 		{
 			Label:  "Issue report",
@@ -671,6 +718,108 @@ func diagnosticsHealthCards(snapshot diagnosticsSnapshot) []diagnosticsHealthCar
 			Detail: "Redacted diagnostics export is available and excludes workspace file contents by default.",
 			Action: "Use Export issue report before sharing beta bugs or release-candidate failures.",
 		},
+	}
+}
+
+func diagnosticsConnectorTransportHealthCard(snapshot diagnosticsSnapshot) diagnosticsHealthCard {
+	if strings.TrimSpace(snapshot.ConnectorProfilesError) != "" {
+		return diagnosticsHealthCard{
+			Label:  "Connector transport",
+			Status: "warning",
+			Detail: "Connector profiles could not be inspected: " + compactDiagnosticsLine(snapshot.ConnectorProfilesError, diagnosticsCompactMessageLimit),
+			Action: "Open Data Sources and verify connector profile storage before release smoke.",
+		}
+	}
+	counts := connectorTransportCounts(snapshot.ConnectorProfiles)
+	if counts.Plaintext > 0 {
+		return diagnosticsHealthCard{
+			Label:  "Connector transport",
+			Status: "warning",
+			Detail: fmt.Sprintf("%d profile(s) use development plaintext transport; %d encrypted, %d local.", counts.Plaintext, counts.Encrypted, counts.Local),
+			Action: "Review Data Sources and switch production connector profiles to encrypted transport.",
+		}
+	}
+	if len(snapshot.ConnectorProfiles) == 0 {
+		return diagnosticsHealthCard{
+			Label:  "Connector transport",
+			Status: "ok",
+			Detail: "No external connector profiles are configured.",
+			Action: "Add a connector profile and rerun Diagnostics before data-source release smoke.",
+		}
+	}
+	return diagnosticsHealthCard{
+		Label:  "Connector transport",
+		Status: "ok",
+		Detail: fmt.Sprintf("%d profile(s) checked: %d encrypted, %d local, 0 plaintext.", len(snapshot.ConnectorProfiles), counts.Encrypted, counts.Local),
+	}
+}
+
+type connectorTransportCount struct {
+	Encrypted int
+	Plaintext int
+	Local     int
+	Custom    int
+}
+
+func connectorTransportCounts(profiles []dbconnectorSvc.ConnectorProfile) connectorTransportCount {
+	var counts connectorTransportCount
+	for _, profile := range profiles {
+		kind := strings.ToLower(strings.TrimSpace(profile.Kind))
+		mode := dbconnectorSvc.NormalizeConnectorSSLMode(kind, profile.SSLMode)
+		switch {
+		case kind == "sqlite" || kind == "duckdb":
+			counts.Local++
+		case mode == dbconnectorSvc.ConnectorSSLModeDevelopmentPlaintext:
+			counts.Plaintext++
+		case mode == dbconnectorSvc.ConnectorSSLModeRequire || mode == dbconnectorSvc.ConnectorSSLModeSkipVerify || mode == "verify-ca" || mode == "verify-full":
+			counts.Encrypted++
+		default:
+			counts.Custom++
+		}
+	}
+	return counts
+}
+
+func formatDiagnosticsConnectorTransport(snapshot diagnosticsSnapshot) string {
+	if strings.TrimSpace(snapshot.ConnectorProfilesError) != "" {
+		return "Status: warning - " + snapshot.ConnectorProfilesError + "\n"
+	}
+	if len(snapshot.ConnectorProfiles) == 0 {
+		return "Status: ok - no external connector profiles configured.\n"
+	}
+	counts := connectorTransportCounts(snapshot.ConnectorProfiles)
+	status := "ok"
+	if counts.Plaintext > 0 {
+		status = "warning"
+	}
+	var builder strings.Builder
+	builder.WriteString(fmt.Sprintf("Status: %s - %d profile(s), %d encrypted, %d plaintext, %d local, %d custom.\n", status, len(snapshot.ConnectorProfiles), counts.Encrypted, counts.Plaintext, counts.Local, counts.Custom))
+	for _, profile := range snapshot.ConnectorProfiles {
+		builder.WriteString("- ")
+		builder.WriteString(firstNonEmptyString(profile.Name, profile.ID, "connector profile"))
+		builder.WriteString(" [")
+		builder.WriteString(firstNonEmptyString(profile.Kind, "unknown"))
+		builder.WriteString("]: ")
+		builder.WriteString(connectorResolvedTransportLabel(profile))
+		builder.WriteString("\n")
+	}
+	return builder.String()
+}
+
+func diagnosticsProtectedSecretHealthCard(snapshot diagnosticsSnapshot) diagnosticsHealthCard {
+	status := snapshot.ProtectedSecretStatus
+	if status.Available {
+		return diagnosticsHealthCard{
+			Label:  "Protected secrets",
+			Status: "ok",
+			Detail: firstNonEmptyString(status.Message, "OS protected secret storage is available."),
+		}
+	}
+	return diagnosticsHealthCard{
+		Label:  "Protected secrets",
+		Status: "warning",
+		Detail: firstNonEmptyString(status.Message, "OS protected secret storage is unavailable."),
+		Action: firstNonEmptyString(status.Action, "Fix protected credential storage before saving provider keys or connector credentials."),
 	}
 }
 
@@ -873,7 +1022,7 @@ func diagnosticsMetadataHealthCard(snapshot diagnosticsSnapshot) diagnosticsHeal
 	return diagnosticsHealthCard{
 		Label:  "Metadata",
 		Status: "ok",
-		Detail: fmt.Sprintf("%d table(s). %s", len(snapshot.MetadataStatus.Tables), firstNonEmptyString(compactDiagnosticsLine(snapshot.MetadataStatus.Message, diagnosticsCompactMessageLimit), "SQLite metadata store is active.")),
+		Detail: fmt.Sprintf("%d table(s). journal=%s foreign_keys=%t busy_timeout=%dms. %s", len(snapshot.MetadataStatus.Tables), firstNonEmptyString(snapshot.MetadataStatus.JournalMode, "unknown"), snapshot.MetadataStatus.ForeignKeys, snapshot.MetadataStatus.BusyTimeoutMS, firstNonEmptyString(compactDiagnosticsLine(snapshot.MetadataStatus.Message, diagnosticsCompactMessageLimit), "SQLite metadata store is active.")),
 	}
 }
 
@@ -1109,6 +1258,14 @@ func diagnosticsRecommendedActions(snapshot diagnosticsSnapshot) []string {
 		actions = append(actions, "Install at least one external coding-agent CLI such as Codex, Claude Code, or OpenCode before enabling future approved external-agent workflows.")
 	} else if externalagentsSvc.HasMissing(snapshot.ExternalAgentTools) {
 		actions = append(actions, "Review External Agent CLIs and install any missing tools you expect NexusDesk to orchestrate later.")
+	}
+	if !snapshot.ProtectedSecretStatus.Available {
+		actions = append(actions, firstNonEmptyString(snapshot.ProtectedSecretStatus.Action, "Fix protected credential storage before saving provider keys or connector credentials."))
+	}
+	if strings.TrimSpace(snapshot.ConnectorProfilesError) != "" {
+		actions = append(actions, "Open Data Sources and verify connector profile storage before release smoke.")
+	} else if connectorTransportCounts(snapshot.ConnectorProfiles).Plaintext > 0 {
+		actions = append(actions, "Review Data Sources and switch production connector profiles to encrypted transport.")
 	}
 	if snapshot.MetadataError != "" {
 		actions = append(actions, "Inspect metadata health and recover .nexusdesk/metadata before continuing long runs.")

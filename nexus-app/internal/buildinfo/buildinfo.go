@@ -10,7 +10,7 @@ import (
 
 const (
 	AppID   = "com.rcooler.nexus"
-	AppName = "Nexus Augentic Studio"
+	AppName = "NexusDesk"
 	Tagline = "Agentic work. Augmented by context."
 )
 

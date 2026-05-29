@@ -48,7 +48,7 @@ func newEditorController(view *View, initialTabID string, welcomeItem *container
 }
 
 func (v *View) newWelcomePanel() fyne.CanvasObject {
-	title := widget.NewRichTextFromMarkdown("# Nexus Augentic Studio\n\nNative local-first workbench for code, data, agents, and artifacts.")
+	title := widget.NewRichTextFromMarkdown("# NexusDesk\n\nNative local-first workbench for code, data, agents, and artifacts.")
 	title.Wrapping = fyne.TextWrapWord
 	openWorkspaceButton := widget.NewButtonWithIcon("Open Workspace", theme.FolderOpenIcon(), v.openWorkspaceDialog)
 	openFileButton := widget.NewButtonWithIcon("Open File", theme.FileTextIcon(), v.openFileDialog)

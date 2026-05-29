@@ -149,6 +149,24 @@ func TestBuildContextPackCapsBytesAndKeepsUTF8Valid(t *testing.T) {
 	}
 }
 
+func TestBuildContextPackPreservesPreviewTruncationWarning(t *testing.T) {
+	root := t.TempDir()
+	writeWorkspaceTestFile(t, root, "large.md", strings.Repeat("x", 16))
+	service := &Service{entryLimit: defaultEntryLimit, previewByteLimit: 4}
+
+	pack, err := service.BuildContextPack(root, []string{"large.md"}, ContextPackOptions{MaxBytes: 1024})
+	if err != nil {
+		t.Fatalf("BuildContextPack returned error: %v", err)
+	}
+
+	if !pack.Truncated {
+		t.Fatal("expected preview truncation to mark context pack truncated")
+	}
+	if !strings.Contains(pack.Content, "[preview truncated: this context contains only the capped file preview]") {
+		t.Fatalf("missing preview truncation warning: %q", pack.Content)
+	}
+}
+
 func TestCollectContextFilesRejectsTraversal(t *testing.T) {
 	if _, err := New().CollectContextFiles(t.TempDir(), []string{"../outside.md"}, ContextCollectOptions{}); err == nil {
 		t.Fatal("expected traversal error")

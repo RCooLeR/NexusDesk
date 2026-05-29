@@ -284,6 +284,7 @@ Rules:
 - Model calls happen only after provider/model setup and explicit user action.
 - `web_fetch` allows HTTP(S) text retrieval only under SSRF, redirect, content-type, and size guards.
 - External database connections default to encrypted transport unless the user explicitly opts into plaintext development mode.
+- XLSX, DOCX, and generated Office package validation use bounded ZIP member, file-count, and total-uncompressed-size caps before reading package contents.
 - Browser automation is planned only after a separate policy for URLs, cookies, screenshots, downloads, storage, and approvals.
 
 ### 6.6 Database safety

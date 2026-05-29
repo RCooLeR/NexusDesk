@@ -8,6 +8,9 @@ type Status struct {
 	SchemaPath    string
 	SchemaVersion int
 	SchemaHash    string
+	JournalMode   string
+	ForeignKeys   bool
+	BusyTimeoutMS int
 	Tables        []string
 	Message       string
 	UpdatedAt     time.Time

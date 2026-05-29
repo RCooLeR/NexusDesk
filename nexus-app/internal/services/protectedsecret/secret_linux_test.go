@@ -5,6 +5,7 @@ package protectedsecret
 import (
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 )
 
@@ -84,5 +85,24 @@ esac
 	}
 	if _, err := Unprotect(token); err == nil {
 		t.Fatal("expected lookup to fail after Delete")
+	}
+}
+
+func TestLinuxSecretServiceUnavailableIsActionable(t *testing.T) {
+	oldCommand := secretToolCommand
+	secretToolCommand = filepath.Join(t.TempDir(), "missing-secret-tool")
+	t.Cleanup(func() {
+		secretToolCommand = oldCommand
+	})
+
+	if Available() {
+		t.Fatal("expected missing secret-tool backend to be unavailable")
+	}
+	_, err := Protect("settings.api-key", []byte("secret"))
+	if err == nil {
+		t.Fatal("expected Protect to fail when secret-tool is unavailable")
+	}
+	if message := err.Error(); !strings.Contains(message, "protected secret storage is unavailable") || !strings.Contains(message, "secret-tool") {
+		t.Fatalf("expected actionable unavailable error, got %q", message)
 	}
 }

@@ -208,7 +208,15 @@ func (v *View) newTextEditor(tab editorSvc.Tab, preview domain.FilePreview, onSt
 	if preview.Truncated {
 		revert.Disable()
 	}
-	encodingControl := container.NewHBox(widget.NewLabel("Save as"), encodingSelect, definition, references, symbols, format, revert)
+	encodingActions := []fyne.CanvasObject{widget.NewLabel("Save as"), encodingSelect, definition, references, symbols, format, revert}
+	if preview.Truncated {
+		loadFull := widget.NewButtonWithIcon("Load full", theme.DownloadIcon(), func() {
+			v.loadFullTextPreview(tab.RelPath, status)
+		})
+		loadFull.Importance = widget.MediumImportance
+		encodingActions = append(encodingActions, loadFull)
+	}
+	encodingControl := container.NewHBox(encodingActions...)
 	sourcePanel := container.NewBorder(container.NewBorder(nil, nil, status, encodingControl), nil, nil, nil, source)
 	previewPanel := container.NewBorder(widget.NewLabel(previewHeader(preview)), nil, nil, nil, rendered.Canvas())
 	outlinePanel := container.NewBorder(outlineStatus, nil, nil, nil, container.NewVScroll(outlineList))
@@ -226,6 +234,21 @@ func (v *View) newTextEditor(tab editorSvc.Tab, preview domain.FilePreview, onSt
 	)
 	tabs.SetTabLocation(container.TabLocationTop)
 	return tabs
+}
+
+func (v *View) loadFullTextPreview(relPath string, status *widget.Label) {
+	workspace := v.state.Workspace()
+	if strings.TrimSpace(workspace.Root) == "" {
+		status.SetText("Open a workspace before loading the full file.")
+		return
+	}
+	preview, err := v.workspaceService.FullTextPreviewFile(workspace.Root, relPath)
+	if err != nil {
+		status.SetText("Full load unavailable: " + err.Error())
+		return
+	}
+	v.addActivity("Loaded full text preview for " + relPath + ".")
+	v.openPreviewTab(preview)
 }
 
 func (b *textEditorBinding) writeEncoding() string {

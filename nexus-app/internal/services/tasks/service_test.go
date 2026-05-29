@@ -1,6 +1,7 @@
 package tasks
 
 import (
+	"bytes"
 	"context"
 	"os"
 	"os/exec"
@@ -248,6 +249,35 @@ func TestRunnableTaskArgsAvoidShellExecution(t *testing.T) {
 	}
 	if _, err := runnableTaskArgs(Task{Kind: "cargo-test", Command: "cargo test -- --ignored", Source: "Cargo.toml", Label: "bad"}); err == nil {
 		t.Fatal("expected unsafe cargo argument injection to be rejected")
+	}
+}
+
+func TestRunnableTaskRejectsShellMetacharactersInScriptNames(t *testing.T) {
+	for _, script := range []string{"build;touch-pwned", "build&&pwn", "build|pwn", "build`pwn`", "build$(pwn)", "build name"} {
+		task := Task{Kind: "npm-script", Command: "npm run " + script, Label: "npm run " + script}
+		if _, err := runnableTaskArgs(task); err == nil {
+			t.Fatalf("expected unsafe script name %q to be rejected", script)
+		}
+	}
+}
+
+func TestLimitWriterCapsOutput(t *testing.T) {
+	var buffer bytes.Buffer
+	writer := limitWriter{buffer: &buffer, limit: 4}
+	if _, err := writer.Write([]byte("abcdef")); err != nil {
+		t.Fatalf("Write returned error: %v", err)
+	}
+	if got := buffer.String(); got != "abcd\n[output truncated]\n" {
+		t.Fatalf("unexpected capped output %q", got)
+	}
+}
+
+func TestTerminalTimeoutClampsToSafeRange(t *testing.T) {
+	if got := terminalTimeout(0); got != terminalDefaultTimeout {
+		t.Fatalf("expected default timeout, got %s", got)
+	}
+	if got := terminalTimeout(999); got != terminalMaxTimeout {
+		t.Fatalf("expected max timeout, got %s", got)
 	}
 }
 

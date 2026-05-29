@@ -34,9 +34,6 @@ bin/
 coverage.out
 coverage/
 *.test
-frontend/dist/
-build/bin/
-app/build/bin/
 nexus-app/bin/
 nexus-app/build/
 nexus-app/*.exe
@@ -60,3 +57,4 @@ services/tmp/
 # AI artifacts
 .codex-ui-screenshots/
 /claude-analysis.md
+/claude/
