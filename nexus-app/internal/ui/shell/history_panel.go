@@ -97,7 +97,7 @@ func (v *View) openHistoryItem(item historySvc.Item) {
 		v.openHistoryAgentRun(item.Ref)
 	case historySvc.KindData:
 		v.historyDetail.SetText(formatHistoryItem(item))
-		v.dataProfileStatus.SetText("Opened data history item " + item.Ref + ".")
+		v.data.dataProfileStatus.SetText("Opened data history item " + item.Ref + ".")
 		v.setDataSummary(strings.TrimSpace(item.Detail))
 		v.addActivity("Opened data history item " + item.Ref + ".")
 	default:

@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"strings"
+	"sync"
 	"time"
 
 	"fyne.io/fyne/v2"
@@ -37,23 +38,108 @@ const (
 	datasetSQLiteArtifactJobKind = "sqlite-artifact-export"
 )
 
+type dataController struct {
+	view                   *View
+	dataProfileStatus      *widget.Label
+	dataProfileDetail      *widget.Entry
+	dataRowsDetail         *widget.Entry
+	dataRowsStatus         *widget.Label
+	dataRowsContainer      *fyne.Container
+	dataRowsTable          *widget.Table
+	dataRowsColumnWidths   []float32
+	dataRowsRenderPolicy   dataGridRenderPolicy
+	dataRowsColumns        []string
+	dataRowsValues         [][]string
+	dataRowsSelectedRow    int
+	dataRowsSelectedCol    int
+	dataRowsSampledRows    int
+	dataRowsOriginalRows   int
+	dataRowsClippedColumns int
+	dataPlanDetail         *widget.Entry
+	dataChartDetail        *widget.Entry
+	dataResultTabs         *container.AppTabs
+	dataQueryEntry         *widget.Entry
+	dataLastQuery          datasetsSvc.QueryResult
+	dataLastSQLiteQuery    dbconnectorSvc.SQLiteQueryResult
+	dataLastConnectorQuery dbconnectorSvc.ConnectorQueryResult
+	dataLastChart          datasetsSvc.ChartResult
+	dataLastDashboard      datasetsSvc.DashboardResult
+	dataLastNotebookRun    datasetsSvc.NotebookRunResult
+	dataSQLiteQueryMu      sync.Mutex
+	dataSQLiteCancel       func()
+	dataSQLiteQueryID      string
+	dataConnectorQueryMu   sync.Mutex
+	dataConnectorCancel    func()
+	dataConnectorQueryID   string
+	dataNotebookLabel      *widget.Entry
+	dataNotebookCellSelect *widget.Select
+	dataNotebookCellIndex  int
+	dataActiveNotebookID   string
+	dataConnectorProfileID string
+	dataConnectorProfile   *widget.Select
+	dataConnectorOptions   map[string]string
+}
+
+func newDataController(view *View) *dataController {
+	dataProfileDetail := widget.NewMultiLineEntry()
+	dataProfileDetail.TextStyle = fyne.TextStyle{Monospace: true}
+	dataProfileDetail.Wrapping = fyne.TextWrapWord
+	dataProfileDetail.Disable()
+
+	dataRowsDetail := widget.NewMultiLineEntry()
+	dataRowsDetail.TextStyle = fyne.TextStyle{Monospace: true}
+	dataRowsDetail.Wrapping = fyne.TextWrapOff
+	dataRowsDetail.Disable()
+
+	dataRowsStatus := widget.NewLabel("Rows: run a query to load grid results.")
+	dataRowsStatus.Wrapping = fyne.TextWrapWord
+
+	dataPlanDetail := widget.NewMultiLineEntry()
+	dataPlanDetail.TextStyle = fyne.TextStyle{Monospace: true}
+	dataPlanDetail.Wrapping = fyne.TextWrapWord
+	dataPlanDetail.Disable()
+
+	dataChartDetail := widget.NewMultiLineEntry()
+	dataChartDetail.TextStyle = fyne.TextStyle{Monospace: true}
+	dataChartDetail.Wrapping = fyne.TextWrapWord
+	dataChartDetail.Disable()
+
+	dataQueryEntry := widget.NewMultiLineEntry()
+	dataQueryEntry.SetMinRowsVisible(2)
+	dataQueryEntry.SetPlaceHolder("Search/filter, SQL, or notebook cells. Use -- cell: Label and -- chart: Label to save multiple cells.")
+
+	return &dataController{
+		view:                 view,
+		dataProfileStatus:    widget.NewLabel("Select a CSV, TSV, or JSON file, then profile or query it."),
+		dataProfileDetail:    dataProfileDetail,
+		dataRowsDetail:       dataRowsDetail,
+		dataRowsStatus:       dataRowsStatus,
+		dataRowsSelectedRow:  -1,
+		dataRowsSelectedCol:  -1,
+		dataPlanDetail:       dataPlanDetail,
+		dataChartDetail:      dataChartDetail,
+		dataQueryEntry:       dataQueryEntry,
+		dataConnectorOptions: map[string]string{},
+	}
+}
+
 func (v *View) newDataPanel() fyne.CanvasObject {
 	profileButton := widget.NewButtonWithIcon("Profile selected", theme.SearchIcon(), v.profileSelectedDataset)
 	queryButton := widget.NewButtonWithIcon("Run query", theme.MediaPlayIcon(), func() {
-		v.querySelectedDataset(v.dataQueryEntry.Text)
+		v.querySelectedDataset(v.data.dataQueryEntry.Text)
 	})
 	sqlButton := widget.NewButtonWithIcon("Run SQL", theme.ComputerIcon(), func() {
-		v.runSelectedDatasetSQL(v.dataQueryEntry.Text)
+		v.runSelectedDatasetSQL(v.data.dataQueryEntry.Text)
 	})
 	exportSummaryButton := widget.NewButtonWithIcon("Export summary", theme.DocumentSaveIcon(), v.exportDatasetSummaryArtifact)
 	exportQueryButton := widget.NewButtonWithIcon("Export query CSV", theme.DownloadIcon(), v.exportDatasetQueryCSVArtifact)
 	exportSQLButton := widget.NewButtonWithIcon("Export SQL report", theme.DocumentSaveIcon(), v.exportDatasetSQLReportArtifact)
 	sqliteButton := widget.NewButtonWithIcon("Inspect SQLite", theme.StorageIcon(), v.inspectSelectedSQLite)
 	sqliteQueryButton := widget.NewButtonWithIcon("Run SQLite", theme.MediaPlayIcon(), func() {
-		v.runSelectedSQLiteQuery(v.dataQueryEntry.Text)
+		v.runSelectedSQLiteQuery(v.data.dataQueryEntry.Text)
 	})
 	cancelSQLiteButton := widget.NewButtonWithIcon("Cancel SQLite", theme.CancelIcon(), v.cancelActiveSQLiteQuery)
-	v.dataQueryEntry.OnSubmitted = func(query string) {
+	v.data.dataQueryEntry.OnSubmitted = func(query string) {
 		v.querySelectedDataset(query)
 	}
 	chartButton := widget.NewButtonWithIcon("Preview chart", theme.ViewFullScreenIcon(), v.previewDatasetChart)
@@ -89,19 +175,19 @@ func (v *View) newDataPanel() fyne.CanvasObject {
 	notebookLabel.SetPlaceHolder("Notebook label")
 	notebookLabel.SetText("SQL Notebook")
 	notebookCellSelect := widget.NewSelect([]string{}, func(choice string) {
-		v.dataNotebookCellIndex = notebookCellOptionIndex(v.dataNotebookCellSelect.Options, choice)
+		v.data.dataNotebookCellIndex = notebookCellOptionIndex(v.data.dataNotebookCellSelect.Options, choice)
 	})
 	notebookCellSelect.PlaceHolder = "Notebook cells"
-	v.dataNotebookLabel = notebookLabel
-	v.dataNotebookCellSelect = notebookCellSelect
+	v.data.dataNotebookLabel = notebookLabel
+	v.data.dataNotebookCellSelect = notebookCellSelect
 	reuseSQLButton := widget.NewButtonWithIcon("Use latest SQL", theme.ContentPasteIcon(), v.reuseLatestDatasetSQLRun)
 	rerunSQLButton := widget.NewButtonWithIcon("Rerun latest SQL", theme.MediaReplayIcon(), v.rerunLatestDatasetSQLRun)
 	rebuildDependencyButton := widget.NewButtonWithIcon("Rebuild latest", theme.MediaReplayIcon(), v.rebuildLatestDatasetDependency)
 	connectorSelect := widget.NewSelect([]string{}, func(choice string) {
-		v.dataConnectorProfileID = v.dataConnectorOptions[choice]
+		v.data.dataConnectorProfileID = v.data.dataConnectorOptions[choice]
 	})
 	connectorSelect.PlaceHolder = "External profile"
-	v.dataConnectorProfile = connectorSelect
+	v.data.dataConnectorProfile = connectorSelect
 	listConnectorProfilesButton := widget.NewButtonWithIcon("List profiles", theme.ViewRefreshIcon(), v.listConnectorProfiles)
 	saveConnectorProfileButton := widget.NewButtonWithIcon("Save profile", theme.DocumentCreateIcon(), v.promptSaveConnectorProfile)
 	deleteConnectorProfileButton := widget.NewButtonWithIcon("Delete profile", theme.DeleteIcon(), v.deleteSelectedConnectorProfile)
@@ -127,18 +213,18 @@ func (v *View) newDataPanel() fyne.CanvasObject {
 		container.NewTabItem("External DB", externalConnectorControls),
 	)
 	actions.SetTabLocation(container.TabLocationTop)
-	queryBar := container.NewBorder(nil, nil, nil, nil, v.dataQueryEntry)
-	header := container.NewVBox(v.dataProfileStatus, queryBar, actions)
-	summary := container.NewScroll(v.dataProfileDetail)
-	v.dataRowsContainer = container.NewMax(v.dataRowsDetail)
-	rowsScroll := container.NewScroll(v.dataRowsContainer)
-	rows := container.NewBorder(v.dataRowsStatus, nil, nil, nil, rowsScroll)
-	plan := container.NewScroll(v.dataPlanDetail)
-	charts := container.NewScroll(v.dataChartDetail)
+	queryBar := container.NewBorder(nil, nil, nil, nil, v.data.dataQueryEntry)
+	header := container.NewVBox(v.data.dataProfileStatus, queryBar, actions)
+	summary := container.NewScroll(v.data.dataProfileDetail)
+	v.data.dataRowsContainer = container.NewMax(v.data.dataRowsDetail)
+	rowsScroll := container.NewScroll(v.data.dataRowsContainer)
+	rows := container.NewBorder(v.data.dataRowsStatus, nil, nil, nil, rowsScroll)
+	plan := container.NewScroll(v.data.dataPlanDetail)
+	charts := container.NewScroll(v.data.dataChartDetail)
 	for _, scroll := range []*container.Scroll{summary, rowsScroll, plan, charts} {
 		scroll.SetMinSize(fyne.NewSize(320, 130))
 	}
-	v.dataResultTabs = container.NewAppTabs(
+	v.data.dataResultTabs = container.NewAppTabs(
 		container.NewTabItem("Summary", summary),
 		container.NewTabItem("Rows", rows),
 		container.NewTabItem("Plan", plan),
@@ -147,7 +233,7 @@ func (v *View) newDataPanel() fyne.CanvasObject {
 	if profiles, err := v.loadConnectorProfiles(); err == nil {
 		v.refreshConnectorProfileSelect(profiles)
 	}
-	return container.NewBorder(header, nil, nil, nil, v.dataResultTabs)
+	return container.NewBorder(header, nil, nil, nil, v.data.dataResultTabs)
 }
 
 func dataActionStrip(actions ...fyne.CanvasObject) fyne.CanvasObject {
@@ -158,54 +244,54 @@ func dataActionStrip(actions ...fyne.CanvasObject) fyne.CanvasObject {
 }
 
 func (v *View) setDataSummary(summary string) {
-	v.dataProfileDetail.SetText(summary)
+	v.data.dataProfileDetail.SetText(summary)
 	v.setDataRowsText("")
-	if v.dataPlanDetail != nil {
-		v.dataPlanDetail.SetText("")
+	if v.data.dataPlanDetail != nil {
+		v.data.dataPlanDetail.SetText("")
 	}
-	if v.dataChartDetail != nil {
-		v.dataChartDetail.SetText("")
+	if v.data.dataChartDetail != nil {
+		v.data.dataChartDetail.SetText("")
 	}
-	if v.dataResultTabs != nil && len(v.dataResultTabs.Items) > 0 {
-		v.dataResultTabs.Select(v.dataResultTabs.Items[0])
+	if v.data.dataResultTabs != nil && len(v.data.dataResultTabs.Items) > 0 {
+		v.data.dataResultTabs.Select(v.data.dataResultTabs.Items[0])
 	}
 }
 
 func (v *View) setDataNotebookRunTabs(result datasetsSvc.NotebookRunResult) {
-	v.dataProfileDetail.SetText(formatNotebookRunResult(result))
+	v.data.dataProfileDetail.SetText(formatNotebookRunResult(result))
 	v.setDataRowsText(formatNotebookRowsTab(result))
-	if v.dataPlanDetail != nil {
-		v.dataPlanDetail.SetText(formatNotebookPlanTab(result))
+	if v.data.dataPlanDetail != nil {
+		v.data.dataPlanDetail.SetText(formatNotebookPlanTab(result))
 	}
-	if v.dataChartDetail != nil {
-		v.dataChartDetail.SetText(formatNotebookChartsTab(result))
+	if v.data.dataChartDetail != nil {
+		v.data.dataChartDetail.SetText(formatNotebookChartsTab(result))
 	}
-	if v.dataResultTabs != nil && len(v.dataResultTabs.Items) > 0 {
-		v.dataResultTabs.Select(v.dataResultTabs.Items[0])
+	if v.data.dataResultTabs != nil && len(v.data.dataResultTabs.Items) > 0 {
+		v.data.dataResultTabs.Select(v.data.dataResultTabs.Items[0])
 	}
 }
 
 func (v *View) insertNotebookCellTemplate(kind string) {
-	updated := appendNotebookCellTemplate(v.dataQueryEntry.Text, kind)
-	v.dataQueryEntry.SetText(updated)
+	updated := appendNotebookCellTemplate(v.data.dataQueryEntry.Text, kind)
+	v.data.dataQueryEntry.SetText(updated)
 	if kind == "chart" {
-		v.dataProfileStatus.SetText("Added chart notebook cell template.")
+		v.data.dataProfileStatus.SetText("Added chart notebook cell template.")
 		v.refreshNotebookCellSelector()
 		return
 	}
-	v.dataProfileStatus.SetText("Added SQL notebook cell template.")
+	v.data.dataProfileStatus.SetText("Added SQL notebook cell template.")
 	v.refreshNotebookCellSelector()
 }
 
 func (v *View) runSelectedSQLiteQuery(sqlText string) {
 	workspace := v.state.Workspace()
 	if workspace.Root == "" {
-		v.dataProfileStatus.SetText("Open a workspace before running SQLite queries.")
+		v.data.dataProfileStatus.SetText("Open a workspace before running SQLite queries.")
 		return
 	}
 	selected := selectedPathOrEmpty(v)
 	if selected == "" {
-		v.dataProfileStatus.SetText("Select a .sqlite, .sqlite3, or .db file before running SQLite queries.")
+		v.data.dataProfileStatus.SetText("Select a .sqlite, .sqlite3, or .db file before running SQLite queries.")
 		return
 	}
 	request := dbconnectorSvc.NormalizeSQLiteQueryRequest(dbconnectorSvc.SQLiteQueryRequest{
@@ -217,7 +303,7 @@ func (v *View) runSelectedSQLiteQuery(sqlText string) {
 	started := time.Now().UTC()
 	ctx, cancel := context.WithTimeout(context.Background(), time.Duration(request.TimeoutSeconds)*time.Second)
 	queryID := v.startSQLiteQuery(cancel)
-	v.dataProfileStatus.SetText(fmt.Sprintf("%s: SQLite query running, cap %d, timeout %ds.", selected, request.ResultLimit, request.TimeoutSeconds))
+	v.data.dataProfileStatus.SetText(fmt.Sprintf("%s: SQLite query running, cap %d, timeout %ds.", selected, request.ResultLimit, request.TimeoutSeconds))
 	v.addActivity("Started read-only SQLite query for " + selected + ".")
 	go func() {
 		defer cancel()
@@ -243,31 +329,31 @@ func (v *View) finishSelectedSQLiteQuery(queryID string, selected string, sqlTex
 	}
 	if err != nil {
 		if isSQLiteQueryCanceled(err) {
-			v.dataProfileStatus.SetText("SQLite query cancelled for " + selected)
+			v.data.dataProfileStatus.SetText("SQLite query cancelled for " + selected)
 			v.addActivity("Cancelled read-only SQLite query for " + selected + ".")
 			return
 		}
-		v.dataProfileStatus.SetText("SQLite query failed for " + selected)
+		v.data.dataProfileStatus.SetText("SQLite query failed for " + selected)
 		dialog.ShowError(err, v.window)
 		return
 	}
-	v.dataProfileStatus.SetText(sqliteQueryStatus(result))
+	v.data.dataProfileStatus.SetText(sqliteQueryStatus(result))
 	v.setDataSummary(formatSQLiteQueryResult(result))
 	v.setDataRowsGrid(result.Columns, result.Rows)
-	v.dataLastQuery = sqliteQueryAsDatasetResult(result)
-	v.dataLastSQLiteQuery = result
-	v.dataLastChart = datasetsSvc.ChartResult{}
-	v.dataLastDashboard = datasetsSvc.DashboardResult{}
+	v.data.dataLastQuery = sqliteQueryAsDatasetResult(result)
+	v.data.dataLastSQLiteQuery = result
+	v.data.dataLastChart = datasetsSvc.ChartResult{}
+	v.data.dataLastDashboard = datasetsSvc.DashboardResult{}
 	v.addActivity("Ran read-only SQLite query for " + result.RelPath + ".")
 }
 
 func (v *View) startSQLiteQuery(cancel context.CancelFunc) string {
 	id := fmt.Sprintf("sqlite-%d", time.Now().UTC().UnixNano())
-	v.dataSQLiteQueryMu.Lock()
-	previousCancel := v.dataSQLiteCancel
-	v.dataSQLiteCancel = cancel
-	v.dataSQLiteQueryID = id
-	v.dataSQLiteQueryMu.Unlock()
+	v.data.dataSQLiteQueryMu.Lock()
+	previousCancel := v.data.dataSQLiteCancel
+	v.data.dataSQLiteCancel = cancel
+	v.data.dataSQLiteQueryID = id
+	v.data.dataSQLiteQueryMu.Unlock()
 	if previousCancel != nil {
 		previousCancel()
 	}
@@ -275,26 +361,26 @@ func (v *View) startSQLiteQuery(cancel context.CancelFunc) string {
 }
 
 func (v *View) clearSQLiteQuery(id string) {
-	v.dataSQLiteQueryMu.Lock()
-	defer v.dataSQLiteQueryMu.Unlock()
-	if v.dataSQLiteQueryID != id {
+	v.data.dataSQLiteQueryMu.Lock()
+	defer v.data.dataSQLiteQueryMu.Unlock()
+	if v.data.dataSQLiteQueryID != id {
 		return
 	}
-	v.dataSQLiteCancel = nil
-	v.dataSQLiteQueryID = ""
+	v.data.dataSQLiteCancel = nil
+	v.data.dataSQLiteQueryID = ""
 }
 
 func (v *View) cancelActiveSQLiteQuery() {
-	v.dataSQLiteQueryMu.Lock()
-	cancel := v.dataSQLiteCancel
-	queryID := v.dataSQLiteQueryID
-	v.dataSQLiteQueryMu.Unlock()
+	v.data.dataSQLiteQueryMu.Lock()
+	cancel := v.data.dataSQLiteCancel
+	queryID := v.data.dataSQLiteQueryID
+	v.data.dataSQLiteQueryMu.Unlock()
 	if cancel == nil {
-		v.dataProfileStatus.SetText("No SQLite connector query is currently running.")
+		v.data.dataProfileStatus.SetText("No SQLite connector query is currently running.")
 		return
 	}
 	cancel()
-	v.dataProfileStatus.SetText("SQLite query cancellation requested.")
+	v.data.dataProfileStatus.SetText("SQLite query cancellation requested.")
 	v.addActivity("SQLite query cancel requested: " + queryID + ".")
 }
 
@@ -309,53 +395,53 @@ func isSQLiteQueryCanceled(err error) bool {
 func (v *View) inspectSelectedSQLite() {
 	workspace := v.state.Workspace()
 	if workspace.Root == "" {
-		v.dataProfileStatus.SetText("Open a workspace before inspecting SQLite databases.")
+		v.data.dataProfileStatus.SetText("Open a workspace before inspecting SQLite databases.")
 		return
 	}
 	selected := selectedPathOrEmpty(v)
 	if selected == "" {
-		v.dataProfileStatus.SetText("Select a .sqlite, .sqlite3, or .db file before inspecting schema.")
+		v.data.dataProfileStatus.SetText("Select a .sqlite, .sqlite3, or .db file before inspecting schema.")
 		return
 	}
 	metadata, err := v.dbconnectorService.InspectWorkspaceSQLite(workspace.Root, selected)
 	if err != nil {
-		v.dataProfileStatus.SetText("SQLite inspection failed for " + selected)
+		v.data.dataProfileStatus.SetText("SQLite inspection failed for " + selected)
 		dialog.ShowError(err, v.window)
 		return
 	}
-	v.dataProfileStatus.SetText(metadata.Message)
+	v.data.dataProfileStatus.SetText(metadata.Message)
 	v.setDataSummary(formatSQLiteMetadata(metadata))
-	v.dataLastQuery = datasetsSvc.QueryResult{}
-	v.dataLastSQLiteQuery = dbconnectorSvc.SQLiteQueryResult{}
-	v.dataLastChart = datasetsSvc.ChartResult{}
-	v.dataLastDashboard = datasetsSvc.DashboardResult{}
+	v.data.dataLastQuery = datasetsSvc.QueryResult{}
+	v.data.dataLastSQLiteQuery = dbconnectorSvc.SQLiteQueryResult{}
+	v.data.dataLastChart = datasetsSvc.ChartResult{}
+	v.data.dataLastDashboard = datasetsSvc.DashboardResult{}
 	v.addActivity("Inspected SQLite database " + metadata.RelPath + ".")
 }
 
 func (v *View) saveSelectedSQLiteQuery() {
 	workspace := v.state.Workspace()
 	if workspace.Root == "" {
-		v.dataProfileStatus.SetText("Open a workspace before saving SQLite queries.")
+		v.data.dataProfileStatus.SetText("Open a workspace before saving SQLite queries.")
 		return
 	}
 	selected := selectedPathOrEmpty(v)
 	if selected == "" {
-		v.dataProfileStatus.SetText("Select a .sqlite, .sqlite3, or .db file before saving SQLite queries.")
+		v.data.dataProfileStatus.SetText("Select a .sqlite, .sqlite3, or .db file before saving SQLite queries.")
 		return
 	}
-	sqlText := strings.TrimSpace(v.dataQueryEntry.Text)
+	sqlText := strings.TrimSpace(v.data.dataQueryEntry.Text)
 	if sqlText == "" {
-		v.dataProfileStatus.SetText("Enter a read-only SQLite query before saving it.")
+		v.data.dataProfileStatus.SetText("Enter a read-only SQLite query before saving it.")
 		return
 	}
 	saved, err := v.datasetService.SaveQuery(workspace.Root, selected, sqlText, "", "sqlite-sql")
 	if err != nil {
-		v.dataProfileStatus.SetText("SQLite query save failed for " + selected)
+		v.data.dataProfileStatus.SetText("SQLite query save failed for " + selected)
 		dialog.ShowError(err, v.window)
 		return
 	}
 	v.persistDatasetDependency(sqliteSavedQueryDependencyRecord(selected, saved))
-	v.dataProfileStatus.SetText("Saved SQLite query " + saved.Label + ".")
+	v.data.dataProfileStatus.SetText("Saved SQLite query " + saved.Label + ".")
 	v.setDataSummary(formatSavedQueries("Saved SQLite Queries", []datasetsSvc.SavedQuery{saved}))
 	v.addActivity("Saved SQLite query for " + selected + ".")
 }
@@ -363,21 +449,21 @@ func (v *View) saveSelectedSQLiteQuery() {
 func (v *View) showSavedSQLiteQueries() {
 	workspace := v.state.Workspace()
 	if workspace.Root == "" {
-		v.dataProfileStatus.SetText("Open a workspace before listing SQLite queries.")
+		v.data.dataProfileStatus.SetText("Open a workspace before listing SQLite queries.")
 		return
 	}
 	selected := selectedPathOrEmpty(v)
 	if selected == "" {
-		v.dataProfileStatus.SetText("Select a SQLite source before listing saved queries.")
+		v.data.dataProfileStatus.SetText("Select a SQLite source before listing saved queries.")
 		return
 	}
 	queries, err := v.datasetService.ListSavedQueries(workspace.Root, selected, "sqlite-sql")
 	if err != nil {
-		v.dataProfileStatus.SetText("Saved SQLite queries unavailable for " + selected)
+		v.data.dataProfileStatus.SetText("Saved SQLite queries unavailable for " + selected)
 		dialog.ShowError(err, v.window)
 		return
 	}
-	v.dataProfileStatus.SetText(fmt.Sprintf("%s: %d saved SQLite query snippet(s).", selected, len(queries)))
+	v.data.dataProfileStatus.SetText(fmt.Sprintf("%s: %d saved SQLite query snippet(s).", selected, len(queries)))
 	v.setDataSummary(formatSavedQueries("Saved SQLite Queries", queries))
 	v.addActivity("Listed saved SQLite queries for " + selected + ".")
 }
@@ -385,42 +471,42 @@ func (v *View) showSavedSQLiteQueries() {
 func (v *View) saveSelectedDatasetNotebook() {
 	workspace := v.state.Workspace()
 	if workspace.Root == "" {
-		v.dataProfileStatus.SetText("Open a workspace before saving SQL notebooks.")
+		v.data.dataProfileStatus.SetText("Open a workspace before saving SQL notebooks.")
 		return
 	}
 	selected := selectedPathOrEmpty(v)
 	if selected == "" {
-		v.dataProfileStatus.SetText("Select a dataset before saving a SQL notebook.")
+		v.data.dataProfileStatus.SetText("Select a dataset before saving a SQL notebook.")
 		return
 	}
-	sqlText := strings.TrimSpace(v.dataQueryEntry.Text)
+	sqlText := strings.TrimSpace(v.data.dataQueryEntry.Text)
 	if sqlText == "" {
-		v.dataProfileStatus.SetText("Write a SELECT query before saving a SQL notebook.")
+		v.data.dataProfileStatus.SetText("Write a SELECT query before saving a SQL notebook.")
 		return
 	}
 	label := notebookLabelForDataset(selected)
-	if v.dataNotebookLabel != nil && strings.TrimSpace(v.dataNotebookLabel.Text) != "" {
-		label = strings.TrimSpace(v.dataNotebookLabel.Text)
+	if v.data.dataNotebookLabel != nil && strings.TrimSpace(v.data.dataNotebookLabel.Text) != "" {
+		label = strings.TrimSpace(v.data.dataNotebookLabel.Text)
 	}
 	saved, err := v.datasetService.SaveNotebook(workspace.Root, datasetsSvc.NotebookSaveRequest{
-		ID:      v.dataActiveNotebookID,
+		ID:      v.data.dataActiveNotebookID,
 		RelPath: selected,
 		Label:   label,
 		Cells:   notebookCellsFromEditor(sqlText),
 	})
 	if err != nil {
-		v.dataProfileStatus.SetText("Notebook save failed for " + selected)
+		v.data.dataProfileStatus.SetText("Notebook save failed for " + selected)
 		dialog.ShowError(err, v.window)
 		return
 	}
 	v.persistDatasetDependency(notebookDependencyRecord(selected, saved))
-	v.dataActiveNotebookID = saved.ID
-	if v.dataNotebookLabel != nil {
-		v.dataNotebookLabel.SetText(saved.Label)
+	v.data.dataActiveNotebookID = saved.ID
+	if v.data.dataNotebookLabel != nil {
+		v.data.dataNotebookLabel.SetText(saved.Label)
 	}
 	v.refreshNotebookCellSelector()
-	v.dataLastNotebookRun = datasetsSvc.NotebookRunResult{}
-	v.dataProfileStatus.SetText(fmt.Sprintf("Saved SQL notebook %s with %d cell(s).", saved.Label, len(saved.Cells)))
+	v.data.dataLastNotebookRun = datasetsSvc.NotebookRunResult{}
+	v.data.dataProfileStatus.SetText(fmt.Sprintf("Saved SQL notebook %s with %d cell(s).", saved.Label, len(saved.Cells)))
 	v.setDataSummary(formatDatasetNotebooks([]datasetsSvc.Notebook{saved}))
 	v.addActivity("Saved SQL notebook for " + selected + ".")
 }
@@ -428,33 +514,33 @@ func (v *View) saveSelectedDatasetNotebook() {
 func (v *View) loadSelectedDatasetNotebook() {
 	workspace := v.state.Workspace()
 	if workspace.Root == "" {
-		v.dataProfileStatus.SetText("Open a workspace before loading SQL notebooks.")
+		v.data.dataProfileStatus.SetText("Open a workspace before loading SQL notebooks.")
 		return
 	}
 	selected := selectedPathOrEmpty(v)
 	if selected == "" {
-		v.dataProfileStatus.SetText("Select a dataset before loading SQL notebooks.")
+		v.data.dataProfileStatus.SetText("Select a dataset before loading SQL notebooks.")
 		return
 	}
 	notebooks, err := v.datasetService.ListNotebooks(workspace.Root, selected)
 	if err != nil {
-		v.dataProfileStatus.SetText("Notebook load failed for " + selected)
+		v.data.dataProfileStatus.SetText("Notebook load failed for " + selected)
 		dialog.ShowError(err, v.window)
 		return
 	}
 	if len(notebooks) == 0 {
-		v.dataProfileStatus.SetText("No saved SQL notebooks for " + selected + ".")
+		v.data.dataProfileStatus.SetText("No saved SQL notebooks for " + selected + ".")
 		v.setDataSummary(formatDatasetNotebooks(nil))
 		return
 	}
-	v.dataActiveNotebookID = notebooks[0].ID
-	if v.dataNotebookLabel != nil {
-		v.dataNotebookLabel.SetText(notebooks[0].Label)
+	v.data.dataActiveNotebookID = notebooks[0].ID
+	if v.data.dataNotebookLabel != nil {
+		v.data.dataNotebookLabel.SetText(notebooks[0].Label)
 	}
-	v.dataQueryEntry.SetText(formatNotebookForEditor(notebooks[0]))
+	v.data.dataQueryEntry.SetText(formatNotebookForEditor(notebooks[0]))
 	v.refreshNotebookCellSelector()
-	v.dataLastNotebookRun = datasetsSvc.NotebookRunResult{}
-	v.dataProfileStatus.SetText(fmt.Sprintf("Loaded %d SQL notebook(s) for %s.", len(notebooks), selected))
+	v.data.dataLastNotebookRun = datasetsSvc.NotebookRunResult{}
+	v.data.dataProfileStatus.SetText(fmt.Sprintf("Loaded %d SQL notebook(s) for %s.", len(notebooks), selected))
 	v.setDataSummary(formatDatasetNotebooks(notebooks))
 	v.addActivity("Loaded SQL notebooks for " + selected + ".")
 }
@@ -462,18 +548,18 @@ func (v *View) loadSelectedDatasetNotebook() {
 func (v *View) runLatestDatasetNotebook() {
 	workspace := v.state.Workspace()
 	if workspace.Root == "" {
-		v.dataProfileStatus.SetText("Open a workspace before running SQL notebooks.")
+		v.data.dataProfileStatus.SetText("Open a workspace before running SQL notebooks.")
 		return
 	}
 	selected := selectedPathOrEmpty(v)
 	if selected == "" {
-		v.dataProfileStatus.SetText("Select a dataset before running SQL notebooks.")
+		v.data.dataProfileStatus.SetText("Select a dataset before running SQL notebooks.")
 		return
 	}
 	jobLabel := datasetNotebookRunJobLabel(selected)
 	job, ctx := v.jobService.Start(datasetNotebookRunJobKind, jobLabel)
 	v.jobService.AppendLog(job.ID, "Path: "+selected)
-	v.dataProfileStatus.SetText("Running SQL notebook as " + job.ID + ".")
+	v.data.dataProfileStatus.SetText("Running SQL notebook as " + job.ID + ".")
 	v.addActivity("Started " + job.ID + ": " + jobLabel + ".")
 	v.refreshJobs()
 	root := workspace.Root
@@ -487,23 +573,23 @@ func (v *View) runLatestDatasetNotebook() {
 
 func (v *View) showDatasetSQLHistory() {
 	if v.metadataStore == nil {
-		v.dataProfileStatus.SetText("Open a workspace before inspecting dataset SQL history.")
+		v.data.dataProfileStatus.SetText("Open a workspace before inspecting dataset SQL history.")
 		return
 	}
-	selected := primarySQLHistorySource(selectedPathOrEmpty(v), v.dataConnectorProfileID)
+	selected := primarySQLHistorySource(selectedPathOrEmpty(v), v.data.dataConnectorProfileID)
 	runs, err := v.metadataStore.ListSQLRuns(50)
 	if err != nil {
-		v.dataProfileStatus.SetText("SQL history unavailable.")
+		v.data.dataProfileStatus.SetText("SQL history unavailable.")
 		dialog.ShowError(err, v.window)
 		return
 	}
 	dependencies, err := v.metadataStore.ListDatasetDependencies(selected, 50)
 	if err != nil {
-		v.dataProfileStatus.SetText("Dataset dependency history unavailable.")
+		v.data.dataProfileStatus.SetText("Dataset dependency history unavailable.")
 		dialog.ShowError(err, v.window)
 		return
 	}
-	v.dataProfileStatus.SetText(datasetHistoryStatus(selected, runs, dependencies))
+	v.data.dataProfileStatus.SetText(datasetHistoryStatus(selected, runs, dependencies))
 	v.setDataSummary(formatDatasetHistory(selected, runs, dependencies))
 	v.addActivity("Loaded dataset SQL history.")
 }
@@ -513,8 +599,8 @@ func (v *View) reuseLatestDatasetSQLRun() {
 	if !ok {
 		return
 	}
-	v.dataQueryEntry.SetText(run.SQL)
-	v.dataProfileStatus.SetText("Loaded latest SQL history entry for " + run.RelPath + ".")
+	v.data.dataQueryEntry.SetText(run.SQL)
+	v.data.dataProfileStatus.SetText("Loaded latest SQL history entry for " + run.RelPath + ".")
 	v.setDataSummary(formatSQLRunReuse("Loaded latest SQL for editing", run))
 	v.addActivity("Loaded SQL history entry for " + run.RelPath + ".")
 }
@@ -524,19 +610,19 @@ func (v *View) rerunLatestDatasetSQLRun() {
 	if !ok {
 		return
 	}
-	v.dataQueryEntry.SetText(run.SQL)
-	v.dataProfileStatus.SetText("Rerunning latest SQL history entry for " + run.RelPath + ".")
+	v.data.dataQueryEntry.SetText(run.SQL)
+	v.data.dataProfileStatus.SetText("Rerunning latest SQL history entry for " + run.RelPath + ".")
 	if isConnectorRun(run) {
 		connectorID := connectorProfileIDFromSourcePath(run.RelPath)
 		if connectorID == "" {
-			v.dataProfileStatus.SetText("Connector SQL history entry is missing a profile reference.")
+			v.data.dataProfileStatus.SetText("Connector SQL history entry is missing a profile reference.")
 			return
 		}
-		v.dataConnectorProfileID = connectorID
-		if v.dataConnectorProfile != nil {
-			for label, id := range v.dataConnectorOptions {
+		v.data.dataConnectorProfileID = connectorID
+		if v.data.dataConnectorProfile != nil {
+			for label, id := range v.data.dataConnectorOptions {
 				if id == connectorID {
-					v.dataConnectorProfile.SetSelected(label)
+					v.data.dataConnectorProfile.SetSelected(label)
 					break
 				}
 			}
@@ -553,24 +639,24 @@ func (v *View) rerunLatestDatasetSQLRun() {
 
 func (v *View) rebuildLatestDatasetDependency() {
 	if v.metadataStore == nil {
-		v.dataProfileStatus.SetText("Open a workspace before rebuilding dataset artifacts.")
+		v.data.dataProfileStatus.SetText("Open a workspace before rebuilding dataset artifacts.")
 		return
 	}
 	workspace := v.state.Workspace()
 	if workspace.Root == "" {
-		v.dataProfileStatus.SetText("Open a workspace before rebuilding dataset artifacts.")
+		v.data.dataProfileStatus.SetText("Open a workspace before rebuilding dataset artifacts.")
 		return
 	}
 	selected := selectedPathOrEmpty(v)
 	dependencies, err := v.metadataStore.ListDatasetDependencies(selected, 100)
 	if err != nil {
-		v.dataProfileStatus.SetText("Dataset dependency history unavailable.")
+		v.data.dataProfileStatus.SetText("Dataset dependency history unavailable.")
 		dialog.ShowError(err, v.window)
 		return
 	}
 	dependency, ok := latestRebuildableDatasetDependency(dependencies)
 	if !ok {
-		v.dataProfileStatus.SetText("No rebuildable dataset dependency found for " + firstNonEmptyString(selected, "this workspace") + ".")
+		v.data.dataProfileStatus.SetText("No rebuildable dataset dependency found for " + firstNonEmptyString(selected, "this workspace") + ".")
 		return
 	}
 	jobLabel := datasetRebuildJobLabel(dependency)
@@ -578,7 +664,7 @@ func (v *View) rebuildLatestDatasetDependency() {
 	v.jobService.AppendLog(job.ID, "Dependency: "+dependency.ID)
 	v.jobService.AppendLog(job.ID, "Source: "+dependency.SourcePath)
 	v.jobService.AppendLog(job.ID, "Kind: "+dependency.DependentKind)
-	v.dataProfileStatus.SetText("Rebuilding dataset artifact as " + job.ID + ".")
+	v.data.dataProfileStatus.SetText("Rebuilding dataset artifact as " + job.ID + ".")
 	v.addActivity("Started " + job.ID + ": " + jobLabel + ".")
 	v.refreshJobs()
 	root := workspace.Root
@@ -592,17 +678,17 @@ func (v *View) rebuildLatestDatasetDependency() {
 
 func (v *View) latestReusableSQLRun() (metadataSvc.SQLRunRecord, bool) {
 	if v.metadataStore == nil {
-		v.dataProfileStatus.SetText("Open a workspace before reusing SQL history.")
+		v.data.dataProfileStatus.SetText("Open a workspace before reusing SQL history.")
 		return metadataSvc.SQLRunRecord{}, false
 	}
-	sources := sqlHistorySources(selectedPathOrEmpty(v), v.dataConnectorProfileID)
+	sources := sqlHistorySources(selectedPathOrEmpty(v), v.data.dataConnectorProfileID)
 	if len(sources) == 0 {
-		v.dataProfileStatus.SetText("Select a dataset, SQLite source, or external connector profile before reusing SQL history.")
+		v.data.dataProfileStatus.SetText("Select a dataset, SQLite source, or external connector profile before reusing SQL history.")
 		return metadataSvc.SQLRunRecord{}, false
 	}
 	runs, err := v.metadataStore.ListSQLRuns(100)
 	if err != nil {
-		v.dataProfileStatus.SetText("SQL history unavailable.")
+		v.data.dataProfileStatus.SetText("SQL history unavailable.")
 		dialog.ShowError(err, v.window)
 		return metadataSvc.SQLRunRecord{}, false
 	}
@@ -612,7 +698,7 @@ func (v *View) latestReusableSQLRun() (metadataSvc.SQLRunRecord, bool) {
 			return run, true
 		}
 	}
-	v.dataProfileStatus.SetText("No reusable SQL history entry found for " + sources[0] + ".")
+	v.data.dataProfileStatus.SetText("No reusable SQL history entry found for " + sources[0] + ".")
 	v.setDataSummary(formatSQLRunReuseEmpty(sources[0]))
 	return metadataSvc.SQLRunRecord{}, false
 }
@@ -620,19 +706,19 @@ func (v *View) latestReusableSQLRun() (metadataSvc.SQLRunRecord, bool) {
 func (v *View) runSelectedDatasetSQL(sqlText string) {
 	workspace := v.state.Workspace()
 	if workspace.Root == "" {
-		v.dataProfileStatus.SetText("Open a workspace before running dataset SQL.")
+		v.data.dataProfileStatus.SetText("Open a workspace before running dataset SQL.")
 		return
 	}
 	selected := selectedPathOrEmpty(v)
 	if selected == "" {
-		v.dataProfileStatus.SetText("Select a CSV, TSV, JSON, NDJSON, XLSX, or log file first.")
+		v.data.dataProfileStatus.SetText("Select a CSV, TSV, JSON, NDJSON, XLSX, or log file first.")
 		return
 	}
 	jobLabel := datasetSQLJobLabel(selected)
 	job, ctx := v.jobService.Start(datasetSQLJobKind, jobLabel)
 	v.jobService.AppendLog(job.ID, "Path: "+selected)
 	v.jobService.AppendLog(job.ID, fmt.Sprintf("SQL bytes: %d", len(strings.TrimSpace(sqlText))))
-	v.dataProfileStatus.SetText("Running native dataset SQL as " + job.ID + ".")
+	v.data.dataProfileStatus.SetText("Running native dataset SQL as " + job.ID + ".")
 	v.addActivity("Started " + job.ID + ": " + jobLabel + ".")
 	v.refreshJobs()
 	root := workspace.Root
@@ -647,18 +733,18 @@ func (v *View) runSelectedDatasetSQL(sqlText string) {
 func (v *View) profileSelectedDataset() {
 	workspace := v.state.Workspace()
 	if workspace.Root == "" {
-		v.dataProfileStatus.SetText("Open a workspace before profiling data.")
+		v.data.dataProfileStatus.SetText("Open a workspace before profiling data.")
 		return
 	}
 	selected := selectedPathOrEmpty(v)
 	if selected == "" {
-		v.dataProfileStatus.SetText("Select a CSV, TSV, JSON, NDJSON, XLSX, Parquet, or log file first.")
+		v.data.dataProfileStatus.SetText("Select a CSV, TSV, JSON, NDJSON, XLSX, Parquet, or log file first.")
 		return
 	}
 	jobLabel := datasetProfileJobLabel(selected)
 	job, ctx := v.jobService.Start(datasetProfileJobKind, jobLabel)
 	v.jobService.AppendLog(job.ID, "Path: "+selected)
-	v.dataProfileStatus.SetText("Profiling dataset as " + job.ID + ".")
+	v.data.dataProfileStatus.SetText("Profiling dataset as " + job.ID + ".")
 	v.addActivity("Started " + job.ID + ": " + jobLabel + ".")
 	v.refreshJobs()
 	root := workspace.Root
@@ -673,12 +759,12 @@ func (v *View) profileSelectedDataset() {
 func (v *View) querySelectedDataset(query string) {
 	workspace := v.state.Workspace()
 	if workspace.Root == "" {
-		v.dataProfileStatus.SetText("Open a workspace before querying data.")
+		v.data.dataProfileStatus.SetText("Open a workspace before querying data.")
 		return
 	}
 	selected := selectedPathOrEmpty(v)
 	if selected == "" {
-		v.dataProfileStatus.SetText("Select a CSV, TSV, JSON, NDJSON, XLSX, or log file first.")
+		v.data.dataProfileStatus.SetText("Select a CSV, TSV, JSON, NDJSON, XLSX, or log file first.")
 		return
 	}
 	jobLabel := datasetQueryJobLabel(selected)
@@ -687,7 +773,7 @@ func (v *View) querySelectedDataset(query string) {
 	if strings.TrimSpace(query) != "" {
 		v.jobService.AppendLog(job.ID, fmt.Sprintf("Query bytes: %d", len(strings.TrimSpace(query))))
 	}
-	v.dataProfileStatus.SetText("Running dataset query as " + job.ID + ".")
+	v.data.dataProfileStatus.SetText("Running dataset query as " + job.ID + ".")
 	v.addActivity("Started " + job.ID + ": " + jobLabel + ".")
 	v.refreshJobs()
 	root := workspace.Root
@@ -703,11 +789,11 @@ func (v *View) finishDatasetProfileJob(jobID string, selected string, profile da
 	if err != nil {
 		if isDataJobCanceled(err) {
 			v.jobService.Finish(jobID, jobsSvc.StatusCanceled, "Dataset profile cancelled.", nil)
-			v.dataProfileStatus.SetText("Dataset profile cancelled for " + selected + ".")
+			v.data.dataProfileStatus.SetText("Dataset profile cancelled for " + selected + ".")
 			v.addActivity("Cancelled dataset profile for " + selected + ".")
 		} else {
 			v.jobService.Finish(jobID, jobsSvc.StatusFailed, "Dataset profile failed.", err)
-			v.dataProfileStatus.SetText("Profile failed for " + selected)
+			v.data.dataProfileStatus.SetText("Profile failed for " + selected)
 			dialog.ShowError(err, v.window)
 		}
 		v.refreshJobs()
@@ -715,12 +801,12 @@ func (v *View) finishDatasetProfileJob(jobID string, selected string, profile da
 	}
 	v.jobService.AppendLog(jobID, fmt.Sprintf("Rows=%d columns=%d", profile.Rows, len(profile.Columns)))
 	v.jobService.Finish(jobID, jobsSvc.StatusSuccess, firstNonEmptyString(profileStatus(profile), "Dataset profile completed."), nil)
-	v.dataProfileStatus.SetText(profileStatus(profile))
+	v.data.dataProfileStatus.SetText(profileStatus(profile))
 	v.setDataSummary(formatDatasetProfile(profile))
-	v.dataLastQuery = datasetsSvc.QueryResult{}
-	v.dataLastSQLiteQuery = dbconnectorSvc.SQLiteQueryResult{}
-	v.dataLastChart = datasetsSvc.ChartResult{}
-	v.dataLastDashboard = datasetsSvc.DashboardResult{}
+	v.data.dataLastQuery = datasetsSvc.QueryResult{}
+	v.data.dataLastSQLiteQuery = dbconnectorSvc.SQLiteQueryResult{}
+	v.data.dataLastChart = datasetsSvc.ChartResult{}
+	v.data.dataLastDashboard = datasetsSvc.DashboardResult{}
 	v.addActivity("Profiled dataset " + profile.RelPath + ".")
 	v.refreshJobs()
 }
@@ -729,11 +815,11 @@ func (v *View) finishDatasetQueryJob(jobID string, selected string, result datas
 	if err != nil {
 		if isDataJobCanceled(err) {
 			v.jobService.Finish(jobID, jobsSvc.StatusCanceled, "Dataset query cancelled.", nil)
-			v.dataProfileStatus.SetText("Dataset query cancelled for " + selected + ".")
+			v.data.dataProfileStatus.SetText("Dataset query cancelled for " + selected + ".")
 			v.addActivity("Cancelled dataset query for " + selected + ".")
 		} else {
 			v.jobService.Finish(jobID, jobsSvc.StatusFailed, "Dataset query failed.", err)
-			v.dataProfileStatus.SetText("Query failed for " + selected)
+			v.data.dataProfileStatus.SetText("Query failed for " + selected)
 			dialog.ShowError(err, v.window)
 		}
 		v.refreshJobs()
@@ -741,13 +827,13 @@ func (v *View) finishDatasetQueryJob(jobID string, selected string, result datas
 	}
 	v.jobService.AppendLog(jobID, fmt.Sprintf("Rows: shown=%d matched=%d", len(result.Rows), result.MatchedRows))
 	v.jobService.Finish(jobID, jobsSvc.StatusSuccess, firstNonEmptyString(result.Message, "Dataset query completed."), nil)
-	v.dataProfileStatus.SetText(queryStatus(result))
+	v.data.dataProfileStatus.SetText(queryStatus(result))
 	v.setDataSummary(formatDatasetQueryResult(result))
 	v.setDataRowsGrid(result.Columns, result.Rows)
-	v.dataLastQuery = result
-	v.dataLastSQLiteQuery = dbconnectorSvc.SQLiteQueryResult{}
-	v.dataLastChart = datasetsSvc.ChartResult{}
-	v.dataLastDashboard = datasetsSvc.DashboardResult{}
+	v.data.dataLastQuery = result
+	v.data.dataLastSQLiteQuery = dbconnectorSvc.SQLiteQueryResult{}
+	v.data.dataLastChart = datasetsSvc.ChartResult{}
+	v.data.dataLastDashboard = datasetsSvc.DashboardResult{}
 	v.addActivity("Queried dataset " + result.RelPath + ".")
 	v.refreshJobs()
 }
@@ -765,11 +851,11 @@ func (v *View) finishDatasetSQLJob(jobID string, selected string, sqlText string
 	if err != nil {
 		if isDataJobCanceled(err) {
 			v.jobService.Finish(jobID, jobsSvc.StatusCanceled, "Native dataset SQL cancelled.", nil)
-			v.dataProfileStatus.SetText("Native dataset SQL cancelled for " + selected + ".")
+			v.data.dataProfileStatus.SetText("Native dataset SQL cancelled for " + selected + ".")
 			v.addActivity("Cancelled native dataset SQL for " + selected + ".")
 		} else {
 			v.jobService.Finish(jobID, jobsSvc.StatusFailed, "Native dataset SQL failed.", err)
-			v.dataProfileStatus.SetText("SQL failed for " + selected)
+			v.data.dataProfileStatus.SetText("SQL failed for " + selected)
 			dialog.ShowError(err, v.window)
 		}
 		v.refreshJobs()
@@ -777,13 +863,13 @@ func (v *View) finishDatasetSQLJob(jobID string, selected string, sqlText string
 	}
 	v.jobService.AppendLog(jobID, fmt.Sprintf("Rows: shown=%d matched=%d duration=%dms", len(result.QueryResult.Rows), result.QueryResult.MatchedRows, result.DurationMs))
 	v.jobService.Finish(jobID, jobsSvc.StatusSuccess, firstNonEmptyString(result.Message, "Native dataset SQL completed."), nil)
-	v.dataProfileStatus.SetText(sqlStatus(result))
+	v.data.dataProfileStatus.SetText(sqlStatus(result))
 	v.setDataSummary(formatDatasetSQLResult(result))
 	v.setDataRowsGrid(result.QueryResult.Columns, result.QueryResult.Rows)
-	v.dataLastQuery = result.QueryResult
-	v.dataLastSQLiteQuery = dbconnectorSvc.SQLiteQueryResult{}
-	v.dataLastChart = datasetsSvc.ChartResult{}
-	v.dataLastDashboard = datasetsSvc.DashboardResult{}
+	v.data.dataLastQuery = result.QueryResult
+	v.data.dataLastSQLiteQuery = dbconnectorSvc.SQLiteQueryResult{}
+	v.data.dataLastChart = datasetsSvc.ChartResult{}
+	v.data.dataLastDashboard = datasetsSvc.DashboardResult{}
 	v.addActivity("Ran native dataset SQL for " + result.RelPath + ".")
 	v.refreshJobs()
 }
@@ -912,23 +998,23 @@ func isDataJobCanceled(err error) bool {
 func (v *View) previewDatasetChart() {
 	workspace := v.state.Workspace()
 	if workspace.Root == "" {
-		v.dataProfileStatus.SetText("Open a workspace before charting data.")
+		v.data.dataProfileStatus.SetText("Open a workspace before charting data.")
 		return
 	}
 	selected := selectedPathOrEmpty(v)
-	if strings.TrimSpace(selected) == "" && strings.TrimSpace(v.dataLastQuery.RelPath) == "" {
-		v.dataProfileStatus.SetText("Select a CSV, TSV, JSON, or XLSX file before charting data.")
+	if strings.TrimSpace(selected) == "" && strings.TrimSpace(v.data.dataLastQuery.RelPath) == "" {
+		v.data.dataProfileStatus.SetText("Select a CSV, TSV, JSON, or XLSX file before charting data.")
 		return
 	}
 	jobLabel := datasetChartPreviewJobLabel(selected)
 	job, ctx := v.jobService.Start(datasetChartPreviewJobKind, jobLabel)
-	v.jobService.AppendLog(job.ID, "Path: "+firstNonEmptyString(selected, v.dataLastQuery.RelPath))
-	v.dataProfileStatus.SetText("Previewing chart as " + job.ID + ".")
+	v.jobService.AppendLog(job.ID, "Path: "+firstNonEmptyString(selected, v.data.dataLastQuery.RelPath))
+	v.data.dataProfileStatus.SetText("Previewing chart as " + job.ID + ".")
 	v.addActivity("Started " + job.ID + ": " + jobLabel + ".")
 	v.refreshJobs()
 	root := workspace.Root
-	cachedQuery := v.dataLastQuery
-	queryText := v.dataQueryEntry.Text
+	cachedQuery := v.data.dataLastQuery
+	queryText := v.data.dataQueryEntry.Text
 	go func() {
 		result, chart, err := v.buildDatasetChartPreview(ctx, root, selected, cachedQuery, queryText)
 		fyne.Do(func() {
@@ -940,23 +1026,23 @@ func (v *View) previewDatasetChart() {
 func (v *View) previewDatasetDashboard() {
 	workspace := v.state.Workspace()
 	if workspace.Root == "" {
-		v.dataProfileStatus.SetText("Open a workspace before charting data.")
+		v.data.dataProfileStatus.SetText("Open a workspace before charting data.")
 		return
 	}
 	selected := selectedPathOrEmpty(v)
-	if strings.TrimSpace(selected) == "" && strings.TrimSpace(v.dataLastQuery.RelPath) == "" {
-		v.dataProfileStatus.SetText("Select a CSV, TSV, JSON, or XLSX file before charting data.")
+	if strings.TrimSpace(selected) == "" && strings.TrimSpace(v.data.dataLastQuery.RelPath) == "" {
+		v.data.dataProfileStatus.SetText("Select a CSV, TSV, JSON, or XLSX file before charting data.")
 		return
 	}
 	jobLabel := datasetDashboardPreviewJobLabel(selected)
 	job, ctx := v.jobService.Start(datasetDashboardPreviewKind, jobLabel)
-	v.jobService.AppendLog(job.ID, "Path: "+firstNonEmptyString(selected, v.dataLastQuery.RelPath))
-	v.dataProfileStatus.SetText("Previewing dashboard as " + job.ID + ".")
+	v.jobService.AppendLog(job.ID, "Path: "+firstNonEmptyString(selected, v.data.dataLastQuery.RelPath))
+	v.data.dataProfileStatus.SetText("Previewing dashboard as " + job.ID + ".")
 	v.addActivity("Started " + job.ID + ": " + jobLabel + ".")
 	v.refreshJobs()
 	root := workspace.Root
-	cachedQuery := v.dataLastQuery
-	queryText := v.dataQueryEntry.Text
+	cachedQuery := v.data.dataLastQuery
+	queryText := v.data.dataQueryEntry.Text
 	go func() {
 		result, dashboard, err := v.buildDatasetDashboardPreview(ctx, root, selected, cachedQuery, queryText)
 		fyne.Do(func() {
@@ -968,24 +1054,24 @@ func (v *View) previewDatasetDashboard() {
 func (v *View) exportDatasetChartArtifact() {
 	workspace := v.state.Workspace()
 	if workspace.Root == "" {
-		v.dataProfileStatus.SetText("Open a workspace before exporting chart artifacts.")
+		v.data.dataProfileStatus.SetText("Open a workspace before exporting chart artifacts.")
 		return
 	}
 	selected := selectedPathOrEmpty(v)
-	if strings.TrimSpace(selected) == "" && strings.TrimSpace(v.dataLastQuery.RelPath) == "" {
-		v.dataProfileStatus.SetText("Select a CSV, TSV, JSON, or XLSX file before exporting chart artifacts.")
+	if strings.TrimSpace(selected) == "" && strings.TrimSpace(v.data.dataLastQuery.RelPath) == "" {
+		v.data.dataProfileStatus.SetText("Select a CSV, TSV, JSON, or XLSX file before exporting chart artifacts.")
 		return
 	}
 	jobLabel := datasetChartExportJobLabel(selected)
 	job, ctx := v.jobService.Start(datasetChartExportJobKind, jobLabel)
-	v.jobService.AppendLog(job.ID, "Path: "+firstNonEmptyString(selected, v.dataLastQuery.RelPath))
-	v.dataProfileStatus.SetText("Exporting chart artifact as " + job.ID + ".")
+	v.jobService.AppendLog(job.ID, "Path: "+firstNonEmptyString(selected, v.data.dataLastQuery.RelPath))
+	v.data.dataProfileStatus.SetText("Exporting chart artifact as " + job.ID + ".")
 	v.addActivity("Started " + job.ID + ": " + jobLabel + ".")
 	v.refreshJobs()
 	root := workspace.Root
-	cachedQuery := v.dataLastQuery
-	cachedChart := v.dataLastChart
-	queryText := v.dataQueryEntry.Text
+	cachedQuery := v.data.dataLastQuery
+	cachedChart := v.data.dataLastChart
+	queryText := v.data.dataQueryEntry.Text
 	go func() {
 		result, chart, artifact, err := v.buildDatasetChartArtifactForExport(ctx, root, selected, cachedQuery, cachedChart, queryText)
 		fyne.Do(func() {
@@ -997,24 +1083,24 @@ func (v *View) exportDatasetChartArtifact() {
 func (v *View) exportDatasetDashboardArtifact() {
 	workspace := v.state.Workspace()
 	if workspace.Root == "" {
-		v.dataProfileStatus.SetText("Open a workspace before exporting dashboard artifacts.")
+		v.data.dataProfileStatus.SetText("Open a workspace before exporting dashboard artifacts.")
 		return
 	}
 	selected := selectedPathOrEmpty(v)
-	if strings.TrimSpace(selected) == "" && strings.TrimSpace(v.dataLastQuery.RelPath) == "" {
-		v.dataProfileStatus.SetText("Select a CSV, TSV, JSON, or XLSX file before exporting dashboard artifacts.")
+	if strings.TrimSpace(selected) == "" && strings.TrimSpace(v.data.dataLastQuery.RelPath) == "" {
+		v.data.dataProfileStatus.SetText("Select a CSV, TSV, JSON, or XLSX file before exporting dashboard artifacts.")
 		return
 	}
 	jobLabel := datasetDashboardExportJobLabel(selected)
 	job, ctx := v.jobService.Start(datasetDashboardExportKind, jobLabel)
-	v.jobService.AppendLog(job.ID, "Path: "+firstNonEmptyString(selected, v.dataLastQuery.RelPath))
-	v.dataProfileStatus.SetText("Exporting dashboard artifact as " + job.ID + ".")
+	v.jobService.AppendLog(job.ID, "Path: "+firstNonEmptyString(selected, v.data.dataLastQuery.RelPath))
+	v.data.dataProfileStatus.SetText("Exporting dashboard artifact as " + job.ID + ".")
 	v.addActivity("Started " + job.ID + ": " + jobLabel + ".")
 	v.refreshJobs()
 	root := workspace.Root
-	cachedQuery := v.dataLastQuery
-	cachedDashboard := v.dataLastDashboard
-	queryText := v.dataQueryEntry.Text
+	cachedQuery := v.data.dataLastQuery
+	cachedDashboard := v.data.dataLastDashboard
+	queryText := v.data.dataQueryEntry.Text
 	go func() {
 		result, dashboard, artifact, err := v.buildDatasetDashboardArtifactForExport(ctx, root, selected, cachedQuery, cachedDashboard, queryText)
 		fyne.Do(func() {
@@ -1026,23 +1112,23 @@ func (v *View) exportDatasetDashboardArtifact() {
 func (v *View) exportDatasetQueryCSVArtifact() {
 	workspace := v.state.Workspace()
 	if workspace.Root == "" {
-		v.dataProfileStatus.SetText("Open a workspace before exporting dataset query artifacts.")
+		v.data.dataProfileStatus.SetText("Open a workspace before exporting dataset query artifacts.")
 		return
 	}
 	selected := selectedPathOrEmpty(v)
-	if strings.TrimSpace(selected) == "" && strings.TrimSpace(v.dataLastQuery.RelPath) == "" {
-		v.dataProfileStatus.SetText("Run or select a dataset query before exporting CSV.")
+	if strings.TrimSpace(selected) == "" && strings.TrimSpace(v.data.dataLastQuery.RelPath) == "" {
+		v.data.dataProfileStatus.SetText("Run or select a dataset query before exporting CSV.")
 		return
 	}
 	jobLabel := datasetQueryExportJobLabel(selected)
 	job, ctx := v.jobService.Start(datasetQueryExportJobKind, jobLabel)
-	v.jobService.AppendLog(job.ID, "Path: "+firstNonEmptyString(selected, v.dataLastQuery.RelPath))
-	v.dataProfileStatus.SetText("Exporting dataset query CSV as " + job.ID + ".")
+	v.jobService.AppendLog(job.ID, "Path: "+firstNonEmptyString(selected, v.data.dataLastQuery.RelPath))
+	v.data.dataProfileStatus.SetText("Exporting dataset query CSV as " + job.ID + ".")
 	v.addActivity("Started " + job.ID + ": " + jobLabel + ".")
 	v.refreshJobs()
 	root := workspace.Root
-	cached := v.dataLastQuery
-	queryText := v.dataQueryEntry.Text
+	cached := v.data.dataLastQuery
+	queryText := v.data.dataQueryEntry.Text
 	go func() {
 		result, artifact, err := v.buildDatasetQueryCSVArtifactForExport(ctx, root, selected, cached, queryText)
 		fyne.Do(func() {
@@ -1054,18 +1140,18 @@ func (v *View) exportDatasetQueryCSVArtifact() {
 func (v *View) exportDatasetSummaryArtifact() {
 	workspace := v.state.Workspace()
 	if workspace.Root == "" {
-		v.dataProfileStatus.SetText("Open a workspace before exporting dataset summaries.")
+		v.data.dataProfileStatus.SetText("Open a workspace before exporting dataset summaries.")
 		return
 	}
 	selected := selectedPathOrEmpty(v)
 	if strings.TrimSpace(selected) == "" {
-		v.dataProfileStatus.SetText("Select a CSV, TSV, JSON, NDJSON, XLSX, Parquet, or log file before exporting a summary.")
+		v.data.dataProfileStatus.SetText("Select a CSV, TSV, JSON, NDJSON, XLSX, Parquet, or log file before exporting a summary.")
 		return
 	}
 	jobLabel := datasetSummaryExportJobLabel(selected)
 	job, ctx := v.jobService.Start(datasetSummaryExportJobKind, jobLabel)
 	v.jobService.AppendLog(job.ID, "Path: "+selected)
-	v.dataProfileStatus.SetText("Exporting dataset summary as " + job.ID + ".")
+	v.data.dataProfileStatus.SetText("Exporting dataset summary as " + job.ID + ".")
 	v.addActivity("Started " + job.ID + ": " + jobLabel + ".")
 	v.refreshJobs()
 	root := workspace.Root
@@ -1080,23 +1166,23 @@ func (v *View) exportDatasetSummaryArtifact() {
 func (v *View) exportDatasetSQLReportArtifact() {
 	workspace := v.state.Workspace()
 	if workspace.Root == "" {
-		v.dataProfileStatus.SetText("Open a workspace before exporting dataset SQL reports.")
+		v.data.dataProfileStatus.SetText("Open a workspace before exporting dataset SQL reports.")
 		return
 	}
 	selected := selectedPathOrEmpty(v)
 	if strings.TrimSpace(selected) == "" {
-		v.dataProfileStatus.SetText("Select a dataset before exporting SQL reports.")
+		v.data.dataProfileStatus.SetText("Select a dataset before exporting SQL reports.")
 		return
 	}
 	jobLabel := datasetSQLExportJobLabel(selected)
 	job, ctx := v.jobService.Start(datasetSQLExportJobKind, jobLabel)
 	v.jobService.AppendLog(job.ID, "Path: "+selected)
-	v.jobService.AppendLog(job.ID, fmt.Sprintf("SQL bytes: %d", len(strings.TrimSpace(v.dataQueryEntry.Text))))
-	v.dataProfileStatus.SetText("Exporting dataset SQL report as " + job.ID + ".")
+	v.jobService.AppendLog(job.ID, fmt.Sprintf("SQL bytes: %d", len(strings.TrimSpace(v.data.dataQueryEntry.Text))))
+	v.data.dataProfileStatus.SetText("Exporting dataset SQL report as " + job.ID + ".")
 	v.addActivity("Started " + job.ID + ": " + jobLabel + ".")
 	v.refreshJobs()
 	root := workspace.Root
-	sqlText := v.dataQueryEntry.Text
+	sqlText := v.data.dataQueryEntry.Text
 	go func() {
 		result, artifact, err := v.buildDatasetSQLReportArtifactForExport(ctx, root, selected, sqlText)
 		fyne.Do(func() {
@@ -1108,19 +1194,19 @@ func (v *View) exportDatasetSQLReportArtifact() {
 func (v *View) exportDatasetNotebookArtifact() {
 	workspace := v.state.Workspace()
 	if workspace.Root == "" {
-		v.dataProfileStatus.SetText("Open a workspace before exporting SQL notebook artifacts.")
+		v.data.dataProfileStatus.SetText("Open a workspace before exporting SQL notebook artifacts.")
 		return
 	}
 	selected := selectedPathOrEmpty(v)
 	if selected == "" {
-		v.dataProfileStatus.SetText("Select a dataset before exporting SQL notebook artifacts.")
+		v.data.dataProfileStatus.SetText("Select a dataset before exporting SQL notebook artifacts.")
 		return
 	}
-	cachedRun := v.dataLastNotebookRun
+	cachedRun := v.data.dataLastNotebookRun
 	jobLabel := datasetNotebookExportJobLabel(selected)
 	job, ctx := v.jobService.Start(datasetNotebookExportJobKind, jobLabel)
 	v.jobService.AppendLog(job.ID, "Path: "+selected)
-	v.dataProfileStatus.SetText("Exporting SQL notebook artifact as " + job.ID + ".")
+	v.data.dataProfileStatus.SetText("Exporting SQL notebook artifact as " + job.ID + ".")
 	v.addActivity("Started " + job.ID + ": " + jobLabel + ".")
 	v.refreshJobs()
 	root := workspace.Root
@@ -1168,15 +1254,15 @@ func (v *View) finishDatasetNotebookRunJob(jobID string, selected string, notebo
 	if err != nil {
 		if isDataJobCanceled(err) {
 			v.jobService.Finish(jobID, jobsSvc.StatusCanceled, "SQL notebook run cancelled.", nil)
-			v.dataProfileStatus.SetText("SQL notebook run cancelled for " + selected + ".")
+			v.data.dataProfileStatus.SetText("SQL notebook run cancelled for " + selected + ".")
 			v.addActivity("Cancelled SQL notebook run for " + selected + ".")
 		} else if strings.Contains(strings.ToLower(err.Error()), "no saved sql notebooks") {
 			v.jobService.Finish(jobID, jobsSvc.StatusFailed, "SQL notebook run failed.", err)
-			v.dataProfileStatus.SetText("No saved SQL notebooks for " + selected + ".")
+			v.data.dataProfileStatus.SetText("No saved SQL notebooks for " + selected + ".")
 			v.setDataSummary(formatDatasetNotebooks(nil))
 		} else {
 			v.jobService.Finish(jobID, jobsSvc.StatusFailed, "SQL notebook run failed.", err)
-			v.dataProfileStatus.SetText("Notebook run failed for " + selected)
+			v.data.dataProfileStatus.SetText("Notebook run failed for " + selected)
 			dialog.ShowError(err, v.window)
 		}
 		v.refreshJobs()
@@ -1185,12 +1271,12 @@ func (v *View) finishDatasetNotebookRunJob(jobID string, selected string, notebo
 	v.jobService.AppendLog(jobID, fmt.Sprintf("Cells=%d duration=%dms", len(result.Cells), result.DurationMs))
 	v.jobService.Finish(jobID, jobsSvc.StatusSuccess, firstNonEmptyString(result.Message, "SQL notebook run completed."), nil)
 	v.persistNotebookRunSQL(result)
-	v.dataProfileStatus.SetText(result.Message)
+	v.data.dataProfileStatus.SetText(result.Message)
 	v.setDataNotebookRunTabs(result)
-	v.dataLastQuery = lastNotebookQueryResult(result)
-	v.dataLastChart = lastNotebookChartResult(result)
-	v.dataLastDashboard = datasetsSvc.DashboardResult{}
-	v.dataLastNotebookRun = result
+	v.data.dataLastQuery = lastNotebookQueryResult(result)
+	v.data.dataLastChart = lastNotebookChartResult(result)
+	v.data.dataLastDashboard = datasetsSvc.DashboardResult{}
+	v.data.dataLastNotebookRun = result
 	v.addActivity("Ran SQL notebook " + firstNonEmptyString(notebookLabel, result.Label) + ".")
 	v.refreshJobs()
 }
@@ -1246,15 +1332,15 @@ func (v *View) finishDatasetNotebookExportJob(
 	if err != nil {
 		if isDataJobCanceled(err) {
 			v.jobService.Finish(jobID, jobsSvc.StatusCanceled, "SQL notebook artifact export cancelled.", nil)
-			v.dataProfileStatus.SetText("SQL notebook artifact export cancelled for " + selected + ".")
+			v.data.dataProfileStatus.SetText("SQL notebook artifact export cancelled for " + selected + ".")
 			v.addActivity("Cancelled SQL notebook artifact export for " + selected + ".")
 		} else if strings.Contains(strings.ToLower(err.Error()), "no saved sql notebooks") {
 			v.jobService.Finish(jobID, jobsSvc.StatusFailed, "SQL notebook artifact export failed.", err)
-			v.dataProfileStatus.SetText("No saved SQL notebooks for " + selected + ".")
+			v.data.dataProfileStatus.SetText("No saved SQL notebooks for " + selected + ".")
 			v.setDataSummary(formatDatasetNotebooks(nil))
 		} else {
 			v.jobService.Finish(jobID, jobsSvc.StatusFailed, "SQL notebook artifact export failed.", err)
-			v.dataProfileStatus.SetText("SQL notebook artifact export failed for " + selected)
+			v.data.dataProfileStatus.SetText("SQL notebook artifact export failed for " + selected)
 			dialog.ShowError(err, v.window)
 		}
 		v.refreshJobs()
@@ -1265,14 +1351,14 @@ func (v *View) finishDatasetNotebookExportJob(
 	v.jobService.Finish(jobID, jobsSvc.StatusSuccess, "Created "+artifact.RelPath+".", nil)
 	if reranNotebook {
 		v.persistNotebookRunSQL(result)
-		v.dataLastQuery = lastNotebookQueryResult(result)
-		v.dataLastChart = lastNotebookChartResult(result)
-		v.dataLastDashboard = datasetsSvc.DashboardResult{}
-		v.dataLastNotebookRun = result
+		v.data.dataLastQuery = lastNotebookQueryResult(result)
+		v.data.dataLastChart = lastNotebookChartResult(result)
+		v.data.dataLastDashboard = datasetsSvc.DashboardResult{}
+		v.data.dataLastNotebookRun = result
 		v.addActivity("Ran SQL notebook " + firstNonEmptyString(notebookLabel, result.Label) + " before export.")
 	}
 	v.persistArtifactRecord(artifact)
-	v.dataProfileStatus.SetText("Exported SQL notebook run " + artifact.RelPath)
+	v.data.dataProfileStatus.SetText("Exported SQL notebook run " + artifact.RelPath)
 	v.addActivity(artifact.Message)
 	v.refreshArtifactsWithQuery("kind:sql-notebook-run")
 	v.refreshJobs()
@@ -1289,24 +1375,24 @@ func (v *View) exportSQLiteQueryMarkdownArtifact() {
 func (v *View) exportSQLiteQueryArtifact(kind string) {
 	workspace := v.state.Workspace()
 	if workspace.Root == "" {
-		v.dataProfileStatus.SetText("Open a workspace before exporting SQLite query artifacts.")
+		v.data.dataProfileStatus.SetText("Open a workspace before exporting SQLite query artifacts.")
 		return
 	}
 	selected := selectedPathOrEmpty(v)
-	if selected == "" && strings.TrimSpace(v.dataLastSQLiteQuery.RelPath) == "" {
-		v.dataProfileStatus.SetText("Select a SQLite source before exporting query artifacts.")
+	if selected == "" && strings.TrimSpace(v.data.dataLastSQLiteQuery.RelPath) == "" {
+		v.data.dataProfileStatus.SetText("Select a SQLite source before exporting query artifacts.")
 		return
 	}
 	jobLabel := sqliteArtifactExportJobLabel(selected, kind)
 	job, ctx := v.jobService.Start(datasetSQLiteArtifactJobKind, jobLabel)
-	v.jobService.AppendLog(job.ID, "Path: "+firstNonEmptyString(selected, v.dataLastSQLiteQuery.RelPath))
+	v.jobService.AppendLog(job.ID, "Path: "+firstNonEmptyString(selected, v.data.dataLastSQLiteQuery.RelPath))
 	v.jobService.AppendLog(job.ID, "Format: "+kind)
-	v.dataProfileStatus.SetText("Exporting SQLite query artifact as " + job.ID + ".")
+	v.data.dataProfileStatus.SetText("Exporting SQLite query artifact as " + job.ID + ".")
 	v.addActivity("Started " + job.ID + ": " + jobLabel + ".")
 	v.refreshJobs()
 	root := workspace.Root
-	cachedSQLite := v.dataLastSQLiteQuery
-	sqlText := v.dataQueryEntry.Text
+	cachedSQLite := v.data.dataLastSQLiteQuery
+	sqlText := v.data.dataQueryEntry.Text
 	go func() {
 		result, artifact, err := v.buildSQLiteArtifactForExport(ctx, root, selected, kind, cachedSQLite, sqlText)
 		fyne.Do(func() {
@@ -1396,11 +1482,11 @@ func (v *View) finishDatasetChartPreviewJob(
 	if err != nil {
 		if isDataJobCanceled(err) {
 			v.jobService.Finish(jobID, jobsSvc.StatusCanceled, "Chart preview cancelled.", nil)
-			v.dataProfileStatus.SetText("Chart preview cancelled for " + firstNonEmptyString(selected, "selection") + ".")
+			v.data.dataProfileStatus.SetText("Chart preview cancelled for " + firstNonEmptyString(selected, "selection") + ".")
 			v.addActivity("Cancelled chart preview for " + firstNonEmptyString(selected, "selection") + ".")
 		} else {
 			v.jobService.Finish(jobID, jobsSvc.StatusFailed, "Chart preview failed.", err)
-			v.dataProfileStatus.SetText("Chart preview failed for " + firstNonEmptyString(selected, result.RelPath))
+			v.data.dataProfileStatus.SetText("Chart preview failed for " + firstNonEmptyString(selected, result.RelPath))
 			dialog.ShowError(err, v.window)
 		}
 		v.refreshJobs()
@@ -1408,10 +1494,10 @@ func (v *View) finishDatasetChartPreviewJob(
 	}
 	v.jobService.AppendLog(jobID, fmt.Sprintf("Points=%d", len(chart.Points)))
 	v.jobService.Finish(jobID, jobsSvc.StatusSuccess, firstNonEmptyString(chart.Message, "Chart preview completed."), nil)
-	v.dataLastQuery = result
-	v.dataLastChart = chart
-	v.dataLastDashboard = datasetsSvc.DashboardResult{}
-	v.dataProfileStatus.SetText(chart.Message)
+	v.data.dataLastQuery = result
+	v.data.dataLastChart = chart
+	v.data.dataLastDashboard = datasetsSvc.DashboardResult{}
+	v.data.dataProfileStatus.SetText(chart.Message)
 	v.setDataSummary(formatDatasetChart(chart))
 	v.addActivity("Previewed chart for " + chart.RelPath + ".")
 	v.refreshJobs()
@@ -1427,11 +1513,11 @@ func (v *View) finishDatasetDashboardPreviewJob(
 	if err != nil {
 		if isDataJobCanceled(err) {
 			v.jobService.Finish(jobID, jobsSvc.StatusCanceled, "Dashboard preview cancelled.", nil)
-			v.dataProfileStatus.SetText("Dashboard preview cancelled for " + firstNonEmptyString(selected, "selection") + ".")
+			v.data.dataProfileStatus.SetText("Dashboard preview cancelled for " + firstNonEmptyString(selected, "selection") + ".")
 			v.addActivity("Cancelled dashboard preview for " + firstNonEmptyString(selected, "selection") + ".")
 		} else {
 			v.jobService.Finish(jobID, jobsSvc.StatusFailed, "Dashboard preview failed.", err)
-			v.dataProfileStatus.SetText("Dashboard preview failed for " + firstNonEmptyString(selected, result.RelPath))
+			v.data.dataProfileStatus.SetText("Dashboard preview failed for " + firstNonEmptyString(selected, result.RelPath))
 			dialog.ShowError(err, v.window)
 		}
 		v.refreshJobs()
@@ -1439,10 +1525,10 @@ func (v *View) finishDatasetDashboardPreviewJob(
 	}
 	v.jobService.AppendLog(jobID, fmt.Sprintf("Metrics=%d points=%d", len(dashboard.Metrics), len(dashboard.Chart.Points)))
 	v.jobService.Finish(jobID, jobsSvc.StatusSuccess, firstNonEmptyString(dashboard.Message, "Dashboard preview completed."), nil)
-	v.dataLastQuery = result
-	v.dataLastChart = dashboard.Chart
-	v.dataLastDashboard = dashboard
-	v.dataProfileStatus.SetText(dashboard.Message)
+	v.data.dataLastQuery = result
+	v.data.dataLastChart = dashboard.Chart
+	v.data.dataLastDashboard = dashboard
+	v.data.dataProfileStatus.SetText(dashboard.Message)
 	v.setDataSummary(formatDatasetDashboard(dashboard))
 	v.addActivity("Previewed dashboard for " + dashboard.RelPath + ".")
 	v.refreshJobs()
@@ -1761,11 +1847,11 @@ func (v *View) finishDatasetChartExportJob(
 	if err != nil {
 		if isDataJobCanceled(err) {
 			v.jobService.Finish(jobID, jobsSvc.StatusCanceled, "Chart export cancelled.", nil)
-			v.dataProfileStatus.SetText("Chart export cancelled for " + firstNonEmptyString(selected, "selection") + ".")
+			v.data.dataProfileStatus.SetText("Chart export cancelled for " + firstNonEmptyString(selected, "selection") + ".")
 			v.addActivity("Cancelled chart export for " + firstNonEmptyString(selected, "selection") + ".")
 		} else {
 			v.jobService.Finish(jobID, jobsSvc.StatusFailed, "Chart export failed.", err)
-			v.dataProfileStatus.SetText("Chart export failed for " + firstNonEmptyString(selected, result.RelPath))
+			v.data.dataProfileStatus.SetText("Chart export failed for " + firstNonEmptyString(selected, result.RelPath))
 			dialog.ShowError(err, v.window)
 		}
 		v.refreshJobs()
@@ -1774,12 +1860,12 @@ func (v *View) finishDatasetChartExportJob(
 	artifact.JobID = jobID
 	v.jobService.AppendLog(jobID, "Artifact: "+artifact.RelPath)
 	v.jobService.Finish(jobID, jobsSvc.StatusSuccess, "Created "+artifact.RelPath+".", nil)
-	v.dataLastQuery = result
-	v.dataLastChart = chart
-	v.dataLastDashboard = datasetsSvc.DashboardResult{}
+	v.data.dataLastQuery = result
+	v.data.dataLastChart = chart
+	v.data.dataLastDashboard = datasetsSvc.DashboardResult{}
 	v.persistArtifactRecord(artifact)
 	v.persistDatasetDependency(chartArtifactDependencyRecord(result, chart, artifact))
-	v.dataProfileStatus.SetText("Exported chart " + artifact.RelPath)
+	v.data.dataProfileStatus.SetText("Exported chart " + artifact.RelPath)
 	v.addActivity(artifact.Message)
 	v.refreshArtifactsWithQuery("kind:chart")
 	v.refreshJobs()
@@ -1796,11 +1882,11 @@ func (v *View) finishDatasetDashboardExportJob(
 	if err != nil {
 		if isDataJobCanceled(err) {
 			v.jobService.Finish(jobID, jobsSvc.StatusCanceled, "Dashboard export cancelled.", nil)
-			v.dataProfileStatus.SetText("Dashboard export cancelled for " + firstNonEmptyString(selected, "selection") + ".")
+			v.data.dataProfileStatus.SetText("Dashboard export cancelled for " + firstNonEmptyString(selected, "selection") + ".")
 			v.addActivity("Cancelled dashboard export for " + firstNonEmptyString(selected, "selection") + ".")
 		} else {
 			v.jobService.Finish(jobID, jobsSvc.StatusFailed, "Dashboard export failed.", err)
-			v.dataProfileStatus.SetText("Dashboard export failed for " + firstNonEmptyString(selected, result.RelPath))
+			v.data.dataProfileStatus.SetText("Dashboard export failed for " + firstNonEmptyString(selected, result.RelPath))
 			dialog.ShowError(err, v.window)
 		}
 		v.refreshJobs()
@@ -1809,12 +1895,12 @@ func (v *View) finishDatasetDashboardExportJob(
 	artifact.JobID = jobID
 	v.jobService.AppendLog(jobID, "Artifact: "+artifact.RelPath)
 	v.jobService.Finish(jobID, jobsSvc.StatusSuccess, "Created "+artifact.RelPath+".", nil)
-	v.dataLastQuery = result
-	v.dataLastChart = dashboard.Chart
-	v.dataLastDashboard = dashboard
+	v.data.dataLastQuery = result
+	v.data.dataLastChart = dashboard.Chart
+	v.data.dataLastDashboard = dashboard
 	v.persistArtifactRecord(artifact)
 	v.persistDatasetDependency(dashboardArtifactDependencyRecord(result, dashboard, artifact))
-	v.dataProfileStatus.SetText("Exported dashboard " + artifact.RelPath)
+	v.data.dataProfileStatus.SetText("Exported dashboard " + artifact.RelPath)
 	v.addActivity(artifact.Message)
 	v.refreshArtifactsWithQuery("kind:dashboard")
 	v.refreshJobs()
@@ -1830,11 +1916,11 @@ func (v *View) finishDatasetQueryCSVExportJob(
 	if err != nil {
 		if isDataJobCanceled(err) {
 			v.jobService.Finish(jobID, jobsSvc.StatusCanceled, "Dataset query CSV export cancelled.", nil)
-			v.dataProfileStatus.SetText("Dataset query CSV export cancelled for " + firstNonEmptyString(selected, "selection") + ".")
+			v.data.dataProfileStatus.SetText("Dataset query CSV export cancelled for " + firstNonEmptyString(selected, "selection") + ".")
 			v.addActivity("Cancelled dataset query CSV export for " + firstNonEmptyString(selected, "selection") + ".")
 		} else {
 			v.jobService.Finish(jobID, jobsSvc.StatusFailed, "Dataset query CSV export failed.", err)
-			v.dataProfileStatus.SetText("Dataset query CSV export failed for " + firstNonEmptyString(selected, result.RelPath))
+			v.data.dataProfileStatus.SetText("Dataset query CSV export failed for " + firstNonEmptyString(selected, result.RelPath))
 			dialog.ShowError(err, v.window)
 		}
 		v.refreshJobs()
@@ -1843,10 +1929,10 @@ func (v *View) finishDatasetQueryCSVExportJob(
 	artifact.JobID = jobID
 	v.jobService.AppendLog(jobID, "Artifact: "+artifact.RelPath)
 	v.jobService.Finish(jobID, jobsSvc.StatusSuccess, "Created "+artifact.RelPath+".", nil)
-	v.dataLastQuery = result
+	v.data.dataLastQuery = result
 	v.persistArtifactRecord(artifact)
 	v.persistDatasetDependency(datasetQueryArtifactDependencyRecord(result, artifact))
-	v.dataProfileStatus.SetText("Exported dataset query CSV " + artifact.RelPath)
+	v.data.dataProfileStatus.SetText("Exported dataset query CSV " + artifact.RelPath)
 	v.addActivity(artifact.Message)
 	v.refreshArtifactsWithQuery("kind:dataset-query-csv")
 	v.refreshJobs()
@@ -1862,11 +1948,11 @@ func (v *View) finishDatasetSummaryExportJob(
 	if err != nil {
 		if isDataJobCanceled(err) {
 			v.jobService.Finish(jobID, jobsSvc.StatusCanceled, "Dataset summary export cancelled.", nil)
-			v.dataProfileStatus.SetText("Dataset summary export cancelled for " + selected + ".")
+			v.data.dataProfileStatus.SetText("Dataset summary export cancelled for " + selected + ".")
 			v.addActivity("Cancelled dataset summary export for " + selected + ".")
 		} else {
 			v.jobService.Finish(jobID, jobsSvc.StatusFailed, "Dataset summary export failed.", err)
-			v.dataProfileStatus.SetText("Dataset summary export failed for " + selected)
+			v.data.dataProfileStatus.SetText("Dataset summary export failed for " + selected)
 			dialog.ShowError(err, v.window)
 		}
 		v.refreshJobs()
@@ -1877,7 +1963,7 @@ func (v *View) finishDatasetSummaryExportJob(
 	v.jobService.Finish(jobID, jobsSvc.StatusSuccess, "Created "+artifact.RelPath+".", nil)
 	v.persistArtifactRecord(artifact)
 	v.persistDatasetDependency(datasetSummaryArtifactDependencyRecord(profile, artifact))
-	v.dataProfileStatus.SetText("Exported dataset summary " + artifact.RelPath)
+	v.data.dataProfileStatus.SetText("Exported dataset summary " + artifact.RelPath)
 	v.addActivity(artifact.Message)
 	v.refreshArtifactsWithQuery("kind:dataset-summary")
 	v.refreshJobs()
@@ -1902,11 +1988,11 @@ func (v *View) finishDatasetSQLReportExportJob(
 	if err != nil {
 		if isDataJobCanceled(err) {
 			v.jobService.Finish(jobID, jobsSvc.StatusCanceled, "Dataset SQL report export cancelled.", nil)
-			v.dataProfileStatus.SetText("Dataset SQL report export cancelled for " + selected + ".")
+			v.data.dataProfileStatus.SetText("Dataset SQL report export cancelled for " + selected + ".")
 			v.addActivity("Cancelled dataset SQL report export for " + selected + ".")
 		} else {
 			v.jobService.Finish(jobID, jobsSvc.StatusFailed, "Dataset SQL report export failed.", err)
-			v.dataProfileStatus.SetText("Dataset SQL report export failed for " + selected)
+			v.data.dataProfileStatus.SetText("Dataset SQL report export failed for " + selected)
 			dialog.ShowError(err, v.window)
 		}
 		v.refreshJobs()
@@ -1915,10 +2001,10 @@ func (v *View) finishDatasetSQLReportExportJob(
 	artifact.JobID = jobID
 	v.jobService.AppendLog(jobID, "Artifact: "+artifact.RelPath)
 	v.jobService.Finish(jobID, jobsSvc.StatusSuccess, "Created "+artifact.RelPath+".", nil)
-	v.dataLastQuery = result.QueryResult
+	v.data.dataLastQuery = result.QueryResult
 	v.persistArtifactRecord(artifact)
 	v.persistDatasetDependency(datasetSQLArtifactDependencyRecord(result, record, artifact))
-	v.dataProfileStatus.SetText("Exported dataset SQL report " + artifact.RelPath)
+	v.data.dataProfileStatus.SetText("Exported dataset SQL report " + artifact.RelPath)
 	v.addActivity(artifact.Message)
 	v.refreshArtifactsWithQuery("kind:dataset-sql-report")
 	v.refreshJobs()
@@ -1933,11 +2019,11 @@ func (v *View) finishDatasetDependencyRebuildJob(
 	if err != nil {
 		if isDataJobCanceled(err) {
 			v.jobService.Finish(jobID, jobsSvc.StatusCanceled, "Dataset dependency rebuild cancelled.", nil)
-			v.dataProfileStatus.SetText("Dataset dependency rebuild cancelled for " + dependency.SourcePath + ".")
+			v.data.dataProfileStatus.SetText("Dataset dependency rebuild cancelled for " + dependency.SourcePath + ".")
 			v.addActivity("Cancelled dataset dependency rebuild for " + dependency.SourcePath + ".")
 		} else {
 			v.jobService.Finish(jobID, jobsSvc.StatusFailed, "Dataset dependency rebuild failed.", err)
-			v.dataProfileStatus.SetText("Dataset dependency rebuild failed for " + dependency.SourcePath)
+			v.data.dataProfileStatus.SetText("Dataset dependency rebuild failed for " + dependency.SourcePath)
 			dialog.ShowError(err, v.window)
 		}
 		v.refreshJobs()
@@ -1947,7 +2033,7 @@ func (v *View) finishDatasetDependencyRebuildJob(
 	v.jobService.AppendLog(jobID, "Artifact: "+artifact.RelPath)
 	v.jobService.Finish(jobID, jobsSvc.StatusSuccess, "Rebuilt "+artifact.RelPath+".", nil)
 	v.persistArtifactRecord(artifact)
-	v.dataProfileStatus.SetText("Rebuilt dataset artifact " + artifact.RelPath)
+	v.data.dataProfileStatus.SetText("Rebuilt dataset artifact " + artifact.RelPath)
 	v.addActivity("Rebuilt " + dependency.DependentKind + " dependency for " + dependency.SourcePath + ".")
 	v.refreshArtifactsWithQuery(artifact.Kind)
 	v.refreshJobs()
@@ -2030,11 +2116,11 @@ func (v *View) finishSQLiteArtifactExportJob(
 	if err != nil {
 		if isDataJobCanceled(err) {
 			v.jobService.Finish(jobID, jobsSvc.StatusCanceled, "SQLite query artifact export cancelled.", nil)
-			v.dataProfileStatus.SetText("SQLite query artifact export cancelled for " + firstNonEmptyString(selected, "selection") + ".")
+			v.data.dataProfileStatus.SetText("SQLite query artifact export cancelled for " + firstNonEmptyString(selected, "selection") + ".")
 			v.addActivity("Cancelled SQLite query artifact export for " + firstNonEmptyString(selected, "selection") + ".")
 		} else {
 			v.jobService.Finish(jobID, jobsSvc.StatusFailed, "SQLite query artifact export failed.", err)
-			v.dataProfileStatus.SetText("SQLite export query failed for " + firstNonEmptyString(selected, result.RelPath))
+			v.data.dataProfileStatus.SetText("SQLite export query failed for " + firstNonEmptyString(selected, result.RelPath))
 			dialog.ShowError(err, v.window)
 		}
 		v.refreshJobs()
@@ -2043,11 +2129,11 @@ func (v *View) finishSQLiteArtifactExportJob(
 	artifact.JobID = jobID
 	v.jobService.AppendLog(jobID, "Artifact: "+artifact.RelPath)
 	v.jobService.Finish(jobID, jobsSvc.StatusSuccess, "Created "+artifact.RelPath+".", nil)
-	v.dataLastSQLiteQuery = result
-	v.dataLastQuery = sqliteQueryAsDatasetResult(result)
+	v.data.dataLastSQLiteQuery = result
+	v.data.dataLastQuery = sqliteQueryAsDatasetResult(result)
 	v.persistArtifactRecord(artifact)
 	v.persistSQLiteArtifactLineage(result, artifact)
-	v.dataProfileStatus.SetText("Exported SQLite query artifact " + artifact.RelPath)
+	v.data.dataProfileStatus.SetText("Exported SQLite query artifact " + artifact.RelPath)
 	v.addActivity(artifact.Message)
 	if kind == "csv" {
 		v.refreshArtifactsWithQuery("kind:sqlite-query-csv")

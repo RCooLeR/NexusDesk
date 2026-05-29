@@ -70,44 +70,7 @@ type View struct {
 	search                  *searchController
 	problemResults          *fyne.Container
 	problemStatus           *widget.Label
-	dataProfileStatus       *widget.Label
-	dataProfileDetail       *widget.Entry
-	dataRowsDetail          *widget.Entry
-	dataRowsStatus          *widget.Label
-	dataRowsContainer       *fyne.Container
-	dataRowsTable           *widget.Table
-	dataRowsColumnWidths    []float32
-	dataRowsRenderPolicy    dataGridRenderPolicy
-	dataRowsColumns         []string
-	dataRowsValues          [][]string
-	dataRowsSelectedRow     int
-	dataRowsSelectedCol     int
-	dataRowsSampledRows     int
-	dataRowsOriginalRows    int
-	dataRowsClippedColumns  int
-	dataPlanDetail          *widget.Entry
-	dataChartDetail         *widget.Entry
-	dataResultTabs          *container.AppTabs
-	dataQueryEntry          *widget.Entry
-	dataLastQuery           datasetsSvc.QueryResult
-	dataLastSQLiteQuery     dbconnectorSvc.SQLiteQueryResult
-	dataLastConnectorQuery  dbconnectorSvc.ConnectorQueryResult
-	dataLastChart           datasetsSvc.ChartResult
-	dataLastDashboard       datasetsSvc.DashboardResult
-	dataLastNotebookRun     datasetsSvc.NotebookRunResult
-	dataSQLiteQueryMu       sync.Mutex
-	dataSQLiteCancel        func()
-	dataSQLiteQueryID       string
-	dataConnectorQueryMu    sync.Mutex
-	dataConnectorCancel     func()
-	dataConnectorQueryID    string
-	dataNotebookLabel       *widget.Entry
-	dataNotebookCellSelect  *widget.Select
-	dataNotebookCellIndex   int
-	dataActiveNotebookID    string
-	dataConnectorProfileID  string
-	dataConnectorProfile    *widget.Select
-	dataConnectorOptions    map[string]string
+	data                    *dataController
 	compatibilityImportMu   sync.Mutex
 	compatibilityImportByWS map[string]bool
 	operationsResults       *fyne.Container
@@ -203,71 +166,38 @@ func NewWithStartupStatus(window fyne.Window, startupStatus startupSvc.Status) *
 	if err != nil {
 		connectorProfileStore = dbconnectorSvc.NewConnectorProfileStore("nexus-connector-profiles.json")
 	}
-	dataProfileDetail := widget.NewMultiLineEntry()
-	dataProfileDetail.TextStyle = fyne.TextStyle{Monospace: true}
-	dataProfileDetail.Wrapping = fyne.TextWrapWord
-	dataProfileDetail.Disable()
-	dataRowsDetail := widget.NewMultiLineEntry()
-	dataRowsDetail.TextStyle = fyne.TextStyle{Monospace: true}
-	dataRowsDetail.Wrapping = fyne.TextWrapOff
-	dataRowsDetail.Disable()
-	dataRowsStatus := widget.NewLabel("Rows: run a query to load grid results.")
-	dataRowsStatus.Wrapping = fyne.TextWrapWord
-	dataPlanDetail := widget.NewMultiLineEntry()
-	dataPlanDetail.TextStyle = fyne.TextStyle{Monospace: true}
-	dataPlanDetail.Wrapping = fyne.TextWrapWord
-	dataPlanDetail.Disable()
-	dataChartDetail := widget.NewMultiLineEntry()
-	dataChartDetail.TextStyle = fyne.TextStyle{Monospace: true}
-	dataChartDetail.Wrapping = fyne.TextWrapWord
-	dataChartDetail.Disable()
-	dataQueryEntry := widget.NewMultiLineEntry()
-	dataQueryEntry.SetMinRowsVisible(2)
-	dataQueryEntry.SetPlaceHolder("Search/filter, SQL, or notebook cells. Use -- cell: Label and -- chart: Label to save multiple cells.")
 	operationsDetail := widget.NewMultiLineEntry()
 	operationsDetail.TextStyle = fyne.TextStyle{Monospace: true}
 	operationsDetail.Wrapping = fyne.TextWrapWord
 	operationsDetail.Disable()
 	view = &View{
-		window:                window,
-		state:                 NewState(),
-		workspaceService:      workspaceService,
-		gitService:            gitService,
-		jobService:            jobService,
-		approvalService:       approvalsSvc.New(),
-		assistantService:      assistantService,
-		assistantProfileStore: assistantProfileStore,
-		agentService:          agentService,
-		datasetService:        datasetService,
-		dbconnectorService:    dbconnectorService,
-		connectorProfileStore: connectorProfileStore,
-		operationsService:     operationsSvc.New(),
-		settingsStore:         settingsStore,
-		recentWorkspaceStore:  recentWorkspaceStore,
-		taskService:           taskService,
-		editorSession:         editorSession,
-		status:                widget.NewLabel("No workspace open"),
-		navigator:             container.NewStack(widget.NewLabel("Open a workspace to browse files.")),
-		activityLog:           widget.NewRichTextFromMarkdown("Ready."),
-		activityText:          "Ready.",
-		activityLines:         []string{"Ready."},
-		problemResults:        container.NewVBox(widget.NewLabel("Run a scan to inspect lightweight workspace problems.")),
-		problemStatus:         widget.NewLabel("No problem scan yet."),
-		dataProfileStatus: widget.NewLabel(
-			"Select a CSV, TSV, or JSON file, then profile or query it.",
-		),
-		dataProfileDetail:       dataProfileDetail,
-		dataRowsDetail:          dataRowsDetail,
-		dataRowsStatus:          dataRowsStatus,
-		dataRowsSelectedRow:     -1,
-		dataRowsSelectedCol:     -1,
-		dataPlanDetail:          dataPlanDetail,
-		dataChartDetail:         dataChartDetail,
-		dataQueryEntry:          dataQueryEntry,
+		window:                  window,
+		state:                   NewState(),
+		workspaceService:        workspaceService,
+		gitService:              gitService,
+		jobService:              jobService,
+		approvalService:         approvalsSvc.New(),
+		assistantService:        assistantService,
+		assistantProfileStore:   assistantProfileStore,
+		agentService:            agentService,
+		datasetService:          datasetService,
+		dbconnectorService:      dbconnectorService,
+		connectorProfileStore:   connectorProfileStore,
+		operationsService:       operationsSvc.New(),
+		settingsStore:           settingsStore,
+		recentWorkspaceStore:    recentWorkspaceStore,
+		taskService:             taskService,
+		editorSession:           editorSession,
+		status:                  widget.NewLabel("No workspace open"),
+		navigator:               container.NewStack(widget.NewLabel("Open a workspace to browse files.")),
+		activityLog:             widget.NewRichTextFromMarkdown("Ready."),
+		activityText:            "Ready.",
+		activityLines:           []string{"Ready."},
+		problemResults:          container.NewVBox(widget.NewLabel("Run a scan to inspect lightweight workspace problems.")),
+		problemStatus:           widget.NewLabel("No problem scan yet."),
 		operationsResults:       container.NewVBox(widget.NewLabel("Scan the workspace to inspect Docker, Compose, env, config, script, and log files.")),
 		operationsStatus:        widget.NewLabel("Operations scan has not been run."),
 		operationsDetail:        operationsDetail,
-		dataConnectorOptions:    map[string]string{},
 		compatibilityImportByWS: map[string]bool{},
 		gitFileBadges:           map[string]string{},
 		taskResults:             container.NewVBox(widget.NewLabel("Discover workspace tasks to run tests, scripts, or Compose checks.")),
@@ -297,6 +227,7 @@ func NewWithStartupStatus(window fyne.Window, startupStatus startupSvc.Status) *
 	}
 	view.editor = newEditorController(view, welcome.ID, welcomeItem)
 	view.search = newSearchController(view)
+	view.data = newDataController(view)
 	view.jobs = newJobsController(view)
 	view.rollbacks = newRollbackController(view)
 	view.diagnostics = newDiagnosticsController(view)

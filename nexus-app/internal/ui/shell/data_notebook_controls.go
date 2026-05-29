@@ -8,54 +8,54 @@ import (
 )
 
 func (v *View) refreshNotebookCellSelector() {
-	if v.dataNotebookCellSelect == nil {
+	if v.data.dataNotebookCellSelect == nil {
 		return
 	}
-	cells := notebookCellsFromEditor(v.dataQueryEntry.Text)
+	cells := notebookCellsFromEditor(v.data.dataQueryEntry.Text)
 	options := notebookCellOptions(cells)
-	v.dataNotebookCellSelect.Options = options
+	v.data.dataNotebookCellSelect.Options = options
 	if len(options) == 0 {
-		v.dataNotebookCellIndex = 0
-		v.dataNotebookCellSelect.ClearSelected()
-		v.dataNotebookCellSelect.Refresh()
+		v.data.dataNotebookCellIndex = 0
+		v.data.dataNotebookCellSelect.ClearSelected()
+		v.data.dataNotebookCellSelect.Refresh()
 		v.setDataSummary("# SQL Notebook Cells\n\nNo valid cells found in the editor.\n")
 		return
 	}
-	if v.dataNotebookCellIndex < 0 {
-		v.dataNotebookCellIndex = 0
+	if v.data.dataNotebookCellIndex < 0 {
+		v.data.dataNotebookCellIndex = 0
 	}
-	if v.dataNotebookCellIndex >= len(options) {
-		v.dataNotebookCellIndex = len(options) - 1
+	if v.data.dataNotebookCellIndex >= len(options) {
+		v.data.dataNotebookCellIndex = len(options) - 1
 	}
-	v.dataNotebookCellSelect.SetSelected(options[v.dataNotebookCellIndex])
-	v.dataNotebookCellSelect.Refresh()
-	v.setDataSummary(formatNotebookCellOutline(cells, v.dataNotebookCellIndex))
+	v.data.dataNotebookCellSelect.SetSelected(options[v.data.dataNotebookCellIndex])
+	v.data.dataNotebookCellSelect.Refresh()
+	v.setDataSummary(formatNotebookCellOutline(cells, v.data.dataNotebookCellIndex))
 }
 
 func (v *View) moveSelectedNotebookCell(delta int) {
-	cells := notebookCellsFromEditor(v.dataQueryEntry.Text)
-	nextCells, nextIndex, moved := moveNotebookCells(cells, v.dataNotebookCellIndex, delta)
+	cells := notebookCellsFromEditor(v.data.dataQueryEntry.Text)
+	nextCells, nextIndex, moved := moveNotebookCells(cells, v.data.dataNotebookCellIndex, delta)
 	if !moved {
-		v.dataProfileStatus.SetText("Notebook cell cannot move in that direction.")
+		v.data.dataProfileStatus.SetText("Notebook cell cannot move in that direction.")
 		return
 	}
-	v.dataNotebookCellIndex = nextIndex
-	v.dataQueryEntry.SetText(formatNotebookForEditor(datasetsSvc.Notebook{Cells: nextCells}))
+	v.data.dataNotebookCellIndex = nextIndex
+	v.data.dataQueryEntry.SetText(formatNotebookForEditor(datasetsSvc.Notebook{Cells: nextCells}))
 	v.refreshNotebookCellSelector()
-	v.dataProfileStatus.SetText(fmt.Sprintf("Moved notebook cell to position %d.", nextIndex+1))
+	v.data.dataProfileStatus.SetText(fmt.Sprintf("Moved notebook cell to position %d.", nextIndex+1))
 }
 
 func (v *View) deleteSelectedNotebookCell() {
-	cells := notebookCellsFromEditor(v.dataQueryEntry.Text)
-	nextCells, nextIndex, deleted := deleteNotebookCell(cells, v.dataNotebookCellIndex)
+	cells := notebookCellsFromEditor(v.data.dataQueryEntry.Text)
+	nextCells, nextIndex, deleted := deleteNotebookCell(cells, v.data.dataNotebookCellIndex)
 	if !deleted {
-		v.dataProfileStatus.SetText("Keep at least one notebook cell before deleting.")
+		v.data.dataProfileStatus.SetText("Keep at least one notebook cell before deleting.")
 		return
 	}
-	v.dataNotebookCellIndex = nextIndex
-	v.dataQueryEntry.SetText(formatNotebookForEditor(datasetsSvc.Notebook{Cells: nextCells}))
+	v.data.dataNotebookCellIndex = nextIndex
+	v.data.dataQueryEntry.SetText(formatNotebookForEditor(datasetsSvc.Notebook{Cells: nextCells}))
 	v.refreshNotebookCellSelector()
-	v.dataProfileStatus.SetText(fmt.Sprintf("Deleted notebook cell. %d cell(s) remain.", len(nextCells)))
+	v.data.dataProfileStatus.SetText(fmt.Sprintf("Deleted notebook cell. %d cell(s) remain.", len(nextCells)))
 }
 
 func notebookCellOptions(cells []datasetsSvc.NotebookCell) []string {

@@ -321,7 +321,7 @@ Every current `claude-findings.md` item is tracked here so no finding is lost wh
 - [x] C-1.2 macOS Keychain no longer passes secrets on process argv: the darwin backend now uses Security.framework via cgo, passes secret bytes directly to Keychain APIs, has a no-cgo refusal path, and includes stubbed regression coverage that exercises the native backend interface without a real keychain.
 - [x] C-1.3 XLSX/DOCX/PPTX zip preview has decompression caps: shared safe zip guards cap file count, total uncompressed size, package members, XLSX metadata/worksheet reads, DOCX body reads, and structured preview compressed package size; DOCX/PPTX generated export validation already enforces required-part/XML caps.
 - [x] C-1.4 Windows DPAPI blob calls pin input buffers and harden `LocalFree` handling: `Protect`/`Unprotect` keep Go slices alive after native calls, propagate `LocalFree` failures when output cleanup fails, and cover Windows DPAPI round-trip behavior.
-- [ ] C-1.5 UI shell `View` is a god object: Search, Jobs, Rollbacks, Diagnostics, Git, Artifacts, Assistant, and Editor panel state/actions are now isolated in controllers; continue extracting controllers/state for Data and Settings.
+- [ ] C-1.5 UI shell `View` is a god object: Search, Jobs, Rollbacks, Diagnostics, Git, Artifacts, Assistant, Editor, and Data panel state/actions are now isolated in controllers; continue extracting controller/state ownership for Settings and any remaining small shell clusters.
 
 #### High
 
@@ -407,7 +407,7 @@ Every current `claude-findings.md` item is tracked here so no finding is lost wh
 
 Future development sessions should pick one logical milestone from this order:
 
-1. Continue UI shell controller extraction with Data and Settings controllers; the Search, Jobs, Rollbacks, Diagnostics, Git, Artifacts, Assistant, and Editor controller slices are complete.
+1. Continue UI shell controller extraction with Settings and any remaining small shell clusters; the Search, Jobs, Rollbacks, Diagnostics, Git, Artifacts, Assistant, Editor, and Data controller slices are complete.
 2. Enforce safer connector TLS defaults with explicit audited plaintext opt-in.
 3. Add metadata WAL/busy timeout and diagnostics visibility.
 4. Throttle assistant streaming, agent events, and activity rendering.

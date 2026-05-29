@@ -36,89 +36,89 @@ type dataGridRenderPolicy struct {
 }
 
 func (v *View) setDataRowsText(text string) {
-	if v.dataRowsDetail == nil {
+	if v.data.dataRowsDetail == nil {
 		return
 	}
-	v.dataRowsColumns = nil
-	v.dataRowsValues = nil
-	v.dataRowsSelectedRow = -1
-	v.dataRowsSelectedCol = -1
-	v.dataRowsSampledRows = 0
-	v.dataRowsOriginalRows = 0
-	v.dataRowsClippedColumns = 0
-	v.dataRowsDetail.SetText(text)
+	v.data.dataRowsColumns = nil
+	v.data.dataRowsValues = nil
+	v.data.dataRowsSelectedRow = -1
+	v.data.dataRowsSelectedCol = -1
+	v.data.dataRowsSampledRows = 0
+	v.data.dataRowsOriginalRows = 0
+	v.data.dataRowsClippedColumns = 0
+	v.data.dataRowsDetail.SetText(text)
 	v.setDataRowsStatus(dataRowsTextStatusLine(text))
-	if v.dataRowsContainer == nil {
+	if v.data.dataRowsContainer == nil {
 		return
 	}
-	v.dataRowsContainer.Objects = []fyne.CanvasObject{v.dataRowsDetail}
-	v.dataRowsContainer.Refresh()
+	v.data.dataRowsContainer.Objects = []fyne.CanvasObject{v.data.dataRowsDetail}
+	v.data.dataRowsContainer.Refresh()
 }
 
 func (v *View) setDataRowsGrid(columns []string, rows [][]string) {
-	if v.dataRowsContainer == nil {
+	if v.data.dataRowsContainer == nil {
 		return
 	}
 	if len(columns) == 0 {
 		v.setDataRowsText("")
 		return
 	}
-	hadSelection := v.dataRowsSelectedRow >= 0 && v.dataRowsSelectedCol >= 0
-	v.dataRowsColumns = append([]string{}, columns...)
-	v.dataRowsValues = cloneDataRows(rows)
-	visibleColumns, visibleRows, clippedColumns := limitDataGridColumns(v.dataRowsColumns, v.dataRowsValues, dataGridMaxVisibleColumns)
-	v.dataRowsColumns = visibleColumns
-	v.dataRowsValues = visibleRows
-	v.dataRowsSelectedRow = -1
-	v.dataRowsSelectedCol = -1
-	v.dataRowsSampledRows = 0
-	v.dataRowsOriginalRows = len(rows)
-	v.dataRowsClippedColumns = clippedColumns
-	v.dataRowsRenderPolicy = resolveDataGridRenderPolicy(v.dataRowsColumns, v.dataRowsValues)
-	renderPolicy := v.dataRowsRenderPolicy
-	widths, sampledRows := estimateDataGridColumnWidthsWithSampling(v.dataRowsColumns, v.dataRowsValues)
-	v.dataRowsSampledRows = sampledRows
+	hadSelection := v.data.dataRowsSelectedRow >= 0 && v.data.dataRowsSelectedCol >= 0
+	v.data.dataRowsColumns = append([]string{}, columns...)
+	v.data.dataRowsValues = cloneDataRows(rows)
+	visibleColumns, visibleRows, clippedColumns := limitDataGridColumns(v.data.dataRowsColumns, v.data.dataRowsValues, dataGridMaxVisibleColumns)
+	v.data.dataRowsColumns = visibleColumns
+	v.data.dataRowsValues = visibleRows
+	v.data.dataRowsSelectedRow = -1
+	v.data.dataRowsSelectedCol = -1
+	v.data.dataRowsSampledRows = 0
+	v.data.dataRowsOriginalRows = len(rows)
+	v.data.dataRowsClippedColumns = clippedColumns
+	v.data.dataRowsRenderPolicy = resolveDataGridRenderPolicy(v.data.dataRowsColumns, v.data.dataRowsValues)
+	renderPolicy := v.data.dataRowsRenderPolicy
+	widths, sampledRows := estimateDataGridColumnWidthsWithSampling(v.data.dataRowsColumns, v.data.dataRowsValues)
+	v.data.dataRowsSampledRows = sampledRows
 	v.ensureDataRowsTable()
-	if v.dataRowsTable == nil {
+	if v.data.dataRowsTable == nil {
 		return
 	}
-	v.dataRowsTable.HideSeparators = renderPolicy.HideDivider
+	v.data.dataRowsTable.HideSeparators = renderPolicy.HideDivider
 	if hadSelection {
-		v.dataRowsTable.UnselectAll()
+		v.data.dataRowsTable.UnselectAll()
 	}
-	for _, index := range changedDataGridColumnWidthIndexes(v.dataRowsColumnWidths, widths) {
-		v.dataRowsTable.SetColumnWidth(index, widths[index])
+	for _, index := range changedDataGridColumnWidthIndexes(v.data.dataRowsColumnWidths, widths) {
+		v.data.dataRowsTable.SetColumnWidth(index, widths[index])
 	}
-	v.dataRowsColumnWidths = append([]float32{}, widths...)
-	if !isSingleDataRowsTableObject(v.dataRowsContainer.Objects, v.dataRowsTable) {
-		v.dataRowsContainer.Objects = []fyne.CanvasObject{v.dataRowsTable}
-		v.dataRowsContainer.Refresh()
+	v.data.dataRowsColumnWidths = append([]float32{}, widths...)
+	if !isSingleDataRowsTableObject(v.data.dataRowsContainer.Objects, v.data.dataRowsTable) {
+		v.data.dataRowsContainer.Objects = []fyne.CanvasObject{v.data.dataRowsTable}
+		v.data.dataRowsContainer.Refresh()
 	}
-	v.dataRowsTable.Refresh()
+	v.data.dataRowsTable.Refresh()
 	v.applyDataGridSamplingStatusHint(sampledRows, len(rows), clippedColumns, renderPolicy)
 	v.refreshDataRowsStatus()
 }
 
 func (v *View) ensureDataRowsTable() {
-	if v.dataRowsTable != nil {
+	if v.data.dataRowsTable != nil {
 		return
 	}
 	table := widget.NewTable(
 		func() (int, int) {
-			return len(v.dataRowsValues) + 1, len(v.dataRowsColumns)
+			return len(v.data.dataRowsValues) + 1, len(v.data.dataRowsColumns)
 		},
 		func() fyne.CanvasObject {
 			label := widget.NewLabel("")
-			label.Truncation = v.dataRowsRenderPolicy.Truncation
+			label.Truncation = v.data.dataRowsRenderPolicy.Truncation
 			return label
 		},
 		func(id widget.TableCellID, cell fyne.CanvasObject) {
 			label := cell.(*widget.Label)
-			label.Truncation = v.dataRowsRenderPolicy.Truncation
+			label.Truncation = v.data.dataRowsRenderPolicy.Truncation
 			if id.Row == 0 {
 				label.TextStyle = fyne.TextStyle{Bold: true}
-				if id.Col < len(v.dataRowsColumns) {
-					label.SetText(v.dataRowsColumns[id.Col])
+				if id.Col < len(v.data.dataRowsColumns) {
+					label.SetText(v.data.dataRowsColumns[id.Col])
 				} else {
 					label.SetText("")
 				}
@@ -127,60 +127,60 @@ func (v *View) ensureDataRowsTable() {
 			label.TextStyle = fyne.TextStyle{}
 			rowIndex := id.Row - 1
 			value := ""
-			if rowIndex >= 0 && rowIndex < len(v.dataRowsValues) && id.Col < len(v.dataRowsValues[rowIndex]) {
-				value = v.dataRowsValues[rowIndex][id.Col]
+			if rowIndex >= 0 && rowIndex < len(v.data.dataRowsValues) && id.Col < len(v.data.dataRowsValues[rowIndex]) {
+				value = v.data.dataRowsValues[rowIndex][id.Col]
 			}
 			label.SetText(value)
 		},
 	)
 	table.OnSelected = func(id widget.TableCellID) {
-		v.dataRowsSelectedRow = id.Row
-		v.dataRowsSelectedCol = id.Col
+		v.data.dataRowsSelectedRow = id.Row
+		v.data.dataRowsSelectedCol = id.Col
 		v.refreshDataRowsStatus()
 	}
 	table.StickyRowCount = 1
-	v.dataRowsTable = table
+	v.data.dataRowsTable = table
 }
 
 func (v *View) setDataRowsStatus(text string) {
-	if v.dataRowsStatus == nil {
+	if v.data.dataRowsStatus == nil {
 		return
 	}
-	v.dataRowsStatus.SetText(text)
+	v.data.dataRowsStatus.SetText(text)
 }
 
 func (v *View) refreshDataRowsStatus() {
-	if v.dataRowsStatus == nil {
+	if v.data.dataRowsStatus == nil {
 		return
 	}
-	v.dataRowsStatus.SetText(dataGridStatusLine(
-		len(v.dataRowsValues),
-		v.dataRowsOriginalRows,
-		len(v.dataRowsColumns),
-		v.dataRowsClippedColumns,
-		v.dataRowsSelectedRow,
-		v.dataRowsSelectedCol,
-		v.dataRowsSampledRows,
-		v.dataRowsRenderPolicy,
+	v.data.dataRowsStatus.SetText(dataGridStatusLine(
+		len(v.data.dataRowsValues),
+		v.data.dataRowsOriginalRows,
+		len(v.data.dataRowsColumns),
+		v.data.dataRowsClippedColumns,
+		v.data.dataRowsSelectedRow,
+		v.data.dataRowsSelectedCol,
+		v.data.dataRowsSampledRows,
+		v.data.dataRowsRenderPolicy,
 	))
 }
 
 func (v *View) copySelectedDataCell() {
 	if !v.copySelectedDataCellToClipboard() {
-		v.dataProfileStatus.SetText("Select a grid cell in Rows before copying.")
+		v.data.dataProfileStatus.SetText("Select a grid cell in Rows before copying.")
 		return
 	}
-	v.dataProfileStatus.SetText("Copied selected grid cell.")
+	v.data.dataProfileStatus.SetText("Copied selected grid cell.")
 }
 
 func (v *View) copySelectedDataRow() {
-	value, ok := dataGridRowTSV(v.dataRowsColumns, v.dataRowsValues, v.dataRowsSelectedRow)
+	value, ok := dataGridRowTSV(v.data.dataRowsColumns, v.data.dataRowsValues, v.data.dataRowsSelectedRow)
 	if !ok {
-		v.dataProfileStatus.SetText("Select a grid row in Rows before copying.")
+		v.data.dataProfileStatus.SetText("Select a grid row in Rows before copying.")
 		return
 	}
 	v.setClipboardContent(value)
-	v.dataProfileStatus.SetText("Copied selected grid row as TSV.")
+	v.data.dataProfileStatus.SetText("Copied selected grid row as TSV.")
 }
 
 func (v *View) copySelection() {
@@ -188,14 +188,14 @@ func (v *View) copySelection() {
 		return
 	}
 	if !v.copySelectedDataCellToClipboard() {
-		v.dataProfileStatus.SetText("Select a grid cell in Rows before copying.")
+		v.data.dataProfileStatus.SetText("Select a grid cell in Rows before copying.")
 		return
 	}
-	v.dataProfileStatus.SetText("Copied selected grid cell.")
+	v.data.dataProfileStatus.SetText("Copied selected grid cell.")
 }
 
 func (v *View) copySelectedDataCellToClipboard() bool {
-	value, ok := dataGridCellValue(v.dataRowsColumns, v.dataRowsValues, v.dataRowsSelectedRow, v.dataRowsSelectedCol)
+	value, ok := dataGridCellValue(v.data.dataRowsColumns, v.data.dataRowsValues, v.data.dataRowsSelectedRow, v.data.dataRowsSelectedCol)
 	if !ok {
 		return false
 	}
@@ -207,14 +207,14 @@ func (v *View) navigateDataGridSelection(rowDelta int, colDelta int) {
 	if !v.isBottomTabSelected("Data") {
 		return
 	}
-	if v.dataRowsTable == nil {
+	if v.data.dataRowsTable == nil {
 		return
 	}
 	nextRow, nextCol, ok := dataGridNextSelection(
-		v.dataRowsSelectedRow,
-		v.dataRowsSelectedCol,
-		len(v.dataRowsValues)+1,
-		len(v.dataRowsColumns),
+		v.data.dataRowsSelectedRow,
+		v.data.dataRowsSelectedCol,
+		len(v.data.dataRowsValues)+1,
+		len(v.data.dataRowsColumns),
 		rowDelta,
 		colDelta,
 	)
@@ -222,8 +222,8 @@ func (v *View) navigateDataGridSelection(rowDelta int, colDelta int) {
 		return
 	}
 	cell := widget.TableCellID{Row: nextRow, Col: nextCol}
-	v.dataRowsTable.Select(cell)
-	v.dataRowsTable.ScrollTo(cell)
+	v.data.dataRowsTable.Select(cell)
+	v.data.dataRowsTable.ScrollTo(cell)
 }
 
 func (v *View) navigateDataGridPage(step int) {
@@ -466,14 +466,14 @@ func dataGridWidthSampleBudget(rowCount int, colCount int) int {
 }
 
 func (v *View) applyDataGridSamplingStatusHint(sampledRows int, totalRows int, clippedColumns int, policy dataGridRenderPolicy) {
-	if v.dataProfileStatus == nil {
+	if v.data.dataProfileStatus == nil {
 		return
 	}
-	base := strings.TrimSpace(v.dataProfileStatus.Text)
+	base := strings.TrimSpace(v.data.dataProfileStatus.Text)
 	if base == "" {
 		return
 	}
-	v.dataProfileStatus.SetText(withDataGridSamplingStatusHint(base, sampledRows, totalRows, clippedColumns, policy.HideDivider))
+	v.data.dataProfileStatus.SetText(withDataGridSamplingStatusHint(base, sampledRows, totalRows, clippedColumns, policy.HideDivider))
 }
 
 func withDataGridSamplingStatusHint(base string, sampledRows int, totalRows int, clippedColumns int, denseMode bool) string {

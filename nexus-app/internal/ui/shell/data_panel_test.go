@@ -22,6 +22,23 @@ func testArtifact(relPath string) artifactsSvc.Artifact {
 	return artifactsSvc.Artifact{RelPath: relPath, GeneratedAt: now, CreatedAt: now}
 }
 
+func TestNewDataControllerOwnsInitialPanelState(t *testing.T) {
+	view := &View{}
+	controller := newDataController(view)
+	if controller.view != view {
+		t.Fatal("expected data controller to keep owning view reference")
+	}
+	if controller.dataProfileStatus == nil || controller.dataProfileDetail == nil || controller.dataQueryEntry == nil {
+		t.Fatal("expected data controller to initialize core widgets")
+	}
+	if controller.dataRowsSelectedRow != -1 || controller.dataRowsSelectedCol != -1 {
+		t.Fatalf("expected grid selection to start unset, got row=%d col=%d", controller.dataRowsSelectedRow, controller.dataRowsSelectedCol)
+	}
+	if controller.dataConnectorOptions == nil {
+		t.Fatal("expected connector option map to be initialized")
+	}
+}
+
 func TestFormatDatasetProfileIncludesColumnsAndJSONNotes(t *testing.T) {
 	output := formatDatasetProfile(datasetsSvc.Profile{
 		RelPath:   "data/events.json",

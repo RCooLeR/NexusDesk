@@ -26,19 +26,19 @@ const (
 func (v *View) listConnectorProfiles() {
 	profiles, err := v.loadConnectorProfiles()
 	if err != nil {
-		v.dataProfileStatus.SetText("External connector profiles are unavailable.")
+		v.data.dataProfileStatus.SetText("External connector profiles are unavailable.")
 		dialog.ShowError(err, v.window)
 		return
 	}
 	v.refreshConnectorProfileSelect(profiles)
-	v.dataProfileStatus.SetText(fmt.Sprintf("Loaded %d external connector profile(s).", len(profiles)))
+	v.data.dataProfileStatus.SetText(fmt.Sprintf("Loaded %d external connector profile(s).", len(profiles)))
 	v.setDataSummary(formatConnectorProfiles(profiles))
 	v.addActivity(fmt.Sprintf("Loaded %d external connector profile(s).", len(profiles)))
 }
 
 func (v *View) promptSaveConnectorProfile() {
 	if v.connectorProfileStore == nil {
-		v.dataProfileStatus.SetText("External connector profile store is unavailable.")
+		v.data.dataProfileStatus.SetText("External connector profile store is unavailable.")
 		return
 	}
 	base := v.selectedConnectorProfile()
@@ -113,12 +113,12 @@ func (v *View) promptSaveConnectorProfile() {
 			TimeoutSeconds: timeoutValue,
 		})
 		if err != nil {
-			v.dataProfileStatus.SetText("External connector profile save failed.")
+			v.data.dataProfileStatus.SetText("External connector profile save failed.")
 			dialog.ShowError(err, v.window)
 			return
 		}
-		v.dataConnectorProfileID = saved.ID
-		v.dataProfileStatus.SetText("Saved external connector profile " + saved.Name + ".")
+		v.data.dataConnectorProfileID = saved.ID
+		v.data.dataProfileStatus.SetText("Saved external connector profile " + saved.Name + ".")
 		v.addActivity("Saved external connector profile " + saved.Name + ".")
 		v.listConnectorProfiles()
 	}, v.window)
@@ -126,12 +126,12 @@ func (v *View) promptSaveConnectorProfile() {
 
 func (v *View) deleteSelectedConnectorProfile() {
 	if v.connectorProfileStore == nil {
-		v.dataProfileStatus.SetText("External connector profile store is unavailable.")
+		v.data.dataProfileStatus.SetText("External connector profile store is unavailable.")
 		return
 	}
-	selected := strings.TrimSpace(v.dataConnectorProfileID)
+	selected := strings.TrimSpace(v.data.dataConnectorProfileID)
 	if selected == "" {
-		v.dataProfileStatus.SetText("Select an external connector profile before deleting.")
+		v.data.dataProfileStatus.SetText("Select an external connector profile before deleting.")
 		return
 	}
 	dialog.ShowConfirm("Delete external connector profile", "Delete selected profile?", func(confirm bool) {
@@ -139,32 +139,32 @@ func (v *View) deleteSelectedConnectorProfile() {
 			return
 		}
 		if err := v.connectorProfileStore.Delete(selected); err != nil {
-			v.dataProfileStatus.SetText("External connector profile delete failed.")
+			v.data.dataProfileStatus.SetText("External connector profile delete failed.")
 			dialog.ShowError(err, v.window)
 			return
 		}
-		v.dataConnectorProfileID = ""
-		v.dataProfileStatus.SetText("Deleted external connector profile.")
+		v.data.dataConnectorProfileID = ""
+		v.data.dataProfileStatus.SetText("Deleted external connector profile.")
 		v.addActivity("Deleted external connector profile " + selected + ".")
 		v.listConnectorProfiles()
 	}, v.window)
 }
 
 func (v *View) validateExternalConnectorSQL() {
-	selected := strings.TrimSpace(v.dataConnectorProfileID)
+	selected := strings.TrimSpace(v.data.dataConnectorProfileID)
 	if selected == "" {
-		v.dataProfileStatus.SetText("Select an external connector profile before validating SQL.")
+		v.data.dataProfileStatus.SetText("Select an external connector profile before validating SQL.")
 		return
 	}
-	normalized, err := dbconnectorSvc.NormalizeExternalReadOnlySQL(v.dataQueryEntry.Text)
+	normalized, err := dbconnectorSvc.NormalizeExternalReadOnlySQL(v.data.dataQueryEntry.Text)
 	if err != nil {
-		v.dataProfileStatus.SetText("External connector SQL validation failed.")
+		v.data.dataProfileStatus.SetText("External connector SQL validation failed.")
 		dialog.ShowError(err, v.window)
 		return
 	}
 	profile := v.selectedConnectorProfile()
 	name := firstNonEmptyString(profile.Name, selected)
-	v.dataProfileStatus.SetText("External connector SQL is read-only and valid for " + name + ".")
+	v.data.dataProfileStatus.SetText("External connector SQL is read-only and valid for " + name + ".")
 	v.setDataSummary(formatConnectorSQLValidation(name, normalized))
 	v.addActivity("Validated read-only external connector SQL for " + name + ".")
 }
@@ -180,7 +180,7 @@ func (v *View) testSelectedConnectorProfile() {
 	v.jobService.AppendLog(job.ID, "Kind: "+profile.Kind)
 	timeout := valueOrDefault(profile.TimeoutSeconds, dbconnectorDefaultTimeoutSeconds())
 	ctx, cancel := context.WithTimeout(jobCtx, time.Duration(timeout)*time.Second)
-	v.dataProfileStatus.SetText("Testing external connector profile " + profile.Name + " as " + job.ID + ".")
+	v.data.dataProfileStatus.SetText("Testing external connector profile " + profile.Name + " as " + job.ID + ".")
 	v.addActivity("Started " + job.ID + ": " + jobLabel + ".")
 	v.refreshJobs()
 	go func() {
@@ -203,7 +203,7 @@ func (v *View) inspectSelectedConnectorProfile() {
 	v.jobService.AppendLog(job.ID, "Kind: "+profile.Kind)
 	timeout := valueOrDefault(profile.TimeoutSeconds, dbconnectorDefaultTimeoutSeconds())
 	ctx, cancel := context.WithTimeout(jobCtx, time.Duration(timeout)*time.Second)
-	v.dataProfileStatus.SetText("Inspecting external connector profile " + profile.Name + " as " + job.ID + ".")
+	v.data.dataProfileStatus.SetText("Inspecting external connector profile " + profile.Name + " as " + job.ID + ".")
 	v.addActivity("Started " + job.ID + ": " + jobLabel + ".")
 	v.refreshJobs()
 	go func() {
@@ -222,7 +222,7 @@ func (v *View) runSelectedConnectorProfileQuery() {
 	}
 	request := dbconnectorSvc.NormalizeConnectorQueryRequest(dbconnectorSvc.ConnectorQueryRequest{
 		ProfileID:      profile.ID,
-		SQL:            v.dataQueryEntry.Text,
+		SQL:            v.data.dataQueryEntry.Text,
 		ResultLimit:    profile.ResultLimit,
 		TimeoutSeconds: profile.TimeoutSeconds,
 	})
@@ -233,7 +233,7 @@ func (v *View) runSelectedConnectorProfileQuery() {
 	started := time.Now().UTC()
 	ctx, cancel := context.WithTimeout(jobCtx, time.Duration(request.TimeoutSeconds)*time.Second)
 	queryID := v.startConnectorQuery(cancel)
-	v.dataProfileStatus.SetText(fmt.Sprintf("%s: external query running, cap %d, timeout %ds.", profile.Name, request.ResultLimit, request.TimeoutSeconds))
+	v.data.dataProfileStatus.SetText(fmt.Sprintf("%s: external query running, cap %d, timeout %ds.", profile.Name, request.ResultLimit, request.TimeoutSeconds))
 	v.addActivity("Started external connector query for " + profile.Name + ".")
 	v.refreshJobs()
 	go func() {
@@ -246,16 +246,16 @@ func (v *View) runSelectedConnectorProfileQuery() {
 }
 
 func (v *View) cancelActiveConnectorQuery() {
-	v.dataConnectorQueryMu.Lock()
-	cancel := v.dataConnectorCancel
-	queryID := v.dataConnectorQueryID
-	v.dataConnectorQueryMu.Unlock()
+	v.data.dataConnectorQueryMu.Lock()
+	cancel := v.data.dataConnectorCancel
+	queryID := v.data.dataConnectorQueryID
+	v.data.dataConnectorQueryMu.Unlock()
 	if cancel == nil {
-		v.dataProfileStatus.SetText("No external connector query is currently running.")
+		v.data.dataProfileStatus.SetText("No external connector query is currently running.")
 		return
 	}
 	cancel()
-	v.dataProfileStatus.SetText("External connector query cancellation requested.")
+	v.data.dataProfileStatus.SetText("External connector query cancellation requested.")
 	v.addActivity("External connector query cancel requested: " + queryID + ".")
 }
 
@@ -275,27 +275,27 @@ func (v *View) finishConnectorQuery(jobID string, queryID string, profile dbconn
 	if err != nil {
 		if isSQLiteQueryCanceled(err) {
 			v.jobService.Finish(jobID, jobsSvc.StatusCanceled, "External connector query cancelled.", nil)
-			v.dataProfileStatus.SetText("External connector query cancelled for " + profile.Name)
+			v.data.dataProfileStatus.SetText("External connector query cancelled for " + profile.Name)
 			v.addActivity("Cancelled external connector query for " + profile.Name + ".")
 			v.refreshJobs()
 			return
 		}
 		v.jobService.Finish(jobID, jobsSvc.StatusFailed, "External connector query failed.", err)
-		v.dataProfileStatus.SetText("External connector query failed for " + profile.Name)
+		v.data.dataProfileStatus.SetText("External connector query failed for " + profile.Name)
 		dialog.ShowError(err, v.window)
 		v.refreshJobs()
 		return
 	}
 	v.jobService.AppendLog(jobID, fmt.Sprintf("Rows: shown=%d total=%d duration=%dms", len(result.Rows), result.TotalRows, result.DurationMs))
 	v.jobService.Finish(jobID, jobsSvc.StatusSuccess, firstNonEmptyString(result.Message, "External connector query completed."), nil)
-	v.dataProfileStatus.SetText(result.Message)
+	v.data.dataProfileStatus.SetText(result.Message)
 	v.setDataSummary(formatConnectorQueryResult(result))
 	v.setDataRowsGrid(result.Columns, result.Rows)
-	v.dataLastConnectorQuery = result
-	v.dataLastQuery = datasetsQueryFromConnectorQuery(result)
-	v.dataLastSQLiteQuery = dbconnectorSvc.SQLiteQueryResult{}
-	v.dataLastChart = datasetsSvc.ChartResult{}
-	v.dataLastDashboard = datasetsSvc.DashboardResult{}
+	v.data.dataLastConnectorQuery = result
+	v.data.dataLastQuery = datasetsQueryFromConnectorQuery(result)
+	v.data.dataLastSQLiteQuery = dbconnectorSvc.SQLiteQueryResult{}
+	v.data.dataLastChart = datasetsSvc.ChartResult{}
+	v.data.dataLastDashboard = datasetsSvc.DashboardResult{}
 	v.addActivity("Ran external connector query for " + profile.Name + ".")
 	v.refreshJobs()
 }
@@ -312,33 +312,33 @@ func (v *View) loadConnectorProfiles() ([]dbconnectorSvc.ConnectorProfile, error
 }
 
 func (v *View) refreshConnectorProfileSelect(profiles []dbconnectorSvc.ConnectorProfile) {
-	if v.dataConnectorProfile == nil {
+	if v.data.dataConnectorProfile == nil {
 		return
 	}
-	v.dataConnectorOptions = map[string]string{}
+	v.data.dataConnectorOptions = map[string]string{}
 	options := make([]string, 0, len(profiles))
 	selectedLabel := ""
 	for _, profile := range profiles {
 		label := fmt.Sprintf("%s [%s]", firstNonEmptyString(profile.Name, profile.ID), profile.Kind)
 		options = append(options, label)
-		v.dataConnectorOptions[label] = profile.ID
-		if profile.ID == v.dataConnectorProfileID {
+		v.data.dataConnectorOptions[label] = profile.ID
+		if profile.ID == v.data.dataConnectorProfileID {
 			selectedLabel = label
 		}
 	}
-	v.dataConnectorProfile.Options = options
-	v.dataConnectorProfile.Refresh()
+	v.data.dataConnectorProfile.Options = options
+	v.data.dataConnectorProfile.Refresh()
 	if selectedLabel != "" {
-		v.dataConnectorProfile.SetSelected(selectedLabel)
+		v.data.dataConnectorProfile.SetSelected(selectedLabel)
 		return
 	}
 	if len(options) == 0 {
-		v.dataConnectorProfile.ClearSelected()
-		v.dataConnectorProfileID = ""
+		v.data.dataConnectorProfile.ClearSelected()
+		v.data.dataConnectorProfileID = ""
 		return
 	}
-	v.dataConnectorProfile.SetSelected(options[0])
-	v.dataConnectorProfileID = v.dataConnectorOptions[options[0]]
+	v.data.dataConnectorProfile.SetSelected(options[0])
+	v.data.dataConnectorProfileID = v.data.dataConnectorOptions[options[0]]
 }
 
 func (v *View) selectedConnectorProfile() dbconnectorSvc.ConnectorProfile {
@@ -346,7 +346,7 @@ func (v *View) selectedConnectorProfile() dbconnectorSvc.ConnectorProfile {
 	if err != nil {
 		return dbconnectorSvc.ConnectorProfile{}
 	}
-	selected := strings.TrimSpace(v.dataConnectorProfileID)
+	selected := strings.TrimSpace(v.data.dataConnectorProfileID)
 	if selected == "" {
 		return dbconnectorSvc.ConnectorProfile{}
 	}
@@ -359,14 +359,14 @@ func (v *View) selectedConnectorProfile() dbconnectorSvc.ConnectorProfile {
 }
 
 func (v *View) selectedConnectorProfileWithGuard() (dbconnectorSvc.ConnectorProfile, bool) {
-	selected := strings.TrimSpace(v.dataConnectorProfileID)
+	selected := strings.TrimSpace(v.data.dataConnectorProfileID)
 	if selected == "" {
-		v.dataProfileStatus.SetText("Select an external connector profile first.")
+		v.data.dataProfileStatus.SetText("Select an external connector profile first.")
 		return dbconnectorSvc.ConnectorProfile{}, false
 	}
 	profile := v.selectedConnectorProfile()
 	if strings.TrimSpace(profile.ID) == "" {
-		v.dataProfileStatus.SetText("Selected external connector profile is unavailable.")
+		v.data.dataProfileStatus.SetText("Selected external connector profile is unavailable.")
 		return dbconnectorSvc.ConnectorProfile{}, false
 	}
 	return profile, true
@@ -374,11 +374,11 @@ func (v *View) selectedConnectorProfileWithGuard() (dbconnectorSvc.ConnectorProf
 
 func (v *View) startConnectorQuery(cancel context.CancelFunc) string {
 	id := fmt.Sprintf("connector-%d", time.Now().UTC().UnixNano())
-	v.dataConnectorQueryMu.Lock()
-	previousCancel := v.dataConnectorCancel
-	v.dataConnectorCancel = cancel
-	v.dataConnectorQueryID = id
-	v.dataConnectorQueryMu.Unlock()
+	v.data.dataConnectorQueryMu.Lock()
+	previousCancel := v.data.dataConnectorCancel
+	v.data.dataConnectorCancel = cancel
+	v.data.dataConnectorQueryID = id
+	v.data.dataConnectorQueryMu.Unlock()
 	if previousCancel != nil {
 		previousCancel()
 	}
@@ -386,13 +386,13 @@ func (v *View) startConnectorQuery(cancel context.CancelFunc) string {
 }
 
 func (v *View) clearConnectorQuery(id string) {
-	v.dataConnectorQueryMu.Lock()
-	defer v.dataConnectorQueryMu.Unlock()
-	if v.dataConnectorQueryID != id {
+	v.data.dataConnectorQueryMu.Lock()
+	defer v.data.dataConnectorQueryMu.Unlock()
+	if v.data.dataConnectorQueryID != id {
 		return
 	}
-	v.dataConnectorCancel = nil
-	v.dataConnectorQueryID = ""
+	v.data.dataConnectorCancel = nil
+	v.data.dataConnectorQueryID = ""
 }
 
 func dbconnectorDefaultResultLimit() int {
@@ -616,12 +616,12 @@ func (v *View) finishConnectorProfileTestJob(jobID string, profile dbconnectorSv
 		if isSQLiteQueryCanceled(err) {
 			v.jobService.Finish(jobID, jobsSvc.StatusCanceled, "External connector profile test cancelled.", nil)
 			v.persistDatasetDependency(connectorProfileTestDependencyRecord(jobID, profile, status, "canceled", err))
-			v.dataProfileStatus.SetText("External connector profile test cancelled for " + profile.Name + ".")
+			v.data.dataProfileStatus.SetText("External connector profile test cancelled for " + profile.Name + ".")
 			v.addActivity("Cancelled external connector profile test for " + profile.Name + ".")
 		} else {
 			v.jobService.Finish(jobID, jobsSvc.StatusFailed, "External connector profile test failed.", err)
 			v.persistDatasetDependency(connectorProfileTestDependencyRecord(jobID, profile, status, "failed", err))
-			v.dataProfileStatus.SetText("External connector profile test failed for " + profile.Name + ".")
+			v.data.dataProfileStatus.SetText("External connector profile test failed for " + profile.Name + ".")
 			dialog.ShowError(err, v.window)
 		}
 		v.refreshJobs()
@@ -630,7 +630,7 @@ func (v *View) finishConnectorProfileTestJob(jobID string, profile dbconnectorSv
 	v.jobService.AppendLog(jobID, "Engine: "+status.Engine)
 	v.jobService.Finish(jobID, jobsSvc.StatusSuccess, firstNonEmptyString(status.Message, "External connector profile test succeeded."), nil)
 	v.persistDatasetDependency(connectorProfileTestDependencyRecord(jobID, profile, status, "success", nil))
-	v.dataProfileStatus.SetText(status.Message)
+	v.data.dataProfileStatus.SetText(status.Message)
 	v.setDataSummary(formatConnectorProfileStatus(status))
 	v.addActivity("Tested external connector profile " + profile.Name + ".")
 	v.refreshJobs()
@@ -641,12 +641,12 @@ func (v *View) finishConnectorProfileInspectJob(jobID string, profile dbconnecto
 		if isSQLiteQueryCanceled(err) {
 			v.jobService.Finish(jobID, jobsSvc.StatusCanceled, "External connector profile inspection cancelled.", nil)
 			v.persistDatasetDependency(connectorProfileInspectDependencyRecord(jobID, profile, metadata, "canceled", err))
-			v.dataProfileStatus.SetText("External connector profile inspection cancelled for " + profile.Name + ".")
+			v.data.dataProfileStatus.SetText("External connector profile inspection cancelled for " + profile.Name + ".")
 			v.addActivity("Cancelled external connector profile inspection for " + profile.Name + ".")
 		} else {
 			v.jobService.Finish(jobID, jobsSvc.StatusFailed, "External connector profile inspection failed.", err)
 			v.persistDatasetDependency(connectorProfileInspectDependencyRecord(jobID, profile, metadata, "failed", err))
-			v.dataProfileStatus.SetText("External connector profile inspection failed for " + profile.Name + ".")
+			v.data.dataProfileStatus.SetText("External connector profile inspection failed for " + profile.Name + ".")
 			dialog.ShowError(err, v.window)
 		}
 		v.refreshJobs()
@@ -655,7 +655,7 @@ func (v *View) finishConnectorProfileInspectJob(jobID string, profile dbconnecto
 	v.jobService.AppendLog(jobID, fmt.Sprintf("Tables=%d Views=%d Relationships=%d", len(metadata.Tables), len(metadata.Views), len(metadata.Relationships)))
 	v.jobService.Finish(jobID, jobsSvc.StatusSuccess, firstNonEmptyString(metadata.Message, "External connector profile inspection succeeded."), nil)
 	v.persistDatasetDependency(connectorProfileInspectDependencyRecord(jobID, profile, metadata, "success", nil))
-	v.dataProfileStatus.SetText(metadata.Message)
+	v.data.dataProfileStatus.SetText(metadata.Message)
 	v.setDataSummary(formatConnectorMetadata(metadata))
 	v.addActivity("Inspected external connector profile " + profile.Name + ".")
 	v.refreshJobs()
