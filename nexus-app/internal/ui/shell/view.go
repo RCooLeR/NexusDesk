@@ -133,8 +133,7 @@ type View struct {
 	taskStatus               *widget.Label
 	taskOutput               *widget.Entry
 	jobs                     *jobsController
-	rollbackResults          *fyne.Container
-	rollbackStatus           *widget.Label
+	rollbacks                *rollbackController
 	artifactResults          *fyne.Container
 	artifactStatus           *widget.Label
 	artifactPreview          *widget.Entry
@@ -333,8 +332,6 @@ func NewWithStartupStatus(window fyne.Window, startupStatus startupSvc.Status) *
 		taskResults:             container.NewVBox(widget.NewLabel("Discover workspace tasks to run tests, scripts, or Compose checks.")),
 		taskStatus:              widget.NewLabel("No tasks discovered."),
 		taskOutput:              taskOutput,
-		rollbackResults:         container.NewVBox(widget.NewLabel("Refresh rollback records to inspect undo points.")),
-		rollbackStatus:          widget.NewLabel("Rollback records have not been loaded."),
 		artifactResults:         container.NewVBox(widget.NewLabel("Refresh artifacts to inspect generated task reports.")),
 		artifactStatus:          widget.NewLabel("Artifacts have not been loaded."),
 		artifactPreview:         artifactPreview,
@@ -370,6 +367,7 @@ func NewWithStartupStatus(window fyne.Window, startupStatus startupSvc.Status) *
 	}
 	view.search = newSearchController(view)
 	view.jobs = newJobsController(view)
+	view.rollbacks = newRollbackController(view)
 	welcomeItem.Content = view.newWelcomePanel()
 	view.configureEditorTabs()
 	view.refreshStatusBar()

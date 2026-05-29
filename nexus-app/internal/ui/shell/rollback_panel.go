@@ -12,54 +12,80 @@ import (
 	workspaceSvc "nexusdesk/internal/services/workspace"
 )
 
+type rollbackController struct {
+	view    *View
+	results *fyne.Container
+	status  *widget.Label
+}
+
+func newRollbackController(view *View) *rollbackController {
+	return &rollbackController{
+		view:    view,
+		results: container.NewVBox(widget.NewLabel("Refresh rollback records to inspect undo points.")),
+		status:  widget.NewLabel("Rollback records have not been loaded."),
+	}
+}
+
 func (v *View) newRollbackPanel() fyne.CanvasObject {
-	refresh := widget.NewButtonWithIcon("Refresh", theme.ViewRefreshIcon(), v.refreshRollbacks)
-	header := container.NewBorder(nil, nil, v.rollbackStatus, refresh)
-	scroll := container.NewScroll(v.rollbackResults)
+	return v.rollbacks.Panel()
+}
+
+func (v *View) refreshRollbacks() {
+	v.rollbacks.Refresh()
+}
+
+func (v *View) confirmRollback(record workspaceSvc.RollbackRecord) {
+	v.rollbacks.Confirm(record)
+}
+
+func (c *rollbackController) Panel() fyne.CanvasObject {
+	refresh := widget.NewButtonWithIcon("Refresh", theme.ViewRefreshIcon(), c.Refresh)
+	header := container.NewBorder(nil, nil, c.status, refresh)
+	scroll := container.NewScroll(c.results)
 	scroll.SetMinSize(fyne.NewSize(240, 110))
 	return container.NewBorder(header, nil, nil, nil, scroll)
 }
 
-func (v *View) refreshRollbacks() {
-	workspace := v.state.Workspace()
+func (c *rollbackController) Refresh() {
+	workspace := c.view.state.Workspace()
 	if workspace.Root == "" {
-		v.rollbackStatus.SetText("Open a workspace before reading rollback records.")
-		v.addActivity("Open a workspace before reading rollback records.")
+		c.status.SetText("Open a workspace before reading rollback records.")
+		c.view.addActivity("Open a workspace before reading rollback records.")
 		return
 	}
-	records, err := v.workspaceService.ListRollbacks(workspace.Root)
+	records, err := c.view.workspaceService.ListRollbacks(workspace.Root)
 	if err != nil {
-		dialog.ShowError(err, v.window)
+		dialog.ShowError(err, c.view.window)
 		return
 	}
-	v.rollbackStatus.SetText(fmt.Sprintf("%d rollback record(s)", len(records)))
-	v.rollbackResults.Objects = rollbackRows(records, v.confirmRollback)
-	v.rollbackResults.Refresh()
-	v.addActivity(fmt.Sprintf("Loaded %d rollback record(s).", len(records)))
+	c.status.SetText(fmt.Sprintf("%d rollback record(s)", len(records)))
+	c.results.Objects = rollbackRows(records, c.Confirm)
+	c.results.Refresh()
+	c.view.addActivity(fmt.Sprintf("Loaded %d rollback record(s).", len(records)))
 }
 
-func (v *View) confirmRollback(record workspaceSvc.RollbackRecord) {
-	workspace := v.state.Workspace()
+func (c *rollbackController) Confirm(record workspaceSvc.RollbackRecord) {
+	workspace := c.view.state.Workspace()
 	if workspace.Root == "" {
 		return
 	}
 	if record.Status == "applied" {
-		v.addActivity("Rollback already applied: " + record.ID)
+		c.view.addActivity("Rollback already applied: " + record.ID)
 		return
 	}
 	dialog.ShowConfirm("Apply rollback", rollbackConfirmText(record), func(confirm bool) {
 		if !confirm {
 			return
 		}
-		result, err := v.workspaceService.ApplyRollback(workspace.Root, record.ID)
+		result, err := c.view.workspaceService.ApplyRollback(workspace.Root, record.ID)
 		if err != nil {
-			dialog.ShowError(err, v.window)
+			dialog.ShowError(err, c.view.window)
 			return
 		}
-		v.addActivity(result.Message)
-		v.refreshRollbacks()
-		v.refreshWorkspace()
-	}, v.window)
+		c.view.addActivity(result.Message)
+		c.Refresh()
+		c.view.refreshWorkspace()
+	}, c.view.window)
 }
 
 func rollbackRows(records []workspaceSvc.RollbackRecord, onApply func(workspaceSvc.RollbackRecord)) []fyne.CanvasObject {
