@@ -61,6 +61,22 @@ func TestNexusThemeDensitySizesStayCompact(t *testing.T) {
 	}
 }
 
+func TestNexusThemeComfortableDensitySizes(t *testing.T) {
+	nexusTheme := NexusTheme{Density: DensityComfortable}
+	if got := nexusTheme.Size(fynetheme.SizeNamePadding); got != 12 {
+		t.Fatalf("expected comfortable padding 12, got %f", got)
+	}
+	if got := nexusTheme.Size(fynetheme.SizeNameInnerPadding); got != 8 {
+		t.Fatalf("expected comfortable inner padding 8, got %f", got)
+	}
+}
+
+func TestDensityForModeFallsBackToCompact(t *testing.T) {
+	if got := DensityForMode(DensityMode("unknown")); got != DensityForMode(DensityCompact) {
+		t.Fatalf("expected unknown density to fall back to compact, got %#v", got)
+	}
+}
+
 func assertOpaque(t *testing.T, label string, value color.NRGBA) {
 	t.Helper()
 	if value.A != 255 {

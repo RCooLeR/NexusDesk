@@ -565,7 +565,7 @@ The checklist below is intentionally large. `tracker.md` should keep task-level 
 ### 7.4 P1: JetBrains-Like UI Polish
 
 - [x] Define final native theme tokens: backgrounds, borders, text hierarchy, accent colors, warnings, success/error, selection, focus ring.
-- [ ] Define compact density and comfortable density modes.
+- [x] Define compact density and comfortable density modes.
 - [ ] Polish top menu to include File, Edit, View, Navigate, Code, Refactor, Run, Tools, Help where supported.
 - [ ] Polish top toolbar with workspace, branch, run/task, provider/model status, search, settings.
 - [ ] Convert crowded bottom tabs into grouped tool windows.

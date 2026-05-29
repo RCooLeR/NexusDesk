@@ -36,6 +36,7 @@ Summary:
 - The highest-priority unfinished work is migration and production readiness, not new top-level studios: applying durable slow-job routing to the remaining slow workflows, richer DOCX/PPTX template variants and cross-suite smoke beyond current native export/theme/validation baselines, deeper assistant retrieval quality beyond deterministic source coverage, signed packaging/installer validation, and native UI polish.
 - Final UI direction is a professional JetBrains-like native workbench: top menu/toolbar, left project/tool rail, central tabbed editor, right integrated assistant, grouped bottom tool windows, compact dark theme, strong keyboard workflows, DataGrip-style data surfaces, and trust-building settings/diagnostics.
 - Native theme token baseline is defined in `docs/26_NATIVE_THEME_TOKENS.md` and implemented in `nexus-app/internal/ui/theme`; future UI polish should reuse those tokens rather than adding ad hoc colors.
+- Compact and comfortable density modes are defined in `nexus-app/internal/ui/theme`; compact remains the production default while comfortable is ready for future preferences/onboarding work.
 - `app-wails/` should remain as reference until the remaining native parity blockers are completed or explicitly moved out of Native Parity Beta.
 
 Production direction:

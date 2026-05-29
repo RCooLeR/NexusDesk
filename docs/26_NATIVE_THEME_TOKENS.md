@@ -62,16 +62,22 @@ NexusDesk should feel like a calm professional IDE/workbench, not a browser dash
 
 ## Density
 
-The current compact baseline uses:
+The default runtime mode is `compact`, matching the reference screenshots and keeping code/data-heavy surfaces efficient:
 
 - outer padding: `8`;
 - inner padding: `6`.
 
-Future comfortable-density work should add an explicit mode instead of changing these defaults silently.
+The `comfortable` mode is defined for future preferences/onboarding work and keeps the same palette while giving forms, dialogs, and first-run surfaces more breathing room:
+
+- outer padding: `12`;
+- inner padding: `8`.
+
+Unknown density values fall back to compact so a malformed or future setting never surprises the workbench with accidental oversized spacing.
 
 ## Rules For Future UI Work
 
 - Prefer Fyne theme names or exported palette tokens instead of hardcoded local colors.
+- Prefer `DensityForMode` instead of hand-coded padding values when a surface needs to align with the global density baseline.
 - Keep semantic status colors consistent across Jobs, Diagnostics, Problems, Settings, Agent Audit, and Artifacts.
 - Use `Panel`/`PanelRaised`/`Editor` to create hierarchy before adding brighter accents.
 - Use accent color sparingly for active or primary affordances, not decoration.

@@ -7,7 +7,21 @@ import (
 	"fyne.io/fyne/v2/theme"
 )
 
-type NexusTheme struct{}
+type DensityMode string
+
+const (
+	DensityCompact     DensityMode = "compact"
+	DensityComfortable DensityMode = "comfortable"
+)
+
+type Density struct {
+	Padding      float32
+	InnerPadding float32
+}
+
+type NexusTheme struct {
+	Density DensityMode
+}
 
 type Palette struct {
 	Background        color.NRGBA
@@ -67,6 +81,15 @@ var jetBrainsDarkPalette = Palette{
 
 func JetBrainsDarkPalette() Palette {
 	return jetBrainsDarkPalette
+}
+
+func DensityForMode(mode DensityMode) Density {
+	switch mode {
+	case DensityComfortable:
+		return Density{Padding: 12, InnerPadding: 8}
+	default:
+		return Density{Padding: 8, InnerPadding: 6}
+	}
 }
 
 func (NexusTheme) Color(name fyne.ThemeColorName, variant fyne.ThemeVariant) color.Color {
@@ -131,12 +154,13 @@ func (NexusTheme) Icon(name fyne.ThemeIconName) fyne.Resource {
 	return theme.DefaultTheme().Icon(name)
 }
 
-func (NexusTheme) Size(name fyne.ThemeSizeName) float32 {
+func (n NexusTheme) Size(name fyne.ThemeSizeName) float32 {
+	density := DensityForMode(n.Density)
 	switch name {
 	case theme.SizeNamePadding:
-		return 8
+		return density.Padding
 	case theme.SizeNameInnerPadding:
-		return 6
+		return density.InnerPadding
 	default:
 		return theme.DefaultTheme().Size(name)
 	}
