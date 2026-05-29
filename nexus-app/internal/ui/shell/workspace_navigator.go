@@ -46,9 +46,11 @@ func (v *View) newWorkspaceNavigator() fyne.CanvasObject {
 	tree, store := newWorkspaceTree(v.state, v.workspaceService, v.gitFileBadges, func(node domain.WorkspaceNode) {
 		summary.SetText(navigatorSelectionSummary(node.RelPath))
 		v.openWorkspaceNode(node)
+		v.refreshStatusBar()
 	}, func(node domain.WorkspaceNode, event *fyne.PointEvent) {
 		v.state.SetSelectedPath(node.RelPath)
 		summary.SetText(navigatorSelectionSummary(node.RelPath))
+		v.refreshStatusBar()
 		v.showNavigatorContextMenu(node, event)
 	}, func(string, domain.ScanSummary) {
 		if refreshVisibility != nil {

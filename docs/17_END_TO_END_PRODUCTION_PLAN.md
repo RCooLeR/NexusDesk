@@ -147,13 +147,13 @@ Already available:
 - Renders lazy project tree with ignored-path handling, entry caps, refresh, reveal, collapse, and context actions.
 - Supports single-file open and quick-open workflows.
 - Keeps folder open fast by avoiding automatic expensive or external operations.
-- Provides menus, shortcuts, command palette baseline, activity, status, bottom panels, and assistant integration.
+- Provides menus, shortcuts, command palette baseline, activity, native status bar, bottom panels, and assistant integration.
 
 Planned/remaining:
 
 - More JetBrains-like tool-window grouping and rail polish.
 - Continue polishing the workspace home surface after the first-run readiness cockpit baseline.
-- Status bar and global health indicators that feel productized.
+- Continued global health indicator polish beyond the first native status bar.
 - More consistent keyboard navigation/focus behavior across all panes.
 
 ### 4.2 Editor And Code Navigation
@@ -570,7 +570,7 @@ The checklist below is intentionally large. `tracker.md` should keep task-level 
 - [ ] Polish top toolbar with workspace, branch, run/task, provider/model status, search, settings.
 - [ ] Convert crowded bottom tabs into grouped tool windows.
 - [ ] Add left/right tool-window rails with consistent icons, labels, shortcuts, and active states.
-- [ ] Add status bar with workspace, provider, branch, jobs, warnings, encoding, line ending, app version.
+- [x] Add status bar with workspace, provider, branch from last manual Git refresh, jobs, warnings, selected path, encoding, line ending, and app version.
 - [ ] Improve Settings into searchable grouped preferences with inline validation.
 - [x] Improve onboarding Home tab with recent workspaces, model setup, safety explanation, and first actions.
 - [ ] Improve assistant panel layout: Ask/Agent modes, sources, approvals, diagnostics, footer evidence, run history.

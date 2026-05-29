@@ -84,6 +84,7 @@ func (v *View) refreshGitStatus() {
 }
 
 func (v *View) applyGitStatus(status gitSvc.Status) {
+	v.gitStatusSnapshot = status
 	v.gitStatus.SetText(gitStatusLabel(status))
 	v.gitResults.Objects = v.gitRows(status)
 	v.gitResults.Refresh()
@@ -91,6 +92,7 @@ func (v *View) applyGitStatus(status gitSvc.Status) {
 	if v.state.Workspace().Root != "" {
 		v.refreshNavigator()
 	}
+	v.refreshStatusBar()
 }
 
 func (v *View) openGitDiff(path string) {

@@ -23,7 +23,7 @@ The app can already:
 - preview common files and documents;
 - safely edit text/code with rollback records;
 - search paths/text and scan lightweight problems;
-- use quick-open, command palette, breadcrumbs, split preview, find/replace, formatting, outline, document map, go-to-symbol, local definition, bounded workspace definition fallback, references search, syntax mirror, cursor-aware token/symbol status, and live draft diagnostics;
+- use quick-open, command palette, native IDE-style status bar, breadcrumbs, split preview, find/replace, formatting, outline, document map, go-to-symbol, local definition, bounded workspace definition fallback, references search, syntax mirror, cursor-aware token/symbol status, and live draft diagnostics;
 - inspect Git status/diffs and stage files or hunks through explicit actions;
 - discover and run bounded project tasks;
 - profile/query local datasets and workspace SQLite files;

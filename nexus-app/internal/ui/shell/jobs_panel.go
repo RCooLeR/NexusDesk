@@ -30,6 +30,7 @@ func (v *View) refreshJobs() {
 	v.jobStatus.SetText(fmt.Sprintf("%d job(s)", len(jobs)))
 	v.jobResults.Objects = jobRows(jobs, v.cancelJob, v.confirmRetryJob, v.openJobOutput, v.taskRunsByJob(), v.artifactOutputsByJob())
 	v.jobResults.Refresh()
+	v.refreshStatusBar()
 }
 
 func (v *View) cancelJob(id string) {

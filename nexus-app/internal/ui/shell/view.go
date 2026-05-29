@@ -50,6 +50,7 @@ type View struct {
 	taskService              *tasksSvc.Service
 	editorSession            *editorSvc.Session
 	status                   *widget.Label
+	gitStatusSnapshot        gitSvc.Status
 	navigator                *fyne.Container
 	navigatorTree            *widget.Tree
 	navigatorStore           *treeStore
@@ -358,6 +359,7 @@ func NewWithStartupStatus(window fyne.Window, startupStatus startupSvc.Status) *
 	}
 	welcomeItem.Content = view.newWelcomePanel()
 	view.configureEditorTabs()
+	view.refreshStatusBar()
 	return view
 }
 
@@ -368,7 +370,7 @@ func (v *View) Canvas() fyne.CanvasObject {
 	workbenchTop := container.NewBorder(v.newToolbar(), nil, v.navigator, nil, mainSplit)
 	workbench := container.NewVSplit(workbenchTop, v.newBottomPanel())
 	workbench.SetOffset(0.68)
-	return container.NewBorder(nil, v.status, rail, nil, workbench)
+	return container.NewBorder(nil, v.newStatusBar(), rail, nil, workbench)
 }
 
 func (v *View) historyService() (*historySvc.Service, error) {

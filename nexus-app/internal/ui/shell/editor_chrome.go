@@ -162,6 +162,7 @@ func (v *View) openEditorBreadcrumb(relPath string) {
 		return
 	}
 	v.state.SetSelectedPath(relPath)
+	v.refreshStatusBar()
 	v.refreshNavigatorTargets(relPath)
 	if selectedWorkspaceNodeKind(workspace, relPath) == domain.NodeDirectory || path.Ext(relPath) == "" {
 		v.addActivity("Selected folder " + relPath + " from editor breadcrumbs.")
@@ -223,6 +224,7 @@ func (v *View) saveEditorDraft(tabID string) {
 		item.Content = v.newEditorPanel(next, preview)
 	}
 	v.updateEditorTabState(next)
+	v.refreshStatusBar()
 	v.addActivity(proposal.Message)
 }
 

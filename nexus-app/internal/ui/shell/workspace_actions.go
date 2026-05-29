@@ -145,7 +145,7 @@ func (v *View) openWorkspace(root string) {
 	v.recordPerformanceTiming(perfSvc.TimingWorkspaceMetadata, metadataStarted, perfSvc.WorkspaceMetadataBudget, metadataDetail)
 	v.runWorkspaceOpenAction(workspaceOpenActionNavigatorRefresh, v.refreshNavigator)
 	v.runWorkspaceOpenAction(workspaceOpenActionAssistantPinsRefresh, v.refreshAssistantContextPins)
-	v.status.SetText(fmt.Sprintf("%s: %d indexed, %d ignored, %d unreadable", workspace.Name, workspace.Summary.Included, workspace.Summary.Ignored, workspace.Summary.Unreadable))
+	v.refreshStatusBar()
 	v.addActivity("Opened workspace " + workspace.Root)
 	v.recordRecentWorkspace(workspace.Root)
 	v.closeWelcomeTabs()

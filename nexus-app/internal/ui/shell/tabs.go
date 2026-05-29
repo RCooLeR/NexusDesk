@@ -168,6 +168,9 @@ func (v *View) configureEditorTabs() {
 	v.editorTabs.CloseIntercept = func(item *container.TabItem) {
 		v.requestCloseTab(item)
 	}
+	v.editorTabs.OnSelected = func(*container.TabItem) {
+		v.refreshStatusBar()
+	}
 }
 
 func (v *View) openPreviewTab(preview domain.FilePreview) {

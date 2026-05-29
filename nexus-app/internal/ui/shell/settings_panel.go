@@ -147,6 +147,7 @@ func (v *View) newSettingsPanel() fyne.CanvasObject {
 			if display, err := v.settingsStore.LoadForDisplay(); err == nil {
 				apiKey.SetText(display.APIKey)
 			}
+			v.refreshStatusBar()
 			v.addActivity("Settings saved.")
 		},
 		SubmitText: "Save",
