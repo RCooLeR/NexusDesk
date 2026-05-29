@@ -165,6 +165,7 @@ type View struct {
 	assistantProfile         assistantSvc.Profile
 	assistantProfileSelect   *widget.Select
 	assistantModelRoute      *widget.Select
+	assistantRunStatus       *widget.Label
 	assistantMemory          *widget.Entry
 	assistantLastPrompt      string
 	assistantLastResult      assistantSvc.Result

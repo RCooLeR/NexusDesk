@@ -151,7 +151,7 @@ Already available:
 
 Planned/remaining:
 
-- More JetBrains-like assistant/data/artifact tool-window grouping and surface-specific polish.
+- More JetBrains-like assistant/data/artifact tool-window grouping and surface-specific polish. Assistant now has a first visible run/status strip for mode, route, context, evidence, source, and Agent job safety.
 - Continue polishing the workspace home surface after the first-run readiness cockpit baseline.
 - Continued global health indicator polish beyond the first native status bar.
 - More consistent keyboard navigation/focus behavior across all panes.
@@ -577,7 +577,8 @@ The checklist below is intentionally large. `tracker.md` should keep task-level 
 - [x] Add status bar with workspace, provider, branch from last manual Git refresh, jobs, warnings, selected path, encoding, line ending, and app version.
 - [x] Improve Settings into searchable grouped preferences with inline validation.
 - [x] Improve onboarding Home tab with recent workspaces, model setup, safety explanation, and first actions.
-- [ ] Improve assistant panel layout: Ask/Agent modes, sources, approvals, diagnostics, footer evidence, run history.
+- [x] Add first assistant panel run/status strip for Ask/Agent mode, model route, context budget, selected/pinned context, evidence/source counts, route warnings, and Agent job/tool safety.
+- [ ] Improve assistant panel layout beyond the status strip: source drilldowns, approvals, diagnostics grouping, footer evidence actions, and run history.
 - [ ] Improve data-grid visual polish: header hierarchy, row density, selection, loading states, error states.
 - [ ] Improve artifact browser polish: type badges, lineage, freshness, regeneration, comparison, preview.
 - [ ] Improve diagnostics polish: health cards, actions, explanations, export issue bundle.

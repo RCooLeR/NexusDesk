@@ -140,6 +140,44 @@ func TestAssistantResponseMarkdownIncludesLineCitations(t *testing.T) {
 	}
 }
 
+func TestAssistantPreRunStatusLineSummarizesModeRouteAndContext(t *testing.T) {
+	store := shellSettingsStore{settings: settingsSvc.Settings{
+		ContextTokens:         1000,
+		ResponseReserveTokens: 250,
+		ModelRoutes: []settingsSvc.ModelRoute{{
+			ID:                    settingsSvc.RouteCSVExcelScripts,
+			Label:                 "CSV / Excel data scripts",
+			Model:                 "qwen3-coder:30b",
+			ContextTokens:         4000,
+			ResponseReserveTokens: 1000,
+		}},
+	}}
+
+	line := assistantPreRunStatusLine(store, "Ask", assistantAutoModelRouteLabel, "", []string{"data/sales.csv"}, "")
+
+	for _, expected := range []string{"Ready: Ask.", "Auto -> CSV / Excel data scripts", "Context: 1 pinned context root(s)."} {
+		if !strings.Contains(line, expected) {
+			t.Fatalf("expected %q in pre-run status %q", expected, line)
+		}
+	}
+}
+
+func TestAssistantResultStatusLineSummarizesEvidenceAndWarnings(t *testing.T) {
+	line := assistantResultStatusLine(assistantSvc.Result{
+		Message:      "See README.md:12.",
+		Model:        "qwen",
+		ModelRoute:   "Main coding model",
+		SourcePaths:  []string{"README.md", "docs/guide.md"},
+		RouteWarning: "route fallback used",
+	})
+
+	for _, expected := range []string{"Completed: qwen via Main coding model.", "Evidence: line-cited", "Sources: 2", "verified refs: 1", "unverified refs: 0", "Route warning: route fallback used"} {
+		if !strings.Contains(line, expected) {
+			t.Fatalf("expected %q in result status %q", expected, line)
+		}
+	}
+}
+
 func TestAssistantEvidenceDiagnosticClassifiesSourceQuality(t *testing.T) {
 	cases := []struct {
 		name    string
@@ -448,6 +486,33 @@ func TestAgentContextBudgetBytesUsesSelectedModelRoute(t *testing.T) {
 	}}
 	if got := agentContextBudgetBytes(store, settingsSvc.RouteMainCoding); got != 12000 {
 		t.Fatalf("unexpected routed budget bytes: %d", got)
+	}
+}
+
+func TestAssistantAgentStatusLinesSummarizeJobSafetyAndResult(t *testing.T) {
+	running := assistantAgentRunningStatusLine("job-1", agentSvc.Request{
+		ModelRouteID:  settingsSvc.RouteMainCoding,
+		SourcePaths:   []string{"README.md", "docs"},
+		ApproveWrites: true,
+		ApproveShell:  false,
+	})
+	for _, expected := range []string{"Running: Agent job job-1.", "Route: main-coding", "Sources: 2", "Writes: true", "Task tool: false"} {
+		if !strings.Contains(running, expected) {
+			t.Fatalf("expected %q in running status %q", expected, running)
+		}
+	}
+
+	completed := assistantAgentResultStatusLine("job-1", agentSvc.Result{
+		Model:      "qwen",
+		ModelRoute: "Main coding model",
+		Iterations: 3,
+		ToolCalls:  []agentSvc.ToolResult{{Name: "read_context"}, {Name: "search_workspace"}},
+		StopReason: "completed",
+	})
+	for _, expected := range []string{"Completed: Agent job job-1 with qwen via Main coding model", "3 iteration(s)", "2 tool call(s)", "Stop reason: completed."} {
+		if !strings.Contains(completed, expected) {
+			t.Fatalf("expected %q in completed status %q", expected, completed)
+		}
 	}
 }
 

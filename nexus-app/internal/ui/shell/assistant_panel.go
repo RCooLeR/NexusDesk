@@ -85,14 +85,19 @@ func (v *View) newAssistantPanel() fyne.CanvasObject {
 	)
 	modelRoute := widget.NewSelect(assistantModelRouteOptions(v.settingsStore), func(string) {
 		v.refreshAssistantContextPins()
+		v.refreshAssistantRunStatus()
 	})
 	modelRoute.SetSelected(assistantAutoModelRouteLabel)
 	v.assistantModelRoute = modelRoute
-	mode := widget.NewSelect([]string{"Ask", "Agent"}, func(string) {})
+	mode := widget.NewSelect([]string{"Ask", "Agent"}, func(string) {
+		v.refreshAssistantRunStatus()
+	})
 	mode.SetSelected("Ask")
 	v.assistantMode = mode
 	agentTaskApproval := widget.NewCheck("Allow task tool this run", nil)
 	v.assistantRunTaskApproval = agentTaskApproval
+	v.assistantRunStatus = widget.NewLabel("")
+	v.assistantRunStatus.Wrapping = fyne.TextWrapWord
 	send := widget.NewButtonWithIcon("", theme.MailSendIcon(), nil)
 	send.OnTapped = func() {
 		v.runAssistantRequest(prompt, response, send, mode.Selected)
@@ -107,12 +112,14 @@ func (v *View) newAssistantPanel() fyne.CanvasObject {
 		v.saveLatestAssistantAnswer()
 	})
 	assistantActions := container.NewHBox(retry, compare, saveAnswer)
-	composer := container.NewBorder(assistantActions, nil, container.NewVBox(mode, modelRoute, agentTaskApproval), send, prompt)
+	composerControls := container.NewVBox(mode, modelRoute, agentTaskApproval, v.assistantRunStatus)
+	composer := container.NewBorder(assistantActions, nil, composerControls, send, prompt)
 	composer = container.NewPadded(composer)
 	sidebar := container.NewVBox(profileBar, widget.NewSeparator(), contextBar, widget.NewSeparator(), historyBar)
 	card := widget.NewCard("Assistant", "Local-first context and tool mediation", container.NewBorder(sidebar, composer, nil, nil, response))
 	v.loadAssistantProfile()
 	v.refreshAssistantContextPins()
+	v.refreshAssistantRunStatus()
 	v.refreshAssistantHistory()
 	return container.NewPadded(card)
 }
@@ -138,6 +145,7 @@ func (v *View) runAssistantRequest(prompt *widget.Entry, response *widget.RichTe
 	}
 	startedAt := time.Now().UTC()
 	send.Disable()
+	v.setAssistantRunStatus(assistantPreRunStatusLine(v.settingsStore, "Ask", selectedAssistantModelRouteOption(v), text, request.ContextPaths, request.SelectedPath))
 	response.ParseMarkdown("Receiving response...")
 	v.addActivity("Assistant request started.")
 
@@ -154,11 +162,13 @@ func (v *View) runAssistantRequest(prompt *widget.Entry, response *widget.RichTe
 		fyne.Do(func() {
 			defer send.Enable()
 			if err != nil {
+				v.setAssistantRunStatus("Assistant failed: " + err.Error())
 				response.ParseMarkdown("Assistant request failed: " + err.Error())
 				v.addActivity("Assistant request failed: " + err.Error())
 				return
 			}
 			response.ParseMarkdown(assistantResponseMarkdown(result))
+			v.setAssistantRunStatus(assistantResultStatusLine(result))
 			if result.ContextWarning != "" {
 				v.addActivity(result.ContextWarning)
 			}
@@ -361,6 +371,48 @@ func assistantRouteBudgetLine(store interface {
 		}
 	}
 	return fmt.Sprintf("Model route: %s. Context budget: ~%s.", routeLabel, formatDiagnosticsBytes(int64(assistantContextBudgetBytes(settings))))
+}
+
+func assistantPreRunStatusLine(store interface {
+	LoadForDisplay() (settingsSvc.Settings, error)
+}, mode string, option string, prompt string, pinned []string, selected string) string {
+	mode = strings.TrimSpace(mode)
+	if mode == "" {
+		mode = "Ask"
+	}
+	context := "no explicit context"
+	switch {
+	case len(pinned) > 0:
+		context = fmt.Sprintf("%d pinned context root(s)", len(pinned))
+	case strings.TrimSpace(selected) != "":
+		context = "selected context: " + strings.TrimSpace(selected)
+	}
+	return fmt.Sprintf("Ready: %s. %s Context: %s.", mode, assistantRouteBudgetLine(store, option, prompt, pinned, selected), context)
+}
+
+func assistantResultStatusLine(result assistantSvc.Result) string {
+	diagnostic := assistantEvidenceDiagnosticForResult(result)
+	model := strings.TrimSpace(result.Model)
+	if model == "" {
+		model = "model not reported"
+	}
+	route := strings.TrimSpace(result.ModelRoute)
+	if route == "" {
+		route = "global fallback"
+	}
+	line := fmt.Sprintf(
+		"Completed: %s via %s. Evidence: %s Sources: %d, verified refs: %d, unverified refs: %d.",
+		model,
+		route,
+		firstNonEmpty(diagnostic.Summary, "not classified."),
+		diagnostic.SourceCount,
+		diagnostic.CitationCount,
+		diagnostic.UnverifiedCitationCount,
+	)
+	if warning := strings.TrimSpace(result.RouteWarning); warning != "" {
+		line += " Route warning: " + warning
+	}
+	return line
 }
 
 func settingsRouteByLabelOrID(routes []settingsSvc.ModelRoute, option string) (settingsSvc.ModelRoute, bool) {
@@ -1072,6 +1124,7 @@ func (v *View) refreshAssistantContextPins() {
 		}
 		v.assistantContextList.Add(widget.NewLabel("No pinned context."))
 		v.assistantContextList.Refresh()
+		v.refreshAssistantRunStatus()
 		return
 	}
 	v.assistantContextStatus.SetText(fmt.Sprintf("Context pack: %d pinned root(s). %s", len(paths), budgetLine))
@@ -1085,6 +1138,7 @@ func (v *View) refreshAssistantContextPins() {
 		v.assistantContextList.Add(container.NewBorder(nil, nil, nil, remove, label))
 	}
 	v.assistantContextList.Refresh()
+	v.refreshAssistantRunStatus()
 }
 
 func selectedAssistantModelRouteOption(v *View) string {
@@ -1092,6 +1146,31 @@ func selectedAssistantModelRouteOption(v *View) string {
 		return assistantAutoModelRouteLabel
 	}
 	return strings.TrimSpace(v.assistantModelRoute.Selected)
+}
+
+func (v *View) refreshAssistantRunStatus() {
+	if v == nil || v.assistantRunStatus == nil {
+		return
+	}
+	mode := "Ask"
+	if v.assistantMode != nil && strings.TrimSpace(v.assistantMode.Selected) != "" {
+		mode = strings.TrimSpace(v.assistantMode.Selected)
+	}
+	v.assistantRunStatus.SetText(assistantPreRunStatusLine(
+		v.settingsStore,
+		mode,
+		selectedAssistantModelRouteOption(v),
+		"",
+		v.state.AssistantContextPaths(),
+		selectedPathOrEmpty(v),
+	))
+}
+
+func (v *View) setAssistantRunStatus(status string) {
+	if v == nil || v.assistantRunStatus == nil {
+		return
+	}
+	v.assistantRunStatus.SetText(strings.TrimSpace(status))
 }
 
 func (v *View) runAgentRequest(text string, response *widget.RichText, send *widget.Button) {
@@ -1114,6 +1193,7 @@ func (v *View) runAgentRequest(text string, response *widget.RichText, send *wid
 	job, ctx := v.jobService.Start("agent", agentJobLabel(text))
 	v.jobService.AppendLog(job.ID, "Prompt: "+agentJobLabel(text))
 	send.Disable()
+	v.setAssistantRunStatus(assistantAgentRunningStatusLine(job.ID, request))
 	response.ParseMarkdown("Agent starting...")
 	v.addActivity("Agent request started as " + job.ID + ".")
 	v.refreshJobs()
@@ -1140,6 +1220,7 @@ func (v *View) runAgentRequest(text string, response *widget.RichText, send *wid
 			}
 			if err != nil {
 				message := "Agent request failed: " + err.Error()
+				v.setAssistantRunStatus(message)
 				response.ParseMarkdown(message)
 				v.addActivity(message)
 				v.jobService.Finish(job.ID, jobsSvc.StatusFailed, message, err)
@@ -1148,6 +1229,7 @@ func (v *View) runAgentRequest(text string, response *widget.RichText, send *wid
 				return
 			}
 			response.ParseMarkdown(agentFinalMarkdown(result))
+			v.setAssistantRunStatus(assistantAgentResultStatusLine(job.ID, result))
 			if result.RouteWarning != "" {
 				v.addActivity(result.RouteWarning)
 			}
@@ -1372,6 +1454,34 @@ func agentFinalMarkdown(result agentSvc.Result) string {
 		message += "\n\nStop reason: `" + result.StopReason + "`"
 	}
 	return message
+}
+
+func assistantAgentRunningStatusLine(jobID string, request agentSvc.Request) string {
+	route := strings.TrimSpace(request.ModelRouteID)
+	if route == "" {
+		route = "global fallback"
+	}
+	sourceCount := len(request.SourcePaths)
+	return fmt.Sprintf("Running: Agent job %s. Route: %s. Sources: %d. Writes: %t. Task tool: %t.", jobID, route, sourceCount, request.ApproveWrites, request.ApproveShell)
+}
+
+func assistantAgentResultStatusLine(jobID string, result agentSvc.Result) string {
+	model := strings.TrimSpace(result.Model)
+	if model == "" {
+		model = "model not reported"
+	}
+	route := strings.TrimSpace(result.ModelRoute)
+	if route == "" {
+		route = "global fallback"
+	}
+	line := fmt.Sprintf("Completed: Agent job %s with %s via %s after %d iteration(s), %d tool call(s).", jobID, model, route, result.Iterations, len(result.ToolCalls))
+	if result.StopReason != "" {
+		line += " Stop reason: " + result.StopReason + "."
+	}
+	if result.RouteWarning != "" {
+		line += " Route warning: " + result.RouteWarning
+	}
+	return line
 }
 
 func firstNonEmpty(values ...string) string {
