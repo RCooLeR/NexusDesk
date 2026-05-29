@@ -40,12 +40,34 @@ func TestDefaultDispatcherListsToolCatalog(t *testing.T) {
 		"[implemented] run_terminal_command",
 		"[planned] browser_navigate",
 		"[planned] call_mcp_tool",
+		"Controls=rooted-scope,approval,audit",
 		"Planned tools are roadmap contracts",
 	} {
 		if !strings.Contains(result.Observation, expected) {
 			t.Fatalf("catalog observation missing %q:\n%s", expected, result.Observation)
 		}
 	}
+}
+
+func TestDefaultToolCatalogAnnotatesRiskControls(t *testing.T) {
+	catalog := DefaultToolCatalog()
+	for _, entry := range catalog {
+		if entry.Descriptor.Risk == "high" && !containsToolControl(entry.Controls, "approval") {
+			t.Fatalf("high-risk catalog entry %q missing approval control: %#v", entry.Descriptor.Name, entry.Controls)
+		}
+		if entry.Descriptor.Risk == "high" && !containsToolControl(entry.Controls, "rollback-or-mitigation") {
+			t.Fatalf("high-risk catalog entry %q missing rollback/mitigation control: %#v", entry.Descriptor.Name, entry.Controls)
+		}
+	}
+}
+
+func containsToolControl(controls []string, expected string) bool {
+	for _, control := range controls {
+		if control == expected {
+			return true
+		}
+	}
+	return false
 }
 
 func TestDefaultDispatcherFiltersToolCatalog(t *testing.T) {

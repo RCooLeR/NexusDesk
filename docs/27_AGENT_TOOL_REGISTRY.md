@@ -9,6 +9,7 @@ Rules:
 - Services remain framework-free. Fyne imports stay in UI/app/theme packages.
 - High-risk actions require explicit approval, audit, rollback or mitigation where practical, redaction, and bounded execution.
 - Workspace open must never run Git, Docker, terminal commands, connector pulls, model calls, browser automation, OCR, dump imports, or deep indexing automatically.
+- Tool risk controls are mirrored in `nexus-app/internal/services/security` and documented in `docs/28_THREAT_MODEL.md`.
 
 ## Implemented Tool Surface
 
@@ -94,7 +95,8 @@ Before a planned tool becomes executable, it needs:
 6. Rollback or mitigation for mutations where practical.
 7. Focused tests for success, denial, invalid inputs, traversal/scope violations, and timeout/cancel behavior.
 8. UI affordance when the action needs user review, preview, or cancellation.
-9. Tracker and production-plan updates.
+9. Threat-model/control coverage through `internal/services/security`.
+10. Tracker and production-plan updates.
 
 ## Priority Order
 

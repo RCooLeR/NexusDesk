@@ -7,7 +7,7 @@ Reference app: `app-wails/`
 
 This document combines the latest project review, the Wails feature inventory, the production readiness plan, Claude's static findings, and the JetBrains-style UI references provided by the product owner. It exists so repeated development sessions keep the same product idea in view: NexusDesk is a native, local-first agentic workbench for code, data, documents, artifacts, operations, and assistant-assisted development.
 
-`tracker.md` remains the task-level checklist. `docs/13_PRODUCTION_READINESS.md` remains the release-gate map. `docs/18_SAFE_AGENT_USER_GUIDE.md` is the private-beta safety guide for agent use, approvals, rollbacks, local data, connector credentials, jobs, diagnostics, and issue reports. `docs/19_BETA_FEEDBACK_AND_RELEASE_NOTES.md` defines the private-beta feedback and release-note loop. `docs/20_CLEAN_MACHINE_SMOKE_CHECKLIST.md` defines release-candidate clean-machine smoke coverage. `docs/21_APP_DATA_AND_UNINSTALL_CLEANUP.md` defines app data, uninstall, and manual cleanup behavior. `docs/22_RELEASE_HYGIENE_AND_ANTIVIRUS.md` defines release artifact discipline, signing/trust expectations, antivirus false-positive triage, release-note requirements, and do-not-ship rules. `docs/26_NATIVE_THEME_TOKENS.md` defines the Fyne-native JetBrains-like theme token baseline. `docs/27_AGENT_TOOL_REGISTRY.md` defines the implemented and planned first-party LLM toolbelt. This file is the end-to-end product and architecture plan that explains why each remaining task matters and what finished should look like.
+`tracker.md` remains the task-level checklist. `docs/13_PRODUCTION_READINESS.md` remains the release-gate map. `docs/18_SAFE_AGENT_USER_GUIDE.md` is the private-beta safety guide for agent use, approvals, rollbacks, local data, connector credentials, jobs, diagnostics, and issue reports. `docs/19_BETA_FEEDBACK_AND_RELEASE_NOTES.md` defines the private-beta feedback and release-note loop. `docs/20_CLEAN_MACHINE_SMOKE_CHECKLIST.md` defines release-candidate clean-machine smoke coverage. `docs/21_APP_DATA_AND_UNINSTALL_CLEANUP.md` defines app data, uninstall, and manual cleanup behavior. `docs/22_RELEASE_HYGIENE_AND_ANTIVIRUS.md` defines release artifact discipline, signing/trust expectations, antivirus false-positive triage, release-note requirements, and do-not-ship rules. `docs/26_NATIVE_THEME_TOKENS.md` defines the Fyne-native JetBrains-like theme token baseline. `docs/27_AGENT_TOOL_REGISTRY.md` defines the implemented and planned first-party LLM toolbelt. `docs/28_THREAT_MODEL.md` defines the safety control matrix for agent tools, connectors, filesystem, jobs, generated artifacts, browser automation, terminal/shell, Docker/system workflows, and MCP/plugins. This file is the end-to-end product and architecture plan that explains why each remaining task matters and what finished should look like.
 
 ## 1. Product North Star
 
@@ -345,10 +345,11 @@ Already available:
 - Search metadata recovery/export for explicit user-triggered workspace searches.
 - Diagnostics for provider, metadata health, jobs, tasks, SQL, agent failures, runtime state.
 - Shared slow-workflow job contract and explicit user-start enforcement.
+- Shared threat-model/control registry for filesystem, connectors, jobs, terminal/shell, browser automation, Docker/system operations, generated artifacts, and MCP/plugins.
 
 Planned/remaining:
 
-- Audit coverage for future connector sync, OCR, dump import, arbitrary shell, and Docker mutation workflows.
+- Audit coverage for future connector sync, OCR, dump import, arbitrary shell, and Docker mutation workflows. The shared threat-model/control registry now defines required controls; concrete audit records still land with each future executable workflow.
 - Issue-report bundle with secret redaction and opt-in workspace content inclusion. Implemented as a Diagnostics export that writes a redacted ZIP with diagnostics text, activity tail, environment metadata, workspace-state file names, and no workspace file contents by default. Diagnostics reports now start with native health cards for provider, metadata, jobs/runs, performance, startup recovery, and issue-report readiness before detailed logs.
 - Crash/hang checks for folder open, malformed files, corrupt metadata, missing providers, and canceled long work.
 
@@ -561,7 +562,7 @@ The checklist below is intentionally large. `tracker.md` should keep task-level 
 - [x] Issue-report bundle with redaction and opt-in workspace content.
 - [ ] Audit coverage for future OCR, connector sync, dump import, shell, and Docker mutation workflows.
 - [ ] Secret-storage smoke on macOS and Linux packaging targets.
-- [ ] Threat-model document for agent tools, connectors, filesystem, jobs, and generated artifacts.
+- [x] Threat-model document and service-level control registry for agent tools, connectors, filesystem, jobs, generated artifacts, terminal/shell, browser automation, Docker/system workflows, and MCP/plugins.
 
 ### 7.4 P1: JetBrains-Like UI Polish
 

@@ -97,7 +97,8 @@ Required:
 - External coding-agent execution implementation for Codex, Claude Code, OpenCode, and similar CLIs remains optional and secondary to NexusDesk's own toolbelt: readiness and non-executing plans exist, but any future process launch must still be routed through approved jobs/shell policy, cancellation, audit, redaction, sandboxing, and artifact/output capture.
 - Job history retention controls and cleanup policy: the Jobs panel can prune successful/canceled completed jobs by count/age while preserving running jobs and failures/timeouts by default.
 - Startup recovery markers and crash/hang triage visibility: launch writes a local session marker, clean exit closes it, and Home/Diagnostics warn when the previous run did not shut down cleanly.
-- Audit coverage for connector jobs, OCR, dump imports, Docker mutations, richer terminal sessions, and future high-risk operations.
+- Threat model and control matrix for connector jobs, OCR, dump imports, Docker mutations, richer terminal sessions, rendered browser automation, generated artifacts, MCP/plugins, and future high-risk operations.
+- Audit coverage for connector jobs, OCR, dump imports, Docker mutations, richer terminal sessions, and future high-risk operations as those workflows become executable.
 - Crash/hang checks for folder open, malformed files, corrupt metadata, missing providers, and canceled long work.
 
 Exit criteria:

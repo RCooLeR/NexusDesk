@@ -6,6 +6,7 @@ import (
 	"strings"
 
 	"nexusdesk/internal/services/agent"
+	"nexusdesk/internal/services/security"
 )
 
 const (
@@ -19,6 +20,7 @@ type ToolCatalogEntry struct {
 	Status     string
 	Stage      string
 	Notes      string
+	Controls   []string
 }
 
 func DefaultToolCatalog() []ToolCatalogEntry {
@@ -46,6 +48,7 @@ func implementedToolCatalog(descriptors []agent.ToolDescriptor) []ToolCatalogEnt
 			Status:     ToolStatusImplemented,
 			Stage:      "native",
 			Notes:      implementedToolNotes(descriptor.Name),
+			Controls:   security.ControlsForRisk(descriptor.Risk),
 		})
 	}
 	return entries
@@ -113,6 +116,7 @@ func plannedTool(category string, name string, description string, risk string, 
 		Status:     ToolStatusPlanned,
 		Stage:      stage,
 		Notes:      notes,
+		Controls:   security.ControlsForRisk(risk),
 	}
 }
 
@@ -214,6 +218,10 @@ func formatToolCatalog(entries []ToolCatalogEntry) string {
 		if entry.Notes != "" {
 			builder.WriteString(" Notes=")
 			builder.WriteString(entry.Notes)
+		}
+		if len(entry.Controls) > 0 {
+			builder.WriteString(" Controls=")
+			builder.WriteString(strings.Join(entry.Controls, ","))
 		}
 		builder.WriteString("\n")
 	}

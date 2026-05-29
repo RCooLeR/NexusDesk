@@ -27,6 +27,7 @@ Clean-machine smoke checklist: `docs/20_CLEAN_MACHINE_SMOKE_CHECKLIST.md`.
 App data and uninstall cleanup guide: `docs/21_APP_DATA_AND_UNINSTALL_CLEANUP.md`.
 Release hygiene and antivirus guidance: `docs/22_RELEASE_HYGIENE_AND_ANTIVIRUS.md`.
 Native agent tool registry: `docs/27_AGENT_TOOL_REGISTRY.md`.
+Threat model and control matrix: `docs/28_THREAT_MODEL.md`.
 
 Summary:
 
@@ -406,7 +407,7 @@ Exit criteria:
 - [x] Metadata recovery/export path for `.nexusdesk/metadata`.
 - [x] Backup/export flow for local-first workspace state.
 - [x] Diagnostics panel for provider status, metadata health, job history, app logs, GPU/model runtime, and recent failures.
-- [ ] Audit coverage for connector jobs, OCR, dump imports, Docker mutations, shell tools, and future high-risk operations.
+- [~] Audit coverage for connector jobs, OCR, dump imports, Docker mutations, shell tools, and future high-risk operations: shared threat-model/control registry now defines required controls before these workflows become executable; per-workflow audit implementations remain future work.
 - [ ] Failure tests for folder open, malformed files, corrupt metadata, missing providers, and canceled long work.
 
 ### Gate 3: Packaging And Platform Beta
@@ -637,8 +638,9 @@ The Fyne migration must not drop product ambition, but this section is intention
 - [x] Rollback snapshots for approved native workspace mutations where practical.
 - [x] OS-protected secrets on Windows, macOS Keychain, and Linux Secret Service/libsecret.
 - [x] Append-only/persisted audit records for approvals, native agent/tool runs, file changes with rollback records, tasks, jobs, SQL runs, and artifacts.
-- [ ] Extend audit coverage to future connector sync jobs, OCR, dump imports, terminal session history, and Docker mutations.
+- [~] Extend audit coverage to future connector sync jobs, OCR, dump imports, terminal session history, and Docker mutations: `docs/28_THREAT_MODEL.md` and `internal/services/security` now define required controls; concrete workflow audit records land with each future implementation.
 - [x] Add durable slow-workflow contract for future external coding-agent CLI runs, prohibited from workspace-open and requiring explicit user start/audit.
+- [x] Add shared threat-model/control matrix for filesystem, connectors, jobs, terminal/shell, browser automation, Docker/system operations, generated artifacts, and MCP/plugins.
 - [x] Export/backup flows for local-first data.
 
 ### Jobs, Persistence, And Observability
