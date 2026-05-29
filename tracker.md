@@ -526,6 +526,7 @@ The Fyne migration must not drop product ambition, but this section is intention
 - [x] Automatic loaded-model context-window tuning from Wails: provider probe applies Ollama runtime `context_length` to native context/reserve fields.
 - [x] Add API key input/persistence in native settings and propagate bearer auth into OpenAI-compatible chat/probe config.
 - [x] Add task-aware model defaults in Settings with user-configurable defaults for coding, React/TypeScript/JavaScript, Go backend, Python, PHP/Laravel, SQL, Neo4j/Cypher, CSV/Excel scripts, analytics explanations, research/summaries, vision/screenshot understanding, balanced reasoning/vision, and fastest 30B-class coding.
+- [x] Refactor native Settings into searchable grouped preferences with inline readiness validation for provider, runtime, secrets, token budgets, and task model routes.
 - [x] Add Ask-mode model-route selector with global fallback and assistant-service route metadata.
 - [x] Wire task-aware model route resolution into Git AI diff summary/commit drafting with assistant-service fallback warnings and saved `chat-answer` route metadata.
 - [x] Wire task-aware model route resolution into Agent mode with selected-route context budgeting, fallback warnings, final-response route metadata, and persisted agent-audit model provenance.

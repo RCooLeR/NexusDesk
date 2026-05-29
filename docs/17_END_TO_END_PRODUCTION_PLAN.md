@@ -571,7 +571,7 @@ The checklist below is intentionally large. `tracker.md` should keep task-level 
 - [ ] Convert crowded bottom tabs into grouped tool windows.
 - [ ] Add left/right tool-window rails with consistent icons, labels, shortcuts, and active states.
 - [x] Add status bar with workspace, provider, branch from last manual Git refresh, jobs, warnings, selected path, encoding, line ending, and app version.
-- [ ] Improve Settings into searchable grouped preferences with inline validation.
+- [x] Improve Settings into searchable grouped preferences with inline validation.
 - [x] Improve onboarding Home tab with recent workspaces, model setup, safety explanation, and first actions.
 - [ ] Improve assistant panel layout: Ask/Agent modes, sources, approvals, diagnostics, footer evidence, run history.
 - [ ] Improve data-grid visual polish: header hierarchy, row density, selection, loading states, error states.

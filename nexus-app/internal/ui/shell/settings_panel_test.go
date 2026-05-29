@@ -81,6 +81,70 @@ func TestSettingsRouteHelpersUpdateSelectedRoute(t *testing.T) {
 	}
 }
 
+func TestSettingsSectionSearchMatchesTitlesSummariesAndKeywords(t *testing.T) {
+	sections := []settingsPanelSection{
+		{Title: "Provider & Runtime", Summary: "Configure endpoint", Keywords: []string{"ollama", "context"}},
+		{Title: "Secrets & Credentials", Summary: "Protected API key storage", Keywords: []string{"dpapi", "keychain"}},
+		{Title: "Task Model Routes", Summary: "Workflow defaults", Keywords: []string{"vision", "coding"}},
+	}
+	if got := settingsVisibleSectionTitles(sections, "api key"); len(got) != 1 || got[0] != "Secrets & Credentials" {
+		t.Fatalf("expected API key search to find secrets section, got %#v", got)
+	}
+	if got := settingsVisibleSectionTitles(sections, "VISION"); len(got) != 1 || got[0] != "Task Model Routes" {
+		t.Fatalf("expected case-insensitive keyword search, got %#v", got)
+	}
+	if got := settingsVisibleSectionTitles(sections, ""); len(got) != 3 {
+		t.Fatalf("expected empty search to show all sections, got %#v", got)
+	}
+}
+
+func TestSettingsValidationSummarizesWarningsAndErrors(t *testing.T) {
+	issues := settingsValidationIssues(
+		"ollama",
+		"ollama-openai-compatible",
+		"http://localhost:11434/v1",
+		"",
+		"4096",
+		"4096",
+		[]settingsSvc.ModelRoute{{ID: settingsSvc.RouteMainCoding, Label: "Main coding model"}},
+	)
+	text := settingsValidationText(issues)
+	for _, expected := range []string{
+		"Settings need attention:",
+		"WARNING: Global chat model is not selected",
+		"ERROR: Response reserve must be smaller than the context window.",
+		"WARNING: 1 task model route(s) have no default model.",
+	} {
+		if !strings.Contains(text, expected) {
+			t.Fatalf("expected validation text to contain %q, got %q", expected, text)
+		}
+	}
+	if err := settingsBlockingValidationError(issues); err == nil || !strings.Contains(err.Error(), "Response reserve must be smaller") {
+		t.Fatalf("expected blocking validation error for token budget, got %v", err)
+	}
+}
+
+func TestSettingsValidationReadyMessage(t *testing.T) {
+	issues := settingsValidationIssues(
+		"ollama",
+		"ollama-openai-compatible",
+		"http://localhost:11434/v1",
+		"qwen3-coder:30b",
+		"32768",
+		"4096",
+		settingsSvc.DefaultModelRoutes(),
+	)
+	if len(issues) != 0 {
+		t.Fatalf("expected ready settings, got %#v", issues)
+	}
+	if text := settingsValidationText(issues); !strings.Contains(text, "Settings look ready") {
+		t.Fatalf("expected ready validation text, got %q", text)
+	}
+	if err := settingsBlockingValidationError(issues); err != nil {
+		t.Fatalf("expected ready settings to be non-blocking, got %v", err)
+	}
+}
+
 func TestFormatSettingsProbeResultSummarizesProvider(t *testing.T) {
 	message := formatSettingsProbeResultWithConfig(llmSvc.Config{
 		Provider: "ollama",
