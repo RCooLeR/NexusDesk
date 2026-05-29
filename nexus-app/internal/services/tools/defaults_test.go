@@ -2,6 +2,7 @@ package tools
 
 import (
 	"context"
+	"database/sql"
 	"errors"
 	"net/http"
 	"net/http/httptest"
@@ -15,6 +16,8 @@ import (
 	"nexusdesk/internal/services/agent"
 	artifactsSvc "nexusdesk/internal/services/artifacts"
 	workspaceSvc "nexusdesk/internal/services/workspace"
+
+	_ "modernc.org/sqlite"
 )
 
 func TestDefaultDispatcherReadAndSearchTools(t *testing.T) {
@@ -110,6 +113,58 @@ func TestDefaultDispatcherDatasetTools(t *testing.T) {
 	}
 }
 
+func TestDefaultDispatcherSQLiteTools(t *testing.T) {
+	root := t.TempDir()
+	dbPath := filepath.Join(root, "data", "store.sqlite")
+	writeToolSQLiteFixture(t, dbPath)
+
+	dispatcher := NewDefaultDispatcher(Dependencies{Workspace: workspaceSvc.New()})
+	request := agent.Request{WorkspaceRoot: root}
+	relPath := filepath.Join("data", "store.sqlite")
+
+	blocked, err := dispatcher.ExecuteTool(context.Background(), agent.ToolCall{Name: "inspect_sqlite", Args: map[string]string{"relPath": relPath}}, request)
+	if err == nil || blocked.Risk != "medium" || !strings.Contains(blocked.Observation, "approval") {
+		t.Fatalf("expected inspect_sqlite approval block, got result=%#v err=%v", blocked, err)
+	}
+
+	approvedRequest := agent.Request{
+		WorkspaceRoot: root,
+		ApproveTool: func(ctx context.Context, request agent.ToolApprovalRequest) bool {
+			return request.Risk == "medium"
+		},
+	}
+	metadata, err := dispatcher.ExecuteTool(context.Background(), agent.ToolCall{Name: "inspect_sqlite", Args: map[string]string{"relPath": relPath}}, approvedRequest)
+	if err != nil {
+		t.Fatalf("inspect_sqlite returned error: %v", err)
+	}
+	for _, expected := range []string{"SQLite metadata: data/store.sqlite", "orders", "customers", "Relationships:", "sample:"} {
+		if !strings.Contains(metadata.Observation, expected) {
+			t.Fatalf("expected metadata observation to contain %q:\n%s", expected, metadata.Observation)
+		}
+	}
+
+	query, err := dispatcher.ExecuteTool(
+		context.Background(),
+		agent.ToolCall{Name: "query_sqlite", Args: map[string]string{"relPath": relPath, "sql": "select id, total from orders order by id", "limit": "1"}},
+		approvedRequest,
+	)
+	if err != nil {
+		t.Fatalf("query_sqlite returned error: %v", err)
+	}
+	if !strings.Contains(query.Observation, "SQLite query result: data/store.sqlite") || !strings.Contains(query.Observation, "| id | total |") || !strings.Contains(query.Observation, "42.5") || !strings.Contains(query.Observation, "truncated=true") {
+		t.Fatalf("unexpected SQLite query observation:\n%s", query.Observation)
+	}
+
+	mutation, err := dispatcher.ExecuteTool(
+		context.Background(),
+		agent.ToolCall{Name: "query_sqlite", Args: map[string]string{"relPath": relPath, "sql": "delete from orders"}},
+		approvedRequest,
+	)
+	if err == nil || !strings.Contains(mutation.Observation, "read-only SELECT") {
+		t.Fatalf("expected mutating SQLite SQL to be rejected, got result=%#v err=%v", mutation, err)
+	}
+}
+
 func TestDefaultDispatcherDocumentAndOperationsTools(t *testing.T) {
 	root := t.TempDir()
 	if err := os.WriteFile(filepath.Join(root, "guide.md"), []byte("# Guide\n\nUseful notes for operations.\n"), 0o644); err != nil {
@@ -144,6 +199,36 @@ func TestDefaultDispatcherDocumentAndOperationsTools(t *testing.T) {
 	}
 	if !strings.Contains(inspection.Observation, "Operations Inspection") || !strings.Contains(inspection.Observation, "nginx") {
 		t.Fatalf("unexpected operations inspection observation:\n%s", inspection.Observation)
+	}
+}
+
+func writeToolSQLiteFixture(t *testing.T, path string) {
+	t.Helper()
+	if err := os.MkdirAll(filepath.Dir(path), 0o755); err != nil {
+		t.Fatalf("create sqlite fixture dir: %v", err)
+	}
+	db, err := sql.Open("sqlite", path)
+	if err != nil {
+		t.Fatalf("open sqlite fixture: %v", err)
+	}
+	defer db.Close()
+	schema := `
+create table customers (
+	id integer primary key,
+	name text not null
+);
+create table orders (
+	id integer primary key,
+	customer_id integer not null references customers(id),
+	total real not null
+);
+create index idx_orders_customer_id on orders(customer_id);
+insert into customers(id, name) values (1, 'Ada'), (2, 'Linus');
+insert into orders(id, customer_id, total) values (10, 1, 42.5), (11, 2, 7.25);
+create view order_totals as select c.name, sum(o.total) as total from customers c join orders o on o.customer_id = c.id group by c.name;
+`
+	if _, err := db.Exec(schema); err != nil {
+		t.Fatalf("seed sqlite fixture: %v", err)
 	}
 }
 

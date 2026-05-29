@@ -94,8 +94,6 @@ func plannedToolCatalog() []ToolCatalogEntry {
 		plannedTool("browser", "browser_network_log", "Read capped request/response metadata for a browser session.", "medium", "sessionId", "browser", "Useful for app debugging; must redact headers/tokens."),
 
 		plannedTool("data", "create_dataset_chart", "Create a deterministic chart artifact from dataset query results.", "high", "relPath, chartJson", "data artifacts", "Requires artifact lineage and regeneration metadata."),
-		plannedTool("database", "inspect_sqlite", "Inspect workspace SQLite schema and sample metadata read-only.", "medium", "relPath", "database parity", "Service exists; direct tool wrapper should preserve caps and query history."),
-		plannedTool("database", "query_sqlite", "Run a bounded read-only SQLite SELECT/WITH query.", "medium", "relPath, sql, limit(optional)", "database parity", "Must keep read-only URI, timeout, and SQL guard."),
 		plannedTool("database", "list_db_profiles", "List configured external database profiles visible to the workspace.", "low", "scope(optional)", "connectors", "Must never expose secrets."),
 		plannedTool("database", "inspect_db_profile", "Inspect an external database profile schema read-only.", "medium", "profileId", "connectors", "Route through durable jobs with cancellation and lineage."),
 		plannedTool("database", "query_db_profile", "Run a guarded read-only query against an external profile.", "medium", "profileId, sql, limit(optional)", "connectors", "Requires approval, timeout, query history, and export lineage."),
@@ -148,6 +146,8 @@ func implementedToolCategory(name string) string {
 		return "workspace"
 	case "profile_dataset", "query_dataset", "query_dataset_sql":
 		return "data"
+	case "inspect_sqlite", "query_sqlite":
+		return "database"
 	case "extract_document":
 		return "documents"
 	case "inspect_operations_files":
