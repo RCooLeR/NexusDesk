@@ -152,6 +152,39 @@ func (h defaultHandlers) applyPatch(ctx context.Context, call agent.ToolCall, re
 	return agent.ToolResult{Name: call.Name, Args: call.Args, Risk: "high", Observation: unifiedPatchObservation(proposal), Mutated: true}, nil
 }
 
+func (h defaultHandlers) resolveConflict(ctx context.Context, call agent.ToolCall, request agent.Request) (agent.ToolResult, error) {
+	if result, err := requireWriteApproval(call, request, "resolving workspace conflict markers"); err != nil {
+		return result, err
+	}
+	root, err := workspaceRoot(request)
+	if err != nil {
+		return toolError(call, "high", err), err
+	}
+	relPath := firstArg(call, "relPath", "path")
+	if relPath == "" {
+		err := errors.New("relPath is required")
+		return toolError(call, "high", err), err
+	}
+	strategy := firstArg(call, "strategy", "resolution", "mode")
+	if strategy == "" {
+		err := errors.New("strategy is required")
+		return toolError(call, "high", err), err
+	}
+	resolved, err := h.deps.Workspace.ResolveConflictMarkers(root, relPath, strategy)
+	if err != nil {
+		return toolError(call, "high", err), err
+	}
+	proposal, err := h.deps.Workspace.ApplyFileWrite(root, workspacesvc.FileWriteRequest{
+		RelPath:  resolved.RelPath,
+		Content:  resolved.Content,
+		Encoding: resolved.Encoding,
+	})
+	if err != nil {
+		return toolError(call, "high", err), err
+	}
+	return agent.ToolResult{Name: call.Name, Args: call.Args, Risk: "high", Observation: conflictResolutionObservation(resolved, proposal), Mutated: true}, nil
+}
+
 func (h defaultHandlers) listRollbacks(ctx context.Context, call agent.ToolCall, request agent.Request) (agent.ToolResult, error) {
 	root, err := workspaceRoot(request)
 	if err != nil {
@@ -206,6 +239,21 @@ func fileWriteObservation(proposal workspacesvc.FileWriteProposal) string {
 		proposal.Message,
 		"Path: " + proposal.RelPath,
 		"Action: " + proposal.Action,
+		"Encoding: " + proposal.Encoding,
+		"Rollback: " + proposal.RollbackID,
+	}
+	if proposal.Diff != "" {
+		lines = append(lines, "Diff:\n"+proposal.Diff)
+	}
+	return strings.Join(lines, "\n")
+}
+
+func conflictResolutionObservation(result workspacesvc.ConflictResolutionResult, proposal workspacesvc.FileWriteProposal) string {
+	lines := []string{
+		result.Message,
+		"Path: " + result.RelPath,
+		"Strategy: " + result.Strategy,
+		fmt.Sprintf("Conflicts: %d", result.ConflictCount),
 		"Encoding: " + proposal.Encoding,
 		"Rollback: " + proposal.RollbackID,
 	}

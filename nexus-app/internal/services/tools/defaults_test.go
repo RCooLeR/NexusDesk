@@ -1221,6 +1221,48 @@ func TestDefaultDispatcherApplyPatchTool(t *testing.T) {
 	}
 }
 
+func TestDefaultDispatcherResolveConflictTool(t *testing.T) {
+	root := t.TempDir()
+	workspace := workspaceSvc.New()
+	content := "before\n<<<<<<< HEAD\nours\n=======\ntheirs\n>>>>>>> branch\nafter\n"
+	if err := os.WriteFile(filepath.Join(root, "notes.txt"), []byte(content), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	dispatcher := NewDefaultDispatcher(Dependencies{Workspace: workspace})
+	call := agent.ToolCall{Name: "resolve_conflict", Args: map[string]string{"relPath": "notes.txt", "strategy": "theirs"}}
+
+	blocked, err := dispatcher.ExecuteTool(context.Background(), call, agent.Request{WorkspaceRoot: root})
+	if err == nil || !strings.Contains(blocked.Observation, "approval") {
+		t.Fatalf("expected approval block, got result=%#v err=%v", blocked, err)
+	}
+	resolved, err := dispatcher.ExecuteTool(context.Background(), call, agent.Request{WorkspaceRoot: root, ApproveWrites: true})
+	if err != nil {
+		t.Fatalf("resolve_conflict returned error: %v", err)
+	}
+	if !resolved.Mutated || !strings.Contains(resolved.Observation, "Resolved 1 conflict") || !strings.Contains(resolved.Observation, "Strategy: theirs") || !strings.Contains(resolved.Observation, "Rollback:") {
+		t.Fatalf("unexpected resolve_conflict observation:\n%s", resolved.Observation)
+	}
+	data, err := os.ReadFile(filepath.Join(root, "notes.txt"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if string(data) != "before\ntheirs\nafter\n" {
+		t.Fatalf("unexpected resolved content: %q", data)
+	}
+	rollbacks, err := workspace.ListRollbacks(root)
+	if err != nil {
+		t.Fatalf("ListRollbacks returned error: %v", err)
+	}
+	if len(rollbacks) != 1 {
+		t.Fatalf("expected rollback record, got %#v", rollbacks)
+	}
+
+	rejected, err := dispatcher.ExecuteTool(context.Background(), agent.ToolCall{Name: "resolve_conflict", Args: map[string]string{"relPath": "notes.txt", "strategy": "ours"}}, agent.Request{WorkspaceRoot: root, ApproveWrites: true})
+	if err == nil || rejected.Mutated || !strings.Contains(rejected.Observation, "no conflict markers") {
+		t.Fatalf("expected clean file rejection, got result=%#v err=%v", rejected, err)
+	}
+}
+
 func TestDefaultDispatcherRollbackTools(t *testing.T) {
 	root := t.TempDir()
 	workspace := workspaceSvc.New()
