@@ -4,7 +4,9 @@ import (
 	"reflect"
 	"testing"
 
+	"fyne.io/fyne/v2"
 	"fyne.io/fyne/v2/container"
+	"fyne.io/fyne/v2/driver/desktop"
 	fynetest "fyne.io/fyne/v2/test"
 	"fyne.io/fyne/v2/widget"
 )
@@ -15,6 +17,9 @@ func TestRightRailToolWindowsCoverAssistantTargets(t *testing.T) {
 	gotTargets := map[string]bool{}
 	for _, tool := range tools {
 		gotLabels = append(gotLabels, tool.Label)
+		if tool.ShortcutKey == "" {
+			t.Fatalf("expected shortcut key for %s", tool.Label)
+		}
 		if tool.TargetTab != "" {
 			gotTargets[tool.TargetTab] = true
 		}
@@ -84,10 +89,23 @@ func TestRightRailAssistantFocusRecordsActivity(t *testing.T) {
 }
 
 func TestRightRailButtonLabelIncludesShortcut(t *testing.T) {
-	if got := (rightRailToolWindow{Label: "Assistant", Shortcut: "A"}).ButtonLabel(); got != "A  Assistant" {
+	if got := (rightRailToolWindow{Label: "Assistant", Shortcut: "Alt+A"}).ButtonLabel(); got != "Alt+A  Assistant" {
 		t.Fatalf("unexpected button label %q", got)
 	}
 	if got := (rightRailToolWindow{Label: "Assistant"}).ButtonLabel(); got != "Assistant" {
 		t.Fatalf("unexpected button label without shortcut %q", got)
+	}
+}
+
+func TestRightRailShortcutUsesAltModifier(t *testing.T) {
+	shortcut, ok := shortcutRightRailTool(rightRailToolWindow{ShortcutKey: fyne.KeyA}).(*desktop.CustomShortcut)
+	if !ok {
+		t.Fatalf("expected desktop shortcut, got %#v", shortcut)
+	}
+	if shortcut.KeyName != fyne.KeyA || shortcut.Modifier != fyne.KeyModifierAlt {
+		t.Fatalf("unexpected shortcut: %#v", shortcut)
+	}
+	if shortcutRightRailTool(rightRailToolWindow{}) != nil {
+		t.Fatal("expected missing shortcut key to return nil")
 	}
 }

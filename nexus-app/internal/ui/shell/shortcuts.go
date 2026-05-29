@@ -28,6 +28,18 @@ func (v *View) installShortcuts() {
 	bindShortcut(canvas, shortcutSettings(), v.openSettingsTab)
 	bindShortcut(canvas, shortcutQuickOpen(), v.openQuickOpenDialog)
 	bindShortcut(canvas, shortcutCommandPalette(), v.openCommandPaletteDialog)
+	for _, tool := range leftRailToolWindows() {
+		tool := tool
+		if shortcut := shortcutLeftRailTool(tool); shortcut != nil {
+			bindShortcut(canvas, shortcut, func() { v.openLeftRailToolWindow(tool) })
+		}
+	}
+	for _, tool := range rightRailToolWindows() {
+		tool := tool
+		if shortcut := shortcutRightRailTool(tool); shortcut != nil {
+			bindShortcut(canvas, shortcut, func() { v.openRightRailToolWindow(tool) })
+		}
+	}
 }
 
 func bindShortcut(canvas fyne.Canvas, shortcut fyne.Shortcut, action func()) {
@@ -118,4 +130,19 @@ func shortcutQuickOpen() fyne.Shortcut {
 
 func shortcutCommandPalette() fyne.Shortcut {
 	return &desktop.CustomShortcut{KeyName: fyne.KeyP, Modifier: fyne.KeyModifierShortcutDefault | fyne.KeyModifierShift}
+}
+
+func shortcutLeftRailTool(tool leftRailToolWindow) fyne.Shortcut {
+	return shortcutRailTool(tool.ShortcutKey)
+}
+
+func shortcutRightRailTool(tool rightRailToolWindow) fyne.Shortcut {
+	return shortcutRailTool(tool.ShortcutKey)
+}
+
+func shortcutRailTool(key fyne.KeyName) fyne.Shortcut {
+	if key == "" {
+		return nil
+	}
+	return &desktop.CustomShortcut{KeyName: key, Modifier: fyne.KeyModifierAlt}
 }
