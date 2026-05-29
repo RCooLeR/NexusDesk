@@ -346,12 +346,13 @@ Already available:
 - Diagnostics for provider, metadata health, jobs, tasks, SQL, agent failures, runtime state.
 - Shared slow-workflow job contract and explicit user-start enforcement.
 - Shared threat-model/control registry for filesystem, connectors, jobs, terminal/shell, browser automation, Docker/system operations, generated artifacts, and MCP/plugins.
+- Readiness-owned production failure scenario matrix for folder-open cheapness, malformed files, corrupt metadata, missing providers, and canceled long work.
 
 Planned/remaining:
 
 - Audit coverage for future connector sync, OCR, dump import, arbitrary shell, and Docker mutation workflows. The shared threat-model/control registry now defines required controls; concrete audit records still land with each future executable workflow.
 - Issue-report bundle with secret redaction and opt-in workspace content inclusion. Implemented as a Diagnostics export that writes a redacted ZIP with diagnostics text, activity tail, environment metadata, workspace-state file names, and no workspace file contents by default. Diagnostics reports now start with native health cards for provider, metadata, jobs/runs, performance, startup recovery, and issue-report readiness before detailed logs.
-- Crash/hang checks for folder open, malformed files, corrupt metadata, missing providers, and canceled long work.
+- Crash/hang checks for folder open, malformed files, corrupt metadata, missing providers, and canceled long work. The readiness failure-scenario matrix now pins automated/manual evidence references; keep adding scenario-specific tests as new workflows land.
 
 ### 4.11 Packaging, Platform, Release
 
