@@ -151,7 +151,7 @@ Already available:
 
 Planned/remaining:
 
-- More JetBrains-like assistant/data/artifact tool-window grouping and surface-specific polish. Assistant now has a first visible run/status strip for mode, route, context, evidence, source, and Agent job safety, plus bounded open/pin source actions for latest answers.
+- More JetBrains-like assistant/data/artifact tool-window grouping and surface-specific polish. Assistant now has a first visible run/status strip for mode, route, context, evidence, source, and Agent job safety, plus bounded open/pin source actions and a native source digest for latest answers.
 - Continue polishing the workspace home surface after the first-run readiness cockpit baseline.
 - Continued global health indicator polish beyond the first native status bar.
 - More consistent keyboard navigation/focus behavior across all panes.
@@ -207,7 +207,7 @@ Already available:
 - Persisted chat history, search/history navigation, retry, compare, save latest answer.
 - Assistant memory and prompt profiles.
 - Separate Ask vs Agent prompt behavior.
-- Source/model footer diagnostics.
+- Source/model footer diagnostics plus a native source digest for latest-answer evidence quality, verified refs, unverified refs, cited sources, and uncited sources.
 - In-product Safe Agent Guide from Help and the command palette.
 - In-product Beta Feedback and Release Notes guide from Help and the command palette.
 - In-product Clean-Machine Smoke Checklist from Help and the command palette.

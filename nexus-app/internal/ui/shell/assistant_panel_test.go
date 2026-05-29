@@ -313,6 +313,48 @@ func TestAssistantSourceActionSummaryReportsFailures(t *testing.T) {
 	}
 }
 
+func TestAssistantSourceDigestMarkdownSummarizesEvidence(t *testing.T) {
+	markdown := assistantSourceDigestMarkdown(assistantSvc.Result{
+		Message:      "Use README.md:12 and missing.md:3.",
+		Model:        "qwen",
+		ModelRoute:   "Main coding model",
+		SourcePaths:  []string{"README.md", "docs/guide.md"},
+		RouteWarning: "fallback used",
+	})
+	for _, expected := range []string{
+		"# Assistant Source Digest",
+		"Evidence: line-cited",
+		"Sources: 2. Verified refs: 1. Unverified refs: 1.",
+		"Model: `qwen`",
+		"Route: `Main coding model`",
+		"Route warning: fallback used",
+		"## Sources",
+		"- `README.md`",
+		"- `docs/guide.md`",
+		"## Verified citations",
+		"- `README.md:L12`",
+		"## Unverified citations",
+		"- `missing.md:L3`",
+		"## Cited sources",
+		"## Uncited sources",
+	} {
+		if !strings.Contains(markdown, expected) {
+			t.Fatalf("expected digest to contain %q, got %q", expected, markdown)
+		}
+	}
+}
+
+func TestAssistantMarkdownListClipsLongLists(t *testing.T) {
+	list := assistantMarkdownList("Sources", []string{"a.go", "b.go", "c.go"}, "empty", 2)
+	if !strings.Contains(list, "- `a.go`") || !strings.Contains(list, "- `b.go`") || strings.Contains(list, "- `c.go`") || !strings.Contains(list, "1 more item(s) hidden") {
+		t.Fatalf("unexpected clipped list: %q", list)
+	}
+	empty := assistantMarkdownList("Sources", nil, "No sources.", 2)
+	if !strings.Contains(empty, "## Sources") || !strings.Contains(empty, "No sources.") {
+		t.Fatalf("unexpected empty list: %q", empty)
+	}
+}
+
 func TestAssistantCitationRefsDedupesAndNormalizes(t *testing.T) {
 	refs := assistantCitationRefs(assistantSvc.Result{
 		Message:     "See docs\\guide.md:10, docs/guide.md#L10, and docs/guide.md#L11-L12.",

@@ -34,6 +34,7 @@ const assistantCitationSnippetLimit = 8
 const assistantCitationSnippetLineLimit = 4
 const assistantCitationSnippetLineMaxChars = 180
 const assistantSourceActionLimit = 8
+const assistantSourceDigestListLimit = 24
 
 var assistantCitationPattern = regexp.MustCompile(`(?i)([\w./\\-]+\.[A-Za-z0-9]{1,12})(?:(?:#L|:)(\d+)(?:[-:L]+(\d+))?)`)
 var assistantCitationRefPattern = regexp.MustCompile(`^(.+):L(\d+)(?:-L(\d+))?$`)
@@ -114,7 +115,8 @@ func (v *View) newAssistantPanel() fyne.CanvasObject {
 	})
 	openSources := widget.NewButtonWithIcon("Open sources", theme.FolderOpenIcon(), v.openLatestAssistantSources)
 	pinSources := widget.NewButtonWithIcon("Pin sources", theme.ContentAddIcon(), v.pinLatestAssistantSources)
-	assistantActions := container.NewHBox(retry, compare, saveAnswer, openSources, pinSources)
+	sourceDigest := widget.NewButtonWithIcon("Source digest", theme.SearchIcon(), v.showLatestAssistantSourceDigest)
+	assistantActions := container.NewHBox(retry, compare, saveAnswer, openSources, pinSources, sourceDigest)
 	composerControls := container.NewVBox(mode, modelRoute, agentTaskApproval, v.assistantRunStatus)
 	composer := container.NewBorder(assistantActions, nil, composerControls, send, prompt)
 	composer = container.NewPadded(composer)
@@ -612,6 +614,24 @@ func (v *View) pinLatestAssistantSources() {
 	v.addActivity(assistantSourceActionSummary("Pinned", added, len(paths), 0))
 }
 
+func (v *View) showLatestAssistantSourceDigest() {
+	if strings.TrimSpace(v.assistantLastResult.Message) == "" {
+		v.addActivity("No assistant answer is available for source digest yet.")
+		return
+	}
+	markdown := assistantSourceDigestMarkdown(v.assistantLastResult)
+	if v.window == nil {
+		v.addActivity("Assistant source digest is unavailable without a window.")
+		return
+	}
+	content := widget.NewRichTextFromMarkdown(markdown)
+	content.Wrapping = fyne.TextWrapWord
+	scroll := container.NewVScroll(content)
+	scroll.SetMinSize(fyne.NewSize(720, 520))
+	dialog.ShowCustom("Assistant source digest", "Close", scroll, v.window)
+	v.addActivity("Opened assistant source digest.")
+}
+
 func (v *View) loadAssistantChatHistory() {
 	if v.metadataStore == nil {
 		v.state.SetAssistantConversation(nil)
@@ -888,6 +908,61 @@ func assistantSourceActionSummary(action string, count int, total int, failed in
 		summary += fmt.Sprintf(" %d failed.", failed)
 	}
 	return summary
+}
+
+func assistantSourceDigestMarkdown(result assistantSvc.Result) string {
+	diagnostic := assistantEvidenceDiagnosticForResult(result)
+	lines := []string{
+		"# Assistant Source Digest",
+		"",
+		"Evidence: " + firstNonEmpty(diagnostic.Summary, "not classified."),
+		fmt.Sprintf("Sources: %d. Verified refs: %d. Unverified refs: %d.", diagnostic.SourceCount, diagnostic.CitationCount, diagnostic.UnverifiedCitationCount),
+	}
+	if model := strings.TrimSpace(result.Model); model != "" {
+		lines = append(lines, "Model: `"+model+"`")
+	}
+	if route := strings.TrimSpace(result.ModelRoute); route != "" {
+		lines = append(lines, "Route: `"+route+"`")
+	}
+	if warning := strings.TrimSpace(result.RouteWarning); warning != "" {
+		lines = append(lines, "Route warning: "+warning)
+	}
+	lines = append(lines,
+		"",
+		assistantMarkdownList("Sources", assistantEffectiveSourcePaths(result), "No explicit source context is attached.", assistantSourceDigestListLimit),
+		"",
+		assistantMarkdownList("Verified citations", assistantCitationRefs(result), "No verified line citations were detected.", assistantSourceDigestListLimit),
+		"",
+		assistantMarkdownList("Unverified citations", assistantUnverifiedCitationRefs(result), "No out-of-context line citations were detected.", assistantSourceDigestListLimit),
+		"",
+		assistantMarkdownList("Cited sources", diagnostic.CitedSourcePaths, "No sources were covered by verified citations.", assistantSourceDigestListLimit),
+		"",
+		assistantMarkdownList("Uncited sources", diagnostic.UncitedSourcePaths, "No uncited sources remain.", assistantSourceDigestListLimit),
+	)
+	return strings.Join(lines, "\n")
+}
+
+func assistantMarkdownList(title string, values []string, empty string, limit int) string {
+	title = firstNonEmpty(strings.TrimSpace(title), "Items")
+	if len(values) == 0 {
+		return "## " + title + "\n\n" + firstNonEmpty(strings.TrimSpace(empty), "None.")
+	}
+	visible := values
+	if limit > 0 && len(values) > limit {
+		visible = values[:limit]
+	}
+	lines := []string{"## " + title}
+	for _, value := range visible {
+		value = strings.TrimSpace(value)
+		if value == "" {
+			continue
+		}
+		lines = append(lines, "- `"+value+"`")
+	}
+	if len(visible) < len(values) {
+		lines = append(lines, fmt.Sprintf("- ... %d more item(s) hidden", len(values)-len(visible)))
+	}
+	return strings.Join(lines, "\n")
 }
 
 func assistantSourcePathsFromContext(contextRelPath string) []string {
