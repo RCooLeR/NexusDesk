@@ -2,81 +2,28 @@
 
 package protectedsecret
 
-import (
-	"os"
-	"path/filepath"
-	"testing"
-)
+import "testing"
 
-func TestDarwinKeychainCommandRoundTrip(t *testing.T) {
-	fake := filepath.Join(t.TempDir(), "security")
-	store := filepath.Join(t.TempDir(), "secret")
-	script := `#!/bin/sh
-set -eu
-store="${NEXUSDESK_FAKE_KEYCHAIN_STORE}"
-cmd="$1"
-shift
-account=""
-service=""
-password=""
-case "$cmd" in
-  add-generic-password)
-    while [ "$#" -gt 0 ]; do
-      case "$1" in
-        -a) account="$2"; shift 2 ;;
-        -s) service="$2"; shift 2 ;;
-        -w) password="$2"; shift 2 ;;
-        -U) shift ;;
-        *) shift ;;
-      esac
-    done
-    printf "%s" "$password" > "${store}.${service}.${account}"
-    ;;
-  find-generic-password)
-    while [ "$#" -gt 0 ]; do
-      case "$1" in
-        -a) account="$2"; shift 2 ;;
-        -s) service="$2"; shift 2 ;;
-        -w) shift ;;
-        *) shift ;;
-      esac
-    done
-    cat "${store}.${service}.${account}"
-    ;;
-  delete-generic-password)
-    while [ "$#" -gt 0 ]; do
-      case "$1" in
-        -a) account="$2"; shift 2 ;;
-        -s) service="$2"; shift 2 ;;
-        *) shift ;;
-      esac
-    done
-    rm -f "${store}.${service}.${account}"
-    ;;
-  *) exit 2 ;;
-esac
-`
-	if err := os.WriteFile(fake, []byte(script), 0o755); err != nil {
-		t.Fatalf("WriteFile fake security failed: %v", err)
-	}
-	oldCommand := securityCommand
-	oldStore := os.Getenv("NEXUSDESK_FAKE_KEYCHAIN_STORE")
-	securityCommand = fake
-	t.Setenv("NEXUSDESK_FAKE_KEYCHAIN_STORE", store)
+func TestDarwinKeychainRoundTripUsesNativeSecretBytes(t *testing.T) {
+	store := newFakeDarwinKeychain()
+	oldStore := darwinKeychainStore
+	darwinKeychainStore = store
 	t.Cleanup(func() {
-		securityCommand = oldCommand
-		_ = os.Setenv("NEXUSDESK_FAKE_KEYCHAIN_STORE", oldStore)
+		darwinKeychainStore = oldStore
 	})
 
-	token, err := Protect("settings.api-key", []byte("darwin-secret"))
+	token, err := Protect("settings.api-key", []byte("darwin-secret\n"))
 	if err != nil {
 		t.Fatalf("Protect returned error: %v", err)
+	}
+	if store.lastStoredSecret != "darwin-secret\n" {
+		t.Fatalf("expected secret to be passed as private bytes, got %q", store.lastStoredSecret)
 	}
 	plain, err := Unprotect(token)
 	if err != nil {
 		t.Fatalf("Unprotect returned error: %v", err)
 	}
-	if string(plain) != "darwin-secret" {
+	if string(plain) != "darwin-secret\n" {
 		t.Fatalf("expected restored secret, got %q", string(plain))
 	}
 	if err := Delete(token); err != nil {
@@ -86,3 +33,46 @@ esac
 		t.Fatal("expected lookup to fail after Delete")
 	}
 }
+
+type fakeDarwinKeychain struct {
+	values           map[string][]byte
+	lastStoredSecret string
+}
+
+func newFakeDarwinKeychain() *fakeDarwinKeychain {
+	return &fakeDarwinKeychain{values: map[string][]byte{}}
+}
+
+func (f *fakeDarwinKeychain) Store(service string, account string, secret []byte) error {
+	key := service + "\x00" + account
+	f.lastStoredSecret = string(secret)
+	f.values[key] = append([]byte{}, secret...)
+	return nil
+}
+
+func (f *fakeDarwinKeychain) Lookup(service string, account string) ([]byte, error) {
+	key := service + "\x00" + account
+	value, ok := f.values[key]
+	if !ok {
+		return nil, errFakeDarwinKeychainMissing
+	}
+	return append([]byte{}, value...), nil
+}
+
+func (f *fakeDarwinKeychain) Delete(service string, account string) error {
+	key := service + "\x00" + account
+	delete(f.values, key)
+	return nil
+}
+
+func (f *fakeDarwinKeychain) Available() bool {
+	return true
+}
+
+type fakeDarwinKeychainMissingError struct{}
+
+func (fakeDarwinKeychainMissingError) Error() string {
+	return "secret not found"
+}
+
+var errFakeDarwinKeychainMissing error = fakeDarwinKeychainMissingError{}

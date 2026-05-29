@@ -150,7 +150,7 @@ Exit criteria:
 - Long-running jobs cannot freeze folder open or block the main UI.
 - Destructive operations lack approval, audit, and rollback/mitigation where practical.
 - Packaging lacks a repeatable build and versioned release process.
-- macOS Keychain, web fetch, and connector TLS defaults are not hardened to the latest review standard.
+- Web fetch and connector TLS defaults are not hardened to the latest review standard.
 - Streaming, activity rendering, search, and editor save paths can visibly stall large sessions.
 
 ## Immediate Production-Oriented Next Batch

@@ -267,7 +267,7 @@ The latest `claude-findings.md` is useful and should be treated as the current r
 
 1. Preview truncation data-loss path: add top-level truncation metadata to `domain.FilePreview`, disable inline save for truncated files, and surface the partial-read state to agent observations.
 2. XLSX/DOCX/PPTX zip decompression caps: implemented shared zip file-count, package-member, total-uncompressed, XLSX XML-member, DOCX body, and structured-preview compressed-size caps before parsing.
-3. macOS Keychain argv secret leak: stop passing secrets through command arguments; use stdin or Security.framework bindings.
+3. macOS Keychain argv secret leak: implemented Security.framework-backed storage so secrets are passed as private bytes rather than process arguments; macOS clean-machine smoke still needs to verify Keychain prompts and signing behavior.
 4. Windows DPAPI buffer pinning: implemented `runtime.KeepAlive` after native calls, hardened `LocalFree` cleanup, and added Windows round-trip coverage.
 5. DNS rebinding SSRF in `web_fetch`: enforce private-range rejection at dial time, not only lookup/URL validation time.
 6. Workspace search performance: add byte/chunk search fast path and avoid full preview decode/classification for every file.
@@ -318,7 +318,7 @@ Every current `claude-findings.md` item is tracked here so no finding is lost wh
 #### Critical
 
 - [ ] C-1.1 Workspace search full-decodes every candidate file: add byte/chunk search fast path, binary skips, matcher reuse, latest-request cancellation/singleflight, and optional mtime/size cache.
-- [ ] C-1.2 macOS Keychain passes secrets on process argv: feed secrets through stdin or Security.framework and add regression coverage.
+- [x] C-1.2 macOS Keychain no longer passes secrets on process argv: the darwin backend now uses Security.framework via cgo, passes secret bytes directly to Keychain APIs, has a no-cgo refusal path, and includes stubbed regression coverage that exercises the native backend interface without a real keychain.
 - [x] C-1.3 XLSX/DOCX/PPTX zip preview has decompression caps: shared safe zip guards cap file count, total uncompressed size, package members, XLSX metadata/worksheet reads, DOCX body reads, and structured preview compressed package size; DOCX/PPTX generated export validation already enforces required-part/XML caps.
 - [x] C-1.4 Windows DPAPI blob calls pin input buffers and harden `LocalFree` handling: `Protect`/`Unprotect` keep Go slices alive after native calls, propagate `LocalFree` failures when output cleanup fails, and cover Windows DPAPI round-trip behavior.
 - [ ] C-1.5 UI shell `View` is a god object: extract controllers/state for Data, Assistant, Git, Editor, Artifacts, Diagnostics, Jobs, and Settings.
@@ -407,15 +407,15 @@ Every current `claude-findings.md` item is tracked here so no finding is lost wh
 
 Future development sessions should pick one logical milestone from this order:
 
-1. Harden macOS Keychain protected-secret storage so secrets are not passed through process argv.
-2. Harden `web_fetch` against DNS rebinding SSRF.
-3. Replace workspace search preview-decode path with a fast bounded byte/chunk search path.
-4. Enforce safer connector TLS defaults with explicit audited plaintext opt-in.
-5. Add metadata WAL/busy timeout and diagnostics visibility.
-6. Throttle assistant streaming, agent events, and activity rendering.
-7. Move editor save/diff/rollback off the UI thread and preserve editor state after save.
-8. Start UI shell controller extraction with Data, Assistant, Artifacts, Diagnostics, and Editor controllers.
-9. Wire signed packaging, installer/update/uninstall evidence into CI/release using the packaging readiness gate.
+1. Harden `web_fetch` against DNS rebinding SSRF.
+2. Replace workspace search preview-decode path with a fast bounded byte/chunk search path.
+3. Enforce safer connector TLS defaults with explicit audited plaintext opt-in.
+4. Add metadata WAL/busy timeout and diagnostics visibility.
+5. Throttle assistant streaming, agent events, and activity rendering.
+6. Move editor save/diff/rollback off the UI thread and preserve editor state after save.
+7. Start UI shell controller extraction with Data, Assistant, Artifacts, Diagnostics, and Editor controllers.
+8. Wire signed packaging, installer/update/uninstall evidence into CI/release using the packaging readiness gate.
+9. Run macOS clean-machine Keychain smoke to verify Security.framework prompts, signing/notarization behavior, and no-cgo refusal messaging.
 10. Continue JetBrains-like UI polish once the above trust/performance risks are under control.
 
 ## 8. Keep-Going Prompt

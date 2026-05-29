@@ -3,22 +3,27 @@
 package protectedsecret
 
 import (
-	"bytes"
 	"errors"
 	"fmt"
-	"os/exec"
 )
 
 const darwinBackend = "macos-keychain"
 
-var securityCommand = "security"
+var darwinKeychainStore darwinKeychain = nativeDarwinKeychain{}
+
+type darwinKeychain interface {
+	Store(service string, account string, secret []byte) error
+	Lookup(service string, account string) ([]byte, error)
+	Delete(service string, account string) error
+	Available() bool
+}
 
 func Protect(purpose string, data []byte) ([]byte, error) {
 	token, err := newToken(darwinBackend, purpose)
 	if err != nil {
 		return nil, err
 	}
-	if err := runSecurity("add-generic-password", "-a", token.Account, "-s", serviceName(token.Purpose), "-w", string(data), "-U"); err != nil {
+	if err := darwinKeychainStore.Store(serviceName(token.Purpose), token.Account, data); err != nil {
 		return nil, fmt.Errorf("store secret in macOS Keychain: %w", err)
 	}
 	return encodeToken(token), nil
@@ -32,11 +37,11 @@ func Unprotect(data []byte) ([]byte, error) {
 	if !ok || token.Backend != darwinBackend {
 		return nil, errors.New("protected secret is not a macOS Keychain token")
 	}
-	out, err := exec.Command(securityCommand, "find-generic-password", "-a", token.Account, "-s", serviceName(token.Purpose), "-w").Output()
+	out, err := darwinKeychainStore.Lookup(serviceName(token.Purpose), token.Account)
 	if err != nil {
 		return nil, fmt.Errorf("read secret from macOS Keychain: %w", err)
 	}
-	return bytes.TrimRight(out, "\r\n"), nil
+	return out, nil
 }
 
 func Delete(data []byte) error {
@@ -44,24 +49,14 @@ func Delete(data []byte) error {
 	if err != nil || !ok || token.Backend != darwinBackend {
 		return err
 	}
-	if err := runSecurity("delete-generic-password", "-a", token.Account, "-s", serviceName(token.Purpose)); err != nil {
+	if err := darwinKeychainStore.Delete(serviceName(token.Purpose), token.Account); err != nil {
 		return fmt.Errorf("delete secret from macOS Keychain: %w", err)
 	}
 	return nil
 }
 
 func Available() bool {
-	_, err := exec.LookPath(securityCommand)
-	return err == nil
-}
-
-func runSecurity(args ...string) error {
-	cmd := exec.Command(securityCommand, args...)
-	out, err := cmd.CombinedOutput()
-	if err != nil {
-		return fmt.Errorf("%w: %s", err, bytes.TrimSpace(out))
-	}
-	return nil
+	return darwinKeychainStore.Available()
 }
 
 func serviceName(purpose string) string {
