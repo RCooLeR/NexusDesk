@@ -127,14 +127,7 @@ type View struct {
 	taskOutput               *widget.Entry
 	jobs                     *jobsController
 	rollbacks                *rollbackController
-	artifactResults          *fyne.Container
-	artifactStatus           *widget.Label
-	artifactPreview          *widget.Entry
-	artifactSourceStatus     *widget.Label
-	artifactSources          *fyne.Container
-	artifactIncludeArchived  bool
-	artifactCompareLeft      artifactsCompareSelection
-	artifactLastComparison   artifactsSvc.ArtifactComparison
+	artifacts                *artifactsController
 	chatHistoryResults       *fyne.Container
 	chatHistoryStatus        *widget.Label
 	chatHistoryDetail        *widget.Entry
@@ -195,10 +188,6 @@ func NewWithStartupStatus(window fyne.Window, startupStatus startupSvc.Status) *
 	taskOutput.TextStyle = fyne.TextStyle{Monospace: true}
 	taskOutput.Wrapping = fyne.TextWrapOff
 	taskOutput.Disable()
-	artifactPreview := widget.NewMultiLineEntry()
-	artifactPreview.TextStyle = fyne.TextStyle{Monospace: true}
-	artifactPreview.Wrapping = fyne.TextWrapWord
-	artifactPreview.Disable()
 	chatHistoryDetail := widget.NewMultiLineEntry()
 	chatHistoryDetail.TextStyle = fyne.TextStyle{Monospace: true}
 	chatHistoryDetail.Wrapping = fyne.TextWrapWord
@@ -310,13 +299,6 @@ func NewWithStartupStatus(window fyne.Window, startupStatus startupSvc.Status) *
 		taskResults:             container.NewVBox(widget.NewLabel("Discover workspace tasks to run tests, scripts, or Compose checks.")),
 		taskStatus:              widget.NewLabel("No tasks discovered."),
 		taskOutput:              taskOutput,
-		artifactResults:         container.NewVBox(widget.NewLabel("Refresh artifacts to inspect generated task reports.")),
-		artifactStatus:          widget.NewLabel("Artifacts have not been loaded."),
-		artifactPreview:         artifactPreview,
-		artifactSourceStatus: widget.NewLabel(
-			"Artifact sources have not been loaded.",
-		),
-		artifactSources: container.NewVBox(widget.NewLabel("Preview an artifact to inspect cited sources.")),
 		chatHistoryResults: container.NewVBox(
 			widget.NewLabel("Open a workspace to search persisted chat messages."),
 		),
@@ -344,6 +326,7 @@ func NewWithStartupStatus(window fyne.Window, startupStatus startupSvc.Status) *
 	view.rollbacks = newRollbackController(view)
 	view.diagnostics = newDiagnosticsController(view)
 	view.git = newGitController(view)
+	view.artifacts = newArtifactsController(view)
 	welcomeItem.Content = view.newWelcomePanel()
 	view.configureEditorTabs()
 	view.refreshStatusBar()

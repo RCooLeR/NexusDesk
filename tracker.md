@@ -54,7 +54,7 @@ Immediate execution order:
 
 - Keep `docs/17_END_TO_END_PRODUCTION_PLAN.md` current as the product north star for all repeated development sessions.
 - Use `docs/29_FULL_PROJECT_REVIEW_AND_ROADMAP.md` as the current consolidated review snapshot when choosing the next safety, parity, UI, packaging, or production milestone.
-- Fix the remaining P0 Claude/Codex review items before broad new feature work: continue UI shell controller extraction beyond the completed Search, Jobs, Rollbacks, Diagnostics, and Git controller slices, then add any follow-up search cancellation/debouncing needed in the shell controller layer.
+- Fix the remaining P0 Claude/Codex review items before broad new feature work: continue UI shell controller extraction beyond the completed Search, Jobs, Rollbacks, Diagnostics, Git, and Artifacts controller slices, then add any follow-up search cancellation/debouncing needed in the shell controller layer.
 - Validate macOS Keychain and Linux Secret Service/libsecret behavior during platform packaging smoke.
 - Apply the durable slow-job contract to OCR, dump imports, connector pulls, long indexing, report generation, and long agent runs as those workflows are implemented.
 - Keep the documented native editor parity strategy visible in Language Actions and continue post-beta LSP/inline-styling spikes without blocking Native Parity Beta.
@@ -757,7 +757,7 @@ Source: `claude-findings.md`. Detailed plan context lives in `docs/29_FULL_PROJE
 - [x] C-1.2 macOS Keychain no longer passes secrets on process argv: the darwin backend now uses Security.framework via cgo, passes secret bytes directly to Keychain APIs, has a no-cgo refusal path, and includes stubbed regression coverage that exercises the native backend interface without a real keychain.
 - [x] C-1.3 XLSX/DOCX/PPTX zip preview has decompression caps: shared safe zip guards now cap file count, total uncompressed size, package members, XLSX metadata/worksheet reads, DOCX body reads, and structured preview compressed package size; DOCX/PPTX generated export validation already enforces required-part/XML caps.
 - [x] C-1.4 Windows DPAPI blob calls pin input buffers and harden `LocalFree` handling: `Protect`/`Unprotect` keep Go slices alive after native calls, propagate `LocalFree` failures when output cleanup fails, and cover Windows DPAPI round-trip behavior.
-- [ ] C-1.5 UI shell `View` is a god object: Search, Jobs, Rollbacks, Diagnostics, and Git panel state/actions are now isolated in controllers; continue extracting controllers/state for Data, Assistant, Editor, Artifacts, and Settings.
+- [ ] C-1.5 UI shell `View` is a god object: Search, Jobs, Rollbacks, Diagnostics, Git, and Artifacts panel state/actions are now isolated in controllers; continue extracting controllers/state for Data, Assistant, Editor, and Settings.
 
 ### High / P1
 

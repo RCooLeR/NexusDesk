@@ -31,6 +31,33 @@ const (
 	artifactJobKindRegenerate      = "artifact-regenerate"
 )
 
+type artifactsController struct {
+	view            *View
+	results         *fyne.Container
+	status          *widget.Label
+	preview         *widget.Entry
+	sourceStatus    *widget.Label
+	sources         *fyne.Container
+	includeArchived bool
+	compareLeft     artifactsCompareSelection
+	lastComparison  artifactsSvc.ArtifactComparison
+}
+
+func newArtifactsController(view *View) *artifactsController {
+	preview := widget.NewMultiLineEntry()
+	preview.TextStyle = fyne.TextStyle{Monospace: true}
+	preview.Wrapping = fyne.TextWrapWord
+	preview.Disable()
+	return &artifactsController{
+		view:         view,
+		results:      container.NewVBox(widget.NewLabel("Refresh artifacts to inspect generated task reports.")),
+		status:       widget.NewLabel("Artifacts have not been loaded."),
+		preview:      preview,
+		sourceStatus: widget.NewLabel("Artifact sources have not been loaded."),
+		sources:      container.NewVBox(widget.NewLabel("Preview an artifact to inspect cited sources.")),
+	}
+}
+
 func (v *View) newArtifactsPanel() fyne.CanvasObject {
 	search := widget.NewEntry()
 	search.SetPlaceHolder("Search artifacts by title, path, kind, source, job, or task")
@@ -41,23 +68,23 @@ func (v *View) newArtifactsPanel() fyne.CanvasObject {
 	exportLineage := widget.NewButtonWithIcon("Export lineage", theme.DocumentSaveIcon(), v.exportArtifactLineageGraph)
 	importLineage := widget.NewButtonWithIcon("Import lineage", theme.FolderOpenIcon(), v.importArtifactLineageGraph)
 	showArchived := widget.NewCheck("Show archived", func(include bool) {
-		v.artifactIncludeArchived = include
+		v.artifacts.includeArchived = include
 		v.refreshArtifactsWithQuery(search.Text)
 	})
-	showArchived.SetChecked(v.artifactIncludeArchived)
+	showArchived.SetChecked(v.artifacts.includeArchived)
 	refresh := widget.NewButtonWithIcon("Refresh", theme.ViewRefreshIcon(), func() {
 		v.refreshArtifactsWithQuery(search.Text)
 	})
 	search.OnSubmitted = func(string) {
 		v.refreshArtifactsWithQuery(search.Text)
 	}
-	header := container.NewBorder(nil, nil, v.artifactStatus, container.NewHBox(documentReport, documentExtract, scanReport, exportComparison, exportLineage, importLineage, showArchived, refresh), search)
-	listScroll := container.NewScroll(v.artifactResults)
+	header := container.NewBorder(nil, nil, v.artifacts.status, container.NewHBox(documentReport, documentExtract, scanReport, exportComparison, exportLineage, importLineage, showArchived, refresh), search)
+	listScroll := container.NewScroll(v.artifacts.results)
 	listScroll.SetMinSize(fyne.NewSize(260, 110))
-	sourceScroll := container.NewVScroll(v.artifactSources)
+	sourceScroll := container.NewVScroll(v.artifacts.sources)
 	sourceScroll.SetMinSize(fyne.NewSize(320, 80))
-	previewHeader := container.NewVBox(widget.NewLabel("Artifact preview and lineage"), v.artifactSourceStatus, sourceScroll)
-	preview := container.NewBorder(previewHeader, nil, nil, nil, v.artifactPreview)
+	previewHeader := container.NewVBox(widget.NewLabel("Artifact preview and lineage"), v.artifacts.sourceStatus, sourceScroll)
+	preview := container.NewBorder(previewHeader, nil, nil, nil, v.artifacts.preview)
 	split := container.NewVSplit(listScroll, preview)
 	split.Offset = 0.42
 	return container.NewBorder(header, nil, nil, nil, split)
@@ -72,7 +99,7 @@ func (v *View) generateWorkspaceScanReportArtifact() {
 	jobLabel := workspaceScanReportJobLabel(workspace.Name)
 	job, ctx := v.jobService.Start(artifactJobKindScanReport, jobLabel)
 	v.jobService.AppendLog(job.ID, "Workspace: "+workspace.Root)
-	v.artifactStatus.SetText("Running " + jobLabel + " as " + job.ID + ".")
+	v.artifacts.status.SetText("Running " + jobLabel + " as " + job.ID + ".")
 	v.addActivity("Started " + job.ID + ": " + jobLabel + ".")
 	v.refreshJobs()
 	go func() {
@@ -113,11 +140,11 @@ func (v *View) finishWorkspaceScanReportArtifactJob(jobID string, artifact artif
 	if err != nil {
 		if errors.Is(err, context.Canceled) {
 			v.jobService.Finish(jobID, jobsSvc.StatusCanceled, "Workspace scan report canceled.", nil)
-			v.artifactStatus.SetText("Workspace scan report canceled.")
+			v.artifacts.status.SetText("Workspace scan report canceled.")
 			v.addActivity("Workspace scan report canceled for " + jobID + ".")
 		} else {
 			v.jobService.Finish(jobID, jobsSvc.StatusFailed, "Workspace scan report failed.", err)
-			v.artifactStatus.SetText("Workspace scan report failed.")
+			v.artifacts.status.SetText("Workspace scan report failed.")
 			dialog.ShowError(err, v.window)
 		}
 		v.refreshJobs()
@@ -126,9 +153,9 @@ func (v *View) finishWorkspaceScanReportArtifactJob(jobID string, artifact artif
 	artifact.JobID = jobID
 	v.jobService.AppendLog(jobID, "Artifact: "+artifact.RelPath)
 	v.jobService.Finish(jobID, jobsSvc.StatusSuccess, "Created "+artifact.RelPath+".", nil)
-	v.artifactPreview.SetText("")
+	v.artifacts.preview.SetText("")
 	v.refreshArtifactSources(nil)
-	v.artifactStatus.SetText("Created " + artifact.RelPath)
+	v.artifacts.status.SetText("Created " + artifact.RelPath)
 	v.addActivity(artifact.Message)
 	v.persistArtifactRecord(artifact)
 	v.refreshArtifactsWithQuery("kind:scan-report")
@@ -148,7 +175,7 @@ func (v *View) generateDocumentSetArtifact() {
 	jobLabel := documentSetArtifactJobLabel(root)
 	job, ctx := v.jobService.Start(artifactJobKindDocumentReport, jobLabel)
 	v.jobService.AppendLog(job.ID, "Root: "+root)
-	v.artifactStatus.SetText("Running " + jobLabel + " as " + job.ID + ".")
+	v.artifacts.status.SetText("Running " + jobLabel + " as " + job.ID + ".")
 	v.addActivity("Started " + job.ID + ": " + jobLabel + ".")
 	v.refreshJobs()
 	workspaceRoot := workspace.Root
@@ -215,11 +242,11 @@ func (v *View) finishDocumentSetArtifactJob(jobID string, artifact artifactsSvc.
 	if err != nil {
 		if errors.Is(err, context.Canceled) {
 			v.jobService.Finish(jobID, jobsSvc.StatusCanceled, "Document report canceled.", nil)
-			v.artifactStatus.SetText("Document report canceled.")
+			v.artifacts.status.SetText("Document report canceled.")
 			v.addActivity("Document report canceled for " + jobID + ".")
 		} else {
 			v.jobService.Finish(jobID, jobsSvc.StatusFailed, "Document report failed.", err)
-			v.artifactStatus.SetText("Document report failed.")
+			v.artifacts.status.SetText("Document report failed.")
 			dialog.ShowError(err, v.window)
 		}
 		v.refreshJobs()
@@ -228,9 +255,9 @@ func (v *View) finishDocumentSetArtifactJob(jobID string, artifact artifactsSvc.
 	artifact.JobID = jobID
 	v.jobService.AppendLog(jobID, "Artifact: "+artifact.RelPath)
 	v.jobService.Finish(jobID, jobsSvc.StatusSuccess, "Created "+artifact.RelPath+".", nil)
-	v.artifactPreview.SetText("")
+	v.artifacts.preview.SetText("")
 	v.refreshArtifactSources(nil)
-	v.artifactStatus.SetText("Created " + artifact.RelPath)
+	v.artifacts.status.SetText("Created " + artifact.RelPath)
 	v.addActivity(artifact.Message)
 	v.persistArtifactRecord(artifact)
 	v.refreshArtifactsWithQuery("kind:document-report")
@@ -251,7 +278,7 @@ func (v *View) generateDocumentExtractionArtifact() {
 	jobLabel := documentExtractionArtifactJobLabel(source)
 	job, ctx := v.jobService.Start(artifactJobKindDocumentExtract, jobLabel)
 	v.jobService.AppendLog(job.ID, "Source: "+source)
-	v.artifactStatus.SetText("Running " + jobLabel + " as " + job.ID + ".")
+	v.artifacts.status.SetText("Running " + jobLabel + " as " + job.ID + ".")
 	v.addActivity("Started " + job.ID + ": " + jobLabel + ".")
 	v.refreshJobs()
 	workspaceRoot := workspace.Root
@@ -293,11 +320,11 @@ func (v *View) finishDocumentExtractionArtifactJob(jobID string, artifact artifa
 	if err != nil {
 		if errors.Is(err, context.Canceled) {
 			v.jobService.Finish(jobID, jobsSvc.StatusCanceled, "Document extraction canceled.", nil)
-			v.artifactStatus.SetText("Document extraction canceled.")
+			v.artifacts.status.SetText("Document extraction canceled.")
 			v.addActivity("Document extraction canceled for " + jobID + ".")
 		} else {
 			v.jobService.Finish(jobID, jobsSvc.StatusFailed, "Document extraction failed.", err)
-			v.artifactStatus.SetText("Document extraction failed.")
+			v.artifacts.status.SetText("Document extraction failed.")
 			dialog.ShowError(err, v.window)
 		}
 		v.refreshJobs()
@@ -306,9 +333,9 @@ func (v *View) finishDocumentExtractionArtifactJob(jobID string, artifact artifa
 	artifact.JobID = jobID
 	v.jobService.AppendLog(jobID, "Artifact: "+artifact.RelPath)
 	v.jobService.Finish(jobID, jobsSvc.StatusSuccess, "Created "+artifact.RelPath+".", nil)
-	v.artifactPreview.SetText("")
+	v.artifacts.preview.SetText("")
 	v.refreshArtifactSources(nil)
-	v.artifactStatus.SetText("Created " + artifact.RelPath)
+	v.artifacts.status.SetText("Created " + artifact.RelPath)
 	v.addActivity(artifact.Message)
 	v.persistArtifactRecord(artifact)
 	v.refreshArtifactsWithQuery("kind:document-extract")
@@ -322,7 +349,7 @@ func (v *View) refreshArtifacts() {
 func (v *View) refreshArtifactsWithQuery(query string) {
 	workspace := v.state.Workspace()
 	if workspace.Root == "" {
-		v.artifactStatus.SetText("Open a workspace before reading artifacts.")
+		v.artifacts.status.SetText("Open a workspace before reading artifacts.")
 		v.addActivity("Open a workspace before reading artifacts.")
 		return
 	}
@@ -331,7 +358,7 @@ func (v *View) refreshArtifactsWithQuery(query string) {
 		dialog.ShowError(err, v.window)
 		return
 	}
-	artifacts, err := store.ListArtifacts(artifactsSvc.ListOptions{Query: query, IncludeArchived: v.artifactIncludeArchived})
+	artifacts, err := store.ListArtifacts(artifactsSvc.ListOptions{Query: query, IncludeArchived: v.artifacts.includeArchived})
 	if err != nil {
 		dialog.ShowError(err, v.window)
 		return
@@ -340,9 +367,9 @@ func (v *View) refreshArtifactsWithQuery(query string) {
 	if strings.TrimSpace(query) != "" {
 		status += " matching " + strings.TrimSpace(query)
 	}
-	v.artifactStatus.SetText(status)
-	v.artifactResults.Objects = artifactRows(artifacts, v.previewArtifact, v.pinArtifactForAssistantContext, v.compareArtifact, v.generateDocumentBriefFromArtifact, v.generatePresentationOutlineFromArtifact, v.regenerateArtifact, v.archiveArtifact, v.restoreArtifact, v.deleteArtifact)
-	v.artifactResults.Refresh()
+	v.artifacts.status.SetText(status)
+	v.artifacts.results.Objects = artifactRows(artifacts, v.previewArtifact, v.pinArtifactForAssistantContext, v.compareArtifact, v.generateDocumentBriefFromArtifact, v.generatePresentationOutlineFromArtifact, v.regenerateArtifact, v.archiveArtifact, v.restoreArtifact, v.deleteArtifact)
+	v.artifacts.results.Refresh()
 	v.persistArtifactRecords(artifacts)
 	v.addActivity(fmt.Sprintf("Loaded %d artifact(s).", len(artifacts)))
 }
@@ -372,9 +399,9 @@ func (v *View) previewArtifact(artifact artifactsSvc.Artifact) {
 		dialog.ShowError(err, v.window)
 		return
 	}
-	v.artifactPreview.SetText(artifactPreviewSummaryText(artifact) + "\n\n" + artifactLineageText(lineage) + "\n\n" + artifactFreshnessText(freshness) + "\n\n---\n\n" + text)
+	v.artifacts.preview.SetText(artifactPreviewSummaryText(artifact) + "\n\n" + artifactLineageText(lineage) + "\n\n" + artifactFreshnessText(freshness) + "\n\n---\n\n" + text)
 	v.refreshArtifactSources(freshness.Sources)
-	v.artifactStatus.SetText("Previewing " + artifact.RelPath)
+	v.artifacts.status.SetText("Previewing " + artifact.RelPath)
 	v.addActivity("Previewed artifact " + artifact.RelPath + ".")
 }
 
@@ -384,25 +411,25 @@ func (v *View) pinArtifactForAssistantContext(artifact artifactsSvc.Artifact) {
 		return
 	}
 	v.pinAssistantContextPath(artifact.RelPath)
-	v.artifactStatus.SetText("Pinned artifact context: " + artifact.RelPath)
+	v.artifacts.status.SetText("Pinned artifact context: " + artifact.RelPath)
 }
 
 func (v *View) compareArtifact(artifact artifactsSvc.Artifact) {
-	if v.artifactCompareLeft.RelPath == "" {
-		v.artifactCompareLeft = artifactsCompareSelection{
+	if v.artifacts.compareLeft.RelPath == "" {
+		v.artifacts.compareLeft = artifactsCompareSelection{
 			RelPath: artifact.RelPath,
 			Kind:    artifact.Kind,
 			Title:   artifactTitle(artifact),
 		}
-		v.artifactLastComparison = artifactsSvc.ArtifactComparison{}
-		v.artifactStatus.SetText("Compare base selected: " + artifact.RelPath)
-		v.artifactPreview.SetText("Select another " + artifact.Kind + " artifact to compare with:\n\n" + artifact.RelPath)
+		v.artifacts.lastComparison = artifactsSvc.ArtifactComparison{}
+		v.artifacts.status.SetText("Compare base selected: " + artifact.RelPath)
+		v.artifacts.preview.SetText("Select another " + artifact.Kind + " artifact to compare with:\n\n" + artifact.RelPath)
 		v.refreshArtifactSources(nil)
 		v.addActivity("Selected artifact compare base " + artifact.RelPath + ".")
 		return
 	}
-	left := v.artifactCompareLeft
-	v.artifactCompareLeft = artifactsCompareSelection{}
+	left := v.artifacts.compareLeft
+	v.artifacts.compareLeft = artifactsCompareSelection{}
 	workspace := v.state.Workspace()
 	if workspace.Root == "" {
 		return
@@ -417,10 +444,10 @@ func (v *View) compareArtifact(artifact artifactsSvc.Artifact) {
 		dialog.ShowError(err, v.window)
 		return
 	}
-	v.artifactPreview.SetText(formatArtifactComparison(comparison))
+	v.artifacts.preview.SetText(formatArtifactComparison(comparison))
 	v.refreshArtifactSources(nil)
-	v.artifactLastComparison = comparison
-	v.artifactStatus.SetText(comparison.Message)
+	v.artifacts.lastComparison = comparison
+	v.artifacts.status.SetText(comparison.Message)
 	v.addActivity(comparison.Message)
 }
 
@@ -435,7 +462,7 @@ func (v *View) generateDocumentBriefFromArtifact(artifact artifactsSvc.Artifact)
 		return
 	}
 	if !artifactCanGenerateDocumentBrief(artifact) {
-		v.artifactStatus.SetText("Document brief is not available for " + artifact.Kind + ".")
+		v.artifacts.status.SetText("Document brief is not available for " + artifact.Kind + ".")
 		v.addActivity("Select a report-like artifact before generating a document brief.")
 		return
 	}
@@ -443,7 +470,7 @@ func (v *View) generateDocumentBriefFromArtifact(artifact artifactsSvc.Artifact)
 	job, ctx := v.jobService.Start(artifactJobKindDocumentBrief, jobLabel)
 	v.jobService.AppendLog(job.ID, "Source artifact: "+artifact.RelPath)
 	v.jobService.AppendLog(job.ID, "Source kind: "+artifact.Kind)
-	v.artifactStatus.SetText("Generating document brief from " + artifact.RelPath + " as " + job.ID + ".")
+	v.artifacts.status.SetText("Generating document brief from " + artifact.RelPath + " as " + job.ID + ".")
 	v.addActivity("Started " + job.ID + ": " + jobLabel + ".")
 	v.refreshJobs()
 	root := workspace.Root
@@ -459,7 +486,7 @@ func (v *View) generateDocumentExportFromBrief(artifact artifactsSvc.Artifact) {
 	jobLabel := documentExportJobLabel(artifact)
 	job, ctx := v.jobService.Start(artifactJobKindDocumentExport, jobLabel)
 	v.jobService.AppendLog(job.ID, "Source brief: "+artifact.RelPath)
-	v.artifactStatus.SetText("Exporting DOCX from " + artifact.RelPath + " as " + job.ID + ".")
+	v.artifacts.status.SetText("Exporting DOCX from " + artifact.RelPath + " as " + job.ID + ".")
 	v.addActivity("Started " + job.ID + ": " + jobLabel + ".")
 	v.refreshJobs()
 	root := v.state.Workspace().Root
@@ -564,7 +591,7 @@ func (v *View) generatePresentationOutlineFromArtifact(artifact artifactsSvc.Art
 		return
 	}
 	if !artifactCanGeneratePresentationOutline(artifact) {
-		v.artifactStatus.SetText("Presentation outline is not available for " + artifact.Kind + ".")
+		v.artifacts.status.SetText("Presentation outline is not available for " + artifact.Kind + ".")
 		v.addActivity("Select a report-like artifact before generating a presentation outline.")
 		return
 	}
@@ -572,7 +599,7 @@ func (v *View) generatePresentationOutlineFromArtifact(artifact artifactsSvc.Art
 	job, ctx := v.jobService.Start(artifactJobKindPresentation, jobLabel)
 	v.jobService.AppendLog(job.ID, "Source artifact: "+artifact.RelPath)
 	v.jobService.AppendLog(job.ID, "Source kind: "+artifact.Kind)
-	v.artifactStatus.SetText("Generating presentation outline from " + artifact.RelPath + " as " + job.ID + ".")
+	v.artifacts.status.SetText("Generating presentation outline from " + artifact.RelPath + " as " + job.ID + ".")
 	v.addActivity("Started " + job.ID + ": " + jobLabel + ".")
 	v.refreshJobs()
 	root := workspace.Root
@@ -588,7 +615,7 @@ func (v *View) generatePresentationPackageFromOutline(artifact artifactsSvc.Arti
 	jobLabel := presentationPackageJobLabel(artifact)
 	job, ctx := v.jobService.Start(jobsSvc.KindPackagedExport, jobLabel)
 	v.jobService.AppendLog(job.ID, "Source outline: "+artifact.RelPath)
-	v.artifactStatus.SetText("Packaging presentation from " + artifact.RelPath + " as " + job.ID + ".")
+	v.artifacts.status.SetText("Packaging presentation from " + artifact.RelPath + " as " + job.ID + ".")
 	v.addActivity("Started " + job.ID + ": " + jobLabel + ".")
 	v.refreshJobs()
 	root := v.state.Workspace().Root
@@ -604,7 +631,7 @@ func (v *View) generatePresentationDeckFromPackage(artifact artifactsSvc.Artifac
 	jobLabel := presentationDeckJobLabel(artifact)
 	job, ctx := v.jobService.Start(jobsSvc.KindPackagedExport, jobLabel)
 	v.jobService.AppendLog(job.ID, "Source package: "+artifact.RelPath)
-	v.artifactStatus.SetText("Exporting PPTX from " + artifact.RelPath + " as " + job.ID + ".")
+	v.artifacts.status.SetText("Exporting PPTX from " + artifact.RelPath + " as " + job.ID + ".")
 	v.addActivity("Started " + job.ID + ": " + jobLabel + ".")
 	v.refreshJobs()
 	root := v.state.Workspace().Root
@@ -879,11 +906,11 @@ func (v *View) finishDocumentBriefJob(jobID string, source artifactsSvc.Artifact
 	if err != nil {
 		if errors.Is(err, context.Canceled) {
 			v.jobService.Finish(jobID, jobsSvc.StatusCanceled, "Document brief generation canceled.", nil)
-			v.artifactStatus.SetText("Document brief generation canceled.")
+			v.artifacts.status.SetText("Document brief generation canceled.")
 			v.addActivity("Canceled document brief generation for " + source.RelPath + ".")
 		} else {
 			v.jobService.Finish(jobID, jobsSvc.StatusFailed, "Document brief generation failed.", err)
-			v.artifactStatus.SetText("Document brief generation failed for " + source.RelPath)
+			v.artifacts.status.SetText("Document brief generation failed for " + source.RelPath)
 			dialog.ShowError(err, v.window)
 		}
 		v.refreshJobs()
@@ -892,9 +919,9 @@ func (v *View) finishDocumentBriefJob(jobID string, source artifactsSvc.Artifact
 	created.JobID = jobID
 	v.jobService.AppendLog(jobID, "Artifact: "+created.RelPath)
 	v.jobService.Finish(jobID, jobsSvc.StatusSuccess, "Created "+created.RelPath+".", nil)
-	v.artifactPreview.SetText("")
+	v.artifacts.preview.SetText("")
 	v.refreshArtifactSources(nil)
-	v.artifactStatus.SetText("Created " + created.RelPath)
+	v.artifacts.status.SetText("Created " + created.RelPath)
 	v.addActivity("Generated document brief from " + source.RelPath + " at " + created.RelPath + ".")
 	v.persistArtifactRecord(created)
 	v.refreshArtifactsWithQuery("kind:document-brief")
@@ -905,11 +932,11 @@ func (v *View) finishDocumentExportJob(jobID string, source artifactsSvc.Artifac
 	if err != nil {
 		if errors.Is(err, context.Canceled) {
 			v.jobService.Finish(jobID, jobsSvc.StatusCanceled, "Document export canceled.", nil)
-			v.artifactStatus.SetText("Document export canceled.")
+			v.artifacts.status.SetText("Document export canceled.")
 			v.addActivity("Canceled document export for " + source.RelPath + ".")
 		} else {
 			v.jobService.Finish(jobID, jobsSvc.StatusFailed, "Document export failed.", err)
-			v.artifactStatus.SetText("Document export failed for " + source.RelPath)
+			v.artifacts.status.SetText("Document export failed for " + source.RelPath)
 			dialog.ShowError(err, v.window)
 		}
 		v.refreshJobs()
@@ -918,9 +945,9 @@ func (v *View) finishDocumentExportJob(jobID string, source artifactsSvc.Artifac
 	created.JobID = jobID
 	v.jobService.AppendLog(jobID, "Artifact: "+created.RelPath)
 	v.jobService.Finish(jobID, jobsSvc.StatusSuccess, "Created "+created.RelPath+".", nil)
-	v.artifactPreview.SetText("")
+	v.artifacts.preview.SetText("")
 	v.refreshArtifactSources(nil)
-	v.artifactStatus.SetText("Created " + created.RelPath)
+	v.artifacts.status.SetText("Created " + created.RelPath)
 	v.addActivity("Exported document brief " + source.RelPath + " to " + created.RelPath + ".")
 	v.persistArtifactRecord(created)
 	v.refreshArtifactsWithQuery("kind:document-export")
@@ -931,11 +958,11 @@ func (v *View) finishPresentationOutlineJob(jobID string, source artifactsSvc.Ar
 	if err != nil {
 		if errors.Is(err, context.Canceled) {
 			v.jobService.Finish(jobID, jobsSvc.StatusCanceled, "Presentation outline generation canceled.", nil)
-			v.artifactStatus.SetText("Presentation outline generation canceled.")
+			v.artifacts.status.SetText("Presentation outline generation canceled.")
 			v.addActivity("Canceled presentation outline generation for " + source.RelPath + ".")
 		} else {
 			v.jobService.Finish(jobID, jobsSvc.StatusFailed, "Presentation outline generation failed.", err)
-			v.artifactStatus.SetText("Presentation outline generation failed for " + source.RelPath)
+			v.artifacts.status.SetText("Presentation outline generation failed for " + source.RelPath)
 			dialog.ShowError(err, v.window)
 		}
 		v.refreshJobs()
@@ -944,9 +971,9 @@ func (v *View) finishPresentationOutlineJob(jobID string, source artifactsSvc.Ar
 	created.JobID = jobID
 	v.jobService.AppendLog(jobID, "Artifact: "+created.RelPath)
 	v.jobService.Finish(jobID, jobsSvc.StatusSuccess, "Created "+created.RelPath+".", nil)
-	v.artifactPreview.SetText("")
+	v.artifacts.preview.SetText("")
 	v.refreshArtifactSources(nil)
-	v.artifactStatus.SetText("Created " + created.RelPath)
+	v.artifacts.status.SetText("Created " + created.RelPath)
 	v.addActivity("Generated presentation outline from " + source.RelPath + " at " + created.RelPath + ".")
 	v.persistArtifactRecord(created)
 	v.refreshArtifactsWithQuery("kind:presentation-outline")
@@ -957,11 +984,11 @@ func (v *View) finishPresentationPackageJob(jobID string, source artifactsSvc.Ar
 	if err != nil {
 		if errors.Is(err, context.Canceled) {
 			v.jobService.Finish(jobID, jobsSvc.StatusCanceled, "Presentation packaging canceled.", nil)
-			v.artifactStatus.SetText("Presentation packaging canceled.")
+			v.artifacts.status.SetText("Presentation packaging canceled.")
 			v.addActivity("Canceled presentation packaging for " + source.RelPath + ".")
 		} else {
 			v.jobService.Finish(jobID, jobsSvc.StatusFailed, "Presentation packaging failed.", err)
-			v.artifactStatus.SetText("Presentation packaging failed for " + source.RelPath)
+			v.artifacts.status.SetText("Presentation packaging failed for " + source.RelPath)
 			dialog.ShowError(err, v.window)
 		}
 		v.refreshJobs()
@@ -970,9 +997,9 @@ func (v *View) finishPresentationPackageJob(jobID string, source artifactsSvc.Ar
 	created.JobID = jobID
 	v.jobService.AppendLog(jobID, "Artifact: "+created.RelPath)
 	v.jobService.Finish(jobID, jobsSvc.StatusSuccess, "Created "+created.RelPath+".", nil)
-	v.artifactPreview.SetText("")
+	v.artifacts.preview.SetText("")
 	v.refreshArtifactSources(nil)
-	v.artifactStatus.SetText("Created " + created.RelPath)
+	v.artifacts.status.SetText("Created " + created.RelPath)
 	v.addActivity("Packaged presentation outline " + source.RelPath + " at " + created.RelPath + ".")
 	v.persistArtifactRecord(created)
 	v.refreshArtifactsWithQuery("kind:presentation-package")
@@ -983,11 +1010,11 @@ func (v *View) finishPresentationDeckJob(jobID string, source artifactsSvc.Artif
 	if err != nil {
 		if errors.Is(err, context.Canceled) {
 			v.jobService.Finish(jobID, jobsSvc.StatusCanceled, "Presentation deck export canceled.", nil)
-			v.artifactStatus.SetText("Presentation deck export canceled.")
+			v.artifacts.status.SetText("Presentation deck export canceled.")
 			v.addActivity("Canceled presentation deck export for " + source.RelPath + ".")
 		} else {
 			v.jobService.Finish(jobID, jobsSvc.StatusFailed, "Presentation deck export failed.", err)
-			v.artifactStatus.SetText("Presentation deck export failed for " + source.RelPath)
+			v.artifacts.status.SetText("Presentation deck export failed for " + source.RelPath)
 			dialog.ShowError(err, v.window)
 		}
 		v.refreshJobs()
@@ -996,9 +1023,9 @@ func (v *View) finishPresentationDeckJob(jobID string, source artifactsSvc.Artif
 	created.JobID = jobID
 	v.jobService.AppendLog(jobID, "Artifact: "+created.RelPath)
 	v.jobService.Finish(jobID, jobsSvc.StatusSuccess, "Created "+created.RelPath+".", nil)
-	v.artifactPreview.SetText("")
+	v.artifacts.preview.SetText("")
 	v.refreshArtifactSources(nil)
-	v.artifactStatus.SetText("Created " + created.RelPath)
+	v.artifacts.status.SetText("Created " + created.RelPath)
 	v.addActivity("Exported presentation package " + source.RelPath + " to " + created.RelPath + ".")
 	v.persistArtifactRecord(created)
 	v.refreshArtifactsWithQuery("kind:presentation-deck")
@@ -1012,7 +1039,7 @@ func (v *View) regenerateArtifact(artifact artifactsSvc.Artifact) {
 		return
 	}
 	if !artifactCanRegenerate(artifact) {
-		v.artifactStatus.SetText("Artifact kind cannot be regenerated yet: " + artifact.Kind)
+		v.artifacts.status.SetText("Artifact kind cannot be regenerated yet: " + artifact.Kind)
 		v.addActivity("Artifact regeneration is not available for " + artifact.Kind + ".")
 		return
 	}
@@ -1020,7 +1047,7 @@ func (v *View) regenerateArtifact(artifact artifactsSvc.Artifact) {
 	job, ctx := v.jobService.Start(artifactJobKindRegenerate, jobLabel)
 	v.jobService.AppendLog(job.ID, "Artifact: "+artifact.RelPath)
 	v.jobService.AppendLog(job.ID, "Kind: "+artifact.Kind)
-	v.artifactStatus.SetText("Regenerating " + artifact.RelPath + " as " + job.ID + ".")
+	v.artifacts.status.SetText("Regenerating " + artifact.RelPath + " as " + job.ID + ".")
 	v.addActivity("Started " + job.ID + ": " + jobLabel + ".")
 	v.refreshJobs()
 	root := workspace.Root
@@ -1151,11 +1178,11 @@ func (v *View) finishArtifactRegenerationJob(jobID string, original artifactsSvc
 	if err != nil {
 		if errors.Is(err, context.Canceled) {
 			v.jobService.Finish(jobID, jobsSvc.StatusCanceled, "Artifact regeneration canceled.", nil)
-			v.artifactStatus.SetText("Artifact regeneration canceled.")
+			v.artifacts.status.SetText("Artifact regeneration canceled.")
 			v.addActivity("Canceled artifact regeneration for " + original.RelPath + ".")
 		} else {
 			v.jobService.Finish(jobID, jobsSvc.StatusFailed, "Artifact regeneration failed.", err)
-			v.artifactStatus.SetText("Artifact regeneration failed for " + original.RelPath)
+			v.artifacts.status.SetText("Artifact regeneration failed for " + original.RelPath)
 			dialog.ShowError(err, v.window)
 		}
 		v.refreshJobs()
@@ -1164,9 +1191,9 @@ func (v *View) finishArtifactRegenerationJob(jobID string, original artifactsSvc
 	rebuilt.JobID = jobID
 	v.jobService.AppendLog(jobID, "Artifact: "+rebuilt.RelPath)
 	v.jobService.Finish(jobID, jobsSvc.StatusSuccess, "Regenerated "+rebuilt.RelPath+".", nil)
-	v.artifactPreview.SetText("")
+	v.artifacts.preview.SetText("")
 	v.refreshArtifactSources(nil)
-	v.artifactStatus.SetText("Regenerated " + rebuilt.RelPath)
+	v.artifacts.status.SetText("Regenerated " + rebuilt.RelPath)
 	v.addActivity("Regenerated " + original.RelPath + " to " + rebuilt.RelPath + ".")
 	v.persistArtifactRecord(rebuilt)
 	v.refreshArtifactsWithQuery("kind:" + rebuilt.Kind)
@@ -1174,7 +1201,7 @@ func (v *View) finishArtifactRegenerationJob(jobID string, original artifactsSvc
 }
 
 func (v *View) exportArtifactComparison() {
-	if !artifactComparisonReady(v.artifactLastComparison) {
+	if !artifactComparisonReady(v.artifacts.lastComparison) {
 		v.addActivity("Compare two artifacts before exporting a comparison report.")
 		return
 	}
@@ -1188,12 +1215,12 @@ func (v *View) exportArtifactComparison() {
 		dialog.ShowError(err, v.window)
 		return
 	}
-	artifact, err := store.WriteArtifactComparisonReport(v.artifactLastComparison)
+	artifact, err := store.WriteArtifactComparisonReport(v.artifacts.lastComparison)
 	if err != nil {
 		dialog.ShowError(err, v.window)
 		return
 	}
-	v.artifactStatus.SetText("Exported " + artifact.RelPath)
+	v.artifacts.status.SetText("Exported " + artifact.RelPath)
 	v.addActivity(artifact.Message)
 	v.persistArtifactRecord(artifact)
 	v.refreshArtifactsWithQuery("kind:artifact-comparison")
@@ -1210,7 +1237,7 @@ func (v *View) exportArtifactLineageGraph() {
 		dialog.ShowError(err, v.window)
 		return
 	}
-	lineage, err := store.LineageGraph(artifactsSvc.ListOptions{IncludeArchived: v.artifactIncludeArchived})
+	lineage, err := store.LineageGraph(artifactsSvc.ListOptions{IncludeArchived: v.artifacts.includeArchived})
 	if err != nil {
 		dialog.ShowError(err, v.window)
 		return
@@ -1220,9 +1247,9 @@ func (v *View) exportArtifactLineageGraph() {
 		dialog.ShowError(err, v.window)
 		return
 	}
-	v.artifactPreview.SetText(artifactLineageText(lineage))
+	v.artifacts.preview.SetText(artifactLineageText(lineage))
 	v.refreshArtifactSources(nil)
-	v.artifactStatus.SetText("Exported " + artifact.RelPath)
+	v.artifacts.status.SetText("Exported " + artifact.RelPath)
 	v.addActivity(artifact.Message)
 	v.persistArtifactRecord(artifact)
 	v.refreshArtifactsWithQuery("kind:artifact-lineage")
@@ -1249,9 +1276,9 @@ func (v *View) importArtifactLineageGraph() {
 		dialog.ShowError(err, v.window)
 		return
 	}
-	v.artifactPreview.SetText(artifactLineageText(result.Lineage))
+	v.artifacts.preview.SetText(artifactLineageText(result.Lineage))
 	v.refreshArtifactSources(nil)
-	v.artifactStatus.SetText(result.Message)
+	v.artifacts.status.SetText(result.Message)
 	v.addActivity(result.Message)
 }
 
@@ -1276,7 +1303,7 @@ func (v *View) archiveArtifact(artifact artifactsSvc.Artifact) {
 			dialog.ShowError(err, v.window)
 			return
 		}
-		v.artifactPreview.SetText("")
+		v.artifacts.preview.SetText("")
 		v.refreshArtifactSources(nil)
 		v.deleteArtifactRecord(artifact.RelPath)
 		v.persistArtifactRecord(archived)
@@ -1300,7 +1327,7 @@ func (v *View) restoreArtifact(artifact artifactsSvc.Artifact) {
 			dialog.ShowError(err, v.window)
 			return
 		}
-		v.artifactPreview.SetText("")
+		v.artifacts.preview.SetText("")
 		v.refreshArtifactSources(nil)
 		v.deleteArtifactRecord(artifact.RelPath)
 		v.persistArtifactRecord(restored)
@@ -1323,7 +1350,7 @@ func (v *View) deleteArtifact(artifact artifactsSvc.Artifact) {
 			dialog.ShowError(err, v.window)
 			return
 		}
-		v.artifactPreview.SetText("")
+		v.artifacts.preview.SetText("")
 		v.refreshArtifactSources(nil)
 		v.deleteArtifactRecord(artifact.RelPath)
 		v.addActivity("Deleted artifact " + artifact.RelPath + ".")
@@ -1356,17 +1383,17 @@ func (v *View) deleteArtifactRecord(relPath string) {
 }
 
 func (v *View) refreshArtifactSources(sources []artifactsSvc.SourceFreshnessStatus) {
-	if v.artifactSources == nil || v.artifactSourceStatus == nil {
+	if v.artifacts.sources == nil || v.artifacts.sourceStatus == nil {
 		return
 	}
-	v.artifactSources.Objects = nil
+	v.artifacts.sources.Objects = nil
 	if len(sources) == 0 {
-		v.artifactSourceStatus.SetText("Sources: none available for this artifact.")
-		v.artifactSources.Add(widget.NewLabel("No cited source files."))
-		v.artifactSources.Refresh()
+		v.artifacts.sourceStatus.SetText("Sources: none available for this artifact.")
+		v.artifacts.sources.Add(widget.NewLabel("No cited source files."))
+		v.artifacts.sources.Refresh()
 		return
 	}
-	v.artifactSourceStatus.SetText(artifactSourceStatusText(sources))
+	v.artifacts.sourceStatus.SetText(artifactSourceStatusText(sources))
 	for _, sourceStatus := range sources {
 		sourceStatus := sourceStatus
 		label := widget.NewLabel(artifactSourceLabel(sourceStatus))
@@ -1382,9 +1409,9 @@ func (v *View) refreshArtifactSources(sources []artifactsSvc.SourceFreshnessStat
 			v.pinAssistantContextPath(sourceStatus.RelPath)
 		})
 		pin.Importance = widget.LowImportance
-		v.artifactSources.Add(container.NewBorder(nil, nil, container.NewHBox(open, pin), nil, label))
+		v.artifacts.sources.Add(container.NewBorder(nil, nil, container.NewHBox(open, pin), nil, label))
 	}
-	v.artifactSources.Refresh()
+	v.artifacts.sources.Refresh()
 }
 
 func (v *View) openArtifactSource(relPath string) {

@@ -6,10 +6,51 @@ import (
 	"testing"
 	"time"
 
+	fynetest "fyne.io/fyne/v2/test"
+
 	artifactsSvc "nexusdesk/internal/services/artifacts"
 	documentsSvc "nexusdesk/internal/services/documents"
 	workspaceSvc "nexusdesk/internal/services/workspace"
 )
+
+func TestArtifactsControllerInitialState(t *testing.T) {
+	_ = fynetest.NewTempApp(t)
+
+	controller := newArtifactsController(&View{})
+
+	if controller.status.Text != "Artifacts have not been loaded." {
+		t.Fatalf("expected initial artifact status, got %q", controller.status.Text)
+	}
+	if controller.sourceStatus.Text != "Artifact sources have not been loaded." {
+		t.Fatalf("expected initial artifact source status, got %q", controller.sourceStatus.Text)
+	}
+	if controller.includeArchived {
+		t.Fatal("expected archived artifacts to be hidden initially")
+	}
+	if len(controller.results.Objects) == 0 || len(controller.sources.Objects) == 0 {
+		t.Fatalf("expected initial results and sources placeholders")
+	}
+}
+
+func TestRefreshArtifactSourcesUsesControllerState(t *testing.T) {
+	_ = fynetest.NewTempApp(t)
+
+	view := &View{}
+	view.artifacts = newArtifactsController(view)
+
+	view.refreshArtifactSources([]artifactsSvc.SourceFreshnessStatus{{
+		RelPath: "docs/guide.md",
+		Exists:  true,
+		Message: "fresh",
+	}})
+
+	if !strings.Contains(view.artifacts.sourceStatus.Text, "1 cited and current") {
+		t.Fatalf("expected source count in status, got %q", view.artifacts.sourceStatus.Text)
+	}
+	if len(view.artifacts.sources.Objects) != 1 {
+		t.Fatalf("expected one source row, got %d", len(view.artifacts.sources.Objects))
+	}
+}
 
 func TestArtifactMetaFormatsTaskReport(t *testing.T) {
 	meta := artifactMeta(artifactsSvc.Artifact{
