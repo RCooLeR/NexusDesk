@@ -11,6 +11,7 @@ import (
 	"fyne.io/fyne/v2/theme"
 	"fyne.io/fyne/v2/widget"
 
+	artifactsSvc "nexusdesk/internal/services/artifacts"
 	externalagentsSvc "nexusdesk/internal/services/externalagents"
 	issueReportSvc "nexusdesk/internal/services/issuereport"
 	jobsSvc "nexusdesk/internal/services/jobs"
@@ -59,6 +60,8 @@ type diagnosticsSnapshot struct {
 	FailureScenarios        []readinessSvc.FailureScenario
 	FailureScenarioIssue    string
 	ToolCatalogHealth       toolsSvc.ToolCatalogHealth
+	ArtifactProvenance      artifactsSvc.ProvenanceSummary
+	ArtifactProvenanceError string
 	RuntimeSummary          []string
 	ExternalAgentTools      []externalagentsSvc.ToolStatus
 	RecentJobFailures       []string
@@ -234,6 +237,20 @@ func (v *View) collectDiagnosticsSnapshot(root string, activityTail []string) di
 	}
 	if !snapshot.ToolCatalogHealth.OK() {
 		snapshot.Warnings = append(snapshot.Warnings, "Tool registry warning: "+strings.Join(snapshot.ToolCatalogHealth.Violations, "; "))
+	}
+	if store, err := artifactsSvc.NewStore(root); err == nil {
+		if provenance, err := store.InspectProvenance(artifactsSvc.ListOptions{}); err == nil {
+			snapshot.ArtifactProvenance = provenance
+			if provenance.Status() != artifactsSvc.ProvenanceStatusOK {
+				snapshot.Warnings = append(snapshot.Warnings, "Artifact provenance warning: "+provenance.Message())
+			}
+		} else {
+			snapshot.ArtifactProvenanceError = err.Error()
+			snapshot.Warnings = append(snapshot.Warnings, "Artifact provenance check failed: "+err.Error())
+		}
+	} else {
+		snapshot.ArtifactProvenanceError = err.Error()
+		snapshot.Warnings = append(snapshot.Warnings, "Artifact store unavailable for provenance check: "+err.Error())
 	}
 	if snapshot.StartupRecovery.PreviousUnclean {
 		snapshot.Warnings = append(snapshot.Warnings, snapshot.StartupRecovery.Message)
@@ -530,6 +547,9 @@ func formatDiagnosticsSnapshot(snapshot diagnosticsSnapshot) string {
 	builder.WriteString("\n## Agent Tool Registry\n")
 	builder.WriteString(formatDiagnosticsToolCatalogHealth(snapshot.ToolCatalogHealth))
 
+	builder.WriteString("\n## Artifact Provenance\n")
+	builder.WriteString(formatDiagnosticsArtifactProvenance(snapshot))
+
 	builder.WriteString("\n## Metadata\n")
 	if snapshot.MetadataError != "" {
 		builder.WriteString("Status: warning - ")
@@ -601,6 +621,7 @@ func diagnosticsHealthCards(snapshot diagnosticsSnapshot) []diagnosticsHealthCar
 		diagnosticsPerformanceHealthCard(snapshot),
 		diagnosticsFailureGatesHealthCard(snapshot),
 		diagnosticsToolCatalogHealthCard(snapshot),
+		diagnosticsArtifactProvenanceHealthCard(snapshot),
 		diagnosticsStartupHealthCard(snapshot),
 		{
 			Label:  "Issue report",
@@ -609,6 +630,46 @@ func diagnosticsHealthCards(snapshot diagnosticsSnapshot) []diagnosticsHealthCar
 			Action: "Use Export issue report before sharing beta bugs or release-candidate failures.",
 		},
 	}
+}
+
+func diagnosticsArtifactProvenanceHealthCard(snapshot diagnosticsSnapshot) diagnosticsHealthCard {
+	if strings.TrimSpace(snapshot.ArtifactProvenanceError) != "" {
+		return diagnosticsHealthCard{
+			Label:  "Artifact provenance",
+			Status: "warning",
+			Detail: "Provenance check failed: " + compactDiagnosticsLine(snapshot.ArtifactProvenanceError, diagnosticsCompactMessageLimit),
+			Action: "Open Artifacts and export an issue report if metadata sidecars cannot be inspected.",
+		}
+	}
+	if snapshot.ArtifactProvenance.ArtifactCount == 0 {
+		return diagnosticsHealthCard{
+			Label:  "Artifact provenance",
+			Status: "ok",
+			Detail: "No native artifacts are present yet.",
+			Action: "Generate an artifact, then rerun Diagnostics before release-candidate smoke.",
+		}
+	}
+	if snapshot.ArtifactProvenance.Status() != artifactsSvc.ProvenanceStatusOK {
+		return diagnosticsHealthCard{
+			Label:  "Artifact provenance",
+			Status: "warning",
+			Detail: compactDiagnosticsLine(snapshot.ArtifactProvenance.Message(), diagnosticsCompactMessageLimit),
+			Action: "Open Artifacts, inspect missing metadata/lineage, and regenerate affected outputs when possible.",
+		}
+	}
+	return diagnosticsHealthCard{
+		Label:  "Artifact provenance",
+		Status: "ok",
+		Detail: snapshot.ArtifactProvenance.Message(),
+		Action: "Use this as the generated-output traceability release gate.",
+	}
+}
+
+func formatDiagnosticsArtifactProvenance(snapshot diagnosticsSnapshot) string {
+	if strings.TrimSpace(snapshot.ArtifactProvenanceError) != "" {
+		return "Status: warning - " + snapshot.ArtifactProvenanceError + "\n"
+	}
+	return artifactsSvc.FormatProvenanceSummary(snapshot.ArtifactProvenance, diagnosticsFailureDetailLimit)
 }
 
 func diagnosticsToolCatalogHealthCard(snapshot diagnosticsSnapshot) diagnosticsHealthCard {

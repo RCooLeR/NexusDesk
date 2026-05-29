@@ -332,7 +332,7 @@ Goal: restore generated-output workflows with provenance and native inspection.
 
 Exit criteria:
 
-- [ ] Generated outputs are traceable to sources, chats, tool runs, and data queries.
+- [~] Generated outputs are traceable to sources, chats, tool runs, and data queries: native artifact provenance inspection now validates metadata sidecars and lineage signals; complete per-workflow tool-run IDs as future generators land.
 
 ## Phase 6: Job System And Persistence
 
@@ -606,7 +606,7 @@ The Fyne migration must not drop product ambition, but this section is intention
 - [ ] Richer DOCX/PPTX template variants, cross-suite compatibility smoke, and visual design polish in native UI.
 - [x] Provenance sidecars with source files, query IDs, generated timestamps, metadata rows, and freshness fingerprints for explicit artifact writes.
 - [x] Chat-answer artifacts include prompt/model/context/source/citation/unverified-citation/snippet/evidence and structured cited/uncited source coverage metadata.
-- [ ] Complete tool-run provenance coverage for every generated output type beyond chat-answer artifacts.
+- [~] Complete tool-run provenance coverage for every generated output type beyond chat-answer artifacts: artifact provenance inspection now validates readable metadata sidecars and lineage signals in Diagnostics; continue adding per-workflow tool-run IDs as future generators land.
 - [x] Artifact browser with search, metadata, preview, compare, archive, delete, restore, and open-source navigation.
 - [x] Artifact browser polish slice: row badges and preview summaries expose artifact type, lineage, regeneration/export capability, comparison state, archive state, metadata, sources, and job IDs.
 - [x] Artifact lineage/freshness warnings for current native artifacts.
@@ -643,6 +643,7 @@ The Fyne migration must not drop product ambition, but this section is intention
 - [x] Add durable slow-workflow contract for future external coding-agent CLI runs, prohibited from workspace-open and requiring explicit user start/audit.
 - [x] Add shared threat-model/control matrix for filesystem, connectors, jobs, terminal/shell, browser automation, Docker/system operations, generated artifacts, and MCP/plugins.
 - [x] Add native agent tool-registry validator and Diagnostics health card so planned browser/MCP/terminal/connector tools cannot silently become executable without safety controls.
+- [x] Add artifact provenance inspection and Diagnostics health card for generated-output metadata/lineage traceability.
 - [x] Export/backup flows for local-first data.
 
 ### Jobs, Persistence, And Observability

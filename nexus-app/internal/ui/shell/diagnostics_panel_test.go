@@ -10,6 +10,7 @@ import (
 
 	fynetest "fyne.io/fyne/v2/test"
 
+	artifactsSvc "nexusdesk/internal/services/artifacts"
 	llmSvc "nexusdesk/internal/services/llm"
 	metadataSvc "nexusdesk/internal/services/metadata"
 	perfSvc "nexusdesk/internal/services/perf"
@@ -115,6 +116,8 @@ func TestFormatDiagnosticsSnapshotIncludesCoreSections(t *testing.T) {
 		"folder-open-cheap",
 		"## Agent Tool Registry",
 		"planned tools are roadmap-only",
+		"## Artifact Provenance",
+		"No native artifacts are present yet.",
 		"## Metadata",
 		"Status: ok",
 		"## Jobs",
@@ -159,6 +162,7 @@ func TestDiagnosticsHealthCardsSummarizeActionsAndWarnings(t *testing.T) {
 		"Production failure gates|ok|5 scenario(s) cover crash/hang/provider/metadata/cancel release gates.",
 		"Agent tool registry|ok|",
 		"planned tools are not executable",
+		"Artifact provenance|ok|No native artifacts are present yet.",
 		"Startup recovery|warning|Previous run did not record a clean exit.",
 		"Issue report|ok|Redacted diagnostics export is available",
 	} {
@@ -190,11 +194,53 @@ func TestDiagnosticsHealthCardsHealthySnapshot(t *testing.T) {
 		"Performance|ok|1 timing record(s) captured and within budget.",
 		"Production failure gates|ok|5 scenario(s) cover crash/hang/provider/metadata/cancel release gates.",
 		"Agent tool registry|ok|",
+		"Artifact provenance|ok|No native artifacts are present yet.",
 		"Startup recovery|ok|Clean-exit markers are active.",
 	} {
 		if !strings.Contains(joined, expected) {
 			t.Fatalf("expected healthy cards to contain %q, got:\n%s", expected, joined)
 		}
+	}
+}
+
+func TestDiagnosticsArtifactProvenanceHealthCardWarnsOnMissingLineage(t *testing.T) {
+	cards := diagnosticsHealthCards(diagnosticsSnapshot{
+		ArtifactProvenance: artifactsSvc.ProvenanceSummary{
+			ArtifactCount:   2,
+			WithMetadata:    2,
+			WithLineage:     1,
+			MissingLineage:  1,
+			MissingMetadata: 0,
+			Issues: []artifactsSvc.ProvenanceIssue{{
+				RelPath: ".nexusdesk/artifacts/manual/weak.md",
+				Kind:    "manual-report",
+				Message: "metadata is missing source, job, prompt, query, package, or tool-run lineage",
+			}},
+		},
+	})
+	joined := diagnosticsHealthCardText(cards)
+	for _, expected := range []string{
+		"Artifact provenance|warning|2 artifact(s) checked, 1 provenance issue(s) found.",
+		"Open Artifacts, inspect missing metadata/lineage",
+	} {
+		if !strings.Contains(joined, expected) {
+			t.Fatalf("expected provenance warning to contain %q, got:\n%s", expected, joined)
+		}
+	}
+	text := formatDiagnosticsSnapshot(diagnosticsSnapshot{
+		ArtifactProvenance: artifactsSvc.ProvenanceSummary{
+			ArtifactCount:  1,
+			WithMetadata:   1,
+			MissingLineage: 1,
+			Issues: []artifactsSvc.ProvenanceIssue{{
+				RelPath: ".nexusdesk/artifacts/manual/weak.md",
+				Kind:    "manual-report",
+				Message: "metadata is missing source, job, prompt, query, package, or tool-run lineage",
+			}},
+		},
+	})
+	if !strings.Contains(text, "## Artifact Provenance") || !strings.Contains(text, "manual/weak.md") {
+		t.Fatalf("expected provenance diagnostics section, got:\n%s", text)
 	}
 }
 

@@ -82,6 +82,7 @@ Implemented foundations:
 - Protected provider and connector credentials.
 - Diagnostics, metadata backup, issue-report export, and job persistence warning visibility.
 - Native tool catalog now annotates implemented/planned tools with risk-derived control requirements.
+- Artifact provenance diagnostics now check generated outputs for readable metadata sidecars and lineage signals before release-candidate sharing.
 
 Still planned:
 
