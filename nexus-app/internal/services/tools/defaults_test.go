@@ -1179,6 +1179,56 @@ func TestDefaultDispatcherReadSymbolIndexTool(t *testing.T) {
 	}
 }
 
+func TestDefaultDispatcherUpdateProjectMemoryTool(t *testing.T) {
+	root := t.TempDir()
+	if err := os.WriteFile(filepath.Join(root, "README.md"), []byte("# Project\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	dispatcher := NewDefaultDispatcher(Dependencies{Workspace: workspaceSvc.New()})
+
+	blocked, err := dispatcher.ExecuteTool(context.Background(), agent.ToolCall{Name: "update_project_memory", Args: map[string]string{"key": "architecture.boundaries", "content": "Services stay framework-free."}}, agent.Request{WorkspaceRoot: root})
+	if err == nil || blocked.Risk != "medium" || !strings.Contains(blocked.Observation, "approval") {
+		t.Fatalf("expected approval rejection, got result=%#v err=%v", blocked, err)
+	}
+
+	approved := false
+	result, err := dispatcher.ExecuteTool(context.Background(), agent.ToolCall{Name: "update_project_memory", Args: map[string]string{"key": "architecture.boundaries", "content": "Services stay framework-free. API_KEY=secret", "sourceRelPaths": "[\"README.md\"]"}}, agent.Request{
+		WorkspaceRoot: root,
+		ApproveTool: func(ctx context.Context, request agent.ToolApprovalRequest) bool {
+			approved = request.Name == "update_project_memory" && request.Risk == "medium"
+			return approved
+		},
+	})
+	if err != nil {
+		t.Fatalf("update_project_memory returned error: %v", err)
+	}
+	for _, expected := range []string{"Created project memory.", "Key: architecture.boundaries", "Total records: 1", "Sources: 1", "Services stay framework-free.", "API_KEY=[redacted]"} {
+		if !strings.Contains(result.Observation, expected) {
+			t.Fatalf("project memory observation missing %q:\n%s", expected, result.Observation)
+		}
+	}
+	if !approved || !result.Mutated {
+		t.Fatalf("expected approved mutated result, approved=%v result=%#v", approved, result)
+	}
+	stored, err := os.ReadFile(filepath.Join(root, ".nexusdesk", "project-memory", "memory.json"))
+	if err != nil {
+		t.Fatalf("expected project memory file: %v", err)
+	}
+	if !strings.Contains(string(stored), "API_KEY=[redacted]") || strings.Contains(string(stored), "secret") {
+		t.Fatalf("expected stored memory to be redacted:\n%s", string(stored))
+	}
+
+	rejected, err := dispatcher.ExecuteTool(context.Background(), agent.ToolCall{Name: "update_project_memory", Args: map[string]string{"key": "bad", "content": "No metadata", "sourceRelPaths": ".nexusdesk/project-memory/memory.json"}}, agent.Request{
+		WorkspaceRoot: root,
+		ApproveTool: func(ctx context.Context, request agent.ToolApprovalRequest) bool {
+			return request.Name == "update_project_memory"
+		},
+	})
+	if err == nil || !strings.Contains(rejected.Observation, "metadata") {
+		t.Fatalf("expected metadata source rejection, got result=%#v err=%v", rejected, err)
+	}
+}
+
 func TestDefaultDispatcherArtifactLineageTool(t *testing.T) {
 	root := t.TempDir()
 	if err := os.WriteFile(filepath.Join(root, "README.md"), []byte("# Project\n"), 0o644); err != nil {

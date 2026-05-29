@@ -54,7 +54,6 @@ func implementedToolCatalog(descriptors []agent.ToolDescriptor) []ToolCatalogEnt
 func plannedToolCatalog() []ToolCatalogEntry {
 	return []ToolCatalogEntry{
 		plannedTool("workspace", "semantic_search_workspace", "Search indexed workspace chunks and symbols with ranked semantic/project-memory results.", "low", "query, filters(optional), maxResults(optional)", "post-indexing", "Requires durable indexing, embedding/provider policy, cache invalidation, and citation diagnostics."),
-		plannedTool("workspace", "update_project_memory", "Store reviewed project facts, conventions, and decisions.", "medium", "key, content, sourceRelPaths(optional)", "memory", "Requires provenance, user review, edit/delete, and stale-source warnings."),
 
 		plannedTool("editor", "apply_code_action", "Apply a language-server or deterministic code action.", "high", "relPath, actionId, range(optional)", "editor parity", "Requires preview, approval, rollback, and language-action provenance."),
 		plannedTool("editor", "rename_symbol", "Rename a symbol across all safe references.", "high", "relPath, line, column, newName", "refactor", "Requires conflict-aware multi-file patching and preview."),
@@ -119,7 +118,7 @@ func plannedTool(category string, name string, description string, risk string, 
 
 func implementedToolCategory(name string) string {
 	switch name {
-	case "read_context", "read_file", "search_workspace", "read_problems", "goto_definition", "find_references", "read_dependency_graph", "read_symbol_index":
+	case "read_context", "read_file", "search_workspace", "read_problems", "goto_definition", "find_references", "read_dependency_graph", "read_symbol_index", "update_project_memory":
 		return "workspace"
 	case "profile_dataset", "query_dataset", "query_dataset_sql", "create_dataset_chart":
 		return "data"

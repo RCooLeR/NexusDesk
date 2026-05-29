@@ -17,7 +17,7 @@ The implemented registry is exposed to the agent through `ToolDescriptors()` and
 | Category | Implemented tools | Notes |
 | --- | --- | --- |
 | Registry | `list_tool_catalog` | Lists implemented and planned first-party tools by category/status. |
-| Workspace | `read_context`, `read_file`, `search_workspace`, `read_problems`, `goto_definition`, `find_references`, `read_dependency_graph`, `read_symbol_index` | Bounded workspace reads, search, context packs, lightweight diagnostics, native outline/search-backed symbol navigation, bounded symbol index reads, and bounded code dependency graph scans. |
+| Workspace | `read_context`, `read_file`, `search_workspace`, `read_problems`, `goto_definition`, `find_references`, `read_dependency_graph`, `read_symbol_index`, `update_project_memory` | Bounded workspace reads, search, context packs, lightweight diagnostics, native outline/search-backed symbol navigation, bounded symbol index reads, bounded code dependency graph scans, and approved reviewed project memory writes with source provenance. |
 | Files | `write_file`, `append_file`, `copy_file`, `move_file`, `delete_file`, `apply_patch`, `list_rollbacks`, `rollback_file_mutation` | Approval-gated safe mutation tools with path validation and rollback snapshots. |
 | Editor | `format_file`, `lint_file` | Approval-gated native deterministic formatter for safe text files with full-file read guards, diff preview, encoding preservation, and rollback snapshots; medium-risk native diagnostics for markers, merge conflicts, and supported parser errors. |
 | Git | `read_git_status`, `read_git_diff`, `read_git_history`, `read_git_blame`, `stage_file`, `unstage_file`, `stage_hunk`, `unstage_hunk`, `commit_changes`, `create_branch`, `resolve_conflict`, `revert_changes`, `revert_staged_changes` | Read-only repository context plus approval-gated index-only staging/unstaging, commits from already-staged changes, branch creation with optional checkout, rollback-backed conflict-marker resolution, rollback-backed discard for unstaged tracked changes or explicit untracked-file deletion, and approval-gated staged-only discard with explicit `scope=staged`, staged diff preview, and mixed-edit rejection. |
@@ -39,7 +39,6 @@ The planned registry should be implemented in priority order, with tests and doc
 ### Workspace And IDE Intelligence
 
 - `semantic_search_workspace`: ranked semantic/project-memory search.
-- `update_project_memory`: reviewed project facts and conventions with provenance.
 
 ### Editor And Refactoring
 
