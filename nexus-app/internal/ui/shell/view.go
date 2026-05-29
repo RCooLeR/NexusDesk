@@ -51,6 +51,9 @@ type View struct {
 	editorSession            *editorSvc.Session
 	status                   *widget.Label
 	gitStatusSnapshot        gitSvc.Status
+	toolbarWorkspaceStatus   *widget.Label
+	toolbarBranchStatus      *widget.Label
+	toolbarProviderStatus    *widget.Label
 	navigator                *fyne.Container
 	navigatorTree            *widget.Tree
 	navigatorStore           *treeStore

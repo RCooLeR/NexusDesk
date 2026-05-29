@@ -54,7 +54,7 @@ Immediate execution order:
 - Keep the documented native editor parity strategy visible in Language Actions and continue post-beta LSP/inline-styling spikes without blocking Native Parity Beta.
 - Polish richer generated document/deck exports beyond native DOCX/PPTX baselines, including template variants, cross-suite compatibility smoke, and richer visual design.
 - Build signed release packaging and installer/update validation.
-- Continue the focused UI polish pass on empty states, settings, diagnostics, and workflow hierarchy now that the first Home readiness/onboarding cockpit and Safe Agent Guide exist.
+- Continue the focused UI polish pass on tool windows, assistant/data/artifact surfaces, diagnostics, and workflow hierarchy now that the first Home readiness/onboarding cockpit, Safe Agent Guide, Settings polish, menu/toolbar, and status bar slices exist.
 
 ## Repository State
 
@@ -153,6 +153,8 @@ Goal: preserve the old app, establish the native shell, and make the new archite
 - [x] Add app icon and brand assets from `docs/brand/`.
 - [x] Stamp the Windows executable icon resource during native builds.
 - [x] Add native main menu: File, Edit, View, Navigate, Tools, Help.
+- [x] Polish native top menu into IDE-style File, Edit, View, Navigate, Code, Refactor, Run, Tools, and Help groups.
+- [x] Polish native top toolbar with workspace, branch, run/task access, provider/model status, command palette, search, and settings.
 - [x] Add keyboard shortcut registry for common IDE actions.
 - [x] Add first resizable native shell layout with a labeled product rail, resizable assistant/sidebar split, resizable bottom workbench split, and grouped Data actions.
 

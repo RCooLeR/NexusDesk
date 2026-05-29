@@ -40,13 +40,43 @@ func (v *View) newRail() fyne.CanvasObject {
 func (v *View) newToolbar() fyne.CanvasObject {
 	openButton := widget.NewButtonWithIcon("Open Workspace", theme.FolderOpenIcon(), v.openWorkspaceDialog)
 	refreshButton := widget.NewButtonWithIcon("Refresh", theme.ViewRefreshIcon(), v.refreshWorkspace)
+	tasksButton := widget.NewButtonWithIcon("Tasks", theme.MediaPlayIcon(), func() {
+		if !v.selectBottomTab("Tasks") {
+			v.addActivity("Tasks panel is unavailable.")
+			return
+		}
+		v.addActivity("Tasks selected.")
+	})
+	gitButton := widget.NewButtonWithIcon("Git", theme.ContentCopyIcon(), func() {
+		if !v.selectBottomTab("Git") {
+			v.addActivity("Git panel is unavailable.")
+			return
+		}
+		v.addActivity("Git selected.")
+	})
+	commandButton := widget.NewButtonWithIcon("Command", theme.MenuIcon(), v.openCommandPaletteDialog)
+	settingsButton := widget.NewButtonWithIcon("", theme.SettingsIcon(), v.openSettingsTab)
+	v.toolbarWorkspaceStatus = newToolbarStatusLabel("Workspace: none")
+	v.toolbarBranchStatus = newToolbarStatusLabel("Branch: refresh Git")
+	v.toolbarProviderStatus = newToolbarStatusLabel("Model: provider?/model not selected")
 	searchEntry := widget.NewEntry()
 	searchEntry.SetPlaceHolder("Search workspace")
 	searchEntry.OnSubmitted = v.searchWorkspace
 	searchButton := widget.NewButtonWithIcon("", theme.SearchIcon(), func() {
 		v.searchWorkspace(searchEntry.Text)
 	})
-	return container.NewBorder(nil, nil, container.NewHBox(openButton, refreshButton), searchButton, searchEntry)
+	v.refreshToolbarStatus()
+	left := container.NewHBox(
+		openButton,
+		refreshButton,
+		gitButton,
+		tasksButton,
+		widget.NewSeparator(),
+		v.toolbarWorkspaceStatus,
+		v.toolbarBranchStatus,
+	)
+	right := container.NewHBox(v.toolbarProviderStatus, commandButton, settingsButton, searchButton)
+	return container.NewPadded(container.NewBorder(nil, nil, left, right, searchEntry))
 }
 
 func (v *View) newBottomPanel() fyne.CanvasObject {

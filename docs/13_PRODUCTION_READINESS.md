@@ -64,7 +64,7 @@ Required:
 - Task-aware model defaults are now stored and editable in searchable grouped Settings with inline readiness validation for coding, backend, database, analytics, research, vision/screenshot, balanced reasoning, and fast-coding routes while preserving a global fallback. Ask mode exposes an auto/global/manual route selector with pre-run route and context-budget visibility, assistant/agent auto-routing infers data, SQL, document, image/screenshot, and code routes from selected context or prompt signals, Git AI diff summary/commit drafting resolves the main coding route, Agent mode resolves the selected route with audit provenance, and saved chat-answer artifacts can preserve route metadata; future dedicated Data/document/vision model workflow resolution remains planned.
 - Complete Wails-only feature inventory and explicit keep/drop/replace decisions.
 - Native UI cleanup pass for Workbench, Data, Artifacts, Settings, assistant, and bottom panels.
-- UI direction follows `docs/17_END_TO_END_PRODUCTION_PLAN.md` and the token baseline in `docs/26_NATIVE_THEME_TOKENS.md`: grouped tool windows, professional settings, dense but readable data grids, integrated assistant/source diagnostics, and JetBrains-like shell hierarchy.
+- UI direction follows `docs/17_END_TO_END_PRODUCTION_PLAN.md` and the token baseline in `docs/26_NATIVE_THEME_TOKENS.md`: JetBrains-like menu/toolbar/status shell hierarchy, grouped tool windows, professional settings, dense but readable data grids, and integrated assistant/source diagnostics.
 - Import-boundary tests now enforce the active architecture: no Wails/webview imports, no Fyne imports in services/domain, and no UI imports from framework-free service/domain packages.
 
 Remaining blockers:

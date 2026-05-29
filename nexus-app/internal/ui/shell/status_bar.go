@@ -70,6 +70,7 @@ func (v *View) refreshStatusBar() {
 		Jobs:          jobs,
 		BuildInfo:     buildinfo.Current(),
 	}))
+	v.refreshToolbarStatus()
 }
 
 func (v *View) activeEditorFileStatus() (string, string) {

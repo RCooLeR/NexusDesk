@@ -23,7 +23,24 @@ func (v *View) mainMenu() *fyne.MainMenu {
 	copySelection := copyDataCellMenuItem(v.copySelection)
 	saveDraft := menuItem("Save Draft", shortcutSaveDraft(), v.saveActiveEditorDraft)
 	revertDraft := menuItem("Revert Draft", shortcutRevertDraft(), v.revertActiveEditorDraft)
+	formatDraft := fyne.NewMenuItemWithIcon("Format Draft", theme.DocumentCreateIcon(), v.formatActiveEditorDraft)
+	symbols := fyne.NewMenuItemWithIcon("Go to Symbol", theme.SearchIcon(), v.openActiveEditorSymbols)
+	references := fyne.NewMenuItemWithIcon("Find References", theme.SearchIcon(), v.openActiveEditorReferences)
 	findReplace := menuItem("Find / Replace", shortcutFindReplace(), v.openFindReplaceDialog)
+	renameMove := fyne.NewMenuItemWithIcon("Rename / Move Selected", theme.DocumentCreateIcon(), v.promptRenameFile)
+	copyFile := fyne.NewMenuItemWithIcon("Copy Selected File", theme.ContentCopyIcon(), v.promptCopyFile)
+	deleteFile := fyne.NewMenuItemWithIcon("Delete Selected File", theme.DeleteIcon(), v.confirmDeleteFile)
+	discoverTasks := fyne.NewMenuItemWithIcon("Discover Tasks", theme.SearchIcon(), v.discoverTasks)
+	tasks := fyne.NewMenuItemWithIcon("Tasks", theme.MediaPlayIcon(), func() {
+		if !v.selectBottomTab("Tasks") {
+			v.addActivity("Tasks panel is unavailable.")
+		}
+	})
+	jobs := fyne.NewMenuItemWithIcon("Jobs", theme.ListIcon(), func() {
+		if !v.selectBottomTab("Jobs") {
+			v.addActivity("Jobs panel is unavailable.")
+		}
+	})
 	safeAgentGuide := fyne.NewMenuItemWithIcon("Safe Agent Guide", theme.HelpIcon(), v.openSafeAgentGuideTab)
 	betaFeedbackGuide := fyne.NewMenuItemWithIcon("Beta Feedback & Release Notes", theme.DocumentIcon(), v.openBetaFeedbackGuideTab)
 	smokeChecklistGuide := fyne.NewMenuItemWithIcon("Clean-Machine Smoke Checklist", theme.ConfirmIcon(), v.openSmokeChecklistGuideTab)
@@ -63,10 +80,15 @@ func (v *View) mainMenu() *fyne.MainMenu {
 		),
 		fyne.NewMenu("Navigate",
 			menuItem("Quick Open", shortcutQuickOpen(), v.openQuickOpenDialog),
+			symbols,
+			references,
 			fyne.NewMenuItemSeparator(),
 			menuItem("Next Tab", shortcutNextTab(), v.selectNextTab),
 			menuItem("Previous Tab", shortcutPreviousTab(), v.selectPreviousTab),
 		),
+		fyne.NewMenu("Code", saveDraft, revertDraft, formatDraft, fyne.NewMenuItemSeparator(), findReplace),
+		fyne.NewMenu("Refactor", renameMove, copyFile, deleteFile),
+		fyne.NewMenu("Run", discoverTasks, tasks, jobs),
 		fyne.NewMenu("Tools",
 			fyne.NewMenuItem("Refresh Activity", func() { v.activityLog.Refresh() }),
 			menuItem("Command Palette", shortcutCommandPalette(), v.openCommandPaletteDialog),

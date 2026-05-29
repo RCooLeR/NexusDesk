@@ -147,7 +147,7 @@ Already available:
 - Renders lazy project tree with ignored-path handling, entry caps, refresh, reveal, collapse, and context actions.
 - Supports single-file open and quick-open workflows.
 - Keeps folder open fast by avoiding automatic expensive or external operations.
-- Provides menus, shortcuts, command palette baseline, activity, native status bar, bottom panels, and assistant integration.
+- Provides JetBrains-like top menu groups, a workspace/branch/task/provider toolbar, shortcuts, command palette baseline, activity, native status bar, bottom panels, and assistant integration.
 
 Planned/remaining:
 
@@ -566,8 +566,8 @@ The checklist below is intentionally large. `tracker.md` should keep task-level 
 
 - [x] Define final native theme tokens: backgrounds, borders, text hierarchy, accent colors, warnings, success/error, selection, focus ring.
 - [x] Define compact density and comfortable density modes.
-- [ ] Polish top menu to include File, Edit, View, Navigate, Code, Refactor, Run, Tools, Help where supported.
-- [ ] Polish top toolbar with workspace, branch, run/task, provider/model status, search, settings.
+- [x] Polish top menu to include File, Edit, View, Navigate, Code, Refactor, Run, Tools, Help where supported.
+- [x] Polish top toolbar with workspace, branch, run/task, provider/model status, search, settings.
 - [ ] Convert crowded bottom tabs into grouped tool windows.
 - [ ] Add left/right tool-window rails with consistent icons, labels, shortcuts, and active states.
 - [x] Add status bar with workspace, provider, branch from last manual Git refresh, jobs, warnings, selected path, encoding, line ending, and app version.
