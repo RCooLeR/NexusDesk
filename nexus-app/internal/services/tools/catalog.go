@@ -55,8 +55,6 @@ func plannedToolCatalog() []ToolCatalogEntry {
 	return []ToolCatalogEntry{
 		plannedTool("workspace", "semantic_search_workspace", "Search indexed workspace chunks and symbols with ranked semantic/project-memory results.", "low", "query, filters(optional), maxResults(optional)", "post-indexing", "Requires durable indexing, embedding/provider policy, cache invalidation, and citation diagnostics."),
 		plannedTool("workspace", "read_symbol_index", "Read symbols, definitions, and exported APIs for files or the project.", "low", "relPath(optional), query(optional)", "editor parity", "Backed by language-aware indexers or LSP adapters."),
-		plannedTool("workspace", "goto_definition", "Resolve a symbol or location to definition candidates.", "low", "relPath, line, column, symbol(optional)", "editor parity", "Must stay framework-free and expose bounded results to Fyne."),
-		plannedTool("workspace", "find_references", "Find bounded references for a symbol or selected range.", "low", "relPath, line, column, symbol(optional)", "editor parity", "Pairs with references UI and source citations."),
 		plannedTool("workspace", "read_dependency_graph", "Return module/package/file dependency relationships.", "low", "relPath(optional), depth(optional)", "architecture", "Needed for IDE-grade assistant explanations and refactors."),
 		plannedTool("workspace", "update_project_memory", "Store reviewed project facts, conventions, and decisions.", "medium", "key, content, sourceRelPaths(optional)", "memory", "Requires provenance, user review, edit/delete, and stale-source warnings."),
 
@@ -123,7 +121,7 @@ func plannedTool(category string, name string, description string, risk string, 
 
 func implementedToolCategory(name string) string {
 	switch name {
-	case "read_context", "read_file", "search_workspace", "read_problems":
+	case "read_context", "read_file", "search_workspace", "read_problems", "goto_definition", "find_references":
 		return "workspace"
 	case "profile_dataset", "query_dataset", "query_dataset_sql", "create_dataset_chart":
 		return "data"

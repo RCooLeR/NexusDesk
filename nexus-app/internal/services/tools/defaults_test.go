@@ -1026,6 +1026,92 @@ func TestDefaultDispatcherLintFileRejectsUnsupportedLinterAndUnsafeTarget(t *tes
 	}
 }
 
+func TestDefaultDispatcherGotoDefinitionTool(t *testing.T) {
+	root := t.TempDir()
+	if err := os.MkdirAll(filepath.Join(root, "cmd"), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	content := "package main\n\nfunc main() {\n  Start()\n}\n\nfunc Start() {}\n"
+	if err := os.WriteFile(filepath.Join(root, "cmd", "main.go"), []byte(content), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	dispatcher := NewDefaultDispatcher(Dependencies{Workspace: workspaceSvc.New()})
+
+	local, err := dispatcher.ExecuteTool(context.Background(), agent.ToolCall{Name: "goto_definition", Args: map[string]string{"relPath": "cmd/main.go", "line": "4", "column": "3"}}, agent.Request{WorkspaceRoot: root})
+	if err != nil {
+		t.Fatalf("goto_definition local returned error: %v", err)
+	}
+	for _, expected := range []string{"Native definition lookup.", "Query: Start", "Scope: local", "Resolved: true", "Path: cmd/main.go", "Line: 7", "Label: Start"} {
+		if !strings.Contains(local.Observation, expected) {
+			t.Fatalf("local definition observation missing %q:\n%s", expected, local.Observation)
+		}
+	}
+
+	if err := os.MkdirAll(filepath.Join(root, "internal", "app"), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(root, "cmd", "other.go"), []byte("package main\n\nfunc main() { Launch() }\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(root, "internal", "app", "app.go"), []byte("package app\n\nfunc Launch() {}\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	workspaceResult, err := dispatcher.ExecuteTool(context.Background(), agent.ToolCall{Name: "goto_definition", Args: map[string]string{"relPath": "cmd/other.go", "query": "Launch"}}, agent.Request{WorkspaceRoot: root})
+	if err != nil {
+		t.Fatalf("goto_definition workspace returned error: %v", err)
+	}
+	for _, expected := range []string{"Scope: workspace", "Resolved: true", "Path: internal/app/app.go", "Line: 3", "Label: Launch"} {
+		if !strings.Contains(workspaceResult.Observation, expected) {
+			t.Fatalf("workspace definition observation missing %q:\n%s", expected, workspaceResult.Observation)
+		}
+	}
+
+	missing, err := dispatcher.ExecuteTool(context.Background(), agent.ToolCall{Name: "goto_definition", Args: map[string]string{"relPath": "cmd/main.go", "query": "Missing"}}, agent.Request{WorkspaceRoot: root})
+	if err != nil {
+		t.Fatalf("goto_definition missing returned error: %v", err)
+	}
+	if !strings.Contains(missing.Observation, "Resolved: false") || !strings.Contains(missing.Observation, "No definition found") {
+		t.Fatalf("unexpected missing definition observation:\n%s", missing.Observation)
+	}
+}
+
+func TestDefaultDispatcherFindReferencesTool(t *testing.T) {
+	root := t.TempDir()
+	if err := os.MkdirAll(filepath.Join(root, "cmd"), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(root, "cmd", "main.go"), []byte("package main\n\nfunc main() {\n  Start()\n}\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(root, "cmd", "start.go"), []byte("package main\n\nfunc Start() {}\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	dispatcher := NewDefaultDispatcher(Dependencies{Workspace: workspaceSvc.New()})
+
+	byQuery, err := dispatcher.ExecuteTool(context.Background(), agent.ToolCall{Name: "find_references", Args: map[string]string{"query": "Start"}}, agent.Request{WorkspaceRoot: root})
+	if err != nil {
+		t.Fatalf("find_references query returned error: %v", err)
+	}
+	for _, expected := range []string{"Native reference lookup.", "Query: Start", "References: 2", "cmd/main.go:4", "cmd/start.go:3"} {
+		if !strings.Contains(byQuery.Observation, expected) {
+			t.Fatalf("reference observation missing %q:\n%s", expected, byQuery.Observation)
+		}
+	}
+
+	byCursor, err := dispatcher.ExecuteTool(context.Background(), agent.ToolCall{Name: "find_references", Args: map[string]string{"relPath": "cmd/main.go", "line": "4", "column": "3"}}, agent.Request{WorkspaceRoot: root})
+	if err != nil {
+		t.Fatalf("find_references cursor returned error: %v", err)
+	}
+	if !strings.Contains(byCursor.Observation, "Query: Start") || !strings.Contains(byCursor.Observation, "References: 2") {
+		t.Fatalf("unexpected cursor references observation:\n%s", byCursor.Observation)
+	}
+
+	missingCursor, err := dispatcher.ExecuteTool(context.Background(), agent.ToolCall{Name: "find_references", Args: map[string]string{"relPath": "cmd/main.go"}}, agent.Request{WorkspaceRoot: root})
+	if err == nil || !strings.Contains(missingCursor.Observation, "line must be one or greater") {
+		t.Fatalf("expected missing cursor rejection, got result=%#v err=%v", missingCursor, err)
+	}
+}
+
 func TestDefaultDispatcherArtifactLineageTool(t *testing.T) {
 	root := t.TempDir()
 	if err := os.WriteFile(filepath.Join(root, "README.md"), []byte("# Project\n"), 0o644); err != nil {
