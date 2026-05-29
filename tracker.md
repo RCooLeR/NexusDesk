@@ -183,6 +183,7 @@ Goal: recreate the useful local project workbench without Wails or React.
 - [x] Add folder open flow using native Fyne dialog.
 - [x] Add native recent-workspace persistence with Home tab open/remove/clear actions.
 - [x] Add first-run Home readiness cockpit for workspace open, model/provider setup, API-key state, native build toolchain status, local safety posture, and quick first actions.
+- [x] Keep the Home readiness cockpit resize-safe by showing a compact failure-gate summary on the Welcome tab and leaving the full production failure matrix in Diagnostics.
 - [x] Render first workspace tree from the service scan.
 - [x] Add lazy child loading for large workspace trees.
 - [x] Add first native file preview service with rooted text preview, UTF-8/UTF-8 BOM/UTF-16/Windows-1251 decoding, binary detection, traversal protection, and size cap.

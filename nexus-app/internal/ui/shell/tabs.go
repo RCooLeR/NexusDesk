@@ -3,6 +3,7 @@ package shell
 import (
 	"fmt"
 	"path/filepath"
+	"strings"
 
 	"fyne.io/fyne/v2"
 	"fyne.io/fyne/v2/container"
@@ -48,6 +49,7 @@ func newEditorController(view *View, initialTabID string, welcomeItem *container
 
 func (v *View) newWelcomePanel() fyne.CanvasObject {
 	title := widget.NewRichTextFromMarkdown("# Nexus Augentic Studio\n\nNative local-first workbench for code, data, agents, and artifacts.")
+	title.Wrapping = fyne.TextWrapWord
 	openWorkspaceButton := widget.NewButtonWithIcon("Open Workspace", theme.FolderOpenIcon(), v.openWorkspaceDialog)
 	openFileButton := widget.NewButtonWithIcon("Open File", theme.FileTextIcon(), v.openFileDialog)
 	settingsButton := widget.NewButtonWithIcon("Model Settings", theme.SettingsIcon(), v.openSettingsTab)
@@ -57,6 +59,7 @@ func (v *View) newWelcomePanel() fyne.CanvasObject {
 		}
 	})
 	readiness := widget.NewRichTextFromMarkdown(v.welcomeReadinessMarkdown())
+	readiness.Wrapping = fyne.TextWrapWord
 	recent := v.recentWorkspaceRows()
 	content := container.NewVBox(
 		title,
@@ -81,13 +84,58 @@ func (v *View) welcomeReadinessMarkdown() string {
 		}
 	}
 	workspace := v.state.Workspace()
-	return readinessSvc.FormatMarkdown(readinessSvc.Collect(readinessSvc.Options{
+	return formatWelcomeReadinessMarkdown(readinessSvc.Collect(readinessSvc.Options{
 		WorkspaceRoot:   workspace.Root,
 		WorkspaceName:   workspace.Name,
 		Settings:        current,
 		SettingsError:   settingsError,
 		StartupRecovery: v.startupStatus,
 	}))
+}
+
+func formatWelcomeReadinessMarkdown(snapshot readinessSvc.Snapshot) string {
+	var builder strings.Builder
+	builder.WriteString("## First-run readiness\n\n")
+	builder.WriteString("This native workspace cockpit keeps setup gaps visible before long-running agent work starts.\n\n")
+	for _, item := range snapshot.Items {
+		builder.WriteString(fmt.Sprintf("- **[%s] %s:** %s", welcomeReadinessStatusLabel(item.Status), item.Label, compactWelcomeReadinessText(item.Detail, 180)))
+		if strings.TrimSpace(item.Action) != "" {
+			builder.WriteString(" Next: ")
+			builder.WriteString(compactWelcomeReadinessText(item.Action, 160))
+		}
+		builder.WriteString("\n")
+	}
+	builder.WriteString("\n## Production failure gates\n\n")
+	if err := readinessSvc.ValidateProductionFailureScenarios(snapshot.FailureScenarios); err != nil {
+		builder.WriteString("- **[ACTION] Production failure scenarios:** ")
+		builder.WriteString(compactWelcomeReadinessText(err.Error(), 180))
+		builder.WriteString(" Open Diagnostics for the detailed matrix.\n")
+		return builder.String()
+	}
+	builder.WriteString(fmt.Sprintf("- **[OK] Production failure scenarios:** %d scenario(s) cover crash/hang/provider/metadata/cancel release gates. Open Diagnostics for owners, automated checks, and manual smoke details.\n", len(snapshot.FailureScenarios)))
+	return builder.String()
+}
+
+func welcomeReadinessStatusLabel(status string) string {
+	switch status {
+	case readinessSvc.StatusOK:
+		return "OK"
+	case readinessSvc.StatusWarning:
+		return "WARN"
+	default:
+		return "ACTION"
+	}
+}
+
+func compactWelcomeReadinessText(text string, limit int) string {
+	compact := strings.Join(strings.Fields(strings.TrimSpace(text)), " ")
+	if limit <= 0 || len(compact) <= limit {
+		return compact
+	}
+	if limit <= 3 {
+		return compact[:limit]
+	}
+	return strings.TrimSpace(compact[:limit-3]) + "..."
 }
 
 func (v *View) recentWorkspaceRows() fyne.CanvasObject {

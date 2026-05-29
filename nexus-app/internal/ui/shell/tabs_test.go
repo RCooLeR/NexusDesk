@@ -1,11 +1,16 @@
 package shell
 
 import (
+	"strings"
 	"testing"
 
 	"fyne.io/fyne/v2/container"
 	fynetest "fyne.io/fyne/v2/test"
 	"fyne.io/fyne/v2/widget"
+
+	readinessSvc "nexusdesk/internal/services/readiness"
+	settingsSvc "nexusdesk/internal/services/settings"
+	startupSvc "nexusdesk/internal/services/startup"
 )
 
 func TestEditorControllerInitializesTabState(t *testing.T) {
@@ -30,4 +35,35 @@ func TestEditorControllerInitializesTabState(t *testing.T) {
 	if controller.previews == nil || controller.textEditors == nil {
 		t.Fatal("expected editor preview and text binding maps")
 	}
+}
+
+func TestFormatWelcomeReadinessMarkdownKeepsHomeSummaryCompact(t *testing.T) {
+	snapshot := readinessSvc.Collect(readinessSvc.Options{
+		Settings:        settingsSvc.Defaults(),
+		StartupRecovery: startupSvc.Status{},
+		LookupPath: func(string) (string, error) {
+			return "", readinessTestError("missing")
+		},
+		ExternalAgentLookupPath: func(string) (string, error) {
+			return "", readinessTestError("missing")
+		},
+	})
+	text := formatWelcomeReadinessMarkdown(snapshot)
+	if !strings.Contains(text, "Production failure gates") {
+		t.Fatalf("expected readiness summary to include failure gates:\n%s", text)
+	}
+	if strings.Contains(text, "workspace/readiness/jobs") || strings.Contains(text, "internal/services/readiness:") {
+		t.Fatalf("home readiness should not include full failure matrix details:\n%s", text)
+	}
+	for _, line := range strings.Split(text, "\n") {
+		if len(line) > 260 {
+			t.Fatalf("home readiness line is too wide for resizable layout (%d chars): %s", len(line), line)
+		}
+	}
+}
+
+type readinessTestError string
+
+func (e readinessTestError) Error() string {
+	return string(e)
 }

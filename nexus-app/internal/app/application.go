@@ -25,7 +25,8 @@ func Run() {
 
 	window := application.NewWindow(buildinfo.AppName)
 	window.SetIcon(brand.AppIcon())
-	window.Resize(fyne.NewSize(1440, 920))
+	window.Resize(fyne.NewSize(1280, 820))
+	window.CenterOnScreen()
 	window.SetMaster()
 
 	view := shell.NewWithStartupStatus(window, startupStatus)
