@@ -421,6 +421,7 @@ Exit criteria:
 - [x] Onboarding flow for workspace open, model setup, permissions, and local data policy.
 - [x] First-run diagnostics for missing model endpoint, missing toolchain, and unavailable provider.
 - [x] Redacted issue-report bundle that excludes workspace contents unless explicitly included.
+- [x] Diagnostics health cards: provider, metadata, jobs/runs, performance, startup recovery, and issue-report readiness are summarized before detailed reports.
 - [x] User docs for safe agent use, approvals, rollbacks, local data, and connector credentials.
 - [x] Beta feedback loop and release notes.
 

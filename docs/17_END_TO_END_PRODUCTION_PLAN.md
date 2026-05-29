@@ -348,7 +348,7 @@ Already available:
 Planned/remaining:
 
 - Audit coverage for future connector sync, OCR, dump import, arbitrary shell, and Docker mutation workflows.
-- Issue-report bundle with secret redaction and opt-in workspace content inclusion. Implemented as a Diagnostics export that writes a redacted ZIP with diagnostics text, activity tail, environment metadata, workspace-state file names, and no workspace file contents by default.
+- Issue-report bundle with secret redaction and opt-in workspace content inclusion. Implemented as a Diagnostics export that writes a redacted ZIP with diagnostics text, activity tail, environment metadata, workspace-state file names, and no workspace file contents by default. Diagnostics reports now start with native health cards for provider, metadata, jobs/runs, performance, startup recovery, and issue-report readiness before detailed logs.
 - Crash/hang checks for folder open, malformed files, corrupt metadata, missing providers, and canceled long work.
 
 ### 4.11 Packaging, Platform, Release
@@ -582,7 +582,8 @@ The checklist below is intentionally large. `tracker.md` should keep task-level 
 - [ ] Improve assistant panel layout beyond the status strip and first source actions: richer source drilldowns, approvals, diagnostics grouping, footer evidence actions, and run history.
 - [ ] Improve data-grid visual polish: header hierarchy, row density, selection, loading states, error states.
 - [ ] Improve artifact browser polish: type badges, lineage, freshness, regeneration, comparison, preview.
-- [ ] Improve diagnostics polish: health cards, actions, explanations, export issue bundle.
+- [x] Improve diagnostics polish with report-level health cards for provider, metadata, jobs/runs, performance, startup recovery, and issue-report readiness.
+- [ ] Continue diagnostics polish: clearer grouped actions, richer explanations, and visual card treatment beyond the Markdown report.
 - [ ] Add visual regression/manual screenshot checklist for core windows.
 
 ### 7.5 P1: Editor And IDE Maturity

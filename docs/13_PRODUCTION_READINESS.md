@@ -128,7 +128,7 @@ Required:
 
 - Onboarding flow for workspace open, model setup, permissions, and local data policy. Implemented as a native Home readiness cockpit with setup health, safety posture, and first actions.
 - First-run diagnostics for missing model endpoint, missing compiler/build toolchain, and unavailable provider. Implemented in the Home readiness cockpit; Diagnostics now adds provider-specific remediation for common Ollama/OpenAI-compatible failures such as stopped local runtimes, missing models, unloaded models, auth failures, and bad `/v1` base URLs.
-- Issue-report bundle that redacts secrets and excludes workspace contents unless explicitly included. Implemented in Diagnostics as a redacted ZIP export containing diagnostics text, activity tail, environment metadata, workspace-state file names, and no workspace file contents by default.
+- Issue-report bundle that redacts secrets and excludes workspace contents unless explicitly included. Implemented in Diagnostics as a redacted ZIP export containing diagnostics text, activity tail, environment metadata, workspace-state file names, and no workspace file contents by default. Diagnostics reports now include health cards for provider, metadata, jobs/runs, performance, startup recovery, and issue-report readiness before detailed logs.
 - Documentation for safe agent use, approvals, rollbacks, local data, and connector credentials. Implemented in `docs/18_SAFE_AGENT_USER_GUIDE.md` and exposed in-product from Help and the command palette.
 - Beta feedback loop and release notes. Implemented in `docs/19_BETA_FEEDBACK_AND_RELEASE_NOTES.md` and exposed in-product from Help and the command palette.
 

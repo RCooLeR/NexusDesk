@@ -63,6 +63,13 @@ type diagnosticsSnapshot struct {
 	Warnings                []string
 }
 
+type diagnosticsHealthCard struct {
+	Label  string
+	Status string
+	Detail string
+	Action string
+}
+
 type diagnosticsProber interface {
 	Probe(ctx context.Context, config llmSvc.Config) (llmSvc.ProbeResult, error)
 }
@@ -393,6 +400,20 @@ func formatDiagnosticsSnapshot(snapshot diagnosticsSnapshot) string {
 	builder.WriteString(snapshot.CollectedAt.Local().Format("2006-01-02 15:04:05"))
 	builder.WriteString("\nWorkspace: ")
 	builder.WriteString(firstNonEmptyString(snapshot.WorkspaceRoot, "(none)"))
+	builder.WriteString("\n\n## Health Cards\n")
+	for _, card := range diagnosticsHealthCards(snapshot) {
+		builder.WriteString("- **[")
+		builder.WriteString(strings.ToUpper(firstNonEmptyString(card.Status, "unknown")))
+		builder.WriteString("] ")
+		builder.WriteString(firstNonEmptyString(card.Label, "Check"))
+		builder.WriteString(":** ")
+		builder.WriteString(firstNonEmptyString(card.Detail, "No detail available."))
+		if action := strings.TrimSpace(card.Action); action != "" {
+			builder.WriteString(" Next: ")
+			builder.WriteString(action)
+		}
+		builder.WriteString("\n")
+	}
 	builder.WriteString("\n\n## Provider\n")
 	if snapshot.SettingsError != "" {
 		builder.WriteString("Settings error: ")
@@ -537,6 +558,143 @@ func formatDiagnosticsSnapshot(snapshot diagnosticsSnapshot) string {
 		}
 	}
 	return builder.String()
+}
+
+func diagnosticsHealthCards(snapshot diagnosticsSnapshot) []diagnosticsHealthCard {
+	return []diagnosticsHealthCard{
+		diagnosticsProviderHealthCard(snapshot),
+		diagnosticsMetadataHealthCard(snapshot),
+		diagnosticsJobsHealthCard(snapshot),
+		diagnosticsPerformanceHealthCard(snapshot),
+		diagnosticsStartupHealthCard(snapshot),
+		{
+			Label:  "Issue report",
+			Status: "ok",
+			Detail: "Redacted diagnostics export is available and excludes workspace file contents by default.",
+			Action: "Use Export issue report before sharing beta bugs or release-candidate failures.",
+		},
+	}
+}
+
+func diagnosticsProviderHealthCard(snapshot diagnosticsSnapshot) diagnosticsHealthCard {
+	switch {
+	case snapshot.SettingsError != "":
+		return diagnosticsHealthCard{
+			Label:  "Provider",
+			Status: "action",
+			Detail: "Settings could not be loaded: " + compactDiagnosticsLine(snapshot.SettingsError, diagnosticsCompactMessageLimit),
+			Action: "Open Settings and save the provider configuration again.",
+		}
+	case snapshot.ProbeError != "":
+		return diagnosticsHealthCard{
+			Label:  "Provider",
+			Status: "action",
+			Detail: "Probe failed: " + compactDiagnosticsLine(snapshot.ProbeError, diagnosticsCompactMessageLimit),
+			Action: "Verify base URL, credentials, selected model, and runtime availability.",
+		}
+	case snapshot.ProbeResult == nil:
+		return diagnosticsHealthCard{
+			Label:  "Provider",
+			Status: "warning",
+			Detail: "Provider probe has not completed for this diagnostics snapshot.",
+			Action: "Refresh Diagnostics after provider settings are saved.",
+		}
+	case snapshot.ProbeResult.OK:
+		return diagnosticsHealthCard{
+			Label:  "Provider",
+			Status: "ok",
+			Detail: firstNonEmptyString(compactDiagnosticsLine(snapshot.ProbeResult.Message, diagnosticsCompactMessageLimit), "Provider probe passed."),
+		}
+	default:
+		return diagnosticsHealthCard{
+			Label:  "Provider",
+			Status: "warning",
+			Detail: firstNonEmptyString(compactDiagnosticsLine(snapshot.ProbeResult.Message, diagnosticsCompactMessageLimit), "Provider returned a warning status."),
+			Action: "Review Provider Guidance and rerun Test connection.",
+		}
+	}
+}
+
+func diagnosticsMetadataHealthCard(snapshot diagnosticsSnapshot) diagnosticsHealthCard {
+	if snapshot.MetadataError != "" || snapshot.MetadataStatus == nil {
+		return diagnosticsHealthCard{
+			Label:  "Metadata",
+			Status: "action",
+			Detail: firstNonEmptyString(compactDiagnosticsLine(snapshot.MetadataError, diagnosticsCompactMessageLimit), "Metadata store is unavailable."),
+			Action: "Export metadata backup if possible, then inspect .nexusdesk/metadata recovery state.",
+		}
+	}
+	return diagnosticsHealthCard{
+		Label:  "Metadata",
+		Status: "ok",
+		Detail: fmt.Sprintf("%d table(s). %s", len(snapshot.MetadataStatus.Tables), firstNonEmptyString(compactDiagnosticsLine(snapshot.MetadataStatus.Message, diagnosticsCompactMessageLimit), "SQLite metadata store is active.")),
+	}
+}
+
+func diagnosticsJobsHealthCard(snapshot diagnosticsSnapshot) diagnosticsHealthCard {
+	failures := snapshot.InMemoryFailedJobs + snapshot.RecentPersistedFailures + snapshot.RecentTaskFailures + snapshot.RecentSQLFailures + snapshot.RecentAgentFailures
+	total := snapshot.InMemoryJobs + snapshot.RecentPersistedJobs + snapshot.RecentTaskRuns + snapshot.RecentSQLRuns + snapshot.RecentAgentRuns
+	if failures > 0 {
+		return diagnosticsHealthCard{
+			Label:  "Jobs and runs",
+			Status: "action",
+			Detail: fmt.Sprintf("%d non-success item(s) across %d recent/in-memory job, task, SQL, and agent record(s).", failures, total),
+			Action: "Open Jobs and Agent Audit, inspect failures, then retry only safe workloads.",
+		}
+	}
+	if snapshot.InMemoryRunningJobs > 0 {
+		return diagnosticsHealthCard{
+			Label:  "Jobs and runs",
+			Status: "warning",
+			Detail: fmt.Sprintf("%d job(s) currently running; recent persisted records show no failures.", snapshot.InMemoryRunningJobs),
+			Action: "Wait for running jobs to finish before packaging or exporting a release report.",
+		}
+	}
+	return diagnosticsHealthCard{
+		Label:  "Jobs and runs",
+		Status: "ok",
+		Detail: fmt.Sprintf("%d recent/in-memory job, task, SQL, and agent record(s); no non-success records detected.", total),
+	}
+}
+
+func diagnosticsPerformanceHealthCard(snapshot diagnosticsSnapshot) diagnosticsHealthCard {
+	if hasOverBudgetPerformanceTiming(snapshot.PerformanceTimings) {
+		return diagnosticsHealthCard{
+			Label:  "Performance",
+			Status: "warning",
+			Detail: "At least one startup or folder-open timing is over budget.",
+			Action: "Review Performance Timings before scaling to larger repositories.",
+		}
+	}
+	if len(snapshot.PerformanceTimings) == 0 {
+		return diagnosticsHealthCard{
+			Label:  "Performance",
+			Status: "warning",
+			Detail: "No startup or folder-open timings were captured yet.",
+			Action: "Open a workspace and rerun Diagnostics before release-candidate smoke.",
+		}
+	}
+	return diagnosticsHealthCard{
+		Label:  "Performance",
+		Status: "ok",
+		Detail: fmt.Sprintf("%d timing record(s) captured and within budget.", len(snapshot.PerformanceTimings)),
+	}
+}
+
+func diagnosticsStartupHealthCard(snapshot diagnosticsSnapshot) diagnosticsHealthCard {
+	if snapshot.StartupRecovery.PreviousUnclean {
+		return diagnosticsHealthCard{
+			Label:  "Startup recovery",
+			Status: "warning",
+			Detail: firstNonEmptyString(compactDiagnosticsLine(snapshot.StartupRecovery.Message, diagnosticsCompactMessageLimit), "Previous run did not record a clean exit."),
+			Action: "Review Jobs, Agent Audit, and metadata health before repeating long workflows.",
+		}
+	}
+	return diagnosticsHealthCard{
+		Label:  "Startup recovery",
+		Status: "ok",
+		Detail: "Clean-exit markers are active.",
+	}
 }
 
 func diagnosticsRuntimeSummary(runtime llmSvc.RuntimeStatus) []string {

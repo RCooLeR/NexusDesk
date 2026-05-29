@@ -97,6 +97,11 @@ func TestFormatDiagnosticsSnapshotIncludesCoreSections(t *testing.T) {
 	for _, expected := range []string{
 		"# Diagnostics",
 		"## Provider",
+		"## Health Cards",
+		"**[OK] Provider:** Connected to provider.",
+		"**[OK] Metadata:** 2 table(s). SQLite metadata store is active.",
+		"**[ACTION] Jobs and runs:** 5 non-success item(s)",
+		"**[OK] Issue report:** Redacted diagnostics export is available",
 		"Probe: ok",
 		"## Provider Runtime",
 		"## Provider Guidance",
@@ -119,6 +124,76 @@ func TestFormatDiagnosticsSnapshotIncludesCoreSections(t *testing.T) {
 			t.Fatalf("expected %q in diagnostics text:\n%s", expected, text)
 		}
 	}
+}
+
+func TestDiagnosticsHealthCardsSummarizeActionsAndWarnings(t *testing.T) {
+	cards := diagnosticsHealthCards(diagnosticsSnapshot{
+		ProbeError:              "connection refused",
+		MetadataError:           "no such table: jobs",
+		InMemoryFailedJobs:      1,
+		RecentPersistedFailures: 2,
+		RecentTaskFailures:      1,
+		InMemoryRunningJobs:     1,
+		StartupRecovery: startupSvc.Status{
+			PreviousUnclean: true,
+			Message:         "Previous run did not record a clean exit.",
+		},
+		PerformanceTimings: []perfSvc.TimingRecord{{
+			Name:         perfSvc.TimingWorkspaceOpen,
+			Duration:     3 * time.Second,
+			Budget:       perfSvc.WorkspaceOpenBudget,
+			WithinBudget: false,
+		}},
+	})
+	joined := diagnosticsHealthCardText(cards)
+	for _, expected := range []string{
+		"Provider|action|Probe failed: connection refused|Verify base URL",
+		"Metadata|action|no such table: jobs|Export metadata backup",
+		"Jobs and runs|action|4 non-success item(s)",
+		"Performance|warning|At least one startup or folder-open timing is over budget.",
+		"Startup recovery|warning|Previous run did not record a clean exit.",
+		"Issue report|ok|Redacted diagnostics export is available",
+	} {
+		if !strings.Contains(joined, expected) {
+			t.Fatalf("expected health cards to contain %q, got:\n%s", expected, joined)
+		}
+	}
+}
+
+func TestDiagnosticsHealthCardsHealthySnapshot(t *testing.T) {
+	cards := diagnosticsHealthCards(diagnosticsSnapshot{
+		ProbeResult: &llmSvc.ProbeResult{OK: true, Message: "Connected."},
+		MetadataStatus: &metadataSvc.Status{
+			Tables:  []string{"jobs"},
+			Message: "SQLite metadata store is active.",
+		},
+		PerformanceTimings: []perfSvc.TimingRecord{{
+			Name:         perfSvc.TimingWorkspaceOpen,
+			Duration:     time.Second,
+			Budget:       perfSvc.WorkspaceOpenBudget,
+			WithinBudget: true,
+		}},
+	})
+	joined := diagnosticsHealthCardText(cards)
+	for _, expected := range []string{
+		"Provider|ok|Connected.|",
+		"Metadata|ok|1 table(s). SQLite metadata store is active.|",
+		"Jobs and runs|ok|0 recent/in-memory",
+		"Performance|ok|1 timing record(s) captured and within budget.",
+		"Startup recovery|ok|Clean-exit markers are active.",
+	} {
+		if !strings.Contains(joined, expected) {
+			t.Fatalf("expected healthy cards to contain %q, got:\n%s", expected, joined)
+		}
+	}
+}
+
+func diagnosticsHealthCardText(cards []diagnosticsHealthCard) string {
+	lines := make([]string, 0, len(cards))
+	for _, card := range cards {
+		lines = append(lines, card.Label+"|"+card.Status+"|"+card.Detail+"|"+card.Action)
+	}
+	return strings.Join(lines, "\n")
 }
 
 func TestIsSuccessStatus(t *testing.T) {
