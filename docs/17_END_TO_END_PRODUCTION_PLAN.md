@@ -283,7 +283,7 @@ Planned/remaining:
 
 Already available:
 
-- Artifact writer, metadata sidecars, browser, search, preview, compare, archive, delete, restore, open source, context pinning.
+- Artifact writer, metadata sidecars, browser, search, preview, compare, archive, delete, restore, open source, context pinning, row status badges, and preview summaries.
 - Source lineage, source fingerprints, freshness warnings, metadata rows.
 - Artifact lineage graph import/export.
 - Regeneration for dataset summary, query CSV, SQL report, chart, dashboard, SQL notebook, SQLite query, document report, document brief, DOCX export, workspace scan, document extraction, operations runbook, comparison, saved chat-answer refresh, presentation outline, packaged presentation zip, PPTX deck.
@@ -581,7 +581,8 @@ The checklist below is intentionally large. `tracker.md` should keep task-level 
 - [x] Add first Assistant source actions to open or pin latest-answer sources for follow-up inspection.
 - [ ] Improve assistant panel layout beyond the status strip and first source actions: richer source drilldowns, approvals, diagnostics grouping, footer evidence actions, and run history.
 - [ ] Improve data-grid visual polish: header hierarchy, row density, selection, loading states, error states.
-- [ ] Improve artifact browser polish: type badges, lineage, freshness, regeneration, comparison, preview.
+- [x] Improve artifact browser polish with row badges and preview summaries for type, lineage, regeneration/export capability, comparison state, archive state, metadata, sources, and jobs.
+- [ ] Continue artifact browser polish: stronger visual hierarchy, richer lineage/freshness cards, and comparison/regeneration workflow grouping.
 - [x] Improve diagnostics polish with report-level health cards for provider, metadata, jobs/runs, performance, startup recovery, and issue-report readiness.
 - [ ] Continue diagnostics polish: clearer grouped actions, richer explanations, and visual card treatment beyond the Markdown report.
 - [ ] Add visual regression/manual screenshot checklist for core windows.

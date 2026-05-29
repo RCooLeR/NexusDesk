@@ -372,7 +372,7 @@ func (v *View) previewArtifact(artifact artifactsSvc.Artifact) {
 		dialog.ShowError(err, v.window)
 		return
 	}
-	v.artifactPreview.SetText(artifactLineageText(lineage) + "\n\n" + artifactFreshnessText(freshness) + "\n\n---\n\n" + text)
+	v.artifactPreview.SetText(artifactPreviewSummaryText(artifact) + "\n\n" + artifactLineageText(lineage) + "\n\n" + artifactFreshnessText(freshness) + "\n\n---\n\n" + text)
 	v.refreshArtifactSources(freshness.Sources)
 	v.artifactStatus.SetText("Previewing " + artifact.RelPath)
 	v.addActivity("Previewed artifact " + artifact.RelPath + ".")
@@ -1476,10 +1476,12 @@ func artifactRows(
 		title := widget.NewLabel(artifactTitle(artifact))
 		title.TextStyle = fyne.TextStyle{Bold: true}
 		title.Truncation = fyne.TextTruncateEllipsis
+		badges := widget.NewLabel(artifactBadgeLine(artifact))
+		badges.Truncation = fyne.TextTruncateEllipsis
 		meta := widget.NewLabel(artifactMeta(artifact))
 		meta.Truncation = fyne.TextTruncateEllipsis
 		actions := container.NewHBox(preview, context, compare, documentBrief, presentation, regenerate, archive, restore, deleteButton)
-		rows = append(rows, container.NewBorder(nil, nil, actions, nil, container.NewVBox(title, meta)))
+		rows = append(rows, container.NewBorder(nil, nil, actions, nil, container.NewVBox(title, badges, meta)))
 	}
 	return rows
 }
@@ -1803,6 +1805,110 @@ func artifactMeta(artifact artifactsSvc.Artifact) string {
 		details += " - archived"
 	}
 	return details
+}
+
+func artifactPreviewSummaryText(artifact artifactsSvc.Artifact) string {
+	var builder strings.Builder
+	builder.WriteString("Artifact Summary\n")
+	builder.WriteString("- Type: ")
+	builder.WriteString(artifactKindLabel(artifact.Kind))
+	builder.WriteString("\n")
+	builder.WriteString("- Path: ")
+	builder.WriteString(firstNonEmpty(strings.TrimSpace(artifact.RelPath), "(no path)"))
+	builder.WriteString("\n")
+	if title := strings.TrimSpace(artifactTitle(artifact)); title != "" {
+		builder.WriteString("- Title: ")
+		builder.WriteString(title)
+		builder.WriteString("\n")
+	}
+	builder.WriteString("- Status: ")
+	builder.WriteString(strings.Join(artifactCapabilityBadges(artifact), ", "))
+	builder.WriteString("\n")
+	if len(artifact.SourcePaths) > 0 {
+		builder.WriteString("- Sources: ")
+		builder.WriteString(fmt.Sprintf("%d", len(artifact.SourcePaths)))
+		builder.WriteString("\n")
+	}
+	if strings.TrimSpace(artifact.JobID) != "" {
+		builder.WriteString("- Job: ")
+		builder.WriteString(artifact.JobID)
+		builder.WriteString("\n")
+	}
+	return builder.String()
+}
+
+func artifactBadgeLine(artifact artifactsSvc.Artifact) string {
+	badges := append([]string{artifactKindLabel(artifact.Kind)}, artifactCapabilityBadges(artifact)...)
+	return strings.Join(badges, " | ")
+}
+
+func artifactKindLabel(kind string) string {
+	kind = strings.TrimSpace(kind)
+	if kind == "" {
+		return "Unknown artifact"
+	}
+	labels := map[string]string{
+		"artifact-comparison":   "Comparison report",
+		"chat-answer":           "Assistant answer",
+		"dataset-dashboard":     "Dashboard",
+		"dataset-query-csv":     "Dataset CSV",
+		"dataset-sql-report":    "SQL report",
+		"dataset-summary":       "Dataset summary",
+		"document-brief":        "Document brief",
+		"document-export":       "DOCX export",
+		"document-extract":      "Extracted document",
+		"document-report":       "Document report",
+		"operations-runbook":    "Operations runbook",
+		"presentation-deck":     "PPTX deck",
+		"presentation-outline":  "Presentation outline",
+		"presentation-package":  "Presentation package",
+		"scan-report":           "Workspace scan",
+		"sql-notebook-run":      "SQL notebook",
+		"sqlite-query-csv":      "SQLite CSV",
+		"sqlite-query-markdown": "SQLite report",
+		"task-report":           "Task report",
+	}
+	if label, ok := labels[kind]; ok {
+		return label
+	}
+	parts := strings.Split(kind, "-")
+	for index, part := range parts {
+		if part == "" {
+			continue
+		}
+		parts[index] = strings.ToUpper(part[:1]) + part[1:]
+	}
+	return strings.Join(parts, " ")
+}
+
+func artifactCapabilityBadges(artifact artifactsSvc.Artifact) []string {
+	badges := []string{}
+	if artifact.Archived {
+		badges = append(badges, "archived")
+	} else {
+		badges = append(badges, "active")
+	}
+	if len(artifact.SourcePaths) > 0 || strings.TrimSpace(artifact.Source) != "" {
+		badges = append(badges, "lineage")
+	} else {
+		badges = append(badges, "no lineage")
+	}
+	if artifactCanRegenerate(artifact) {
+		badges = append(badges, "regenerable")
+	}
+	if artifactCanGenerateDocumentArtifact(artifact) {
+		badges = append(badges, "doc export")
+	}
+	if artifactCanGeneratePresentationArtifact(artifact) {
+		badges = append(badges, "deck export")
+	}
+	if strings.TrimSpace(artifact.Kind) == "artifact-comparison" {
+		badges = append(badges, "comparison")
+	}
+	if strings.TrimSpace(artifact.MetadataPath) != "" {
+		badges = append(badges, "metadata")
+	}
+	return badges
 }
 
 func artifactLineageText(lineage artifactsSvc.Lineage) string {

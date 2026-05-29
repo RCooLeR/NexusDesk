@@ -25,6 +25,59 @@ func TestArtifactMetaFormatsTaskReport(t *testing.T) {
 	}
 }
 
+func TestArtifactBadgeLineSummarizesTypeAndCapabilities(t *testing.T) {
+	line := artifactBadgeLine(artifactsSvc.Artifact{
+		Kind:         "chat-answer",
+		RelPath:      ".nexusdesk/artifacts/chat-answers/answer.md",
+		MetadataPath: ".nexusdesk/artifacts/chat-answers/answer.md.json",
+		SourcePaths:  []string{"README.md"},
+	})
+	for _, expected := range []string{"Assistant answer", "active", "lineage", "regenerable", "doc export", "deck export", "metadata"} {
+		if !strings.Contains(line, expected) {
+			t.Fatalf("artifact badge line %q missing %q", line, expected)
+		}
+	}
+}
+
+func TestArtifactBadgeLineMarksArchivedNoLineage(t *testing.T) {
+	line := artifactBadgeLine(artifactsSvc.Artifact{
+		Kind:     "task-report",
+		Archived: true,
+	})
+	for _, expected := range []string{"Task report", "archived", "no lineage"} {
+		if !strings.Contains(line, expected) {
+			t.Fatalf("artifact badge line %q missing %q", line, expected)
+		}
+	}
+	if strings.Contains(line, "regenerable") {
+		t.Fatalf("archived artifact should not be regenerable: %q", line)
+	}
+}
+
+func TestArtifactPreviewSummaryTextIncludesStatus(t *testing.T) {
+	text := artifactPreviewSummaryText(artifactsSvc.Artifact{
+		Kind:        "document-report",
+		Title:       "Report",
+		RelPath:     ".nexusdesk/artifacts/document-sets/report.md",
+		SourcePaths: []string{"docs/a.md", "docs/b.md"},
+		JobID:       "job-1",
+	})
+	for _, expected := range []string{"Artifact Summary", "Type: Document report", "Path: .nexusdesk/artifacts/document-sets/report.md", "Title: Report", "Status: active, lineage, regenerable", "Sources: 2", "Job: job-1"} {
+		if !strings.Contains(text, expected) {
+			t.Fatalf("artifact preview summary missing %q:\n%s", expected, text)
+		}
+	}
+}
+
+func TestArtifactKindLabelFallsBackToTitleCase(t *testing.T) {
+	if got := artifactKindLabel("custom-output-kind"); got != "Custom Output Kind" {
+		t.Fatalf("unexpected custom kind label: %q", got)
+	}
+	if got := artifactKindLabel(""); got != "Unknown artifact" {
+		t.Fatalf("unexpected empty kind label: %q", got)
+	}
+}
+
 func TestArtifactTitleFallsBackToFilename(t *testing.T) {
 	if got := artifactTitle(artifactsSvc.Artifact{RelPath: ".nexusdesk/artifacts/task-runs/report.md"}); got != "report.md" {
 		t.Fatalf("unexpected fallback title: %q", got)

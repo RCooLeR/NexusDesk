@@ -580,6 +580,7 @@ The Fyne migration must not drop product ambition, but this section is intention
 - [x] Chat-answer artifacts include prompt/model/context/source/citation/unverified-citation/snippet/evidence and structured cited/uncited source coverage metadata.
 - [ ] Complete tool-run provenance coverage for every generated output type beyond chat-answer artifacts.
 - [x] Artifact browser with search, metadata, preview, compare, archive, delete, restore, and open-source navigation.
+- [x] Artifact browser polish slice: row badges and preview summaries expose artifact type, lineage, regeneration/export capability, comparison state, archive state, metadata, sources, and job IDs.
 - [x] Artifact lineage/freshness warnings for current native artifacts.
 - [x] Artifact lineage graph import/export UI parity with workspace graph JSON artifacts.
 - [x] First artifact regeneration workflow that reuses dataset summary, query, SQL, chart, dashboard, SQL notebook, and SQLite query export dependency metadata.
