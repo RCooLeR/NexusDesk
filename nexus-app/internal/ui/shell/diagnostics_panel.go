@@ -11,6 +11,7 @@ import (
 	"fyne.io/fyne/v2/theme"
 	"fyne.io/fyne/v2/widget"
 
+	externalagentsSvc "nexusdesk/internal/services/externalagents"
 	issueReportSvc "nexusdesk/internal/services/issuereport"
 	jobsSvc "nexusdesk/internal/services/jobs"
 	llmSvc "nexusdesk/internal/services/llm"
@@ -53,6 +54,7 @@ type diagnosticsSnapshot struct {
 	StartupRecovery         startupSvc.Status
 	PerformanceTimings      []perfSvc.TimingRecord
 	RuntimeSummary          []string
+	ExternalAgentTools      []externalagentsSvc.ToolStatus
 	RecentJobFailures       []string
 	RecentTaskFailuresList  []string
 	RecentSQLFailuresList   []string
@@ -216,6 +218,7 @@ func (v *View) collectDiagnosticsSnapshot(root string, activityTail []string) di
 		ActivityTail:       append([]string(nil), activityTail...),
 		StartupRecovery:    v.startupStatus,
 		PerformanceTimings: v.performanceTimings(diagnosticsPerformanceLimit),
+		ExternalAgentTools: externalagentsSvc.Probe(externalagentsSvc.Options{}),
 	}
 	if snapshot.StartupRecovery.PreviousUnclean {
 		snapshot.Warnings = append(snapshot.Warnings, snapshot.StartupRecovery.Message)
@@ -468,6 +471,10 @@ func formatDiagnosticsSnapshot(snapshot diagnosticsSnapshot) string {
 		}
 	}
 
+	builder.WriteString("\n## External Agent CLIs\n")
+	builder.WriteString(externalagentsSvc.FormatMarkdown(snapshot.ExternalAgentTools))
+	builder.WriteString("\n")
+
 	builder.WriteString("\n## Startup Recovery\n")
 	if snapshot.StartupRecovery.PreviousUnclean {
 		builder.WriteString("Status: warning - ")
@@ -563,6 +570,7 @@ func formatDiagnosticsSnapshot(snapshot diagnosticsSnapshot) string {
 func diagnosticsHealthCards(snapshot diagnosticsSnapshot) []diagnosticsHealthCard {
 	return []diagnosticsHealthCard{
 		diagnosticsProviderHealthCard(snapshot),
+		diagnosticsExternalAgentsHealthCard(snapshot),
 		diagnosticsMetadataHealthCard(snapshot),
 		diagnosticsJobsHealthCard(snapshot),
 		diagnosticsPerformanceHealthCard(snapshot),
@@ -573,6 +581,39 @@ func diagnosticsHealthCards(snapshot diagnosticsSnapshot) []diagnosticsHealthCar
 			Detail: "Redacted diagnostics export is available and excludes workspace file contents by default.",
 			Action: "Use Export issue report before sharing beta bugs or release-candidate failures.",
 		},
+	}
+}
+
+func diagnosticsExternalAgentsHealthCard(snapshot diagnosticsSnapshot) diagnosticsHealthCard {
+	summary := externalagentsSvc.Summary(snapshot.ExternalAgentTools)
+	switch {
+	case len(snapshot.ExternalAgentTools) == 0:
+		return diagnosticsHealthCard{
+			Label:  "External agent CLIs",
+			Status: "warning",
+			Detail: summary,
+			Action: "Keep the catalog updated before exposing execution workflows.",
+		}
+	case !externalagentsSvc.HasAnyAvailable(snapshot.ExternalAgentTools):
+		return diagnosticsHealthCard{
+			Label:  "External agent CLIs",
+			Status: "action",
+			Detail: summary,
+			Action: "Install Codex, Claude Code, or OpenCode and ensure the command is on PATH before routing approved external-agent workflows.",
+		}
+	case externalagentsSvc.HasMissing(snapshot.ExternalAgentTools):
+		return diagnosticsHealthCard{
+			Label:  "External agent CLIs",
+			Status: "warning",
+			Detail: summary,
+			Action: "Install missing CLIs only if those providers are part of your intended workflow.",
+		}
+	default:
+		return diagnosticsHealthCard{
+			Label:  "External agent CLIs",
+			Status: "ok",
+			Detail: summary,
+		}
 	}
 }
 
@@ -850,6 +891,11 @@ func diagnosticsRecommendedActions(snapshot diagnosticsSnapshot) []string {
 	actions = append(actions, snapshot.ProviderGuidance...)
 	if snapshot.ProbeResult != nil && snapshot.ProbeResult.Runtime != nil && strings.TrimSpace(snapshot.ProbeResult.Runtime.SelectedModel) != "" && !snapshot.ProbeResult.Runtime.SelectedModelLoaded {
 		actions = append(actions, "Load the selected model in your runtime or switch to an already-loaded model in Settings.")
+	}
+	if !externalagentsSvc.HasAnyAvailable(snapshot.ExternalAgentTools) {
+		actions = append(actions, "Install at least one external coding-agent CLI such as Codex, Claude Code, or OpenCode before enabling future approved external-agent workflows.")
+	} else if externalagentsSvc.HasMissing(snapshot.ExternalAgentTools) {
+		actions = append(actions, "Review External Agent CLIs and install any missing tools you expect NexusDesk to orchestrate later.")
 	}
 	if snapshot.MetadataError != "" {
 		actions = append(actions, "Inspect metadata health and recover .nexusdesk/metadata before continuing long runs.")

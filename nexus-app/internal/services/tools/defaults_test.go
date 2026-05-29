@@ -2,6 +2,7 @@ package tools
 
 import (
 	"context"
+	"errors"
 	"net/http"
 	"net/http/httptest"
 	"os"
@@ -63,6 +64,27 @@ func TestDefaultDispatcherContextAndProblemsTools(t *testing.T) {
 	}
 	if !strings.Contains(problems.Observation, "FIXME") {
 		t.Fatalf("unexpected problems observation:\n%s", problems.Observation)
+	}
+}
+
+func TestDefaultDispatcherListsExternalAgentTools(t *testing.T) {
+	dispatcher := NewDefaultDispatcher(Dependencies{
+		ExternalAgentLookupPath: func(command string) (string, error) {
+			if command == "codex" {
+				return "/usr/local/bin/codex", nil
+			}
+			return "", errors.New("missing")
+		},
+	})
+	result, err := dispatcher.ExecuteTool(context.Background(), agent.ToolCall{Name: "list_external_agent_tools"}, agent.Request{})
+	if err != nil {
+		t.Fatalf("list_external_agent_tools returned error: %v", err)
+	}
+	if !strings.Contains(result.Observation, "Codex CLI: available") {
+		t.Fatalf("expected Codex CLI availability, got:\n%s", result.Observation)
+	}
+	if !strings.Contains(result.Observation, "Execution must be routed through an approved job/shell integration") {
+		t.Fatalf("expected execution policy, got:\n%s", result.Observation)
 	}
 }
 

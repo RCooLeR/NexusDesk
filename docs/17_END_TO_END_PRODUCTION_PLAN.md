@@ -215,7 +215,7 @@ Already available:
 - In-product Release Hygiene and Antivirus Notes guide from Help and the command palette.
 - Line-aware citations, bounded snippets, evidence labels, weak-evidence warnings, stale-source warnings, cited/uncited coverage, unverified/out-of-context citation diagnostics.
 - Agent runtime with plan updates, bounded observations, emergency backend loop guard, tool dispatcher, audit, final fallback.
-- Agent tools for context, search, problems, Git, tasks, artifacts, datasets, SQLite, documents, operations, safe file mutations, rollback, web fetch, and artifact regeneration.
+- Agent tools for context, search, problems, Git, tasks, artifacts, datasets, SQLite, documents, operations, safe file mutations, rollback, web fetch, artifact regeneration, and detection-only external coding-agent CLI readiness for Codex, Claude Code, and OpenCode.
 - High-risk mutation tools use per-call approval modal and audit records.
 - Settings stores and exposes task-aware model defaults for coding, backend, database, analytics, research, vision/screenshot, balanced reasoning, and fast-coding routes while preserving the global model as the active fallback.
 - Ask mode exposes a model-route selector with global fallback and sends selected routes through the assistant service.
@@ -682,6 +682,8 @@ The checklist below is intentionally large. `tracker.md` should keep task-level 
 ### 7.11 P2: Extensibility And Community
 
 - [ ] Stable service interfaces for contributed connectors and parsers.
+- [x] Detection-only external coding-agent CLI readiness for Codex, Claude Code, and OpenCode in agent tools, Diagnostics, and first-run readiness.
+- [ ] Approved job/shell execution strategy for external coding-agent CLIs after native audit, cancellation, sandboxing, prompt/permission policy, and artifact capture are designed.
 - [ ] Plugin/MCP strategy after native core tools are stable.
 - [x] Contributor setup, coding standards, and architecture decision records.
 - [ ] Test fixture policy for community contributions.

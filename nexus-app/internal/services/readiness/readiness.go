@@ -9,6 +9,7 @@ import (
 	"strings"
 	"time"
 
+	externalagentsSvc "nexusdesk/internal/services/externalagents"
 	settingsSvc "nexusdesk/internal/services/settings"
 	startupSvc "nexusdesk/internal/services/startup"
 )
@@ -53,23 +54,25 @@ type Snapshot struct {
 	APIKeyRequired   bool
 	APIKeyConfigured bool
 	Toolchain        ToolchainStatus
+	ExternalAgents   []externalagentsSvc.ToolStatus
 	StartupRecovery  startupSvc.Status
 	Items            []Item
 }
 
 type Options struct {
-	WorkspaceRoot   string
-	WorkspaceName   string
-	Settings        settingsSvc.Settings
-	SettingsError   string
-	Now             time.Time
-	GOOS            string
-	GOARCH          string
-	MSYS2UCRT64Bin  string
-	LookupPath      func(string) (string, error)
-	Getenv          func(string) string
-	Stat            func(string) (os.FileInfo, error)
-	StartupRecovery startupSvc.Status
+	WorkspaceRoot           string
+	WorkspaceName           string
+	Settings                settingsSvc.Settings
+	SettingsError           string
+	Now                     time.Time
+	GOOS                    string
+	GOARCH                  string
+	MSYS2UCRT64Bin          string
+	LookupPath              func(string) (string, error)
+	ExternalAgentLookupPath func(string) (string, error)
+	Getenv                  func(string) string
+	Stat                    func(string) (os.FileInfo, error)
+	StartupRecovery         startupSvc.Status
 }
 
 func Collect(options Options) Snapshot {
@@ -97,6 +100,7 @@ func Collect(options Options) Snapshot {
 		APIKeyRequired:   apiKeyRequired,
 		APIKeyConfigured: apiKeyConfigured,
 		Toolchain:        inspectToolchain(options),
+		ExternalAgents:   externalagentsSvc.Probe(externalagentsSvc.Options{LookupPath: options.ExternalAgentLookupPath}),
 		StartupRecovery:  options.StartupRecovery,
 	}
 	snapshot.Items = append(snapshot.Items,
@@ -105,6 +109,7 @@ func Collect(options Options) Snapshot {
 		modelItem(snapshot),
 		credentialsItem(snapshot),
 		toolchainItem(snapshot.Toolchain),
+		externalAgentsItem(snapshot.ExternalAgents),
 		startupRecoveryItem(snapshot.StartupRecovery),
 		safetyItem(),
 	)
@@ -262,6 +267,35 @@ func safetyItem() Item {
 		Label:  "Local safety",
 		Status: StatusOK,
 		Detail: "Approvals, rollback records, job history, redacted issue reports, and local metadata are available for risky actions.",
+	}
+}
+
+func externalAgentsItem(statuses []externalagentsSvc.ToolStatus) Item {
+	summary := externalagentsSvc.Summary(statuses)
+	switch {
+	case !externalagentsSvc.HasAnyAvailable(statuses):
+		return Item{
+			ID:     "external-agents",
+			Label:  "External coding agents",
+			Status: StatusAction,
+			Detail: summary,
+			Action: "Install Codex, Claude Code, or OpenCode and ensure the command is on PATH before future approved external-agent workflows.",
+		}
+	case externalagentsSvc.HasMissing(statuses):
+		return Item{
+			ID:     "external-agents",
+			Label:  "External coding agents",
+			Status: StatusWarning,
+			Detail: summary,
+			Action: "Install missing CLIs only if those providers are part of your intended workflow.",
+		}
+	default:
+		return Item{
+			ID:     "external-agents",
+			Label:  "External coding agents",
+			Status: StatusOK,
+			Detail: summary,
+		}
 	}
 }
 

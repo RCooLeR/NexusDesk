@@ -9,6 +9,7 @@ import (
 
 	"nexusdesk/internal/services/agent"
 	artifactsSvc "nexusdesk/internal/services/artifacts"
+	externalagentsSvc "nexusdesk/internal/services/externalagents"
 	gitsvc "nexusdesk/internal/services/git"
 	taskssvc "nexusdesk/internal/services/tasks"
 	webfetchSvc "nexusdesk/internal/services/webfetch"
@@ -19,6 +20,8 @@ type Dependencies struct {
 	Workspace *workspacesvc.Service
 	Git       *gitsvc.Service
 	Tasks     *taskssvc.Service
+
+	ExternalAgentLookupPath func(string) (string, error)
 }
 
 func NewDefaultDispatcher(deps Dependencies) *Dispatcher {
@@ -41,6 +44,7 @@ func NewDefaultDispatcher(deps Dependencies) *Dispatcher {
 		Tool{Descriptor: agent.ToolDescriptor{Name: "read_git_diff", Description: "Read a bounded staged/unstaged diff for one changed file.", Risk: "low", Inputs: "relPath"}, Handler: handlers.readGitDiff},
 		Tool{Descriptor: agent.ToolDescriptor{Name: "read_git_history", Description: "Read bounded Git commit history for the repository or one file.", Risk: "low", Inputs: "relPath(optional), limit(optional)"}, Handler: handlers.readGitHistory},
 		Tool{Descriptor: agent.ToolDescriptor{Name: "read_git_blame", Description: "Read bounded Git blame lines for one file.", Risk: "low", Inputs: "relPath, startLine(optional), endLine(optional)"}, Handler: handlers.readGitBlame},
+		Tool{Descriptor: agent.ToolDescriptor{Name: "list_external_agent_tools", Description: "List optional external coding-agent CLIs detected on PATH, such as Codex, Claude Code, and OpenCode. This is detection-only; execution requires a future approved job/shell integration.", Risk: "low", Inputs: ""}, Handler: handlers.listExternalAgentTools},
 		Tool{Descriptor: agent.ToolDescriptor{Name: "read_artifact_lineage", Description: "Read the workspace artifact lineage graph with generated artifacts, sources, jobs, and task relationships.", Risk: "low", Inputs: "query(optional), includeArchived(optional)"}, Handler: handlers.readArtifactLineage},
 		Tool{Descriptor: agent.ToolDescriptor{Name: "regenerate_artifact", Description: "Regenerate one supported native artifact from saved source/dependency metadata into a new artifact file.", Risk: "high", Inputs: "relPath"}, Handler: handlers.regenerateArtifact},
 		Tool{Descriptor: agent.ToolDescriptor{Name: "web_fetch", Description: "Fetch one approved HTTP(S) text-like URL with redirect, size, content-type, local-network, and optional domain allow-list guards.", Risk: "medium", Inputs: "url, allowedDomains(optional), allowLocal(optional), maxBytes(optional)"}, Handler: handlers.webFetch},
@@ -251,6 +255,11 @@ func formatGitBlameObservation(result gitsvc.BlameResult) string {
 		lines = append(lines, "Blame output was truncated.")
 	}
 	return strings.Join(lines, "\n")
+}
+
+func (h defaultHandlers) listExternalAgentTools(ctx context.Context, call agent.ToolCall, request agent.Request) (agent.ToolResult, error) {
+	statuses := externalagentsSvc.Probe(externalagentsSvc.Options{LookupPath: h.deps.ExternalAgentLookupPath})
+	return toolOK(call, "low", externalagentsSvc.FormatMarkdown(statuses)), nil
 }
 
 func (h defaultHandlers) readArtifactLineage(ctx context.Context, call agent.ToolCall, request agent.Request) (agent.ToolResult, error) {

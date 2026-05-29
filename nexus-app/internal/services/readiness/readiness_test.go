@@ -13,22 +13,43 @@ import (
 
 func TestCollectFlagsFirstRunActions(t *testing.T) {
 	snapshot := Collect(Options{
-		Settings:       settingsSvc.Defaults(),
-		Now:            time.Date(2026, 5, 28, 12, 0, 0, 0, time.UTC),
-		GOOS:           "windows",
-		LookupPath:     missingPath,
-		Stat:           missingStat,
-		MSYS2UCRT64Bin: `C:\missing\ucrt64\bin`,
+		Settings:                settingsSvc.Defaults(),
+		Now:                     time.Date(2026, 5, 28, 12, 0, 0, 0, time.UTC),
+		GOOS:                    "windows",
+		LookupPath:              missingPath,
+		ExternalAgentLookupPath: missingPath,
+		Stat:                    missingStat,
+		MSYS2UCRT64Bin:          `C:\missing\ucrt64\bin`,
 	})
 
 	assertItemStatus(t, snapshot, "workspace", StatusAction)
 	assertItemStatus(t, snapshot, "model", StatusAction)
 	assertItemStatus(t, snapshot, "toolchain", StatusAction)
+	assertItemStatus(t, snapshot, "external-agents", StatusAction)
 	if snapshot.SettingsLoaded != true {
 		t.Fatalf("expected default settings to be treated as loaded")
 	}
 	if snapshot.ModelConfigured {
 		t.Fatalf("expected empty default model to require setup")
+	}
+}
+
+func TestCollectReportsExternalAgentCLIs(t *testing.T) {
+	snapshot := Collect(Options{
+		Settings:   settingsSvc.Settings{Model: "qwen3:8b"},
+		GOOS:       "linux",
+		LookupPath: fixedPath("/usr/bin/gcc"),
+		ExternalAgentLookupPath: func(name string) (string, error) {
+			if name == "codex" {
+				return "/usr/local/bin/codex", nil
+			}
+			return "", os.ErrNotExist
+		},
+	})
+
+	assertItemStatus(t, snapshot, "external-agents", StatusWarning)
+	if !strings.Contains(FormatMarkdown(snapshot), "Codex CLI") {
+		t.Fatalf("expected Codex CLI in readiness markdown")
 	}
 }
 

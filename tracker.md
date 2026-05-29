@@ -560,6 +560,7 @@ The Fyne migration must not drop product ambition, but this section is intention
 - [x] Unified tool registry and dispatcher for deterministic tools and model-requested tools.
 - [x] Agent tools for read context, workspace search, problems, Git status/diff, tasks, artifacts, datasets, SQLite, documents, operations files, safe writes, patches, copy/move/delete, and rollback.
 - [x] Agent tools for read-only Git history/blame.
+- [x] Agent tool and readiness diagnostics for optional external coding-agent CLIs (`codex`, `claude`, `opencode`) with detection-only policy until approved job/shell execution is designed.
 - [x] Agent tool for read-only artifact lineage context.
 - [x] Agent tool for approval-gated artifact regeneration actions.
 - [ ] Agent approved shell beyond discovered safe tasks.
