@@ -881,6 +881,75 @@ func TestDefaultDispatcherRevertStagedChangesRejectsMixedEdits(t *testing.T) {
 	}
 }
 
+func TestDefaultDispatcherFormatFileTool(t *testing.T) {
+	root := t.TempDir()
+	if err := os.WriteFile(filepath.Join(root, "settings.json"), []byte(`{"name":"nexus","enabled":true}`), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	workspace := workspaceSvc.New()
+	dispatcher := NewDefaultDispatcher(Dependencies{Workspace: workspace})
+	call := agent.ToolCall{Name: "format_file", Args: map[string]string{"relPath": "settings.json"}}
+
+	blocked, err := dispatcher.ExecuteTool(context.Background(), call, agent.Request{WorkspaceRoot: root})
+	if err == nil || blocked.Risk != "high" || !strings.Contains(blocked.Observation, "approval") {
+		t.Fatalf("expected format_file approval block, got result=%#v err=%v", blocked, err)
+	}
+	formatted, err := dispatcher.ExecuteTool(context.Background(), call, agent.Request{WorkspaceRoot: root, ApproveWrites: true})
+	if err != nil {
+		t.Fatalf("format_file returned error: %v", err)
+	}
+	if !formatted.Mutated || !strings.Contains(formatted.Observation, "Formatted workspace file.") || !strings.Contains(formatted.Observation, "Rollback:") || !strings.Contains(formatted.Observation, "Diff:") {
+		t.Fatalf("unexpected format_file observation:\n%s", formatted.Observation)
+	}
+	data, err := os.ReadFile(filepath.Join(root, "settings.json"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	want := "{\n  \"name\": \"nexus\",\n  \"enabled\": true\n}\n"
+	if string(data) != want {
+		t.Fatalf("expected formatted JSON, got %q", data)
+	}
+	rollbacks, err := workspace.ListRollbacks(root)
+	if err != nil {
+		t.Fatalf("ListRollbacks returned error: %v", err)
+	}
+	if len(rollbacks) != 1 {
+		t.Fatalf("expected one rollback record, got %#v", rollbacks)
+	}
+
+	unchanged, err := dispatcher.ExecuteTool(context.Background(), call, agent.Request{WorkspaceRoot: root, ApproveWrites: true})
+	if err != nil {
+		t.Fatalf("format_file unchanged returned error: %v", err)
+	}
+	if unchanged.Mutated || !strings.Contains(unchanged.Observation, "already formatted") {
+		t.Fatalf("expected unchanged format result, got %#v", unchanged)
+	}
+}
+
+func TestDefaultDispatcherFormatFileRejectsUnsupportedAndUnsafeTargets(t *testing.T) {
+	root := t.TempDir()
+	if err := os.WriteFile(filepath.Join(root, "archive.bin"), []byte("bytes\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(root, "blob.txt"), []byte{'a', 0x00, 'b'}, 0o644); err != nil {
+		t.Fatal(err)
+	}
+	dispatcher := NewDefaultDispatcher(Dependencies{Workspace: workspaceSvc.New()})
+
+	unsupported, err := dispatcher.ExecuteTool(context.Background(), agent.ToolCall{Name: "format_file", Args: map[string]string{"relPath": "archive.bin"}}, agent.Request{WorkspaceRoot: root, ApproveWrites: true})
+	if err == nil || unsupported.Mutated || !strings.Contains(unsupported.Observation, "not available") {
+		t.Fatalf("expected unsupported format rejection, got result=%#v err=%v", unsupported, err)
+	}
+	unsafe, err := dispatcher.ExecuteTool(context.Background(), agent.ToolCall{Name: "format_file", Args: map[string]string{"relPath": "blob.txt"}}, agent.Request{WorkspaceRoot: root, ApproveWrites: true})
+	if err == nil || unsafe.Mutated || !strings.Contains(unsafe.Observation, "safe text") {
+		t.Fatalf("expected unsafe text rejection, got result=%#v err=%v", unsafe, err)
+	}
+	badFormatter, err := dispatcher.ExecuteTool(context.Background(), agent.ToolCall{Name: "format_file", Args: map[string]string{"relPath": "archive.bin", "formatter": "prettier"}}, agent.Request{WorkspaceRoot: root, ApproveWrites: true})
+	if err == nil || badFormatter.Mutated || !strings.Contains(badFormatter.Observation, "unsupported formatter") {
+		t.Fatalf("expected formatter rejection, got result=%#v err=%v", badFormatter, err)
+	}
+}
+
 func TestDefaultDispatcherArtifactLineageTool(t *testing.T) {
 	root := t.TempDir()
 	if err := os.WriteFile(filepath.Join(root, "README.md"), []byte("# Project\n"), 0o644); err != nil {

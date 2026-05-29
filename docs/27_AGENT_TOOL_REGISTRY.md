@@ -19,6 +19,7 @@ The implemented registry is exposed to the agent through `ToolDescriptors()` and
 | Registry | `list_tool_catalog` | Lists implemented and planned first-party tools by category/status. |
 | Workspace | `read_context`, `read_file`, `search_workspace`, `read_problems` | Bounded workspace reads, search, context packs, and lightweight diagnostics. |
 | Files | `write_file`, `append_file`, `copy_file`, `move_file`, `delete_file`, `apply_patch`, `list_rollbacks`, `rollback_file_mutation` | Approval-gated safe mutation tools with path validation and rollback snapshots. |
+| Editor | `format_file` | Approval-gated native deterministic formatter for safe text files with full-file read guards, diff preview, encoding preservation, and rollback snapshots. |
 | Git | `read_git_status`, `read_git_diff`, `read_git_history`, `read_git_blame`, `stage_file`, `unstage_file`, `stage_hunk`, `unstage_hunk`, `commit_changes`, `create_branch`, `resolve_conflict`, `revert_changes`, `revert_staged_changes` | Read-only repository context plus approval-gated index-only staging/unstaging, commits from already-staged changes, branch creation with optional checkout, rollback-backed conflict-marker resolution, rollback-backed discard for unstaged tracked changes or explicit untracked-file deletion, and approval-gated staged-only discard with explicit `scope=staged`, staged diff preview, and mixed-edit rejection. |
 | Terminal/tasks | `list_tasks`, `run_task`, `run_terminal_command` | Discovered safe tasks and one-shot approved terminal commands by executable name plus explicit JSON args. Shell interpreters and command paths are blocked. |
 | Jobs | `list_jobs`, `read_job_logs`, `cancel_job` | Redacted durable job status/log access plus approval-gated cancellation for running jobs. |
@@ -46,7 +47,6 @@ The planned registry should be implemented in priority order, with tests and doc
 
 ### Editor And Refactoring
 
-- `format_file`: approved formatter with diff preview and rollback.
 - `lint_file`: bounded linter/diagnostic execution.
 - `apply_code_action`: approved language-service or deterministic code action.
 - `rename_symbol`: conflict-aware multi-file symbol rename.

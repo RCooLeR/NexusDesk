@@ -60,7 +60,6 @@ func plannedToolCatalog() []ToolCatalogEntry {
 		plannedTool("workspace", "read_dependency_graph", "Return module/package/file dependency relationships.", "low", "relPath(optional), depth(optional)", "architecture", "Needed for IDE-grade assistant explanations and refactors."),
 		plannedTool("workspace", "update_project_memory", "Store reviewed project facts, conventions, and decisions.", "medium", "key, content, sourceRelPaths(optional)", "memory", "Requires provenance, user review, edit/delete, and stale-source warnings."),
 
-		plannedTool("editor", "format_file", "Format a file with an approved formatter or language service.", "high", "relPath, formatter(optional)", "editor parity", "Must preview diff, require approval for writes, and use rollback snapshots."),
 		plannedTool("editor", "lint_file", "Run bounded lint/diagnostic checks for a file or project slice.", "medium", "relPath(optional), linter(optional)", "editor parity", "Can use terminal/job plumbing but needs diagnostic normalization."),
 		plannedTool("editor", "apply_code_action", "Apply a language-server or deterministic code action.", "high", "relPath, actionId, range(optional)", "editor parity", "Requires preview, approval, rollback, and language-action provenance."),
 		plannedTool("editor", "rename_symbol", "Rename a symbol across all safe references.", "high", "relPath, line, column, newName", "refactor", "Requires conflict-aware multi-file patching and preview."),
@@ -133,6 +132,8 @@ func implementedToolCategory(name string) string {
 		return "database"
 	case "extract_document":
 		return "documents"
+	case "format_file":
+		return "editor"
 	case "inspect_operations_files", "generate_runbook":
 		return "operations"
 	case "read_git_status", "read_git_diff", "read_git_history", "read_git_blame", "stage_file", "unstage_file", "stage_hunk", "unstage_hunk", "commit_changes", "create_branch", "resolve_conflict", "revert_changes", "revert_staged_changes":
