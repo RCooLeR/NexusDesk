@@ -152,6 +152,39 @@ func TestRunContextAcceptsCanceledContext(t *testing.T) {
 	}
 }
 
+func TestRunTerminalCommandCapturesOutput(t *testing.T) {
+	if _, err := exec.LookPath("go"); err != nil {
+		t.Skip("go executable is not available")
+	}
+	result, err := New().RunTerminalCommandContext(context.Background(), t.TempDir(), TerminalRequest{
+		Command:        "go",
+		Args:           []string{"version"},
+		TimeoutSeconds: 10,
+	})
+	if err != nil {
+		t.Fatalf("RunTerminalCommandContext() error = %v", err)
+	}
+	if result.Status != "success" || result.ExitCode != 0 {
+		t.Fatalf("expected successful terminal result, got %#v", result)
+	}
+	if !strings.Contains(result.Stdout, "go version") {
+		t.Fatalf("expected go version output, got %#v", result)
+	}
+}
+
+func TestRunTerminalCommandRejectsShellInterpreterAndTraversal(t *testing.T) {
+	service := New()
+	if _, err := service.RunTerminalCommandContext(context.Background(), t.TempDir(), TerminalRequest{Command: "bash"}); err == nil {
+		t.Fatal("expected shell interpreter to be rejected")
+	}
+	if _, err := service.RunTerminalCommandContext(context.Background(), t.TempDir(), TerminalRequest{Command: "go", Cwd: "../outside"}); err == nil {
+		t.Fatal("expected cwd traversal to be rejected")
+	}
+	if _, err := service.RunTerminalCommandContext(context.Background(), t.TempDir(), TerminalRequest{Command: "../go"}); err == nil {
+		t.Fatal("expected command path to be rejected")
+	}
+}
+
 func TestValidateRunnableTask(t *testing.T) {
 	for _, task := range []Task{
 		{Kind: "npm-script", Command: "npm run build", Label: "npm run build"},

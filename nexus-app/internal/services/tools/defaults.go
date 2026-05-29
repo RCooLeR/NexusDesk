@@ -51,6 +51,7 @@ func NewDefaultDispatcher(deps Dependencies) *Dispatcher {
 		Tool{Descriptor: agent.ToolDescriptor{Name: "web_fetch", Description: "Fetch one approved HTTP(S) text-like URL with redirect, size, content-type, local-network, and optional domain allow-list guards.", Risk: "medium", Inputs: "url, allowedDomains(optional), allowLocal(optional), maxBytes(optional)"}, Handler: handlers.webFetch},
 		Tool{Descriptor: agent.ToolDescriptor{Name: "list_tasks", Description: "List safe discovered workspace tasks.", Risk: "low", Inputs: ""}, Handler: handlers.listTasks},
 		Tool{Descriptor: agent.ToolDescriptor{Name: "run_task", Description: "Run a discovered safe workspace task when shell approval is granted.", Risk: "high", Inputs: "taskId"}, Handler: handlers.runTask},
+		Tool{Descriptor: agent.ToolDescriptor{Name: "run_terminal_command", Description: "Run one approved terminal command by executable name plus explicit JSON args, rooted inside the workspace, with timeout and output caps. Shell interpreters and command paths are blocked.", Risk: "high", Inputs: "command, argsJson(optional), cwd(optional), timeoutSeconds(optional)"}, Handler: handlers.runTerminalCommand},
 		Tool{Descriptor: agent.ToolDescriptor{Name: "write_file", Description: "Create or replace a text/code file inside the workspace through safe write validation and rollback.", Risk: "high", Inputs: "relPath, content, encoding(optional)"}, Handler: handlers.writeFile},
 		Tool{Descriptor: agent.ToolDescriptor{Name: "append_file", Description: "Append text to a workspace file through safe append validation and rollback.", Risk: "high", Inputs: "relPath, content, encoding(optional)"}, Handler: handlers.appendFile},
 		Tool{Descriptor: agent.ToolDescriptor{Name: "copy_file", Description: "Copy one workspace file to a new path through safe path validation and rollback.", Risk: "high", Inputs: "sourceRelPath, targetRelPath"}, Handler: handlers.copyFile},
@@ -411,5 +412,46 @@ func (h defaultHandlers) runTask(ctx context.Context, call agent.ToolCall, reque
 		Risk:        "high",
 		Observation: fmt.Sprintf("%s\nStatus: %s\nExit: %d\nStdout:\n%s\nStderr:\n%s", result.Message, result.Status, result.ExitCode, result.Stdout, result.Stderr),
 		Mutated:     false,
+	}, nil
+}
+
+func (h defaultHandlers) runTerminalCommand(ctx context.Context, call agent.ToolCall, request agent.Request) (agent.ToolResult, error) {
+	if !request.ApproveShell {
+		err := errors.New("approval is required before running terminal commands")
+		return agent.ToolResult{Name: call.Name, Args: call.Args, Risk: "high", Observation: err.Error(), Error: err.Error()}, err
+	}
+	root, err := workspaceRoot(request)
+	if err != nil {
+		return toolError(call, "high", err), err
+	}
+	args, err := jsonListArg(call, "argsJson")
+	if err != nil {
+		err = fmt.Errorf("argsJson must be a JSON string array: %w", err)
+		return toolError(call, "high", err), err
+	}
+	result, err := h.deps.Tasks.RunTerminalCommandContext(ctx, root, taskssvc.TerminalRequest{
+		Command:        firstArg(call, "command", "cmd"),
+		Args:           args,
+		Cwd:            firstArg(call, "cwd", "workingDirectory"),
+		TimeoutSeconds: intArg(call, "timeoutSeconds", 30),
+	})
+	if err != nil {
+		return toolError(call, "high", err), err
+	}
+	return agent.ToolResult{
+		Name: call.Name,
+		Args: call.Args,
+		Risk: "high",
+		Observation: fmt.Sprintf(
+			"%s\nCommand: %s\nCwd: %s\nStatus: %s\nExit: %d\nStdout:\n%s\nStderr:\n%s",
+			result.Message,
+			strings.Join(append([]string{result.Command}, result.Args...), " "),
+			result.Cwd,
+			result.Status,
+			result.ExitCode,
+			result.Stdout,
+			result.Stderr,
+		),
+		Mutated: true,
 	}, nil
 }

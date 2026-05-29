@@ -28,3 +28,24 @@ type RunResult struct {
 	Duration    time.Duration
 	Message     string
 }
+
+type TerminalRequest struct {
+	Command        string
+	Args           []string
+	Cwd            string
+	TimeoutSeconds int
+}
+
+type TerminalResult struct {
+	Command     string
+	Args        []string
+	Cwd         string
+	Status      string
+	ExitCode    int
+	Stdout      string
+	Stderr      string
+	StartedAt   time.Time
+	CompletedAt time.Time
+	Duration    time.Duration
+	Message     string
+}

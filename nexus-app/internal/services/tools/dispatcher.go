@@ -72,7 +72,7 @@ func toolRequiresPerCallApproval(tool Tool, request agent.Request) bool {
 		return false
 	}
 	switch tool.Descriptor.Name {
-	case "run_task":
+	case "run_task", "run_terminal_command":
 		return !request.ApproveShell
 	default:
 		return !request.ApproveWrites
@@ -83,7 +83,7 @@ func requestWithPerCallApproval(request agent.Request, toolName string) agent.Re
 	if toolName == "web_fetch" {
 		return request
 	}
-	if toolName == "run_task" {
+	if toolName == "run_task" || toolName == "run_terminal_command" {
 		request.ApproveShell = true
 		return request
 	}

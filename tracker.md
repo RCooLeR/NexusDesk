@@ -558,13 +558,13 @@ The Fyne migration must not drop product ambition, but this section is intention
 - [x] Agent runtime with plan updates, bounded observations, model-driven tool calls, no frontend iteration cap, emergency backend loop guard, and final-answer fallback behavior.
 - [x] Agent runtime resolves selected task-aware model routes without UI/framework coupling and records model/route provenance in SQLite audit history.
 - [x] Unified tool registry and dispatcher for deterministic tools and model-requested tools.
-- [x] Agent tools for read context, workspace search, problems, Git status/diff, tasks, artifacts, datasets, SQLite, documents, operations files, safe writes, patches, copy/move/delete, and rollback.
+- [x] Agent tools for read context, workspace search, problems, Git status/diff, tasks, artifacts, datasets, SQLite, documents, operations files, safe writes, patches, copy/move/delete, rollback, and first-party approved terminal commands.
 - [x] Agent tools for read-only Git history/blame.
 - [x] Agent tool and readiness diagnostics for optional external coding-agent CLIs (`codex`, `claude`, `opencode`) with detection-only policy until approved job/shell execution is designed.
 - [x] Add non-executing external coding-agent run plan contract with durable job kind, approval, audit, cancellation, stdin prompt delivery, and output-capture requirements.
 - [x] Agent tool for read-only artifact lineage context.
 - [x] Agent tool for approval-gated artifact regeneration actions.
-- [ ] Agent approved shell beyond discovered safe tasks.
+- [x] Agent approved terminal command tool beyond discovered safe tasks, using executable name plus explicit JSON args, rooted workspace cwd, timeout/output caps, blocked shell interpreters/command paths, and persisted high-risk tool audit.
 - [x] Approval-gated native `web_fetch` agent tool with Wails-equivalent HTTP(S), redirect, size, content-type, allow-list, and local-network guards.
 - [x] Live activity tail that shows compact model/tool progress while preserving persisted agent audit history.
 
@@ -614,7 +614,7 @@ The Fyne migration must not drop product ambition, but this section is intention
 - [x] Rollback snapshots for approved native workspace mutations where practical.
 - [x] OS-protected secrets on Windows, macOS Keychain, and Linux Secret Service/libsecret.
 - [x] Append-only/persisted audit records for approvals, native agent/tool runs, file changes with rollback records, tasks, jobs, SQL runs, and artifacts.
-- [ ] Extend audit coverage to future connector sync jobs, OCR, dump imports, shell, and Docker mutations.
+- [ ] Extend audit coverage to future connector sync jobs, OCR, dump imports, terminal session history, and Docker mutations.
 - [x] Add durable slow-workflow contract for future external coding-agent CLI runs, prohibited from workspace-open and requiring explicit user start/audit.
 - [x] Export/backup flows for local-first data.
 

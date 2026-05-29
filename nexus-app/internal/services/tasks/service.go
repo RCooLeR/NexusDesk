@@ -60,3 +60,7 @@ func (s *Service) Run(root string, taskID string) (RunResult, error) {
 func (s *Service) RunContext(ctx context.Context, root string, taskID string) (RunResult, error) {
 	return runDiscovered(ctx, root, taskID)
 }
+
+func (s *Service) RunTerminalCommandContext(ctx context.Context, root string, request TerminalRequest) (TerminalResult, error) {
+	return runTerminalCommand(ctx, root, request)
+}

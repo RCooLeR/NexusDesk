@@ -1,6 +1,7 @@
 package tools
 
 import (
+	"encoding/json"
 	"errors"
 	"strconv"
 	"strings"
@@ -14,6 +15,18 @@ func workspaceRoot(request agent.Request) (string, error) {
 		return "", errors.New("workspace root is required")
 	}
 	return root, nil
+}
+
+func jsonListArg(call agent.ToolCall, key string) ([]string, error) {
+	value := strings.TrimSpace(call.Args[key])
+	if value == "" {
+		return nil, nil
+	}
+	var items []string
+	if err := json.Unmarshal([]byte(value), &items); err != nil {
+		return nil, err
+	}
+	return items, nil
 }
 
 func firstArg(call agent.ToolCall, keys ...string) string {

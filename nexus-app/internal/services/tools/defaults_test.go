@@ -113,6 +113,44 @@ func TestDefaultDispatcherPlansExternalAgentRun(t *testing.T) {
 	}
 }
 
+func TestDefaultDispatcherRunsApprovedTerminalCommand(t *testing.T) {
+	if _, err := exec.LookPath("go"); err != nil {
+		t.Skip("go executable is not available")
+	}
+	dispatcher := NewDefaultDispatcher(Dependencies{Workspace: workspaceSvc.New()})
+	result, err := dispatcher.ExecuteTool(
+		context.Background(),
+		agent.ToolCall{Name: "run_terminal_command", Args: map[string]string{"command": "go", "argsJson": `["version"]`}},
+		agent.Request{
+			WorkspaceRoot: t.TempDir(),
+			ApproveTool: func(ctx context.Context, request agent.ToolApprovalRequest) bool {
+				return request.Name == "run_terminal_command" && request.Risk == "high"
+			},
+		},
+	)
+	if err != nil {
+		t.Fatalf("run_terminal_command returned error: %v", err)
+	}
+	if !strings.Contains(result.Observation, "go version") {
+		t.Fatalf("expected go version output, got:\n%s", result.Observation)
+	}
+	if !result.Mutated {
+		t.Fatal("expected terminal command tool to be recorded as mutating-capable")
+	}
+}
+
+func TestDefaultDispatcherBlocksTerminalCommandWithoutApproval(t *testing.T) {
+	dispatcher := NewDefaultDispatcher(Dependencies{Workspace: workspaceSvc.New()})
+	result, err := dispatcher.ExecuteTool(
+		context.Background(),
+		agent.ToolCall{Name: "run_terminal_command", Args: map[string]string{"command": "go", "argsJson": `["version"]`}},
+		agent.Request{WorkspaceRoot: t.TempDir()},
+	)
+	if err == nil || !strings.Contains(result.Error, "per-call approval") {
+		t.Fatalf("expected per-call approval denial, result=%#v err=%v", result, err)
+	}
+}
+
 func TestDefaultDispatcherGitHistoryAndBlameTools(t *testing.T) {
 	if _, err := exec.LookPath("git"); err != nil {
 		t.Skip("git executable is not available")
