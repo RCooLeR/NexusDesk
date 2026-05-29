@@ -240,10 +240,12 @@ func NewWithStartupStatus(window fyne.Window, startupStatus startupSvc.Status) *
 	assistantService.SetProfileStore(assistantProfileStore)
 	gitService := gitSvc.New()
 	taskService := tasksSvc.New()
+	jobService := jobsSvc.New()
 	toolDispatcher := toolsSvc.NewDefaultDispatcher(toolsSvc.Dependencies{
 		Workspace: workspaceService,
 		Git:       gitService,
 		Tasks:     taskService,
+		Jobs:      jobService,
 	})
 	agentService := agentSvc.New(settingsStore, llmClient, toolDispatcher)
 	datasetService := datasetsSvc.New(workspaceService)
@@ -282,7 +284,7 @@ func NewWithStartupStatus(window fyne.Window, startupStatus startupSvc.Status) *
 		state:                 NewState(),
 		workspaceService:      workspaceService,
 		gitService:            gitService,
-		jobService:            jobsSvc.New(),
+		jobService:            jobService,
 		approvalService:       approvalsSvc.New(),
 		assistantService:      assistantService,
 		assistantProfileStore: assistantProfileStore,

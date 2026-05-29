@@ -21,6 +21,7 @@ The implemented registry is exposed to the agent through `ToolDescriptors()` and
 | Files | `write_file`, `append_file`, `copy_file`, `move_file`, `delete_file`, `apply_patch`, `list_rollbacks`, `rollback_file_mutation` | Approval-gated safe mutation tools with path validation and rollback snapshots. |
 | Git | `read_git_status`, `read_git_diff`, `read_git_history`, `read_git_blame` | Read-only repository context. Mutating Git actions remain planned. |
 | Terminal/tasks | `list_tasks`, `run_task`, `run_terminal_command` | Discovered safe tasks and one-shot approved terminal commands by executable name plus explicit JSON args. Shell interpreters and command paths are blocked. |
+| Jobs | `list_jobs`, `read_job_logs`, `cancel_job` | Redacted durable job status/log access plus approval-gated cancellation for running jobs. |
 | Browser/web | `web_fetch` | Approval-gated HTTP(S) text fetch only. Rendered browser automation remains planned. |
 | Artifacts | `read_artifact_lineage`, `regenerate_artifact` | Artifact lineage context and approval-gated regeneration for supported artifact kinds. |
 | Data | `profile_dataset`, `query_dataset`, `query_dataset_sql`, `create_dataset_chart` | Local dataset profiling, bounded row queries, medium-risk approval-gated SELECT-only dataset SQL, and high-risk approval-gated chart artifact generation. |
@@ -63,7 +64,6 @@ The planned registry should be implemented in priority order, with tests and doc
 ### Terminal And Durable Jobs
 
 - `start_terminal_session`, `send_terminal_input`, `read_terminal_output`, `stop_terminal_session`: interactive terminal sessions with durable process supervision.
-- `list_jobs`, `read_job_logs`, `cancel_job`: agent access to durable jobs and cancellation.
 
 ### Browser Automation
 
@@ -109,11 +109,10 @@ Before a planned tool becomes executable, it needs:
 
 ## Priority Order
 
-1. Expose the next already-built service capabilities as direct agent tools: job list/log/cancel.
-2. Add mutating Git tools with preview/approval/audit.
-3. Add browser automation with screenshots and rendered-page extraction.
-4. Add interactive terminal sessions on top of durable jobs.
-5. Add GitHub/PR connector tools.
-6. Add semantic/symbol indexing and LSP-backed editor actions.
-7. Add MCP/plugin discovery after native core tools are stable.
-8. Add automation scheduling after jobs, approvals, and notification UX are mature.
+1. Add mutating Git tools with preview/approval/audit.
+2. Add browser automation with screenshots and rendered-page extraction.
+3. Add interactive terminal sessions on top of durable jobs.
+4. Add GitHub/PR connector tools.
+5. Add semantic/symbol indexing and LSP-backed editor actions.
+6. Add MCP/plugin discovery after native core tools are stable.
+7. Add automation scheduling after jobs, approvals, and notification UX are mature.

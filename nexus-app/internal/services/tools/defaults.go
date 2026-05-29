@@ -11,6 +11,7 @@ import (
 	artifactsSvc "nexusdesk/internal/services/artifacts"
 	externalagentsSvc "nexusdesk/internal/services/externalagents"
 	gitsvc "nexusdesk/internal/services/git"
+	jobsSvc "nexusdesk/internal/services/jobs"
 	taskssvc "nexusdesk/internal/services/tasks"
 	webfetchSvc "nexusdesk/internal/services/webfetch"
 	workspacesvc "nexusdesk/internal/services/workspace"
@@ -20,6 +21,7 @@ type Dependencies struct {
 	Workspace *workspacesvc.Service
 	Git       *gitsvc.Service
 	Tasks     *taskssvc.Service
+	Jobs      *jobsSvc.Service
 
 	ExternalAgentLookupPath func(string) (string, error)
 }
@@ -33,6 +35,9 @@ func NewDefaultDispatcher(deps Dependencies) *Dispatcher {
 	}
 	if deps.Tasks == nil {
 		deps.Tasks = taskssvc.New()
+	}
+	if deps.Jobs == nil {
+		deps.Jobs = jobsSvc.New()
 	}
 	handlers := defaultHandlers{deps: deps}
 	return NewDispatcher(
@@ -62,6 +67,9 @@ func NewDefaultDispatcher(deps Dependencies) *Dispatcher {
 		Tool{Descriptor: agent.ToolDescriptor{Name: "list_tasks", Description: "List safe discovered workspace tasks.", Risk: "low", Inputs: ""}, Handler: handlers.listTasks},
 		Tool{Descriptor: agent.ToolDescriptor{Name: "run_task", Description: "Run a discovered safe workspace task when shell approval is granted.", Risk: "high", Inputs: "taskId"}, Handler: handlers.runTask},
 		Tool{Descriptor: agent.ToolDescriptor{Name: "run_terminal_command", Description: "Run one approved terminal command by executable name plus explicit JSON args, rooted inside the workspace, with timeout and output caps. Shell interpreters and command paths are blocked.", Risk: "high", Inputs: "command, argsJson(optional), cwd(optional), timeoutSeconds(optional)"}, Handler: handlers.runTerminalCommand},
+		Tool{Descriptor: agent.ToolDescriptor{Name: "list_jobs", Description: "List durable jobs and recent statuses with capped redacted details.", Risk: "low", Inputs: "status(optional), limit(optional)"}, Handler: handlers.listJobs},
+		Tool{Descriptor: agent.ToolDescriptor{Name: "read_job_logs", Description: "Read capped redacted log tail for one durable job.", Risk: "low", Inputs: "jobId, tailLines(optional), tailBytes(optional)"}, Handler: handlers.readJobLogs},
+		Tool{Descriptor: agent.ToolDescriptor{Name: "cancel_job", Description: "Cancel one running durable job when high-risk approval is granted.", Risk: "high", Inputs: "jobId"}, Handler: handlers.cancelJob},
 		Tool{Descriptor: agent.ToolDescriptor{Name: "write_file", Description: "Create or replace a text/code file inside the workspace through safe write validation and rollback.", Risk: "high", Inputs: "relPath, content, encoding(optional)"}, Handler: handlers.writeFile},
 		Tool{Descriptor: agent.ToolDescriptor{Name: "append_file", Description: "Append text to a workspace file through safe append validation and rollback.", Risk: "high", Inputs: "relPath, content, encoding(optional)"}, Handler: handlers.appendFile},
 		Tool{Descriptor: agent.ToolDescriptor{Name: "copy_file", Description: "Copy one workspace file to a new path through safe path validation and rollback.", Risk: "high", Inputs: "sourceRelPath, targetRelPath"}, Handler: handlers.copyFile},

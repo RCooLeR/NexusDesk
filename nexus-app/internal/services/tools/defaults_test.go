@@ -15,6 +15,7 @@ import (
 
 	"nexusdesk/internal/services/agent"
 	artifactsSvc "nexusdesk/internal/services/artifacts"
+	jobsSvc "nexusdesk/internal/services/jobs"
 	workspaceSvc "nexusdesk/internal/services/workspace"
 
 	_ "modernc.org/sqlite"
@@ -159,6 +160,56 @@ func TestDefaultDispatcherCreateDatasetChartTool(t *testing.T) {
 	}
 	if metadata.Kind != "chart" || len(metadata.SourcePaths) != 1 || metadata.SourcePaths[0] != "sales.csv" {
 		t.Fatalf("unexpected chart metadata: %#v", metadata)
+	}
+}
+
+func TestDefaultDispatcherJobTools(t *testing.T) {
+	jobService := jobsSvc.New()
+	running, _ := jobService.Start("dataset-query", "Import with api_key=super-secret")
+	jobService.AppendLog(running.ID, "Authorization: Bearer secret-token")
+	jobService.AppendLog(running.ID, "processed safe rows")
+	finished, _ := jobService.Start("task", "completed task")
+	jobService.Finish(finished.ID, jobsSvc.StatusSuccess, "done", nil)
+	dispatcher := NewDefaultDispatcher(Dependencies{Workspace: workspaceSvc.New(), Jobs: jobService})
+
+	listed, err := dispatcher.ExecuteTool(context.Background(), agent.ToolCall{Name: "list_jobs", Args: map[string]string{"status": "running", "limit": "10"}}, agent.Request{})
+	if err != nil {
+		t.Fatalf("list_jobs returned error: %v", err)
+	}
+	if !strings.Contains(listed.Observation, running.ID) || strings.Contains(listed.Observation, finished.ID) {
+		t.Fatalf("unexpected filtered job list:\n%s", listed.Observation)
+	}
+	if strings.Contains(listed.Observation, "super-secret") || !strings.Contains(listed.Observation, "api_key=[redacted]") {
+		t.Fatalf("job list did not redact sensitive label:\n%s", listed.Observation)
+	}
+
+	logs, err := dispatcher.ExecuteTool(context.Background(), agent.ToolCall{Name: "read_job_logs", Args: map[string]string{"jobId": running.ID, "tailLines": "2"}}, agent.Request{})
+	if err != nil {
+		t.Fatalf("read_job_logs returned error: %v", err)
+	}
+	if !strings.Contains(logs.Observation, "processed safe rows") || !strings.Contains(logs.Observation, "Authorization: [redacted]") || strings.Contains(logs.Observation, "secret-token") {
+		t.Fatalf("unexpected redacted job logs:\n%s", logs.Observation)
+	}
+
+	blocked, err := dispatcher.ExecuteTool(context.Background(), agent.ToolCall{Name: "cancel_job", Args: map[string]string{"jobId": running.ID}}, agent.Request{})
+	if err == nil || blocked.Risk != "high" || !strings.Contains(blocked.Observation, "approval") {
+		t.Fatalf("expected cancel_job approval block, got result=%#v err=%v", blocked, err)
+	}
+
+	canceled, err := dispatcher.ExecuteTool(context.Background(), agent.ToolCall{Name: "cancel_job", Args: map[string]string{"jobId": running.ID}}, agent.Request{
+		ApproveTool: func(ctx context.Context, request agent.ToolApprovalRequest) bool {
+			return request.Name == "cancel_job" && request.Risk == "high"
+		},
+	})
+	if err != nil {
+		t.Fatalf("cancel_job returned error: %v", err)
+	}
+	if !canceled.Mutated || !strings.Contains(canceled.Observation, "Cancel requested") {
+		t.Fatalf("unexpected cancel result: %#v", canceled)
+	}
+	got, ok := jobService.Get(running.ID)
+	if !ok || got.Status != jobsSvc.StatusCanceled {
+		t.Fatalf("expected job to be canceled, got ok=%t job=%#v", ok, got)
 	}
 }
 

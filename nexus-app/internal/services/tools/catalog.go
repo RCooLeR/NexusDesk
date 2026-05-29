@@ -82,10 +82,6 @@ func plannedToolCatalog() []ToolCatalogEntry {
 		plannedTool("terminal", "send_terminal_input", "Send input to an approved running terminal session.", "high", "sessionId, input", "terminal", "Requires session ownership, redaction, and prompt-state safeguards."),
 		plannedTool("terminal", "read_terminal_output", "Read capped output from a running terminal session.", "medium", "sessionId, since(optional)", "terminal", "Should stream into Jobs/Terminal UI and agent observations."),
 		plannedTool("terminal", "stop_terminal_session", "Cancel or terminate a running terminal session.", "high", "sessionId", "terminal", "Needs graceful/force stop policy and audit."),
-		plannedTool("jobs", "list_jobs", "List durable jobs and recent statuses.", "low", "status(optional), limit(optional)", "jobs", "Expose existing job repository safely to the agent."),
-		plannedTool("jobs", "read_job_logs", "Read capped logs for one durable job.", "low", "jobId, tailBytes(optional)", "jobs", "Needs redaction and source/job lineage."),
-		plannedTool("jobs", "cancel_job", "Cancel a running durable job.", "high", "jobId", "jobs", "Requires ownership, approval, and cancellation audit."),
-
 		plannedTool("browser", "browser_navigate", "Open or navigate an isolated browser page.", "medium", "url, allowLocal(optional)", "browser", "Requires sandboxed browser runtime, URL policy, and network disclosure."),
 		plannedTool("browser", "browser_click", "Click an element in an active browser page.", "medium", "sessionId, selectorOrText", "browser", "Needs page session state and observation snapshots."),
 		plannedTool("browser", "browser_type", "Type into an active browser page.", "high", "sessionId, selectorOrText, text", "browser", "Can submit data; needs approval and secret redaction."),
@@ -152,7 +148,11 @@ func implementedToolCategory(name string) string {
 		return "operations"
 	case "read_git_status", "read_git_diff", "read_git_history", "read_git_blame":
 		return "git"
-	case "list_tasks", "run_task", "run_terminal_command":
+	case "list_tasks", "run_task":
+		return "tasks"
+	case "list_jobs", "read_job_logs", "cancel_job":
+		return "jobs"
+	case "run_terminal_command":
 		return "terminal"
 	case "write_file", "append_file", "copy_file", "move_file", "delete_file", "apply_patch", "list_rollbacks", "rollback_file_mutation":
 		return "files"
