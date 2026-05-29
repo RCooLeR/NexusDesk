@@ -120,15 +120,8 @@ type View struct {
 	operationsResults        *fyne.Container
 	operationsStatus         *widget.Label
 	operationsDetail         *widget.Entry
-	gitResults               *fyne.Container
-	gitStatus                *widget.Label
-	gitDiffText              *widget.Entry
-	gitDiffStatus            *widget.Label
-	gitDiffMode              gitDiffMode
-	gitLastDiff              gitSvc.FileDiff
+	git                      *gitController
 	gitFileBadges            map[string]string
-	gitHunkStatus            *widget.Label
-	gitActiveHunk            int
 	taskResults              *fyne.Container
 	taskStatus               *widget.Label
 	taskOutput               *widget.Entry
@@ -198,10 +191,6 @@ func NewWithStartupStatus(window fyne.Window, startupStatus startupSvc.Status) *
 	if err != nil {
 		recentWorkspaceStore = recentWorkspacesSvc.NewFileStore("nexus-recent-workspaces.json")
 	}
-	gitDiffText := widget.NewMultiLineEntry()
-	gitDiffText.TextStyle = fyne.TextStyle{Monospace: true}
-	gitDiffText.Wrapping = fyne.TextWrapOff
-	gitDiffText.Disable()
 	taskOutput := widget.NewMultiLineEntry()
 	taskOutput.TextStyle = fyne.TextStyle{Monospace: true}
 	taskOutput.Wrapping = fyne.TextWrapOff
@@ -317,13 +306,7 @@ func NewWithStartupStatus(window fyne.Window, startupStatus startupSvc.Status) *
 		operationsDetail:        operationsDetail,
 		dataConnectorOptions:    map[string]string{},
 		compatibilityImportByWS: map[string]bool{},
-		gitResults:              container.NewVBox(widget.NewLabel("Press Refresh git to inspect repository status.")),
-		gitStatus:               widget.NewLabel("Git status has not been loaded."),
-		gitDiffText:             gitDiffText,
-		gitDiffStatus:           widget.NewLabel("Select a changed file to load a read-only diff."),
-		gitDiffMode:             gitDiffModeUnified,
 		gitFileBadges:           map[string]string{},
-		gitHunkStatus:           widget.NewLabel("No hunk selected."),
 		taskResults:             container.NewVBox(widget.NewLabel("Discover workspace tasks to run tests, scripts, or Compose checks.")),
 		taskStatus:              widget.NewLabel("No tasks discovered."),
 		taskOutput:              taskOutput,
@@ -360,6 +343,7 @@ func NewWithStartupStatus(window fyne.Window, startupStatus startupSvc.Status) *
 	view.jobs = newJobsController(view)
 	view.rollbacks = newRollbackController(view)
 	view.diagnostics = newDiagnosticsController(view)
+	view.git = newGitController(view)
 	welcomeItem.Content = view.newWelcomePanel()
 	view.configureEditorTabs()
 	view.refreshStatusBar()

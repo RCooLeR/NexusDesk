@@ -4,8 +4,57 @@ import (
 	"strings"
 	"testing"
 
+	fynetest "fyne.io/fyne/v2/test"
+
 	gitSvc "nexusdesk/internal/services/git"
 )
+
+func TestGitControllerInitialState(t *testing.T) {
+	_ = fynetest.NewTempApp(t)
+
+	controller := newGitController(&View{})
+
+	if controller.status.Text != "Git status has not been loaded." {
+		t.Fatalf("expected initial Git status, got %q", controller.status.Text)
+	}
+	if controller.diffStatus.Text != "Select a changed file to load a read-only diff." {
+		t.Fatalf("expected initial diff status, got %q", controller.diffStatus.Text)
+	}
+	if controller.diffMode != gitDiffModeUnified {
+		t.Fatalf("expected unified diff mode, got %q", controller.diffMode)
+	}
+}
+
+func TestGitControllerApplyStatusUpdatesRowsAndBadges(t *testing.T) {
+	_ = fynetest.NewTempApp(t)
+
+	view := &View{state: NewState(), gitFileBadges: map[string]string{}}
+	controller := newGitController(view)
+	view.git = controller
+
+	controller.ApplyStatus(gitSvc.Status{
+		Available: true,
+		Branch:    "main",
+		Head:      "abc123",
+		Message:   "Git status loaded.",
+		ChangedFiles: []gitSvc.FileChange{{
+			Path:     "src/app.go",
+			Summary:  "modified",
+			Worktree: "M",
+		}},
+		UnstagedFiles: []gitSvc.FileChange{{Path: "src/app.go"}},
+	})
+
+	if controller.status.Text != "main @ abc123 - 1 changed" {
+		t.Fatalf("expected Git status label, got %q", controller.status.Text)
+	}
+	if len(controller.results.Objects) < 3 {
+		t.Fatalf("expected status rows and change rows, got %d", len(controller.results.Objects))
+	}
+	if view.gitFileBadges["src/app.go"] != "M" {
+		t.Fatalf("expected file badge to be updated, got %#v", view.gitFileBadges)
+	}
+}
 
 func TestGroupGitChangesSortsByDirectory(t *testing.T) {
 	groups := groupGitChanges([]gitSvc.FileChange{

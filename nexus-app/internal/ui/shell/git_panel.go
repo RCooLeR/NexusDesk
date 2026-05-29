@@ -27,223 +27,303 @@ type gitHunkTarget struct {
 	Label  string
 }
 
+type gitController struct {
+	view       *View
+	results    *fyne.Container
+	status     *widget.Label
+	diffText   *widget.Entry
+	diffStatus *widget.Label
+	diffMode   gitDiffMode
+	lastDiff   gitSvc.FileDiff
+	hunkStatus *widget.Label
+	activeHunk int
+}
+
+func newGitController(view *View) *gitController {
+	diffText := widget.NewMultiLineEntry()
+	diffText.TextStyle = fyne.TextStyle{Monospace: true}
+	diffText.Wrapping = fyne.TextWrapOff
+	diffText.Disable()
+	return &gitController{
+		view:       view,
+		results:    container.NewVBox(widget.NewLabel("Press Refresh git to inspect repository status.")),
+		status:     widget.NewLabel("Git status has not been loaded."),
+		diffText:   diffText,
+		diffStatus: widget.NewLabel("Select a changed file to load a read-only diff."),
+		diffMode:   gitDiffModeUnified,
+		hunkStatus: widget.NewLabel("No hunk selected."),
+	}
+}
+
 func (v *View) newGitPanel() fyne.CanvasObject {
-	refresh := widget.NewButtonWithIcon("Refresh git", theme.ViewRefreshIcon(), v.refreshGitStatus)
-	header := container.NewBorder(nil, nil, v.gitStatus, refresh)
-	scroll := container.NewScroll(v.gitResults)
+	return v.git.Panel()
+}
+
+func (v *View) refreshGitStatus() {
+	v.git.RefreshStatus()
+}
+
+func (v *View) applyGitStatus(status gitSvc.Status) {
+	v.git.ApplyStatus(status)
+}
+
+func (v *View) openGitDiff(path string) {
+	v.git.OpenDiff(path)
+}
+
+func (v *View) openSelectedGitHistory() {
+	v.git.OpenSelectedHistory()
+}
+
+func (v *View) openSelectedGitBlame() {
+	v.git.OpenSelectedBlame()
+}
+
+func (v *View) currentGitTargetPath() string {
+	return v.git.CurrentTargetPath()
+}
+
+func (v *View) moveGitHunk(delta int) {
+	v.git.MoveHunk(delta)
+}
+
+func (v *View) updateGitHunkStatus() {
+	v.git.UpdateHunkStatus()
+}
+
+func (v *View) confirmGitFileAction(action gitSvc.FileAction) {
+	v.git.ConfirmFileAction(action)
+}
+
+func (v *View) applyGitFileAction(action gitSvc.FileAction) {
+	v.git.ApplyFileAction(action)
+}
+
+func (v *View) confirmGitHunkAction(action gitSvc.HunkAction) {
+	v.git.ConfirmHunkAction(action)
+}
+
+func (v *View) applyGitHunkAction(target gitHunkTarget, action gitSvc.HunkAction) {
+	v.git.ApplyHunkAction(target, action)
+}
+
+func (c *gitController) Panel() fyne.CanvasObject {
+	refresh := widget.NewButtonWithIcon("Refresh git", theme.ViewRefreshIcon(), c.RefreshStatus)
+	header := container.NewBorder(nil, nil, c.status, refresh)
+	scroll := container.NewScroll(c.results)
 	scroll.SetMinSize(fyne.NewSize(240, 110))
 	diffMode := widget.NewSelect(gitDiffModeLabels(), func(label string) {
-		v.gitDiffMode = gitDiffModeFromLabel(label)
-		if v.gitLastDiff.Path != "" {
-			v.gitDiffText.SetText(formatGitDiff(v.gitLastDiff, v.gitDiffMode))
+		c.diffMode = gitDiffModeFromLabel(label)
+		if c.lastDiff.Path != "" {
+			c.diffText.SetText(formatGitDiff(c.lastDiff, c.diffMode))
 		}
 	})
 	diffMode.SetSelected(gitDiffModeUnified.Label())
 	stage := widget.NewButtonWithIcon("Stage", theme.ContentAddIcon(), func() {
-		v.confirmGitFileAction(gitSvc.FileActionStage)
+		c.ConfirmFileAction(gitSvc.FileActionStage)
 	})
 	unstage := widget.NewButtonWithIcon("Unstage", theme.ContentRemoveIcon(), func() {
-		v.confirmGitFileAction(gitSvc.FileActionUnstage)
+		c.ConfirmFileAction(gitSvc.FileActionUnstage)
 	})
 	stageHunk := widget.NewButtonWithIcon("Stage hunk", theme.ContentAddIcon(), func() {
-		v.confirmGitHunkAction(gitSvc.HunkActionStage)
+		c.ConfirmHunkAction(gitSvc.HunkActionStage)
 	})
 	unstageHunk := widget.NewButtonWithIcon("Unstage hunk", theme.ContentRemoveIcon(), func() {
-		v.confirmGitHunkAction(gitSvc.HunkActionUnstage)
+		c.ConfirmHunkAction(gitSvc.HunkActionUnstage)
 	})
-	summarize := widget.NewButtonWithIcon("AI summary", theme.InfoIcon(), v.summarizeSelectedGitDiff)
-	draftCommit := widget.NewButtonWithIcon("Draft commit", theme.MailComposeIcon(), v.draftSelectedGitCommitMessage)
-	history := widget.NewButtonWithIcon("History", theme.HistoryIcon(), v.openSelectedGitHistory)
-	blame := widget.NewButtonWithIcon("Blame", theme.VisibilityIcon(), v.openSelectedGitBlame)
+	summarize := widget.NewButtonWithIcon("AI summary", theme.InfoIcon(), c.view.summarizeSelectedGitDiff)
+	draftCommit := widget.NewButtonWithIcon("Draft commit", theme.MailComposeIcon(), c.view.draftSelectedGitCommitMessage)
+	history := widget.NewButtonWithIcon("History", theme.HistoryIcon(), c.OpenSelectedHistory)
+	blame := widget.NewButtonWithIcon("Blame", theme.VisibilityIcon(), c.OpenSelectedBlame)
 	prevHunk := widget.NewButtonWithIcon("", theme.NavigateBackIcon(), func() {
-		v.moveGitHunk(-1)
+		c.MoveHunk(-1)
 	})
 	prevHunk.Importance = widget.LowImportance
 	nextHunk := widget.NewButtonWithIcon("", theme.NavigateNextIcon(), func() {
-		v.moveGitHunk(1)
+		c.MoveHunk(1)
 	})
 	nextHunk.Importance = widget.LowImportance
-	hunkNav := container.NewHBox(prevHunk, v.gitHunkStatus, nextHunk)
+	hunkNav := container.NewHBox(prevHunk, c.hunkStatus, nextHunk)
 	actions := container.NewHBox(stage, unstage, stageHunk, unstageHunk, history, blame, summarize, draftCommit, diffMode)
-	diffHeader := container.NewBorder(nil, nil, hunkNav, actions, v.gitDiffStatus)
-	diff := container.NewBorder(diffHeader, nil, nil, nil, v.gitDiffText)
+	diffHeader := container.NewBorder(nil, nil, hunkNav, actions, c.diffStatus)
+	diff := container.NewBorder(diffHeader, nil, nil, nil, c.diffText)
 	split := container.NewVSplit(scroll, diff)
 	split.Offset = 0.42
 	return container.NewBorder(header, nil, nil, nil, split)
 }
 
-func (v *View) refreshGitStatus() {
-	workspace := v.state.Workspace()
-	status, err := v.gitService.Status(workspace.Root)
+func (c *gitController) RefreshStatus() {
+	workspace := c.view.state.Workspace()
+	status, err := c.view.gitService.Status(workspace.Root)
 	if err != nil {
-		dialog.ShowError(err, v.window)
+		dialog.ShowError(err, c.view.window)
 		return
 	}
-	v.applyGitStatus(status)
-	v.addActivity(status.Message)
+	c.ApplyStatus(status)
+	c.view.addActivity(status.Message)
 }
 
-func (v *View) applyGitStatus(status gitSvc.Status) {
-	v.gitStatusSnapshot = status
-	v.gitStatus.SetText(gitStatusLabel(status))
-	v.gitResults.Objects = v.gitRows(status)
-	v.gitResults.Refresh()
-	v.gitFileBadges = gitWorkspaceBadges(status)
-	if v.state.Workspace().Root != "" {
-		v.refreshNavigator()
+func (c *gitController) ApplyStatus(status gitSvc.Status) {
+	c.view.gitStatusSnapshot = status
+	c.status.SetText(gitStatusLabel(status))
+	c.results.Objects = c.rows(status)
+	c.results.Refresh()
+	c.view.gitFileBadges = gitWorkspaceBadges(status)
+	if c.view.state.Workspace().Root != "" {
+		c.view.refreshNavigator()
 	}
-	v.refreshStatusBar()
+	c.view.refreshStatusBar()
 }
 
-func (v *View) openGitDiff(path string) {
-	workspace := v.state.Workspace()
-	diff, err := v.gitService.FileDiff(workspace.Root, path)
+func (c *gitController) OpenDiff(path string) {
+	workspace := c.view.state.Workspace()
+	diff, err := c.view.gitService.FileDiff(workspace.Root, path)
 	if err != nil {
-		dialog.ShowError(err, v.window)
+		dialog.ShowError(err, c.view.window)
 		return
 	}
-	v.gitLastDiff = diff
-	v.gitActiveHunk = 0
-	v.gitDiffStatus.SetText(diff.Message)
-	v.gitDiffText.SetText(formatGitDiff(diff, v.gitDiffMode))
-	v.updateGitHunkStatus()
-	v.addActivity(diff.Message)
+	c.lastDiff = diff
+	c.activeHunk = 0
+	c.diffStatus.SetText(diff.Message)
+	c.diffText.SetText(formatGitDiff(diff, c.diffMode))
+	c.UpdateHunkStatus()
+	c.view.addActivity(diff.Message)
 }
 
-func (v *View) openSelectedGitHistory() {
-	target := v.currentGitTargetPath()
-	workspace := v.state.Workspace()
-	result, err := v.gitService.History(workspace.Root, target, gitSvc.DefaultHistoryLimit)
+func (c *gitController) OpenSelectedHistory() {
+	target := c.CurrentTargetPath()
+	workspace := c.view.state.Workspace()
+	result, err := c.view.gitService.History(workspace.Root, target, gitSvc.DefaultHistoryLimit)
 	if err != nil {
-		dialog.ShowError(err, v.window)
+		dialog.ShowError(err, c.view.window)
 		return
 	}
-	v.gitDiffStatus.SetText(result.Message)
-	v.gitDiffText.SetText(formatGitHistory(result))
-	v.addActivity(result.Message)
+	c.diffStatus.SetText(result.Message)
+	c.diffText.SetText(formatGitHistory(result))
+	c.view.addActivity(result.Message)
 }
 
-func (v *View) openSelectedGitBlame() {
-	target := v.currentGitTargetPath()
+func (c *gitController) OpenSelectedBlame() {
+	target := c.CurrentTargetPath()
 	if strings.TrimSpace(target) == "" {
-		v.addActivity("Select a file before reading Git blame.")
+		c.view.addActivity("Select a file before reading Git blame.")
 		return
 	}
-	workspace := v.state.Workspace()
-	result, err := v.gitService.Blame(workspace.Root, target, 1, gitSvc.DefaultHistoryLimit)
+	workspace := c.view.state.Workspace()
+	result, err := c.view.gitService.Blame(workspace.Root, target, 1, gitSvc.DefaultHistoryLimit)
 	if err != nil {
-		dialog.ShowError(err, v.window)
+		dialog.ShowError(err, c.view.window)
 		return
 	}
-	v.gitDiffStatus.SetText(result.Message)
-	v.gitDiffText.SetText(formatGitBlame(result))
-	v.addActivity(result.Message)
+	c.diffStatus.SetText(result.Message)
+	c.diffText.SetText(formatGitBlame(result))
+	c.view.addActivity(result.Message)
 }
 
-func (v *View) currentGitTargetPath() string {
-	if strings.TrimSpace(v.gitLastDiff.Path) != "" {
-		return v.gitLastDiff.Path
+func (c *gitController) CurrentTargetPath() string {
+	if strings.TrimSpace(c.lastDiff.Path) != "" {
+		return c.lastDiff.Path
 	}
-	return strings.TrimSpace(v.state.SelectedPath())
+	return strings.TrimSpace(c.view.state.SelectedPath())
 }
 
-func (v *View) moveGitHunk(delta int) {
-	targets := gitHunkTargets(v.gitLastDiff)
+func (c *gitController) MoveHunk(delta int) {
+	targets := gitHunkTargets(c.lastDiff)
 	if len(targets) == 0 {
-		v.addActivity("No diff hunks are available for the selected file.")
+		c.view.addActivity("No diff hunks are available for the selected file.")
 		return
 	}
-	v.gitActiveHunk = (v.gitActiveHunk + delta + len(targets)) % len(targets)
-	target := targets[v.gitActiveHunk]
-	v.updateGitHunkStatus()
-	v.addActivity("Selected " + target.Label + ".")
+	c.activeHunk = (c.activeHunk + delta + len(targets)) % len(targets)
+	target := targets[c.activeHunk]
+	c.UpdateHunkStatus()
+	c.view.addActivity("Selected " + target.Label + ".")
 }
 
-func (v *View) updateGitHunkStatus() {
-	targets := gitHunkTargets(v.gitLastDiff)
+func (c *gitController) UpdateHunkStatus() {
+	targets := gitHunkTargets(c.lastDiff)
 	if len(targets) == 0 {
-		v.gitHunkStatus.SetText("No hunks")
+		c.hunkStatus.SetText("No hunks")
 		return
 	}
-	if v.gitActiveHunk < 0 || v.gitActiveHunk >= len(targets) {
-		v.gitActiveHunk = 0
+	if c.activeHunk < 0 || c.activeHunk >= len(targets) {
+		c.activeHunk = 0
 	}
-	v.gitHunkStatus.SetText(fmt.Sprintf("%d / %d %s", v.gitActiveHunk+1, len(targets), targets[v.gitActiveHunk].Label))
+	c.hunkStatus.SetText(fmt.Sprintf("%d / %d %s", c.activeHunk+1, len(targets), targets[c.activeHunk].Label))
 }
 
-func (v *View) confirmGitFileAction(action gitSvc.FileAction) {
-	if v.gitLastDiff.Path == "" {
-		v.addActivity("Select a changed file before running a Git action.")
+func (c *gitController) ConfirmFileAction(action gitSvc.FileAction) {
+	if c.lastDiff.Path == "" {
+		c.view.addActivity("Select a changed file before running a Git action.")
 		return
 	}
 	title := "Stage file"
-	message := "Stage " + v.gitLastDiff.Path + "?"
+	message := "Stage " + c.lastDiff.Path + "?"
 	if action == gitSvc.FileActionUnstage {
 		title = "Unstage file"
-		message = "Unstage " + v.gitLastDiff.Path + "?"
+		message = "Unstage " + c.lastDiff.Path + "?"
 	}
 	dialog.ShowConfirm(title, message, func(confirm bool) {
 		if !confirm {
 			return
 		}
-		v.applyGitFileAction(action)
-	}, v.window)
+		c.ApplyFileAction(action)
+	}, c.view.window)
 }
 
-func (v *View) applyGitFileAction(action gitSvc.FileAction) {
-	workspace := v.state.Workspace()
-	result, err := v.gitService.ApplyFileAction(workspace.Root, v.gitLastDiff.Path, action)
+func (c *gitController) ApplyFileAction(action gitSvc.FileAction) {
+	workspace := c.view.state.Workspace()
+	result, err := c.view.gitService.ApplyFileAction(workspace.Root, c.lastDiff.Path, action)
 	if err != nil {
-		dialog.ShowError(err, v.window)
+		dialog.ShowError(err, c.view.window)
 		return
 	}
-	v.applyGitStatus(result.Status)
-	v.addActivity(result.Message)
-	v.openGitDiff(result.Path)
+	c.ApplyStatus(result.Status)
+	c.view.addActivity(result.Message)
+	c.OpenDiff(result.Path)
 }
 
-func (v *View) confirmGitHunkAction(action gitSvc.HunkAction) {
-	targets := gitHunkTargets(v.gitLastDiff)
-	if v.gitLastDiff.Path == "" || len(targets) == 0 {
-		v.addActivity("Select a changed file and hunk before running a Git hunk action.")
+func (c *gitController) ConfirmHunkAction(action gitSvc.HunkAction) {
+	targets := gitHunkTargets(c.lastDiff)
+	if c.lastDiff.Path == "" || len(targets) == 0 {
+		c.view.addActivity("Select a changed file and hunk before running a Git hunk action.")
 		return
 	}
-	if v.gitActiveHunk < 0 || v.gitActiveHunk >= len(targets) {
-		v.gitActiveHunk = 0
+	if c.activeHunk < 0 || c.activeHunk >= len(targets) {
+		c.activeHunk = 0
 	}
-	target := targets[v.gitActiveHunk]
+	target := targets[c.activeHunk]
 	if !validGitHunkAction(action, target.Kind) {
-		v.addActivity("Selected hunk cannot be used with that action.")
+		c.view.addActivity("Selected hunk cannot be used with that action.")
 		return
 	}
 	title := "Stage hunk"
-	message := "Stage " + target.Label + " in " + v.gitLastDiff.Path + "?"
+	message := "Stage " + target.Label + " in " + c.lastDiff.Path + "?"
 	if action == gitSvc.HunkActionUnstage {
 		title = "Unstage hunk"
-		message = "Unstage " + target.Label + " in " + v.gitLastDiff.Path + "?"
+		message = "Unstage " + target.Label + " in " + c.lastDiff.Path + "?"
 	}
 	dialog.ShowConfirm(title, message, func(confirm bool) {
 		if !confirm {
 			return
 		}
-		v.applyGitHunkAction(target, action)
-	}, v.window)
+		c.ApplyHunkAction(target, action)
+	}, c.view.window)
 }
 
-func (v *View) applyGitHunkAction(target gitHunkTarget, action gitSvc.HunkAction) {
-	workspace := v.state.Workspace()
-	result, err := v.gitService.ApplyHunkAction(workspace.Root, v.gitLastDiff.Path, target.Kind, target.Index, action)
+func (c *gitController) ApplyHunkAction(target gitHunkTarget, action gitSvc.HunkAction) {
+	workspace := c.view.state.Workspace()
+	result, err := c.view.gitService.ApplyHunkAction(workspace.Root, c.lastDiff.Path, target.Kind, target.Index, action)
 	if err != nil {
-		dialog.ShowError(err, v.window)
+		dialog.ShowError(err, c.view.window)
 		return
 	}
 	if result.Message != "" {
-		v.addActivity(result.Message)
+		c.view.addActivity(result.Message)
 	}
 	if result.Status.Available {
-		v.applyGitStatus(result.Status)
+		c.ApplyStatus(result.Status)
 	}
-	v.openGitDiff(result.Path)
+	c.OpenDiff(result.Path)
 }
 
 func validGitHunkAction(action gitSvc.HunkAction, kind gitSvc.DiffKind) bool {
@@ -262,7 +342,7 @@ func gitStatusLabel(status gitSvc.Status) string {
 	return fmt.Sprintf("%s @ %s - %d changed", status.Branch, head, len(status.ChangedFiles))
 }
 
-func (v *View) gitRows(status gitSvc.Status) []fyne.CanvasObject {
+func (c *gitController) rows(status gitSvc.Status) []fyne.CanvasObject {
 	if !status.Available {
 		return []fyne.CanvasObject{widget.NewLabel(status.Message)}
 	}
@@ -280,7 +360,7 @@ func (v *View) gitRows(status gitSvc.Status) []fyne.CanvasObject {
 	for _, group := range groupGitChanges(status.ChangedFiles) {
 		rows = append(rows, gitDirectoryRow(group.Directory))
 		for _, change := range group.Changes {
-			rows = append(rows, gitChangeRow(change, v.openGitDiff))
+			rows = append(rows, gitChangeRow(change, c.OpenDiff))
 		}
 	}
 	return rows

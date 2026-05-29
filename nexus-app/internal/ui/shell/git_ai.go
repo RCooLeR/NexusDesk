@@ -14,21 +14,21 @@ import (
 const maxGitAIDiffChars = 48000
 
 func (v *View) summarizeSelectedGitDiff() {
-	v.runGitAI("AI diff summary", gitSummaryPrompt(v.gitLastDiff))
+	v.runGitAI("AI diff summary", gitSummaryPrompt(v.git.lastDiff))
 }
 
 func (v *View) draftSelectedGitCommitMessage() {
-	v.runGitAI("AI commit draft", gitCommitDraftPrompt(v.gitLastDiff))
+	v.runGitAI("AI commit draft", gitCommitDraftPrompt(v.git.lastDiff))
 }
 
 func (v *View) runGitAI(label string, prompt string) {
-	if !gitDiffHasContent(v.gitLastDiff) {
+	if !gitDiffHasContent(v.git.lastDiff) {
 		v.addActivity("Select a changed file before asking Nexus to review a diff.")
 		return
 	}
-	v.gitDiffStatus.SetText(label + " running...")
-	v.gitDiffText.SetText(label + " running through the native assistant service...")
-	v.addActivity(label + " started for " + v.gitLastDiff.Path + ".")
+	v.git.diffStatus.SetText(label + " running...")
+	v.git.diffText.SetText(label + " running through the native assistant service...")
+	v.addActivity(label + " started for " + v.git.lastDiff.Path + ".")
 
 	go func() {
 		var builder strings.Builder
@@ -40,15 +40,15 @@ func (v *View) runGitAI(label string, prompt string) {
 			builder.WriteString(delta)
 			current := builder.String()
 			fyne.Do(func() {
-				v.gitDiffText.SetText(current)
+				v.git.diffText.SetText(current)
 			})
 			return nil
 		})
 		fyne.Do(func() {
 			if err != nil {
 				message := label + " failed: " + err.Error()
-				v.gitDiffStatus.SetText(message)
-				v.gitDiffText.SetText(message)
+				v.git.diffStatus.SetText(message)
+				v.git.diffText.SetText(message)
 				v.addActivity(message)
 				return
 			}
@@ -59,9 +59,9 @@ func (v *View) runGitAI(label string, prompt string) {
 			if strings.TrimSpace(result.RouteWarning) != "" {
 				v.addActivity(result.RouteWarning)
 			}
-			v.gitDiffStatus.SetText(status)
-			v.gitDiffText.SetText(result.Message)
-			v.addActivity(label + " completed for " + v.gitLastDiff.Path + ".")
+			v.git.diffStatus.SetText(status)
+			v.git.diffText.SetText(result.Message)
+			v.addActivity(label + " completed for " + v.git.lastDiff.Path + ".")
 		})
 	}()
 }
