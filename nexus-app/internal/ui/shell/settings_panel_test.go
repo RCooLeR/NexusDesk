@@ -53,7 +53,7 @@ func TestSettingsFromFormPreservesTaskModelRoutes(t *testing.T) {
 func TestSettingsModelOptionHelpersUseRecommendedCatalog(t *testing.T) {
 	labels := settingsModelOptionLabels()
 	if len(labels) == 0 || !strings.Contains(labels[0], "Qwen3 4B") {
-		t.Fatalf("expected Wails recommended model labels, got %#v", labels)
+		t.Fatalf("expected recommended model labels, got %#v", labels)
 	}
 	option, ok := settingsModelOptionByLabel(labels[0])
 	if !ok || option.ID != "qwen3:4b-instruct" {

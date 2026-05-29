@@ -30,7 +30,7 @@ func ProductionFailureScenarios() []FailureScenario {
 				"internal/services/readiness: TestFailureScenariosCoverProductionGate",
 			},
 			ManualCoverage: []string{
-				"docs/20_CLEAN_MACHINE_SMOKE_CHECKLIST.md: launch/open workspace smoke",
+				"docs/05_PLAN.md: launch/open workspace smoke",
 			},
 		},
 		{
@@ -45,7 +45,7 @@ func ProductionFailureScenarios() []FailureScenario {
 				"internal/services/workspace: TestPreviewFileRejectsTraversal",
 			},
 			ManualCoverage: []string{
-				"docs/20_CLEAN_MACHINE_SMOKE_CHECKLIST.md: malformed file preview smoke",
+				"docs/05_PLAN.md: malformed file preview smoke",
 			},
 		},
 		{
@@ -60,7 +60,7 @@ func ProductionFailureScenarios() []FailureScenario {
 				"internal/ui/shell: TestDiagnosticsHealthCardsSummarizeActionsAndWarnings",
 			},
 			ManualCoverage: []string{
-				"docs/20_CLEAN_MACHINE_SMOKE_CHECKLIST.md: diagnostics/metadata smoke",
+				"docs/05_PLAN.md: diagnostics/metadata smoke",
 			},
 		},
 		{
@@ -75,7 +75,7 @@ func ProductionFailureScenarios() []FailureScenario {
 				"internal/ui/shell: provider diagnostics guidance tests",
 			},
 			ManualCoverage: []string{
-				"docs/20_CLEAN_MACHINE_SMOKE_CHECKLIST.md: provider setup smoke",
+				"docs/05_PLAN.md: provider setup smoke",
 			},
 		},
 		{
@@ -91,7 +91,7 @@ func ProductionFailureScenarios() []FailureScenario {
 				"internal/services/tools: cancel_job approval/cancellation tests",
 			},
 			ManualCoverage: []string{
-				"docs/20_CLEAN_MACHINE_SMOKE_CHECKLIST.md: cancel/retry smoke",
+				"docs/05_PLAN.md: cancel/retry smoke",
 			},
 		},
 	}

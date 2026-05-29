@@ -62,7 +62,7 @@ func TestEditorCursorOffsetRoundTrip(t *testing.T) {
 	}
 }
 
-func TestEditorWriteEncodingNormalizesWailsOptions(t *testing.T) {
+func TestEditorWriteEncodingNormalizesLegacyOptions(t *testing.T) {
 	tests := map[string]string{
 		"":             "utf-8",
 		"UTF8":         "utf-8",

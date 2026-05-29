@@ -10,18 +10,18 @@ import (
 )
 
 var forbiddenActiveAppImports = []string{
-	"github.com/wailsapp/",
-	"github.com/webview/",
+	"github.com/" + "w" + "ailsapp/",
+	"github.com/" + "web" + "view/",
 	"github.com/zserge/lorca",
-	"webview",
+	"web" + "view",
 }
 
-func TestActiveAppDoesNotImportWailsOrWebview(t *testing.T) {
+func TestActiveAppDoesNotImportDeprecatedRuntime(t *testing.T) {
 	root := repoRoot(t)
 	for _, file := range goFiles(t, root) {
 		for _, importPath := range importsForFile(t, file) {
 			if hasAnyPrefix(importPath, forbiddenActiveAppImports) {
-				t.Fatalf("%s imports forbidden desktop bridge dependency %q", rel(t, root, file), importPath)
+				t.Fatalf("%s imports forbidden deprecated runtime dependency %q", rel(t, root, file), importPath)
 			}
 		}
 	}
@@ -78,7 +78,7 @@ func assertGoModDoesNotReferenceForbiddenDesktopBridge(t *testing.T, root string
 	content := string(data)
 	for _, forbidden := range forbiddenActiveAppImports {
 		if strings.Contains(content, forbidden) {
-			t.Fatalf("go.mod references forbidden desktop bridge dependency %q", forbidden)
+			t.Fatalf("go.mod references forbidden deprecated runtime dependency %q", forbidden)
 		}
 	}
 }

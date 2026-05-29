@@ -184,10 +184,10 @@ func TestProviderProfilesExposeExtensibleOptions(t *testing.T) {
 	}
 }
 
-func TestRecommendedModelCatalogPortsWailsContextRules(t *testing.T) {
+func TestRecommendedModelCatalogKeepsContextRules(t *testing.T) {
 	options := RecommendedModelOptions()
 	if len(options) == 0 || options[0].ID != "qwen3:4b-instruct" {
-		t.Fatalf("expected Wails recommended model catalog, got %#v", options)
+		t.Fatalf("expected recommended model catalog, got %#v", options)
 	}
 	if got := ModelContextWindow("qwen3-coder:30b"); got != 131072 {
 		t.Fatalf("expected production coding model in catalog, got %d", got)

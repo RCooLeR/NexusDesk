@@ -6,10 +6,10 @@ func ContributorGuide() Guide {
 		Summary: "A production-oriented contributor guide for building NexusDesk safely without weakening the Fyne-native architecture.",
 		Sections: []Section{
 			{
-				Title: "Active App And Reference App",
+				Title: "Active App",
 				Body: []string{
-					"Develop in `nexus-app/`. Treat `app-wails/` as a reference implementation only until the explicit freeze/archive milestone is complete.",
-					"Port useful behavior capability-by-capability. Do not reintroduce Wails, webview, React bridge, or generated frontend dependencies into the active app.",
+					"Develop in `nexus-app/`; it is the single active desktop product.",
+					"Do not reintroduce deprecated runtime dependencies or generated UI bridge code into the active app.",
 				},
 			},
 			{
@@ -41,9 +41,9 @@ func ContributorGuide() Guide {
 			{
 				Title: "Documentation And Tracker Updates",
 				Body: []string{
-					"Update `tracker.md` and the relevant docs whenever behavior, architecture, production readiness, or Wails parity changes.",
-					"Keep `docs/17_END_TO_END_PRODUCTION_PLAN.md` as the broad roadmap and `docs/13_PRODUCTION_READINESS.md` as the release-gate map.",
-					"Document new package ownership in `docs/23_INTERNAL_PACKAGE_OWNERSHIP.md` before responsibilities become tribal knowledge.",
+					"Update `tracker.md` and the relevant docs whenever behavior, architecture, production readiness, or UI/tooling plans change.",
+					"Keep `docs/05_PLAN.md` as the broad roadmap and `docs/03_UI_WORKBENCH.md` as the UI target.",
+					"Document new package ownership in `docs/01_ARCHITECTURE.md` before responsibilities become tribal knowledge.",
 				},
 			},
 			{

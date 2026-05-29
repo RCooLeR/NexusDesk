@@ -22,7 +22,7 @@ func TestPackageOwnershipGuideCoversMajorInternalAreas(t *testing.T) {
 		"`internal/architecture`",
 		"`internal/release`",
 		"Fyne",
-		"Wails/webview",
+		"deprecated runtime",
 		"folder open cheap",
 		"approvals, audit, redaction",
 	} {

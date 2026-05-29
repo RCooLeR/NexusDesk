@@ -5,7 +5,7 @@ import (
 	"testing"
 )
 
-func TestDetectSyntaxLanguageUsesWailsLanguageCoverage(t *testing.T) {
+func TestDetectSyntaxLanguageUsesWorkbenchLanguageCoverage(t *testing.T) {
 	cases := map[string]string{
 		"main.go":               "go",
 		"app.tsx":               "typescript",

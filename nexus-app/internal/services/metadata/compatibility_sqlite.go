@@ -71,13 +71,13 @@ func (s *Store) importCompatibilitySQLiteDatasets(ctx context.Context) (int, int
 		return 0, 0, sqlSkipped + dependencySkipped, err
 	}
 	if sqlLegacy {
-		if err := renameCompatibilityTable(db, "sql_runs", "legacy_wails_sql_runs"); err != nil {
+		if err := renameCompatibilityTable(db, "sql_runs", "legacy_sql_runs"); err != nil {
 			db.Close()
 			return 0, 0, 0, err
 		}
 	}
 	if dependencyLegacy {
-		if err := renameCompatibilityTable(db, "dataset_dependencies", "legacy_wails_dataset_dependencies"); err != nil {
+		if err := renameCompatibilityTable(db, "dataset_dependencies", "legacy_dataset_dependencies"); err != nil {
 			db.Close()
 			return 0, 0, 0, err
 		}
@@ -190,7 +190,7 @@ func (s *Store) compatibilitySQLRunRecord(item compatibilitySQLRun) SQLRunRecord
 		ID:           strings.TrimSpace(item.ID),
 		RelPath:      strings.TrimSpace(item.RelPath),
 		SQL:          strings.TrimSpace(item.SQL),
-		Engine:       firstNonEmptyString(item.Engine, "wails-dataset-sql"),
+		Engine:       firstNonEmptyString(item.Engine, "legacy-dataset-sql"),
 		Status:       compatibilitySQLStatus(item.Status),
 		RowCount:     item.Rows,
 		MatchedRows:  item.Rows,
@@ -272,8 +272,8 @@ func backupLegacyCompatibilityTables(db *sql.DB) error {
 		backup    string
 		nativeKey string
 	}{
-		{table: "artifacts", backup: "legacy_wails_artifacts", nativeKey: "metadata_path"},
-		{table: "tool_runs", backup: "legacy_wails_tool_runs", nativeKey: "agent_run_id"},
+		{table: "artifacts", backup: "legacy_artifacts", nativeKey: "metadata_path"},
+		{table: "tool_runs", backup: "legacy_tool_runs", nativeKey: "agent_run_id"},
 	} {
 		columns, ok, err := tableColumns(db, item.table)
 		if err != nil {

@@ -12,13 +12,13 @@ func TestBuildDocumentBriefReportExtractsSections(t *testing.T) {
 		".nexusdesk/artifacts/document-sets/report.md",
 		"Document Set Report - Architecture Notes",
 		"document-report",
-		"# Architecture Notes\n\nThe native shell keeps useful Wails features while removing webview runtime risk.\n\n## Gaps\n\n- Missing durable routing for slow jobs remains a production blocker.\n- Teams should review packaging smoke tests before release.\n- Next action: verify source citations and regenerate the deck.\n",
+		"# Architecture Notes\n\nThe native shell keeps mature workbench features while removing deprecated runtime risk.\n\n## Gaps\n\n- Missing durable routing for slow jobs remains a production blocker.\n- Teams should review packaging smoke tests before release.\n- Next action: verify source citations and regenerate the deck.\n",
 		[]string{"docs/a.md"},
 	)
 	if report.Title != "Document Brief - Architecture Notes" || report.SourcePath == "" || report.SectionCount != 4 {
 		t.Fatalf("unexpected document brief report metadata: %#v", report)
 	}
-	for _, expected := range []string{"### Executive Summary", "native shell keeps useful Wails features", "### Key Points", "Architecture Notes", "### Risks And Gaps", "production blocker", "### Suggested Next Steps", "Next action"} {
+	for _, expected := range []string{"### Executive Summary", "native shell keeps mature workbench features", "### Key Points", "Architecture Notes", "### Risks And Gaps", "production blocker", "### Suggested Next Steps", "Next action"} {
 		if !strings.Contains(report.Content, expected) {
 			t.Fatalf("document brief missing %q:\n%s", expected, report.Content)
 		}

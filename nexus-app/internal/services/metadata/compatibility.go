@@ -185,9 +185,9 @@ func (r CompatibilityImportReport) compatibilityMessage() string {
 	total := r.Chats + r.Approvals + r.Artifacts + r.ToolRuns + r.SQLRuns + r.DatasetDependencies
 	if total == 0 {
 		if r.Skipped > 0 {
-			return fmt.Sprintf("No Wails-era metadata imported; %d malformed or unsupported item(s) skipped.", r.Skipped)
+			return fmt.Sprintf("No legacy metadata imported; %d malformed or unsupported item(s) skipped.", r.Skipped)
 		}
-		return "No Wails-era metadata found to import."
+		return "No legacy metadata found to import."
 	}
 	parts := []string{}
 	if r.Chats > 0 {
@@ -208,7 +208,7 @@ func (r CompatibilityImportReport) compatibilityMessage() string {
 	if r.DatasetDependencies > 0 {
 		parts = append(parts, fmt.Sprintf("%d dataset dependency", r.DatasetDependencies))
 	}
-	message := "Imported Wails-era metadata: " + strings.Join(parts, ", ") + "."
+	message := "Imported legacy metadata: " + strings.Join(parts, ", ") + "."
 	if r.Skipped > 0 {
 		message += fmt.Sprintf(" Skipped %d malformed or unsupported item(s).", r.Skipped)
 	}
@@ -502,9 +502,9 @@ func (s *Store) importCompatibilityToolRuns(ctx context.Context) (int, int, erro
 	}
 	agentRun := AgentRunRecord{
 		ID:          compatibilityAgentRunID,
-		Prompt:      "Imported Wails-era tool-run log",
+		Prompt:      "Imported legacy tool-run log",
 		Status:      "imported",
-		Message:     fmt.Sprintf("Imported %d Wails-era tool run record(s).", len(items)),
+		Message:     fmt.Sprintf("Imported %d legacy tool run record(s).", len(items)),
 		StopReason:  "compatibility-json",
 		StartedAt:   compatibilityToolRunStart(items),
 		CompletedAt: compatibilityToolRunCompleted(items),

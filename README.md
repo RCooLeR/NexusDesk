@@ -1,123 +1,58 @@
-# Nexus Augentic Studio
+﻿# NexusDesk
 
-Nexus Augentic Studio is a local-first AI workbench for code, documents, datasets, marketing analytics, databases, Docker, and operations.
+NexusDesk is a Fyne-native, local-first AI workbench for code, data, documents, artifacts, operations, and agent-assisted development.
 
-The goal is to give users one desktop studio where they can open a project or business workspace, inspect and edit files, analyze spreadsheets and documents, connect to data sources, generate reports and charts, and safely create or modify artifacts with AI assistance.
+The app should feel like a professional desktop IDE/data studio: JetBrains-style three-column workbench, compact top menu/toolbar, left tool stripe plus project/database tool window, large central editor canvas, right AI chat panel, subtle status bar, low-noise dark theme, and strong resize behavior.
 
-Nexus Augentic Studio is not only a chatbot. It should feel like a serious IDE-style studio with AI built into Workbench, Data & Analytics, Artifacts, and Settings surfaces:
+## What It Does
 
-- browse and understand project folders
-- open text, code, images, PDFs, spreadsheets, and common document formats
-- connect to local or remote LLM endpoints as an integrated assistant layer
-- analyze Excel, CSV, logs, traffic exports, marketing data, and database results
-- create charts, reports, dashboards, code, SQL, Dockerfiles, and Compose files
-- inspect Docker containers, images, logs, and compose projects
-- keep AI actions visible, permissioned, and auditable
+- Open and browse local workspaces safely.
+- Preview and edit text/code with rollback-backed safe writes.
+- Search files, inspect problems, navigate symbols, definitions, and references.
+- Work with Git status, diffs, hunks, staged commits, history, and blame.
+- Use an integrated Ask/Agent assistant with local context, citations, source diagnostics, approvals, and audit.
+- Run first-party tools for files, search, Git, tasks, jobs, data, SQLite, documents, artifacts, operations, and approved terminal commands.
+- Profile/query datasets and inspect read-only database connections.
+- Generate charts, dashboards, reports, DOCX/PPTX outputs, runbooks, task reports, and answer artifacts.
+- Persist chats, jobs, approvals, artifacts, SQL runs, dataset dependencies, and agent/tool audit records locally.
+- Export diagnostics and keep risky actions permissioned, auditable, redacted, and reversible where practical.
 
 ## Documentation
 
-- [Product Vision](docs/01_PRODUCT_VISION.md)
-- [Architecture](docs/02_ARCHITECTURE.md)
-- [Domain Model](docs/03_DOMAIN_MODEL.md)
-- [Workspace And Indexing](docs/04_WORKSPACE_AND_INDEXING.md)
-- [Search, Context, And Ranking](docs/05_SEARCH_CONTEXT_AND_RANKING.md)
-- [AI Agent And LLM Strategy](docs/06_AI_AGENT_AND_LLM_STRATEGY.md)
-- [Operations And Security](docs/07_OPERATIONS_AND_SECURITY.md)
-- [Delivery Plan](docs/08_DELIVERY_PLAN.md)
-- [Developer Experience](docs/09_DEVELOPER_EXPERIENCE.md)
-- [Studio Roadmap](docs/10_STUDIO_ROADMAP.md)
-- [Fyne Migration Plan](docs/11_FYNE_MIGRATION_PLAN.md)
-- [Current Project Review](docs/12_PROJECT_REVIEW.md)
-- [Production Readiness Plan](docs/13_PRODUCTION_READINESS.md)
-- [Platform Support Matrix](docs/14_PLATFORM_SUPPORT.md)
-- [Wails Feature Inventory](docs/15_WAILS_FEATURE_INVENTORY.md)
-- [Native Editor Parity Strategy](docs/16_EDITOR_PARITY_STRATEGY.md)
-- [End-To-End Production Master Plan](docs/17_END_TO_END_PRODUCTION_PLAN.md)
-- [Implementation Tracker](tracker.md)
+- [Architecture](docs/01_ARCHITECTURE.md)
+- [JetBrains-Style UI Workbench](docs/02_UI_WORKBENCH.md)
+- [Features](docs/03_FEATURES.md)
+- [Goals](docs/04_GOALS.md)
+- [Plan](docs/05_PLAN.md)
+- [Tracker](docs/06_TRACKER.md)
 
-## Current Project Layout
-
-The repository is migrating from the preserved Wails prototype to a Fyne-native desktop application. The directories that exist now are:
+## Project Layout
 
 ```text
-app-wails/            Preserved Wails desktop app with Go backend and React/TypeScript frontend.
-nexus-app/            New Fyne-native Go desktop app.
-nexus-app/internal/   Native app code grouped by app, domain, services, and UI.
-docs/                 Product, architecture, delivery, security, migration, and developer-experience documentation.
-services/             Development and testing helper services.
-tracker.md            Fyne migration tracker and current execution plan.
+nexus-app/            Active Fyne-native Go desktop app
+nexus-app/internal/   App, domain, services, UI, theme, and brand packages
+docs/                 Canonical architecture, UI, features, goals, plan, and tracker docs
+services/             Local development helper services
+tracker.md            Pointer to the canonical tracker in docs/
 ```
 
-Generated runtime state such as `.nexusdesk/`, frontend build output, Wails binaries, Fyne build output, and dependency folders are ignored.
+Generated runtime state such as `.nexusdesk/`, build output, local executables, and dependency folders are ignored.
 
 ## Core Principles
 
-- Local-first: user files, chats, tool logs, and generated artifacts should live locally by default.
-- Provider-agnostic: users should configure an LLM base URL, model, API key, and capabilities.
-- Tool-mediated: the LLM requests actions; the Go backend validates and performs them.
-- Source-grounded: analysis should cite files, sheets, rows, queries, logs, or tool outputs used.
-- Permissioned: writes, deletes, Docker mutations, database mutations, and shell execution require approval.
-- Multimodal: text, code, spreadsheets, PDFs, images, charts, and database results are first-class.
-- Artifact-first: useful outputs should become real files, not just chat messages.
-- Explainable: every tool call, search result, generated report, and file change should be inspectable.
-- Modular: workspace, parsing, indexing, agent, LLM gateway, connectors, and UI are separate modules.
-- Extensible: native tools come first; MCP and external plugin systems can be added later.
-
-## Product Shape
-
-Nexus Augentic Studio should feel like a unified studio:
-
-```text
-Workbench + Data & Analytics + Artifacts + Settings + always-visible AI assistant
-```
-
-A typical workflow:
-
-```text
-Open workspace
-  ->
-Nexus Augentic Studio indexes files, documents, datasets, and metadata
-  ->
-User asks a question in chat
-  ->
-Agent searches relevant context
-  ->
-Agent requests tools when needed
-  ->
-Backend runs approved tools
-  ->
-Agent returns grounded answer
-  ->
-App creates artifacts such as reports, charts, files, or configs
-```
+- Local-first: user files, chats, tool logs, and generated artifacts stay local by default.
+- Provider-agnostic: users configure model providers, routes, context windows, and capabilities.
+- Tool-mediated: the assistant requests actions; services validate and perform them.
+- Source-grounded: answers cite files, rows, queries, logs, documents, or tool outputs.
+- Permissioned: risky writes, terminal, database, operations, and future system actions require approval.
+- Artifact-first: durable outputs become files with metadata and lineage.
+- Explainable: every tool call, generated artifact, approval, and mutation should be inspectable.
+- Modular: services own behavior; UI renders intent and results.
 
 ## Current Focus
 
-The active application is `nexus-app/`. The preserved Wails app remains a reference, but new development should finish Fyne parity first, then continue with new features. The current review is in `docs/12_PROJECT_REVIEW.md`, the production release path is in `docs/13_PRODUCTION_READINESS.md`, the Wails retirement/parity inventory is in `docs/15_WAILS_FEATURE_INVENTORY.md`, the end-to-end production and JetBrains-like UI target is in `docs/17_END_TO_END_PRODUCTION_PLAN.md`, and the execution source of truth is `tracker.md`.
-
-Current planning estimate:
-
-- Fyne-native migration is roughly 98% complete by useful Wails-era functionality.
-- Wails useful-code parity is roughly 97% complete.
-- Native Parity Beta readiness is roughly 96% complete.
-- Overall production readiness is roughly 93% complete.
-- Distribution and packaging readiness is roughly 70-75% complete.
-
-The remaining work is concentrated in JetBrains-like native UI polish, durable routing for future slow workflows, richer generated document/presentation exports, assistant retrieval/evidence quality, signed packaging, onboarding, platform smoke, diagnostics, and performance validation.
-
-## First Stable Focus
-
-The first useful version should focus on:
-
-- opening local workspaces
-- configuring an LLM URL
-- file tree, quick-open, editor tabs, find-in-file, and route-driven primary surfaces
-- chat per workspace
-- safe read-only tools
-- Excel/CSV analysis
-- PDF and image preview
-- chart generation
-- report artifacts
-- simple Docker inspection
-
-Avoid building everything at once. A reliable studio with a few strong tools is better than a broad agent that cannot be trusted.
+1. Finish the JetBrains-style native shell: thin rails, compact left-sidebar tool windows, large center editor, right assistant hierarchy, status-only bottom bar, and resizing safety.
+2. Harden long-session performance: streaming/activity throttling, async editor save/diff/rollback, metadata contention fixes.
+3. Complete signed packaging and clean-machine smoke for Windows, macOS, and Linux.
+4. Polish DataGrip-like data workflows, artifact regeneration, settings, diagnostics, and source quality.
+5. Keep architecture boundaries strict: framework-free services, native UI only in app/UI/theme/brand, slow work through jobs, risky actions through approval/audit/rollback/redaction.

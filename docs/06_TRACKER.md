@@ -1,0 +1,544 @@
+﻿# Execution Tracker
+
+Status: canonical checklist for finishing NexusDesk end to end.
+
+Use this tracker for implementation slices. Work from the earliest phase with open items unless a later item blocks release safety. Check items only after implementation, tests, docs, and validation are complete.
+
+Legend:
+
+- `[ ]`: not done.
+- `[x]`: done.
+- `P0`: release blocker or data-loss/security risk.
+- `P1`: important production readiness item.
+- `P2`: polish or post-beta hardening.
+
+## Phase 0: Documentation Reset
+
+- [x] P1 Create canonical docs index.
+- [x] P1 Create canonical architecture document.
+- [x] P1 Create canonical UI workbench document.
+- [x] P1 Create canonical feature inventory.
+- [x] P1 Create canonical goals document.
+- [x] P1 Create canonical production plan.
+- [x] P1 Create detailed execution tracker.
+- [x] P1 Remove duplicate docs asset clutter from `docs/`.
+- [x] P1 Update root `tracker.md` to point to this canonical tracker.
+- [x] P1 Update root `README.md` links if doc filenames changed.
+- [x] P1 Run docs reference sweep.
+- [x] P1 Run `git diff --check`.
+
+## Phase 1: Safety Lockdown
+
+### 1.1 File preview and save safety
+
+- [ ] P0 Add top-level `Truncated` metadata to file preview domain model.
+- [ ] P0 Add top-level text byte count/source byte count metadata to file previews.
+- [ ] P0 Mark previews partial when read caps are hit.
+- [ ] P0 Disable inline save for partial previews.
+- [ ] P0 Show editor banner for partial/truncated files.
+- [ ] P0 Add explicit open-external or full-load option only if safe.
+- [ ] P0 Include truncation state in `read_file` tool observations.
+- [ ] P0 Ensure assistant context packs preserve truncation warnings.
+- [ ] P0 Add tests for large text file preview.
+- [ ] P0 Add tests that save is blocked for partial preview.
+- [ ] P0 Add tests that agent read observation exposes truncation.
+
+### 1.2 Archive and document container caps
+
+- [ ] P0 Add total uncompressed cap for XLSX parsing.
+- [ ] P0 Add per-entry cap for XLSX shared strings.
+- [ ] P0 Add per-entry cap for XLSX worksheets.
+- [ ] P0 Add cap tests for malicious XLSX containers.
+- [ ] P0 Review DOCX extraction for unbounded zip entry reads.
+- [ ] P0 Add DOCX extraction caps.
+- [ ] P0 Review PPTX generation/validation for bounded zip handling.
+- [ ] P1 Document archive/container caps in architecture or safety notes.
+
+### 1.3 Protected secret hardening
+
+- [ ] P0 Ensure macOS secret storage never passes secret value in process arguments.
+- [ ] P0 Add macOS command-argument exposure test or documented smoke.
+- [ ] P0 Add `runtime.KeepAlive` or safer wrapper for Windows DPAPI input buffers.
+- [ ] P0 Add Windows DPAPI stress test.
+- [ ] P0 Ensure Linux protected storage failure is explicit and actionable.
+- [ ] P1 Add diagnostics card for protected secret backend status.
+- [ ] P1 Add cross-platform protected secret CI/smoke plan.
+
+### 1.4 Network and connector safety
+
+- [ ] P0 Replace pre-lookup-only private IP checks in web fetch with actual dial-address checks.
+- [ ] P0 Cover IPv4 private, loopback, link-local, multicast ranges.
+- [ ] P0 Cover IPv6 loopback, link-local, multicast, and ULA ranges.
+- [ ] P0 Recheck safety after redirects.
+- [ ] P0 Add DNS rebinding regression tests.
+- [ ] P0 Default PostgreSQL profiles to encrypted transport.
+- [ ] P0 Default MySQL/MariaDB profiles to encrypted transport.
+- [ ] P0 Default SQL Server profiles to encrypted transport.
+- [ ] P0 Add explicit development-only plaintext toggle.
+- [ ] P0 Audit plaintext toggle changes.
+- [ ] P1 Show resolved transport mode in connector profile UI.
+- [ ] P1 Show resolved transport mode in Diagnostics.
+
+### 1.5 Agent mutation honesty
+
+- [ ] P0 Ensure file mutation tools set `Mutated` accurately.
+- [ ] P0 Ensure formatter tool sets `Mutated` when it writes.
+- [ ] P0 Ensure Git staging tools set `Mutated` accurately.
+- [ ] P0 Ensure commit and branch tools set `Mutated` accurately.
+- [ ] P0 Ensure conflict resolution tools set `Mutated` accurately.
+- [ ] P0 Ensure artifact regeneration sets `Mutated` accurately.
+- [ ] P0 Ensure project memory updates set `Mutated` accurately.
+- [ ] P0 Make agent final verification use tool result mutation flags instead of fragile tool name lists.
+- [ ] P0 Add tests for verification messages after representative mutating tools.
+
+### 1.6 Task and terminal safety
+
+- [ ] P0 Ensure discovered task execution uses argv, not shell strings.
+- [ ] P0 Add tests for task names containing shell metacharacters.
+- [ ] P0 Keep one-shot terminal command rooted to workspace or explicit safe cwd.
+- [ ] P0 Keep one-shot terminal command approval-gated.
+- [ ] P0 Keep one-shot terminal command output-capped.
+- [ ] P0 Keep one-shot terminal command timeout-bound.
+- [ ] P0 Keep one-shot terminal command audited.
+- [ ] P0 Reject shell interpreter shortcuts unless explicitly designed and approved.
+
+### 1.7 Workspace path safety
+
+- [ ] P0 Re-audit read and write paths for symlink escape behavior.
+- [ ] P0 Add tests for symlink parent components.
+- [ ] P0 Add tests for symlink file targets outside root.
+- [ ] P0 Reject Windows alternate data stream path forms where relevant.
+- [ ] P0 Reject Windows reserved device names where relevant.
+- [ ] P1 Ensure error messages explain rejected path cause.
+
+## Phase 2: Performance Floor
+
+### 2.1 Assistant and activity rendering
+
+- [ ] P1 Coalesce assistant stream deltas with a UI refresh ticker.
+- [ ] P1 Parse markdown once at final response where practical.
+- [ ] P1 Coalesce agent event rendering.
+- [ ] P1 Replace activity markdown rebuild with incremental list rendering.
+- [ ] P1 Cap activity display while preserving durable audit elsewhere.
+- [ ] P1 Add long streaming UI stress test or profiling harness.
+- [ ] P1 Add agent-event burst test.
+
+### 2.2 Editor save performance
+
+- [ ] P1 Move save flow off UI thread.
+- [ ] P1 Show visible saving state.
+- [ ] P1 Keep tab dirty marker accurate during save.
+- [ ] P1 Avoid rebuilding whole editor panel after save.
+- [ ] P1 Preserve cursor after save.
+- [ ] P1 Preserve scroll after save.
+- [ ] P1 Add failure state and retry affordance for failed save.
+- [ ] P1 Add save performance test or benchmark.
+
+### 2.3 Diff and rollback performance
+
+- [ ] P1 Replace large-file LCS diff with bounded hunk diff.
+- [ ] P1 Add deadline or size fallback for diff generation.
+- [ ] P1 Add tests for large-line-count diff.
+- [ ] P1 Add rollback storage usage diagnostics.
+- [ ] P1 Add rollback retention policy documentation.
+- [ ] P2 Add content-addressed rollback storage.
+- [ ] P2 Add deduplication tests for identical snapshots.
+
+### 2.4 Workspace search performance
+
+- [ ] P1 Stop using full file preview for content search.
+- [ ] P1 Add streaming byte-level literal search.
+- [ ] P1 Add streaming regex search with bounds.
+- [ ] P1 Skip known binary files before opening.
+- [ ] P1 Increase per-file cap safely.
+- [ ] P1 Add total search wall-clock limit.
+- [ ] P1 Add cancellation/singleflight for search while typing.
+- [ ] P1 Stream results to UI.
+- [ ] P1 Add tests for matches beyond old preview cap.
+- [ ] P1 Add benchmark or synthetic large workspace test.
+
+### 2.5 Metadata store performance
+
+- [ ] P1 Enable SQLite WAL mode.
+- [ ] P1 Enable busy timeout.
+- [ ] P1 Enable foreign keys consistently.
+- [ ] P1 Review connection pooling strategy.
+- [ ] P1 Avoid schema bootstrap work after first open.
+- [ ] P1 Surface active journal mode in Diagnostics.
+- [ ] P1 Add tests for concurrent read/write behavior where practical.
+
+### 2.6 Connector performance
+
+- [ ] P1 Cache external database pools by profile and version.
+- [ ] P1 Invalidate pool when profile changes.
+- [ ] P1 Respect context cancellation for pooled queries.
+- [ ] P1 Bound idle lifetime.
+- [ ] P1 Surface pool/connection status in Diagnostics.
+- [ ] P1 Add tests with fake SQL driver or integration harness.
+
+## Phase 3: Correctness And Audit Honesty
+
+### 3.1 SQL safety correctness
+
+- [ ] P1 Extract shared SQL read-only analyzer.
+- [ ] P1 Replace dataset raw keyword blocklist with token-aware analyzer.
+- [ ] P1 Keep connector and dataset behavior consistent.
+- [ ] P1 Add string-literal keyword tests.
+- [ ] P1 Add comment keyword tests.
+- [ ] P1 Add multi-statement rejection tests.
+- [ ] P1 Add fuzz test seed corpus.
+
+### 3.2 Agent bounds and context
+
+- [ ] P1 Add default wall-clock limit for agent runs.
+- [ ] P1 Make wall-clock limit configurable per request or setting.
+- [ ] P1 Propagate context deadline through model calls and tools.
+- [ ] P1 Surface timeout stop reason in UI.
+- [ ] P1 Persist timeout stop reason in audit.
+- [ ] P1 Replace fixed history count with token-aware packing.
+- [ ] P1 Add stress test for repeated tool-request loop.
+
+### 3.3 Job logs
+
+- [ ] P1 Raise visible job log tail.
+- [ ] P1 Persist full logs under job directory.
+- [ ] P1 Add open-full-log action.
+- [ ] P1 Include relevant logs in issue report with redaction.
+- [ ] P1 Add tests for long job logs.
+
+### 3.4 Artifact audit and rollback
+
+- [ ] P1 Snapshot artifact before archive where needed.
+- [ ] P1 Snapshot artifact before restore where needed.
+- [ ] P1 Snapshot artifact before delete.
+- [ ] P1 Snapshot artifact before regenerate.
+- [ ] P1 Persist artifact rollback metadata.
+- [ ] P1 Add UI recovery affordance.
+- [ ] P1 Add tests for artifact destructive flows.
+
+### 3.5 Git robustness
+
+- [ ] P1 Split Git timeouts by operation class.
+- [ ] P1 Set non-interactive Git environment.
+- [ ] P1 Detect ownership/safety errors and show remediation.
+- [ ] P1 Avoid silent fetch/pull/network behavior.
+- [ ] P1 Add tests for timeout class selection.
+- [ ] P1 Add tests for error classification.
+
+### 3.6 Encoding honesty
+
+- [ ] P1 Add charset detection strategy.
+- [ ] P1 Use lossless fallback when confidence is low.
+- [ ] P1 Surface ambiguous encoding warning.
+- [ ] P1 Disable save until encoding is explicit when ambiguity risks data loss.
+- [ ] P1 Add tests for Latin-1.
+- [ ] P1 Add tests for Windows-1251.
+- [ ] P2 Add tests for Shift-JIS or other common encoding.
+
+### 3.7 Recent workspace correctness
+
+- [ ] P2 Stat recent workspace paths on list.
+- [ ] P2 Mark missing paths.
+- [ ] P2 Add remove missing workspace action.
+- [ ] P2 Add tests for missing recent path.
+
+## Phase 4: JetBrains-Style UI Refactor
+
+### 4.1 Controller extraction
+
+- [ ] P1 Define shell controller interfaces.
+- [ ] P1 Add typed shell event bus.
+- [ ] P1 Extract editor controller.
+- [ ] P1 Extract assistant controller.
+- [ ] P1 Extract data controller.
+- [ ] P1 Extract Git controller.
+- [ ] P1 Extract artifacts controller.
+- [ ] P1 Extract jobs controller.
+- [ ] P1 Extract diagnostics controller.
+- [ ] P1 Extract approvals/audit controller.
+- [ ] P1 Shrink `View` to layout and registry ownership.
+- [ ] P1 Add tests for controller event flow.
+
+### 4.2 Tool-window framework
+
+- [ ] P1 Define tool-window registry type.
+- [ ] P1 Register Project tool window.
+- [ ] P1 Register Search tool window.
+- [ ] P1 Register Problems tool window.
+- [ ] P1 Register Git tool window.
+- [ ] P1 Register Data Sources tool window.
+- [ ] P1 Register Artifacts tool window.
+- [ ] P1 Register Operations tool window.
+- [ ] P1 Register Tasks tool window.
+- [ ] P1 Register Jobs tool window.
+- [ ] P1 Register History tool window.
+- [ ] P1 Register Approvals tool window.
+- [ ] P1 Register Diagnostics tool window.
+- [ ] P1 Register Activity tool window.
+- [ ] P1 Add keyboard shortcut routing through registry.
+
+### 4.3 Left rail
+
+- [ ] P1 Implement thin icon-first rail.
+- [ ] P1 Add active icon state.
+- [ ] P1 Add collapse on active-icon click.
+- [ ] P1 Add hover tooltips.
+- [ ] P1 Add keyboard navigation.
+- [ ] P1 Remember active tool per workspace.
+- [ ] P1 Remember width per tool window.
+- [ ] P1 Add resize handle with enlarged hit zone.
+- [ ] P1 Add tests for rail state mapping.
+
+### 4.4 Center editor UI
+
+- [ ] P1 Replace first-launch dashboard/cockpit feeling with editor-like empty state.
+- [ ] P1 Keep tabs compact.
+- [ ] P1 Keep breadcrumbs compact.
+- [ ] P1 Keep document map optional and unobtrusive.
+- [ ] P1 Add stable split behavior.
+- [ ] P1 Show save state in status bar.
+- [ ] P1 Show encoding/line endings in status bar.
+- [ ] P1 Keep editor width priority during resize.
+
+### 4.5 Right assistant UI
+
+- [ ] P1 Redesign assistant header hierarchy.
+- [ ] P1 Add visible mode/model/route state.
+- [ ] P1 Add source digest above composer or messages.
+- [ ] P1 Add clearer tool timeline.
+- [ ] P1 Add approval cards with details.
+- [ ] P1 Keep composer pinned to bottom.
+- [ ] P1 Add stop/cancel visibility during runs.
+- [ ] P1 Add Sources secondary pane.
+- [ ] P1 Add Lineage secondary pane.
+- [ ] P1 Add Inspector secondary pane.
+
+### 4.6 Remove bottom tool panel
+
+- [ ] P1 Remove horizontal bottom tool panel from the target shell.
+- [ ] P1 Keep the bottom region as status bar only.
+- [ ] P1 Move Problems to the left-sidebar tool registry.
+- [ ] P1 Move Search Results to the left-sidebar tool registry.
+- [ ] P1 Move Git Diff to the left-sidebar tool registry.
+- [ ] P1 Move Tasks to the left-sidebar tool registry.
+- [ ] P1 Move Jobs to the left-sidebar tool registry.
+- [ ] P1 Move Audit to the left-sidebar tool registry.
+- [ ] P1 Move Diagnostics to the left-sidebar tool registry.
+- [ ] P1 Move Activity to the left-sidebar tool registry.
+- [ ] P1 Add keyboard shortcuts for the moved tool windows.
+- [ ] P1 Ensure the moved tool windows keep per-tool width memory and collapse behavior.
+
+### 4.7 Settings UI
+
+- [ ] P1 Add searchable settings shell.
+- [ ] P1 Add provider settings category.
+- [ ] P1 Add task model routing category.
+- [ ] P1 Add credentials category.
+- [ ] P1 Add connector profiles category.
+- [ ] P1 Add safety/approval category.
+- [ ] P1 Add UI density/theme category.
+- [ ] P1 Add diagnostics/test category.
+- [ ] P1 Add route test actions.
+- [ ] P1 Add disabled-state explanations.
+
+### 4.8 Theme and visual polish
+
+- [ ] P1 Replace hardcoded colors with theme tokens.
+- [ ] P1 Define panel/editor/raised/status colors.
+- [ ] P1 Define semantic success/warning/error colors.
+- [ ] P1 Normalize spacing and row height.
+- [ ] P1 Normalize focus rings.
+- [ ] P1 Normalize active tab underline.
+- [ ] P1 Audit contrast.
+- [ ] P1 Add theme drift check or diagnostic.
+
+### 4.9 Resize and visual smoke
+
+- [ ] P1 Test 1280 x 820 default.
+- [ ] P1 Test 1024 x 640 minimum working size.
+- [ ] P1 Test 1600 x 900 desktop size.
+- [ ] P1 Test first launch no workspace screenshot.
+- [ ] P1 Test workspace open screenshot.
+- [ ] P1 Test editor screenshot.
+- [ ] P1 Test assistant streaming screenshot.
+- [ ] P1 Test data source screenshot.
+- [ ] P1 Test artifacts screenshot.
+- [ ] P1 Test settings screenshot.
+- [ ] P1 Test diagnostics screenshot.
+- [ ] P1 Test approval dialog screenshot.
+
+## Phase 5: Data, Artifact, Assistant Maturity
+
+### 5.1 Data workbench
+
+- [ ] P1 Improve Data Sources tree icons and hierarchy.
+- [ ] P1 Add schema/table browser polish.
+- [ ] P1 Improve query editor layout.
+- [ ] P1 Improve result grid scrolling and virtualization.
+- [ ] P1 Add result copy/export polish.
+- [ ] P1 Improve query history UX.
+- [ ] P1 Add connector profile inspector.
+- [ ] P2 Add saved query folders/tags.
+
+### 5.2 Dump import and sync jobs
+
+- [ ] P2 Design dump import job safety model.
+- [ ] P2 Implement isolated dump import job.
+- [ ] P2 Add dump import progress/logs/cancel.
+- [ ] P2 Add connector sync job design.
+- [ ] P2 Implement first connector sync job after safety review.
+
+### 5.3 Document and artifact outputs
+
+- [ ] P1 Polish DOCX report templates.
+- [ ] P1 Polish PPTX deck templates.
+- [ ] P1 Add cross-suite DOCX smoke.
+- [ ] P1 Add cross-suite PPTX smoke.
+- [ ] P1 Expand artifact regeneration coverage.
+- [ ] P1 Improve artifact freshness visualization.
+- [ ] P1 Improve lineage visualization.
+- [ ] P2 Add OCR/scanned document extraction job.
+
+### 5.4 Assistant quality
+
+- [ ] P1 Improve source ranking.
+- [ ] P1 Improve source coverage UI.
+- [ ] P1 Improve uncited source warnings.
+- [ ] P1 Improve stale source prompts.
+- [ ] P1 Add model route recommendations in Settings.
+- [ ] P1 Add context budget visualization.
+- [ ] P2 Add image/screenshot understanding.
+
+### 5.5 Planned tool designs
+
+- [ ] P2 Write browser automation safety design.
+- [ ] P2 Write interactive terminal session safety design.
+- [ ] P2 Write PR platform tools design.
+- [ ] P2 Write MCP client/tools design.
+- [ ] P2 Write scheduled automation design.
+- [ ] P2 Write plugin trust/signing design.
+- [ ] P2 Only implement each planned tool after design approval and tests.
+
+## Phase 6: Packaging And Release Trust
+
+### 6.1 Release build pipeline
+
+- [ ] P1 Define release build command.
+- [ ] P1 Produce Windows zip artifact.
+- [ ] P1 Produce Windows installer artifact.
+- [ ] P1 Produce macOS app/package artifact.
+- [ ] P1 Produce Linux package artifact.
+- [ ] P1 Generate SHA-256 manifest.
+- [ ] P1 Embed version metadata.
+- [ ] P1 Add About dialog version string.
+
+### 6.2 Signing and trust
+
+- [ ] P1 Decide Windows certificate strategy.
+- [ ] P1 Sign Windows executable.
+- [ ] P1 Sign Windows installer.
+- [ ] P1 Decide macOS signing/notarization strategy.
+- [ ] P1 Implement macOS signing/notarization if chosen.
+- [ ] P1 Document Linux trust/package dependencies.
+- [ ] P1 Add release trust diagnostics.
+
+### 6.3 SBOM and provenance
+
+- [ ] P1 Generate SBOM for release.
+- [ ] P1 Generate provenance evidence.
+- [ ] P1 Store release evidence next to artifacts.
+- [ ] P1 Document verification steps.
+
+### 6.4 CI matrix
+
+- [ ] P1 Windows CI: gofmt check.
+- [ ] P1 Windows CI: tests.
+- [ ] P1 Windows CI: build check.
+- [ ] P1 Windows CI: release manifest check.
+- [ ] P1 Linux CI: tests.
+- [ ] P1 Linux CI: build/package smoke.
+- [ ] P1 macOS CI: tests.
+- [ ] P1 macOS CI: build/package smoke.
+- [ ] P1 Cross-platform protected secret smoke.
+- [ ] P1 CI avoids leaving generated binaries in workspace.
+
+### 6.5 Clean-machine smoke
+
+- [ ] P1 Windows clean-machine launch smoke.
+- [ ] P1 Windows open workspace smoke.
+- [ ] P1 Windows edit/save/revert smoke.
+- [ ] P1 Windows assistant setup smoke.
+- [ ] P1 Windows data/artifact smoke.
+- [ ] P1 Windows diagnostics/export smoke.
+- [ ] P1 macOS clean-machine smoke.
+- [ ] P1 Linux clean-machine smoke.
+- [ ] P1 Uninstall/app-data cleanup smoke.
+
+### 6.6 Update visibility
+
+- [ ] P2 Add Help > Check for updates.
+- [ ] P2 Show available update non-modally.
+- [ ] P2 Do not auto-download.
+- [ ] P2 Do not auto-install.
+- [ ] P2 Add release notes link.
+
+## Phase 7: Private Beta
+
+- [ ] P1 Create first-run onboarding flow.
+- [ ] P1 Add provider setup wizard.
+- [ ] P1 Add model auto-suggestion from detected provider models.
+- [ ] P1 Add sample workflow guide.
+- [ ] P1 Add safe-agent user guide.
+- [ ] P1 Add beta feedback issue template.
+- [ ] P1 Add crash recovery banner actions.
+- [ ] P1 Add known limitations page.
+- [ ] P1 Prepare beta release notes.
+- [ ] P1 Run five-user beta install test.
+- [ ] P1 Triage beta feedback within 48 hours.
+
+## Phase 8: Release Candidate
+
+- [ ] P0 Freeze v1 feature scope.
+- [ ] P0 Close all P0 issues.
+- [ ] P0 Review all P1 issues and explicitly defer or fix.
+- [ ] P0 Run full test suite in CI.
+- [ ] P0 Run full platform smoke.
+- [ ] P0 Run security/safety review.
+- [ ] P0 Run performance review.
+- [ ] P0 Run accessibility review.
+- [ ] P0 Verify no hidden workspace-open side effects.
+- [ ] P0 Verify no known file data-loss path.
+- [ ] P0 Verify no known plaintext secret storage path.
+- [ ] P0 Verify release artifacts and hashes.
+- [ ] P0 Verify docs match shipped behavior.
+- [ ] P0 Publish release notes.
+
+## Ongoing Rules For Every Development Slice
+
+- [ ] Check git status before editing.
+- [ ] Avoid overwriting unrelated user changes.
+- [ ] Choose one logical milestone.
+- [ ] Add or update focused tests for code changes.
+- [ ] Update docs and this tracker when behavior or plan changes.
+- [ ] Run `gofmt` for Go changes.
+- [ ] Run focused tests first.
+- [ ] Run `go test ./...` before milestone completion when local toolchain supports it.
+- [ ] Run `go build .` or platform build-check when local toolchain supports it.
+- [ ] Run `git diff --check`.
+- [ ] Remove generated binaries unless a runnable local build was explicitly requested.
+- [ ] Commit only when the user asks or the current workflow explicitly requires it.
+- [ ] Never force-push.
+
+## Progress Estimate
+
+Planning-only estimate after the documentation reset:
+
+- Architecture foundation: 90% to production target.
+- Core feature breadth: 90% to production target.
+- Safety hardening: 75% to production target.
+- Performance hardening: 70% to production target.
+- UI target polish: 60% to production target.
+- Packaging/release trust: 45% to production target.
+- Overall v1 readiness: 75-80%.
+
+These numbers are intentionally conservative. The app has many capabilities, but production readiness depends on safety, polish, packaging, and smoke evidence, not only feature count.

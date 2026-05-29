@@ -5,7 +5,7 @@ import (
 	"testing"
 )
 
-func TestBuildOutlinePortsWailsSymbolRules(t *testing.T) {
+func TestBuildOutlineKeepsIDESymbolRules(t *testing.T) {
 	tests := []struct {
 		name     string
 		fileName string

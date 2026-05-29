@@ -45,7 +45,7 @@ func PackageOwnershipGuide() Guide {
 				Body: []string{
 					"`internal/ui/shell` owns the native workbench: project tree, editor tabs, assistant, Data, Artifacts, Git, Jobs, Diagnostics, History, Approvals, Settings, menus, shortcuts, and dialogs.",
 					"`internal/ui/theme` owns presentation tokens and Fyne theme adaptation; `internal/brand` owns approved product assets used by native windows and packaging.",
-					"`internal/architecture` owns import-boundary tests that prevent Wails/webview reintroduction and Fyne/UI leakage into services or domain packages.",
+					"`internal/architecture` owns import-boundary tests that prevent deprecated runtime dependencies and Fyne/UI leakage into services or domain packages.",
 					"`internal/buildinfo` and `internal/release` own build metadata validation, About text, release manifest models, checksums, and release hygiene support.",
 				},
 			},

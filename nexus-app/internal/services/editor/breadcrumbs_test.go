@@ -5,7 +5,7 @@ import (
 	"testing"
 )
 
-func TestBuildBreadcrumbsPortsWailsBehavior(t *testing.T) {
+func TestBuildBreadcrumbsKeepsIDEBehavior(t *testing.T) {
 	tests := []struct {
 		name          string
 		activeFile    string

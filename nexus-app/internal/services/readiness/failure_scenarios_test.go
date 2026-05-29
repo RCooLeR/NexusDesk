@@ -50,7 +50,7 @@ func TestFormatFailureScenarioMatrixIncludesEvidence(t *testing.T) {
 		"Production failure scenarios",
 		"folder-open-cheap",
 		"TestOpenListsOnlyTopLevel",
-		"docs/20_CLEAN_MACHINE_SMOKE_CHECKLIST.md",
+		"docs/05_PLAN.md",
 	} {
 		if !strings.Contains(text, expected) {
 			t.Fatalf("failure scenario matrix missing %q:\n%s", expected, text)

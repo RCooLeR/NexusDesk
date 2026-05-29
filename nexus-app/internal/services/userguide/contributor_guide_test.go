@@ -10,7 +10,7 @@ func TestContributorGuideCoversSetupStandardsAndADR(t *testing.T) {
 	for _, expected := range []string{
 		"Contributor Setup And Standards",
 		"`nexus-app/`",
-		"`app-wails/`",
+		"`nexus-app/`",
 		"MSYS2 UCRT64 GCC",
 		"`GOFLAGS=-mod=readonly`",
 		"Fyne imports",

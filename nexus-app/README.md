@@ -1,6 +1,6 @@
-# Nexus Augentic Studio Fyne App
+﻿# NexusDesk Fyne App
 
-This is the new Fyne-native desktop application. The previous Wails/React implementation is preserved in `../app-wails` as the reference implementation and migration source.
+This is the active Fyne-native desktop application.
 
 ## Shape
 

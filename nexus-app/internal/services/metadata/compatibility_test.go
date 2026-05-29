@@ -12,7 +12,7 @@ import (
 	"time"
 )
 
-func TestImportCompatibilityDataImportsWailsJSONStores(t *testing.T) {
+func TestImportCompatibilityDataImportsLegacyJSONStores(t *testing.T) {
 	root := t.TempDir()
 	store, err := NewStore(root)
 	if err != nil {
@@ -276,16 +276,16 @@ func TestImportCompatibilityDataMigratesLegacySQLiteDatasetTables(t *testing.T) 
 		t.Fatal(err)
 	}
 	defer db.Close()
-	if exists, err := tableExists(db, "legacy_wails_sql_runs"); err != nil || !exists {
+	if exists, err := tableExists(db, "legacy_sql_runs"); err != nil || !exists {
 		t.Fatalf("expected legacy SQL backup table, exists=%v err=%v", exists, err)
 	}
-	if exists, err := tableExists(db, "legacy_wails_dataset_dependencies"); err != nil || !exists {
+	if exists, err := tableExists(db, "legacy_dataset_dependencies"); err != nil || !exists {
 		t.Fatalf("expected legacy dependency backup table, exists=%v err=%v", exists, err)
 	}
-	if exists, err := tableExists(db, "legacy_wails_artifacts"); err != nil || !exists {
+	if exists, err := tableExists(db, "legacy_artifacts"); err != nil || !exists {
 		t.Fatalf("expected legacy artifact backup table, exists=%v err=%v", exists, err)
 	}
-	if exists, err := tableExists(db, "legacy_wails_tool_runs"); err != nil || !exists {
+	if exists, err := tableExists(db, "legacy_tool_runs"); err != nil || !exists {
 		t.Fatalf("expected legacy tool-run backup table, exists=%v err=%v", exists, err)
 	}
 }

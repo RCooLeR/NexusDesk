@@ -278,7 +278,7 @@ func TestAssistantCitationSourceCoverageTreatsDirectorySourceAsCovered(t *testin
 	}
 }
 
-func TestAssistantSourcePathsFromContextPortsWailsRules(t *testing.T) {
+func TestAssistantSourcePathsFromContextKeepsLegacyRules(t *testing.T) {
 	tests := []struct {
 		context string
 		want    []string

@@ -66,7 +66,7 @@ func TestFormatMarkdownIncludesFailureScenarioMatrix(t *testing.T) {
 		"Production failure scenarios",
 		"folder-open-cheap",
 		"canceled-long-work",
-		"docs/20_CLEAN_MACHINE_SMOKE_CHECKLIST.md",
+		"docs/05_PLAN.md",
 	} {
 		if !strings.Contains(text, expected) {
 			t.Fatalf("expected %q in readiness markdown:\n%s", expected, text)
