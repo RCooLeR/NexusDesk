@@ -291,6 +291,28 @@ func TestAssistantEffectiveSourcePathsFallsBackAndDedupes(t *testing.T) {
 	}
 }
 
+func TestAssistantActionableSourcePathsClipsLargeSourceSets(t *testing.T) {
+	paths := assistantActionableSourcePaths(assistantSvc.Result{
+		SourcePaths: []string{"a.go", "b.go", "c.go", "d.go"},
+	}, 2)
+	if strings.Join(paths, "|") != "a.go|b.go" {
+		t.Fatalf("unexpected clipped sources: %#v", paths)
+	}
+	all := assistantActionableSourcePaths(assistantSvc.Result{SourcePaths: []string{"a.go", "b.go"}}, 0)
+	if strings.Join(all, "|") != "a.go|b.go" {
+		t.Fatalf("expected non-positive limit to keep all sources, got %#v", all)
+	}
+}
+
+func TestAssistantSourceActionSummaryReportsFailures(t *testing.T) {
+	summary := assistantSourceActionSummary("Opened", 2, 4, 1)
+	for _, expected := range []string{"Opened 2/4 assistant source(s).", "1 failed."} {
+		if !strings.Contains(summary, expected) {
+			t.Fatalf("expected %q in summary %q", expected, summary)
+		}
+	}
+}
+
 func TestAssistantCitationRefsDedupesAndNormalizes(t *testing.T) {
 	refs := assistantCitationRefs(assistantSvc.Result{
 		Message:     "See docs\\guide.md:10, docs/guide.md#L10, and docs/guide.md#L11-L12.",

@@ -389,6 +389,7 @@ Exit criteria:
 - [x] Assistant source-quality UX slice: native answer footers and saved `chat-answer` artifacts classify evidence as weak, source-backed, or line-cited with metadata.
 - [x] Assistant citation coverage diagnostics: answer footers and saved `chat-answer` artifacts now surface line refs that fall outside the attached source set instead of silently dropping them.
 - [x] Assistant panel status strip: Ask/Agent mode, model route, context budget, selected/pinned context, evidence/source counts, route warnings, and Agent job/tool safety are visible outside the response markdown.
+- [x] Assistant source actions: open or pin bounded latest-answer sources directly from the Assistant panel for follow-up inspection.
 - [ ] Native UI cleanup pass across Workbench, Data, Artifacts, Settings, assistant, and bottom panels.
 
 ### Gate 2: Safety And Reliability Beta

@@ -33,6 +33,7 @@ const defaultAgentContextMaxBytes = 96 * 1024
 const assistantCitationSnippetLimit = 8
 const assistantCitationSnippetLineLimit = 4
 const assistantCitationSnippetLineMaxChars = 180
+const assistantSourceActionLimit = 8
 
 var assistantCitationPattern = regexp.MustCompile(`(?i)([\w./\\-]+\.[A-Za-z0-9]{1,12})(?:(?:#L|:)(\d+)(?:[-:L]+(\d+))?)`)
 var assistantCitationRefPattern = regexp.MustCompile(`^(.+):L(\d+)(?:-L(\d+))?$`)
@@ -111,7 +112,9 @@ func (v *View) newAssistantPanel() fyne.CanvasObject {
 	saveAnswer := widget.NewButtonWithIcon("Save answer", theme.DocumentSaveIcon(), func() {
 		v.saveLatestAssistantAnswer()
 	})
-	assistantActions := container.NewHBox(retry, compare, saveAnswer)
+	openSources := widget.NewButtonWithIcon("Open sources", theme.FolderOpenIcon(), v.openLatestAssistantSources)
+	pinSources := widget.NewButtonWithIcon("Pin sources", theme.ContentAddIcon(), v.pinLatestAssistantSources)
+	assistantActions := container.NewHBox(retry, compare, saveAnswer, openSources, pinSources)
 	composerControls := container.NewVBox(mode, modelRoute, agentTaskApproval, v.assistantRunStatus)
 	composer := container.NewBorder(assistantActions, nil, composerControls, send, prompt)
 	composer = container.NewPadded(composer)
@@ -562,6 +565,53 @@ func (v *View) saveLatestAssistantAnswer() {
 	v.addActivity(artifact.Message)
 }
 
+func (v *View) openLatestAssistantSources() {
+	workspace := v.state.Workspace()
+	if strings.TrimSpace(workspace.Root) == "" {
+		v.addActivity("Open a workspace before opening assistant sources.")
+		return
+	}
+	paths := assistantActionableSourcePaths(v.assistantLastResult, assistantSourceActionLimit)
+	if len(paths) == 0 {
+		v.addActivity("No assistant sources are available to open.")
+		return
+	}
+	opened := 0
+	failed := 0
+	for _, relPath := range paths {
+		preview, err := v.workspaceService.PreviewFile(workspace.Root, relPath)
+		if err != nil {
+			failed++
+			v.addActivity("Could not open assistant source " + relPath + ": " + err.Error())
+			continue
+		}
+		v.openPreviewTab(preview)
+		opened++
+	}
+	v.addActivity(assistantSourceActionSummary("Opened", opened, len(paths), failed))
+}
+
+func (v *View) pinLatestAssistantSources() {
+	workspace := v.state.Workspace()
+	if strings.TrimSpace(workspace.Root) == "" {
+		v.addActivity("Open a workspace before pinning assistant sources.")
+		return
+	}
+	paths := assistantActionableSourcePaths(v.assistantLastResult, assistantSourceActionLimit)
+	if len(paths) == 0 {
+		v.addActivity("No assistant sources are available to pin.")
+		return
+	}
+	added := 0
+	for _, relPath := range paths {
+		if v.state.AddAssistantContextPath(relPath) {
+			added++
+		}
+	}
+	v.refreshAssistantContextPins()
+	v.addActivity(assistantSourceActionSummary("Pinned", added, len(paths), 0))
+}
+
 func (v *View) loadAssistantChatHistory() {
 	if v.metadataStore == nil {
 		v.state.SetAssistantConversation(nil)
@@ -819,6 +869,25 @@ func assistantEffectiveSourcePaths(result assistantSvc.Result) []string {
 		paths = assistantSourcePathsFromContext(result.ContextRelPath)
 	}
 	return dedupeAssistantSourcePaths(paths)
+}
+
+func assistantActionableSourcePaths(result assistantSvc.Result, limit int) []string {
+	paths := assistantEffectiveSourcePaths(result)
+	if limit <= 0 || len(paths) <= limit {
+		return paths
+	}
+	clipped := make([]string, limit)
+	copy(clipped, paths[:limit])
+	return clipped
+}
+
+func assistantSourceActionSummary(action string, count int, total int, failed int) string {
+	action = firstNonEmpty(action, "Processed")
+	summary := fmt.Sprintf("%s %d/%d assistant source(s).", action, count, total)
+	if failed > 0 {
+		summary += fmt.Sprintf(" %d failed.", failed)
+	}
+	return summary
 }
 
 func assistantSourcePathsFromContext(contextRelPath string) []string {
