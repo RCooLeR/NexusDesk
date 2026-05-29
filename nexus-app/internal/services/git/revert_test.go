@@ -73,6 +73,74 @@ func TestPlanRevertChangesRejectsStagedChanges(t *testing.T) {
 	}
 }
 
+func TestPlanRevertStagedChangesPreparesTrackedRestore(t *testing.T) {
+	if _, err := exec.LookPath("git"); err != nil {
+		t.Skip("git executable is not available")
+	}
+	root := t.TempDir()
+	initGitRepoWithCommit(t, root)
+	writeGitTestFile(t, root, "README.md", "# Repo\n\nstaged\n")
+	runGit(t, root, "add", "--", "README.md")
+
+	blocked, err := New().PlanRevertStagedChanges(root, "README.md", "")
+	if err != nil {
+		t.Fatalf("PlanRevertStagedChanges returned error: %v", err)
+	}
+	if blocked.Action != "" || !strings.Contains(blocked.Message, "scope=staged") {
+		t.Fatalf("expected explicit staged scope requirement, got %#v", blocked)
+	}
+	plan, err := New().PlanRevertStagedChanges(root, "README.md", "staged")
+	if err != nil {
+		t.Fatalf("PlanRevertStagedChanges returned error: %v", err)
+	}
+	if plan.Action != RevertActionWrite || plan.Scope != RevertScopeStaged {
+		t.Fatalf("unexpected staged revert plan: %#v", plan)
+	}
+	if plan.Content != "# Repo\n" {
+		t.Fatalf("expected HEAD content, got %q", plan.Content)
+	}
+	if !strings.Contains(plan.Diff, "+staged") {
+		t.Fatalf("expected staged diff preview, got %q", plan.Diff)
+	}
+}
+
+func TestPlanRevertStagedChangesRejectsMixedWorktreeEdits(t *testing.T) {
+	if _, err := exec.LookPath("git"); err != nil {
+		t.Skip("git executable is not available")
+	}
+	root := t.TempDir()
+	initGitRepoWithCommit(t, root)
+	writeGitTestFile(t, root, "README.md", "# Repo\n\nstaged\n")
+	runGit(t, root, "add", "--", "README.md")
+	writeGitTestFile(t, root, "README.md", "# Repo\n\nunstaged too\n")
+
+	plan, err := New().PlanRevertStagedChanges(root, "README.md", "staged")
+	if err != nil {
+		t.Fatalf("PlanRevertStagedChanges returned error: %v", err)
+	}
+	if plan.Action != "" || !strings.Contains(plan.Message, "unstaged edits") {
+		t.Fatalf("expected mixed-edit rejection, got %#v", plan)
+	}
+}
+
+func TestPlanRevertStagedChangesPreparesAddedFileDelete(t *testing.T) {
+	if _, err := exec.LookPath("git"); err != nil {
+		t.Skip("git executable is not available")
+	}
+	root := t.TempDir()
+	initGitRepoWithCommit(t, root)
+	writeGitTestFile(t, root, "scratch.txt", "draft\n")
+	runGit(t, root, "add", "--", "scratch.txt")
+
+	plan, err := New().PlanRevertStagedChanges(root, "scratch.txt", "staged")
+	if err != nil {
+		t.Fatalf("PlanRevertStagedChanges returned error: %v", err)
+	}
+	if plan.Action != RevertActionDelete || !strings.Contains(plan.Message, "staged added file") {
+		t.Fatalf("expected staged add delete plan, got %#v", plan)
+	}
+}
+
 func TestPlanRevertChangesRejectsBinaryHeadContent(t *testing.T) {
 	if _, err := exec.LookPath("git"); err != nil {
 		t.Skip("git executable is not available")

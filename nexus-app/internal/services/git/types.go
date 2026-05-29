@@ -121,6 +121,7 @@ type RevertPlan struct {
 	Scope       string
 	Action      RevertAction
 	Content     string
+	Diff        string
 	Change      FileChange
 	Message     string
 	Status      Status
