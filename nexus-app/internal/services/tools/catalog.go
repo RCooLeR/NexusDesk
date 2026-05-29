@@ -93,7 +93,6 @@ func plannedToolCatalog() []ToolCatalogEntry {
 		plannedTool("browser", "browser_extract_page", "Extract structured text, links, forms, and accessibility tree.", "medium", "sessionId", "browser", "Extends web_fetch with rendered-page context."),
 		plannedTool("browser", "browser_network_log", "Read capped request/response metadata for a browser session.", "medium", "sessionId", "browser", "Useful for app debugging; must redact headers/tokens."),
 
-		plannedTool("data", "create_dataset_chart", "Create a deterministic chart artifact from dataset query results.", "high", "relPath, chartJson", "data artifacts", "Requires artifact lineage and regeneration metadata."),
 		plannedTool("database", "list_db_profiles", "List configured external database profiles visible to the workspace.", "low", "scope(optional)", "connectors", "Must never expose secrets."),
 		plannedTool("database", "inspect_db_profile", "Inspect an external database profile schema read-only.", "medium", "profileId", "connectors", "Route through durable jobs with cancellation and lineage."),
 		plannedTool("database", "query_db_profile", "Run a guarded read-only query against an external profile.", "medium", "profileId, sql, limit(optional)", "connectors", "Requires approval, timeout, query history, and export lineage."),
@@ -143,7 +142,7 @@ func implementedToolCategory(name string) string {
 	switch name {
 	case "read_context", "read_file", "search_workspace", "read_problems":
 		return "workspace"
-	case "profile_dataset", "query_dataset", "query_dataset_sql":
+	case "profile_dataset", "query_dataset", "query_dataset_sql", "create_dataset_chart":
 		return "data"
 	case "inspect_sqlite", "query_sqlite":
 		return "database"

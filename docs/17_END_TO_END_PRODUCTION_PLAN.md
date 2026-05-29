@@ -215,7 +215,7 @@ Already available:
 - In-product Release Hygiene and Antivirus Notes guide from Help and the command palette.
 - Line-aware citations, bounded snippets, evidence labels, weak-evidence warnings, stale-source warnings, cited/uncited coverage, unverified/out-of-context citation diagnostics.
 - Agent runtime with plan updates, bounded observations, emergency backend loop guard, tool dispatcher, audit, final fallback.
-- Agent tools for catalog inspection, context, search, problems, Git reads, local dataset profile/query/SELECT-only SQL, workspace SQLite schema/query, document extraction, read-only operations scan/inspection/runbook generation, tasks, first-party approved terminal commands, artifacts/lineage/regeneration, safe file mutations, rollback, web fetch, detection-only external coding-agent CLI readiness for Codex, Claude Code, and OpenCode, and non-executing external-agent run planning.
+- Agent tools for catalog inspection, context, search, problems, Git reads, local dataset profile/query/SELECT-only SQL/chart artifact generation, workspace SQLite schema/query, document extraction, read-only operations scan/inspection/runbook generation, tasks, first-party approved terminal commands, artifacts/lineage/regeneration, safe file mutations, rollback, web fetch, detection-only external coding-agent CLI readiness for Codex, Claude Code, and OpenCode, and non-executing external-agent run planning.
 - High-risk mutation tools use per-call approval modal and audit records.
 - Settings stores and exposes task-aware model defaults for coding, backend, database, analytics, research, vision/screenshot, balanced reasoning, and fast-coding routes while preserving the global model as the active fallback.
 - Ask mode exposes a model-route selector with global fallback and sends selected routes through the assistant service.
@@ -227,7 +227,7 @@ Already available:
 Planned/remaining:
 
 - Deeper retrieval/ranking quality beyond deterministic coverage diagnostics.
-- Direct dispatcher wrappers for remaining already-built service capabilities: artifact-backed dataset chart generation and job list/log/cancel.
+- Direct dispatcher wrappers for remaining already-built service capabilities: job list/log/cancel.
 - Wire route-aware model resolution into future dedicated Data, analytics, research, vision/screenshot, and document model workflows with explicit fallback/availability warnings.
 - Better source diagnostics for partial, stale, weak, contradictory, or missing evidence.
 - Complete tool-run provenance coverage for every generated output type.

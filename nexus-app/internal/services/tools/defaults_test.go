@@ -113,6 +113,55 @@ func TestDefaultDispatcherDatasetTools(t *testing.T) {
 	}
 }
 
+func TestDefaultDispatcherCreateDatasetChartTool(t *testing.T) {
+	root := t.TempDir()
+	if err := os.WriteFile(filepath.Join(root, "sales.csv"), []byte("channel,spend\nsearch,12\nsocial,8\nsearch,18\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	dispatcher := NewDefaultDispatcher(Dependencies{Workspace: workspaceSvc.New()})
+	call := agent.ToolCall{Name: "create_dataset_chart", Args: map[string]string{"relPath": "sales.csv", "query": "order by spend desc"}}
+
+	blocked, err := dispatcher.ExecuteTool(context.Background(), call, agent.Request{WorkspaceRoot: root})
+	if err == nil || blocked.Risk != "high" || !strings.Contains(blocked.Observation, "approval") {
+		t.Fatalf("expected create_dataset_chart approval block, got result=%#v err=%v", blocked, err)
+	}
+
+	generated, err := dispatcher.ExecuteTool(context.Background(), call, agent.Request{WorkspaceRoot: root, ApproveWrites: true})
+	if err != nil {
+		t.Fatalf("create_dataset_chart returned error: %v", err)
+	}
+	if !generated.Mutated || !strings.Contains(generated.Observation, "Generated dataset chart artifact") || !strings.Contains(generated.Observation, "sales.csv") || !strings.Contains(generated.Observation, "Points:") {
+		t.Fatalf("unexpected chart result: %#v", generated)
+	}
+	store, err := artifactsSvc.NewStore(root)
+	if err != nil {
+		t.Fatal(err)
+	}
+	matches, err := store.ListArtifacts(artifactsSvc.ListOptions{Query: "kind:chart"})
+	if err != nil {
+		t.Fatalf("ListArtifacts returned error: %v", err)
+	}
+	if len(matches) != 1 {
+		t.Fatalf("expected one chart artifact, got %d", len(matches))
+	}
+	text, err := store.ReadArtifactText(matches[0].RelPath)
+	if err != nil {
+		t.Fatalf("ReadArtifactText returned error: %v", err)
+	}
+	for _, expected := range []string{"<svg", "search", "social"} {
+		if !strings.Contains(text, expected) {
+			t.Fatalf("expected chart artifact text to contain %q:\n%s", expected, text)
+		}
+	}
+	metadata, err := store.ReadArtifactMetadata(matches[0].RelPath)
+	if err != nil {
+		t.Fatalf("ReadArtifactMetadata returned error: %v", err)
+	}
+	if metadata.Kind != "chart" || len(metadata.SourcePaths) != 1 || metadata.SourcePaths[0] != "sales.csv" {
+		t.Fatalf("unexpected chart metadata: %#v", metadata)
+	}
+}
+
 func TestDefaultDispatcherSQLiteTools(t *testing.T) {
 	root := t.TempDir()
 	dbPath := filepath.Join(root, "data", "store.sqlite")

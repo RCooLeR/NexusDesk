@@ -55,6 +55,49 @@ func (h defaultHandlers) queryDatasetSQL(ctx context.Context, call agent.ToolCal
 	return toolOK(call, "medium", formatDatasetSQL(result)), nil
 }
 
+func (h defaultHandlers) createDatasetChart(ctx context.Context, call agent.ToolCall, request agent.Request) (agent.ToolResult, error) {
+	root, relPath, err := requiredWorkspacePath(call, request, "relPath", "path")
+	if err != nil {
+		return toolError(call, "high", err), err
+	}
+	query := firstArg(call, "query", "filter")
+	result, err := datasetsSvc.New(h.deps.Workspace).QueryContext(ctx, root, relPath, query)
+	if err != nil {
+		return toolError(call, "high", err), err
+	}
+	chart, err := datasetsSvc.BuildChart(result)
+	if err != nil {
+		return toolError(call, "high", err), err
+	}
+	if err := ctx.Err(); err != nil {
+		return toolError(call, "high", err), err
+	}
+	store, err := artifactsSvc.NewStore(root)
+	if err != nil {
+		return toolError(call, "high", err), err
+	}
+	artifact, err := store.WriteChartArtifact(chartArtifactInput(chart))
+	if err != nil {
+		return toolError(call, "high", err), err
+	}
+	return agent.ToolResult{
+		Name:    call.Name,
+		Args:    call.Args,
+		Risk:    "high",
+		Mutated: true,
+		Observation: fmt.Sprintf(
+			"Generated dataset chart artifact.\nSource: %s\nArtifact: %s\nMode: %s\nCategory: %s\nValue: %s\nPoints: %d\nTruncated: %t",
+			chart.RelPath,
+			artifact.RelPath,
+			chart.Mode,
+			chart.CategoryColumn,
+			firstNonEmptyTool(chart.ValueColumn, "row count"),
+			len(chart.Points),
+			chart.Truncated,
+		),
+	}, nil
+}
+
 func (h defaultHandlers) inspectSQLite(ctx context.Context, call agent.ToolCall, request agent.Request) (agent.ToolResult, error) {
 	root, relPath, err := requiredWorkspacePath(call, request, "relPath", "path")
 	if err != nil {
@@ -238,6 +281,31 @@ func formatDatasetSQL(result datasetsSvc.SQLResult) string {
 	return strings.Join(lines, "\n")
 }
 
+func chartArtifactInput(chart datasetsSvc.ChartResult) artifactsSvc.ChartArtifactReport {
+	return artifactsSvc.ChartArtifactReport{
+		Title:          chartArtifactTitle(chart),
+		SourcePath:     chart.RelPath,
+		Query:          chart.Query,
+		Format:         chart.Format,
+		Mode:           chart.Mode,
+		CategoryColumn: chart.CategoryColumn,
+		ValueColumn:    chart.ValueColumn,
+		SVG:            chart.SVG,
+		PointCount:     len(chart.Points),
+		Truncated:      chart.Truncated,
+	}
+}
+
+func chartArtifactTitle(chart datasetsSvc.ChartResult) string {
+	if chart.Mode == "line" && chart.ValueColumn != "" {
+		return fmt.Sprintf("Chart - %s over %s", chart.ValueColumn, chart.CategoryColumn)
+	}
+	if chart.Mode == "sum" && chart.ValueColumn != "" {
+		return fmt.Sprintf("Chart - %s by %s", chart.ValueColumn, chart.CategoryColumn)
+	}
+	return fmt.Sprintf("Chart - rows by %s", chart.CategoryColumn)
+}
+
 func formatSQLiteMetadata(metadata dbconnectorSvc.SQLiteMetadata) string {
 	lines := []string{
 		metadata.Message,
@@ -387,6 +455,15 @@ func minInt(left int, right int) int {
 		return left
 	}
 	return right
+}
+
+func firstNonEmptyTool(values ...string) string {
+	for _, value := range values {
+		if strings.TrimSpace(value) != "" {
+			return strings.TrimSpace(value)
+		}
+	}
+	return ""
 }
 
 func formatExtractedDocument(document documentsSvc.ExtractedDocument) string {

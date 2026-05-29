@@ -23,7 +23,7 @@ The implemented registry is exposed to the agent through `ToolDescriptors()` and
 | Terminal/tasks | `list_tasks`, `run_task`, `run_terminal_command` | Discovered safe tasks and one-shot approved terminal commands by executable name plus explicit JSON args. Shell interpreters and command paths are blocked. |
 | Browser/web | `web_fetch` | Approval-gated HTTP(S) text fetch only. Rendered browser automation remains planned. |
 | Artifacts | `read_artifact_lineage`, `regenerate_artifact` | Artifact lineage context and approval-gated regeneration for supported artifact kinds. |
-| Data | `profile_dataset`, `query_dataset`, `query_dataset_sql` | Local dataset profiling, bounded row queries, and medium-risk approval-gated SELECT-only dataset SQL. |
+| Data | `profile_dataset`, `query_dataset`, `query_dataset_sql`, `create_dataset_chart` | Local dataset profiling, bounded row queries, medium-risk approval-gated SELECT-only dataset SQL, and high-risk approval-gated chart artifact generation. |
 | Database | `inspect_sqlite`, `query_sqlite` | Medium-risk approval-gated workspace SQLite schema inspection and bounded read-only SELECT/WITH queries. |
 | Documents | `extract_document` | Bounded text and metadata extraction for supported workspace documents. |
 | Operations | `inspect_operations_files`, `generate_runbook` | Read-only operations file scan/inspection plus approval-gated runbook artifact generation from redacted evidence; no Docker/shell execution. |
@@ -71,7 +71,6 @@ The planned registry should be implemented in priority order, with tests and doc
 
 ### Data, Databases, And Connectors
 
-- `create_dataset_chart`: local dataset chart artifact generation.
 - `list_db_profiles`, `inspect_db_profile`, `query_db_profile`, `import_database_dump`: external database profile and sandbox import tools.
 - `list_connectors`, `run_connector_action`: permissioned non-database connectors such as GitHub, Jira, analytics, CRM, and cloud storage.
 
@@ -110,7 +109,7 @@ Before a planned tool becomes executable, it needs:
 
 ## Priority Order
 
-1. Expose the next already-built service capabilities as direct agent tools: artifact-backed dataset chart generation and job list/log/cancel.
+1. Expose the next already-built service capabilities as direct agent tools: job list/log/cancel.
 2. Add mutating Git tools with preview/approval/audit.
 3. Add browser automation with screenshots and rendered-page extraction.
 4. Add interactive terminal sessions on top of durable jobs.
