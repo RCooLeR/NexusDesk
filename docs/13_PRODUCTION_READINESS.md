@@ -15,7 +15,7 @@ Approximate migration status:
 - Wails-era useful workflow parity: roughly 97% complete.
 - Native Parity Beta readiness: roughly 96% complete.
 - Overall production readiness: roughly 95% complete.
-- Distribution and packaging readiness: roughly 75-80% complete.
+- Distribution and packaging readiness: roughly 80% complete.
 
 The app can already:
 
@@ -116,6 +116,7 @@ Required:
 
 - Repeatable Windows build pipeline with app icon, version metadata, installer/update plan, and code-signing path.
 - First native CI smoke matrix for Windows, macOS, and Linux covers formatting, `go test ./...`, `go vet ./...`, CGO/Fyne build, ldflag-backed version/commit/build-date metadata validation, release manifest generation/validation with artifact SHA256 and size, and `git diff --check`; signed release packaging and installer/update validation remain open.
+- Framework-free release packaging readiness evidence gate now blocks production readiness unless each platform records a valid manifest, approved artifact format, signing/notarization or package trust posture, installer/update/uninstall validation, clean-machine smoke, protected-secret storage smoke, and antivirus/release-note triage state.
 - Windows visual/manual smoke checklist for every main surface. Implemented in `docs/20_CLEAN_MACHINE_SMOKE_CHECKLIST.md` and exposed in-product from Help and the command palette.
 - Linux/macOS build investigation and explicit support matrix, defined in [Platform Support Matrix](14_PLATFORM_SUPPORT.md).
 - Antivirus false-positive mitigation notes and release-build hygiene. Implemented in `docs/22_RELEASE_HYGIENE_AND_ANTIVIRUS.md` and exposed in-product from Help and the command palette.

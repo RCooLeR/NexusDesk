@@ -419,6 +419,7 @@ Exit criteria:
 - [x] Harden native CI portability after matrix failures: POSIX-safe Unix gofmt check, Windows-path connector scope matching on non-Windows runners, and graceful Linux protected-secret refusal when `secret-tool` is unavailable.
 - [x] Add ldflag-backed app version/build metadata validation to native CI builds and About metadata.
 - [x] Add release manifest generation/validation to native CI builds with artifact name, size, SHA256, platform, version, commit, and build date metadata.
+- [x] Add framework-free release packaging readiness evaluator for Windows/macOS/Linux evidence gates: manifest validity, approved artifact format, signing/notarization or package trust, installer/update/uninstall smoke, clean-machine smoke, protected-secret smoke, and antivirus/release-note triage.
 - [ ] Expand CI into signed release packaging and installer/update validation.
 - [x] Windows visual/manual smoke checklist for every main surface.
 - [x] Linux/macOS build investigation and explicit support matrix.

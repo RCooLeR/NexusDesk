@@ -365,6 +365,7 @@ Already available:
 - Build metadata validation through ldflags.
 - CI matrix for Windows, macOS, and Linux formatting, tests, static analysis, and Fyne build smoke.
 - Native release manifest generation with artifact SHA256/size metadata.
+- Framework-free release packaging readiness evaluator for Windows/macOS/Linux evidence gates: manifest validity, approved artifact format, signing/notarization or package trust, installer/update/uninstall smoke, clean-machine smoke, protected-secret smoke, and antivirus/release-note triage.
 - Platform support matrix documentation.
 
 Planned/remaining:
@@ -372,7 +373,7 @@ Planned/remaining:
 - Signed Windows installer and release flow.
 - macOS packaging, signing, notarization path.
 - Linux package strategy, likely AppImage/deb/rpm or documented portable package.
-- Installer/update/uninstall validation.
+- CI/release wiring for signed packages, artifact upload, and installer/update/uninstall validation using the packaging readiness evidence gate.
 - Antivirus false-positive mitigation notes.
 - Release notes, smoke checklist, beta feedback loop.
 
@@ -675,6 +676,7 @@ The checklist below is intentionally large. `tracker.md` should keep task-level 
 - [x] Build metadata validation.
 - [x] Release manifest with hashes/sizes.
 - [x] Windows icon stamping.
+- [x] Release packaging readiness evidence gate for Windows/macOS/Linux.
 - [ ] Signed Windows installer.
 - [ ] macOS build, signing, notarization path.
 - [ ] Linux package strategy and smoke.

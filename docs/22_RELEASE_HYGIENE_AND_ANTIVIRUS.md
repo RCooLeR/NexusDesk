@@ -11,6 +11,7 @@ This document defines how NexusDesk should prepare, verify, communicate, and sup
 - The artifact must match a known commit and the release notes must name that commit.
 - The app About dialog, build metadata, release manifest, and release notes must agree on version, commit, build date, platform, and architecture.
 - The release manifest must record artifact name, platform, version, commit, build date, size, and SHA256.
+- The packaging readiness evidence gate must pass for the target platform before a package is considered production-ready.
 - Generated binaries such as local `nexusdesk.exe` files must not be committed.
 - Debug-only files, local logs, temporary package directories, secrets, test workspaces, and developer machine paths must not be bundled.
 
@@ -46,6 +47,24 @@ Linux:
 
 - Use the chosen package trust model once selected: archive, AppImage, deb/rpm, Flatpak, or repository packaging.
 - Document desktop entry/icon behavior, runtime dependencies, Wayland/X11 launch behavior, and Secret Service/libsecret behavior or explicit unsupported-secret refusal.
+
+## 2.1 Packaging Readiness Evidence Gate
+
+`nexus-app/internal/release` owns the framework-free packaging readiness evaluator so CI, release scripts, and future Diagnostics surfaces can ask the same question: is this artifact actually shippable for the target platform?
+
+The gate requires:
+
+- a valid release manifest with schema version, app identity, semantic version, commit, build date, platform, artifact name, positive size, SHA256, and generation time;
+- an approved artifact format for the target platform;
+- Windows code signing, macOS code signing and notarization, or a documented Linux package trust strategy;
+- installer/package install validation;
+- update or upgrade validation;
+- uninstall and app-data retention validation;
+- clean-machine smoke completion;
+- protected-secret storage smoke or explicit unsupported-platform refusal;
+- antivirus/signing/trust state recorded in release notes.
+
+Unsigned CI build artifacts and local developer binaries are useful for validation, but they must fail this gate until production signing/trust, installer/update/uninstall, smoke, and release-note evidence is recorded.
 
 ## 3. Antivirus False-Positive Triage
 
@@ -125,5 +144,6 @@ Block the release when any of these are true:
 
 - Native CI already validates formatting, tests, vet, CGO/Fyne builds, build metadata, release manifests, and whitespace checks.
 - Windows icon stamping and release manifest generation exist.
+- Packaging readiness evidence can now be evaluated for Windows, macOS, and Linux, but the current unsigned CI artifacts intentionally remain blocked until signing/trust and installer/update/uninstall smoke are wired into the release pipeline.
 - Clean-machine smoke, app data cleanup, safe agent guidance, and beta feedback docs are available in the app Help menu and command palette.
 - Signed packaging, installer/update validation, macOS signing/notarization, and Linux package strategy remain open production milestones.
