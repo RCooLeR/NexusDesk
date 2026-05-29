@@ -9,6 +9,7 @@ import (
 
 	"nexusdesk/internal/services/agent"
 	gitSvc "nexusdesk/internal/services/git"
+	workspacesvc "nexusdesk/internal/services/workspace"
 )
 
 func (h defaultHandlers) stageFile(ctx context.Context, call agent.ToolCall, request agent.Request) (agent.ToolResult, error) {
@@ -79,6 +80,44 @@ func (h defaultHandlers) createBranch(ctx context.Context, call agent.ToolCall, 
 		Mutated:     true,
 		Observation: formatGitBranchObservation(result),
 	}, nil
+}
+
+func (h defaultHandlers) revertChanges(ctx context.Context, call agent.ToolCall, request agent.Request) (agent.ToolResult, error) {
+	_ = ctx
+	if !request.ApproveWrites {
+		err := errors.New("approval is required before reverting workspace changes")
+		return agent.ToolResult{Name: call.Name, Args: call.Args, Risk: "high", Observation: err.Error(), Error: err.Error()}, err
+	}
+	root, err := workspaceRoot(request)
+	if err != nil {
+		return toolError(call, "high", err), err
+	}
+	relPath := firstArg(call, "relPath", "path")
+	if relPath == "" {
+		err := errors.New("relPath is required")
+		return toolError(call, "high", err), err
+	}
+	plan, err := h.deps.Git.PlanRevertChanges(root, relPath, firstArg(call, "scope"))
+	if err != nil {
+		return toolError(call, "high", err), err
+	}
+	switch plan.Action {
+	case gitSvc.RevertActionWrite:
+		proposal, err := h.deps.Workspace.ApplyFileWrite(root, workspacesvc.FileWriteRequest{RelPath: plan.Path, Content: plan.Content})
+		if err != nil {
+			return toolError(call, "high", err), err
+		}
+		return agent.ToolResult{Name: call.Name, Args: call.Args, Risk: "high", Observation: formatGitRevertWriteObservation(plan, proposal), Mutated: true}, nil
+	case gitSvc.RevertActionDelete:
+		proposal, err := h.deps.Workspace.ApplyFileDelete(root, plan.Path)
+		if err != nil {
+			return toolError(call, "high", err), err
+		}
+		return agent.ToolResult{Name: call.Name, Args: call.Args, Risk: "high", Observation: formatGitRevertDeleteObservation(plan, proposal), Mutated: true}, nil
+	default:
+		err := errors.New(plan.Message)
+		return toolError(call, "high", err), err
+	}
 }
 
 func (h defaultHandlers) applyGitFileAction(ctx context.Context, call agent.ToolCall, request agent.Request, action gitSvc.FileAction) (agent.ToolResult, error) {
@@ -233,6 +272,31 @@ func formatGitHunkActionObservation(result gitSvc.HunkActionResult) string {
 		fmt.Sprintf("Hunk index: %d", result.HunkIndex),
 	}
 	lines = append(lines, formatGitMutationStatus(result.Status)...)
+	return strings.Join(lines, "\n")
+}
+
+func formatGitRevertWriteObservation(plan gitSvc.RevertPlan, proposal workspacesvc.FileWriteProposal) string {
+	lines := []string{
+		plan.Message,
+		fmt.Sprintf("Path: %s", plan.Path),
+		fmt.Sprintf("Scope: %s", plan.Scope),
+		fmt.Sprintf("Action: %s", plan.Action),
+		"Rollback: " + proposal.RollbackID,
+	}
+	if proposal.Diff != "" {
+		lines = append(lines, "Diff:\n"+proposal.Diff)
+	}
+	return strings.Join(lines, "\n")
+}
+
+func formatGitRevertDeleteObservation(plan gitSvc.RevertPlan, proposal workspacesvc.FileOperationProposal) string {
+	lines := []string{
+		plan.Message,
+		fmt.Sprintf("Path: %s", plan.Path),
+		fmt.Sprintf("Scope: %s", plan.Scope),
+		fmt.Sprintf("Action: %s", plan.Action),
+		"Rollback: " + proposal.RollbackID,
+	}
 	return strings.Join(lines, "\n")
 }
 

@@ -578,7 +578,8 @@ The Fyne migration must not drop product ambition, but this section is intention
 - [x] Add approval-gated Git branch creation tool with branch-name validation, existing-branch rejection, optional checkout, no force, and no ref rewriting.
 - [x] Add approval-gated rollback-backed conflict-marker resolution tool for one workspace text file with `ours`, `theirs`, and `both` strategies.
 - [x] Add first-party security tools for redacting text, listing approval posture/records, and recording explicit future-approval requests for multi-step agent plans.
-- [ ] Add remaining mutating Git tools with preview, approval, audit, and no force/amend behavior by default: explicit destructive revert/discard workflows.
+- [x] Add approval-gated rollback-backed `revert_changes` tool for one file's unstaged tracked changes or explicit untracked-file deletion; staged resets remain blocked.
+- [ ] Add remaining mutating Git tools with preview, approval, audit, and no force/amend behavior by default: staged reset/discard, commit-level revert/cherry-pick, and PR collaboration workflows.
 - [ ] Add rendered browser automation tools with isolated sessions, screenshots, page extraction, and network-log redaction.
 - [ ] Add interactive terminal sessions on top of durable jobs, with cancellation and log/history audit.
 - [ ] Add MCP/plugin discovery and approved tool execution after native core tools are stable.

@@ -67,7 +67,7 @@ func plannedToolCatalog() []ToolCatalogEntry {
 		plannedTool("editor", "generate_tests", "Generate or update test files from selected code and project conventions.", "high", "relPath, targetRelPath(optional), instructions(optional)", "coding", "Should use safe write/patch tools and run focused tests after approval."),
 		plannedTool("editor", "review_code_selection", "Review selected code or diff with structured findings.", "low", "relPath(optional), diffScope(optional)", "coding", "Can start as an assistant workflow, then become a recorded tool output."),
 
-		plannedTool("git", "revert_changes", "Revert selected working-tree changes through an explicit preview.", "high", "relPath(optional), scope", "git parity", "Destructive; needs preview, confirmation, and audit."),
+		plannedTool("git", "revert_staged_changes", "Discard selected staged changes through an explicit preview.", "high", "relPath(optional), scope", "git parity", "Destructive; needs preview, confirmation, and audit."),
 		plannedTool("github", "draft_pull_request", "Draft a PR title/body from branch diff and issue context.", "medium", "base(optional), head(optional)", "collaboration", "Creation/push stays separate and approval-gated."),
 		plannedTool("github", "create_pull_request", "Create a PR through a configured connector.", "high", "base, head, title, body", "collaboration", "Requires connector auth, permission check, and audit."),
 		plannedTool("github", "read_pr_comments", "Read review comments and unresolved threads.", "medium", "repo, prNumber", "collaboration", "Requires GitHub connector and source mapping."),
@@ -136,7 +136,7 @@ func implementedToolCategory(name string) string {
 		return "documents"
 	case "inspect_operations_files", "generate_runbook":
 		return "operations"
-	case "read_git_status", "read_git_diff", "read_git_history", "read_git_blame", "stage_file", "unstage_file", "stage_hunk", "unstage_hunk", "commit_changes", "create_branch", "resolve_conflict":
+	case "read_git_status", "read_git_diff", "read_git_history", "read_git_blame", "stage_file", "unstage_file", "stage_hunk", "unstage_hunk", "commit_changes", "create_branch", "resolve_conflict", "revert_changes":
 		return "git"
 	case "list_tasks", "run_task":
 		return "tasks"

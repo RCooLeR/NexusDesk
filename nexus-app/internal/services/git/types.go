@@ -109,6 +109,24 @@ type BranchResult struct {
 	GeneratedAt   time.Time
 }
 
+type RevertAction string
+
+const (
+	RevertActionWrite  RevertAction = "write"
+	RevertActionDelete RevertAction = "delete"
+)
+
+type RevertPlan struct {
+	Path        string
+	Scope       string
+	Action      RevertAction
+	Content     string
+	Change      FileChange
+	Message     string
+	Status      Status
+	GeneratedAt time.Time
+}
+
 type HistoryEntry struct {
 	Hash      string
 	ShortHash string

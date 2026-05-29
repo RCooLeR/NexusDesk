@@ -718,6 +718,73 @@ func TestDefaultDispatcherCreateBranchTool(t *testing.T) {
 	}
 }
 
+func TestDefaultDispatcherRevertChangesTool(t *testing.T) {
+	if _, err := exec.LookPath("git"); err != nil {
+		t.Skip("git executable is not available")
+	}
+	root := t.TempDir()
+	runToolTestGit(t, root, "init")
+	runToolTestGit(t, root, "config", "user.email", "test@example.com")
+	runToolTestGit(t, root, "config", "user.name", "Test User")
+	path := filepath.Join(root, "notes.txt")
+	if err := os.WriteFile(path, []byte("original\n"), 0o644); err != nil {
+		t.Fatalf("write notes file: %v", err)
+	}
+	runToolTestGit(t, root, "add", "notes.txt")
+	runToolTestGit(t, root, "commit", "-m", "initial notes")
+	if err := os.WriteFile(path, []byte("changed\n"), 0o644); err != nil {
+		t.Fatalf("modify notes file: %v", err)
+	}
+	dispatcher := NewDefaultDispatcher(Dependencies{Workspace: workspaceSvc.New()})
+	call := agent.ToolCall{Name: "revert_changes", Args: map[string]string{"relPath": "notes.txt"}}
+
+	blocked, err := dispatcher.ExecuteTool(context.Background(), call, agent.Request{WorkspaceRoot: root})
+	if err == nil || blocked.Risk != "high" || !strings.Contains(blocked.Observation, "approval") {
+		t.Fatalf("expected revert_changes approval block, got result=%#v err=%v", blocked, err)
+	}
+	reverted, err := dispatcher.ExecuteTool(context.Background(), call, agent.Request{WorkspaceRoot: root, ApproveWrites: true})
+	if err != nil {
+		t.Fatalf("revert_changes returned error: %v", err)
+	}
+	if !reverted.Mutated || !strings.Contains(reverted.Observation, "Prepared to restore notes.txt") || !strings.Contains(reverted.Observation, "Rollback:") {
+		t.Fatalf("unexpected revert observation:\n%s", reverted.Observation)
+	}
+	data, err := os.ReadFile(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if string(data) != "original\n" {
+		t.Fatalf("expected file to be restored, got %q", data)
+	}
+	workspace := workspaceSvc.New()
+	rollbacks, err := workspace.ListRollbacks(root)
+	if err != nil {
+		t.Fatalf("ListRollbacks returned error: %v", err)
+	}
+	if len(rollbacks) != 1 {
+		t.Fatalf("expected rollback record, got %#v", rollbacks)
+	}
+
+	untrackedPath := filepath.Join(root, "scratch.txt")
+	if err := os.WriteFile(untrackedPath, []byte("draft\n"), 0o644); err != nil {
+		t.Fatalf("write untracked file: %v", err)
+	}
+	untrackedBlocked, err := dispatcher.ExecuteTool(context.Background(), agent.ToolCall{Name: "revert_changes", Args: map[string]string{"relPath": "scratch.txt"}}, agent.Request{WorkspaceRoot: root, ApproveWrites: true})
+	if err == nil || untrackedBlocked.Mutated || !strings.Contains(untrackedBlocked.Observation, "scope=untracked") {
+		t.Fatalf("expected untracked scope rejection, got result=%#v err=%v", untrackedBlocked, err)
+	}
+	deleted, err := dispatcher.ExecuteTool(context.Background(), agent.ToolCall{Name: "revert_changes", Args: map[string]string{"relPath": "scratch.txt", "scope": "untracked"}}, agent.Request{WorkspaceRoot: root, ApproveWrites: true})
+	if err != nil {
+		t.Fatalf("revert_changes untracked returned error: %v", err)
+	}
+	if !deleted.Mutated || !strings.Contains(deleted.Observation, "delete untracked file scratch.txt") {
+		t.Fatalf("unexpected untracked revert observation:\n%s", deleted.Observation)
+	}
+	if _, err := os.Stat(untrackedPath); !os.IsNotExist(err) {
+		t.Fatalf("expected untracked file to be deleted, got err=%v", err)
+	}
+}
+
 func TestDefaultDispatcherArtifactLineageTool(t *testing.T) {
 	root := t.TempDir()
 	if err := os.WriteFile(filepath.Join(root, "README.md"), []byte("# Project\n"), 0o644); err != nil {
