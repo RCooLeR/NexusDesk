@@ -57,15 +57,10 @@ func (s *Store) WritePresentationPackageReport(report PresentationPackageReport)
 	if title == "" {
 		title = presentationPackageTitle(report.SourceTitle, report.SourcePath)
 	}
-	relPath := s.relPath("presentation-packages", fmt.Sprintf("%s-%s.zip", artifactTimestamp(createdAt), safeName(title)))
-	absPath := s.absPath(relPath)
-	if err := os.MkdirAll(filepath.Dir(absPath), 0o755); err != nil {
-		return Artifact{}, err
-	}
 	sourcePaths := presentationOutlineSourcePaths(report.SourcePath, report.SourcePaths)
 	slides := presentationSlidesFromMarkdown(outline)
 	files := []string{"manifest.json", "outline.md", "slides.json", "slides.md", "README.md"}
-	file, err := os.OpenFile(absPath, os.O_WRONLY|os.O_CREATE|os.O_EXCL, 0o644)
+	relPath, absPath, file, err := s.createUniqueArtifactFile("presentation-packages", title, ".zip", createdAt)
 	if err != nil {
 		return Artifact{}, err
 	}

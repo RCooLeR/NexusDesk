@@ -269,7 +269,7 @@ The latest `claude-findings.md` is useful and should be treated as the current r
 2. XLSX/DOCX/PPTX zip decompression caps: implemented shared zip file-count, package-member, total-uncompressed, XLSX XML-member, DOCX body, and structured-preview compressed-size caps before parsing.
 3. macOS Keychain argv secret leak: implemented Security.framework-backed storage so secrets are passed as private bytes rather than process arguments; macOS clean-machine smoke still needs to verify Keychain prompts and signing behavior.
 4. Windows DPAPI buffer pinning: implemented `runtime.KeepAlive` after native calls, hardened `LocalFree` cleanup, and added Windows round-trip coverage.
-5. DNS rebinding SSRF in `web_fetch`: enforce private-range rejection at dial time, not only lookup/URL validation time.
+5. DNS rebinding SSRF in `web_fetch`: implemented a guarded HTTP transport that re-resolves and rejects private, loopback, link-local, multicast, and unspecified targets at dial time, with redirect validation retained.
 6. Workspace search performance: add byte/chunk search fast path and avoid full preview decode/classification for every file.
 7. External DB TLS defaults: require encrypted connections by default and make plaintext an explicit audited development-only choice.
 8. Metadata SQLite WAL/busy timeout: reduce UI/agent write contention under long sessions.
@@ -332,7 +332,7 @@ Every current `claude-findings.md` item is tracked here so no finding is lost wh
 - [ ] H-2.5 Activity log still reparses the whole bounded Markdown buffer: move to list/per-line rendering or throttled incremental rendering.
 - [ ] H-2.6 External DB connector defaults can downgrade to plaintext: default PostgreSQL/MySQL/SQL Server to encrypted connections and require audited plaintext opt-in.
 - [ ] H-2.7 Mutating tool verification whitelist is incomplete: trust `ToolResult.Mutated`, mark every mutating handler correctly, and remove fragile whitelist behavior.
-- [ ] H-2.8 `web_fetch` is vulnerable to DNS rebinding SSRF: enforce private/link-local/multicast rejection at dial time and cover redirects/tests.
+- [x] H-2.8 `web_fetch` is hardened against DNS rebinding SSRF: URL validation and the guarded HTTP transport both reject private, loopback, link-local, multicast, and unspecified targets; redirects are revalidated and dial-time tests cover rebinding to loopback/multicast.
 - [ ] H-2.9 LCS diff and rollback snapshots can consume too much memory/disk: add bounded diff strategy, content-addressable rollback storage, and rollback usage diagnostics.
 - [ ] H-2.10 Two-layer bottom tab navigation still hides functions: continue bottom tool-window grouping and one-click discoverability polish.
 - [ ] H-2.11 SQL guard can block valid keywords inside string literals: improve tokenizer/parser behavior and add fuzz/property tests.
@@ -407,16 +407,15 @@ Every current `claude-findings.md` item is tracked here so no finding is lost wh
 
 Future development sessions should pick one logical milestone from this order:
 
-1. Harden `web_fetch` against DNS rebinding SSRF.
-2. Replace workspace search preview-decode path with a fast bounded byte/chunk search path.
+1. Replace workspace search preview-decode path with a fast bounded byte/chunk search path.
+2. Start UI shell controller extraction with Data, Assistant, Artifacts, Diagnostics, and Editor controllers.
 3. Enforce safer connector TLS defaults with explicit audited plaintext opt-in.
 4. Add metadata WAL/busy timeout and diagnostics visibility.
 5. Throttle assistant streaming, agent events, and activity rendering.
 6. Move editor save/diff/rollback off the UI thread and preserve editor state after save.
-7. Start UI shell controller extraction with Data, Assistant, Artifacts, Diagnostics, and Editor controllers.
-8. Wire signed packaging, installer/update/uninstall evidence into CI/release using the packaging readiness gate.
-9. Run macOS clean-machine Keychain smoke to verify Security.framework prompts, signing/notarization behavior, and no-cgo refusal messaging.
-10. Continue JetBrains-like UI polish once the above trust/performance risks are under control.
+7. Wire signed packaging, installer/update/uninstall evidence into CI/release using the packaging readiness gate.
+8. Run macOS clean-machine Keychain smoke to verify Security.framework prompts, signing/notarization behavior, and no-cgo refusal messaging.
+9. Continue JetBrains-like UI polish once the above trust/performance risks are under control.
 
 ## 8. Keep-Going Prompt
 

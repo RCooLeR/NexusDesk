@@ -40,7 +40,7 @@ Summary:
 - Final UI direction is a professional JetBrains-like native workbench: top menu/toolbar, left project/tool rail, central tabbed editor, right integrated assistant, grouped bottom tool windows, compact dark theme, strong keyboard workflows, DataGrip-style data surfaces, and trust-building settings/diagnostics.
 - Native theme token baseline is defined in `docs/26_NATIVE_THEME_TOKENS.md` and implemented in `nexus-app/internal/ui/theme`; future UI polish should reuse those tokens rather than adding ad hoc colors.
 - Compact and comfortable density modes are defined in `nexus-app/internal/ui/theme`; compact remains the production default while comfortable is ready for future preferences/onboarding work.
-- The latest Claude findings are now consolidated into `docs/29_FULL_PROJECT_REVIEW_AND_ROADMAP.md`; the top production risks are DNS-rebinding SSRF hardening, workspace search performance, connector TLS defaults, metadata WAL/busy timeout, streaming/activity throttling, editor-save threading, UI shell controller extraction, and platform protected-secret smoke.
+- The latest Claude findings are now consolidated into `docs/29_FULL_PROJECT_REVIEW_AND_ROADMAP.md`; the top production risks are workspace search performance, connector TLS defaults, metadata WAL/busy timeout, streaming/activity throttling, editor-save threading, UI shell controller extraction, signed packaging, and platform protected-secret smoke.
 - `app-wails/` should remain as reference until the remaining native parity blockers are completed or explicitly moved out of Native Parity Beta.
 
 Production direction:
@@ -54,7 +54,7 @@ Immediate execution order:
 
 - Keep `docs/17_END_TO_END_PRODUCTION_PLAN.md` current as the product north star for all repeated development sessions.
 - Use `docs/29_FULL_PROJECT_REVIEW_AND_ROADMAP.md` as the current consolidated review snapshot when choosing the next safety, parity, UI, packaging, or production milestone.
-- Fix the remaining P0 Claude/Codex review items before broad new feature work: DNS-rebinding SSRF hardening and workspace search fast path.
+- Fix the remaining P0 Claude/Codex review items before broad new feature work: workspace search fast path and UI shell controller extraction.
 - Validate macOS Keychain and Linux Secret Service/libsecret behavior during platform packaging smoke.
 - Apply the durable slow-job contract to OCR, dump imports, connector pulls, long indexing, report generation, and long agent runs as those workflows are implemented.
 - Keep the documented native editor parity strategy visible in Language Actions and continue post-beta LSP/inline-styling spikes without blocking Native Parity Beta.
@@ -768,7 +768,7 @@ Source: `claude-findings.md`. Detailed plan context lives in `docs/29_FULL_PROJE
 - [ ] H-2.5 Activity log still reparses the whole bounded Markdown buffer: move to list/per-line rendering or throttled incremental rendering.
 - [ ] H-2.6 External DB connector defaults can downgrade to plaintext: default PostgreSQL/MySQL/SQL Server to encrypted connections and require audited plaintext opt-in.
 - [ ] H-2.7 Mutating tool verification whitelist is incomplete: trust `ToolResult.Mutated`, mark every mutating handler correctly, and remove fragile whitelist behavior.
-- [ ] H-2.8 `web_fetch` is vulnerable to DNS rebinding SSRF: enforce private/link-local/multicast rejection at dial time and cover redirects/tests.
+- [x] H-2.8 `web_fetch` is hardened against DNS rebinding SSRF: URL validation and the guarded HTTP transport both reject private, loopback, link-local, multicast, and unspecified targets; redirects are revalidated and dial-time tests cover rebinding to loopback/multicast.
 - [ ] H-2.9 LCS diff and rollback snapshots can consume too much memory/disk: add bounded diff strategy, content-addressable rollback storage, and rollback usage diagnostics.
 - [ ] H-2.10 Two-layer bottom tab navigation still hides functions: continue bottom tool-window grouping and one-click discoverability polish.
 - [ ] H-2.11 SQL guard can block valid keywords inside string literals: improve tokenizer/parser behavior and add fuzz/property tests.

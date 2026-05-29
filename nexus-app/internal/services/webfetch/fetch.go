@@ -24,6 +24,8 @@ const (
 	maxRedirects    = 3
 )
 
+var resolveHostIPs = defaultResolveHostIPs
+
 type Request struct {
 	URL            string
 	AllowedDomains []string
@@ -66,7 +68,8 @@ func Fetch(ctx context.Context, request Request) (Result, error) {
 
 	redirects := 0
 	client := &http.Client{
-		Timeout: timeout,
+		Timeout:   timeout,
+		Transport: guardedTransport(request.AllowLocal),
 		CheckRedirect: func(req *http.Request, via []*http.Request) error {
 			redirects = len(via)
 			if len(via) >= maxRedirects {
@@ -172,25 +175,81 @@ func rejectPrivateHost(host string) error {
 	if strings.EqualFold(host, "localhost") {
 		return errors.New("web fetch blocks localhost unless allowLocal is enabled")
 	}
-	ips := []net.IP{}
-	if ip := net.ParseIP(host); ip != nil {
-		ips = append(ips, ip)
-	} else {
-		resolved, err := net.LookupIP(host)
-		if err != nil {
-			return err
-		}
-		ips = append(ips, resolved...)
+	ips, err := resolveHostIPs(context.Background(), host)
+	if err != nil {
+		return err
 	}
 	for _, ip := range ips {
-		if ip == nil {
-			continue
-		}
-		if ip.IsLoopback() || ip.IsPrivate() || ip.IsLinkLocalUnicast() || ip.IsLinkLocalMulticast() || ip.IsUnspecified() {
+		if blockedLocalIP(ip) {
 			return errors.New("web fetch blocks private, loopback, link-local, and unspecified hosts unless allowLocal is enabled")
 		}
 	}
 	return nil
+}
+
+func guardedTransport(allowLocal bool) *http.Transport {
+	transport := http.DefaultTransport.(*http.Transport).Clone()
+	transport.Proxy = nil
+	dialer := &net.Dialer{Timeout: defaultTimeout, KeepAlive: 30 * time.Second}
+	transport.DialContext = func(ctx context.Context, network string, address string) (net.Conn, error) {
+		host, port, err := net.SplitHostPort(address)
+		if err != nil {
+			return nil, err
+		}
+		ips, err := resolveHostIPs(ctx, host)
+		if err != nil {
+			return nil, err
+		}
+		var blocked []string
+		for _, ip := range ips {
+			if ip == nil {
+				continue
+			}
+			if !allowLocal && blockedLocalIP(ip) {
+				blocked = append(blocked, ip.String())
+				continue
+			}
+			return dialer.DialContext(ctx, network, net.JoinHostPort(ip.String(), port))
+		}
+		if len(blocked) > 0 {
+			return nil, fmt.Errorf("web fetch blocks private, loopback, link-local, multicast, and unspecified dial targets unless allowLocal is enabled: %s", strings.Join(blocked, ", "))
+		}
+		return nil, fmt.Errorf("web fetch could not resolve a usable address for %s", net.JoinHostPort(host, port))
+	}
+	return transport
+}
+
+func defaultResolveHostIPs(ctx context.Context, host string) ([]net.IP, error) {
+	host = strings.TrimSpace(strings.Trim(host, "[]"))
+	if host == "" {
+		return nil, errors.New("host is required")
+	}
+	if ip := net.ParseIP(host); ip != nil {
+		return []net.IP{ip}, nil
+	}
+	addresses, err := net.DefaultResolver.LookupIPAddr(ctx, host)
+	if err != nil {
+		return nil, err
+	}
+	ips := make([]net.IP, 0, len(addresses))
+	for _, address := range addresses {
+		if address.IP != nil {
+			ips = append(ips, address.IP)
+		}
+	}
+	return ips, nil
+}
+
+func blockedLocalIP(ip net.IP) bool {
+	if ip == nil {
+		return false
+	}
+	return ip.IsLoopback() ||
+		ip.IsPrivate() ||
+		ip.IsLinkLocalUnicast() ||
+		ip.IsLinkLocalMulticast() ||
+		ip.IsMulticast() ||
+		ip.IsUnspecified()
 }
 
 func isTextLikeContentType(contentType string) bool {

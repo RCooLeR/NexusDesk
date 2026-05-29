@@ -2,9 +2,11 @@ package webfetch
 
 import (
 	"context"
+	"net"
 	"net/http"
 	"net/http/httptest"
 	"strings"
+	"sync/atomic"
 	"testing"
 )
 
@@ -24,6 +26,53 @@ func TestFetchBlocksLocalByDefault(t *testing.T) {
 	_, err := Fetch(context.Background(), Request{URL: server.URL})
 	if err == nil || !strings.Contains(err.Error(), "blocks private") {
 		t.Fatalf("expected local host rejection, got %v", err)
+	}
+}
+
+func TestFetchBlocksDNSRebindingAtDialTime(t *testing.T) {
+	var calls atomic.Int32
+	oldResolver := resolveHostIPs
+	resolveHostIPs = func(ctx context.Context, host string) ([]net.IP, error) {
+		if host != "rebind.test" {
+			return oldResolver(ctx, host)
+		}
+		if calls.Add(1) == 1 {
+			return []net.IP{net.ParseIP("93.184.216.34")}, nil
+		}
+		return []net.IP{net.ParseIP("127.0.0.1")}, nil
+	}
+	t.Cleanup(func() {
+		resolveHostIPs = oldResolver
+	})
+
+	_, err := Fetch(context.Background(), Request{URL: "http://rebind.test/"})
+	if err == nil || !strings.Contains(err.Error(), "blocks private") {
+		t.Fatalf("expected dial-time private target rejection, got %v", err)
+	}
+	if calls.Load() < 2 {
+		t.Fatalf("expected resolver to be called during validation and dial, got %d call(s)", calls.Load())
+	}
+}
+
+func TestFetchBlocksMulticastAtDialTime(t *testing.T) {
+	var calls atomic.Int32
+	oldResolver := resolveHostIPs
+	resolveHostIPs = func(ctx context.Context, host string) ([]net.IP, error) {
+		if host != "multicast.test" {
+			return oldResolver(ctx, host)
+		}
+		if calls.Add(1) == 1 {
+			return []net.IP{net.ParseIP("93.184.216.34")}, nil
+		}
+		return []net.IP{net.ParseIP("224.0.0.1")}, nil
+	}
+	t.Cleanup(func() {
+		resolveHostIPs = oldResolver
+	})
+
+	_, err := Fetch(context.Background(), Request{URL: "http://multicast.test/"})
+	if err == nil || !strings.Contains(err.Error(), "blocks private") {
+		t.Fatalf("expected dial-time multicast target rejection, got %v", err)
 	}
 }
 
