@@ -231,6 +231,7 @@ Goal: port the LLM and agent runtime without recreating the Wails bridge problem
 - [x] Add durable job and SQLite tool-run audit persistence for native agent runs.
 - [x] Add native audit/history UI for persisted agent runs and tool runs.
 - [x] Add agent-safe write/append/copy/move/delete/apply_patch tools gated by full-project access and rollback snapshots.
+- [x] Add low-risk native `read_dependency_graph` agent tool for bounded Go/JavaScript/TypeScript/Python/stylesheet dependency context.
 
 Exit criteria:
 

@@ -1112,6 +1112,38 @@ func TestDefaultDispatcherFindReferencesTool(t *testing.T) {
 	}
 }
 
+func TestDefaultDispatcherReadDependencyGraphTool(t *testing.T) {
+	root := t.TempDir()
+	if err := os.MkdirAll(filepath.Join(root, "src"), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(root, "src", "app.ts"), []byte("import { api } from './api'\nconst fs = require('fs')\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(root, "src", "api.ts"), []byte("export const api = 1\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	dispatcher := NewDefaultDispatcher(Dependencies{Workspace: workspaceSvc.New()})
+
+	result, err := dispatcher.ExecuteTool(context.Background(), agent.ToolCall{Name: "read_dependency_graph", Args: map[string]string{"relPath": "src", "maxFiles": "20", "maxEdges": "20"}}, agent.Request{WorkspaceRoot: root})
+	if err != nil {
+		t.Fatalf("read_dependency_graph returned error: %v", err)
+	}
+	for _, expected := range []string{"Native dependency graph.", "Scope: src", "scanned 2 file(s)", "src/app.ts:1 -> src/api.ts [js-import/resolved] ./api", "src/app.ts:2 -> external:fs [js-require/external] fs"} {
+		if !strings.Contains(result.Observation, expected) {
+			t.Fatalf("dependency graph observation missing %q:\n%s", expected, result.Observation)
+		}
+	}
+
+	empty, err := dispatcher.ExecuteTool(context.Background(), agent.ToolCall{Name: "read_dependency_graph", Args: map[string]string{"relPath": "src/api.ts"}}, agent.Request{WorkspaceRoot: root})
+	if err != nil {
+		t.Fatalf("read_dependency_graph focused file returned error: %v", err)
+	}
+	if !strings.Contains(empty.Observation, "No supported code dependency edges found") {
+		t.Fatalf("expected empty graph observation, got:\n%s", empty.Observation)
+	}
+}
+
 func TestDefaultDispatcherArtifactLineageTool(t *testing.T) {
 	root := t.TempDir()
 	if err := os.WriteFile(filepath.Join(root, "README.md"), []byte("# Project\n"), 0o644); err != nil {
