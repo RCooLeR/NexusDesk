@@ -13,11 +13,11 @@ import (
 )
 
 func (v *View) activeEditorTabID() (string, bool) {
-	item := v.editorTabs.Selected()
+	item := v.editor.tabs.Selected()
 	if item == nil {
 		return "", false
 	}
-	id := strings.TrimSpace(v.tabIDs[item])
+	id := strings.TrimSpace(v.editor.tabIDs[item])
 	if id == "" {
 		return "", false
 	}

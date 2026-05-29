@@ -23,6 +23,29 @@ func newEditorTabs(welcomeItem *container.TabItem) *container.DocTabs {
 	return tabs
 }
 
+type editorController struct {
+	view             *View
+	tabs             *container.DocTabs
+	openTabs         map[string]*container.TabItem
+	tabIDs           map[*container.TabItem]string
+	previews         map[string]domain.FilePreview
+	textEditors      map[string]*textEditorBinding
+	splitEnabled     bool
+	secondaryRelPath string
+}
+
+func newEditorController(view *View, initialTabID string, welcomeItem *container.TabItem) *editorController {
+	tabs := newEditorTabs(welcomeItem)
+	return &editorController{
+		view:        view,
+		tabs:        tabs,
+		openTabs:    map[string]*container.TabItem{initialTabID: tabs.Items[0]},
+		tabIDs:      map[*container.TabItem]string{tabs.Items[0]: initialTabID},
+		previews:    map[string]domain.FilePreview{},
+		textEditors: map[string]*textEditorBinding{},
+	}
+}
+
 func (v *View) newWelcomePanel() fyne.CanvasObject {
 	title := widget.NewRichTextFromMarkdown("# Nexus Augentic Studio\n\nNative local-first workbench for code, data, agents, and artifacts.")
 	openWorkspaceButton := widget.NewButtonWithIcon("Open Workspace", theme.FolderOpenIcon(), v.openWorkspaceDialog)
@@ -136,25 +159,25 @@ func (v *View) clearRecentWorkspaces() {
 }
 
 func (v *View) openHomeTab() {
-	for item, id := range v.tabIDs {
+	for item, id := range v.editor.tabIDs {
 		tab, ok := v.editorSession.Tab(id)
 		if !ok || tab.Kind != editorSvc.KindWelcome {
 			continue
 		}
 		item.Content = v.newWelcomePanel()
-		v.editorTabs.Select(item)
+		v.editor.tabs.Select(item)
 		return
 	}
 	tabState := v.editorSession.OpenWelcome("Home")
 	item := container.NewTabItemWithIcon(editorTabTitle(tabState), theme.HomeIcon(), v.newWelcomePanel())
-	v.openTabs[tabState.ID] = item
-	v.tabIDs[item] = tabState.ID
-	v.editorTabs.Append(item)
-	v.editorTabs.Select(item)
+	v.editor.openTabs[tabState.ID] = item
+	v.editor.tabIDs[item] = tabState.ID
+	v.editor.tabs.Append(item)
+	v.editor.tabs.Select(item)
 }
 
 func (v *View) refreshWelcomeTabs() {
-	for item, id := range v.tabIDs {
+	for item, id := range v.editor.tabIDs {
 		tab, ok := v.editorSession.Tab(id)
 		if !ok || tab.Kind != editorSvc.KindWelcome {
 			continue
@@ -165,40 +188,40 @@ func (v *View) refreshWelcomeTabs() {
 }
 
 func (v *View) configureEditorTabs() {
-	v.editorTabs.CloseIntercept = func(item *container.TabItem) {
+	v.editor.tabs.CloseIntercept = func(item *container.TabItem) {
 		v.requestCloseTab(item)
 	}
-	v.editorTabs.OnSelected = func(*container.TabItem) {
+	v.editor.tabs.OnSelected = func(*container.TabItem) {
 		v.refreshStatusBar()
 	}
 }
 
 func (v *View) openPreviewTab(preview domain.FilePreview) {
 	tabState := v.editorSession.OpenFileWithSource(preview.RelPath, filepath.Base(preview.RelPath), preview.Text)
-	if existing := v.openTabs[tabState.ID]; existing != nil {
+	if existing := v.editor.openTabs[tabState.ID]; existing != nil {
 		existing.Content = v.newEditorPanel(tabState, preview)
 		v.updateEditorTabState(tabState)
-		v.editorTabs.Select(existing)
+		v.editor.tabs.Select(existing)
 		return
 	}
 	tab := container.NewTabItemWithIcon(editorTabTitle(tabState), editorTabIcon(tabState), v.newEditorPanel(tabState, preview))
-	v.openTabs[tabState.ID] = tab
-	v.tabIDs[tab] = tabState.ID
-	v.editorTabs.Append(tab)
-	v.editorTabs.Select(tab)
+	v.editor.openTabs[tabState.ID] = tab
+	v.editor.tabIDs[tab] = tabState.ID
+	v.editor.tabs.Append(tab)
+	v.editor.tabs.Select(tab)
 }
 
 func (v *View) addPlaceholderTab(title string, body string) {
 	tabState := v.editorSession.OpenPlaceholder(title)
 	tab := container.NewTabItemWithIcon(editorTabTitle(tabState), editorTabIcon(tabState), widget.NewRichTextFromMarkdown(body))
-	v.openTabs[tabState.ID] = tab
-	v.tabIDs[tab] = tabState.ID
-	v.editorTabs.Append(tab)
-	v.editorTabs.Select(tab)
+	v.editor.openTabs[tabState.ID] = tab
+	v.editor.tabIDs[tab] = tabState.ID
+	v.editor.tabs.Append(tab)
+	v.editor.tabs.Select(tab)
 }
 
 func (v *View) closeWelcomeTabs() {
-	for item, id := range v.tabIDs {
+	for item, id := range v.editor.tabIDs {
 		tab, ok := v.editorSession.Tab(id)
 		if !ok || tab.Kind != editorSvc.KindWelcome {
 			continue

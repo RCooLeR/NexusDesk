@@ -6,7 +6,7 @@ import (
 )
 
 func (v *View) closeSelectedTab() {
-	item := v.editorTabs.Selected()
+	item := v.editor.tabs.Selected()
 	if item == nil {
 		return
 	}
@@ -14,13 +14,13 @@ func (v *View) closeSelectedTab() {
 }
 
 func (v *View) requestCloseTab(item *container.TabItem) {
-	id := v.tabIDs[item]
+	id := v.editor.tabIDs[item]
 	if id == "" {
-		v.editorTabs.Remove(item)
+		v.editor.tabs.Remove(item)
 		return
 	}
 	if tab, ok := v.editorSession.Tab(id); ok && tab.Dirty {
-		v.editorTabs.Select(item)
+		v.editor.tabs.Select(item)
 		dialog.ShowConfirm("Discard unsaved changes?", dirtyTabCloseMessage(tab.Title), func(confirm bool) {
 			v.handleDirtyTabCloseDecision(item, id, tab.Title, confirm)
 		}, v.window)
@@ -32,7 +32,7 @@ func (v *View) requestCloseTab(item *container.TabItem) {
 func (v *View) handleDirtyTabCloseDecision(item *container.TabItem, id string, title string, confirm bool) {
 	if !confirm {
 		v.addActivity("Kept modified tab " + title + " open.")
-		v.editorTabs.Select(item)
+		v.editor.tabs.Select(item)
 		return
 	}
 	v.closeEditorTabItem(item, id, true)
@@ -41,14 +41,14 @@ func (v *View) handleDirtyTabCloseDecision(item *container.TabItem, id string, t
 func (v *View) closeEditorTabItem(item *container.TabItem, id string, force bool) {
 	if _, ok := v.editorSession.Close(id, force); !ok {
 		v.addActivity("Close blocked because the tab has unsaved changes.")
-		v.editorTabs.Select(item)
+		v.editor.tabs.Select(item)
 		return
 	}
-	delete(v.openTabs, id)
-	delete(v.tabIDs, item)
-	delete(v.editorPreviews, id)
+	delete(v.editor.openTabs, id)
+	delete(v.editor.tabIDs, item)
+	delete(v.editor.previews, id)
 	v.removeTextEditor(id)
-	v.editorTabs.Remove(item)
+	v.editor.tabs.Remove(item)
 }
 
 func dirtyTabCloseMessage(tabTitle string) string {
@@ -67,17 +67,17 @@ func (v *View) selectPreviousTab() {
 }
 
 func (v *View) selectRelativeTab(delta int) {
-	if len(v.editorTabs.Items) == 0 {
+	if len(v.editor.tabs.Items) == 0 {
 		return
 	}
-	current := v.editorTabs.Selected()
+	current := v.editor.tabs.Selected()
 	index := 0
-	for i, item := range v.editorTabs.Items {
+	for i, item := range v.editor.tabs.Items {
 		if item == current {
 			index = i
 			break
 		}
 	}
-	next := (index + delta + len(v.editorTabs.Items)) % len(v.editorTabs.Items)
-	v.editorTabs.Select(v.editorTabs.Items[next])
+	next := (index + delta + len(v.editor.tabs.Items)) % len(v.editor.tabs.Items)
+	v.editor.tabs.Select(v.editor.tabs.Items[next])
 }

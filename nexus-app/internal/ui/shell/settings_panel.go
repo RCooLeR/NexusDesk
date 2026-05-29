@@ -21,16 +21,16 @@ import (
 func (v *View) openSettingsTab() {
 	tabState := v.editorSession.OpenPlaceholder("Settings")
 	content := v.newSettingsPanel()
-	if existing := v.openTabs[tabState.ID]; existing != nil {
+	if existing := v.editor.openTabs[tabState.ID]; existing != nil {
 		existing.Content = content
-		v.editorTabs.Select(existing)
+		v.editor.tabs.Select(existing)
 		return
 	}
 	tab := container.NewTabItemWithIcon(editorTabTitle(tabState), theme.SettingsIcon(), content)
-	v.openTabs[tabState.ID] = tab
-	v.tabIDs[tab] = tabState.ID
-	v.editorTabs.Append(tab)
-	v.editorTabs.Select(tab)
+	v.editor.openTabs[tabState.ID] = tab
+	v.editor.tabIDs[tab] = tabState.ID
+	v.editor.tabs.Append(tab)
+	v.editor.tabs.Select(tab)
 }
 
 type settingsPanelSection struct {

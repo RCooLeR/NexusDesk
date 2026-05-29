@@ -7,7 +7,6 @@ import (
 	"fyne.io/fyne/v2/container"
 	"fyne.io/fyne/v2/widget"
 
-	"nexusdesk/internal/domain"
 	agentSvc "nexusdesk/internal/services/agent"
 	approvalsSvc "nexusdesk/internal/services/approvals"
 	artifactsSvc "nexusdesk/internal/services/artifacts"
@@ -62,14 +61,8 @@ type View struct {
 	navigatorTree           *widget.Tree
 	navigatorStore          *treeStore
 	navigatorRefreshSummary func()
-	editorTabs              *container.DocTabs
+	editor                  *editorController
 	bottomTabs              *container.AppTabs
-	openTabs                map[string]*container.TabItem
-	tabIDs                  map[*container.TabItem]string
-	editorPreviews          map[string]domain.FilePreview
-	textEditors             map[string]*textEditorBinding
-	editorSplitEnabled      bool
-	editorSecondaryRelPath  string
 	navigatorClipboard      navigatorClipboard
 	activityLog             *widget.RichText
 	activityText            string
@@ -162,7 +155,6 @@ func NewWithStartupStatus(window fyne.Window, startupStatus startupSvc.Status) *
 	welcome := editorSession.OpenWelcome("Welcome")
 	var view *View
 	welcomeItem := container.NewTabItem(welcome.Title, widget.NewLabel("Loading home..."))
-	editorTabs := newEditorTabs(welcomeItem)
 	settingsStore, err := settingsSvc.NewStore()
 	if err != nil {
 		settingsStore = settingsSvc.NewFileStore("nexus-settings.json")
@@ -256,11 +248,6 @@ func NewWithStartupStatus(window fyne.Window, startupStatus startupSvc.Status) *
 		editorSession:         editorSession,
 		status:                widget.NewLabel("No workspace open"),
 		navigator:             container.NewStack(widget.NewLabel("Open a workspace to browse files.")),
-		editorTabs:            editorTabs,
-		openTabs:              map[string]*container.TabItem{welcome.ID: editorTabs.Items[0]},
-		tabIDs:                map[*container.TabItem]string{editorTabs.Items[0]: welcome.ID},
-		editorPreviews:        map[string]domain.FilePreview{},
-		textEditors:           map[string]*textEditorBinding{},
 		activityLog:           widget.NewRichTextFromMarkdown("Ready."),
 		activityText:          "Ready.",
 		activityLines:         []string{"Ready."},
@@ -308,6 +295,7 @@ func NewWithStartupStatus(window fyne.Window, startupStatus startupSvc.Status) *
 		startupStatus:       startupStatus,
 		performanceRecorder: perfSvc.NewRecorder(64),
 	}
+	view.editor = newEditorController(view, welcome.ID, welcomeItem)
 	view.search = newSearchController(view)
 	view.jobs = newJobsController(view)
 	view.rollbacks = newRollbackController(view)
@@ -324,7 +312,7 @@ func NewWithStartupStatus(window fyne.Window, startupStatus startupSvc.Status) *
 func (v *View) Canvas() fyne.CanvasObject {
 	rail := v.newRail()
 	rightWorkbench := container.NewBorder(nil, nil, nil, v.newRightRail(), v.newAssistantPanel())
-	mainSplit := container.NewHSplit(v.editorTabs, rightWorkbench)
+	mainSplit := container.NewHSplit(v.editor.tabs, rightWorkbench)
 	mainSplit.SetOffset(0.82)
 	workbenchTop := container.NewBorder(v.newToolbar(), nil, v.navigator, nil, mainSplit)
 	workbench := container.NewVSplit(workbenchTop, v.newBottomPanel())

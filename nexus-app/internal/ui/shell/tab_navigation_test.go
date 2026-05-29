@@ -26,17 +26,17 @@ func TestDirtyTabCloseCancelKeepsTabOpen(t *testing.T) {
 	tab := view.editorSession.OpenFileWithSource("README.md", "README.md", "# Hello\n")
 	view.editorSession.UpdateDraft(tab.ID, "# Draft\n")
 	item := container.NewTabItem("README.md", widget.NewLabel("README.md"))
-	view.openTabs[tab.ID] = item
-	view.tabIDs[item] = tab.ID
-	view.editorTabs.Append(item)
-	view.editorTabs.Select(item)
+	view.editor.openTabs[tab.ID] = item
+	view.editor.tabIDs[item] = tab.ID
+	view.editor.tabs.Append(item)
+	view.editor.tabs.Select(item)
 
 	view.handleDirtyTabCloseDecision(item, tab.ID, tab.Title, false)
 
 	if _, ok := view.editorSession.Tab(tab.ID); !ok {
 		t.Fatal("expected dirty tab to remain open after cancel")
 	}
-	if view.editorTabs.Selected() != item {
+	if view.editor.tabs.Selected() != item {
 		t.Fatal("expected dirty tab to remain selected after cancel")
 	}
 	if !containsActivityLine(view.recentActivityLines(5), "Kept modified tab README.md open.") {
@@ -52,18 +52,18 @@ func TestDirtyTabCloseConfirmDiscardsTab(t *testing.T) {
 	tab := view.editorSession.OpenFileWithSource("README.md", "README.md", "# Hello\n")
 	view.editorSession.UpdateDraft(tab.ID, "# Draft\n")
 	item := container.NewTabItem("README.md", widget.NewLabel("README.md"))
-	view.openTabs[tab.ID] = item
-	view.tabIDs[item] = tab.ID
-	view.editorTabs.Append(item)
-	view.editorTabs.Select(item)
+	view.editor.openTabs[tab.ID] = item
+	view.editor.tabIDs[item] = tab.ID
+	view.editor.tabs.Append(item)
+	view.editor.tabs.Select(item)
 
 	view.handleDirtyTabCloseDecision(item, tab.ID, tab.Title, true)
 
 	if _, ok := view.editorSession.Tab(tab.ID); ok {
 		t.Fatal("expected dirty tab to close after confirm")
 	}
-	if view.openTabs[tab.ID] != nil || view.tabIDs[item] != "" {
-		t.Fatalf("expected tab maps to be cleaned: open=%#v id=%q", view.openTabs[tab.ID], view.tabIDs[item])
+	if view.editor.openTabs[tab.ID] != nil || view.editor.tabIDs[item] != "" {
+		t.Fatalf("expected tab maps to be cleaned: open=%#v id=%q", view.editor.openTabs[tab.ID], view.editor.tabIDs[item])
 	}
 	for _, line := range view.recentActivityLines(5) {
 		if strings.Contains(line, "Close blocked") {

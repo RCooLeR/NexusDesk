@@ -16,7 +16,7 @@ import (
 )
 
 func (v *View) newEditorPanel(tab editorSvc.Tab, preview domain.FilePreview) fyne.CanvasObject {
-	v.editorPreviews[tab.ID] = preview
+	v.editor.previews[tab.ID] = preview
 	content := newFilePreview(preview)
 	state := widget.NewLabel(editorStateText(tab))
 	save := widget.NewButtonWithIcon("", theme.DocumentSaveIcon(), func() {
@@ -42,11 +42,11 @@ func (v *View) newEditorPanel(tab editorSvc.Tab, preview domain.FilePreview) fyn
 		v.removeTextEditor(tab.ID)
 	}
 	split := widget.NewButtonWithIcon("", theme.ViewFullScreenIcon(), func() {
-		v.editorSplitEnabled = !v.editorSplitEnabled
+		v.editor.splitEnabled = !v.editor.splitEnabled
 		v.refreshEditorTabPanel(tab.ID)
 	})
 	split.Importance = widget.LowImportance
-	if v.editorSplitEnabled {
+	if v.editor.splitEnabled {
 		content = v.newSplitEditorContent(tab, content)
 	}
 	tools := container.NewHBox(pin, split, save, state)
@@ -54,7 +54,7 @@ func (v *View) newEditorPanel(tab editorSvc.Tab, preview domain.FilePreview) fyn
 }
 
 func (v *View) newSplitEditorContent(active editorSvc.Tab, primary fyne.CanvasObject) fyne.CanvasObject {
-	secondaryTab, ok := v.editorSession.ResolveSecondaryFileTab(active.RelPath, v.editorSecondaryRelPath)
+	secondaryTab, ok := v.editorSession.ResolveSecondaryFileTab(active.RelPath, v.editor.secondaryRelPath)
 	if !ok {
 		empty := widget.NewLabel("Open another file tab to use split editor.")
 		empty.Wrapping = fyne.TextWrapWord
@@ -62,7 +62,7 @@ func (v *View) newSplitEditorContent(active editorSvc.Tab, primary fyne.CanvasOb
 		split.SetOffset(0.66)
 		return split
 	}
-	v.editorSecondaryRelPath = secondaryTab.RelPath
+	v.editor.secondaryRelPath = secondaryTab.RelPath
 	secondary := v.newSecondaryEditorPanel(active.RelPath, secondaryTab)
 	split := container.NewHSplit(primary, secondary)
 	split.SetOffset(0.66)
@@ -75,10 +75,10 @@ func (v *View) newSecondaryEditorPanel(activeRelPath string, secondaryTab editor
 	selectSecondary.PlaceHolder = "Secondary tab"
 	selectSecondary.SetSelected(secondaryTab.RelPath)
 	selectSecondary.OnChanged = func(relPath string) {
-		v.editorSecondaryRelPath = relPath
+		v.editor.secondaryRelPath = relPath
 		v.refreshActiveEditorTabPanel()
 	}
-	preview, ok := v.editorPreviews[secondaryTab.ID]
+	preview, ok := v.editor.previews[secondaryTab.ID]
 	if !ok {
 		preview = domain.FilePreview{
 			RelPath: secondaryTab.RelPath,
@@ -108,8 +108,8 @@ func (v *View) secondaryEditorOptions(activeRelPath string) []string {
 }
 
 func (v *View) refreshActiveEditorTabPanel() {
-	if item := v.editorTabs.Selected(); item != nil {
-		if id := v.tabIDs[item]; id != "" {
+	if item := v.editor.tabs.Selected(); item != nil {
+		if id := v.editor.tabIDs[item]; id != "" {
 			v.refreshEditorTabPanel(id)
 		}
 	}
@@ -120,14 +120,14 @@ func (v *View) refreshEditorTabPanel(tabID string) {
 	if !ok || tab.Kind != editorSvc.KindFile {
 		return
 	}
-	preview, ok := v.editorPreviews[tab.ID]
+	preview, ok := v.editor.previews[tab.ID]
 	if !ok {
 		return
 	}
-	if item := v.openTabs[tab.ID]; item != nil {
+	if item := v.editor.openTabs[tab.ID]; item != nil {
 		item.Content = v.newEditorPanel(tab, preview)
 		item.Content.Refresh()
-		v.editorTabs.Refresh()
+		v.editor.tabs.Refresh()
 	}
 }
 
@@ -190,7 +190,7 @@ func (v *View) saveEditorDraft(tabID string) {
 		v.addActivity("No draft changes to save.")
 		return
 	}
-	preview, ok := v.editorPreviews[tab.ID]
+	preview, ok := v.editor.previews[tab.ID]
 	if !ok {
 		v.addActivity("Could not resolve editor preview for saving " + tab.Title + ".")
 		return
@@ -221,11 +221,11 @@ func (v *View) saveEditorDraft(tabID string) {
 	preview.Text = next.SourceText
 	preview.Size = int64(proposal.Size)
 	preview.Encoding = proposal.Encoding
-	v.editorPreviews[next.ID] = preview
+	v.editor.previews[next.ID] = preview
 	if editor, ok := v.textEditor(next.ID); ok {
 		editor.markEncodingSaved(proposal.Encoding)
 	}
-	if item := v.openTabs[next.ID]; item != nil {
+	if item := v.editor.openTabs[next.ID]; item != nil {
 		item.Content = v.newEditorPanel(next, preview)
 	}
 	v.updateEditorTabState(next)
@@ -278,25 +278,25 @@ func editorSaveAllowed(tab editorSvc.Tab, preview domain.FilePreview, encodingDi
 }
 
 func (v *View) updateEditorTabState(tab editorSvc.Tab) {
-	item := v.openTabs[tab.ID]
+	item := v.editor.openTabs[tab.ID]
 	if item == nil {
 		return
 	}
 	item.Text = editorTabTitle(tab)
 	item.Icon = editorTabIcon(tab)
 	item.Content.Refresh()
-	v.editorTabs.Refresh()
+	v.editor.tabs.Refresh()
 }
 
 func (v *View) syncEditorTabOrder() {
-	ordered := make([]*container.TabItem, 0, len(v.openTabs))
+	ordered := make([]*container.TabItem, 0, len(v.editor.openTabs))
 	for _, tab := range v.editorSession.Tabs() {
-		if item := v.openTabs[tab.ID]; item != nil {
+		if item := v.editor.openTabs[tab.ID]; item != nil {
 			ordered = append(ordered, item)
 		}
 	}
-	v.editorTabs.Items = ordered
-	v.editorTabs.Refresh()
+	v.editor.tabs.Items = ordered
+	v.editor.tabs.Refresh()
 }
 
 func editorTabTitle(tab editorSvc.Tab) string {

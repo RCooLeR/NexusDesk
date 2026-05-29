@@ -602,20 +602,20 @@ func draftStatusTextWithEncoding(tab editorSvc.Tab, encodingDirty bool) string {
 }
 
 func (v *View) bindTextEditor(tabID string, binding *textEditorBinding) {
-	if v.textEditors == nil {
-		v.textEditors = map[string]*textEditorBinding{}
+	if v.editor.textEditors == nil {
+		v.editor.textEditors = map[string]*textEditorBinding{}
 	}
-	v.textEditors[tabID] = binding
+	v.editor.textEditors[tabID] = binding
 }
 
 func (v *View) removeTextEditor(tabID string) {
-	if len(v.textEditors) == 0 {
+	if len(v.editor.textEditors) == 0 {
 		return
 	}
-	delete(v.textEditors, tabID)
+	delete(v.editor.textEditors, tabID)
 }
 
 func (v *View) textEditor(tabID string) (*textEditorBinding, bool) {
-	binding := v.textEditors[tabID]
+	binding := v.editor.textEditors[tabID]
 	return binding, binding != nil
 }

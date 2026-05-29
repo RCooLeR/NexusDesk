@@ -74,18 +74,18 @@ func (v *View) refreshStatusBar() {
 }
 
 func (v *View) activeEditorFileStatus() (string, string) {
-	if v == nil || v.editorTabs == nil {
+	if v == nil || v.editor == nil || v.editor.tabs == nil {
 		return "n/a", "n/a"
 	}
-	item := v.editorTabs.Selected()
+	item := v.editor.tabs.Selected()
 	if item == nil {
 		return "n/a", "n/a"
 	}
-	tabID := strings.TrimSpace(v.tabIDs[item])
+	tabID := strings.TrimSpace(v.editor.tabIDs[item])
 	if tabID == "" {
 		return "n/a", "n/a"
 	}
-	if editor, ok := v.textEditors[tabID]; ok && editor != nil {
+	if editor, ok := v.editor.textEditors[tabID]; ok && editor != nil {
 		encoding := editor.writeEncoding()
 		if editor.encodingDirty() {
 			encoding += "*"
@@ -96,7 +96,7 @@ func (v *View) activeEditorFileStatus() (string, string) {
 		}
 		return fallbackStatusValue(encoding, "utf-8"), detectLineEnding(text)
 	}
-	if preview, ok := v.editorPreviews[tabID]; ok {
+	if preview, ok := v.editor.previews[tabID]; ok {
 		return fallbackStatusValue(preview.Encoding, "n/a"), detectLineEnding(preview.Text)
 	}
 	return "n/a", "n/a"
