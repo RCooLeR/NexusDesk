@@ -99,6 +99,16 @@ type CommitResult struct {
 	GeneratedAt time.Time
 }
 
+type BranchResult struct {
+	BranchName    string
+	StartPoint    string
+	StartPointSHA string
+	CheckedOut    bool
+	Message       string
+	Status        Status
+	GeneratedAt   time.Time
+}
+
 type HistoryEntry struct {
 	Hash      string
 	ShortHash string

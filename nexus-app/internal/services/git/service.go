@@ -175,6 +175,75 @@ func (s *Service) CommitChanges(root string, message string, body string) (Commi
 	}, nil
 }
 
+func (s *Service) CreateBranch(root string, branchName string, startPoint string, checkout bool) (BranchResult, error) {
+	generatedAt := time.Now().UTC()
+	root = strings.TrimSpace(root)
+	branchName = strings.TrimSpace(branchName)
+	startPoint = strings.TrimSpace(startPoint)
+	if startPoint == "" {
+		startPoint = "HEAD"
+	}
+	result := BranchResult{BranchName: branchName, StartPoint: startPoint, CheckedOut: checkout, GeneratedAt: generatedAt}
+	if root == "" {
+		result.Message = "Open a workspace before creating Git branches."
+		return result, nil
+	}
+	if branchName == "" {
+		result.Message = "branchName is required."
+		return result, nil
+	}
+	if strings.HasPrefix(branchName, "-") || strings.HasPrefix(startPoint, "-") {
+		result.Message = "Git branch names and start points must not start with '-'."
+		return result, nil
+	}
+	absRoot, err := filepath.Abs(root)
+	if err != nil {
+		return BranchResult{}, err
+	}
+	if _, err := gitOutput(absRoot, "rev-parse", "--show-toplevel"); err != nil {
+		result.Message = "Workspace is not inside a Git repository."
+		return result, nil
+	}
+	if _, err := gitOutput(absRoot, "check-ref-format", "--branch", branchName); err != nil {
+		result.Message = "Invalid Git branch name."
+		return result, nil
+	}
+	if branchExists(absRoot, branchName) {
+		result.Message = "Git branch already exists."
+		return result, nil
+	}
+	startSHA, err := gitOutput(absRoot, "rev-parse", "--verify", "--end-of-options", startPoint+"^{commit}")
+	if err != nil {
+		result.Message = "Start point is not a valid commit."
+		return result, nil
+	}
+	result.StartPointSHA = strings.TrimSpace(startSHA)
+	if _, err := gitOutput(absRoot, "branch", "--", branchName, result.StartPointSHA); err != nil {
+		return BranchResult{}, err
+	}
+	if checkout {
+		if _, err := gitOutput(absRoot, "switch", "--", branchName); err != nil {
+			return BranchResult{}, err
+		}
+	}
+	status, err := s.Status(absRoot)
+	if err != nil {
+		return BranchResult{}, err
+	}
+	result.Status = status
+	if checkout {
+		result.Message = "Created and switched to branch " + branchName + "."
+	} else {
+		result.Message = "Created branch " + branchName + "."
+	}
+	return result, nil
+}
+
+func branchExists(root string, branchName string) bool {
+	_, err := gitOutput(root, "show-ref", "--verify", "--quiet", "refs/heads/"+branchName)
+	return err == nil
+}
+
 func runFileAction(root string, relPath string, action FileAction) error {
 	switch action {
 	case FileActionStage:

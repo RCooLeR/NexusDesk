@@ -54,6 +54,33 @@ func (h defaultHandlers) commitChanges(ctx context.Context, call agent.ToolCall,
 	}, nil
 }
 
+func (h defaultHandlers) createBranch(ctx context.Context, call agent.ToolCall, request agent.Request) (agent.ToolResult, error) {
+	_ = ctx
+	if !request.ApproveWrites {
+		err := errors.New("approval is required before creating Git branches")
+		return agent.ToolResult{Name: call.Name, Args: call.Args, Risk: "high", Observation: err.Error(), Error: err.Error()}, err
+	}
+	root, err := workspaceRoot(request)
+	if err != nil {
+		return toolError(call, "high", err), err
+	}
+	result, err := h.deps.Git.CreateBranch(root, firstArg(call, "branchName", "name", "branch"), firstArg(call, "startPoint", "from"), boolArg(call, "checkout"))
+	if err != nil {
+		return toolError(call, "high", err), err
+	}
+	if result.StartPointSHA == "" {
+		err := errors.New(result.Message)
+		return toolError(call, "high", err), err
+	}
+	return agent.ToolResult{
+		Name:        call.Name,
+		Args:        call.Args,
+		Risk:        "high",
+		Mutated:     true,
+		Observation: formatGitBranchObservation(result),
+	}, nil
+}
+
 func (h defaultHandlers) applyGitFileAction(ctx context.Context, call agent.ToolCall, request agent.Request, action gitSvc.FileAction) (agent.ToolResult, error) {
 	_ = ctx
 	if !request.ApproveWrites {
@@ -161,6 +188,18 @@ func gitDiffKindArg(call agent.ToolCall, fallback gitSvc.DiffKind) (gitSvc.DiffK
 	default:
 		return "", fmt.Errorf("unsupported diffKind %q", value)
 	}
+}
+
+func formatGitBranchObservation(result gitSvc.BranchResult) string {
+	lines := []string{
+		result.Message,
+		fmt.Sprintf("Branch: %s", result.BranchName),
+		fmt.Sprintf("Start point: %s", result.StartPoint),
+		fmt.Sprintf("Start SHA: %s", result.StartPointSHA),
+		fmt.Sprintf("Checked out: %t", result.CheckedOut),
+	}
+	lines = append(lines, formatGitMutationStatus(result.Status)...)
+	return strings.Join(lines, "\n")
 }
 
 func formatGitCommitObservation(result gitSvc.CommitResult) string {

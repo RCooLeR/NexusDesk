@@ -575,7 +575,8 @@ The Fyne migration must not drop product ambition, but this section is intention
 - [x] Add direct dispatcher wrappers for local dataset profile/query/SELECT-only SQL/chart artifact generation, document extraction, read-only operations scan/inspection/runbook generation, and durable job list/log/cancel.
 - [x] Add approval-gated Git index mutation tools for whole-file and single-hunk stage/unstage with path validation, exact hunk application, no branch changes, no amend, and no force behavior.
 - [x] Add approval-gated Git commit tool for already-staged changes only, with required message, staged-stat confirmation, no implicit staging, no amend, and no force behavior.
-- [ ] Add remaining mutating Git tools with preview, approval, audit, and no force/amend behavior by default: branch, conflict-resolution, and explicit destructive revert/discard workflows.
+- [x] Add approval-gated Git branch creation tool with branch-name validation, existing-branch rejection, optional checkout, no force, and no ref rewriting.
+- [ ] Add remaining mutating Git tools with preview, approval, audit, and no force/amend behavior by default: conflict-resolution and explicit destructive revert/discard workflows.
 - [ ] Add rendered browser automation tools with isolated sessions, screenshots, page extraction, and network-log redaction.
 - [ ] Add interactive terminal sessions on top of durable jobs, with cancellation and log/history audit.
 - [ ] Add MCP/plugin discovery and approved tool execution after native core tools are stable.

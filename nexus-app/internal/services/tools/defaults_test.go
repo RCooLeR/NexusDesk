@@ -611,6 +611,60 @@ func TestDefaultDispatcherCommitChangesTool(t *testing.T) {
 	}
 }
 
+func TestDefaultDispatcherCreateBranchTool(t *testing.T) {
+	if _, err := exec.LookPath("git"); err != nil {
+		t.Skip("git executable is not available")
+	}
+	root := t.TempDir()
+	runToolTestGit(t, root, "init")
+	runToolTestGit(t, root, "config", "user.email", "test@example.com")
+	runToolTestGit(t, root, "config", "user.name", "Test User")
+	path := filepath.Join(root, "notes.txt")
+	if err := os.WriteFile(path, []byte("line one\n"), 0o644); err != nil {
+		t.Fatalf("write notes file: %v", err)
+	}
+	runToolTestGit(t, root, "add", "notes.txt")
+	runToolTestGit(t, root, "commit", "-m", "initial notes")
+	dispatcher := NewDefaultDispatcher(Dependencies{Workspace: workspaceSvc.New()})
+
+	blocked, err := dispatcher.ExecuteTool(context.Background(), agent.ToolCall{Name: "create_branch", Args: map[string]string{"branchName": "feature/native-branch"}}, agent.Request{WorkspaceRoot: root})
+	if err == nil || blocked.Risk != "high" || !strings.Contains(blocked.Observation, "approval") {
+		t.Fatalf("expected create_branch approval block, got result=%#v err=%v", blocked, err)
+	}
+
+	created, err := dispatcher.ExecuteTool(context.Background(), agent.ToolCall{Name: "create_branch", Args: map[string]string{"branchName": "feature/native-branch"}}, agent.Request{
+		WorkspaceRoot: root,
+		ApproveTool: func(ctx context.Context, request agent.ToolApprovalRequest) bool {
+			return request.Name == "create_branch" && request.Risk == "high"
+		},
+	})
+	if err != nil {
+		t.Fatalf("create_branch returned error: %v", err)
+	}
+	if !created.Mutated || !strings.Contains(created.Observation, "Created branch feature/native-branch.") || !strings.Contains(created.Observation, "Checked out: false") {
+		t.Fatalf("unexpected create_branch observation:\n%s", created.Observation)
+	}
+	if out := runToolTestGitOutput(t, root, "branch", "--list", "feature/native-branch"); !strings.Contains(out, "feature/native-branch") {
+		t.Fatalf("created branch was not listed: %q", out)
+	}
+
+	duplicate, err := dispatcher.ExecuteTool(context.Background(), agent.ToolCall{Name: "create_branch", Args: map[string]string{"branchName": "feature/native-branch"}}, agent.Request{WorkspaceRoot: root, ApproveWrites: true})
+	if err == nil || duplicate.Mutated || !strings.Contains(duplicate.Observation, "already exists") {
+		t.Fatalf("expected duplicate branch rejection, got result=%#v err=%v", duplicate, err)
+	}
+
+	checkedOut, err := dispatcher.ExecuteTool(context.Background(), agent.ToolCall{Name: "create_branch", Args: map[string]string{"branchName": "feature/checked-out", "checkout": "true"}}, agent.Request{WorkspaceRoot: root, ApproveWrites: true})
+	if err != nil {
+		t.Fatalf("create_branch checkout returned error: %v", err)
+	}
+	if !strings.Contains(checkedOut.Observation, "Created and switched to branch feature/checked-out.") || !strings.Contains(checkedOut.Observation, "Checked out: true") {
+		t.Fatalf("unexpected checked-out branch observation:\n%s", checkedOut.Observation)
+	}
+	if branch := strings.TrimSpace(runToolTestGitOutput(t, root, "branch", "--show-current")); branch != "feature/checked-out" {
+		t.Fatalf("expected checked-out branch, got %q", branch)
+	}
+}
+
 func TestDefaultDispatcherArtifactLineageTool(t *testing.T) {
 	root := t.TempDir()
 	if err := os.WriteFile(filepath.Join(root, "README.md"), []byte("# Project\n"), 0o644); err != nil {
