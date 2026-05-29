@@ -71,6 +71,31 @@ import "./two"
 	}
 }
 
+func TestSourceFilesReturnsBoundedSupportedFiles(t *testing.T) {
+	root := t.TempDir()
+	writeTestFile(t, root, "src/a.go", "package src\n")
+	writeTestFile(t, root, "src/b.ts", "export const b = 1\n")
+	writeTestFile(t, root, "src/readme.md", "# ignored\n")
+	writeTestFile(t, root, "other/c.py", "def c(): pass\n")
+
+	list, err := New().SourceFiles(root, SourceFileOptions{RelPath: "src", MaxFiles: 10})
+	if err != nil {
+		t.Fatalf("SourceFiles returned error: %v", err)
+	}
+	if list.RootRelPath != "src" || list.Truncated {
+		t.Fatalf("unexpected source file list metadata: %#v", list)
+	}
+	assertStringSliceEqual(t, list.Files, []string{"src/a.go", "src/b.ts"})
+
+	capped, err := New().SourceFiles(root, SourceFileOptions{MaxFiles: 2})
+	if err != nil {
+		t.Fatalf("SourceFiles capped returned error: %v", err)
+	}
+	if len(capped.Files) != 2 || !capped.Truncated {
+		t.Fatalf("expected capped source file list, got %#v", capped)
+	}
+}
+
 func assertDependencyEdge(t *testing.T, graph DependencyGraph, from string, to string, spec string, resolved bool) {
 	t.Helper()
 	for _, edge := range graph.Edges {
@@ -79,6 +104,18 @@ func assertDependencyEdge(t *testing.T, graph DependencyGraph, from string, to s
 		}
 	}
 	t.Fatalf("missing edge from=%s to=%s spec=%s resolved=%v in %#v", from, to, spec, resolved, graph.Edges)
+}
+
+func assertStringSliceEqual(t *testing.T, actual []string, expected []string) {
+	t.Helper()
+	if len(actual) != len(expected) {
+		t.Fatalf("expected %#v, got %#v", expected, actual)
+	}
+	for index := range expected {
+		if actual[index] != expected[index] {
+			t.Fatalf("expected %#v, got %#v", expected, actual)
+		}
+	}
 }
 
 func writeTestFile(t *testing.T, root string, relPath string, content string) {

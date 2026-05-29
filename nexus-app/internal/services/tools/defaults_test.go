@@ -1144,6 +1144,41 @@ func TestDefaultDispatcherReadDependencyGraphTool(t *testing.T) {
 	}
 }
 
+func TestDefaultDispatcherReadSymbolIndexTool(t *testing.T) {
+	root := t.TempDir()
+	if err := os.MkdirAll(filepath.Join(root, "src"), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(root, "src", "app.go"), []byte("package src\n\ntype Service struct{}\n\nfunc Start() {}\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(root, "src", "view.ts"), []byte("export class Panel {}\nexport const render = () => {}\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(root, "README.md"), []byte("# ignored\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	dispatcher := NewDefaultDispatcher(Dependencies{Workspace: workspaceSvc.New()})
+
+	result, err := dispatcher.ExecuteTool(context.Background(), agent.ToolCall{Name: "read_symbol_index", Args: map[string]string{"relPath": "src", "maxFiles": "20", "maxSymbols": "20"}}, agent.Request{WorkspaceRoot: root})
+	if err != nil {
+		t.Fatalf("read_symbol_index returned error: %v", err)
+	}
+	for _, expected := range []string{"Native symbol index.", "Scope: src", "Files scanned: 2", "Symbols: 4", "src/app.go:3 [type] Service", "src/app.go:5 [func] Start", "src/view.ts:1 [class] Panel", "src/view.ts:2 [func] render"} {
+		if !strings.Contains(result.Observation, expected) {
+			t.Fatalf("symbol index observation missing %q:\n%s", expected, result.Observation)
+		}
+	}
+
+	filtered, err := dispatcher.ExecuteTool(context.Background(), agent.ToolCall{Name: "read_symbol_index", Args: map[string]string{"query": "panel"}}, agent.Request{WorkspaceRoot: root})
+	if err != nil {
+		t.Fatalf("read_symbol_index filtered returned error: %v", err)
+	}
+	if !strings.Contains(filtered.Observation, "Symbols: 1") || !strings.Contains(filtered.Observation, "src/view.ts:1 [class] Panel") || strings.Contains(filtered.Observation, "Start") {
+		t.Fatalf("unexpected filtered symbol index observation:\n%s", filtered.Observation)
+	}
+}
+
 func TestDefaultDispatcherArtifactLineageTool(t *testing.T) {
 	root := t.TempDir()
 	if err := os.WriteFile(filepath.Join(root, "README.md"), []byte("# Project\n"), 0o644); err != nil {

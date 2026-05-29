@@ -31,6 +31,19 @@ type DependencyGraphOptions struct {
 	MaxEdges int
 }
 
+type SourceFileOptions struct {
+	RelPath  string
+	MaxFiles int
+}
+
+type SourceFileList struct {
+	RootRelPath  string
+	Files        []string
+	FilesSkipped int
+	Truncated    bool
+	Message      string
+}
+
 type DependencyGraph struct {
 	RootRelPath  string
 	FilesScanned int
@@ -107,6 +120,36 @@ func (s *Service) DependencyGraph(root string, options DependencyGraphOptions) (
 		graph.Message += " Results truncated by safety caps."
 	}
 	return graph, nil
+}
+
+func (s *Service) SourceFiles(root string, options SourceFileOptions) (SourceFileList, error) {
+	absRoot, err := cleanRoot(root)
+	if err != nil {
+		return SourceFileList{}, err
+	}
+	cleanRelPath, err := cleanRel(options.RelPath)
+	if err != nil {
+		return SourceFileList{}, err
+	}
+	maxFiles := options.MaxFiles
+	if maxFiles <= 0 || maxFiles > defaultDependencyGraphMaxFiles {
+		maxFiles = defaultDependencyGraphMaxFiles
+	}
+	relPaths, skipped, truncated, err := s.dependencyGraphFiles(absRoot, cleanRelPath, maxFiles)
+	if err != nil {
+		return SourceFileList{}, err
+	}
+	list := SourceFileList{
+		RootRelPath:  firstNonEmptyDependencyGraphString(cleanRelPath, "."),
+		Files:        relPaths,
+		FilesSkipped: skipped,
+		Truncated:    truncated,
+	}
+	list.Message = fmt.Sprintf("Source file scan found %d file(s), skipped %d item(s).", len(list.Files), list.FilesSkipped)
+	if list.Truncated {
+		list.Message += " Results truncated by safety caps."
+	}
+	return list, nil
 }
 
 func (s *Service) dependencyGraphFiles(absRoot string, cleanRelPath string, maxFiles int) ([]string, int, bool, error) {
