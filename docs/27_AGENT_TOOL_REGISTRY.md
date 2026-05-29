@@ -28,6 +28,7 @@ The implemented registry is exposed to the agent through `ToolDescriptors()` and
 | Database | `inspect_sqlite`, `query_sqlite` | Medium-risk approval-gated workspace SQLite schema inspection and bounded read-only SELECT/WITH queries. |
 | Documents | `extract_document` | Bounded text and metadata extraction for supported workspace documents. |
 | Operations | `inspect_operations_files`, `generate_runbook` | Read-only operations file scan/inspection plus approval-gated runbook artifact generation from redacted evidence; no Docker/shell execution. |
+| Security | `redact_text`, `list_approvals`, `request_approval` | First-party redaction, approval posture inspection, and explicit future-approval request records for multi-step plans. |
 | External agent readiness | `list_external_agent_tools`, `plan_external_agent_run` | Detection/planning only for optional Codex, Claude Code, and OpenCode integrations. NexusDesk's own tools remain primary. |
 
 ## Planned Complete Toolbelt
@@ -87,7 +88,6 @@ The planned registry should be implemented in priority order, with tests and doc
 ### Operations And Security
 
 - `docker_compose_config`, `docker_compose_logs`, `docker_compose_lifecycle`: redacted operations tooling and approved Docker workflows.
-- `request_approval`, `list_approvals`, `redact_text`: approval and redaction primitives for multi-step tool plans.
 
 ## Implementation Gate For Each Tool
 

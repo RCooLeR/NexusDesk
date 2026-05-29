@@ -8,6 +8,7 @@ import (
 	"strings"
 
 	"nexusdesk/internal/services/agent"
+	approvalsSvc "nexusdesk/internal/services/approvals"
 	artifactsSvc "nexusdesk/internal/services/artifacts"
 	externalagentsSvc "nexusdesk/internal/services/externalagents"
 	gitsvc "nexusdesk/internal/services/git"
@@ -22,6 +23,7 @@ type Dependencies struct {
 	Git       *gitsvc.Service
 	Tasks     *taskssvc.Service
 	Jobs      *jobsSvc.Service
+	Approvals *approvalsSvc.Service
 
 	ExternalAgentLookupPath func(string) (string, error)
 }
@@ -38,6 +40,9 @@ func NewDefaultDispatcher(deps Dependencies) *Dispatcher {
 	}
 	if deps.Jobs == nil {
 		deps.Jobs = jobsSvc.New()
+	}
+	if deps.Approvals == nil {
+		deps.Approvals = approvalsSvc.New()
 	}
 	handlers := defaultHandlers{deps: deps}
 	return NewDispatcher(
@@ -74,6 +79,9 @@ func NewDefaultDispatcher(deps Dependencies) *Dispatcher {
 		Tool{Descriptor: agent.ToolDescriptor{Name: "list_tasks", Description: "List safe discovered workspace tasks.", Risk: "low", Inputs: ""}, Handler: handlers.listTasks},
 		Tool{Descriptor: agent.ToolDescriptor{Name: "run_task", Description: "Run a discovered safe workspace task when shell approval is granted.", Risk: "high", Inputs: "taskId"}, Handler: handlers.runTask},
 		Tool{Descriptor: agent.ToolDescriptor{Name: "run_terminal_command", Description: "Run one approved terminal command by executable name plus explicit JSON args, rooted inside the workspace, with timeout and output caps. Shell interpreters and command paths are blocked.", Risk: "high", Inputs: "command, argsJson(optional), cwd(optional), timeoutSeconds(optional)"}, Handler: handlers.runTerminalCommand},
+		Tool{Descriptor: agent.ToolDescriptor{Name: "redact_text", Description: "Redact common secrets from text before storing, sharing, or sending it to another tool.", Risk: "low", Inputs: "content"}, Handler: handlers.redactText},
+		Tool{Descriptor: agent.ToolDescriptor{Name: "list_approvals", Description: "List recent workspace approval records and current full-project access policy with secret redaction.", Risk: "low", Inputs: "limit(optional), decision(optional)"}, Handler: handlers.listApprovals},
+		Tool{Descriptor: agent.ToolDescriptor{Name: "request_approval", Description: "Record a proposed approval request for a future high-risk action without executing that action.", Risk: "medium", Inputs: "action, risk(optional), target(optional), summary(optional)"}, Handler: handlers.requestApproval},
 		Tool{Descriptor: agent.ToolDescriptor{Name: "list_jobs", Description: "List durable jobs and recent statuses with capped redacted details.", Risk: "low", Inputs: "status(optional), limit(optional)"}, Handler: handlers.listJobs},
 		Tool{Descriptor: agent.ToolDescriptor{Name: "read_job_logs", Description: "Read capped redacted log tail for one durable job.", Risk: "low", Inputs: "jobId, tailLines(optional), tailBytes(optional)"}, Handler: handlers.readJobLogs},
 		Tool{Descriptor: agent.ToolDescriptor{Name: "cancel_job", Description: "Cancel one running durable job when high-risk approval is granted.", Risk: "high", Inputs: "jobId"}, Handler: handlers.cancelJob},

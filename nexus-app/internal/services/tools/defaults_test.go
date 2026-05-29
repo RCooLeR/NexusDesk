@@ -14,6 +14,7 @@ import (
 	"time"
 
 	"nexusdesk/internal/services/agent"
+	approvalsSvc "nexusdesk/internal/services/approvals"
 	artifactsSvc "nexusdesk/internal/services/artifacts"
 	jobsSvc "nexusdesk/internal/services/jobs"
 	workspaceSvc "nexusdesk/internal/services/workspace"
@@ -210,6 +211,58 @@ func TestDefaultDispatcherJobTools(t *testing.T) {
 	got, ok := jobService.Get(running.ID)
 	if !ok || got.Status != jobsSvc.StatusCanceled {
 		t.Fatalf("expected job to be canceled, got ok=%t job=%#v", ok, got)
+	}
+}
+
+func TestDefaultDispatcherSecurityTools(t *testing.T) {
+	root := t.TempDir()
+	approvalService := approvalsSvc.New()
+	dispatcher := NewDefaultDispatcher(Dependencies{Workspace: workspaceSvc.New(), Approvals: approvalService})
+
+	redacted, err := dispatcher.ExecuteTool(context.Background(), agent.ToolCall{Name: "redact_text", Args: map[string]string{
+		"content": `Authorization: Bearer secret-token api_key=super-key {"access_token":"json-secret"} password: "db-secret"`,
+	}}, agent.Request{WorkspaceRoot: root})
+	if err != nil {
+		t.Fatalf("redact_text returned error: %v", err)
+	}
+	for _, secret := range []string{"secret-token", "super-key", "json-secret", "db-secret"} {
+		if strings.Contains(redacted.Observation, secret) {
+			t.Fatalf("redact_text leaked %q:\n%s", secret, redacted.Observation)
+		}
+	}
+	if !strings.Contains(redacted.Observation, "[redacted]") {
+		t.Fatalf("redact_text did not include redaction marker:\n%s", redacted.Observation)
+	}
+
+	call := agent.ToolCall{Name: "request_approval", Args: map[string]string{
+		"action":  "delete_file",
+		"risk":    "high",
+		"target":  "secrets.env",
+		"summary": "Delete file after checking token=delete-token",
+	}}
+	blocked, err := dispatcher.ExecuteTool(context.Background(), call, agent.Request{WorkspaceRoot: root})
+	if err == nil || blocked.Risk != "medium" || !strings.Contains(blocked.Observation, "approval") {
+		t.Fatalf("expected request_approval per-call approval block, got result=%#v err=%v", blocked, err)
+	}
+	requested, err := dispatcher.ExecuteTool(context.Background(), call, agent.Request{
+		WorkspaceRoot: root,
+		ApproveTool: func(ctx context.Context, request agent.ToolApprovalRequest) bool {
+			return request.Name == "request_approval" && request.Risk == "medium"
+		},
+	})
+	if err != nil {
+		t.Fatalf("request_approval returned error: %v", err)
+	}
+	if !requested.Mutated || !strings.Contains(requested.Observation, "Approval request recorded") || strings.Contains(requested.Observation, "delete-token") {
+		t.Fatalf("unexpected request_approval observation:\n%s", requested.Observation)
+	}
+
+	listed, err := dispatcher.ExecuteTool(context.Background(), agent.ToolCall{Name: "list_approvals"}, agent.Request{WorkspaceRoot: root})
+	if err != nil {
+		t.Fatalf("list_approvals returned error: %v", err)
+	}
+	if !strings.Contains(listed.Observation, "tool.approval.request.delete_file") || !strings.Contains(listed.Observation, "decision=requested") || strings.Contains(listed.Observation, "delete-token") {
+		t.Fatalf("unexpected list_approvals observation:\n%s", listed.Observation)
 	}
 }
 

@@ -179,6 +179,8 @@ var jobSecretPatterns = []struct {
 	{regexp.MustCompile(`(?i)(token\s*[:=]\s*)[^\s,"']+`), `${1}[redacted]`},
 	{regexp.MustCompile(`(?i)(password\s*[:=]\s*)[^\s,"']+`), `${1}[redacted]`},
 	{regexp.MustCompile(`(?i)(secret\s*[:=]\s*)[^\s,"']+`), `${1}[redacted]`},
+	{regexp.MustCompile(`(?i)("(?:api[_-]?key|token|access_token|auth_token|password|secret)"\s*:\s*)"[^"]*"`), `${1}"[redacted]"`},
+	{regexp.MustCompile(`(?i)\b(api[_-]?key|token|access_token|auth_token|password|secret)\s*:\s*('[^']*'|"[^"]*"|[^\s,;]+)`), `${1}: [redacted]`},
 	{regexp.MustCompile(`(?i)(Authorization\s*[:=]\s*)[^\n\r]+`), `${1}[redacted]`},
 	{regexp.MustCompile(`(?i)(postgres|mysql|sqlserver)://([^:\s/@]+):([^@\s]+)@`), `${1}://${2}:[redacted]@`},
 }

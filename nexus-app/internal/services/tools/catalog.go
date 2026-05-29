@@ -111,10 +111,6 @@ func plannedToolCatalog() []ToolCatalogEntry {
 		plannedTool("operations", "docker_compose_config", "Run approved `docker compose config` for validation.", "high", "composeRelPath", "operations", "Can route through discovered task/job contract."),
 		plannedTool("operations", "docker_compose_logs", "Read capped Docker Compose logs.", "high", "service(optional), tail(optional)", "operations", "Requires Docker policy, redaction, and user approval."),
 		plannedTool("operations", "docker_compose_lifecycle", "Start/stop/restart approved Compose services.", "high", "action, service(optional)", "operations", "Destructive/system-impacting; requires explicit UX and rollback/mitigation notes."),
-
-		plannedTool("security", "request_approval", "Create an explicit approval request record for a proposed high-risk action.", "medium", "action, risk, summary", "security", "Needed for multi-step agent plans and deferred approvals."),
-		plannedTool("security", "list_approvals", "List relevant approval records and current trust policy.", "low", "status(optional)", "security", "Expose approval posture without secrets."),
-		plannedTool("security", "redact_text", "Redact secrets from text before storage or connector transmission.", "low", "content", "security", "Centralize secret redaction diagnostics."),
 	}
 }
 
@@ -148,6 +144,8 @@ func implementedToolCategory(name string) string {
 		return "jobs"
 	case "run_terminal_command":
 		return "terminal"
+	case "request_approval", "list_approvals", "redact_text":
+		return "security"
 	case "write_file", "append_file", "copy_file", "move_file", "delete_file", "apply_patch", "list_rollbacks", "rollback_file_mutation":
 		return "files"
 	case "read_artifact_lineage", "regenerate_artifact":
