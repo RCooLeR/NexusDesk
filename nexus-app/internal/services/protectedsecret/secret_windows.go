@@ -4,6 +4,7 @@ package protectedsecret
 
 import (
 	"errors"
+	"runtime"
 	"syscall"
 	"unsafe"
 )
@@ -21,10 +22,15 @@ type dataBlob struct {
 	pbData *byte
 }
 
-func Protect(purpose string, data []byte) ([]byte, error) {
+func Protect(purpose string, data []byte) (protected []byte, err error) {
 	_ = purpose
 	in := bytesToBlob(data)
 	var out dataBlob
+	defer func() {
+		if freeErr := freeLocalData(out.pbData); err == nil && freeErr != nil {
+			err = freeErr
+		}
+	}()
 	result, _, callErr := procCryptProtectData.Call(
 		uintptr(unsafe.Pointer(&in)),
 		0,
@@ -34,16 +40,21 @@ func Protect(purpose string, data []byte) ([]byte, error) {
 		0,
 		uintptr(unsafe.Pointer(&out)),
 	)
+	runtime.KeepAlive(data)
 	if result == 0 {
 		return nil, windowsSecretError("CryptProtectData", callErr)
 	}
-	defer procLocalFree.Call(uintptr(unsafe.Pointer(out.pbData)))
 	return blobToBytes(out), nil
 }
 
-func Unprotect(data []byte) ([]byte, error) {
+func Unprotect(data []byte) (plain []byte, err error) {
 	in := bytesToBlob(data)
 	var out dataBlob
+	defer func() {
+		if freeErr := freeLocalData(out.pbData); err == nil && freeErr != nil {
+			err = freeErr
+		}
+	}()
 	result, _, callErr := procCryptUnprotectData.Call(
 		uintptr(unsafe.Pointer(&in)),
 		0,
@@ -53,10 +64,10 @@ func Unprotect(data []byte) ([]byte, error) {
 		0,
 		uintptr(unsafe.Pointer(&out)),
 	)
+	runtime.KeepAlive(data)
 	if result == 0 {
 		return nil, windowsSecretError("CryptUnprotectData", callErr)
 	}
-	defer procLocalFree.Call(uintptr(unsafe.Pointer(out.pbData)))
 	return blobToBytes(out), nil
 }
 
@@ -84,6 +95,17 @@ func blobToBytes(blob dataBlob) []byte {
 	out := make([]byte, len(data))
 	copy(out, data)
 	return out
+}
+
+func freeLocalData(pointer *byte) error {
+	if pointer == nil {
+		return nil
+	}
+	result, _, callErr := procLocalFree.Call(uintptr(unsafe.Pointer(pointer)))
+	if result != 0 {
+		return windowsSecretError("LocalFree", callErr)
+	}
+	return nil
 }
 
 func windowsSecretError(operation string, err error) error {

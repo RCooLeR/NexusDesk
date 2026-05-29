@@ -268,7 +268,7 @@ The latest `claude-findings.md` is useful and should be treated as the current r
 1. Preview truncation data-loss path: add top-level truncation metadata to `domain.FilePreview`, disable inline save for truncated files, and surface the partial-read state to agent observations.
 2. XLSX/DOCX/PPTX zip decompression caps: implemented shared zip file-count, package-member, total-uncompressed, XLSX XML-member, DOCX body, and structured-preview compressed-size caps before parsing.
 3. macOS Keychain argv secret leak: stop passing secrets through command arguments; use stdin or Security.framework bindings.
-4. Windows DPAPI buffer pinning: add `runtime.KeepAlive` or switch to official Windows wrappers for DPAPI blobs.
+4. Windows DPAPI buffer pinning: implemented `runtime.KeepAlive` after native calls, hardened `LocalFree` cleanup, and added Windows round-trip coverage.
 5. DNS rebinding SSRF in `web_fetch`: enforce private-range rejection at dial time, not only lookup/URL validation time.
 6. Workspace search performance: add byte/chunk search fast path and avoid full preview decode/classification for every file.
 7. External DB TLS defaults: require encrypted connections by default and make plaintext an explicit audited development-only choice.
@@ -320,7 +320,7 @@ Every current `claude-findings.md` item is tracked here so no finding is lost wh
 - [ ] C-1.1 Workspace search full-decodes every candidate file: add byte/chunk search fast path, binary skips, matcher reuse, latest-request cancellation/singleflight, and optional mtime/size cache.
 - [ ] C-1.2 macOS Keychain passes secrets on process argv: feed secrets through stdin or Security.framework and add regression coverage.
 - [x] C-1.3 XLSX/DOCX/PPTX zip preview has decompression caps: shared safe zip guards cap file count, total uncompressed size, package members, XLSX metadata/worksheet reads, DOCX body reads, and structured preview compressed package size; DOCX/PPTX generated export validation already enforces required-part/XML caps.
-- [ ] C-1.4 Windows DPAPI blob calls do not pin input buffers: add `runtime.KeepAlive` or use official Windows wrappers and harden `LocalFree` handling.
+- [x] C-1.4 Windows DPAPI blob calls pin input buffers and harden `LocalFree` handling: `Protect`/`Unprotect` keep Go slices alive after native calls, propagate `LocalFree` failures when output cleanup fails, and cover Windows DPAPI round-trip behavior.
 - [ ] C-1.5 UI shell `View` is a god object: extract controllers/state for Data, Assistant, Git, Editor, Artifacts, Diagnostics, Jobs, and Settings.
 
 #### High
@@ -407,7 +407,7 @@ Every current `claude-findings.md` item is tracked here so no finding is lost wh
 
 Future development sessions should pick one logical milestone from this order:
 
-1. Harden macOS Keychain and Windows DPAPI protected-secret implementations.
+1. Harden macOS Keychain protected-secret storage so secrets are not passed through process argv.
 2. Harden `web_fetch` against DNS rebinding SSRF.
 3. Replace workspace search preview-decode path with a fast bounded byte/chunk search path.
 4. Enforce safer connector TLS defaults with explicit audited plaintext opt-in.
