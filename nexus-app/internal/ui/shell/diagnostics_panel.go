@@ -85,101 +85,143 @@ type diagnosticsProber interface {
 	Probe(ctx context.Context, config llmSvc.Config) (llmSvc.ProbeResult, error)
 }
 
+type diagnosticsController struct {
+	view   *View
+	status *widget.Label
+	detail *widget.Entry
+}
+
+func newDiagnosticsController(view *View) *diagnosticsController {
+	detail := widget.NewMultiLineEntry()
+	detail.TextStyle = fyne.TextStyle{Monospace: true}
+	detail.Wrapping = fyne.TextWrapWord
+	detail.Disable()
+	return &diagnosticsController{
+		view:   view,
+		status: widget.NewLabel("Open a workspace to run diagnostics."),
+		detail: detail,
+	}
+}
+
 func (v *View) newDiagnosticsPanel() fyne.CanvasObject {
-	refresh := widget.NewButtonWithIcon("Refresh", theme.ViewRefreshIcon(), v.refreshDiagnostics)
-	copyReport := widget.NewButtonWithIcon("Copy report", theme.ContentCopyIcon(), v.copyDiagnosticsReport)
-	exportIssueReport := widget.NewButtonWithIcon("Export issue report", theme.DownloadIcon(), v.exportDiagnosticsIssueReport)
-	exportMetadata := widget.NewButtonWithIcon("Export metadata", theme.DownloadIcon(), v.exportDiagnosticsMetadataBackup)
-	exportState := widget.NewButtonWithIcon("Export state", theme.DownloadIcon(), v.exportDiagnosticsWorkspaceStateBackup)
-	openSettings := widget.NewButtonWithIcon("Settings", theme.SettingsIcon(), v.openSettingsTab)
+	return v.diagnostics.Panel()
+}
+
+func (v *View) copyDiagnosticsReport() {
+	v.diagnostics.CopyReport()
+}
+
+func (v *View) exportDiagnosticsMetadataBackup() {
+	v.diagnostics.ExportMetadataBackup()
+}
+
+func (v *View) exportDiagnosticsWorkspaceStateBackup() {
+	v.diagnostics.ExportWorkspaceStateBackup()
+}
+
+func (v *View) exportDiagnosticsIssueReport() {
+	v.diagnostics.ExportIssueReport()
+}
+
+func (v *View) refreshDiagnostics() {
+	v.diagnostics.Refresh()
+}
+
+func (c *diagnosticsController) Panel() fyne.CanvasObject {
+	refresh := widget.NewButtonWithIcon("Refresh", theme.ViewRefreshIcon(), c.Refresh)
+	copyReport := widget.NewButtonWithIcon("Copy report", theme.ContentCopyIcon(), c.CopyReport)
+	exportIssueReport := widget.NewButtonWithIcon("Export issue report", theme.DownloadIcon(), c.ExportIssueReport)
+	exportMetadata := widget.NewButtonWithIcon("Export metadata", theme.DownloadIcon(), c.ExportMetadataBackup)
+	exportState := widget.NewButtonWithIcon("Export state", theme.DownloadIcon(), c.ExportWorkspaceStateBackup)
+	openSettings := widget.NewButtonWithIcon("Settings", theme.SettingsIcon(), c.view.openSettingsTab)
 	openJobs := widget.NewButtonWithIcon("Jobs", theme.ListIcon(), func() {
-		if !v.selectBottomTab("Jobs") {
-			v.addActivity("Jobs panel is unavailable.")
+		if !c.view.selectBottomTab("Jobs") {
+			c.view.addActivity("Jobs panel is unavailable.")
 		}
 	})
 	openAudit := widget.NewButtonWithIcon("Agent Audit", theme.InfoIcon(), func() {
-		if !v.selectBottomTab("Agent Audit") {
-			v.addActivity("Agent Audit panel is unavailable.")
+		if !c.view.selectBottomTab("Agent Audit") {
+			c.view.addActivity("Agent Audit panel is unavailable.")
 		}
 	})
 	actions := container.NewHBox(refresh, copyReport, exportIssueReport, exportMetadata, exportState, openSettings, openJobs, openAudit)
-	header := container.NewVBox(v.diagnosticsStatus, actions)
-	scroll := container.NewScroll(v.diagnosticsDetail)
+	header := container.NewVBox(c.status, actions)
+	scroll := container.NewScroll(c.detail)
 	scroll.SetMinSize(fyne.NewSize(260, 120))
-	if strings.TrimSpace(v.diagnosticsDetail.Text) == "" {
-		v.diagnosticsDetail.SetText("Run diagnostics to inspect provider, metadata, and job health.")
+	if strings.TrimSpace(c.detail.Text) == "" {
+		c.detail.SetText("Run diagnostics to inspect provider, metadata, and job health.")
 	}
 	return container.NewBorder(header, nil, nil, nil, scroll)
 }
 
-func (v *View) copyDiagnosticsReport() {
-	report := strings.TrimSpace(v.diagnosticsDetail.Text)
+func (c *diagnosticsController) CopyReport() {
+	report := strings.TrimSpace(c.detail.Text)
 	if report == "" {
-		v.diagnosticsStatus.SetText("Run diagnostics before copying the report.")
+		c.status.SetText("Run diagnostics before copying the report.")
 		return
 	}
 	if app := fyne.CurrentApp(); app != nil && app.Clipboard() != nil {
 		app.Clipboard().SetContent(report)
-		v.diagnosticsStatus.SetText("Diagnostics report copied to clipboard.")
+		c.status.SetText("Diagnostics report copied to clipboard.")
 		return
 	}
-	if v.window != nil && v.window.Clipboard() != nil {
-		v.window.Clipboard().SetContent(report)
-		v.diagnosticsStatus.SetText("Diagnostics report copied to clipboard.")
+	if c.view.window != nil && c.view.window.Clipboard() != nil {
+		c.view.window.Clipboard().SetContent(report)
+		c.status.SetText("Diagnostics report copied to clipboard.")
 		return
 	}
-	v.diagnosticsStatus.SetText("Clipboard is unavailable in this runtime.")
+	c.status.SetText("Clipboard is unavailable in this runtime.")
 }
 
-func (v *View) exportDiagnosticsMetadataBackup() {
-	workspace := v.state.Workspace()
-	if workspace.Root == "" || v.metadataStore == nil {
-		v.diagnosticsStatus.SetText("Open a workspace before exporting metadata backup.")
+func (c *diagnosticsController) ExportMetadataBackup() {
+	workspace := c.view.state.Workspace()
+	if workspace.Root == "" || c.view.metadataStore == nil {
+		c.status.SetText("Open a workspace before exporting metadata backup.")
 		return
 	}
-	result, err := v.metadataStore.ExportBackup()
+	result, err := c.view.metadataStore.ExportBackup()
 	if err != nil {
-		v.diagnosticsStatus.SetText("Metadata backup export failed.")
-		v.addActivity("Metadata backup export failed: " + err.Error())
+		c.status.SetText("Metadata backup export failed.")
+		c.view.addActivity("Metadata backup export failed: " + err.Error())
 		return
 	}
-	v.diagnosticsStatus.SetText("Metadata backup exported: " + result.Path)
-	v.addActivity(fmt.Sprintf("Exported metadata backup %s (%d file(s), %d bytes).", result.Path, len(result.Files), result.SizeBytes))
+	c.status.SetText("Metadata backup exported: " + result.Path)
+	c.view.addActivity(fmt.Sprintf("Exported metadata backup %s (%d file(s), %d bytes).", result.Path, len(result.Files), result.SizeBytes))
 }
 
-func (v *View) exportDiagnosticsWorkspaceStateBackup() {
-	workspace := v.state.Workspace()
-	if workspace.Root == "" || v.metadataStore == nil {
-		v.diagnosticsStatus.SetText("Open a workspace before exporting workspace state backup.")
+func (c *diagnosticsController) ExportWorkspaceStateBackup() {
+	workspace := c.view.state.Workspace()
+	if workspace.Root == "" || c.view.metadataStore == nil {
+		c.status.SetText("Open a workspace before exporting workspace state backup.")
 		return
 	}
-	result, err := v.metadataStore.ExportWorkspaceStateBackup(metadataSvc.WorkspaceStateBackupOptions{
-		SettingsPath:          v.settingsStore.Path(),
-		ConnectorProfilesPath: v.connectorProfileStore.Path(),
+	result, err := c.view.metadataStore.ExportWorkspaceStateBackup(metadataSvc.WorkspaceStateBackupOptions{
+		SettingsPath:          c.view.settingsStore.Path(),
+		ConnectorProfilesPath: c.view.connectorProfileStore.Path(),
 	})
 	if err != nil {
-		v.diagnosticsStatus.SetText("Workspace state backup export failed.")
-		v.addActivity("Workspace state backup export failed: " + err.Error())
+		c.status.SetText("Workspace state backup export failed.")
+		c.view.addActivity("Workspace state backup export failed: " + err.Error())
 		return
 	}
-	v.diagnosticsStatus.SetText("Workspace state backup exported: " + result.Path)
-	v.addActivity(fmt.Sprintf("Exported workspace state backup %s (%d file(s), %d bytes).", result.Path, len(result.Files), result.SizeBytes))
+	c.status.SetText("Workspace state backup exported: " + result.Path)
+	c.view.addActivity(fmt.Sprintf("Exported workspace state backup %s (%d file(s), %d bytes).", result.Path, len(result.Files), result.SizeBytes))
 }
 
-func (v *View) exportDiagnosticsIssueReport() {
-	workspace := v.state.Workspace()
+func (c *diagnosticsController) ExportIssueReport() {
+	workspace := c.view.state.Workspace()
 	if workspace.Root == "" {
-		v.diagnosticsStatus.SetText("Open a workspace before exporting an issue report.")
+		c.status.SetText("Open a workspace before exporting an issue report.")
 		return
 	}
 	root := workspace.Root
-	v.diagnosticsStatus.SetText("Exporting redacted issue report...")
-	activityTail := v.recentActivityLines(diagnosticsActivityTailLimit)
-	currentReport := strings.TrimSpace(v.diagnosticsDetail.Text)
+	c.status.SetText("Exporting redacted issue report...")
+	activityTail := c.view.recentActivityLines(diagnosticsActivityTailLimit)
+	currentReport := strings.TrimSpace(c.detail.Text)
 	go func() {
 		report := currentReport
 		if report == "" || strings.Contains(report, "Run diagnostics to inspect") {
-			snapshot := v.collectDiagnosticsSnapshot(root, activityTail)
+			snapshot := c.view.collectDiagnosticsSnapshot(root, activityTail)
 			report = formatDiagnosticsSnapshot(snapshot)
 		}
 		result, err := issueReportSvc.Export(issueReportSvc.Options{
@@ -189,33 +231,33 @@ func (v *View) exportDiagnosticsIssueReport() {
 		})
 		fyne.Do(func() {
 			if err != nil {
-				v.diagnosticsStatus.SetText("Issue report export failed.")
-				v.addActivity("Issue report export failed: " + err.Error())
+				c.status.SetText("Issue report export failed.")
+				c.view.addActivity("Issue report export failed: " + err.Error())
 				return
 			}
-			v.diagnosticsStatus.SetText("Redacted issue report exported: " + result.Path)
-			v.addActivity(fmt.Sprintf("Exported redacted issue report %s (%d file(s), %d bytes).", result.Path, len(result.Files), result.SizeBytes))
+			c.status.SetText("Redacted issue report exported: " + result.Path)
+			c.view.addActivity(fmt.Sprintf("Exported redacted issue report %s (%d file(s), %d bytes).", result.Path, len(result.Files), result.SizeBytes))
 		})
 	}()
 }
 
-func (v *View) refreshDiagnostics() {
-	workspace := v.state.Workspace()
+func (c *diagnosticsController) Refresh() {
+	workspace := c.view.state.Workspace()
 	if workspace.Root == "" {
-		v.diagnosticsStatus.SetText("Open a workspace before running diagnostics.")
-		v.diagnosticsDetail.SetText("Diagnostics are scoped to an open workspace.")
+		c.status.SetText("Open a workspace before running diagnostics.")
+		c.detail.SetText("Diagnostics are scoped to an open workspace.")
 		return
 	}
-	v.diagnosticsStatus.SetText("Running diagnostics...")
+	c.status.SetText("Running diagnostics...")
 	root := workspace.Root
-	activityTail := v.recentActivityLines(diagnosticsActivityTailLimit)
+	activityTail := c.view.recentActivityLines(diagnosticsActivityTailLimit)
 	go func() {
-		snapshot := v.collectDiagnosticsSnapshot(root, activityTail)
+		snapshot := c.view.collectDiagnosticsSnapshot(root, activityTail)
 		detail := formatDiagnosticsSnapshot(snapshot)
 		status := diagnosticsStatusLine(snapshot)
 		fyne.Do(func() {
-			v.diagnosticsDetail.SetText(detail)
-			v.diagnosticsStatus.SetText(status)
+			c.detail.SetText(detail)
+			c.status.SetText(status)
 		})
 	}()
 }

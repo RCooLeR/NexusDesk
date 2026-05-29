@@ -19,6 +19,36 @@ import (
 	toolsSvc "nexusdesk/internal/services/tools"
 )
 
+func TestDiagnosticsControllerInitialState(t *testing.T) {
+	_ = fynetest.NewTempApp(t)
+
+	view := &View{}
+	controller := newDiagnosticsController(view)
+
+	if controller.status.Text != "Open a workspace to run diagnostics." {
+		t.Fatalf("expected initial diagnostics status, got %q", controller.status.Text)
+	}
+	if strings.TrimSpace(controller.detail.Text) != "" {
+		t.Fatalf("expected empty initial diagnostics detail, got %q", controller.detail.Text)
+	}
+}
+
+func TestDiagnosticsControllerRequiresWorkspace(t *testing.T) {
+	app := fynetest.NewTempApp(t)
+	window := app.NewWindow("diagnostics-controller")
+	defer window.Close()
+	view := New(window)
+
+	view.diagnostics.Refresh()
+
+	if view.diagnostics.status.Text != "Open a workspace before running diagnostics." {
+		t.Fatalf("expected missing workspace status, got %q", view.diagnostics.status.Text)
+	}
+	if view.diagnostics.detail.Text != "Diagnostics are scoped to an open workspace." {
+		t.Fatalf("expected missing workspace detail, got %q", view.diagnostics.detail.Text)
+	}
+}
+
 func TestDiagnosticsStatusLineReflectsProbeAndMetadataState(t *testing.T) {
 	now := time.Date(2026, 5, 28, 10, 0, 0, 0, time.UTC)
 	snapshot := diagnosticsSnapshot{

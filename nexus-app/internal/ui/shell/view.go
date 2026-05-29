@@ -151,8 +151,7 @@ type View struct {
 	agentAuditResults        *fyne.Container
 	agentAuditStatus         *widget.Label
 	agentAuditDetail         *widget.Entry
-	diagnosticsStatus        *widget.Label
-	diagnosticsDetail        *widget.Entry
+	diagnostics              *diagnosticsController
 	approvalResults          *fyne.Container
 	approvalStatus           *widget.Label
 	accessStatus             *widget.Label
@@ -223,10 +222,6 @@ func NewWithStartupStatus(window fyne.Window, startupStatus startupSvc.Status) *
 	agentAuditDetail.TextStyle = fyne.TextStyle{Monospace: true}
 	agentAuditDetail.Wrapping = fyne.TextWrapWord
 	agentAuditDetail.Disable()
-	diagnosticsDetail := widget.NewMultiLineEntry()
-	diagnosticsDetail.TextStyle = fyne.TextStyle{Monospace: true}
-	diagnosticsDetail.Wrapping = fyne.TextWrapWord
-	diagnosticsDetail.Disable()
 	workspaceService := workspaceSvc.New()
 	llmClient := llmSvc.NewClient()
 	assistantService := assistantSvc.New(settingsStore, workspaceService, llmClient)
@@ -352,12 +347,8 @@ func NewWithStartupStatus(window fyne.Window, startupStatus startupSvc.Status) *
 		agentAuditResults: container.NewVBox(
 			widget.NewLabel("Open a workspace to inspect persisted agent runs."),
 		),
-		agentAuditStatus: widget.NewLabel("Agent audit has not been loaded."),
-		agentAuditDetail: agentAuditDetail,
-		diagnosticsStatus: widget.NewLabel(
-			"Open a workspace to run diagnostics.",
-		),
-		diagnosticsDetail:   diagnosticsDetail,
+		agentAuditStatus:    widget.NewLabel("Agent audit has not been loaded."),
+		agentAuditDetail:    agentAuditDetail,
 		approvalResults:     container.NewVBox(widget.NewLabel("Open a workspace to inspect approval records.")),
 		approvalStatus:      widget.NewLabel("Approval records have not been loaded."),
 		accessStatus:        widget.NewLabel("Full project access: inactive"),
@@ -368,6 +359,7 @@ func NewWithStartupStatus(window fyne.Window, startupStatus startupSvc.Status) *
 	view.search = newSearchController(view)
 	view.jobs = newJobsController(view)
 	view.rollbacks = newRollbackController(view)
+	view.diagnostics = newDiagnosticsController(view)
 	welcomeItem.Content = view.newWelcomePanel()
 	view.configureEditorTabs()
 	view.refreshStatusBar()
