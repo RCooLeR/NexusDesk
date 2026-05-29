@@ -579,6 +579,7 @@ The Fyne migration must not drop product ambition, but this section is intention
 - [x] Add approval-gated rollback-backed conflict-marker resolution tool for one workspace text file with `ours`, `theirs`, and `both` strategies.
 - [x] Add first-party security tools for redacting text, listing approval posture/records, and recording explicit future-approval requests for multi-step agent plans.
 - [x] Add approval-gated native `format_file` tool for safe text files with full-file read guard, deterministic editor formatting, diff preview, original encoding preservation, and rollback snapshots.
+- [x] Add medium-risk native `lint_file` tool for one safe text file with marker, merge-conflict, JSON, Go, YAML, TOML, and XML diagnostics plus bounded output and no mutation.
 - [x] Add approval-gated rollback-backed `revert_changes` tool for one file's unstaged tracked changes or explicit untracked-file deletion.
 - [x] Add approval-gated `revert_staged_changes` tool for one file's staged-only change with explicit `scope=staged`, staged diff preview, rollback-backed file restore/delete, mixed unstaged-edit rejection, and no branch/ref rewriting.
 - [ ] Add remaining mutating Git tools with preview, approval, audit, and no force/amend behavior by default: commit-level revert/cherry-pick and PR collaboration workflows.

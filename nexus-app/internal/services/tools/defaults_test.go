@@ -950,6 +950,82 @@ func TestDefaultDispatcherFormatFileRejectsUnsupportedAndUnsafeTargets(t *testin
 	}
 }
 
+func TestDefaultDispatcherLintFileTool(t *testing.T) {
+	root := t.TempDir()
+	if err := os.MkdirAll(filepath.Join(root, "config"), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(root, "config", "app.json"), []byte("{\n  \"name\": true,,\n  \"note\": \"TODO wire this\"\n}\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	dispatcher := NewDefaultDispatcher(Dependencies{Workspace: workspaceSvc.New()})
+	call := agent.ToolCall{Name: "lint_file", Args: map[string]string{"relPath": "config/app.json"}}
+
+	blocked, err := dispatcher.ExecuteTool(context.Background(), call, agent.Request{WorkspaceRoot: root})
+	if err == nil || blocked.Risk != "medium" || !strings.Contains(blocked.Observation, "approval") {
+		t.Fatalf("expected lint_file approval block, got result=%#v err=%v", blocked, err)
+	}
+	approved := false
+	result, err := dispatcher.ExecuteTool(context.Background(), call, agent.Request{
+		WorkspaceRoot: root,
+		ApproveTool: func(ctx context.Context, request agent.ToolApprovalRequest) bool {
+			approved = request.Name == "lint_file" && request.Risk == "medium"
+			return approved
+		},
+	})
+	if err != nil {
+		t.Fatalf("lint_file returned error: %v", err)
+	}
+	for _, expected := range []string{"Native lint diagnostics.", "Diagnostics: 2", "error/json", "info/marker", "TODO wire this"} {
+		if !strings.Contains(result.Observation, expected) {
+			t.Fatalf("lint_file observation missing %q:\n%s", expected, result.Observation)
+		}
+	}
+	if !approved || result.Mutated {
+		t.Fatalf("unexpected lint_file approval/mutation state approved=%t result=%#v", approved, result)
+	}
+
+	cleanPath := filepath.Join(root, "config", "clean.json")
+	if err := os.WriteFile(cleanPath, []byte("{\"name\": true}\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	clean, err := dispatcher.ExecuteTool(context.Background(), agent.ToolCall{Name: "lint_file", Args: map[string]string{"relPath": "config/clean.json"}}, agent.Request{
+		WorkspaceRoot: root,
+		ApproveTool: func(ctx context.Context, request agent.ToolApprovalRequest) bool {
+			return request.Name == "lint_file"
+		},
+	})
+	if err != nil {
+		t.Fatalf("clean lint_file returned error: %v", err)
+	}
+	if !strings.Contains(clean.Observation, "No lint diagnostics found.") || clean.Mutated {
+		t.Fatalf("unexpected clean lint result: %#v", clean)
+	}
+}
+
+func TestDefaultDispatcherLintFileRejectsUnsupportedLinterAndUnsafeTarget(t *testing.T) {
+	root := t.TempDir()
+	if err := os.WriteFile(filepath.Join(root, "blob.txt"), []byte{'a', 0x00, 'b'}, 0o644); err != nil {
+		t.Fatal(err)
+	}
+	dispatcher := NewDefaultDispatcher(Dependencies{Workspace: workspaceSvc.New()})
+	approved := agent.Request{
+		WorkspaceRoot: root,
+		ApproveTool: func(ctx context.Context, request agent.ToolApprovalRequest) bool {
+			return request.Name == "lint_file"
+		},
+	}
+
+	badLinter, err := dispatcher.ExecuteTool(context.Background(), agent.ToolCall{Name: "lint_file", Args: map[string]string{"relPath": "blob.txt", "linter": "eslint"}}, approved)
+	if err == nil || badLinter.Mutated || !strings.Contains(badLinter.Observation, "unsupported linter") {
+		t.Fatalf("expected unsupported linter rejection, got result=%#v err=%v", badLinter, err)
+	}
+	unsafe, err := dispatcher.ExecuteTool(context.Background(), agent.ToolCall{Name: "lint_file", Args: map[string]string{"relPath": "blob.txt"}}, approved)
+	if err == nil || unsafe.Mutated || !strings.Contains(unsafe.Observation, "safe text") {
+		t.Fatalf("expected unsafe lint target rejection, got result=%#v err=%v", unsafe, err)
+	}
+}
+
 func TestDefaultDispatcherArtifactLineageTool(t *testing.T) {
 	root := t.TempDir()
 	if err := os.WriteFile(filepath.Join(root, "README.md"), []byte("# Project\n"), 0o644); err != nil {

@@ -61,6 +61,30 @@ func (h defaultHandlers) formatFile(ctx context.Context, call agent.ToolCall, re
 	}, nil
 }
 
+func (h defaultHandlers) lintFile(ctx context.Context, call agent.ToolCall, request agent.Request) (agent.ToolResult, error) {
+	_ = ctx
+	root, err := workspaceRoot(request)
+	if err != nil {
+		return toolError(call, "medium", err), err
+	}
+	relPath := firstArg(call, "relPath", "path")
+	if relPath == "" {
+		err := errors.New("relPath is required")
+		return toolError(call, "medium", err), err
+	}
+	linter := strings.ToLower(strings.TrimSpace(firstArg(call, "linter")))
+	if linter != "" && linter != "native" {
+		err := fmt.Errorf("unsupported linter %q; only native diagnostics are available", linter)
+		return toolError(call, "medium", err), err
+	}
+	read, err := h.deps.Workspace.ReadTextFile(root, relPath)
+	if err != nil {
+		return toolError(call, "medium", err), err
+	}
+	diagnostics := editorSvc.AnalyzeDraftDiagnostics(read.RelPath, read.Content)
+	return toolOK(call, "medium", formatLintFileObservation(read, diagnostics)), nil
+}
+
 func formatFileObservation(read workspacesvc.TextFileRead, proposal workspacesvc.FileWriteProposal) string {
 	lines := []string{
 		"Formatted workspace file.",
@@ -72,6 +96,29 @@ func formatFileObservation(read workspacesvc.TextFileRead, proposal workspacesvc
 	}
 	if proposal.Diff != "" {
 		lines = append(lines, "Diff:\n"+proposal.Diff)
+	}
+	return strings.Join(lines, "\n")
+}
+
+func formatLintFileObservation(read workspacesvc.TextFileRead, diagnostics []editorSvc.DraftDiagnostic) string {
+	lines := []string{
+		"Native lint diagnostics.",
+		"Path: " + read.RelPath,
+		"Linter: native",
+		"Encoding: " + read.Encoding,
+		fmt.Sprintf("Size: %d", read.Size),
+		fmt.Sprintf("Diagnostics: %d", len(diagnostics)),
+	}
+	if len(diagnostics) == 0 {
+		lines = append(lines, "No lint diagnostics found.")
+		return strings.Join(lines, "\n")
+	}
+	for index, diagnostic := range diagnostics {
+		if index >= 30 {
+			lines = append(lines, "[diagnostics truncated]")
+			break
+		}
+		lines = append(lines, fmt.Sprintf("- %s/%s L%d %s", diagnostic.Severity, diagnostic.Source, diagnostic.Line, diagnostic.Message))
 	}
 	return strings.Join(lines, "\n")
 }
