@@ -67,6 +67,86 @@ func TestDefaultDispatcherContextAndProblemsTools(t *testing.T) {
 	}
 }
 
+func TestDefaultDispatcherDatasetTools(t *testing.T) {
+	root := t.TempDir()
+	if err := os.WriteFile(filepath.Join(root, "sales.csv"), []byte("channel,spend\nsearch,12\nsocial,8\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	dispatcher := NewDefaultDispatcher(Dependencies{Workspace: workspaceSvc.New()})
+	request := agent.Request{WorkspaceRoot: root}
+
+	profile, err := dispatcher.ExecuteTool(context.Background(), agent.ToolCall{Name: "profile_dataset", Args: map[string]string{"relPath": "sales.csv"}}, request)
+	if err != nil {
+		t.Fatalf("profile_dataset returned error: %v", err)
+	}
+	if !strings.Contains(profile.Observation, "Dataset profile: sales.csv") || !strings.Contains(profile.Observation, "channel") {
+		t.Fatalf("unexpected profile observation:\n%s", profile.Observation)
+	}
+
+	query, err := dispatcher.ExecuteTool(context.Background(), agent.ToolCall{Name: "query_dataset", Args: map[string]string{"relPath": "sales.csv", "query": "channel=search"}}, request)
+	if err != nil {
+		t.Fatalf("query_dataset returned error: %v", err)
+	}
+	if !strings.Contains(query.Observation, "search") || !strings.Contains(query.Observation, "| channel | spend |") {
+		t.Fatalf("unexpected query observation:\n%s", query.Observation)
+	}
+
+	blocked, err := dispatcher.ExecuteTool(context.Background(), agent.ToolCall{Name: "query_dataset_sql", Args: map[string]string{"relPath": "sales.csv", "sql": "select channel, spend from dataset where channel = 'search'"}}, request)
+	if err == nil || !strings.Contains(blocked.Observation, "approval") {
+		t.Fatalf("expected medium-risk SQL approval, got result=%#v err=%v", blocked, err)
+	}
+
+	sql, err := dispatcher.ExecuteTool(context.Background(), agent.ToolCall{Name: "query_dataset_sql", Args: map[string]string{"relPath": "sales.csv", "sql": "select channel, spend from dataset where channel = 'search'"}}, agent.Request{
+		WorkspaceRoot: root,
+		ApproveTool: func(ctx context.Context, request agent.ToolApprovalRequest) bool {
+			return request.Name == "query_dataset_sql" && request.Risk == "medium"
+		},
+	})
+	if err != nil {
+		t.Fatalf("query_dataset_sql returned error: %v", err)
+	}
+	if !strings.Contains(sql.Observation, "Dataset SQL result: sales.csv") || !strings.Contains(sql.Observation, "Validate SELECT-only") {
+		t.Fatalf("unexpected SQL observation:\n%s", sql.Observation)
+	}
+}
+
+func TestDefaultDispatcherDocumentAndOperationsTools(t *testing.T) {
+	root := t.TempDir()
+	if err := os.WriteFile(filepath.Join(root, "guide.md"), []byte("# Guide\n\nUseful notes for operations.\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	compose := "services:\n  web:\n    image: nginx\n    ports:\n      - \"8080:80\"\n"
+	if err := os.WriteFile(filepath.Join(root, "docker-compose.yml"), []byte(compose), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	dispatcher := NewDefaultDispatcher(Dependencies{Workspace: workspaceSvc.New()})
+	request := agent.Request{WorkspaceRoot: root}
+
+	document, err := dispatcher.ExecuteTool(context.Background(), agent.ToolCall{Name: "extract_document", Args: map[string]string{"relPath": "guide.md"}}, request)
+	if err != nil {
+		t.Fatalf("extract_document returned error: %v", err)
+	}
+	if !strings.Contains(document.Observation, "Document extract: guide.md") || !strings.Contains(document.Observation, "Useful notes") {
+		t.Fatalf("unexpected document observation:\n%s", document.Observation)
+	}
+
+	scan, err := dispatcher.ExecuteTool(context.Background(), agent.ToolCall{Name: "inspect_operations_files"}, request)
+	if err != nil {
+		t.Fatalf("inspect_operations_files scan returned error: %v", err)
+	}
+	if !strings.Contains(scan.Observation, "operations files found") || !strings.Contains(scan.Observation, "docker-compose.yml") {
+		t.Fatalf("unexpected operations scan observation:\n%s", scan.Observation)
+	}
+
+	inspection, err := dispatcher.ExecuteTool(context.Background(), agent.ToolCall{Name: "inspect_operations_files", Args: map[string]string{"relPath": "docker-compose.yml"}}, request)
+	if err != nil {
+		t.Fatalf("inspect_operations_files inspect returned error: %v", err)
+	}
+	if !strings.Contains(inspection.Observation, "Operations Inspection") || !strings.Contains(inspection.Observation, "nginx") {
+		t.Fatalf("unexpected operations inspection observation:\n%s", inspection.Observation)
+	}
+}
+
 func TestDefaultDispatcherListsExternalAgentTools(t *testing.T) {
 	dispatcher := NewDefaultDispatcher(Dependencies{
 		ExternalAgentLookupPath: func(command string) (string, error) {

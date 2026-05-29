@@ -93,9 +93,6 @@ func plannedToolCatalog() []ToolCatalogEntry {
 		plannedTool("browser", "browser_extract_page", "Extract structured text, links, forms, and accessibility tree.", "medium", "sessionId", "browser", "Extends web_fetch with rendered-page context."),
 		plannedTool("browser", "browser_network_log", "Read capped request/response metadata for a browser session.", "medium", "sessionId", "browser", "Useful for app debugging; must redact headers/tokens."),
 
-		plannedTool("data", "profile_dataset", "Profile a CSV/TSV/JSON/NDJSON/XLSX/Parquet/log file.", "low", "relPath", "data parity", "Service exists; needs direct agent dispatcher wrapper and provenance shape."),
-		plannedTool("data", "query_dataset", "Run a bounded table query over a local dataset.", "low", "relPath, queryJson", "data parity", "Service exists; expose rows, schema, and caps safely."),
-		plannedTool("data", "query_dataset_sql", "Run a guarded read-only SQL query over a local dataset.", "medium", "relPath, sql, limit(optional)", "data parity", "Requires single-statement guard and source lineage."),
 		plannedTool("data", "create_dataset_chart", "Create a deterministic chart artifact from dataset query results.", "high", "relPath, chartJson", "data artifacts", "Requires artifact lineage and regeneration metadata."),
 		plannedTool("database", "inspect_sqlite", "Inspect workspace SQLite schema and sample metadata read-only.", "medium", "relPath", "database parity", "Service exists; direct tool wrapper should preserve caps and query history."),
 		plannedTool("database", "query_sqlite", "Run a bounded read-only SQLite SELECT/WITH query.", "medium", "relPath, sql, limit(optional)", "database parity", "Must keep read-only URI, timeout, and SQL guard."),
@@ -104,7 +101,6 @@ func plannedToolCatalog() []ToolCatalogEntry {
 		plannedTool("database", "query_db_profile", "Run a guarded read-only query against an external profile.", "medium", "profileId, sql, limit(optional)", "connectors", "Requires approval, timeout, query history, and export lineage."),
 		plannedTool("database", "import_database_dump", "Import a dump into a local sandbox for analysis.", "high", "relPath, engine", "connectors", "Slow, high-risk; must use durable jobs, sandboxing, and disk caps."),
 
-		plannedTool("documents", "extract_document", "Extract bounded text/metadata from a document.", "low", "relPath", "documents", "Service exists for many formats; direct agent wrapper should add citation metadata."),
 		plannedTool("documents", "compare_documents", "Compare two document/artifact sources.", "low", "leftRelPath, rightRelPath", "documents", "Use existing artifact comparison where possible."),
 		plannedTool("documents", "generate_docx", "Generate a DOCX from an approved document artifact.", "high", "sourceRelPath, template(optional)", "documents", "Requires packaged export validation and regeneration metadata."),
 		plannedTool("presentations", "generate_pptx", "Generate a PPTX deck from an approved presentation artifact.", "high", "sourceRelPath, template(optional)", "presentations", "Requires packaged export validation and regeneration metadata."),
@@ -125,7 +121,6 @@ func plannedToolCatalog() []ToolCatalogEntry {
 		plannedTool("automation", "pause_automation", "Pause or resume an automation.", "high", "automationId, status", "automation", "Requires clear ownership and audit."),
 		plannedTool("automation", "run_automation_now", "Trigger an automation manually.", "high", "automationId", "automation", "Must reuse normal approval/job rules."),
 
-		plannedTool("operations", "inspect_operations_files", "Inspect Docker, Compose, env, script, config, and log files with redaction.", "low", "relPath(optional)", "operations", "Service exists; direct agent wrapper should expose existing summaries."),
 		plannedTool("operations", "generate_runbook", "Generate an operations runbook artifact from inspected service files.", "high", "relPath(optional)", "operations", "Service/artifact slices exist; direct agent wrapper should preserve lineage."),
 		plannedTool("operations", "docker_compose_config", "Run approved `docker compose config` for validation.", "high", "composeRelPath", "operations", "Can route through discovered task/job contract."),
 		plannedTool("operations", "docker_compose_logs", "Read capped Docker Compose logs.", "high", "service(optional), tail(optional)", "operations", "Requires Docker policy, redaction, and user approval."),
@@ -151,6 +146,12 @@ func implementedToolCategory(name string) string {
 	switch name {
 	case "read_context", "read_file", "search_workspace", "read_problems":
 		return "workspace"
+	case "profile_dataset", "query_dataset", "query_dataset_sql":
+		return "data"
+	case "extract_document":
+		return "documents"
+	case "inspect_operations_files":
+		return "operations"
 	case "read_git_status", "read_git_diff", "read_git_history", "read_git_blame":
 		return "git"
 	case "list_tasks", "run_task", "run_terminal_command":

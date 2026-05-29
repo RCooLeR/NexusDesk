@@ -23,6 +23,9 @@ The implemented registry is exposed to the agent through `ToolDescriptors()` and
 | Terminal/tasks | `list_tasks`, `run_task`, `run_terminal_command` | Discovered safe tasks and one-shot approved terminal commands by executable name plus explicit JSON args. Shell interpreters and command paths are blocked. |
 | Browser/web | `web_fetch` | Approval-gated HTTP(S) text fetch only. Rendered browser automation remains planned. |
 | Artifacts | `read_artifact_lineage`, `regenerate_artifact` | Artifact lineage context and approval-gated regeneration for supported artifact kinds. |
+| Data | `profile_dataset`, `query_dataset`, `query_dataset_sql` | Local dataset profiling, bounded row queries, and medium-risk approval-gated SELECT-only dataset SQL. |
+| Documents | `extract_document` | Bounded text and metadata extraction for supported workspace documents. |
+| Operations | `inspect_operations_files` | Read-only operations file scan/inspection with secret redaction and no Docker/shell execution. |
 | External agent readiness | `list_external_agent_tools`, `plan_external_agent_run` | Detection/planning only for optional Codex, Claude Code, and OpenCode integrations. NexusDesk's own tools remain primary. |
 
 ## Planned Complete Toolbelt
@@ -67,14 +70,14 @@ The planned registry should be implemented in priority order, with tests and doc
 
 ### Data, Databases, And Connectors
 
-- `profile_dataset`, `query_dataset`, `query_dataset_sql`, `create_dataset_chart`: local dataset profiling/query/chart tools.
+- `create_dataset_chart`: local dataset chart artifact generation.
 - `inspect_sqlite`, `query_sqlite`: workspace SQLite schema/query tools.
 - `list_db_profiles`, `inspect_db_profile`, `query_db_profile`, `import_database_dump`: external database profile and sandbox import tools.
 - `list_connectors`, `run_connector_action`: permissioned non-database connectors such as GitHub, Jira, analytics, CRM, and cloud storage.
 
 ### Documents, Presentations, Images
 
-- `extract_document`, `compare_documents`, `generate_docx`, `generate_pptx`: document and presentation intelligence/generation.
+- `compare_documents`, `generate_docx`, `generate_pptx`: document and presentation intelligence/generation.
 - `describe_image`, `compare_screenshots`, `generate_image_asset`: vision/screenshot and approved media-generation workflows.
 
 ### MCP, Plugins, And Extensibility
@@ -88,7 +91,7 @@ The planned registry should be implemented in priority order, with tests and doc
 
 ### Operations And Security
 
-- `inspect_operations_files`, `generate_runbook`, `docker_compose_config`, `docker_compose_logs`, `docker_compose_lifecycle`: redacted operations tooling and approved Docker workflows.
+- `generate_runbook`, `docker_compose_config`, `docker_compose_logs`, `docker_compose_lifecycle`: redacted operations tooling and approved Docker workflows.
 - `request_approval`, `list_approvals`, `redact_text`: approval and redaction primitives for multi-step tool plans.
 
 ## Implementation Gate For Each Tool
@@ -107,7 +110,7 @@ Before a planned tool becomes executable, it needs:
 
 ## Priority Order
 
-1. Expose already-built service capabilities as direct agent tools: dataset profile/query/SQL, SQLite inspect/query, document extraction, operations inspection/runbook, job list/log/cancel.
+1. Expose the next already-built service capabilities as direct agent tools: SQLite inspect/query, operations runbook export, artifact-backed dataset chart generation, and job list/log/cancel.
 2. Add mutating Git tools with preview/approval/audit.
 3. Add browser automation with screenshots and rendered-page extraction.
 4. Add interactive terminal sessions on top of durable jobs.
@@ -115,4 +118,3 @@ Before a planned tool becomes executable, it needs:
 6. Add semantic/symbol indexing and LSP-backed editor actions.
 7. Add MCP/plugin discovery after native core tools are stable.
 8. Add automation scheduling after jobs, approvals, and notification UX are mature.
-
