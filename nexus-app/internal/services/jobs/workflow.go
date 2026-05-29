@@ -15,6 +15,7 @@ const (
 	KindLongIndexing         = "long-indexing"
 	KindReportGeneration     = "report-generation"
 	KindLongAgentRun         = "long-agent-run"
+	KindExternalAgentRun     = "external-agent-run"
 	KindPackagedExport       = "packaged-export"
 )
 
@@ -94,6 +95,17 @@ var slowWorkflowSpecs = []WorkflowSpec{
 		Kind:                      KindLongAgentRun,
 		Label:                     "Long agent run",
 		Description:               "Run multi-step agent workflows through durable progress and audit records.",
+		RequiresDurableJob:        true,
+		ProhibitedOnWorkspaceOpen: true,
+		RequiresExplicitStart:     true,
+		Cancellable:               true,
+		Retryable:                 false,
+		AuditRequired:             true,
+	},
+	{
+		Kind:                      KindExternalAgentRun,
+		Label:                     "External coding-agent run",
+		Description:               "Run optional coding-agent CLIs such as Codex, Claude Code, or OpenCode only after explicit approval.",
 		RequiresDurableJob:        true,
 		ProhibitedOnWorkspaceOpen: true,
 		RequiresExplicitStart:     true,

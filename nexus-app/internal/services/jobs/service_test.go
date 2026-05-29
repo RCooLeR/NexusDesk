@@ -151,6 +151,19 @@ func TestSlowWorkflowSpecsRequireDurableExplicitStarts(t *testing.T) {
 	}
 }
 
+func TestExternalAgentRunWorkflowIsAuditedAndExplicit(t *testing.T) {
+	spec, ok := SlowWorkflowSpec(KindExternalAgentRun)
+	if !ok {
+		t.Fatal("expected external agent run workflow spec")
+	}
+	if !spec.RequiresDurableJob || !spec.RequiresExplicitStart || !spec.ProhibitedOnWorkspaceOpen || !spec.AuditRequired || !spec.Cancellable {
+		t.Fatalf("external agent workflow is missing guardrails: %#v", spec)
+	}
+	if err := ValidateWorkflowStart(KindExternalAgentRun, StartOptions{}); err == nil {
+		t.Fatal("expected implicit external agent workflow start to be rejected")
+	}
+}
+
 func TestStartWorkflowEnforcesExplicitUserStart(t *testing.T) {
 	service := New()
 	if _, _, err := service.StartWorkflow(KindOCRExtraction, "OCR", StartOptions{}); err == nil {

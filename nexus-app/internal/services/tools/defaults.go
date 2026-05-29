@@ -45,6 +45,7 @@ func NewDefaultDispatcher(deps Dependencies) *Dispatcher {
 		Tool{Descriptor: agent.ToolDescriptor{Name: "read_git_history", Description: "Read bounded Git commit history for the repository or one file.", Risk: "low", Inputs: "relPath(optional), limit(optional)"}, Handler: handlers.readGitHistory},
 		Tool{Descriptor: agent.ToolDescriptor{Name: "read_git_blame", Description: "Read bounded Git blame lines for one file.", Risk: "low", Inputs: "relPath, startLine(optional), endLine(optional)"}, Handler: handlers.readGitBlame},
 		Tool{Descriptor: agent.ToolDescriptor{Name: "list_external_agent_tools", Description: "List optional external coding-agent CLIs detected on PATH, such as Codex, Claude Code, and OpenCode. This is detection-only; execution requires a future approved job/shell integration.", Risk: "low", Inputs: ""}, Handler: handlers.listExternalAgentTools},
+		Tool{Descriptor: agent.ToolDescriptor{Name: "plan_external_agent_run", Description: "Plan a future approved external coding-agent CLI run without executing it. Produces job kind, working directory, prompt delivery, audit, approval, cancellation, and output-capture requirements.", Risk: "low", Inputs: "toolID, prompt"}, Handler: handlers.planExternalAgentRun},
 		Tool{Descriptor: agent.ToolDescriptor{Name: "read_artifact_lineage", Description: "Read the workspace artifact lineage graph with generated artifacts, sources, jobs, and task relationships.", Risk: "low", Inputs: "query(optional), includeArchived(optional)"}, Handler: handlers.readArtifactLineage},
 		Tool{Descriptor: agent.ToolDescriptor{Name: "regenerate_artifact", Description: "Regenerate one supported native artifact from saved source/dependency metadata into a new artifact file.", Risk: "high", Inputs: "relPath"}, Handler: handlers.regenerateArtifact},
 		Tool{Descriptor: agent.ToolDescriptor{Name: "web_fetch", Description: "Fetch one approved HTTP(S) text-like URL with redirect, size, content-type, local-network, and optional domain allow-list guards.", Risk: "medium", Inputs: "url, allowedDomains(optional), allowLocal(optional), maxBytes(optional)"}, Handler: handlers.webFetch},
@@ -260,6 +261,23 @@ func formatGitBlameObservation(result gitsvc.BlameResult) string {
 func (h defaultHandlers) listExternalAgentTools(ctx context.Context, call agent.ToolCall, request agent.Request) (agent.ToolResult, error) {
 	statuses := externalagentsSvc.Probe(externalagentsSvc.Options{LookupPath: h.deps.ExternalAgentLookupPath})
 	return toolOK(call, "low", externalagentsSvc.FormatMarkdown(statuses)), nil
+}
+
+func (h defaultHandlers) planExternalAgentRun(ctx context.Context, call agent.ToolCall, request agent.Request) (agent.ToolResult, error) {
+	prompt := firstArg(call, "prompt", "task", "instructions")
+	if strings.TrimSpace(prompt) == "" {
+		prompt = request.Prompt
+	}
+	plan, err := externalagentsSvc.PlanInvocation(externalagentsSvc.InvocationRequest{
+		ToolID:        firstArg(call, "toolID", "tool", "id"),
+		WorkspaceRoot: request.WorkspaceRoot,
+		Prompt:        prompt,
+		LookupPath:    h.deps.ExternalAgentLookupPath,
+	})
+	if err != nil {
+		return toolError(call, "low", err), err
+	}
+	return toolOK(call, "low", externalagentsSvc.FormatInvocationPlan(plan)), nil
 }
 
 func (h defaultHandlers) readArtifactLineage(ctx context.Context, call agent.ToolCall, request agent.Request) (agent.ToolResult, error) {

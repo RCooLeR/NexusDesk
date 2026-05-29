@@ -31,7 +31,7 @@ The app can already:
 - create chart, dashboard, notebook, document, document-brief, validated/theme-backed DOCX document export, workspace scan, operations, task, chat-answer, comparison, presentation-outline, packaged presentation zip, and validated/theme-backed PPTX presentation deck artifacts, with dependency/source rebuild coverage for dataset summary, query, SQL, chart, dashboard, SQL notebook, SQLite query, document-report, document-brief, document-export, scan-report, document-extraction, operations-runbook, artifact-comparison, chat-answer refresh, presentation-outline, presentation-package, and presentation-deck outputs, plus artifact browser row badges and preview summaries for type, lineage, regeneration/export capability, comparison state, archive state, metadata, sources, and jobs;
 - run Ask and Agent modes against configured OpenAI-compatible or Ollama endpoints;
 - let approved agent runs regenerate supported native artifacts from saved source/dependency metadata;
-- inspect optional external coding-agent CLI readiness for Codex, Claude Code, and OpenCode without executing them;
+- inspect optional external coding-agent CLI readiness for Codex, Claude Code, and OpenCode, and create non-executing run plans with approval/audit/cancel/output-capture requirements;
 - persist chat, artifact, job, SQL, approval, and agent/tool audit metadata.
 
 ## Production Definition
@@ -94,7 +94,7 @@ Required:
 - Search metadata recovery/export path for explicit workspace searches: bounded `.nexusdesk/search/index-metadata.json` manifests store result paths/lines and scan counts without snippets, and corrupt manifests are quarantined before replacement.
 - Backup/export flow for local-first workspace state.
 - Diagnostics panel for app logs, provider status, metadata health, job history, GPU/model runtime, recent failures, provider-specific model/runtime remediation guidance, and startup/folder-open performance timings with over-budget warnings.
-- External coding-agent execution design for Codex, Claude Code, OpenCode, and similar CLIs: detection exists, but execution must still be routed through approved jobs/shell policy, cancellation, audit, redaction, and artifact/output capture.
+- External coding-agent execution implementation for Codex, Claude Code, OpenCode, and similar CLIs: readiness and non-executing plans exist, but process launch must still be routed through approved jobs/shell policy, cancellation, audit, redaction, sandboxing, and artifact/output capture.
 - Job history retention controls and cleanup policy: the Jobs panel can prune successful/canceled completed jobs by count/age while preserving running jobs and failures/timeouts by default.
 - Startup recovery markers and crash/hang triage visibility: launch writes a local session marker, clean exit closes it, and Home/Diagnostics warn when the previous run did not shut down cleanly.
 - Audit coverage for connector jobs, OCR, dump imports, Docker mutations, shell tools, and future high-risk operations.

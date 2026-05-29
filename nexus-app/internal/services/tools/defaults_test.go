@@ -88,6 +88,31 @@ func TestDefaultDispatcherListsExternalAgentTools(t *testing.T) {
 	}
 }
 
+func TestDefaultDispatcherPlansExternalAgentRun(t *testing.T) {
+	dispatcher := NewDefaultDispatcher(Dependencies{
+		ExternalAgentLookupPath: func(command string) (string, error) {
+			if command == "opencode" {
+				return "/usr/local/bin/opencode", nil
+			}
+			return "", errors.New("missing")
+		},
+	})
+	result, err := dispatcher.ExecuteTool(
+		context.Background(),
+		agent.ToolCall{Name: "plan_external_agent_run", Args: map[string]string{"toolID": "opencode", "prompt": "inspect the branch"}},
+		agent.Request{WorkspaceRoot: "/work/project"},
+	)
+	if err != nil {
+		t.Fatalf("plan_external_agent_run returned error: %v", err)
+	}
+	if !strings.Contains(result.Observation, "External agent plan: OpenCode") {
+		t.Fatalf("expected OpenCode plan, got:\n%s", result.Observation)
+	}
+	if !strings.Contains(result.Observation, "Requires approval: true") {
+		t.Fatalf("expected approval requirement, got:\n%s", result.Observation)
+	}
+}
+
 func TestDefaultDispatcherGitHistoryAndBlameTools(t *testing.T) {
 	if _, err := exec.LookPath("git"); err != nil {
 		t.Skip("git executable is not available")
