@@ -46,6 +46,7 @@ type View struct {
 	metadataStore           *metadataSvc.Store
 	recentWorkspaceStore    *recentWorkspacesSvc.Store
 	settingsStore           *settingsSvc.Store
+	settings                *settingsController
 	taskService             *tasksSvc.Service
 	editorSession           *editorSvc.Session
 	status                  *widget.Label
@@ -234,6 +235,7 @@ func NewWithStartupStatus(window fyne.Window, startupStatus startupSvc.Status) *
 	view.git = newGitController(view)
 	view.artifacts = newArtifactsController(view)
 	view.assistant = newAssistantController(view)
+	view.settings = newSettingsController(view)
 	welcomeItem.Content = view.newWelcomePanel()
 	view.configureEditorTabs()
 	view.refreshStatusBar()

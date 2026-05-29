@@ -9,6 +9,14 @@ import (
 	settingsSvc "nexusdesk/internal/services/settings"
 )
 
+func TestNewSettingsControllerOwnsView(t *testing.T) {
+	view := &View{}
+	controller := newSettingsController(view)
+	if controller.view != view {
+		t.Fatal("expected settings controller to keep owning view reference")
+	}
+}
+
 func TestSettingsFromFormParsesTokens(t *testing.T) {
 	settings, err := settingsFromForm("ollama", "ollama-openai-compatible", "http://localhost:11434/v1", "qwen2.5-coder:14b", "api-key", "32768", "4096")
 	if err != nil {

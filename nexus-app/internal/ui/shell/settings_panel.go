@@ -18,9 +18,25 @@ import (
 	settingsSvc "nexusdesk/internal/services/settings"
 )
 
+type settingsController struct {
+	view *View
+}
+
+func newSettingsController(view *View) *settingsController {
+	return &settingsController{view: view}
+}
+
 func (v *View) openSettingsTab() {
+	if v.settings == nil {
+		v.settings = newSettingsController(v)
+	}
+	v.settings.openTab()
+}
+
+func (c *settingsController) openTab() {
+	v := c.view
 	tabState := v.editorSession.OpenPlaceholder("Settings")
-	content := v.newSettingsPanel()
+	content := c.newPanel()
 	if existing := v.editor.openTabs[tabState.ID]; existing != nil {
 		existing.Content = content
 		v.editor.tabs.Select(existing)
@@ -40,7 +56,8 @@ type settingsPanelSection struct {
 	Content  fyne.CanvasObject
 }
 
-func (v *View) newSettingsPanel() fyne.CanvasObject {
+func (c *settingsController) newPanel() fyne.CanvasObject {
+	v := c.view
 	current, err := v.settingsStore.LoadForDisplay()
 	if err != nil {
 		current = settingsSvc.Defaults()
