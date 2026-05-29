@@ -580,7 +580,8 @@ The checklist below is intentionally large. `tracker.md` should keep task-level 
 - [x] Add first assistant panel run/status strip for Ask/Agent mode, model route, context budget, selected/pinned context, evidence/source counts, route warnings, and Agent job/tool safety.
 - [x] Add first Assistant source actions to open or pin latest-answer sources for follow-up inspection.
 - [ ] Improve assistant panel layout beyond the status strip and first source actions: richer source drilldowns, approvals, diagnostics grouping, footer evidence actions, and run history.
-- [ ] Improve data-grid visual polish: header hierarchy, row density, selection, loading states, error states.
+- [x] Improve data-grid visual polish baseline with a sticky Rows status strip for row/column counts, hidden-column warnings, density mode, sizing strategy, active selection, and copy hints.
+- [ ] Continue data-grid visual polish: stronger header hierarchy, loading states, error states, and richer selected-row affordances.
 - [x] Improve artifact browser polish with row badges and preview summaries for type, lineage, regeneration/export capability, comparison state, archive state, metadata, sources, and jobs.
 - [ ] Continue artifact browser polish: stronger visual hierarchy, richer lineage/freshness cards, and comparison/regeneration workflow grouping.
 - [x] Improve diagnostics polish with report-level health cards for provider, metadata, jobs/runs, performance, startup recovery, and issue-report readiness.
@@ -646,7 +647,7 @@ The checklist below is intentionally large. `tracker.md` should keep task-level 
 - [ ] Ads exported-data importer and later API connectors.
 - [ ] CRM/contact connector importers.
 - [ ] Cross-source analysis workflows with citations.
-- [ ] DataGrip-like schema navigation and grid polish.
+- [ ] DataGrip-like schema navigation and deeper grid polish beyond the current status/density/selection strip.
 - [ ] Docker/container mutations only after mature approval, jobs, audit, and mitigation design.
 
 ### 7.9 P1: Jobs, Persistence, Diagnostics

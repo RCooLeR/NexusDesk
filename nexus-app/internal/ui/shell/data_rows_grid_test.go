@@ -266,6 +266,58 @@ func TestWithDataGridSamplingStatusHintShowsColumnCap(t *testing.T) {
 	}
 }
 
+func TestDataGridStatusLineSummarizesSelectionAndDensity(t *testing.T) {
+	value := dataGridStatusLine(
+		25,
+		250,
+		8,
+		0,
+		3,
+		2,
+		80,
+		dataGridRenderPolicy{MaxWidth: dataGridWidthMaxDense, HideDivider: true},
+	)
+	expected := "Rows: 25 shown of 250 | Columns: 8 visible | Density: dense | Sizing: sampled 80/250 rows | Selection: R3 C3 | Copy: Ctrl/Cmd+C cell, Copy row TSV"
+	if value != expected {
+		t.Fatalf("expected %q, got %q", expected, value)
+	}
+}
+
+func TestDataGridStatusLineShowsHeaderSelectionAndHiddenColumns(t *testing.T) {
+	value := dataGridStatusLine(
+		10,
+		10,
+		dataGridMaxVisibleColumns,
+		12,
+		0,
+		4,
+		0,
+		dataGridRenderPolicy{MaxWidth: dataGridWidthMax},
+	)
+	expected := "Rows: 10 shown | Columns: 128 visible (+12 hidden) | Density: standard | Sizing: headers only | Selection: header C5 | Copy: Ctrl/Cmd+C cell, Copy row TSV"
+	if value != expected {
+		t.Fatalf("expected %q, got %q", expected, value)
+	}
+}
+
+func TestDataGridStatusLineHandlesEmptyGrid(t *testing.T) {
+	value := dataGridStatusLine(0, 0, 0, 0, -1, -1, 0, dataGridRenderPolicy{})
+	if value != "Rows: no grid loaded." {
+		t.Fatalf("expected empty grid status, got %q", value)
+	}
+}
+
+func TestDataRowsTextStatusLine(t *testing.T) {
+	if value := dataRowsTextStatusLine(""); value != "Rows: no grid loaded." {
+		t.Fatalf("expected empty text status, got %q", value)
+	}
+	value := dataRowsTextStatusLine("plain rows")
+	expected := "Rows: text preview loaded | Grid navigation unavailable for this result."
+	if value != expected {
+		t.Fatalf("expected text status %q, got %q", expected, value)
+	}
+}
+
 func TestEstimateDataGridColumnWidthsUltraWideUsesFixedWidths(t *testing.T) {
 	columns := make([]string, dataGridUltraWideColumnThreshold)
 	for index := range columns {

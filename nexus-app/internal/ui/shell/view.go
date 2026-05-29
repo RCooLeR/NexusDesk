@@ -81,6 +81,7 @@ type View struct {
 	dataProfileStatus        *widget.Label
 	dataProfileDetail        *widget.Entry
 	dataRowsDetail           *widget.Entry
+	dataRowsStatus           *widget.Label
 	dataRowsContainer        *fyne.Container
 	dataRowsTable            *widget.Table
 	dataRowsColumnWidths     []float32
@@ -89,6 +90,9 @@ type View struct {
 	dataRowsValues           [][]string
 	dataRowsSelectedRow      int
 	dataRowsSelectedCol      int
+	dataRowsSampledRows      int
+	dataRowsOriginalRows     int
+	dataRowsClippedColumns   int
 	dataPlanDetail           *widget.Entry
 	dataChartDetail          *widget.Entry
 	dataResultTabs           *container.AppTabs
@@ -256,6 +260,8 @@ func NewWithStartupStatus(window fyne.Window, startupStatus startupSvc.Status) *
 	dataRowsDetail.TextStyle = fyne.TextStyle{Monospace: true}
 	dataRowsDetail.Wrapping = fyne.TextWrapOff
 	dataRowsDetail.Disable()
+	dataRowsStatus := widget.NewLabel("Rows: run a query to load grid results.")
+	dataRowsStatus.Wrapping = fyne.TextWrapWord
 	dataPlanDetail := widget.NewMultiLineEntry()
 	dataPlanDetail.TextStyle = fyne.TextStyle{Monospace: true}
 	dataPlanDetail.Wrapping = fyne.TextWrapWord
@@ -308,6 +314,7 @@ func NewWithStartupStatus(window fyne.Window, startupStatus startupSvc.Status) *
 		),
 		dataProfileDetail:       dataProfileDetail,
 		dataRowsDetail:          dataRowsDetail,
+		dataRowsStatus:          dataRowsStatus,
 		dataRowsSelectedRow:     -1,
 		dataRowsSelectedCol:     -1,
 		dataPlanDetail:          dataPlanDetail,

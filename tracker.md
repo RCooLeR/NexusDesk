@@ -508,6 +508,7 @@ The Fyne migration must not drop product ambition, but this section is intention
 - [x] Add ultra-wide header-width mode and dense-result shallow row caching to reduce width-estimation and deep-copy overhead on very large grids.
 - [x] Avoid duplicate row-sampling work and skip redundant container-object swaps/unselect calls during repeated Data-grid refreshes.
 - [x] Expand native table/grid strategy with richer keyboard nav and larger-result virtualization tuning.
+- [x] Add DataGrip-like Rows status strip with visible row/column counts, hidden-column warnings, density mode, sizing strategy, active selection, and copy hints.
 - [x] First SVG bar chart preview/artifact generation from bounded query results.
 - [x] Line chart previews/artifacts for ordered date or numeric query results.
 - [x] Richer dashboard SVG visuals with KPI cards, chart panel, and dataset notes.

@@ -131,10 +131,11 @@ func (v *View) newDataPanel() fyne.CanvasObject {
 	header := container.NewVBox(v.dataProfileStatus, queryBar, actions)
 	summary := container.NewScroll(v.dataProfileDetail)
 	v.dataRowsContainer = container.NewMax(v.dataRowsDetail)
-	rows := container.NewScroll(v.dataRowsContainer)
+	rowsScroll := container.NewScroll(v.dataRowsContainer)
+	rows := container.NewBorder(v.dataRowsStatus, nil, nil, nil, rowsScroll)
 	plan := container.NewScroll(v.dataPlanDetail)
 	charts := container.NewScroll(v.dataChartDetail)
-	for _, scroll := range []*container.Scroll{summary, rows, plan, charts} {
+	for _, scroll := range []*container.Scroll{summary, rowsScroll, plan, charts} {
 		scroll.SetMinSize(fyne.NewSize(320, 130))
 	}
 	v.dataResultTabs = container.NewAppTabs(

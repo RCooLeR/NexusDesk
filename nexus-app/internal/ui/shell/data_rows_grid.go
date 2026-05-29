@@ -43,7 +43,11 @@ func (v *View) setDataRowsText(text string) {
 	v.dataRowsValues = nil
 	v.dataRowsSelectedRow = -1
 	v.dataRowsSelectedCol = -1
+	v.dataRowsSampledRows = 0
+	v.dataRowsOriginalRows = 0
+	v.dataRowsClippedColumns = 0
 	v.dataRowsDetail.SetText(text)
+	v.setDataRowsStatus(dataRowsTextStatusLine(text))
 	if v.dataRowsContainer == nil {
 		return
 	}
@@ -67,9 +71,13 @@ func (v *View) setDataRowsGrid(columns []string, rows [][]string) {
 	v.dataRowsValues = visibleRows
 	v.dataRowsSelectedRow = -1
 	v.dataRowsSelectedCol = -1
+	v.dataRowsSampledRows = 0
+	v.dataRowsOriginalRows = len(rows)
+	v.dataRowsClippedColumns = clippedColumns
 	v.dataRowsRenderPolicy = resolveDataGridRenderPolicy(v.dataRowsColumns, v.dataRowsValues)
 	renderPolicy := v.dataRowsRenderPolicy
 	widths, sampledRows := estimateDataGridColumnWidthsWithSampling(v.dataRowsColumns, v.dataRowsValues)
+	v.dataRowsSampledRows = sampledRows
 	v.ensureDataRowsTable()
 	if v.dataRowsTable == nil {
 		return
@@ -88,6 +96,7 @@ func (v *View) setDataRowsGrid(columns []string, rows [][]string) {
 	}
 	v.dataRowsTable.Refresh()
 	v.applyDataGridSamplingStatusHint(sampledRows, len(rows), clippedColumns, renderPolicy)
+	v.refreshDataRowsStatus()
 }
 
 func (v *View) ensureDataRowsTable() {
@@ -127,9 +136,33 @@ func (v *View) ensureDataRowsTable() {
 	table.OnSelected = func(id widget.TableCellID) {
 		v.dataRowsSelectedRow = id.Row
 		v.dataRowsSelectedCol = id.Col
+		v.refreshDataRowsStatus()
 	}
 	table.StickyRowCount = 1
 	v.dataRowsTable = table
+}
+
+func (v *View) setDataRowsStatus(text string) {
+	if v.dataRowsStatus == nil {
+		return
+	}
+	v.dataRowsStatus.SetText(text)
+}
+
+func (v *View) refreshDataRowsStatus() {
+	if v.dataRowsStatus == nil {
+		return
+	}
+	v.dataRowsStatus.SetText(dataGridStatusLine(
+		len(v.dataRowsValues),
+		v.dataRowsOriginalRows,
+		len(v.dataRowsColumns),
+		v.dataRowsClippedColumns,
+		v.dataRowsSelectedRow,
+		v.dataRowsSelectedCol,
+		v.dataRowsSampledRows,
+		v.dataRowsRenderPolicy,
+	))
 }
 
 func (v *View) copySelectedDataCell() {
@@ -462,6 +495,72 @@ func withDataGridSamplingStatusHint(base string, sampledRows int, totalRows int,
 		hint += fmt.Sprintf(", showing first %d columns", dataGridMaxVisibleColumns)
 	}
 	return base + " | " + hint
+}
+
+func dataRowsTextStatusLine(text string) string {
+	if strings.TrimSpace(text) == "" {
+		return "Rows: no grid loaded."
+	}
+	return "Rows: text preview loaded | Grid navigation unavailable for this result."
+}
+
+func dataGridStatusLine(
+	visibleRows int,
+	originalRows int,
+	visibleColumns int,
+	clippedColumns int,
+	selectedRow int,
+	selectedCol int,
+	sampledRows int,
+	policy dataGridRenderPolicy,
+) string {
+	if visibleColumns <= 0 {
+		return "Rows: no grid loaded."
+	}
+	rowSummary := fmt.Sprintf("Rows: %d shown", visibleRows)
+	if originalRows > 0 && originalRows != visibleRows {
+		rowSummary = fmt.Sprintf("Rows: %d shown of %d", visibleRows, originalRows)
+	}
+	columnSummary := fmt.Sprintf("Columns: %d visible", visibleColumns)
+	if clippedColumns > 0 {
+		columnSummary += fmt.Sprintf(" (+%d hidden)", clippedColumns)
+	}
+	sizing := "Sizing: headers only"
+	if sampledRows > 0 {
+		totalRows := originalRows
+		if totalRows <= 0 {
+			totalRows = visibleRows
+		}
+		sizing = fmt.Sprintf("Sizing: sampled %d/%d rows", sampledRows, totalRows)
+	}
+	return strings.Join([]string{
+		rowSummary,
+		columnSummary,
+		"Density: " + dataGridDensityLabel(policy),
+		sizing,
+		dataGridSelectionLabel(selectedRow, selectedCol),
+		"Copy: Ctrl/Cmd+C cell, Copy row TSV",
+	}, " | ")
+}
+
+func dataGridDensityLabel(policy dataGridRenderPolicy) string {
+	if policy.HideDivider && policy.MaxWidth <= dataGridWidthMaxUltraDense {
+		return "ultra dense"
+	}
+	if policy.HideDivider {
+		return "dense"
+	}
+	return "standard"
+}
+
+func dataGridSelectionLabel(row int, col int) string {
+	if row < 0 || col < 0 {
+		return "Selection: none"
+	}
+	if row == 0 {
+		return fmt.Sprintf("Selection: header C%d", col+1)
+	}
+	return fmt.Sprintf("Selection: R%d C%d", row, col+1)
 }
 
 func limitDataGridColumns(columns []string, rows [][]string, maxColumns int) ([]string, [][]string, int) {
