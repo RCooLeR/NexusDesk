@@ -63,6 +63,18 @@ func TestRepositoryUnavailableMessageKeepsNonRepoFallback(t *testing.T) {
 	}
 }
 
+func TestRejectSilentNetworkGitCommand(t *testing.T) {
+	for _, command := range []string{"fetch", "pull", "push", "clone", "ls-remote"} {
+		err := rejectSilentNetworkGitCommand([]string{command, "origin"})
+		if err == nil || !strings.Contains(err.Error(), "explicit network workflow") {
+			t.Fatalf("expected %s to require explicit network workflow, got %v", command, err)
+		}
+	}
+	if err := rejectSilentNetworkGitCommand([]string{"status", "--porcelain=v1"}); err != nil {
+		t.Fatalf("local status command should be allowed: %v", err)
+	}
+}
+
 func hasEnvEntry(env []string, expected string) bool {
 	key := strings.SplitN(expected, "=", 2)[0] + "="
 	found := ""

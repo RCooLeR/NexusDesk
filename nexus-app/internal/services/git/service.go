@@ -293,6 +293,9 @@ func gitOutput(root string, args ...string) (string, error) {
 }
 
 func gitOutputFor(root string, class operationClass, args ...string) (string, error) {
+	if err := rejectSilentNetworkGitCommand(args); err != nil {
+		return "", err
+	}
 	timeout := timeoutForOperation(class)
 	ctx, cancel := context.WithTimeout(context.Background(), timeout)
 	defer cancel()
@@ -378,6 +381,18 @@ func nonInteractiveGitEnv(base []string) []string {
 	}
 	env = append(env, overrides...)
 	return env
+}
+
+func rejectSilentNetworkGitCommand(args []string) error {
+	if len(args) == 0 {
+		return nil
+	}
+	switch strings.ToLower(strings.TrimSpace(args[0])) {
+	case "fetch", "pull", "push", "clone", "ls-remote":
+		return fmt.Errorf("git %s requires an explicit network workflow and user approval", args[0])
+	default:
+		return nil
+	}
 }
 
 func repositoryUnavailableMessage(root string, err error) string {
