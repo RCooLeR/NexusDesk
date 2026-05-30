@@ -112,6 +112,23 @@ func TestVisualSmokeCoreToolStates(t *testing.T) {
 	assertVisualSmokeContains(t, settingsMarkup, "Diagnostics & Tests")
 }
 
+func TestVisualSmokeApprovalDialogState(t *testing.T) {
+	window, view := newVisualSmokeWindow(t)
+	window.Resize(fyne.NewSize(1280, 820))
+	root := t.TempDir()
+	workspace, err := view.workspaceService.Open(root)
+	if err != nil {
+		t.Fatal(err)
+	}
+	view.state.SetWorkspace(workspace)
+
+	view.confirmGrantFullProjectAccess()
+	markup := fynetest.RenderToMarkup(window.Canvas())
+
+	assertVisualSmokeContains(t, markup, "Grant full project access")
+	assertVisualSmokeContains(t, markup, "Grant full project access for this workspace for 1 hour?")
+}
+
 func newVisualSmokeWindow(t *testing.T) (fyne.Window, *View) {
 	t.Helper()
 	app := fynetest.NewTempApp(t)

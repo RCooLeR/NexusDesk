@@ -366,7 +366,7 @@ Legend:
 - [x] P1 Test artifacts screenshot. (`TestVisualSmokeCoreToolStates` selects the Artifacts tool and renders the shell.)
 - [x] P1 Test settings screenshot. (`TestVisualSmokeCoreToolStates` opens the Settings editor tab and verifies the Diagnostics & Tests settings section.)
 - [x] P1 Test diagnostics screenshot. (`TestVisualSmokeCoreToolStates` selects the Diagnostics tool and renders the shell.)
-- [ ] P1 Test approval dialog screenshot.
+- [x] P1 Test approval dialog screenshot. (`TestVisualSmokeApprovalDialogState` renders the grant-access confirmation dialog and verifies its title/message.)
 
 ## Phase 5: Data, Artifact, Assistant Maturity
 
