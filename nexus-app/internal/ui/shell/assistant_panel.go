@@ -151,13 +151,17 @@ func (v *View) newAssistantPanel() fyne.CanvasObject {
 	composer = container.NewPadded(composer)
 	sidebar := container.NewVBox(profileBar, widget.NewSeparator(), contextBar, widget.NewSeparator(), historyBar)
 	messageArea := container.NewBorder(v.assistant.sourceDigest, nil, nil, nil, response)
-	panel := container.NewBorder(header, composer, sidebar, nil, messageArea)
+	panel := newAssistantPanelLayout(header, composer, sidebar, messageArea)
 	v.loadAssistantProfile()
 	v.refreshAssistantContextPins()
 	v.refreshAssistantRunStatus()
 	v.refreshAssistantSourceDigest()
 	v.refreshAssistantHistory()
 	return container.NewPadded(panel)
+}
+
+func newAssistantPanelLayout(header fyne.CanvasObject, composer fyne.CanvasObject, sidebar fyne.CanvasObject, messages fyne.CanvasObject) *fyne.Container {
+	return container.NewBorder(header, composer, sidebar, nil, messages)
 }
 
 func newAssistantHeader(runStatus *widget.Label) fyne.CanvasObject {

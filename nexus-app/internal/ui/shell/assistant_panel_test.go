@@ -41,6 +41,22 @@ func TestAssistantHeaderKeepsModeRouteStatusVisible(t *testing.T) {
 	}
 }
 
+func TestAssistantPanelLayoutKeepsComposerPinnedToBottom(t *testing.T) {
+	header := widget.NewLabel("header")
+	composer := widget.NewLabel("composer")
+	sidebar := widget.NewLabel("sidebar")
+	messages := widget.NewLabel("messages")
+
+	panel := newAssistantPanelLayout(header, composer, sidebar, messages)
+
+	if len(panel.Objects) != 4 {
+		t.Fatalf("expected four assistant layout objects, got %d", len(panel.Objects))
+	}
+	if panel.Objects[0] != messages || panel.Objects[1] != header || panel.Objects[2] != composer || panel.Objects[3] != sidebar {
+		t.Fatalf("unexpected assistant layout object order: %#v", panel.Objects)
+	}
+}
+
 func TestSelectedAssistantModelRouteOptionHandlesMissingController(t *testing.T) {
 	if got := selectedAssistantModelRouteOption(&View{}); got != assistantAutoModelRouteLabel {
 		t.Fatalf("expected auto route without assistant controller, got %q", got)
