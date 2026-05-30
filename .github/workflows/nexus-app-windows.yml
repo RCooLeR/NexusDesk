@@ -1,6 +1,7 @@
 name: Nexus App Native CI
 
 on:
+  workflow_dispatch:
   push:
     paths:
       - ".github/workflows/nexus-app-windows.yml"
@@ -14,10 +15,14 @@ on:
       - "docs/**"
       - "tracker.md"
 
+permissions:
+  contents: read
+
 jobs:
   native:
     name: ${{ matrix.name }}
     runs-on: ${{ matrix.os }}
+    timeout-minutes: 35
     strategy:
       fail-fast: false
       matrix:
