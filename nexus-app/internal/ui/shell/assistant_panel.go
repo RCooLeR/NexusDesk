@@ -1067,13 +1067,41 @@ func assistantEffectiveSourcePaths(result assistantSvc.Result) []string {
 }
 
 func assistantActionableSourcePaths(result assistantSvc.Result, limit int) []string {
-	paths := assistantEffectiveSourcePaths(result)
+	paths := assistantRankedSourcePaths(result)
 	if limit <= 0 || len(paths) <= limit {
 		return paths
 	}
 	clipped := make([]string, limit)
 	copy(clipped, paths[:limit])
 	return clipped
+}
+
+func assistantRankedSourcePaths(result assistantSvc.Result) []string {
+	sources := assistantEffectiveSourcePaths(result)
+	if len(sources) <= 1 {
+		return sources
+	}
+	ranked := make([]string, 0, len(sources))
+	seen := map[string]bool{}
+	for _, ref := range assistantCitationRefs(result) {
+		path, _, _, ok := parseAssistantCitationRef(ref)
+		if !ok {
+			continue
+		}
+		for _, source := range sources {
+			if seen[source] || !assistantSourceCoveredByCitation(source, []string{path}) {
+				continue
+			}
+			ranked = append(ranked, source)
+			seen[source] = true
+		}
+	}
+	for _, source := range sources {
+		if !seen[source] {
+			ranked = append(ranked, source)
+		}
+	}
+	return ranked
 }
 
 func assistantSourceActionSummary(action string, count int, total int, failed int) string {
@@ -1104,7 +1132,7 @@ func assistantSourceDigestMarkdown(result assistantSvc.Result) string {
 	}
 	lines = append(lines,
 		"",
-		assistantMarkdownList("Sources", assistantEffectiveSourcePaths(result), "No explicit source context is attached.", assistantSourceDigestListLimit),
+		assistantMarkdownList("Sources", assistantRankedSourcePaths(result), "No explicit source context is attached.", assistantSourceDigestListLimit),
 		"",
 		assistantMarkdownList("Verified citations", assistantCitationRefs(result), "No verified line citations were detected.", assistantSourceDigestListLimit),
 		"",
@@ -1548,7 +1576,23 @@ func assistantSourcesPaneStatus(result assistantSvc.Result) string {
 }
 
 func assistantSourcesPaneLabels(result assistantSvc.Result, limit int) []string {
-	return assistantActionableSourcePaths(result, limit)
+	paths := assistantActionableSourcePaths(result, limit)
+	if len(paths) == 0 {
+		return nil
+	}
+	cited := map[string]bool{}
+	for _, source := range assistantEvidenceDiagnosticForResult(result).CitedSourcePaths {
+		cited[source] = true
+	}
+	labels := make([]string, 0, len(paths))
+	for _, path := range paths {
+		prefix := "uncited: "
+		if cited[path] {
+			prefix = "cited: "
+		}
+		labels = append(labels, prefix+path)
+	}
+	return labels
 }
 
 func (v *View) refreshAssistantLineagePane() {

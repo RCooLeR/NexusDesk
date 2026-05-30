@@ -534,7 +534,7 @@ func TestAssistantSourcesPaneSummarizesLatestAnswer(t *testing.T) {
 		}
 	}
 	labels := assistantSourcesPaneLabels(result, 8)
-	if strings.Join(labels, "|") != "README.md|docs/guide.md" {
+	if strings.Join(labels, "|") != "cited: README.md|uncited: docs/guide.md" {
 		t.Fatalf("unexpected source labels: %#v", labels)
 	}
 }
@@ -644,6 +644,16 @@ func TestAssistantActionableSourcePathsClipsLargeSourceSets(t *testing.T) {
 	all := assistantActionableSourcePaths(assistantSvc.Result{SourcePaths: []string{"a.go", "b.go"}}, 0)
 	if strings.Join(all, "|") != "a.go|b.go" {
 		t.Fatalf("expected non-positive limit to keep all sources, got %#v", all)
+	}
+}
+
+func TestAssistantActionableSourcePathsRanksCitedSourcesFirst(t *testing.T) {
+	paths := assistantActionableSourcePaths(assistantSvc.Result{
+		Message:     "Use README.md:12 and docs/guide.md:4.",
+		SourcePaths: []string{"notes/todo.md", "docs/guide.md", "README.md"},
+	}, 0)
+	if strings.Join(paths, "|") != "README.md|docs/guide.md|notes/todo.md" {
+		t.Fatalf("expected cited sources first, got %#v", paths)
 	}
 }
 

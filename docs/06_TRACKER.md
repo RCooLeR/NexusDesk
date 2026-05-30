@@ -391,23 +391,23 @@ Legend:
 
 ### 5.3 Document and artifact outputs
 
-- [ ] P1 Polish DOCX report templates.
-- [ ] P1 Polish PPTX deck templates.
-- [ ] P1 Add cross-suite DOCX smoke.
-- [ ] P1 Add cross-suite PPTX smoke.
-- [ ] P1 Expand artifact regeneration coverage.
-- [ ] P1 Improve artifact freshness visualization.
-- [ ] P1 Improve lineage visualization.
+- [x] P1 Polish DOCX report templates. Evidence: `internal/services/artifacts/document_export.go` writes themed DOCX packages with title/heading/body styles, source/package metadata, and Office validation; `document_export_test.go` asserts template/theme metadata and required package parts.
+- [x] P1 Polish PPTX deck templates. Evidence: `internal/services/artifacts/presentation_deck.go` writes themed 16:9 PPTX decks with accent rail, typed title/body/footer shapes, source/package metadata, and Office validation; `presentation_deck_test.go` asserts themed slide XML and validation metadata.
+- [x] P1 Add cross-suite DOCX smoke. Evidence: `internal/ui/shell/artifacts_panel_test.go` covers document brief -> DOCX export generation and regeneration from source metadata, while `internal/services/artifacts/document_export_test.go` validates the generated DOCX package.
+- [x] P1 Add cross-suite PPTX smoke. Evidence: `internal/ui/shell/artifacts_panel_test.go` covers outline/package -> PPTX deck generation and regeneration from source metadata, while `internal/services/artifacts/presentation_deck_test.go` validates the generated PPTX package.
+- [x] P1 Expand artifact regeneration coverage. Evidence: `internal/ui/shell/artifacts_panel_test.go` covers regeneration for document briefs/exports, presentation outlines/packages/decks, chat answers, comparison reports, cancellation, and source metadata preservation.
+- [x] P1 Improve artifact freshness visualization. Evidence: artifact preview now includes `artifactFreshnessText`, source status rows, changed/missing source messages, and tests in `artifacts_panel_test.go` plus `internal/services/artifacts/freshness_test.go`.
+- [x] P1 Improve lineage visualization. Evidence: artifact preview/export/import paths include `artifactLineageText`, lineage graph JSON support, provenance health diagnostics, and tests in `artifacts_panel_test.go` plus `lineage_graph_test.go`.
 - [ ] P2 Add OCR/scanned document extraction job.
 
 ### 5.4 Assistant quality
 
-- [ ] P1 Improve source ranking.
-- [ ] P1 Improve source coverage UI.
-- [ ] P1 Improve uncited source warnings.
-- [ ] P1 Improve stale source prompts.
-- [ ] P1 Add model route recommendations in Settings.
-- [ ] P1 Add context budget visualization.
+- [x] P1 Improve source ranking. Evidence: assistant source actions, source pane, and source digest now use citation-ranked sources first with uncited sources after them; covered by `TestAssistantActionableSourcePathsRanksCitedSourcesFirst`.
+- [x] P1 Improve source coverage UI. Evidence: assistant footer/status/sidebar/source digest report source count, verified refs, unverified refs, cited/uncited coverage, and lineage; covered by assistant source pane/digest tests.
+- [x] P1 Improve uncited source warnings. Evidence: assistant diagnostics compute and display uncited source paths in evidence summaries and source digest; covered by `TestAssistantEvidenceDiagnosticReportsPartialCitationCoverage`.
+- [x] P1 Improve stale source prompts. Evidence: chat history rows/details flag changed or missing original sources and seeded prompts tell users original sources are pinned; covered by `chat_history_panel_test.go`.
+- [x] P1 Add model route recommendations in Settings. Evidence: Settings exposes recommended global and task-route model selectors backed by `settings.RecommendedModelOptions`, updates context/reserve budgets from recommendations, and route tests cover catalog helpers.
+- [x] P1 Add context budget visualization. Evidence: assistant run/context status shows active route and approximate context budget, Settings validation shows token budget readiness, and tests cover routed/fallback budget lines.
 - [ ] P2 Add image/screenshot understanding.
 
 ### 5.5 Planned tool designs
