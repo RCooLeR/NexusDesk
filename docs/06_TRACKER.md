@@ -435,10 +435,10 @@ Legend:
 
 ### 6.2 Signing and trust
 
-- [ ] P1 Decide Windows certificate strategy.
+- [x] P1 Decide Windows certificate strategy. Evidence: `docs/adr/0001-release-signing-and-notarization.md` accepts an organization-owned OV/EV Windows code-signing certificate strategy with hardware-backed key storage preferred, `signtool`, RFC 3161 timestamping, and signed executable/installer release evidence requirements.
 - [ ] P1 Sign Windows executable.
 - [ ] P1 Sign Windows installer.
-- [ ] P1 Decide macOS signing/notarization strategy.
+- [x] P1 Decide macOS signing/notarization strategy. Evidence: `docs/adr/0001-release-signing-and-notarization.md` accepts Developer ID Application signing for app bundles, Developer ID Installer signing for `.pkg`, Apple notarization/stapling for public artifacts, and documented quarantine/trust state for private beta builds.
 - [ ] P1 Implement macOS signing/notarization if chosen.
 - [x] P1 Document Linux trust/package dependencies. Evidence: Help > Release Hygiene now includes Linux Package Trust and Linux Runtime Dependencies sections covering hash-first manifest/SBOM/provenance verification, package format recording, repository-signing state, OpenGL/Wayland/X11 expectations, Secret Service/libsecret/secret-tool behavior, desktop entry/icon behavior, and package-level dependency notes (`go test ./internal/services/userguide -run "ReleaseHygiene"`).
 - [x] P1 Add release trust diagnostics. Evidence: `release.RuntimeTrustDiagnostics` now reports unstamped build metadata plus missing manifest/signing/trust/smoke/SBOM/provenance evidence, and Diagnostics renders a Release trust health card plus report section (`go test ./internal/release ./internal/ui/shell -run "ReleaseTrust|RuntimeTrust|PackagingReadiness|Diagnostics"`).
