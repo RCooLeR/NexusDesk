@@ -33,6 +33,36 @@ func TestBuildSBOMFromGoArtifactIncludesApplicationAndModules(t *testing.T) {
 	}
 }
 
+func TestBuildSBOMForPackageArtifactFallsBackToManifestMetadata(t *testing.T) {
+	dir := t.TempDir()
+	artifact := filepath.Join(dir, "nexusdesk-windows-installer.zip")
+	if err := os.WriteFile(artifact, []byte("installer package bytes"), 0o644); err != nil {
+		t.Fatalf("WriteFile returned error: %v", err)
+	}
+	generatedAt := time.Date(2026, 5, 30, 9, 20, 0, 0, time.UTC)
+	manifest, err := BuildManifest(artifact, "windows-installer", testBuildInfo(), generatedAt)
+	if err != nil {
+		t.Fatalf("BuildManifest returned error: %v", err)
+	}
+	sbom, err := BuildSBOM(artifact, manifest, generatedAt)
+	if err != nil {
+		t.Fatalf("BuildSBOM returned error: %v", err)
+	}
+	if sbom.Metadata.Component.Name != manifest.AppName {
+		t.Fatalf("expected app component %q, got %q", manifest.AppName, sbom.Metadata.Component.Name)
+	}
+	if len(sbom.Components) != 0 {
+		t.Fatalf("expected package artifact fallback to omit Go module components, got %d", len(sbom.Components))
+	}
+	properties := []string{}
+	for _, property := range sbom.Metadata.Component.Properties {
+		properties = append(properties, property.Name+"="+property.Value)
+	}
+	if !strings.Contains(strings.Join(properties, "\n"), "nexusdesk:sbomSource=manifest-only-package-artifact") {
+		t.Fatalf("expected fallback SBOM source property, got %v", properties)
+	}
+}
+
 func TestWriteEvidenceSetStoresManifestSBOMAndProvenanceTogether(t *testing.T) {
 	exe := currentTestExecutable(t)
 	dir := t.TempDir()

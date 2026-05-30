@@ -426,7 +426,7 @@ Legend:
 
 - [x] P1 Define release build command.
 - [x] P1 Produce Windows zip artifact. Evidence: `scripts/package-windows-zip.ps1` builds `nexusdesk.exe`, generates manifest/SBOM/provenance evidence, and writes `nexusdesk-windows-<version>.zip`; iteration 149 smoke produced a 28,556,734-byte zip containing `nexusdesk.exe`, `nexusdesk-windows-manifest.json`, `nexusdesk-windows-sbom.json`, and `nexusdesk-windows-provenance.json`.
-- [ ] P1 Produce Windows installer artifact.
+- [x] P1 Produce Windows installer artifact. Evidence: `scripts/package-windows-installer.ps1` now creates `nexusdesk-windows-installer-<version>.zip` containing install/uninstall PowerShell scripts, README, and the Windows payload zip, then writes installer-level manifest/SBOM/provenance sidecars; iteration 154 smoke produced a 28,409,202-byte installer zip with SHA-256 `89f9139cbc1d265d9633362dd5ed09b53100b30750bb2e7ed52175bde79dff67` (`go test ./internal/release ./cmd/release-manifest -run "Evidence|SBOM|Provenance|Manifest"` plus packaging smoke).
 - [ ] P1 Produce macOS app/package artifact.
 - [ ] P1 Produce Linux package artifact.
 - [x] P1 Generate SHA-256 manifest. (`scripts/ci-windows.ps1` generated `build/nexusdesk-windows-manifest.json` with artifact SHA-256 during the iteration 80 Windows checkpoint.)

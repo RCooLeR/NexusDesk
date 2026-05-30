@@ -158,15 +158,16 @@ func BuildSBOM(artifactPath string, manifest Manifest, generatedAt time.Time) (S
 		return SBOM{}, errors.New("artifact path is required")
 	}
 	info, err := debugBuildInfo.ReadFile(artifactPath)
-	if err != nil {
-		return SBOM{}, fmt.Errorf("read Go build info from artifact: %w", err)
-	}
 	if generatedAt.IsZero() {
 		generatedAt = time.Now().UTC()
 	}
+	componentName := strings.TrimSpace(manifest.AppName)
+	if err == nil {
+		componentName = firstNonEmpty(componentName, info.Main.Path)
+	}
 	appComponent := SBOMComponent{
 		Type:    "application",
-		Name:    firstNonEmpty(manifest.AppName, info.Main.Path, "nexusdesk"),
+		Name:    firstNonEmpty(componentName, "nexusdesk"),
 		Version: strings.TrimSpace(manifest.Version),
 		Hashes:  []SBOMHash{{Alg: "SHA-256", Content: strings.TrimSpace(manifest.ArtifactSHA256)}},
 		Properties: []SBOMProperty{
@@ -175,10 +176,18 @@ func BuildSBOM(artifactPath string, manifest Manifest, generatedAt time.Time) (S
 			{Name: "nexusdesk:commit", Value: strings.TrimSpace(manifest.Commit)},
 		},
 	}
-	components := make([]SBOMComponent, 0, len(info.Deps)+1)
-	components = append(components, moduleComponent(info.Main, "required"))
-	for _, dep := range info.Deps {
-		components = append(components, moduleComponent(*dep, "required"))
+	components := []SBOMComponent{}
+	if err == nil {
+		components = make([]SBOMComponent, 0, len(info.Deps)+1)
+		components = append(components, moduleComponent(info.Main, "required"))
+		for _, dep := range info.Deps {
+			components = append(components, moduleComponent(*dep, "required"))
+		}
+	} else {
+		appComponent.Properties = append(appComponent.Properties,
+			SBOMProperty{Name: "nexusdesk:sbomSource", Value: "manifest-only-package-artifact"},
+			SBOMProperty{Name: "nexusdesk:goBuildInfo", Value: "unavailable: " + err.Error()},
+		)
 	}
 	return SBOM{
 		BOMFormat:    "CycloneDX",
