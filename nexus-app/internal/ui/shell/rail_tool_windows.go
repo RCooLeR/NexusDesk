@@ -10,6 +10,7 @@ func (v *View) openLeftRailToolWindow(tool leftRailToolWindow) {
 	if tool.OpenProject {
 		v.openHomeTab()
 		v.setLeftRailActive(tool.Label)
+		v.publishShellEvent(toolWindowSelectedEvent(tool))
 		v.addActivity(tool.Activity)
 		return
 	}
@@ -22,5 +23,6 @@ func (v *View) openLeftRailToolWindow(tool leftRailToolWindow) {
 		return
 	}
 	v.setLeftRailActive(tool.Label)
+	v.publishShellEvent(toolWindowSelectedEvent(tool))
 	v.addActivity(tool.Activity)
 }

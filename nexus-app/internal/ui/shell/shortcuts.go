@@ -160,8 +160,19 @@ func (v *View) openToolWindow(tool toolWindowRegistration) {
 			v.addActivity(tool.Label + " panel is unavailable.")
 			return
 		}
+		v.publishShellEvent(toolWindowSelectedEvent(tool))
 		v.addActivity(tool.Activity)
 	default:
 		v.addActivity(tool.Label + " panel is unavailable.")
+	}
+}
+
+func toolWindowSelectedEvent(tool toolWindowRegistration) shellEvent {
+	return shellEvent{
+		Type:      shellEventToolWindowSelected,
+		ToolID:    tool.ID,
+		ToolLabel: tool.Label,
+		TabTitle:  tool.TargetTab,
+		Message:   tool.Activity,
 	}
 }

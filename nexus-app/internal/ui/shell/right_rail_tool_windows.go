@@ -12,6 +12,7 @@ func (v *View) openRightRailToolWindow(tool rightRailToolWindow) {
 			v.window.Canvas().Focus(v.assistant.prompt)
 		}
 		v.setRightRailActive(tool.Label)
+		v.publishShellEvent(toolWindowSelectedEvent(tool))
 		v.addActivity(tool.Activity)
 		return
 	}
@@ -24,5 +25,6 @@ func (v *View) openRightRailToolWindow(tool rightRailToolWindow) {
 		return
 	}
 	v.setRightRailActive(tool.Label)
+	v.publishShellEvent(toolWindowSelectedEvent(tool))
 	v.addActivity(tool.Activity)
 }

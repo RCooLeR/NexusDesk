@@ -247,8 +247,8 @@ Legend:
 
 ### 4.1 Controller extraction
 
-- [ ] P1 Define shell controller interfaces.
-- [ ] P1 Add typed shell event bus.
+- [x] P1 Define shell controller interfaces.
+- [x] P1 Add typed shell event bus.
 - [ ] P1 Extract editor controller.
 - [ ] P1 Extract assistant controller.
 - [ ] P1 Extract data controller.
@@ -258,7 +258,7 @@ Legend:
 - [ ] P1 Extract diagnostics controller.
 - [ ] P1 Extract approvals/audit controller.
 - [ ] P1 Shrink `View` to layout and registry ownership.
-- [ ] P1 Add tests for controller event flow.
+- [x] P1 Add tests for controller event flow.
 
 ### 4.2 Tool-window framework
 

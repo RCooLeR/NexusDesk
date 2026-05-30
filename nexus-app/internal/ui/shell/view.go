@@ -49,6 +49,7 @@ type View struct {
 	settings                *settingsController
 	taskService             *tasksSvc.Service
 	editorSession           *editorSvc.Session
+	events                  *shellEventBus
 	status                  *widget.Label
 	gitStatusSnapshot       gitSvc.Status
 	toolbarWorkspaceStatus  *widget.Label
@@ -183,6 +184,7 @@ func NewWithStartupStatus(window fyne.Window, startupStatus startupSvc.Status) *
 		recentWorkspaceStore:    recentWorkspaceStore,
 		taskService:             taskService,
 		editorSession:           editorSession,
+		events:                  newShellEventBus(),
 		status:                  widget.NewLabel("No workspace open"),
 		navigator:               container.NewStack(widget.NewLabel("Open a workspace to browse files.")),
 		activityLog:             widget.NewRichTextFromMarkdown("Ready."),
