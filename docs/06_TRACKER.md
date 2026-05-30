@@ -249,13 +249,13 @@ Legend:
 
 - [x] P1 Define shell controller interfaces.
 - [x] P1 Add typed shell event bus.
-- [ ] P1 Extract editor controller.
-- [ ] P1 Extract assistant controller.
-- [ ] P1 Extract data controller.
-- [ ] P1 Extract Git controller.
-- [ ] P1 Extract artifacts controller.
-- [ ] P1 Extract jobs controller.
-- [ ] P1 Extract diagnostics controller.
+- [x] P1 Extract editor controller. Evidence: `tabs.go` defines `editorController`, `View` owns it through `view.editor`, and editor chrome/tab tests exercise controller-owned tab state and UI actions.
+- [x] P1 Extract assistant controller. Evidence: `assistant_panel.go` defines `assistantController` for assistant widgets/state, `View` initializes it through `newAssistantController`, and assistant controller tests cover initial state and run controls.
+- [x] P1 Extract data controller. Evidence: `data_panel.go` defines `dataController` with owned panel widgets and connector/query state, initialized by `newDataController`, with data controller tests covering initial state.
+- [x] P1 Extract Git controller. Evidence: `git_panel.go` defines `gitController` with panel/status/diff/hunk ownership and tests cover initial state plus status row/badge updates.
+- [x] P1 Extract artifacts controller. Evidence: `artifacts_panel.go` defines `artifactsController` with results/status/preview/source state and tests cover initial state plus source refresh behavior.
+- [x] P1 Extract jobs controller. Evidence: `jobs_panel.go` defines `jobsController` with job list/status/output controls and tests cover initial state, empty refresh, and missing output handling.
+- [x] P1 Extract diagnostics controller. Evidence: `diagnostics_panel.go` defines `diagnosticsController` with panel state and refresh/export actions, with diagnostics controller tests covering initial and workspace-required states.
 - [ ] P1 Extract approvals/audit controller.
 - [ ] P1 Shrink `View` to layout and registry ownership.
 - [x] P1 Add tests for controller event flow.
