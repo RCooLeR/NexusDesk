@@ -499,7 +499,7 @@ Legend:
 
 ## Phase 8: Release Candidate
 
-- [ ] P0 Freeze v1 feature scope.
+- [x] P0 Freeze v1 feature scope. Evidence: `docs/releases/v1-scope-freeze.md` freezes the v1 promise, in-scope surface, post-v1 deferrals, release blockers that do not expand scope, and change-control rule; docs index links it as release-specific source of truth.
 - [ ] P0 Close all P0 issues.
 - [ ] P0 Review all P1 issues and explicitly defer or fix.
 - [ ] P0 Run full test suite in CI.

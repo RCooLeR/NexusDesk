@@ -15,6 +15,11 @@ Read these in order:
 5. [Production Plan](05_PLAN.md): phases, milestones, gates, sequencing, validation standards, and risk management.
 6. [Execution Tracker](06_TRACKER.md): checkboxes for every known step needed to finish the project end to end.
 
+Release-specific notes:
+
+- [v1 Scope Freeze](releases/v1-scope-freeze.md): the frozen v1 promise, in-scope product surface, post-v1 deferrals, and release blockers that do not expand scope.
+- [Beta Release Notes](releases/beta-release-notes.md): private beta scope, trust state, validation path, known limitations, and feedback instructions.
+
 ## Documentation Rules
 
 - These files replace scattered planning notes. If a plan is not reflected here, it is not the active plan.
