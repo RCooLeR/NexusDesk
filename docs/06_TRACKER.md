@@ -489,8 +489,8 @@ Legend:
 - [ ] P1 Add provider setup wizard.
 - [ ] P1 Add model auto-suggestion from detected provider models.
 - [ ] P1 Add sample workflow guide.
-- [ ] P1 Add safe-agent user guide.
-- [ ] P1 Add beta feedback issue template.
+- [x] P1 Add safe-agent user guide. Evidence: Help and the command palette expose Safe Agent Guide, backed by `userguide.SafeAgentMarkdown()` with approval, rollback, secret, connector, job, and diagnostic safety guidance (`go test ./internal/services/userguide ./internal/ui/shell -run "SafeAgent|CommandPaletteIncludesSafeAgentGuide"`).
+- [x] P1 Add beta feedback issue template. Evidence: `.github/ISSUE_TEMPLATE/beta-feedback.yml` captures app version/commit/build date, affected area, goal/expected/actual result, reproduction steps, redacted diagnostics notes, and a required secret/workspace-data redaction checklist.
 - [ ] P1 Add crash recovery banner actions.
 - [ ] P1 Add known limitations page.
 - [ ] P1 Prepare beta release notes.
