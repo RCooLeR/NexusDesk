@@ -67,6 +67,8 @@ func TestCommandPaletteIncludesSafeAgentGuide(t *testing.T) {
 	commands := view.commandPaletteActions()
 	foundBetaFeedback := false
 	foundSafeAgent := false
+	foundSampleWorkflow := false
+	foundKnownLimitations := false
 	foundSmokeChecklist := false
 	foundAppDataCleanup := false
 	foundReleaseHygiene := false
@@ -79,11 +81,21 @@ func TestCommandPaletteIncludesSafeAgentGuide(t *testing.T) {
 				t.Fatalf("unexpected safe-agent command: %#v", command)
 			}
 			foundSafeAgent = true
+		case "help.sample_workflow":
+			if command.Title != "Sample Workflow Guide" || command.Group != "Help" || command.Run == nil {
+				t.Fatalf("unexpected sample-workflow command: %#v", command)
+			}
+			foundSampleWorkflow = true
 		case "help.beta_feedback":
 			if command.Title != "Beta Feedback & Release Notes" || command.Group != "Help" || command.Run == nil {
 				t.Fatalf("unexpected beta-feedback command: %#v", command)
 			}
 			foundBetaFeedback = true
+		case "help.known_limitations":
+			if command.Title != "Known Limitations" || command.Group != "Help" || command.Run == nil {
+				t.Fatalf("unexpected known-limitations command: %#v", command)
+			}
+			foundKnownLimitations = true
 		case "help.smoke_checklist":
 			if command.Title != "Clean-Machine Smoke Checklist" || command.Group != "Help" || command.Run == nil {
 				t.Fatalf("unexpected smoke-checklist command: %#v", command)
@@ -111,8 +123,8 @@ func TestCommandPaletteIncludesSafeAgentGuide(t *testing.T) {
 			foundContributor = true
 		}
 	}
-	if !foundSafeAgent || !foundBetaFeedback || !foundSmokeChecklist || !foundAppDataCleanup || !foundReleaseHygiene || !foundPackageOwnership || !foundContributor {
-		t.Fatalf("missing help commands: safe_agent=%t beta_feedback=%t smoke_checklist=%t app_data_cleanup=%t release_hygiene=%t package_ownership=%t contributor=%t in %#v", foundSafeAgent, foundBetaFeedback, foundSmokeChecklist, foundAppDataCleanup, foundReleaseHygiene, foundPackageOwnership, foundContributor, commands)
+	if !foundSafeAgent || !foundSampleWorkflow || !foundBetaFeedback || !foundKnownLimitations || !foundSmokeChecklist || !foundAppDataCleanup || !foundReleaseHygiene || !foundPackageOwnership || !foundContributor {
+		t.Fatalf("missing help commands: safe_agent=%t sample_workflow=%t beta_feedback=%t known_limitations=%t smoke_checklist=%t app_data_cleanup=%t release_hygiene=%t package_ownership=%t contributor=%t in %#v", foundSafeAgent, foundSampleWorkflow, foundBetaFeedback, foundKnownLimitations, foundSmokeChecklist, foundAppDataCleanup, foundReleaseHygiene, foundPackageOwnership, foundContributor, commands)
 	}
 }
 

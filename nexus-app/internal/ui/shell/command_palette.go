@@ -183,11 +183,25 @@ func (v *View) commandPaletteActions() []commandPaletteAction {
 			Run:    v.openSafeAgentGuideTab,
 		},
 		{
+			ID:     "help.sample_workflow",
+			Title:  "Sample Workflow Guide",
+			Detail: "Open a small end-to-end beta workflow for workspace, assistant, agent, data, artifacts, and diagnostics checks.",
+			Group:  "Help",
+			Run:    v.openSampleWorkflowGuideTab,
+		},
+		{
 			ID:     "help.beta_feedback",
 			Title:  "Beta Feedback & Release Notes",
 			Detail: "Open private-beta reporting guidance, release-note expectations, and redacted issue-report instructions.",
 			Group:  "Help",
 			Run:    v.openBetaFeedbackGuideTab,
+		},
+		{
+			ID:     "help.known_limitations",
+			Title:  "Known Limitations",
+			Detail: "Open current beta boundaries for packaging, providers, tools, connectors, platform coverage, and secret storage.",
+			Group:  "Help",
+			Run:    v.openKnownLimitationsGuideTab,
 		},
 		{
 			ID:     "help.smoke_checklist",

@@ -488,11 +488,11 @@ Legend:
 - [ ] P1 Create first-run onboarding flow.
 - [ ] P1 Add provider setup wizard.
 - [ ] P1 Add model auto-suggestion from detected provider models.
-- [ ] P1 Add sample workflow guide.
+- [x] P1 Add sample workflow guide. Evidence: Help and the command palette expose Sample Workflow Guide, backed by `userguide.SampleWorkflowMarkdown()` with a safe end-to-end beta path covering workspace readiness, edit/revert, Ask with sources, low-risk Agent, Data/Artifacts, Diagnostics, and redacted issue-report closeout (`go test ./internal/services/userguide ./internal/ui/shell -run "SampleWorkflow|KnownLimitations|CommandPaletteIncludesSafeAgentGuide"`).
 - [x] P1 Add safe-agent user guide. Evidence: Help and the command palette expose Safe Agent Guide, backed by `userguide.SafeAgentMarkdown()` with approval, rollback, secret, connector, job, and diagnostic safety guidance (`go test ./internal/services/userguide ./internal/ui/shell -run "SafeAgent|CommandPaletteIncludesSafeAgentGuide"`).
 - [x] P1 Add beta feedback issue template. Evidence: `.github/ISSUE_TEMPLATE/beta-feedback.yml` captures app version/commit/build date, affected area, goal/expected/actual result, reproduction steps, redacted diagnostics notes, and a required secret/workspace-data redaction checklist.
 - [ ] P1 Add crash recovery banner actions.
-- [ ] P1 Add known limitations page.
+- [x] P1 Add known limitations page. Evidence: Help and the command palette expose Known Limitations, backed by `userguide.KnownLimitationsMarkdown()` with beta boundaries for packaging/trust, provider/model setup, planned tools, connector/data limits, platform coverage, and protected-secret backends (`go test ./internal/services/userguide ./internal/ui/shell -run "SampleWorkflow|KnownLimitations|CommandPaletteIncludesSafeAgentGuide"`).
 - [ ] P1 Prepare beta release notes.
 - [ ] P1 Run five-user beta install test.
 - [ ] P1 Triage beta feedback within 48 hours.

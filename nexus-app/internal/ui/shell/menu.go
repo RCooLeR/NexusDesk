@@ -42,7 +42,9 @@ func (v *View) mainMenu() *fyne.MainMenu {
 		}
 	})
 	safeAgentGuide := fyne.NewMenuItemWithIcon("Safe Agent Guide", theme.HelpIcon(), v.openSafeAgentGuideTab)
+	sampleWorkflowGuide := fyne.NewMenuItemWithIcon("Sample Workflow Guide", theme.MediaPlayIcon(), v.openSampleWorkflowGuideTab)
 	betaFeedbackGuide := fyne.NewMenuItemWithIcon("Beta Feedback & Release Notes", theme.DocumentIcon(), v.openBetaFeedbackGuideTab)
+	knownLimitationsGuide := fyne.NewMenuItemWithIcon("Known Limitations", theme.InfoIcon(), v.openKnownLimitationsGuideTab)
 	smokeChecklistGuide := fyne.NewMenuItemWithIcon("Clean-Machine Smoke Checklist", theme.ConfirmIcon(), v.openSmokeChecklistGuideTab)
 	appDataCleanupGuide := fyne.NewMenuItemWithIcon("App Data & Uninstall Cleanup", theme.StorageIcon(), v.openAppDataCleanupGuideTab)
 	releaseHygieneGuide := fyne.NewMenuItemWithIcon("Release Hygiene & Antivirus Notes", theme.WarningIcon(), v.openReleaseHygieneGuideTab)
@@ -93,7 +95,7 @@ func (v *View) mainMenu() *fyne.MainMenu {
 			fyne.NewMenuItem("Refresh Activity", func() { v.activityLog.Refresh() }),
 			menuItem("Command Palette", shortcutCommandPalette(), v.openCommandPaletteDialog),
 		),
-		fyne.NewMenu("Help", safeAgentGuide, betaFeedbackGuide, smokeChecklistGuide, appDataCleanupGuide, releaseHygieneGuide, packageOwnershipGuide, contributorGuide, fyne.NewMenuItemSeparator(), about),
+		fyne.NewMenu("Help", safeAgentGuide, sampleWorkflowGuide, betaFeedbackGuide, knownLimitationsGuide, smokeChecklistGuide, appDataCleanupGuide, releaseHygieneGuide, packageOwnershipGuide, contributorGuide, fyne.NewMenuItemSeparator(), about),
 	)
 }
 
@@ -119,8 +121,16 @@ func (v *View) openSafeAgentGuideTab() {
 	v.addPlaceholderTab("Safe Agent Guide", userGuideSvc.SafeAgentMarkdown())
 }
 
+func (v *View) openSampleWorkflowGuideTab() {
+	v.addPlaceholderTab("Sample Workflow", userGuideSvc.SampleWorkflowMarkdown())
+}
+
 func (v *View) openBetaFeedbackGuideTab() {
 	v.addPlaceholderTab("Beta Feedback", userGuideSvc.BetaFeedbackMarkdown())
+}
+
+func (v *View) openKnownLimitationsGuideTab() {
+	v.addPlaceholderTab("Known Limitations", userGuideSvc.KnownLimitationsMarkdown())
 }
 
 func (v *View) openSmokeChecklistGuideTab() {
