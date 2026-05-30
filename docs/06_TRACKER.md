@@ -424,7 +424,7 @@ Legend:
 
 ### 6.1 Release build pipeline
 
-- [ ] P1 Define release build command.
+- [x] P1 Define release build command.
 - [ ] P1 Produce Windows zip artifact.
 - [ ] P1 Produce Windows installer artifact.
 - [ ] P1 Produce macOS app/package artifact.

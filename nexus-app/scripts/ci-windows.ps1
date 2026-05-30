@@ -30,8 +30,15 @@ $usrBin = $null
 foreach ($root in ($candidateRoots | Where-Object { -not [string]::IsNullOrWhiteSpace($_) } | Select-Object -Unique)) {
     $candidateUcrtBin = Join-Path $root 'ucrt64\bin'
     $candidateGcc = Join-Path $candidateUcrtBin 'gcc.exe'
+    $candidatePrefixedGcc = Join-Path $candidateUcrtBin 'x86_64-w64-mingw32-gcc.exe'
     if (Test-Path $candidateGcc) {
         $gcc = $candidateGcc
+        $ucrtBin = $candidateUcrtBin
+        $usrBin = Join-Path $root 'usr\bin'
+        break
+    }
+    if (Test-Path $candidatePrefixedGcc) {
+        $gcc = $candidatePrefixedGcc
         $ucrtBin = $candidateUcrtBin
         $usrBin = Join-Path $root 'usr\bin'
         break
@@ -53,12 +60,25 @@ if ($null -eq $gcc) {
 }
 
 $env:PATH = "$ucrtBin;$usrBin;$env:PATH"
+$env:CC = $gcc
 $env:CGO_ENABLED = '1'
 $env:GOFLAGS = '-mod=readonly'
 $version = if ([string]::IsNullOrWhiteSpace($env:NEXUSDESK_VERSION)) { '0.0.0-ci' } else { $env:NEXUSDESK_VERSION }
 $commit = if ([string]::IsNullOrWhiteSpace($env:GITHUB_SHA)) { (git -C $repoRoot rev-parse --short HEAD) } else { $env:GITHUB_SHA.Substring(0, [Math]::Min(12, $env:GITHUB_SHA.Length)) }
 $buildDate = if ([string]::IsNullOrWhiteSpace($env:NEXUSDESK_BUILD_DATE)) { (Get-Date).ToUniversalTime().ToString('yyyy-MM-ddTHH:mm:ssZ') } else { $env:NEXUSDESK_BUILD_DATE }
 $ldflags = "-X nexusdesk/internal/buildinfo.Version=$version -X nexusdesk/internal/buildinfo.Commit=$commit -X nexusdesk/internal/buildinfo.BuildDate=$buildDate"
+
+function Invoke-Checked {
+    param(
+        [string]$Command,
+        [string[]]$Arguments
+    )
+
+    & $Command @Arguments
+    if ($LASTEXITCODE -ne 0) {
+        throw "$Command failed with exit code $LASTEXITCODE."
+    }
+}
 
 Push-Location $appRoot
 try {
@@ -73,30 +93,30 @@ try {
     }
 
     Write-Host 'Running tests...'
-    go test ./...
+    Invoke-Checked 'go' @('test', './...')
 
     Write-Host 'Running static analysis...'
-    go vet ./...
+    Invoke-Checked 'go' @('vet', './...')
 
     Write-Host 'Validating build metadata...'
-    go test -ldflags "$ldflags" ./internal/buildinfo
+    Invoke-Checked 'go' @('test', '-ldflags', $ldflags, './internal/buildinfo')
 
     if (-not $SkipBuild) {
         Write-Host 'Building native Windows executable...'
         New-Item -ItemType Directory -Force -Path build | Out-Null
         $artifactPath = Join-Path $appRoot 'build\nexusdesk.exe'
         $manifestPath = Join-Path $appRoot 'build\nexusdesk-windows-manifest.json'
-        go build -ldflags "$ldflags" -o $artifactPath .
+        Invoke-Checked 'go' @('build', '-ldflags', $ldflags, '-o', $artifactPath, '.')
 
         Write-Host 'Generating release manifest...'
-        go run ./cmd/release-manifest -artifact $artifactPath -output $manifestPath -platform windows -version $version -commit $commit -build-date $buildDate
+        Invoke-Checked 'go' @('run', './cmd/release-manifest', '-artifact', $artifactPath, '-output', $manifestPath, '-platform', 'windows', '-version', $version, '-commit', $commit, '-build-date', $buildDate)
         if (-not (Test-Path $manifestPath)) {
             throw 'Release manifest was not generated.'
         }
     }
 
     Write-Host 'Checking diff whitespace...'
-    git -C $repoRoot diff --check
+    Invoke-Checked 'git' @('-C', $repoRoot, 'diff', '--check')
 } finally {
     Remove-Item -LiteralPath (Join-Path $appRoot 'nexusdesk.exe') -Force -ErrorAction SilentlyContinue
     Remove-Item -LiteralPath (Join-Path $appRoot 'build\nexusdesk.exe') -Force -ErrorAction SilentlyContinue

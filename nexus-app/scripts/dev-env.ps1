@@ -14,9 +14,15 @@ if ([string]::IsNullOrWhiteSpace($msysRoot)) {
 
 $ucrtBin = Join-Path $msysRoot 'ucrt64\bin'
 $usrBin = Join-Path $msysRoot 'usr\bin'
+$gcc = Join-Path $ucrtBin 'gcc.exe'
+$prefixedGcc = Join-Path $ucrtBin 'x86_64-w64-mingw32-gcc.exe'
 
-if (-not (Test-Path (Join-Path $ucrtBin 'gcc.exe'))) {
-    throw "MSYS2 UCRT64 gcc.exe was not found at $ucrtBin. Install MSYS2 and the mingw-w64-ucrt-x86_64-gcc package."
+if (Test-Path $gcc) {
+    $env:CC = $gcc
+} elseif (Test-Path $prefixedGcc) {
+    $env:CC = $prefixedGcc
+} else {
+    throw "MSYS2 UCRT64 GCC was not found at $ucrtBin. Install MSYS2 and the mingw-w64-ucrt-x86_64-gcc package."
 }
 
 $env:PATH = "$ucrtBin;$usrBin;$env:PATH"
@@ -29,14 +35,26 @@ $commit = if ([string]::IsNullOrWhiteSpace($env:NEXUSDESK_COMMIT)) { (git rev-pa
 $buildDate = if ([string]::IsNullOrWhiteSpace($env:NEXUSDESK_BUILD_DATE)) { (Get-Date).ToUniversalTime().ToString('yyyy-MM-ddTHH:mm:ssZ') } else { $env:NEXUSDESK_BUILD_DATE }
 $ldflags = "-X nexusdesk/internal/buildinfo.Version=$version -X nexusdesk/internal/buildinfo.Commit=$commit -X nexusdesk/internal/buildinfo.BuildDate=$buildDate"
 
+function Invoke-Checked {
+    param(
+        [string]$Command,
+        [string[]]$Arguments
+    )
+
+    & $Command @Arguments
+    if ($LASTEXITCODE -ne 0) {
+        throw "$Command failed with exit code $LASTEXITCODE."
+    }
+}
+
 Write-Host "Nexus native dev environment ready."
-Write-Host "gcc: $((Get-Command gcc).Source)"
+Write-Host "CC=$env:CC"
 Write-Host "CGO_ENABLED=$env:CGO_ENABLED"
 Write-Host "GOFLAGS=$env:GOFLAGS"
 Write-Host "Version=$version Commit=$commit BuildDate=$buildDate"
 
 if ($Test) {
-    go test ./internal/domain ./internal/services/... ./internal/ui/shell ./internal/ui/theme ./internal/brand
+    Invoke-Checked 'go' @('test', './internal/domain', './internal/services/...', './internal/ui/shell', './internal/ui/theme', './internal/brand')
 }
 
 if ($Build) {
@@ -44,7 +62,7 @@ if ($Build) {
     if ($IsWindows -or $env:OS -eq 'Windows_NT') {
         & (Join-Path $PSScriptRoot 'build-windows-icon.ps1')
     }
-    go build -ldflags "$ldflags" -o build\nexusdesk.exe .
+    Invoke-Checked 'go' @('build', '-ldflags', $ldflags, '-o', 'build\nexusdesk.exe', '.')
 }
 
 if ($BuildCheck) {
@@ -57,7 +75,7 @@ if ($BuildCheck) {
         } else {
             $checkArtifact = Join-Path $checkRoot 'nexusdesk-build-check'
         }
-        go build -ldflags "$ldflags" -o $checkArtifact .
+        Invoke-Checked 'go' @('build', '-ldflags', $ldflags, '-o', $checkArtifact, '.')
         Write-Host "Build check passed; removed temporary unsigned artifact at $checkArtifact."
     } finally {
         Remove-Item -Recurse -Force -LiteralPath $checkRoot -ErrorAction SilentlyContinue
@@ -65,5 +83,5 @@ if ($BuildCheck) {
 }
 
 if ($Run) {
-    go run -ldflags "$ldflags" .
+    Invoke-Checked 'go' @('run', '-ldflags', $ldflags, '.')
 }

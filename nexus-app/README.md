@@ -12,7 +12,23 @@ This is the active Fyne-native desktop application.
 
 ## Local Toolchain
 
-Fyne desktop builds need CGO and a C compiler on Windows. This workstation uses MSYS2 UCRT64 GCC from `C:\msys64\ucrt64\bin`. The helper below configures the current PowerShell session and can run tests, builds, or the app.
+Fyne desktop builds need CGO and a native C compiler. On Windows, use MSYS2 UCRT64 GCC; the default expected install root is `C:\msys64`, with the compiler at `C:\msys64\ucrt64\bin\gcc.exe` or `C:\msys64\ucrt64\bin\x86_64-w64-mingw32-gcc.exe`.
+
+Install or repair the Windows compiler prerequisite before running native builds:
+
+```powershell
+winget install MSYS2.MSYS2
+C:\msys64\usr\bin\bash.exe -lc "pacman -Syu --noconfirm"
+C:\msys64\usr\bin\bash.exe -lc "pacman -S --needed --noconfirm mingw-w64-ucrt-x86_64-gcc"
+```
+
+Restart PowerShell after installing MSYS2. If MSYS2 is installed somewhere other than `C:\msys64`, set `MSYS2_ROOT` for the current session:
+
+```powershell
+$env:MSYS2_ROOT = 'D:\tools\msys64'
+```
+
+From this directory, use the project helper for local validation and builds:
 
 ```powershell
 .\scripts\dev-env.ps1 -Test
@@ -21,6 +37,14 @@ Fyne desktop builds need CGO and a C compiler on Windows. This workstation uses 
 .\scripts\dev-env.ps1 -Run
 ```
 
-Use `-BuildCheck` for normal validation. It builds to a temporary folder and removes the unsigned executable immediately, which avoids leaving fresh low-reputation dev binaries in the source tree. Use `-Build` only when you intentionally need a local runnable artifact. On Windows, `-Build` and `-BuildCheck` generate `resource_windows.syso` from the approved brand PNG before `go build`, so built executables carry the app icon in Explorer and the taskbar.
+Use `-BuildCheck` for normal validation. It configures `PATH`, sets `CGO_ENABLED=1`, generates `resource_windows.syso` from the approved brand PNG, builds to a temporary folder, and removes the unsigned executable immediately. Use `-Build` only when a local runnable artifact is intentionally needed; it writes `build\nexusdesk.exe`.
 
-If your machine uses another MSYS2 location, set `MSYS2_ROOT` before invoking the helper. `CGO_ENABLED=0 go build .` still fails because the Fyne OpenGL driver requires CGO-backed bindings.
+For the full Windows CI/release-style checkpoint, run:
+
+```powershell
+.\scripts\ci-windows.ps1
+```
+
+That script checks formatting, runs `go test ./...`, runs `go vet ./...`, validates build metadata, builds `build\nexusdesk.exe`, generates `build\nexusdesk-windows-manifest.json`, checks whitespace, then removes generated unsigned artifacts.
+
+If both compiler names are missing, the build stops before tests or compilation with an MSYS2 UCRT64 GCC error. `CGO_ENABLED=0 go build .` is not a valid workaround because the Fyne OpenGL driver requires CGO-backed bindings.

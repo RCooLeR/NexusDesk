@@ -459,6 +459,25 @@ cd nexus-app
 .\scripts\dev-env.ps1 -Build
 ```
 
+Windows native build prerequisite:
+
+```powershell
+winget install MSYS2.MSYS2
+C:\msys64\usr\bin\bash.exe -lc "pacman -Syu --noconfirm"
+C:\msys64\usr\bin\bash.exe -lc "pacman -S --needed --noconfirm mingw-w64-ucrt-x86_64-gcc"
+```
+
+If MSYS2 is not installed at `C:\msys64`, set `MSYS2_ROOT` before invoking the helper scripts. The expected compiler path is `C:\msys64\ucrt64\bin\gcc.exe` or `C:\msys64\ucrt64\bin\x86_64-w64-mingw32-gcc.exe`, with the same paths under `$env:MSYS2_ROOT` when overridden.
+
+Windows CI/release-style checkpoint:
+
+```powershell
+cd nexus-app
+.\scripts\ci-windows.ps1
+```
+
+`ci-windows.ps1` runs gofmt verification, `go test ./...`, `go vet ./...`, build metadata validation, native executable build, release manifest generation, and `git diff --check`. It removes generated unsigned artifacts in its cleanup block. If MSYS2 UCRT64 GCC is missing, the script fails before tests and compilation; install `mingw-w64-ucrt-x86_64-gcc` rather than trying `CGO_ENABLED=0`.
+
 ## 13. Risk Management
 
 Top risks:

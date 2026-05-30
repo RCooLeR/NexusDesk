@@ -81,5 +81,13 @@ if ($null -eq $windres) {
     throw 'windres.exe was not found on PATH. Run scripts\dev-env.ps1 so MSYS2 UCRT64 bin is available.'
 }
 
-& $windres.Source -O coff -F pe-x86-64 -i $rcPath -o $SysoPath
+$windresArgs = @('-O', 'coff', '-F', 'pe-x86-64', '-i', $rcPath, '-o', $SysoPath)
+if (-not [string]::IsNullOrWhiteSpace($env:CC)) {
+    $windresArgs = @("--preprocessor=$env:CC") + $windresArgs
+}
+
+& $windres.Source @windresArgs
+if ($LASTEXITCODE -ne 0) {
+    throw "windres.exe failed with exit code $LASTEXITCODE."
+}
 Write-Host "Windows icon resource generated at $SysoPath"
