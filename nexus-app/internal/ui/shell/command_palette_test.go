@@ -66,6 +66,7 @@ func TestCommandPaletteIncludesSafeAgentGuide(t *testing.T) {
 	view := &View{state: NewState()}
 	commands := view.commandPaletteActions()
 	foundBetaFeedback := false
+	foundProviderSetup := false
 	foundSafeAgent := false
 	foundSampleWorkflow := false
 	foundKnownLimitations := false
@@ -76,6 +77,11 @@ func TestCommandPaletteIncludesSafeAgentGuide(t *testing.T) {
 	foundContributor := false
 	for _, command := range commands {
 		switch command.ID {
+		case "help.provider_setup":
+			if command.Title != "Provider Setup Wizard" || command.Group != "Help" || command.Run == nil {
+				t.Fatalf("unexpected provider-setup command: %#v", command)
+			}
+			foundProviderSetup = true
 		case "help.safe_agent":
 			if command.Title != "Safe Agent Guide" || command.Group != "Help" || command.Run == nil {
 				t.Fatalf("unexpected safe-agent command: %#v", command)
@@ -123,8 +129,8 @@ func TestCommandPaletteIncludesSafeAgentGuide(t *testing.T) {
 			foundContributor = true
 		}
 	}
-	if !foundSafeAgent || !foundSampleWorkflow || !foundBetaFeedback || !foundKnownLimitations || !foundSmokeChecklist || !foundAppDataCleanup || !foundReleaseHygiene || !foundPackageOwnership || !foundContributor {
-		t.Fatalf("missing help commands: safe_agent=%t sample_workflow=%t beta_feedback=%t known_limitations=%t smoke_checklist=%t app_data_cleanup=%t release_hygiene=%t package_ownership=%t contributor=%t in %#v", foundSafeAgent, foundSampleWorkflow, foundBetaFeedback, foundKnownLimitations, foundSmokeChecklist, foundAppDataCleanup, foundReleaseHygiene, foundPackageOwnership, foundContributor, commands)
+	if !foundProviderSetup || !foundSafeAgent || !foundSampleWorkflow || !foundBetaFeedback || !foundKnownLimitations || !foundSmokeChecklist || !foundAppDataCleanup || !foundReleaseHygiene || !foundPackageOwnership || !foundContributor {
+		t.Fatalf("missing help commands: provider_setup=%t safe_agent=%t sample_workflow=%t beta_feedback=%t known_limitations=%t smoke_checklist=%t app_data_cleanup=%t release_hygiene=%t package_ownership=%t contributor=%t in %#v", foundProviderSetup, foundSafeAgent, foundSampleWorkflow, foundBetaFeedback, foundKnownLimitations, foundSmokeChecklist, foundAppDataCleanup, foundReleaseHygiene, foundPackageOwnership, foundContributor, commands)
 	}
 }
 

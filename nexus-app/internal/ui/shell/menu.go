@@ -41,6 +41,7 @@ func (v *View) mainMenu() *fyne.MainMenu {
 			v.addActivity("Jobs panel is unavailable.")
 		}
 	})
+	providerSetupGuide := fyne.NewMenuItemWithIcon("Provider Setup Wizard", theme.SettingsIcon(), v.openProviderSetupWizardTab)
 	safeAgentGuide := fyne.NewMenuItemWithIcon("Safe Agent Guide", theme.HelpIcon(), v.openSafeAgentGuideTab)
 	sampleWorkflowGuide := fyne.NewMenuItemWithIcon("Sample Workflow Guide", theme.MediaPlayIcon(), v.openSampleWorkflowGuideTab)
 	betaFeedbackGuide := fyne.NewMenuItemWithIcon("Beta Feedback & Release Notes", theme.DocumentIcon(), v.openBetaFeedbackGuideTab)
@@ -95,7 +96,7 @@ func (v *View) mainMenu() *fyne.MainMenu {
 			fyne.NewMenuItem("Refresh Activity", func() { v.activityLog.Refresh() }),
 			menuItem("Command Palette", shortcutCommandPalette(), v.openCommandPaletteDialog),
 		),
-		fyne.NewMenu("Help", safeAgentGuide, sampleWorkflowGuide, betaFeedbackGuide, knownLimitationsGuide, smokeChecklistGuide, appDataCleanupGuide, releaseHygieneGuide, packageOwnershipGuide, contributorGuide, fyne.NewMenuItemSeparator(), about),
+		fyne.NewMenu("Help", providerSetupGuide, safeAgentGuide, sampleWorkflowGuide, betaFeedbackGuide, knownLimitationsGuide, smokeChecklistGuide, appDataCleanupGuide, releaseHygieneGuide, packageOwnershipGuide, contributorGuide, fyne.NewMenuItemSeparator(), about),
 	)
 }
 
@@ -119,6 +120,10 @@ func (v *View) showAbout() {
 
 func (v *View) openSafeAgentGuideTab() {
 	v.addPlaceholderTab("Safe Agent Guide", userGuideSvc.SafeAgentMarkdown())
+}
+
+func (v *View) openProviderSetupWizardTab() {
+	v.addPlaceholderTab("Provider Setup", userGuideSvc.ProviderSetupWizardMarkdown())
 }
 
 func (v *View) openSampleWorkflowGuideTab() {

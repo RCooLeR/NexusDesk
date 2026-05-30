@@ -60,7 +60,7 @@ func (v *View) newWelcomePanel() fyne.CanvasObject {
 	title.Wrapping = fyne.TextWrapWord
 	openWorkspaceButton := widget.NewButtonWithIcon("Open Workspace", theme.FolderOpenIcon(), v.openWorkspaceDialog)
 	openFileButton := widget.NewButtonWithIcon("Open File", theme.FileTextIcon(), v.openFileDialog)
-	settingsButton := widget.NewButtonWithIcon("Model Settings", theme.SettingsIcon(), v.openSettingsTab)
+	providerSetupButton := widget.NewButtonWithIcon("Provider Setup", theme.SettingsIcon(), v.openProviderSetupWizardTab)
 	sampleWorkflowButton := widget.NewButtonWithIcon("Sample Workflow", theme.MediaPlayIcon(), v.openSampleWorkflowGuideTab)
 	diagnosticsButton := widget.NewButtonWithIcon("Diagnostics", theme.SearchIcon(), func() {
 		if !v.selectBottomTab("Diagnostics") {
@@ -74,7 +74,7 @@ func (v *View) newWelcomePanel() fyne.CanvasObject {
 	recent := recentWorkspaceRowsFrom(recentItems, recentErr, v.openWorkspace, v.removeRecentWorkspace, v.clearRecentWorkspaces)
 	content := container.NewVBox(
 		title,
-		container.NewHBox(openWorkspaceButton, openFileButton, settingsButton, sampleWorkflowButton, diagnosticsButton),
+		container.NewHBox(openWorkspaceButton, openFileButton, providerSetupButton, sampleWorkflowButton, diagnosticsButton),
 		widget.NewSeparator(),
 		widget.NewCard("First Run", "", onboarding),
 		widget.NewSeparator(),
@@ -92,7 +92,7 @@ func (v *View) newEditorEmptyWelcomePanel() fyne.CanvasObject {
 	subtitle.Wrapping = fyne.TextWrapWord
 	openWorkspaceButton := widget.NewButtonWithIcon("Open Workspace", theme.FolderOpenIcon(), v.openWorkspaceDialog)
 	openFileButton := widget.NewButtonWithIcon("Open File", theme.FileTextIcon(), v.openFileDialog)
-	settingsButton := widget.NewButtonWithIcon("Model Settings", theme.SettingsIcon(), v.openSettingsTab)
+	providerSetupButton := widget.NewButtonWithIcon("Provider Setup", theme.SettingsIcon(), v.openProviderSetupWizardTab)
 	sampleWorkflowButton := widget.NewButtonWithIcon("Sample Workflow", theme.MediaPlayIcon(), v.openSampleWorkflowGuideTab)
 	diagnosticsButton := widget.NewButtonWithIcon("Diagnostics", theme.SearchIcon(), func() {
 		if !v.selectBottomTab("Diagnostics") {
@@ -109,7 +109,7 @@ func (v *View) newEditorEmptyWelcomePanel() fyne.CanvasObject {
 		widget.NewSeparator(),
 		welcomeEmptyCommandRows(),
 		widget.NewSeparator(),
-		container.NewHBox(openWorkspaceButton, openFileButton, settingsButton, sampleWorkflowButton, diagnosticsButton),
+		container.NewHBox(openWorkspaceButton, openFileButton, providerSetupButton, sampleWorkflowButton, diagnosticsButton),
 	)
 	return container.NewPadded(container.NewCenter(content))
 }

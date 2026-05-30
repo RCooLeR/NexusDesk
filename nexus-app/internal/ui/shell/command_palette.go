@@ -176,6 +176,13 @@ func (v *View) commandPaletteActions() []commandPaletteAction {
 			Run:      v.openSettingsTab,
 		},
 		{
+			ID:     "help.provider_setup",
+			Title:  "Provider Setup Wizard",
+			Detail: "Open the short provider, model detection, credential, Test connection, and route setup path.",
+			Group:  "Help",
+			Run:    v.openProviderSetupWizardTab,
+		},
+		{
 			ID:     "help.safe_agent",
 			Title:  "Safe Agent Guide",
 			Detail: "Open user guidance for approvals, rollbacks, local data, credentials, connectors, and jobs.",
