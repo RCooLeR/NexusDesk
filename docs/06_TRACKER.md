@@ -425,7 +425,7 @@ Legend:
 ### 6.1 Release build pipeline
 
 - [x] P1 Define release build command.
-- [ ] P1 Produce Windows zip artifact.
+- [x] P1 Produce Windows zip artifact. Evidence: `scripts/package-windows-zip.ps1` builds `nexusdesk.exe`, generates manifest/SBOM/provenance evidence, and writes `nexusdesk-windows-<version>.zip`; iteration 149 smoke produced a 28,556,734-byte zip containing `nexusdesk.exe`, `nexusdesk-windows-manifest.json`, `nexusdesk-windows-sbom.json`, and `nexusdesk-windows-provenance.json`.
 - [ ] P1 Produce Windows installer artifact.
 - [ ] P1 Produce macOS app/package artifact.
 - [ ] P1 Produce Linux package artifact.
