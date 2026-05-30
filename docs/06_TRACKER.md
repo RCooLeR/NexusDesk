@@ -262,20 +262,20 @@ Legend:
 
 ### 4.2 Tool-window framework
 
-- [ ] P1 Define tool-window registry type.
-- [ ] P1 Register Project tool window.
-- [ ] P1 Register Search tool window.
-- [ ] P1 Register Problems tool window.
-- [ ] P1 Register Git tool window.
-- [ ] P1 Register Data Sources tool window.
-- [ ] P1 Register Artifacts tool window.
-- [ ] P1 Register Operations tool window.
-- [ ] P1 Register Tasks tool window.
-- [ ] P1 Register Jobs tool window.
-- [ ] P1 Register History tool window.
-- [ ] P1 Register Approvals tool window.
-- [ ] P1 Register Diagnostics tool window.
-- [ ] P1 Register Activity tool window.
+- [x] P1 Define tool-window registry type.
+- [x] P1 Register Project tool window.
+- [x] P1 Register Search tool window.
+- [x] P1 Register Problems tool window.
+- [x] P1 Register Git tool window.
+- [x] P1 Register Data Sources tool window.
+- [x] P1 Register Artifacts tool window.
+- [x] P1 Register Operations tool window.
+- [x] P1 Register Tasks tool window.
+- [x] P1 Register Jobs tool window.
+- [x] P1 Register History tool window.
+- [x] P1 Register Approvals tool window.
+- [x] P1 Register Diagnostics tool window.
+- [x] P1 Register Activity tool window.
 - [ ] P1 Add keyboard shortcut routing through registry.
 
 ### 4.3 Left rail
