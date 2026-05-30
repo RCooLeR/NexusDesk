@@ -597,7 +597,9 @@ func TestDefaultDispatcherGitIndexMutationTools(t *testing.T) {
 	if err == nil || blocked.Risk != "high" || !strings.Contains(blocked.Observation, "approval") {
 		t.Fatalf("expected stage_file approval block, got result=%#v err=%v", blocked, err)
 	}
-	notRepo, err := dispatcher.ExecuteTool(context.Background(), agent.ToolCall{Name: "stage_file", Args: map[string]string{"relPath": "notes.txt"}}, agent.Request{WorkspaceRoot: t.TempDir(), ApproveWrites: true})
+	nonRepoRoot := t.TempDir()
+	t.Setenv("GIT_CEILING_DIRECTORIES", filepath.Dir(nonRepoRoot))
+	notRepo, err := dispatcher.ExecuteTool(context.Background(), agent.ToolCall{Name: "stage_file", Args: map[string]string{"relPath": "notes.txt"}}, agent.Request{WorkspaceRoot: nonRepoRoot, ApproveWrites: true})
 	if err == nil || notRepo.Mutated || !strings.Contains(notRepo.Observation, "Git repository") {
 		t.Fatalf("expected stage_file to reject non-repo workspace without mutation, got result=%#v err=%v", notRepo, err)
 	}
