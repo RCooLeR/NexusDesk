@@ -3,12 +3,19 @@ package jobs
 import (
 	"context"
 	"fmt"
+	"io"
+	"os"
+	"path/filepath"
 	"sort"
+	"strings"
 	"sync"
 	"time"
 )
 
-const maxLogLines = 12
+const (
+	maxLogLines             = 64
+	defaultFullLogReadBytes = 256 * 1024
+)
 
 type Service struct {
 	mu               sync.Mutex
@@ -16,6 +23,7 @@ type Service struct {
 	jobs             []Job
 	cancels          map[string]context.CancelFunc
 	repo             Repository
+	logRoot          string
 	persistenceIssue PersistenceIssue
 }
 
@@ -50,6 +58,29 @@ func (s *Service) SetRepository(repo Repository, load bool) {
 	s.nextID = nextIDFromJobs(jobs)
 }
 
+func (s *Service) SetLogRoot(workspaceRoot string) error {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	workspaceRoot = strings.TrimSpace(workspaceRoot)
+	if workspaceRoot == "" {
+		s.logRoot = ""
+		return nil
+	}
+	absRoot, err := filepath.Abs(workspaceRoot)
+	if err != nil {
+		return err
+	}
+	logRoot := filepath.Join(absRoot, ".nexusdesk", "jobs")
+	if err := os.MkdirAll(logRoot, 0o755); err != nil {
+		return err
+	}
+	s.logRoot = logRoot
+	for index := range s.jobs {
+		s.jobs[index].LogPath = s.fullLogPathLocked(s.jobs[index].ID)
+	}
+	return nil
+}
+
 func (s *Service) Start(kind string, label string) (Job, context.Context) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
@@ -64,6 +95,7 @@ func (s *Service) Start(kind string, label string) (Job, context.Context) {
 		Message:   "Running " + label + ".",
 		StartedAt: time.Now().UTC(),
 	}
+	job.LogPath = s.fullLogPathLocked(job.ID)
 	s.jobs = append([]Job{job}, s.jobs...)
 	s.cancels[job.ID] = cancel
 	s.persistLocked(job)
@@ -90,6 +122,7 @@ func (s *Service) AppendLog(id string, line string) {
 		s.jobs[index].LogTail = s.jobs[index].LogTail[len(s.jobs[index].LogTail)-maxLogLines:]
 	}
 	s.persistLocked(s.jobs[index])
+	s.appendFullLogLocked(s.jobs[index].ID, line)
 }
 
 func (s *Service) Finish(id string, status Status, message string, err error) {
@@ -139,6 +172,7 @@ func (s *Service) List() []Job {
 	copy(jobs, s.jobs)
 	for index := range jobs {
 		jobs[index].LogTail = append([]string(nil), jobs[index].LogTail...)
+		jobs[index].LogPath = s.fullLogPathLocked(jobs[index].ID)
 	}
 	return jobs
 }
@@ -152,7 +186,36 @@ func (s *Service) Get(id string) (Job, bool) {
 	}
 	job := s.jobs[index]
 	job.LogTail = append([]string(nil), job.LogTail...)
+	job.LogPath = s.fullLogPathLocked(job.ID)
 	return job, true
+}
+
+func (s *Service) FullLogPath(id string) (string, bool) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	if s.indexOf(id) < 0 {
+		return "", false
+	}
+	path := s.fullLogPathLocked(id)
+	return path, path != ""
+}
+
+func (s *Service) ReadFullLog(id string, maxBytes int) (string, string, error) {
+	s.mu.Lock()
+	if s.indexOf(id) < 0 {
+		s.mu.Unlock()
+		return "", "", fmt.Errorf("job %q was not found", id)
+	}
+	path := s.fullLogPathLocked(id)
+	s.mu.Unlock()
+	if path == "" {
+		return "", "", nil
+	}
+	text, err := readTailFile(path, maxBytes)
+	if os.IsNotExist(err) {
+		return "", path, nil
+	}
+	return text, path, err
 }
 
 func (s *Service) PersistenceIssue() (PersistenceIssue, bool) {
@@ -250,6 +313,92 @@ func (s *Service) persistLocked(job Job) {
 		return
 	}
 	s.persistenceIssue = PersistenceIssue{}
+}
+
+func (s *Service) appendFullLogLocked(id string, line string) {
+	path := s.fullLogPathLocked(id)
+	if path == "" || strings.TrimSpace(line) == "" {
+		return
+	}
+	if err := os.MkdirAll(filepath.Dir(path), 0o755); err != nil {
+		s.recordPersistenceIssueLocked(id, "create job log directory", err)
+		return
+	}
+	file, err := os.OpenFile(path, os.O_CREATE|os.O_WRONLY|os.O_APPEND, 0o600)
+	if err != nil {
+		s.recordPersistenceIssueLocked(id, "append job log", err)
+		return
+	}
+	_, writeErr := fmt.Fprintf(file, "%s\t%s\n", time.Now().UTC().Format(time.RFC3339Nano), line)
+	closeErr := file.Close()
+	if writeErr != nil {
+		s.recordPersistenceIssueLocked(id, "append job log", writeErr)
+		return
+	}
+	if closeErr != nil {
+		s.recordPersistenceIssueLocked(id, "close job log", closeErr)
+		return
+	}
+}
+
+func (s *Service) fullLogPathLocked(id string) string {
+	if s.logRoot == "" || !safeJobID(id) {
+		return ""
+	}
+	return filepath.Join(s.logRoot, id, "job.log")
+}
+
+func (s *Service) recordPersistenceIssueLocked(id string, operation string, err error) {
+	if err == nil {
+		return
+	}
+	s.persistenceIssue = PersistenceIssue{
+		JobID:     id,
+		Operation: operation,
+		Error:     err.Error(),
+		At:        time.Now().UTC(),
+	}
+}
+
+func safeJobID(id string) bool {
+	id = strings.TrimSpace(id)
+	if id == "" || strings.Contains(id, "..") {
+		return false
+	}
+	for _, r := range id {
+		if (r >= 'a' && r <= 'z') || (r >= 'A' && r <= 'Z') || (r >= '0' && r <= '9') || r == '-' || r == '_' {
+			continue
+		}
+		return false
+	}
+	return true
+}
+
+func readTailFile(path string, maxBytes int) (string, error) {
+	if maxBytes <= 0 {
+		maxBytes = defaultFullLogReadBytes
+	}
+	file, err := os.Open(path)
+	if err != nil {
+		return "", err
+	}
+	defer file.Close()
+	info, err := file.Stat()
+	if err != nil {
+		return "", err
+	}
+	prefix := ""
+	if info.Size() > int64(maxBytes) {
+		if _, err := file.Seek(-int64(maxBytes), io.SeekEnd); err != nil {
+			return "", err
+		}
+		prefix = "[log truncated]\n"
+	}
+	data, err := io.ReadAll(file)
+	if err != nil {
+		return "", err
+	}
+	return prefix + string(data), nil
 }
 
 func DefaultRetentionPolicy() RetentionPolicy {

@@ -23,6 +23,8 @@ import (
 
 const (
 	maxIncludedWorkspaceFileBytes = 64 * 1024
+	maxIssueReportJobLogs         = 5
+	maxIssueReportJobLogBytes     = 64 * 1024
 )
 
 type Options struct {
@@ -144,6 +146,13 @@ func Export(options Options) (Result, error) {
 	}
 	files = append(files, "activity-tail.txt")
 
+	jobLogs, err := addRecentJobLogs(writer, absRoot, redactor)
+	if err != nil {
+		_ = writer.Close()
+		return Result{}, err
+	}
+	files = append(files, jobLogs...)
+
 	env := map[string]string{
 		"goVersion": runtime.Version(),
 		"os":        runtime.GOOS,
@@ -180,7 +189,8 @@ func Export(options Options) (Result, error) {
 		Safety: []string{
 			"Secrets and common credential patterns are redacted from text entries.",
 			"Workspace file contents are excluded unless explicit relative paths are provided.",
-			"Default bundle entries contain diagnostics, environment metadata, activity tail, and workspace-state file names only.",
+			"Workspace source file contents remain excluded unless explicit relative paths are provided.",
+			"Recent durable job logs are included with redaction and byte caps.",
 		},
 		Files: append([]string{}, files...),
 	}
@@ -203,6 +213,73 @@ func Export(options Options) (Result, error) {
 	removeOnError = false
 	sort.Strings(files)
 	return Result{Path: reportPath, Files: files, SizeBytes: info.Size(), CreatedAt: now}, nil
+}
+
+func addRecentJobLogs(writer *zip.Writer, absRoot string, redactor redactor) ([]string, error) {
+	jobsRoot := filepath.Join(absRoot, ".nexusdesk", "jobs")
+	info, err := os.Stat(jobsRoot)
+	if os.IsNotExist(err) {
+		return nil, nil
+	}
+	if err != nil {
+		return nil, err
+	}
+	if !info.IsDir() {
+		return nil, nil
+	}
+	type candidate struct {
+		path    string
+		relPath string
+		modTime time.Time
+	}
+	candidates := []candidate{}
+	err = filepath.WalkDir(jobsRoot, func(path string, entry os.DirEntry, walkErr error) error {
+		if walkErr != nil {
+			return walkErr
+		}
+		if entry.IsDir() {
+			return nil
+		}
+		if strings.ToLower(entry.Name()) != "job.log" {
+			return nil
+		}
+		info, err := entry.Info()
+		if err != nil {
+			return err
+		}
+		rel, err := filepath.Rel(jobsRoot, path)
+		if err != nil {
+			return err
+		}
+		candidates = append(candidates, candidate{
+			path:    path,
+			relPath: filepath.ToSlash(rel),
+			modTime: info.ModTime(),
+		})
+		return nil
+	})
+	if err != nil {
+		return nil, err
+	}
+	sort.Slice(candidates, func(i, j int) bool {
+		return candidates[i].modTime.After(candidates[j].modTime)
+	})
+	if len(candidates) > maxIssueReportJobLogs {
+		candidates = candidates[:maxIssueReportJobLogs]
+	}
+	files := []string{}
+	for _, candidate := range candidates {
+		text, err := readTailFile(candidate.path, maxIssueReportJobLogBytes)
+		if err != nil {
+			return nil, err
+		}
+		zipPath := filepath.ToSlash(filepath.Join("job-logs", candidate.relPath))
+		if err := addText(writer, zipPath, redactor.redact(text)+"\n"); err != nil {
+			return nil, err
+		}
+		files = append(files, zipPath)
+	}
+	return files, nil
 }
 
 func collectWorkspaceSummary(absRoot string) (workspaceSummary, error) {
@@ -293,6 +370,30 @@ func addExplicitWorkspaceFiles(writer *zip.Writer, absRoot string, redactor reda
 		included = append(included, zipPath)
 	}
 	return included, nil
+}
+
+func readTailFile(path string, maxBytes int64) (string, error) {
+	file, err := os.Open(path)
+	if err != nil {
+		return "", err
+	}
+	defer file.Close()
+	info, err := file.Stat()
+	if err != nil {
+		return "", err
+	}
+	prefix := ""
+	if maxBytes > 0 && info.Size() > maxBytes {
+		if _, err := file.Seek(-maxBytes, io.SeekEnd); err != nil {
+			return "", err
+		}
+		prefix = "[log truncated]\n"
+	}
+	data, err := io.ReadAll(file)
+	if err != nil {
+		return "", err
+	}
+	return prefix + string(data), nil
 }
 
 func cleanExplicitRelPath(relPath string) (string, error) {

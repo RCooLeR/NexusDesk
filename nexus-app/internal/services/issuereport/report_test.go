@@ -22,6 +22,12 @@ func TestExportRedactsSecretsAndExcludesWorkspaceContentsByDefault(t *testing.T)
 	if err := os.WriteFile(filepath.Join(root, ".nexusdesk", "metadata", "schema.sql"), []byte("create table jobs(id text);"), 0o600); err != nil {
 		t.Fatal(err)
 	}
+	if err := os.MkdirAll(filepath.Join(root, ".nexusdesk", "jobs", "job-0001"), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(root, ".nexusdesk", "jobs", "job-0001", "job.log"), []byte("started\nAuthorization: Bearer job-secret\nsafe line"), 0o600); err != nil {
+		t.Fatal(err)
+	}
 
 	result, err := Export(Options{
 		WorkspaceRoot:     root,
@@ -41,6 +47,13 @@ func TestExportRedactsSecretsAndExcludesWorkspaceContentsByDefault(t *testing.T)
 		if _, ok := entries[required]; !ok {
 			t.Fatalf("missing %s in issue report entries %#v", required, keys(entries))
 		}
+	}
+	jobLog, ok := entries["job-logs/job-0001/job.log"]
+	if !ok {
+		t.Fatalf("missing redacted job log in issue report entries %#v", keys(entries))
+	}
+	if !strings.Contains(jobLog, "safe line") || strings.Contains(jobLog, "job-secret") || !strings.Contains(jobLog, "Authorization: [redacted]") {
+		t.Fatalf("job log was not redacted correctly:\n%s", jobLog)
 	}
 	for name, content := range entries {
 		if strings.Contains(content, root) {

@@ -61,15 +61,30 @@ func (h defaultHandlers) readJobLogs(ctx context.Context, call agent.ToolCall, r
 	}
 	tailLines := boundedJobInt(call, "tailLines", defaultJobLogLines, maxJobLogLines)
 	tailBytes := boundedJobInt(call, "tailBytes", defaultJobLogBytes, maxJobLogBytes)
+	logSource := "visible tail"
+	fullLog, fullLogPath, fullLogErr := h.deps.Jobs.ReadFullLog(jobID, tailBytes)
+	if fullLogErr != nil {
+		return toolError(call, "low", fullLogErr), fullLogErr
+	}
 	logLines := tailJobLines(job.LogTail, tailLines)
-	logText := redactJobText(strings.Join(logLines, "\n"))
+	logText := strings.Join(logLines, "\n")
+	if strings.TrimSpace(fullLog) != "" {
+		logSource = "full durable log"
+		logLines = tailJobLines(strings.Split(fullLog, "\n"), tailLines)
+		logText = strings.Join(logLines, "\n")
+	}
+	logText = redactJobText(logText)
 	logText = tailUTF8Bytes(logText, tailBytes)
 	if strings.TrimSpace(logText) == "" {
 		logText = "No log lines are available for this job."
 	}
+	logHeader := fmt.Sprintf("Log tail: %d line(s) from %s, capped at %d byte(s).", len(logLines), logSource, tailBytes)
+	if fullLogPath != "" {
+		logHeader += " Full log: " + fullLogPath + "."
+	}
 	lines := []string{
 		formatJobSummary(job),
-		fmt.Sprintf("Log tail: %d line(s), capped at %d byte(s).", len(logLines), tailBytes),
+		logHeader,
 		"",
 		logText,
 	}

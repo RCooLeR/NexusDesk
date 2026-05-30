@@ -20,6 +20,7 @@ type Job struct {
 	Message     string
 	Error       string
 	LogTail     []string
+	LogPath     string
 	StartedAt   time.Time
 	CompletedAt time.Time
 }

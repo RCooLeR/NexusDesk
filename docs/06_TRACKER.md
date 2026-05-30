@@ -201,11 +201,11 @@ Legend:
 
 ### 3.3 Job logs
 
-- [ ] P1 Raise visible job log tail.
-- [ ] P1 Persist full logs under job directory.
-- [ ] P1 Add open-full-log action.
-- [ ] P1 Include relevant logs in issue report with redaction.
-- [ ] P1 Add tests for long job logs.
+- [x] P1 Raise visible job log tail.
+- [x] P1 Persist full logs under job directory.
+- [x] P1 Add open-full-log action.
+- [x] P1 Include relevant logs in issue report with redaction.
+- [x] P1 Add tests for long job logs.
 
 ### 3.4 Artifact audit and rollback
 

@@ -2,6 +2,9 @@ package jobs
 
 import (
 	"errors"
+	"os"
+	"path/filepath"
+	"strings"
 	"testing"
 	"time"
 )
@@ -52,6 +55,38 @@ func TestServiceCapsLogTail(t *testing.T) {
 	got, _ := service.Get(job.ID)
 	if len(got.LogTail) != maxLogLines {
 		t.Fatalf("expected capped log tail, got %d", len(got.LogTail))
+	}
+}
+
+func TestServicePersistsFullJobLogsUnderWorkspace(t *testing.T) {
+	root := t.TempDir()
+	service := New()
+	if err := service.SetLogRoot(root); err != nil {
+		t.Fatalf("SetLogRoot returned error: %v", err)
+	}
+	job, _ := service.Start("task", "noisy")
+	for index := 0; index < maxLogLines+4; index++ {
+		service.AppendLog(job.ID, "line "+time.Unix(int64(index), 0).UTC().Format(time.RFC3339))
+	}
+	got, _ := service.Get(job.ID)
+	if len(got.LogTail) != maxLogLines || strings.Contains(strings.Join(got.LogTail, "\n"), "1970-01-01T00:00:00Z") {
+		t.Fatalf("expected visible tail to keep newest %d lines, got %#v", maxLogLines, got.LogTail)
+	}
+	if got.LogPath == "" || filepath.Base(filepath.Dir(got.LogPath)) != job.ID {
+		t.Fatalf("expected job log path under job id directory, got %#v", got)
+	}
+	text, path, err := service.ReadFullLog(job.ID, 0)
+	if err != nil {
+		t.Fatalf("ReadFullLog returned error: %v", err)
+	}
+	if path != got.LogPath {
+		t.Fatalf("expected path %q, got %q", got.LogPath, path)
+	}
+	if !strings.Contains(text, "1970-01-01T00:00:00Z") || !strings.Contains(text, "1970-01-01T00:01:07Z") {
+		t.Fatalf("expected full log to retain oldest and newest lines:\n%s", text)
+	}
+	if _, err := os.Stat(filepath.Join(root, ".nexusdesk", "jobs", job.ID, "job.log")); err != nil {
+		t.Fatalf("expected durable job log file: %v", err)
 	}
 }
 

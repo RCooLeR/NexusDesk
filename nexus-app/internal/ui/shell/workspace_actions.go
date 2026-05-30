@@ -91,6 +91,9 @@ func (v *View) openWorkspace(root string) {
 		return
 	}
 	v.state.SetWorkspace(workspace)
+	if err := v.jobService.SetLogRoot(workspace.Root); err != nil {
+		v.addActivity("Job full-log directory unavailable: " + err.Error())
+	}
 	v.gitFileBadges = map[string]string{}
 	metadataStarted := time.Now().UTC()
 	metadataDetail := "metadata store unavailable"

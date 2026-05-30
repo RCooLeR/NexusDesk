@@ -71,7 +71,7 @@ func TestJobSummaryIncludesMessageErrorAndTail(t *testing.T) {
 }
 
 func TestJobRowsEmpty(t *testing.T) {
-	rows := jobRows(nil, func(string) {}, func(string) {}, func(string) {}, nil, nil)
+	rows := jobRows(nil, func(string) {}, func(string) {}, func(string) {}, func(string) {}, nil, nil)
 	if len(rows) != 1 {
 		t.Fatalf("expected one empty row, got %d", len(rows))
 	}
@@ -147,6 +147,15 @@ func TestFormatJobRecordIncludesStatusAndLogTail(t *testing.T) {
 	for _, expected := range []string{"Query completed.", "Status: success", "Kind: connector-query", "Log tail", "Rows: shown=50 total=50 duration=320ms"} {
 		if !strings.Contains(output, expected) {
 			t.Fatalf("expected job output to contain %q:\n%s", expected, output)
+		}
+	}
+}
+
+func TestFormatFullJobLogIncludesPathAndText(t *testing.T) {
+	text := formatFullJobLog("job-1", "C:/repo/.nexusdesk/jobs/job-1/job.log", "line 1")
+	for _, expected := range []string{"Full job log for job-1", "job.log", "line 1"} {
+		if !strings.Contains(text, expected) {
+			t.Fatalf("expected %q in full log text:\n%s", expected, text)
 		}
 	}
 }

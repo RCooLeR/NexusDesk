@@ -54,6 +54,10 @@ func (v *View) openJobOutput(id string) {
 	v.jobs.OpenOutput(id)
 }
 
+func (v *View) openJobFullLog(id string) {
+	v.jobs.OpenFullLog(id)
+}
+
 func (c *jobsController) Panel() fyne.CanvasObject {
 	refresh := widget.NewButtonWithIcon("Refresh", theme.ViewRefreshIcon(), c.Refresh)
 	cleanup := widget.NewButtonWithIcon("Clean Up", theme.DeleteIcon(), c.ConfirmPrune)
@@ -70,7 +74,7 @@ func (c *jobsController) Refresh() {
 		status = fmt.Sprintf("%s - persistence warning on %s: %s", status, firstNonEmptyString(issue.JobID, "latest job"), issue.Error)
 	}
 	c.status.SetText(status)
-	c.results.Objects = jobRows(jobs, c.Cancel, c.ConfirmRetry, c.OpenOutput, c.view.taskRunsByJob(), c.view.artifactOutputsByJob())
+	c.results.Objects = jobRows(jobs, c.Cancel, c.ConfirmRetry, c.OpenOutput, c.OpenFullLog, c.view.taskRunsByJob(), c.view.artifactOutputsByJob())
 	c.results.Refresh()
 	c.view.refreshStatusBar()
 }
@@ -157,6 +161,21 @@ func (c *jobsController) OpenOutput(id string) {
 	c.view.taskOutput.SetText(formatTaskRunRecord(record))
 	c.view.taskStatus.SetText("Opened task output for " + id + ".")
 	c.view.addActivity("Opened task output for " + id + ".")
+}
+
+func (c *jobsController) OpenFullLog(id string) {
+	text, path, err := c.view.jobService.ReadFullLog(id, 0)
+	if err != nil {
+		dialog.ShowError(err, c.view.window)
+		return
+	}
+	if strings.TrimSpace(text) == "" {
+		c.status.SetText("No full log file found for " + id + ".")
+		return
+	}
+	c.view.taskOutput.SetText(formatFullJobLog(id, path, text))
+	c.view.taskStatus.SetText("Opened full job log for " + id + ".")
+	c.view.addActivity("Opened full job log for " + id + ".")
 }
 
 func (v *View) openTaskRunArtifactOutput(record metadataSvc.TaskRunRecord) bool {
@@ -277,6 +296,7 @@ func jobRows(
 	onCancel func(string),
 	onRetry func(string),
 	onOpenOutput func(string),
+	onOpenFullLog func(string),
 	taskRuns map[string]metadataSvc.TaskRunRecord,
 	artifactOutputs map[string]metadataSvc.ArtifactRecord,
 ) []fyne.CanvasObject {
@@ -301,6 +321,10 @@ func jobRows(
 			onOpenOutput(job.ID)
 		})
 		output.Importance = widget.LowImportance
+		fullLog := widget.NewButtonWithIcon("", theme.FileTextIcon(), func() {
+			onOpenFullLog(job.ID)
+		})
+		fullLog.Importance = widget.LowImportance
 		taskRun, hasTaskRun := taskRuns[job.ID]
 		_, hasArtifactOutput := artifactOutputs[job.ID]
 		if job.Status == jobsSvc.StatusRunning || !hasTaskRun || strings.TrimSpace(taskRun.TaskID) == "" {
@@ -309,13 +333,16 @@ func jobRows(
 		if (!hasTaskRun || !taskRunHasOutput(taskRun)) && !hasArtifactOutput && !jobHasOutput(job) {
 			output.Disable()
 		}
+		if strings.TrimSpace(job.LogPath) == "" && len(job.LogTail) == 0 {
+			fullLog.Disable()
+		}
 		title := widget.NewLabel(fmt.Sprintf("%s - %s", job.ID, job.Label))
 		title.TextStyle = fyne.TextStyle{Bold: true}
 		meta := widget.NewLabel(fmt.Sprintf("%s - %s", job.Kind, job.Status))
 		meta.Truncation = fyne.TextTruncateEllipsis
 		message := widget.NewLabel(jobSummary(job))
 		message.Truncation = fyne.TextTruncateEllipsis
-		rows = append(rows, container.NewBorder(nil, nil, container.NewHBox(cancel, retry, output), nil, container.NewVBox(title, meta, message)))
+		rows = append(rows, container.NewBorder(nil, nil, container.NewHBox(cancel, retry, output, fullLog), nil, container.NewVBox(title, meta, message)))
 	}
 	return rows
 }
@@ -401,6 +428,22 @@ func formatJobRecord(job jobsSvc.Job) string {
 			builder.WriteString(line)
 			builder.WriteString("\n")
 		}
+	}
+	return builder.String()
+}
+
+func formatFullJobLog(id string, path string, text string) string {
+	var builder strings.Builder
+	builder.WriteString("Full job log for ")
+	builder.WriteString(id)
+	if strings.TrimSpace(path) != "" {
+		builder.WriteString("\nPath: ")
+		builder.WriteString(path)
+	}
+	builder.WriteString("\n\n")
+	builder.WriteString(text)
+	if !strings.HasSuffix(text, "\n") {
+		builder.WriteString("\n")
 	}
 	return builder.String()
 }
