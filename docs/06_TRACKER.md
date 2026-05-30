@@ -116,7 +116,7 @@ Legend:
 
 ### 2.1 Assistant and activity rendering
 
-- [ ] P1 Coalesce assistant stream deltas with a UI refresh ticker.
+- [x] P1 Coalesce assistant stream deltas with a UI refresh ticker.
 - [ ] P1 Parse markdown once at final response where practical.
 - [ ] P1 Coalesce agent event rendering.
 - [ ] P1 Replace activity markdown rebuild with incremental list rendering.

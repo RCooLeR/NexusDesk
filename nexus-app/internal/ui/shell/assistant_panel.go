@@ -7,6 +7,7 @@ import (
 	"regexp"
 	"strconv"
 	"strings"
+	"sync"
 	"time"
 
 	"fyne.io/fyne/v2"
@@ -35,6 +36,7 @@ const assistantCitationSnippetLineLimit = 4
 const assistantCitationSnippetLineMaxChars = 180
 const assistantSourceActionLimit = 8
 const assistantSourceDigestListLimit = 24
+const assistantStreamRefreshInterval = 80 * time.Millisecond
 
 var assistantCitationPattern = regexp.MustCompile(`(?i)([\w./\\-]+\.[A-Za-z0-9]{1,12})(?:(?:#L|:)(\d+)(?:[-:L]+(\d+))?)`)
 var assistantCitationRefPattern = regexp.MustCompile(`^(.+):L(\d+)(?:-L(\d+))?$`)
@@ -177,15 +179,13 @@ func (v *View) runAssistantRequest(prompt *widget.Entry, response *widget.RichTe
 	v.addActivity("Assistant request started.")
 
 	go func() {
-		var builder strings.Builder
+		stream := newAssistantStreamRenderer(response, assistantStreamRefreshInterval)
 		result, err := v.assistantService.AskStream(context.Background(), request, func(delta string) error {
-			builder.WriteString(delta)
-			current := builder.String()
-			fyne.Do(func() {
-				response.ParseMarkdown(current)
-			})
+			stream.Append(delta)
 			return nil
 		})
+		stream.Flush()
+		stream.Stop()
 		fyne.Do(func() {
 			defer send.Enable()
 			if err != nil {
@@ -211,6 +211,98 @@ func (v *View) runAssistantRequest(prompt *widget.Entry, response *widget.RichTe
 			v.addActivity("Assistant response completed with " + result.Model + ".")
 		})
 	}()
+}
+
+type assistantMarkdownRenderer interface {
+	ParseMarkdown(string)
+}
+
+type assistantStreamRenderer struct {
+	mu       sync.Mutex
+	builder  strings.Builder
+	dirty    bool
+	render   func(string)
+	stop     chan struct{}
+	stopped  chan struct{}
+	stopOnce sync.Once
+}
+
+func newAssistantStreamRenderer(response assistantMarkdownRenderer, interval time.Duration) *assistantStreamRenderer {
+	return newAssistantStreamRendererWithRender(func(text string) {
+		if response == nil {
+			return
+		}
+		fyne.Do(func() {
+			response.ParseMarkdown(text)
+		})
+	}, interval)
+}
+
+func newAssistantStreamRendererWithRender(render func(string), interval time.Duration) *assistantStreamRenderer {
+	if interval <= 0 {
+		interval = assistantStreamRefreshInterval
+	}
+	stream := &assistantStreamRenderer{
+		render:  render,
+		stop:    make(chan struct{}),
+		stopped: make(chan struct{}),
+	}
+	go stream.run(interval)
+	return stream
+}
+
+func (r *assistantStreamRenderer) Append(delta string) {
+	if r == nil || delta == "" {
+		return
+	}
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	r.builder.WriteString(delta)
+	r.dirty = true
+}
+
+func (r *assistantStreamRenderer) Flush() {
+	if r == nil {
+		return
+	}
+	if text, ok := r.consume(); ok && r.render != nil {
+		r.render(text)
+	}
+}
+
+func (r *assistantStreamRenderer) Stop() {
+	if r == nil {
+		return
+	}
+	r.stopOnce.Do(func() {
+		close(r.stop)
+		<-r.stopped
+	})
+}
+
+func (r *assistantStreamRenderer) run(interval time.Duration) {
+	ticker := time.NewTicker(interval)
+	defer ticker.Stop()
+	defer close(r.stopped)
+	for {
+		select {
+		case <-ticker.C:
+			r.Flush()
+		case <-r.stop:
+			r.Flush()
+			return
+		}
+	}
+}
+
+func (r *assistantStreamRenderer) consume() (string, bool) {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	if !r.dirty {
+		return "", false
+	}
+	r.dirty = false
+	return r.builder.String(), true
 }
 
 const assistantAutoModelRouteLabel = "Auto by selected context"

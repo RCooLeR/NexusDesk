@@ -45,6 +45,33 @@ func TestAgentActivityTailKeepsLastTwoMessages(t *testing.T) {
 	}
 }
 
+func TestAssistantStreamRendererCoalescesDeltasUntilFlush(t *testing.T) {
+	rendered := make([]string, 0, 2)
+	stream := newAssistantStreamRendererWithRender(func(text string) {
+		rendered = append(rendered, text)
+	}, time.Hour)
+	defer stream.Stop()
+
+	stream.Append("hello")
+	stream.Append(" world")
+	if len(rendered) != 0 {
+		t.Fatalf("expected no render before flush, got %#v", rendered)
+	}
+	stream.Flush()
+	if len(rendered) != 1 || rendered[0] != "hello world" {
+		t.Fatalf("expected coalesced render, got %#v", rendered)
+	}
+	stream.Flush()
+	if len(rendered) != 1 {
+		t.Fatalf("expected clean flush to skip duplicate render, got %#v", rendered)
+	}
+	stream.Append("!")
+	stream.Flush()
+	if len(rendered) != 2 || rendered[1] != "hello world!" {
+		t.Fatalf("expected full stream text on next render, got %#v", rendered)
+	}
+}
+
 func TestAgentEventLineFormatsUsefulEvents(t *testing.T) {
 	cases := []struct {
 		event agentSvc.Event
