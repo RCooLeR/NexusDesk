@@ -74,6 +74,21 @@ func TestMarkDraftSavedPromotesDraftToSource(t *testing.T) {
 	}
 }
 
+func TestMarkDraftSavedAsPreservesNewerDirtyDraft(t *testing.T) {
+	session := NewSession()
+	tab := session.OpenFileWithSource("main.go", "main.go", "package main\n")
+	session.UpdateDraft(tab.ID, "package app\n")
+	session.UpdateDraft(tab.ID, "package newer\n")
+
+	current, ok := session.MarkDraftSavedAs(tab.ID, "package app\n")
+	if !ok {
+		t.Fatalf("expected saved source to be recorded")
+	}
+	if !current.Dirty || current.SourceText != "package app\n" || current.DraftText != "package newer\n" {
+		t.Fatalf("expected newer draft to remain dirty after stale save completion, got %#v", current)
+	}
+}
+
 func TestPinnedTabsStayBeforeUnpinnedTabs(t *testing.T) {
 	session := NewSession()
 	first := session.OpenFile("a.go", "a.go")

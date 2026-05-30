@@ -31,6 +31,7 @@ type editorController struct {
 	tabIDs           map[*container.TabItem]string
 	previews         map[string]domain.FilePreview
 	textEditors      map[string]*textEditorBinding
+	savingTabs       map[string]bool
 	splitEnabled     bool
 	secondaryRelPath string
 }
@@ -44,6 +45,7 @@ func newEditorController(view *View, initialTabID string, welcomeItem *container
 		tabIDs:      map[*container.TabItem]string{tabs.Items[0]: initialTabID},
 		previews:    map[string]domain.FilePreview{},
 		textEditors: map[string]*textEditorBinding{},
+		savingTabs:  map[string]bool{},
 	}
 }
 

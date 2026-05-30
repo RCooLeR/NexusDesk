@@ -6,6 +6,7 @@ import (
 
 	"fyne.io/fyne/v2/container"
 	fynetest "fyne.io/fyne/v2/test"
+	"fyne.io/fyne/v2/widget"
 
 	"nexusdesk/internal/domain"
 	editorSvc "nexusdesk/internal/services/editor"
@@ -103,6 +104,48 @@ func TestRefreshEditorAfterSaveUpdatesBindingInPlace(t *testing.T) {
 	}
 	if editor.source.CursorRow != 0 || editor.source.CursorColumn != 2 {
 		t.Fatalf("expected cursor to be preserved, got row=%d column=%d", editor.source.CursorRow, editor.source.CursorColumn)
+	}
+}
+
+func TestSetEditorSaveStateShowsSavingAndRetryFailure(t *testing.T) {
+	_ = fynetest.NewTempApp(t)
+	session := editorSvc.NewSession()
+	tab := session.OpenFileWithSource("notes.txt", "notes.txt", "old")
+	if !session.UpdateDraft(tab.ID, "new") {
+		t.Fatal("expected dirty draft")
+	}
+	dirty, ok := session.Tab(tab.ID)
+	if !ok {
+		t.Fatal("expected dirty tab")
+	}
+	status := widget.NewLabel("")
+	state := widget.NewLabel("")
+	save := widget.NewButton("", nil)
+	view := &View{editorSession: session}
+	view.editor = &editorController{
+		openTabs:    map[string]*container.TabItem{tab.ID: container.NewTabItem("notes.txt", widget.NewLabel(""))},
+		tabIDs:      map[*container.TabItem]string{},
+		previews:    map[string]domain.FilePreview{tab.ID: {RelPath: "notes.txt", Kind: domain.PreviewText, Encoding: "utf-8", Text: "old"}},
+		textEditors: map[string]*textEditorBinding{},
+		savingTabs:  map[string]bool{},
+	}
+	view.editor.textEditors[tab.ID] = &textEditorBinding{
+		status:           status,
+		tabState:         state,
+		saveButton:       save,
+		sourceEncoding:   "utf-8",
+		saveEncoding:     "utf-8",
+		encodingExplicit: true,
+	}
+
+	view.setEditorSaveState(tab.ID, true, "Saving draft...")
+	if !view.editorSaving(tab.ID) || status.Text != "Saving draft..." || state.Text != "Saving..." {
+		t.Fatalf("expected visible saving state, saving=%v status=%q state=%q", view.editorSaving(tab.ID), status.Text, state.Text)
+	}
+
+	view.setEditorSaveState(tab.ID, false, "Save failed: disk is full. Retry Save after fixing the problem.")
+	if view.editorSaving(tab.ID) || !strings.Contains(status.Text, "Retry Save") || state.Text != editorStateText(dirty) {
+		t.Fatalf("expected retry failure state, saving=%v status=%q state=%q", view.editorSaving(tab.ID), status.Text, state.Text)
 	}
 }
 

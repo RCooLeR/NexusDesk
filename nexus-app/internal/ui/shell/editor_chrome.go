@@ -18,12 +18,13 @@ import (
 func (v *View) newEditorPanel(tab editorSvc.Tab, preview domain.FilePreview) fyne.CanvasObject {
 	v.editor.previews[tab.ID] = preview
 	content := newFilePreview(preview)
-	state := widget.NewLabel(editorStateText(tab))
+	saving := v.editorSaving(tab.ID)
+	state := widget.NewLabel(editorStateTextWithSaving(tab, saving))
 	save := widget.NewButtonWithIcon("", theme.DocumentSaveIcon(), func() {
 		v.saveEditorDraft(tab.ID)
 	})
 	save.Importance = widget.MediumImportance
-	setSaveEnabled(save, editorSaveAllowed(tab, preview, false, !preview.EncodingAmbiguous))
+	setSaveEnabled(save, !saving && editorSaveAllowed(tab, preview, false, !preview.EncodingAmbiguous))
 	pin := widget.NewButtonWithIcon("", theme.ConfirmIcon(), func() {
 		if next, ok := v.editorSession.TogglePinned(tab.ID); ok {
 			state.SetText(editorStateText(next))
@@ -34,10 +35,18 @@ func (v *View) newEditorPanel(tab editorSvc.Tab, preview domain.FilePreview) fyn
 	pin.Importance = widget.LowImportance
 	if preview.Kind == domain.PreviewText {
 		content = v.newTextEditor(tab, preview, func(next editorSvc.Tab, encodingDirty bool, encodingExplicit bool) {
-			state.SetText(editorStateText(next))
-			setSaveEnabled(save, editorSaveAllowed(next, preview, encodingDirty, encodingExplicit))
+			state.SetText(editorStateTextWithSaving(next, v.editorSaving(next.ID)))
+			setSaveEnabled(save, !v.editorSaving(next.ID) && editorSaveAllowed(next, preview, encodingDirty, encodingExplicit))
 			v.updateEditorTabState(next)
 		})
+		if editor, ok := v.textEditor(tab.ID); ok {
+			editor.tabState = state
+			editor.saveButton = save
+			editor.saving = saving
+			if saving {
+				editor.status.SetText("Saving draft...")
+			}
+		}
 	} else {
 		v.removeTextEditor(tab.ID)
 	}
@@ -171,6 +180,16 @@ func (v *View) openEditorBreadcrumb(relPath string) {
 	v.openWorkspaceRelFile(relPath)
 }
 
+type editorSaveRequest struct {
+	tabID         string
+	title         string
+	relPath       string
+	draftText     string
+	encoding      string
+	workspaceRoot string
+	preview       domain.FilePreview
+}
+
 func (v *View) saveEditorDraft(tabID string) {
 	workspace := v.state.Workspace()
 	if workspace.Root == "" {
@@ -180,6 +199,10 @@ func (v *View) saveEditorDraft(tabID string) {
 	tab, ok := v.editorSession.Tab(tabID)
 	if !ok {
 		v.addActivity("Editor tab is no longer available.")
+		return
+	}
+	if v.editorSaving(tab.ID) {
+		v.addActivity("Save already in progress for " + tab.RelPath + ".")
 		return
 	}
 	encodingDirty := false
@@ -211,27 +234,55 @@ func (v *View) saveEditorDraft(tabID string) {
 	if editor, ok := v.textEditor(tab.ID); ok {
 		encoding = editor.writeEncoding()
 	}
-	proposal, err := v.workspaceService.ApplyFileWrite(workspace.Root, workspaceSvc.FileWriteRequest{
-		RelPath:  tab.RelPath,
-		Content:  tab.DraftText,
-		Encoding: encoding,
+	request := editorSaveRequest{
+		tabID:         tab.ID,
+		title:         tab.Title,
+		relPath:       tab.RelPath,
+		draftText:     tab.DraftText,
+		encoding:      encoding,
+		workspaceRoot: workspace.Root,
+		preview:       preview,
+	}
+	v.setEditorSaveState(tab.ID, true, "Saving draft...")
+	go v.applyEditorSave(request)
+}
+
+func (v *View) applyEditorSave(request editorSaveRequest) {
+	proposal, err := v.workspaceService.ApplyFileWrite(request.workspaceRoot, workspaceSvc.FileWriteRequest{
+		RelPath:  request.relPath,
+		Content:  request.draftText,
+		Encoding: request.encoding,
 	})
+	fyne.Do(func() {
+		v.finishEditorSave(request, proposal, err)
+	})
+}
+
+func (v *View) finishEditorSave(request editorSaveRequest, proposal workspaceSvc.FileWriteProposal, err error) {
+	v.setEditorSaveState(request.tabID, false, "")
 	if err != nil {
+		v.setEditorSaveState(request.tabID, false, "Save failed: "+err.Error()+" Retry Save after fixing the problem.")
+		v.addActivity("Save failed for " + request.relPath + ": " + err.Error())
 		dialog.ShowError(err, v.window)
 		return
 	}
-	next, ok := v.editorSession.MarkDraftSaved(tab.ID)
+	next, ok := v.editorSession.MarkDraftSavedAs(request.tabID, request.draftText)
 	if !ok {
 		v.addActivity("Saved file, but editor state could not be refreshed.")
 		return
 	}
+	preview := request.preview
 	preview.Text = next.SourceText
 	preview.Size = int64(proposal.Size)
 	preview.Encoding = proposal.Encoding
 	v.refreshEditorAfterSave(next, preview)
 	v.updateEditorTabState(next)
 	v.refreshStatusBar()
-	v.addActivity(proposal.Message)
+	message := proposal.Message
+	if next.Dirty {
+		message += " Draft has newer unsaved changes."
+	}
+	v.addActivity(message)
 }
 
 func (v *View) refreshEditorAfterSave(next editorSvc.Tab, preview domain.FilePreview) {
@@ -301,6 +352,49 @@ func (v *View) updateEditorTabState(tab editorSvc.Tab) {
 	v.editor.tabs.Refresh()
 }
 
+func (v *View) editorSaving(tabID string) bool {
+	return v != nil && v.editor != nil && v.editor.savingTabs != nil && v.editor.savingTabs[tabID]
+}
+
+func (v *View) setEditorSaveState(tabID string, saving bool, message string) {
+	if v == nil || v.editor == nil {
+		return
+	}
+	if v.editor.savingTabs == nil {
+		v.editor.savingTabs = map[string]bool{}
+	}
+	if saving {
+		v.editor.savingTabs[tabID] = true
+	} else {
+		delete(v.editor.savingTabs, tabID)
+	}
+	if v.editorSession == nil {
+		return
+	}
+	tab, ok := v.editorSession.Tab(tabID)
+	if !ok {
+		return
+	}
+	editor, hasEditor := v.textEditor(tabID)
+	if hasEditor {
+		editor.saving = saving
+		if editor.status != nil {
+			if message != "" {
+				editor.status.SetText(message)
+			} else {
+				editor.status.SetText(draftStatusTextWithEncoding(tab, editor.encodingDirty(), !editor.hasExplicitEncoding()))
+			}
+		}
+		if editor.saveButton != nil {
+			preview := v.editor.previews[tabID]
+			setSaveEnabled(editor.saveButton, !saving && editorSaveAllowed(tab, preview, editor.encodingDirty(), editor.hasExplicitEncoding()))
+		}
+	}
+	if hasEditor && editor.tabState != nil {
+		editor.tabState.SetText(editorStateTextWithSaving(tab, saving))
+	}
+}
+
 func (v *View) syncEditorTabOrder() {
 	ordered := make([]*container.TabItem, 0, len(v.editor.openTabs))
 	for _, tab := range v.editorSession.Tabs() {
@@ -337,6 +431,13 @@ func editorTabIcon(tab editorSvc.Tab) fyne.Resource {
 }
 
 func editorStateText(tab editorSvc.Tab) string {
+	return editorStateTextWithSaving(tab, false)
+}
+
+func editorStateTextWithSaving(tab editorSvc.Tab, saving bool) string {
+	if saving {
+		return "Saving..."
+	}
 	state := "Saved"
 	if tab.Dirty {
 		state = "Modified"

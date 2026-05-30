@@ -117,6 +117,16 @@ func (s *Session) MarkDraftSaved(id string) (Tab, bool) {
 	return s.tabs[index], true
 }
 
+func (s *Session) MarkDraftSavedAs(id, savedText string) (Tab, bool) {
+	index := s.find(id)
+	if index < 0 {
+		return Tab{}, false
+	}
+	s.tabs[index].SourceText = savedText
+	s.tabs[index].Dirty = s.tabs[index].DraftText != savedText
+	return s.tabs[index], true
+}
+
 func (s *Session) TogglePinned(id string) (Tab, bool) {
 	index := s.find(id)
 	if index < 0 {

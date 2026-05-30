@@ -126,13 +126,13 @@ Legend:
 
 ### 2.2 Editor save performance
 
-- [ ] P1 Move save flow off UI thread.
-- [ ] P1 Show visible saving state.
-- [ ] P1 Keep tab dirty marker accurate during save.
+- [x] P1 Move save flow off UI thread.
+- [x] P1 Show visible saving state.
+- [x] P1 Keep tab dirty marker accurate during save.
 - [x] P1 Avoid rebuilding whole editor panel after save.
 - [x] P1 Preserve cursor after save.
 - [ ] P1 Preserve scroll after save.
-- [ ] P1 Add failure state and retry affordance for failed save.
+- [x] P1 Add failure state and retry affordance for failed save.
 - [ ] P1 Add save performance test or benchmark.
 
 ### 2.3 Diff and rollback performance

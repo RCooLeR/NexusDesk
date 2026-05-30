@@ -20,6 +20,8 @@ const workspaceDefinitionSearchLimit = 60
 type textEditorBinding struct {
 	source               *widget.Entry
 	status               *widget.Label
+	tabState             *widget.Label
+	saveButton           *widget.Button
 	rendered             *previewPane
 	outlineStatus        *widget.Label
 	outlineList          *fyne.Container
@@ -38,6 +40,7 @@ type textEditorBinding struct {
 	saveEncoding         string
 	encodingExplicit     bool
 	initializingEncoding bool
+	saving               bool
 	onEncoding           func()
 	onState              func(editorSvc.Tab, bool, bool)
 }
