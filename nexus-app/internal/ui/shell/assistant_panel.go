@@ -60,6 +60,8 @@ type assistantController struct {
 	modelRoute      *widget.Select
 	runStatus       *widget.Label
 	sourceDigest    *widget.Label
+	stopButton      *widget.Button
+	activeJobID     string
 	memory          *widget.Entry
 	lastPrompt      string
 	lastResult      assistantSvc.Result
@@ -142,10 +144,14 @@ func (v *View) newAssistantPanel() fyne.CanvasObject {
 	saveAnswer := widget.NewButtonWithIcon("Save answer", theme.DocumentSaveIcon(), func() {
 		v.saveLatestAssistantAnswer()
 	})
+	stop := widget.NewButtonWithIcon("Stop", theme.CancelIcon(), v.cancelActiveAssistantRun)
+	stop.Importance = widget.HighImportance
+	stop.Disable()
+	v.assistant.stopButton = stop
 	openSources := widget.NewButtonWithIcon("Open sources", theme.FolderOpenIcon(), v.openLatestAssistantSources)
 	pinSources := widget.NewButtonWithIcon("Pin sources", theme.ContentAddIcon(), v.pinLatestAssistantSources)
 	sourceDigest := widget.NewButtonWithIcon("Source digest", theme.SearchIcon(), v.showLatestAssistantSourceDigest)
-	assistantActions := container.NewHBox(retry, compare, saveAnswer, openSources, pinSources, sourceDigest)
+	assistantActions := container.NewHBox(stop, retry, compare, saveAnswer, openSources, pinSources, sourceDigest)
 	composerControls := container.NewVBox(mode, modelRoute, agentTaskApproval)
 	composer := container.NewBorder(assistantActions, nil, composerControls, send, prompt)
 	composer = container.NewPadded(composer)
@@ -1494,6 +1500,7 @@ func (v *View) runAgentRequest(text string, response *widget.RichText, send *wid
 	job, ctx := v.jobService.Start("agent", agentJobLabel(text))
 	v.jobService.AppendLog(job.ID, "Prompt: "+agentJobLabel(text))
 	send.Disable()
+	v.setAssistantStopState(job.ID, true)
 	v.setAssistantRunStatus(assistantAgentRunningStatusLine(job.ID, request))
 	response.ParseMarkdown("Agent starting...")
 	v.addActivity("Agent request started as " + job.ID + ".")
@@ -1520,6 +1527,7 @@ func (v *View) runAgentRequest(text string, response *widget.RichText, send *wid
 		events.Stop()
 		fyne.Do(func() {
 			defer send.Enable()
+			defer v.setAssistantStopState("", false)
 			if v.assistant.runTaskApproval != nil && !v.approvalService.HasFullProjectAccess(workspace.Root) {
 				v.assistant.runTaskApproval.SetChecked(false)
 			}
@@ -1550,6 +1558,43 @@ func (v *View) runAgentRequest(text string, response *widget.RichText, send *wid
 			v.refreshJobs()
 		})
 	}()
+}
+
+func (v *View) setAssistantStopState(jobID string, enabled bool) {
+	if v == nil || v.assistant == nil {
+		return
+	}
+	v.assistant.activeJobID = strings.TrimSpace(jobID)
+	if v.assistant.stopButton == nil {
+		return
+	}
+	if enabled && v.assistant.activeJobID != "" {
+		v.assistant.stopButton.Enable()
+		return
+	}
+	v.assistant.stopButton.Disable()
+}
+
+func (v *View) cancelActiveAssistantRun() {
+	if v == nil || v.assistant == nil {
+		return
+	}
+	jobID := strings.TrimSpace(v.assistant.activeJobID)
+	if jobID == "" || v.jobService == nil {
+		v.setAssistantRunStatus("No cancellable assistant run is active.")
+		return
+	}
+	if !v.jobService.Cancel(jobID) {
+		v.setAssistantRunStatus("Assistant run is no longer cancellable.")
+		v.setAssistantStopState("", false)
+		return
+	}
+	v.setAssistantRunStatus("Cancel requested for " + jobID + ".")
+	v.setAssistantStopState(jobID, false)
+	v.addActivity("Cancel requested for assistant job " + jobID + ".")
+	if v.jobs != nil {
+		v.refreshJobs()
+	}
 }
 
 func (v *View) assistantRunTaskApprovalChecked() bool {

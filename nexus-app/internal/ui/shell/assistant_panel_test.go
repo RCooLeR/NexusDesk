@@ -12,6 +12,7 @@ import (
 	"nexusdesk/internal/domain"
 	agentSvc "nexusdesk/internal/services/agent"
 	assistantSvc "nexusdesk/internal/services/assistant"
+	jobsSvc "nexusdesk/internal/services/jobs"
 	llmSvc "nexusdesk/internal/services/llm"
 	metadataSvc "nexusdesk/internal/services/metadata"
 	settingsSvc "nexusdesk/internal/services/settings"
@@ -54,6 +55,44 @@ func TestAssistantPanelLayoutKeepsComposerPinnedToBottom(t *testing.T) {
 	}
 	if panel.Objects[0] != messages || panel.Objects[1] != header || panel.Objects[2] != composer || panel.Objects[3] != sidebar {
 		t.Fatalf("unexpected assistant layout object order: %#v", panel.Objects)
+	}
+}
+
+func TestAssistantStopStateTracksActiveJob(t *testing.T) {
+	stop := widget.NewButton("Stop", nil)
+	stop.Disable()
+	view := &View{assistant: &assistantController{stopButton: stop}}
+
+	view.setAssistantStopState("job-0001", true)
+	if view.assistant.activeJobID != "job-0001" || stop.Disabled() {
+		t.Fatalf("expected active enabled stop state, job=%q disabled=%v", view.assistant.activeJobID, stop.Disabled())
+	}
+
+	view.setAssistantStopState("", false)
+	if view.assistant.activeJobID != "" || !stop.Disabled() {
+		t.Fatalf("expected idle disabled stop state, job=%q disabled=%v", view.assistant.activeJobID, stop.Disabled())
+	}
+}
+
+func TestCancelActiveAssistantRunCancelsJob(t *testing.T) {
+	service := jobsSvc.New()
+	job, _ := service.Start("agent", "slow")
+	stop := widget.NewButton("Stop", nil)
+	status := widget.NewLabel("")
+	view := &View{
+		jobService: service,
+		assistant:  &assistantController{activeJobID: job.ID, stopButton: stop, runStatus: status},
+	}
+	view.setAssistantStopState(job.ID, true)
+
+	view.cancelActiveAssistantRun()
+
+	updated, ok := service.Get(job.ID)
+	if !ok || updated.Status != jobsSvc.StatusCanceled {
+		t.Fatalf("expected job to be canceled, got %#v ok=%v", updated, ok)
+	}
+	if !stop.Disabled() || !strings.Contains(status.Text, "Cancel requested") {
+		t.Fatalf("expected visible cancel state, disabled=%v status=%q", stop.Disabled(), status.Text)
 	}
 }
 
