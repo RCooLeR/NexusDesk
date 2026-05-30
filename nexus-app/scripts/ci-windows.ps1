@@ -67,6 +67,12 @@ $version = if ([string]::IsNullOrWhiteSpace($env:NEXUSDESK_VERSION)) { '0.0.0-ci
 $commit = if ([string]::IsNullOrWhiteSpace($env:GITHUB_SHA)) { (git -C $repoRoot rev-parse --short HEAD) } else { $env:GITHUB_SHA.Substring(0, [Math]::Min(12, $env:GITHUB_SHA.Length)) }
 $buildDate = if ([string]::IsNullOrWhiteSpace($env:NEXUSDESK_BUILD_DATE)) { (Get-Date).ToUniversalTime().ToString('yyyy-MM-ddTHH:mm:ssZ') } else { $env:NEXUSDESK_BUILD_DATE }
 $ldflags = "-X nexusdesk/internal/buildinfo.Version=$version -X nexusdesk/internal/buildinfo.Commit=$commit -X nexusdesk/internal/buildinfo.BuildDate=$buildDate"
+$buildLdflags = "-linkmode=internal $ldflags"
+$goToolDir = (& go env GOTOOLDIR).Trim()
+$cgoTool = Join-Path $goToolDir 'cgo.exe'
+if (-not (Test-Path $cgoTool)) {
+    throw "Go CGO tool was not found at $cgoTool. Repair or reinstall Go for Windows, then open a fresh PowerShell."
+}
 
 function Invoke-Checked {
     param(
@@ -106,7 +112,7 @@ try {
         New-Item -ItemType Directory -Force -Path build | Out-Null
         $artifactPath = Join-Path $appRoot 'build\nexusdesk.exe'
         $manifestPath = Join-Path $appRoot 'build\nexusdesk-windows-manifest.json'
-        Invoke-Checked 'go' @('build', '-ldflags', $ldflags, '-o', $artifactPath, '.')
+        Invoke-Checked 'go' @('build', '-ldflags', $buildLdflags, '-o', $artifactPath, '.')
 
         Write-Host 'Generating release manifest...'
         Invoke-Checked 'go' @('run', './cmd/release-manifest', '-artifact', $artifactPath, '-output', $manifestPath, '-platform', 'windows', '-version', $version, '-commit', $commit, '-build-date', $buildDate)
