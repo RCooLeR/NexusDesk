@@ -10,6 +10,7 @@ import (
 
 	"nexusdesk/internal/buildinfo"
 	"nexusdesk/internal/domain"
+	editorSvc "nexusdesk/internal/services/editor"
 	gitSvc "nexusdesk/internal/services/git"
 	jobsSvc "nexusdesk/internal/services/jobs"
 	settingsSvc "nexusdesk/internal/services/settings"
@@ -21,6 +22,7 @@ type statusBarSnapshot struct {
 	SettingsError string
 	GitStatus     gitSvc.Status
 	SelectedPath  string
+	SaveState     string
 	Encoding      string
 	LineEnding    string
 	Jobs          []jobsSvc.Job
@@ -48,7 +50,7 @@ func (v *View) refreshStatusBar() {
 			settings = loaded
 		}
 	}
-	encoding, lineEnding := v.activeEditorFileStatus()
+	encoding, lineEnding, saveState := v.activeEditorFileStatus()
 	workspace := domain.Workspace{}
 	selectedPath := ""
 	if v.state != nil {
@@ -65,6 +67,7 @@ func (v *View) refreshStatusBar() {
 		SettingsError: settingsError,
 		GitStatus:     v.gitStatusSnapshot,
 		SelectedPath:  selectedPath,
+		SaveState:     saveState,
 		Encoding:      encoding,
 		LineEnding:    lineEnding,
 		Jobs:          jobs,
@@ -73,17 +76,21 @@ func (v *View) refreshStatusBar() {
 	v.refreshToolbarStatus()
 }
 
-func (v *View) activeEditorFileStatus() (string, string) {
+func (v *View) activeEditorFileStatus() (string, string, string) {
 	if v == nil || v.editor == nil || v.editor.tabs == nil {
-		return "n/a", "n/a"
+		return "n/a", "n/a", "n/a"
 	}
 	item := v.editor.tabs.Selected()
 	if item == nil {
-		return "n/a", "n/a"
+		return "n/a", "n/a", "n/a"
 	}
 	tabID := strings.TrimSpace(v.editor.tabIDs[item])
 	if tabID == "" {
-		return "n/a", "n/a"
+		return "n/a", "n/a", "n/a"
+	}
+	tab := editorSvc.Tab{}
+	if v.editorSession != nil {
+		tab, _ = v.editorSession.Tab(tabID)
 	}
 	if editor, ok := v.editor.textEditors[tabID]; ok && editor != nil {
 		encoding := editor.writeEncoding()
@@ -94,12 +101,28 @@ func (v *View) activeEditorFileStatus() (string, string) {
 		if editor.source != nil {
 			text = editor.source.Text
 		}
-		return fallbackStatusValue(encoding, "utf-8"), detectLineEnding(text)
+		return fallbackStatusValue(encoding, "utf-8"), detectLineEnding(text), editorSaveStateText(tab, editor)
 	}
 	if preview, ok := v.editor.previews[tabID]; ok {
-		return fallbackStatusValue(preview.Encoding, "n/a"), detectLineEnding(preview.Text)
+		return fallbackStatusValue(preview.Encoding, "n/a"), detectLineEnding(preview.Text), "read-only"
 	}
-	return "n/a", "n/a"
+	return "n/a", "n/a", "n/a"
+}
+
+func editorSaveStateText(tab editorSvc.Tab, editor *textEditorBinding) string {
+	if editor != nil && editor.saving {
+		return "saving"
+	}
+	if editor != nil && !editor.hasExplicitEncoding() {
+		return "encoding required"
+	}
+	if tab.Dirty {
+		return "modified"
+	}
+	if editor != nil && editor.encodingDirty() {
+		return "encoding changed"
+	}
+	return "saved"
 }
 
 func statusBarText(snapshot statusBarSnapshot) string {
@@ -130,6 +153,7 @@ func statusBarText(snapshot statusBarSnapshot) string {
 	warnings := statusBarWarningCount(snapshot, failed)
 	encoding := fallbackStatusValue(snapshot.Encoding, "n/a")
 	lineEnding := fallbackStatusValue(snapshot.LineEnding, "n/a")
+	saveState := fallbackStatusValue(snapshot.SaveState, "n/a")
 	version := fallbackStatusValue(snapshot.BuildInfo.Version, "dev")
 
 	return strings.Join([]string{
@@ -139,6 +163,7 @@ func statusBarText(snapshot statusBarSnapshot) string {
 		fmt.Sprintf("Jobs: %d running, %d failed", running, failed),
 		fmt.Sprintf("Warnings: %d", warnings),
 		"Selected: " + selected,
+		"Save: " + saveState,
 		"Encoding: " + encoding,
 		"Line: " + lineEnding,
 		"Version: " + version,
