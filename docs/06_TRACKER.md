@@ -493,7 +493,7 @@ Legend:
 - [x] P1 Add beta feedback issue template. Evidence: `.github/ISSUE_TEMPLATE/beta-feedback.yml` captures app version/commit/build date, affected area, goal/expected/actual result, reproduction steps, redacted diagnostics notes, and a required secret/workspace-data redaction checklist.
 - [ ] P1 Add crash recovery banner actions.
 - [x] P1 Add known limitations page. Evidence: Help and the command palette expose Known Limitations, backed by `userguide.KnownLimitationsMarkdown()` with beta boundaries for packaging/trust, provider/model setup, planned tools, connector/data limits, platform coverage, and protected-secret backends (`go test ./internal/services/userguide ./internal/ui/shell -run "SampleWorkflow|KnownLimitations|CommandPaletteIncludesSafeAgentGuide"`).
-- [ ] P1 Prepare beta release notes.
+- [x] P1 Prepare beta release notes. Evidence: `docs/releases/beta-release-notes.md` documents private-beta scope, ready-to-exercise features, install/trust state, release evidence verification, validation steps, known limitations, uninstall/app-data expectations, and redacted feedback instructions.
 - [ ] P1 Run five-user beta install test.
 - [ ] P1 Triage beta feedback within 48 hours.
 
