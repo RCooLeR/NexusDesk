@@ -276,7 +276,7 @@ Legend:
 - [x] P1 Register Approvals tool window.
 - [x] P1 Register Diagnostics tool window.
 - [x] P1 Register Activity tool window.
-- [ ] P1 Add keyboard shortcut routing through registry.
+- [x] P1 Add keyboard shortcut routing through registry.
 
 ### 4.3 Left rail
 

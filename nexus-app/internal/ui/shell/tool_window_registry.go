@@ -65,6 +65,16 @@ func (r toolWindowRegistry) ForSide(side toolWindowSide) []toolWindowRegistratio
 	return tools
 }
 
+func (r toolWindowRegistry) ShortcutTools() []toolWindowRegistration {
+	tools := []toolWindowRegistration{}
+	for _, tool := range r.ordered {
+		if tool.ShortcutKey != "" {
+			tools = append(tools, tool)
+		}
+	}
+	return tools
+}
+
 func (r toolWindowRegistry) Lookup(id string) (toolWindowRegistration, bool) {
 	tool, ok := r.byID[id]
 	return tool, ok

@@ -1,6 +1,11 @@
 package shell
 
-import "testing"
+import (
+	"testing"
+
+	"fyne.io/fyne/v2"
+	"fyne.io/fyne/v2/driver/desktop"
+)
 
 func TestDefaultToolWindowRegistryRegistersCoreTools(t *testing.T) {
 	registry := defaultToolWindowRegistry()
@@ -37,5 +42,24 @@ func TestRailToolWindowsReadFromRegistry(t *testing.T) {
 	}
 	if left[1].ButtonLabel() != "Alt+2  Search" {
 		t.Fatalf("expected shortcut label from shared registration, got %q", left[1].ButtonLabel())
+	}
+}
+
+func TestToolWindowRegistryShortcutRoutingUsesAltModifier(t *testing.T) {
+	registry := defaultToolWindowRegistry()
+	tools := registry.ShortcutTools()
+	if len(tools) == 0 {
+		t.Fatal("expected registered shortcut tools")
+	}
+	search, ok := registry.Lookup("search")
+	if !ok {
+		t.Fatal("expected search tool registration")
+	}
+	shortcut, ok := shortcutToolWindow(search).(*desktop.CustomShortcut)
+	if !ok {
+		t.Fatalf("expected desktop shortcut, got %#v", shortcutToolWindow(search))
+	}
+	if shortcut.KeyName != fyne.Key2 || shortcut.Modifier != fyne.KeyModifierAlt {
+		t.Fatalf("expected Alt+2 search shortcut, got key=%s modifier=%v", shortcut.KeyName, shortcut.Modifier)
 	}
 }

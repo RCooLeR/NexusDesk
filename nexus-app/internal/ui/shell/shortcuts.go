@@ -28,16 +28,10 @@ func (v *View) installShortcuts() {
 	bindShortcut(canvas, shortcutSettings(), v.openSettingsTab)
 	bindShortcut(canvas, shortcutQuickOpen(), v.openQuickOpenDialog)
 	bindShortcut(canvas, shortcutCommandPalette(), v.openCommandPaletteDialog)
-	for _, tool := range leftRailToolWindows() {
+	for _, tool := range defaultToolWindowRegistry().ShortcutTools() {
 		tool := tool
-		if shortcut := shortcutLeftRailTool(tool); shortcut != nil {
-			bindShortcut(canvas, shortcut, func() { v.openLeftRailToolWindow(tool) })
-		}
-	}
-	for _, tool := range rightRailToolWindows() {
-		tool := tool
-		if shortcut := shortcutRightRailTool(tool); shortcut != nil {
-			bindShortcut(canvas, shortcut, func() { v.openRightRailToolWindow(tool) })
+		if shortcut := shortcutToolWindow(tool); shortcut != nil {
+			bindShortcut(canvas, shortcut, func() { v.openToolWindow(tool) })
 		}
 	}
 }
@@ -140,9 +134,34 @@ func shortcutRightRailTool(tool rightRailToolWindow) fyne.Shortcut {
 	return shortcutRailTool(tool.ShortcutKey)
 }
 
+func shortcutToolWindow(tool toolWindowRegistration) fyne.Shortcut {
+	return shortcutRailTool(tool.ShortcutKey)
+}
+
 func shortcutRailTool(key fyne.KeyName) fyne.Shortcut {
 	if key == "" {
 		return nil
 	}
 	return &desktop.CustomShortcut{KeyName: key, Modifier: fyne.KeyModifierAlt}
+}
+
+func (v *View) openToolWindow(tool toolWindowRegistration) {
+	switch tool.Side {
+	case toolWindowSideLeft:
+		v.openLeftRailToolWindow(tool)
+	case toolWindowSideRight:
+		v.openRightRailToolWindow(tool)
+	case toolWindowSideBottom:
+		if tool.TargetTab == "" {
+			v.addActivity(tool.Label + " panel is unavailable.")
+			return
+		}
+		if !v.selectBottomTab(tool.TargetTab) {
+			v.addActivity(tool.Label + " panel is unavailable.")
+			return
+		}
+		v.addActivity(tool.Activity)
+	default:
+		v.addActivity(tool.Label + " panel is unavailable.")
+	}
 }
