@@ -57,3 +57,35 @@ func TestSelectBottomTabCanSelectTopLevelGroup(t *testing.T) {
 		t.Fatal("expected missing bottom tab selection to fail")
 	}
 }
+
+func TestEditorPrioritySplitKeepsEditorWide(t *testing.T) {
+	_ = fynetest.NewTempApp(t)
+	view := &View{editor: &editorController{
+		tabs: container.NewDocTabs(container.NewTabItem("README.md", widget.NewLabel("editor"))),
+	}}
+
+	split := view.newEditorPrioritySplit(widget.NewLabel("assistant"))
+
+	if split.Offset != editorWidthPriorityOffset {
+		t.Fatalf("expected editor priority offset %v, got %v", editorWidthPriorityOffset, split.Offset)
+	}
+	if view.mainSplit != split {
+		t.Fatal("expected view to retain the main editor split")
+	}
+}
+
+func TestSelectBottomTabReassertsEditorWidthPriority(t *testing.T) {
+	_ = fynetest.NewTempApp(t)
+	view := &View{
+		bottomTabs: container.NewAppTabs(container.NewTabItem("Diagnostics", widget.NewLabel("diagnostics"))),
+		mainSplit:  container.NewHSplit(widget.NewLabel("editor"), widget.NewLabel("assistant")),
+	}
+	view.mainSplit.SetOffset(0.5)
+
+	if !view.selectBottomTab("Diagnostics") {
+		t.Fatal("expected Diagnostics tab to be selectable")
+	}
+	if view.mainSplit.Offset != editorWidthPriorityOffset {
+		t.Fatalf("expected editor width priority to be restored, got %v", view.mainSplit.Offset)
+	}
+}

@@ -70,6 +70,7 @@ type View struct {
 	activityLog             *widget.RichText
 	activityText            string
 	activityLines           []string
+	mainSplit               *container.Split
 	workbenchSplit          *container.Split
 	bottomPanelCollapsed    bool
 	search                  *searchController
@@ -243,8 +244,7 @@ func NewWithStartupStatus(window fyne.Window, startupStatus startupSvc.Status) *
 func (v *View) Canvas() fyne.CanvasObject {
 	rail := v.newRail()
 	rightWorkbench := container.NewBorder(nil, nil, nil, v.newRightRail(), v.newAssistantPanel())
-	mainSplit := container.NewHSplit(v.editor.tabs, rightWorkbench)
-	mainSplit.SetOffset(0.82)
+	mainSplit := v.newEditorPrioritySplit(rightWorkbench)
 	workbenchTop := container.NewBorder(v.newToolbar(), nil, v.navigator, nil, mainSplit)
 	workbench := container.NewVSplit(workbenchTop, v.newBottomPanel())
 	v.workbenchSplit = workbench

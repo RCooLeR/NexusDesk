@@ -299,7 +299,7 @@ Legend:
 - [x] P1 Add stable split behavior.
 - [x] P1 Show save state in status bar.
 - [x] P1 Show encoding/line endings in status bar.
-- [ ] P1 Keep editor width priority during resize.
+- [x] P1 Keep editor width priority during resize.
 
 ### 4.5 Right assistant UI
 

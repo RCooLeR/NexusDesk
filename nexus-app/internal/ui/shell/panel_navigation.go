@@ -3,10 +3,14 @@ package shell
 import (
 	"strings"
 
+	"fyne.io/fyne/v2"
 	"fyne.io/fyne/v2/container"
 )
 
-const workbenchExpandedOffset = 0.68
+const (
+	workbenchExpandedOffset   = 0.68
+	editorWidthPriorityOffset = 0.82
+)
 
 func (v *View) selectBottomTab(title string) bool {
 	if v.bottomTabs == nil {
@@ -15,6 +19,7 @@ func (v *View) selectBottomTab(title string) bool {
 	if !selectAppTabByTitle(v.bottomTabs, title) {
 		return false
 	}
+	v.enforceEditorWidthPriority()
 	v.updateRailActiveStateForTab(title)
 	return true
 }
@@ -36,6 +41,22 @@ func (v *View) expandBottomPanel() {
 	v.bottomPanelCollapsed = false
 	if v.workbenchSplit != nil {
 		v.workbenchSplit.SetOffset(workbenchExpandedOffset)
+	}
+}
+
+func (v *View) newEditorPrioritySplit(rightWorkbench fyne.CanvasObject) *container.Split {
+	split := container.NewHSplit(v.editor.tabs, rightWorkbench)
+	split.SetOffset(editorWidthPriorityOffset)
+	v.mainSplit = split
+	return split
+}
+
+func (v *View) enforceEditorWidthPriority() {
+	if v == nil || v.mainSplit == nil {
+		return
+	}
+	if v.mainSplit.Offset < editorWidthPriorityOffset {
+		v.mainSplit.SetOffset(editorWidthPriorityOffset)
 	}
 }
 
