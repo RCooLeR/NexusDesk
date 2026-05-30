@@ -82,6 +82,12 @@ func TestRefreshEditorAfterSaveUpdatesBindingInPlace(t *testing.T) {
 	item := container.NewTabItem("notes.txt", content)
 	view.editor.openTabs[tab.ID] = item
 	view.editor.tabIDs[item] = tab.ID
+	editor, ok := view.textEditor(tab.ID)
+	if !ok {
+		t.Fatal("expected text editor binding")
+	}
+	editor.source.CursorRow = 0
+	editor.source.CursorColumn = 2
 	saved, ok := session.MarkDraftSaved(tab.ID)
 	if !ok {
 		t.Fatal("expected saved tab")
@@ -92,12 +98,11 @@ func TestRefreshEditorAfterSaveUpdatesBindingInPlace(t *testing.T) {
 	if item.Content != content {
 		t.Fatal("expected editor content to be updated in place after save")
 	}
-	editor, ok := view.textEditor(tab.ID)
-	if !ok {
-		t.Fatal("expected text editor binding to remain registered")
-	}
 	if editor.source.Text != "new" || editor.status.Text != "Draft matches source." {
 		t.Fatalf("expected binding state to be refreshed, source=%q status=%q", editor.source.Text, editor.status.Text)
+	}
+	if editor.source.CursorRow != 0 || editor.source.CursorColumn != 2 {
+		t.Fatalf("expected cursor to be preserved, got row=%d column=%d", editor.source.CursorRow, editor.source.CursorColumn)
 	}
 }
 
