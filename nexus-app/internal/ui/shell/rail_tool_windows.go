@@ -14,7 +14,8 @@ func (v *View) openLeftRailToolWindow(tool leftRailToolWindow) {
 				v.addActivity(tool.Label + " collapsed.")
 				return
 			}
-			v.expandBottomPanel()
+			v.rememberCurrentToolPanelOffset()
+			v.expandToolPanelFor(tool.Label)
 			if !v.selectBottomTab(tool.TargetTab) {
 				v.addActivity(tool.Label + " panel is unavailable.")
 				return
@@ -35,7 +36,8 @@ func (v *View) openLeftRailToolWindow(tool leftRailToolWindow) {
 		v.addActivity(tool.Label + " collapsed.")
 		return
 	}
-	v.expandBottomPanel()
+	v.rememberCurrentToolPanelOffset()
+	v.expandToolPanelFor(tool.Label)
 	if !v.selectBottomTab(tool.TargetTab) {
 		v.addActivity(tool.Label + " panel is unavailable.")
 		return

@@ -59,6 +59,8 @@ type View struct {
 	rightRailButtons        map[string]*railToolButton
 	activeLeftRailTool      string
 	activeRightRailTool     string
+	activeToolPanelKey      string
+	toolPanelOffsetByTool   map[string]float64
 	railStateByWorkspace    map[string]railWorkspaceState
 	navigator               *fyne.Container
 	navigatorTree           *widget.Tree
@@ -190,6 +192,7 @@ func NewWithStartupStatus(window fyne.Window, startupStatus startupSvc.Status) *
 		editorSession:           editorSession,
 		events:                  newShellEventBus(),
 		status:                  widget.NewLabel("No workspace open"),
+		toolPanelOffsetByTool:   map[string]float64{},
 		railStateByWorkspace:    map[string]railWorkspaceState{},
 		navigator:               container.NewStack(widget.NewLabel("Open a workspace to browse files.")),
 		activityLog:             widget.NewRichTextFromMarkdown("Ready."),

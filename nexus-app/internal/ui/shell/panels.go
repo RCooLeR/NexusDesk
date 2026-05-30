@@ -69,7 +69,8 @@ func (v *View) newToolbar() fyne.CanvasObject {
 	openButton := widget.NewButtonWithIcon("Open Workspace", theme.FolderOpenIcon(), v.openWorkspaceDialog)
 	refreshButton := widget.NewButtonWithIcon("Refresh", theme.ViewRefreshIcon(), v.refreshWorkspace)
 	tasksButton := widget.NewButtonWithIcon("Tasks", theme.MediaPlayIcon(), func() {
-		v.expandBottomPanel()
+		v.rememberCurrentToolPanelOffset()
+		v.expandToolPanelFor("Tasks")
 		if !v.selectBottomTab("Tasks") {
 			v.addActivity("Tasks panel is unavailable.")
 			return
@@ -77,7 +78,8 @@ func (v *View) newToolbar() fyne.CanvasObject {
 		v.addActivity("Tasks selected.")
 	})
 	gitButton := widget.NewButtonWithIcon("Git", theme.ContentCopyIcon(), func() {
-		v.expandBottomPanel()
+		v.rememberCurrentToolPanelOffset()
+		v.expandToolPanelFor("Git")
 		if !v.selectBottomTab("Git") {
 			v.addActivity("Git panel is unavailable.")
 			return

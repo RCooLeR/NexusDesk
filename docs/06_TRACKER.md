@@ -286,7 +286,7 @@ Legend:
 - [x] P1 Add hover tooltips.
 - [x] P1 Add keyboard navigation.
 - [x] P1 Remember active tool per workspace.
-- [ ] P1 Remember width per tool window.
+- [x] P1 Remember width per tool window. (The dock split stores/restores validated offsets by active tool key so each tool reopens at its last useful width.)
 - [ ] P1 Add resize handle with enlarged hit zone.
 - [x] P1 Add tests for rail state mapping.
 
@@ -327,7 +327,7 @@ Legend:
 - [x] P1 Move Diagnostics to the left-sidebar tool registry.
 - [x] P1 Move Activity to the left-sidebar tool registry.
 - [x] P1 Add keyboard shortcuts for the moved tool windows.
-- [ ] P1 Ensure the moved tool windows keep per-tool width memory and collapse behavior.
+- [x] P1 Ensure the moved tool windows keep per-tool width memory and collapse behavior. (Moved tools now use the shared dock collapse path while preserving per-tool split widths.)
 
 ### 4.7 Settings UI
 

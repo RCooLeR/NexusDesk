@@ -9,6 +9,8 @@ import (
 
 const (
 	workbenchExpandedOffset   = 0.24
+	minToolPanelOffset        = 0.16
+	maxToolPanelOffset        = 0.42
 	editorWidthPriorityOffset = 0.82
 )
 
@@ -28,6 +30,7 @@ func (v *View) collapseBottomPanel() {
 	if v == nil {
 		return
 	}
+	v.rememberCurrentToolPanelOffset()
 	v.bottomPanelCollapsed = true
 	if v.workbenchSplit != nil {
 		v.workbenchSplit.SetOffset(0)
@@ -35,12 +38,19 @@ func (v *View) collapseBottomPanel() {
 }
 
 func (v *View) expandBottomPanel() {
+	v.expandToolPanelFor(v.currentToolPanelKey())
+}
+
+func (v *View) expandToolPanelFor(label string) {
 	if v == nil {
 		return
 	}
+	if label != "" {
+		v.activeToolPanelKey = label
+	}
 	v.bottomPanelCollapsed = false
 	if v.workbenchSplit != nil {
-		v.workbenchSplit.SetOffset(workbenchExpandedOffset)
+		v.workbenchSplit.SetOffset(v.toolPanelOffsetFor(label))
 	}
 }
 
@@ -53,9 +63,54 @@ func (v *View) newEditorPrioritySplit(rightWorkbench fyne.CanvasObject) *contain
 
 func (v *View) newToolPanelSplit(workbench fyne.CanvasObject) *container.Split {
 	split := container.NewHSplit(v.newBottomPanel(), workbench)
-	split.SetOffset(workbenchExpandedOffset)
+	split.SetOffset(v.toolPanelOffsetFor(v.currentToolPanelKey()))
 	v.workbenchSplit = split
 	return split
+}
+
+func (v *View) rememberCurrentToolPanelOffset() {
+	if v == nil || v.workbenchSplit == nil || v.bottomPanelCollapsed {
+		return
+	}
+	key := v.currentToolPanelKey()
+	if key == "" {
+		return
+	}
+	offset := v.workbenchSplit.Offset
+	if offset < minToolPanelOffset || offset > maxToolPanelOffset {
+		return
+	}
+	if v.toolPanelOffsetByTool == nil {
+		v.toolPanelOffsetByTool = map[string]float64{}
+	}
+	v.toolPanelOffsetByTool[key] = offset
+}
+
+func (v *View) toolPanelOffsetFor(label string) float64 {
+	if v == nil || label == "" || v.toolPanelOffsetByTool == nil {
+		return workbenchExpandedOffset
+	}
+	offset, ok := v.toolPanelOffsetByTool[label]
+	if !ok || offset < minToolPanelOffset || offset > maxToolPanelOffset {
+		return workbenchExpandedOffset
+	}
+	return offset
+}
+
+func (v *View) currentToolPanelKey() string {
+	if v == nil {
+		return ""
+	}
+	if v.activeToolPanelKey != "" {
+		return v.activeToolPanelKey
+	}
+	if v.activeLeftRailTool != "" {
+		return v.activeLeftRailTool
+	}
+	if v.activeRightRailTool != "" {
+		return v.activeRightRailTool
+	}
+	return defaultLeftRailTool
 }
 
 func (v *View) enforceEditorWidthPriority() {

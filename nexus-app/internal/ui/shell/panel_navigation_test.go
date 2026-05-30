@@ -94,6 +94,34 @@ func TestToolPanelSplitUsesLeftDock(t *testing.T) {
 	}
 }
 
+func TestToolPanelOffsetIsRememberedPerTool(t *testing.T) {
+	_ = fynetest.NewTempApp(t)
+	view := &View{
+		workbenchSplit:        container.NewHSplit(widget.NewLabel("tools"), widget.NewLabel("editor")),
+		activeToolPanelKey:    "Search",
+		toolPanelOffsetByTool: map[string]float64{},
+	}
+	view.workbenchSplit.SetOffset(0.31)
+
+	view.rememberCurrentToolPanelOffset()
+	view.expandToolPanelFor("Git")
+	if view.workbenchSplit.Offset != workbenchExpandedOffset {
+		t.Fatalf("expected default Git width before adjustment, got %v", view.workbenchSplit.Offset)
+	}
+
+	view.workbenchSplit.SetOffset(0.19)
+	view.rememberCurrentToolPanelOffset()
+	view.expandToolPanelFor("Search")
+	if view.workbenchSplit.Offset != 0.31 {
+		t.Fatalf("expected remembered Search width, got %v", view.workbenchSplit.Offset)
+	}
+
+	view.expandToolPanelFor("Git")
+	if view.workbenchSplit.Offset != 0.19 {
+		t.Fatalf("expected remembered Git width, got %v", view.workbenchSplit.Offset)
+	}
+}
+
 func TestSelectBottomTabReassertsEditorWidthPriority(t *testing.T) {
 	_ = fynetest.NewTempApp(t)
 	view := &View{
