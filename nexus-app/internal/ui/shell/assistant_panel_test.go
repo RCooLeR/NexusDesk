@@ -6,6 +6,9 @@ import (
 	"testing"
 	"time"
 
+	"fyne.io/fyne/v2"
+	"fyne.io/fyne/v2/widget"
+
 	"nexusdesk/internal/domain"
 	agentSvc "nexusdesk/internal/services/agent"
 	assistantSvc "nexusdesk/internal/services/assistant"
@@ -26,6 +29,18 @@ func TestAssistantControllerInitialState(t *testing.T) {
 	}
 }
 
+func TestAssistantHeaderKeepsModeRouteStatusVisible(t *testing.T) {
+	status := widget.NewLabel("Ready: Ask. Model route: Auto. Context: no explicit context.")
+	header := newAssistantHeader(status)
+
+	if !canvasObjectContains(header, status) {
+		t.Fatal("expected assistant header to contain the live run status label")
+	}
+	if !canvasObjectContainsLabel(header, "Assistant") {
+		t.Fatal("expected assistant header title")
+	}
+}
+
 func TestSelectedAssistantModelRouteOptionHandlesMissingController(t *testing.T) {
 	if got := selectedAssistantModelRouteOption(&View{}); got != assistantAutoModelRouteLabel {
 		t.Fatalf("expected auto route without assistant controller, got %q", got)
@@ -33,6 +48,38 @@ func TestSelectedAssistantModelRouteOptionHandlesMissingController(t *testing.T)
 	if got := (&View{}).selectedAssistantModelRouteID("write Go tests"); got != "" {
 		t.Fatalf("expected no explicit route without assistant controller, got %q", got)
 	}
+}
+
+func canvasObjectContains(root fyne.CanvasObject, target fyne.CanvasObject) bool {
+	if root == target {
+		return true
+	}
+	container, ok := root.(*fyne.Container)
+	if !ok {
+		return false
+	}
+	for _, child := range container.Objects {
+		if canvasObjectContains(child, target) {
+			return true
+		}
+	}
+	return false
+}
+
+func canvasObjectContainsLabel(root fyne.CanvasObject, text string) bool {
+	if label, ok := root.(*widget.Label); ok && label.Text == text {
+		return true
+	}
+	container, ok := root.(*fyne.Container)
+	if !ok {
+		return false
+	}
+	for _, child := range container.Objects {
+		if canvasObjectContainsLabel(child, text) {
+			return true
+		}
+	}
+	return false
 }
 
 func TestAgentActivityTailKeepsLastTwoMessages(t *testing.T) {

@@ -125,6 +125,7 @@ func (v *View) newAssistantPanel() fyne.CanvasObject {
 	v.assistant.runTaskApproval = agentTaskApproval
 	v.assistant.runStatus = widget.NewLabel("")
 	v.assistant.runStatus.Wrapping = fyne.TextWrapWord
+	header := newAssistantHeader(v.assistant.runStatus)
 	send := widget.NewButtonWithIcon("", theme.MailSendIcon(), nil)
 	send.OnTapped = func() {
 		v.runAssistantRequest(prompt, response, send, mode.Selected)
@@ -142,16 +143,26 @@ func (v *View) newAssistantPanel() fyne.CanvasObject {
 	pinSources := widget.NewButtonWithIcon("Pin sources", theme.ContentAddIcon(), v.pinLatestAssistantSources)
 	sourceDigest := widget.NewButtonWithIcon("Source digest", theme.SearchIcon(), v.showLatestAssistantSourceDigest)
 	assistantActions := container.NewHBox(retry, compare, saveAnswer, openSources, pinSources, sourceDigest)
-	composerControls := container.NewVBox(mode, modelRoute, agentTaskApproval, v.assistant.runStatus)
+	composerControls := container.NewVBox(mode, modelRoute, agentTaskApproval)
 	composer := container.NewBorder(assistantActions, nil, composerControls, send, prompt)
 	composer = container.NewPadded(composer)
 	sidebar := container.NewVBox(profileBar, widget.NewSeparator(), contextBar, widget.NewSeparator(), historyBar)
-	card := widget.NewCard("Assistant", "Local-first context and tool mediation", container.NewBorder(sidebar, composer, nil, nil, response))
+	panel := container.NewBorder(header, composer, sidebar, nil, response)
 	v.loadAssistantProfile()
 	v.refreshAssistantContextPins()
 	v.refreshAssistantRunStatus()
 	v.refreshAssistantHistory()
-	return container.NewPadded(card)
+	return container.NewPadded(panel)
+}
+
+func newAssistantHeader(runStatus *widget.Label) fyne.CanvasObject {
+	title := widget.NewLabel("Assistant")
+	title.TextStyle = fyne.TextStyle{Bold: true}
+	if runStatus == nil {
+		runStatus = widget.NewLabel("")
+	}
+	runStatus.Wrapping = fyne.TextWrapWord
+	return container.NewBorder(nil, nil, title, nil, runStatus)
 }
 
 func (v *View) runAssistantRequest(prompt *widget.Entry, response *widget.RichText, send *widget.Button, mode string) {
