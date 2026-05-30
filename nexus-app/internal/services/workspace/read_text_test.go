@@ -23,6 +23,36 @@ func TestReadTextFileReadsFullSafeText(t *testing.T) {
 	}
 }
 
+func TestReadTextFileSurfacesAmbiguousLatin1Fallback(t *testing.T) {
+	root := t.TempDir()
+	if err := os.WriteFile(filepath.Join(root, "notes.txt"), []byte{'c', 'a', 'f', 0xe9}, 0o644); err != nil {
+		t.Fatal(err)
+	}
+
+	read, err := New().ReadTextFile(root, "notes.txt")
+	if err != nil {
+		t.Fatalf("ReadTextFile returned error: %v", err)
+	}
+	if read.Content != "café" || read.Encoding != encodingLatin1 || !read.EncodingAmbiguous || !strings.Contains(read.EncodingWarning, "Low-confidence") {
+		t.Fatalf("expected ambiguous Latin-1 fallback, got %#v", read)
+	}
+}
+
+func TestReadTextFileDetectsWindows1251WithCyrillicSignal(t *testing.T) {
+	root := t.TempDir()
+	if err := os.WriteFile(filepath.Join(root, "notes.txt"), []byte{0xcf, 0xf0, 0xe8, 0xe2, 0xb3, 0xf2}, 0o644); err != nil {
+		t.Fatal(err)
+	}
+
+	read, err := New().ReadTextFile(root, "notes.txt")
+	if err != nil {
+		t.Fatalf("ReadTextFile returned error: %v", err)
+	}
+	if read.Content != "Привіт" || read.Encoding != encodingWindows1251 || read.EncodingAmbiguous {
+		t.Fatalf("expected confident Windows-1251 detection, got %#v", read)
+	}
+}
+
 func TestReadTextFileRejectsUnsafeTargets(t *testing.T) {
 	root := t.TempDir()
 	if err := os.WriteFile(filepath.Join(root, "blob.bin"), []byte{'a', 0x00, 'b'}, 0o644); err != nil {

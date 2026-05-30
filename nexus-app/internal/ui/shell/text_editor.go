@@ -275,7 +275,7 @@ func (b *textEditorBinding) markEncodingSaved(encoding string) {
 }
 
 func editorEncodingOptions() []string {
-	return []string{"utf-8", "utf-8-bom", "utf-16le", "utf-16be", "windows-1251", "windows-1252"}
+	return []string{"utf-8", "utf-8-bom", "utf-16le", "utf-16be", "iso-8859-1", "windows-1251", "windows-1252"}
 }
 
 func editorWriteEncoding(value string) string {
@@ -289,6 +289,8 @@ func editorWriteEncoding(value string) string {
 		return "utf-16le"
 	case "utf16be", "utf-16be", "utf-16 be":
 		return "utf-16be"
+	case "latin1", "latin-1", "iso8859-1", "iso-8859-1":
+		return "iso-8859-1"
 	case "cp1251", "windows1251", "windows-1251":
 		return "windows-1251"
 	case "cp1252", "windows1252", "windows-1252":

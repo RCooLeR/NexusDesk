@@ -81,8 +81,8 @@ func TestPreviewFileReadsWindows1252Text(t *testing.T) {
 	if err != nil {
 		t.Fatalf("PreviewFile returned error: %v", err)
 	}
-	if preview.Text != "café" || preview.Encoding != encodingWindows1252 {
-		t.Fatalf("unexpected Windows-1252 preview: %#v", preview)
+	if preview.Text != "café" || preview.Encoding != encodingLatin1 || !preview.EncodingAmbiguous || !strings.Contains(preview.EncodingWarning, "Low-confidence") {
+		t.Fatalf("expected ambiguous Latin-1-compatible preview, got %#v", preview)
 	}
 }
 

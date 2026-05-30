@@ -2,6 +2,7 @@ package shell
 
 import (
 	"fmt"
+	"strings"
 
 	"fyne.io/fyne/v2"
 	"fyne.io/fyne/v2/canvas"
@@ -150,6 +151,9 @@ func previewHeader(preview domain.FilePreview) string {
 	}
 	if preview.Encoding == "" {
 		return fmt.Sprintf("%s - %d bytes - %s%s", preview.RelPath, preview.Size, preview.MediaType, suffix)
+	}
+	if strings.TrimSpace(preview.EncodingWarning) != "" {
+		suffix += " - " + preview.EncodingWarning
 	}
 	return fmt.Sprintf("%s - %d bytes - %s - %s%s", preview.RelPath, preview.Size, preview.MediaType, preview.Encoding, suffix)
 }

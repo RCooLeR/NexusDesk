@@ -6,10 +6,12 @@ import (
 )
 
 type TextFileRead struct {
-	RelPath  string
-	Content  string
-	Encoding string
-	Size     int64
+	RelPath           string
+	Content           string
+	Encoding          string
+	EncodingWarning   string
+	EncodingAmbiguous bool
+	Size              int64
 }
 
 func (s *Service) ReadTextFile(root string, relPath string) (TextFileRead, error) {
@@ -27,14 +29,16 @@ func (s *Service) ReadTextFile(root string, relPath string) (TextFileRead, error
 	if looksBinary(content) && !looksLikeUTF16LE(content) && !looksLikeUTF16BE(content) {
 		return TextFileRead{}, errors.New("file is not safe text")
 	}
-	text, encoding, err := decodeText(content)
+	detection, err := decodeTextWithDetection(content)
 	if err != nil {
 		return TextFileRead{}, err
 	}
 	return TextFileRead{
-		RelPath:  cleanRelPath,
-		Content:  text,
-		Encoding: encoding,
-		Size:     info.Size(),
+		RelPath:           cleanRelPath,
+		Content:           detection.Text,
+		Encoding:          detection.Encoding,
+		EncodingWarning:   detection.Warning,
+		EncodingAmbiguous: detection.Ambiguous,
+		Size:              info.Size(),
 	}, nil
 }

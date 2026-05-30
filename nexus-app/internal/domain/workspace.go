@@ -34,19 +34,21 @@ const (
 )
 
 type FilePreview struct {
-	RelPath   string
-	Name      string
-	Size      int64
-	Kind      PreviewKind
-	MediaType string
-	Encoding  string
-	Text      string
-	TextBytes int64
-	Truncated bool
-	Bytes     []byte
-	Table     *TablePreview
-	Document  *DocumentPreview
-	PDF       *PDFPreview
+	RelPath           string
+	Name              string
+	Size              int64
+	Kind              PreviewKind
+	MediaType         string
+	Encoding          string
+	EncodingWarning   string
+	EncodingAmbiguous bool
+	Text              string
+	TextBytes         int64
+	Truncated         bool
+	Bytes             []byte
+	Table             *TablePreview
+	Document          *DocumentPreview
+	PDF               *PDFPreview
 }
 
 type TablePreview struct {

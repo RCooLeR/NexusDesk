@@ -39,6 +39,12 @@ func encodeContent(content string, encoding string, includeSignature bool, reque
 		return encodeUTF16(content, binary.LittleEndian, signatureBytes(includeSignature, []byte{0xff, 0xfe})), encoding, nil
 	case encodingUTF16BE:
 		return encodeUTF16(content, binary.BigEndian, signatureBytes(includeSignature, []byte{0xfe, 0xff})), encoding, nil
+	case encodingLatin1:
+		encoded, err := charmap.ISO8859_1.NewEncoder().Bytes([]byte(content))
+		if err != nil {
+			return nil, "", errors.New("content cannot be encoded as iso-8859-1")
+		}
+		return encoded, encoding, nil
 	case encodingWindows1251:
 		encoded, err := charmap.Windows1251.NewEncoder().Bytes([]byte(content))
 		if err != nil {
@@ -74,6 +80,8 @@ func normalizeWriteEncoding(value string) string {
 		return encodingUTF16LE
 	case "utf16be", "utf-16be", "utf-16 be", encodingUTF16BE:
 		return encodingUTF16BE
+	case "latin1", "latin-1", "iso8859-1", "iso-8859-1":
+		return encodingLatin1
 	case "cp1251", "windows1251", encodingWindows1251:
 		return encodingWindows1251
 	case "cp1252", "windows1252", encodingWindows1252:

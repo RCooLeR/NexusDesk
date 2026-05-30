@@ -100,14 +100,16 @@ func (s *Service) PreviewFile(root string, relPath string) (domain.FilePreview, 
 	if kind != domain.PreviewText {
 		return preview, nil
 	}
-	text, encoding, err := decodeText(content)
+	detection, err := decodeTextWithDetection(content)
 	if err != nil {
 		return domain.FilePreview{}, err
 	}
-	preview.Text = text
+	preview.Text = detection.Text
 	preview.TextBytes = int64(len(content))
 	preview.Truncated = isOversized
-	preview.Encoding = encoding
+	preview.Encoding = detection.Encoding
+	preview.EncodingWarning = detection.Warning
+	preview.EncodingAmbiguous = detection.Ambiguous
 	return preview, nil
 }
 
@@ -117,15 +119,17 @@ func (s *Service) FullTextPreviewFile(root string, relPath string) (domain.FileP
 		return domain.FilePreview{}, err
 	}
 	return domain.FilePreview{
-		RelPath:   read.RelPath,
-		Name:      filepath.Base(read.RelPath),
-		Size:      read.Size,
-		Kind:      domain.PreviewText,
-		MediaType: mediaType(read.RelPath),
-		Encoding:  read.Encoding,
-		Text:      read.Content,
-		TextBytes: read.Size,
-		Truncated: false,
+		RelPath:           read.RelPath,
+		Name:              filepath.Base(read.RelPath),
+		Size:              read.Size,
+		Kind:              domain.PreviewText,
+		MediaType:         mediaType(read.RelPath),
+		Encoding:          read.Encoding,
+		EncodingWarning:   read.EncodingWarning,
+		EncodingAmbiguous: read.EncodingAmbiguous,
+		Text:              read.Content,
+		TextBytes:         read.Size,
+		Truncated:         false,
 	}, nil
 }
 

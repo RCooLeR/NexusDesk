@@ -160,7 +160,11 @@ func (h defaultHandlers) readFile(ctx context.Context, call agent.ToolCall, requ
 	if strings.TrimSpace(text) == "" {
 		text = fmt.Sprintf("No inline text available for %s preview.", preview.Kind)
 	}
-	return toolOK(call, "low", fmt.Sprintf("File: %s\nKind: %s\nMedia: %s\nEncoding: %s\nSize: %d\nTextBytes: %d\nTruncated: %t\n\n%s", preview.RelPath, preview.Kind, preview.MediaType, preview.Encoding, preview.Size, preview.TextBytes, preview.Truncated, text)), nil
+	warning := strings.TrimSpace(preview.EncodingWarning)
+	if warning == "" {
+		warning = "none"
+	}
+	return toolOK(call, "low", fmt.Sprintf("File: %s\nKind: %s\nMedia: %s\nEncoding: %s\nEncodingWarning: %s\nSize: %d\nTextBytes: %d\nTruncated: %t\n\n%s", preview.RelPath, preview.Kind, preview.MediaType, preview.Encoding, warning, preview.Size, preview.TextBytes, preview.Truncated, text)), nil
 }
 
 func (h defaultHandlers) searchWorkspace(ctx context.Context, call agent.ToolCall, request agent.Request) (agent.ToolResult, error) {

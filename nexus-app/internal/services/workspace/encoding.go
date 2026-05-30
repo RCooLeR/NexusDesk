@@ -16,65 +16,117 @@ const (
 	encodingUTF8BOM     = "utf-8-bom"
 	encodingUTF16LE     = "utf-16-le"
 	encodingUTF16BE     = "utf-16-be"
+	encodingLatin1      = "iso-8859-1"
 	encodingWindows1251 = "windows-1251"
 	encodingWindows1252 = "windows-1252"
 )
 
+type textEncodingDetection struct {
+	Text             string
+	Encoding         string
+	Warning          string
+	Ambiguous        bool
+	LosslessFallback bool
+}
+
+type legacyCandidate struct {
+	name  string
+	text  string
+	score int
+}
+
 func decodeText(content []byte) (string, string, error) {
+	detection, err := detectTextEncoding(content)
+	if err != nil {
+		return "", "", err
+	}
+	return detection.Text, detection.Encoding, nil
+}
+
+func decodeTextWithDetection(content []byte) (textEncodingDetection, error) {
+	return detectTextEncoding(content)
+}
+
+func detectTextEncoding(content []byte) (textEncodingDetection, error) {
 	switch {
 	case bytes.HasPrefix(content, []byte{0xef, 0xbb, 0xbf}):
-		return string(content[3:]), encodingUTF8BOM, nil
+		return textEncodingDetection{Text: string(content[3:]), Encoding: encodingUTF8BOM}, nil
 	case bytes.HasPrefix(content, []byte{0xff, 0xfe}):
 		text, err := decodeUTF16(content[2:], binary.LittleEndian)
-		return text, encodingUTF16LE, err
+		return textEncodingDetection{Text: text, Encoding: encodingUTF16LE}, err
 	case bytes.HasPrefix(content, []byte{0xfe, 0xff}):
 		text, err := decodeUTF16(content[2:], binary.BigEndian)
-		return text, encodingUTF16BE, err
+		return textEncodingDetection{Text: text, Encoding: encodingUTF16BE}, err
 	case utf8.Valid(content):
-		return string(content), encodingUTF8, nil
+		return textEncodingDetection{Text: string(content), Encoding: encodingUTF8}, nil
 	case looksLikeUTF16LE(content):
 		text, err := decodeUTF16(content, binary.LittleEndian)
-		return text, encodingUTF16LE, err
+		return textEncodingDetection{Text: text, Encoding: encodingUTF16LE}, err
 	case looksLikeUTF16BE(content):
 		text, err := decodeUTF16(content, binary.BigEndian)
-		return text, encodingUTF16BE, err
+		return textEncodingDetection{Text: text, Encoding: encodingUTF16BE}, err
 	default:
 		return decodeLegacyText(content)
 	}
 }
 
-func decodeLegacyText(content []byte) (string, string, error) {
-	type legacyCandidate struct {
-		name string
-		text string
-	}
+func decodeLegacyText(content []byte) (textEncodingDetection, error) {
 	candidates := []legacyCandidate{}
 	for _, candidate := range []struct {
 		name    string
 		decoder *charmap.Charmap
 	}{
 		{name: encodingWindows1251, decoder: charmap.Windows1251},
+		{name: encodingLatin1, decoder: charmap.ISO8859_1},
 		{name: encodingWindows1252, decoder: charmap.Windows1252},
 	} {
 		decoded, err := candidate.decoder.NewDecoder().Bytes(content)
 		if err != nil {
 			continue
 		}
-		candidates = append(candidates, legacyCandidate{name: candidate.name, text: string(decoded)})
+		text := string(decoded)
+		candidates = append(candidates, legacyCandidate{name: candidate.name, text: text, score: legacyTextScore(text, candidate.name)})
 	}
 	if len(candidates) == 0 {
-		return "", "", errors.New("file text encoding is unsupported")
+		return textEncodingDetection{}, errors.New("file text encoding is unsupported")
 	}
 	best := candidates[0]
-	bestScore := legacyTextScore(best.text, best.name)
 	for _, candidate := range candidates[1:] {
-		score := legacyTextScore(candidate.text, candidate.name)
-		if score > bestScore {
+		if candidate.score > best.score {
 			best = candidate
-			bestScore = score
 		}
 	}
-	return best.text, best.name, nil
+	secondScore := best.score
+	for _, candidate := range candidates {
+		if candidate.name == best.name {
+			continue
+		}
+		if secondScore == best.score || candidate.score > secondScore {
+			secondScore = candidate.score
+		}
+	}
+	if best.score-secondScore < 4 {
+		fallback := losslessSingleByteFallback(candidates)
+		return textEncodingDetection{
+			Text:             fallback.text,
+			Encoding:         fallback.name,
+			Warning:          "Low-confidence single-byte charset detection. NexusDesk used a lossless fallback; choose an explicit save encoding before saving changes.",
+			Ambiguous:        true,
+			LosslessFallback: true,
+		}, nil
+	}
+	return textEncodingDetection{Text: best.text, Encoding: best.name}, nil
+}
+
+func losslessSingleByteFallback(candidates []legacyCandidate) legacyCandidate {
+	for _, preferred := range []string{encodingLatin1, encodingWindows1252, encodingWindows1251} {
+		for _, candidate := range candidates {
+			if candidate.name == preferred {
+				return candidate
+			}
+		}
+	}
+	return candidates[0]
 }
 
 func legacyTextScore(text string, encoding string) int {
@@ -84,6 +136,8 @@ func legacyTextScore(text string, encoding string) int {
 	for _, r := range text {
 		switch {
 		case r == '\uFFFD':
+			score -= 20
+		case r >= '\u0080' && r <= '\u009f':
 			score -= 20
 		case unicode.IsControl(r) && r != '\n' && r != '\r' && r != '\t':
 			score -= 10
@@ -101,6 +155,9 @@ func legacyTextScore(text string, encoding string) int {
 		score += cyrillic * 4
 	}
 	if cyrillic == 0 && latin > 0 && encoding == encodingWindows1252 {
+		score += latin
+	}
+	if cyrillic == 0 && latin > 0 && encoding == encodingLatin1 {
 		score += latin
 	}
 	return score

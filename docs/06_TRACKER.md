@@ -228,12 +228,12 @@ Legend:
 
 ### 3.6 Encoding honesty
 
-- [ ] P1 Add charset detection strategy.
-- [ ] P1 Use lossless fallback when confidence is low.
-- [ ] P1 Surface ambiguous encoding warning.
+- [x] P1 Add charset detection strategy.
+- [x] P1 Use lossless fallback when confidence is low.
+- [x] P1 Surface ambiguous encoding warning.
 - [ ] P1 Disable save until encoding is explicit when ambiguity risks data loss.
-- [ ] P1 Add tests for Latin-1.
-- [ ] P1 Add tests for Windows-1251.
+- [x] P1 Add tests for Latin-1.
+- [x] P1 Add tests for Windows-1251.
 - [ ] P2 Add tests for Shift-JIS or other common encoding.
 
 ### 3.7 Recent workspace correctness
