@@ -318,15 +318,15 @@ Legend:
 
 - [ ] P1 Remove horizontal bottom tool panel from the target shell.
 - [ ] P1 Keep the bottom region as status bar only.
-- [ ] P1 Move Problems to the left-sidebar tool registry.
-- [ ] P1 Move Search Results to the left-sidebar tool registry.
-- [ ] P1 Move Git Diff to the left-sidebar tool registry.
-- [ ] P1 Move Tasks to the left-sidebar tool registry.
-- [ ] P1 Move Jobs to the left-sidebar tool registry.
-- [ ] P1 Move Audit to the left-sidebar tool registry.
-- [ ] P1 Move Diagnostics to the left-sidebar tool registry.
-- [ ] P1 Move Activity to the left-sidebar tool registry.
-- [ ] P1 Add keyboard shortcuts for the moved tool windows.
+- [x] P1 Move Problems to the left-sidebar tool registry.
+- [x] P1 Move Search Results to the left-sidebar tool registry.
+- [x] P1 Move Git Diff to the left-sidebar tool registry.
+- [x] P1 Move Tasks to the left-sidebar tool registry.
+- [x] P1 Move Jobs to the left-sidebar tool registry.
+- [x] P1 Move Audit to the left-sidebar tool registry.
+- [x] P1 Move Diagnostics to the left-sidebar tool registry.
+- [x] P1 Move Activity to the left-sidebar tool registry.
+- [x] P1 Add keyboard shortcuts for the moved tool windows.
 - [ ] P1 Ensure the moved tool windows keep per-tool width memory and collapse behavior.
 
 ### 4.7 Settings UI

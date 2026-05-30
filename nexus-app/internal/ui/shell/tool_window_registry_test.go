@@ -23,6 +23,7 @@ func TestDefaultToolWindowRegistryRegistersCoreTools(t *testing.T) {
 		"approvals",
 		"diagnostics",
 		"activity",
+		"audit",
 	} {
 		if _, ok := registry.Lookup(id); !ok {
 			t.Fatalf("expected tool window %q to be registered", id)
