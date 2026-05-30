@@ -4,18 +4,34 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"os"
 	"os/exec"
 	"path/filepath"
 	"strings"
 	"time"
 )
 
-const commandTimeout = 4 * time.Second
 const diffMaxBytes = 220 * 1024
 const diffContextLines = "3"
 const DefaultHistoryLimit = 20
 const historyMaxLimit = 80
 const blameMaxLines = 220
+
+type operationClass string
+
+const (
+	operationStatus   operationClass = "status"
+	operationDiff     operationClass = "diff"
+	operationHistory  operationClass = "history"
+	operationMutation operationClass = "mutation"
+)
+
+const (
+	statusTimeout   = 4 * time.Second
+	diffTimeout     = 8 * time.Second
+	historyTimeout  = 12 * time.Second
+	mutationTimeout = 20 * time.Second
+)
 
 type Service struct{}
 
@@ -32,16 +48,16 @@ func (s *Service) Status(root string) (Status, error) {
 	if err != nil {
 		return Status{}, err
 	}
-	repoRoot, err := gitOutput(absRoot, "rev-parse", "--show-toplevel")
+	repoRoot, err := gitOutputFor(absRoot, operationStatus, "rev-parse", "--show-toplevel")
 	if err != nil {
 		return unavailableStatus("Workspace is not inside a Git repository."), nil
 	}
-	branch := strings.TrimSpace(mustGitOutput(absRoot, "branch", "--show-current"))
+	branch := strings.TrimSpace(mustGitOutputFor(absRoot, operationStatus, "branch", "--show-current"))
 	if branch == "" {
 		branch = "detached"
 	}
-	head := strings.TrimSpace(mustGitOutput(absRoot, "rev-parse", "--short", "HEAD"))
-	statusText := mustGitOutput(absRoot, "status", "--porcelain=v1", "--branch")
+	head := strings.TrimSpace(mustGitOutputFor(absRoot, operationStatus, "rev-parse", "--short", "HEAD"))
+	statusText := mustGitOutputFor(absRoot, operationStatus, "status", "--porcelain=v1", "--branch")
 	changes, aheadBehind := parseStatus(statusText)
 	staged, unstaged := splitChanges(changes)
 	return Status{
@@ -73,11 +89,11 @@ func (s *Service) FileDiff(root string, relPath string) (FileDiff, error) {
 	if err != nil {
 		return FileDiff{Path: relPath, Message: err.Error(), GeneratedAt: generatedAt}, nil
 	}
-	if _, err := gitOutput(absRoot, "rev-parse", "--show-toplevel"); err != nil {
+	if _, err := gitOutputFor(absRoot, operationStatus, "rev-parse", "--show-toplevel"); err != nil {
 		return FileDiff{Path: cleanPath, Message: "Workspace is not inside a Git repository.", GeneratedAt: generatedAt}, nil
 	}
-	unstagedDiff, unstagedTruncated := cappedGitOutput(absRoot, "diff", "--no-ext-diff", "--unified="+diffContextLines, "--", cleanPath)
-	stagedDiff, stagedTruncated := cappedGitOutput(absRoot, "diff", "--cached", "--no-ext-diff", "--unified="+diffContextLines, "--", cleanPath)
+	unstagedDiff, unstagedTruncated := cappedGitOutputFor(absRoot, operationDiff, "diff", "--no-ext-diff", "--unified="+diffContextLines, "--", cleanPath)
+	stagedDiff, stagedTruncated := cappedGitOutputFor(absRoot, operationDiff, "diff", "--cached", "--no-ext-diff", "--unified="+diffContextLines, "--", cleanPath)
 	message := "No diff for " + cleanPath + "."
 	if stagedDiff != "" || unstagedDiff != "" {
 		message = "Loaded read-only diff for " + cleanPath + "."
@@ -109,7 +125,7 @@ func (s *Service) ApplyFileAction(root string, relPath string, action FileAction
 	if err != nil {
 		return FileActionResult{Path: relPath, Action: action, Message: err.Error(), GeneratedAt: generatedAt}, nil
 	}
-	if _, err := gitOutput(absRoot, "rev-parse", "--show-toplevel"); err != nil {
+	if _, err := gitOutputFor(absRoot, operationStatus, "rev-parse", "--show-toplevel"); err != nil {
 		return FileActionResult{Path: cleanPath, Action: action, Message: "Workspace is not inside a Git repository.", GeneratedAt: generatedAt}, nil
 	}
 	if err := runFileAction(absRoot, cleanPath, action); err != nil {
@@ -143,10 +159,10 @@ func (s *Service) CommitChanges(root string, message string, body string) (Commi
 	if err != nil {
 		return CommitResult{}, err
 	}
-	if _, err := gitOutput(absRoot, "rev-parse", "--show-toplevel"); err != nil {
+	if _, err := gitOutputFor(absRoot, operationStatus, "rev-parse", "--show-toplevel"); err != nil {
 		return CommitResult{Subject: subject, Body: body, Message: "Workspace is not inside a Git repository.", GeneratedAt: generatedAt}, nil
 	}
-	stagedStat := strings.TrimSpace(mustGitOutput(absRoot, "diff", "--cached", "--stat"))
+	stagedStat := strings.TrimSpace(mustGitOutputFor(absRoot, operationDiff, "diff", "--cached", "--stat"))
 	if stagedStat == "" {
 		return CommitResult{Subject: subject, Body: body, Message: "No staged changes are available to commit.", GeneratedAt: generatedAt}, nil
 	}
@@ -154,11 +170,11 @@ func (s *Service) CommitChanges(root string, message string, body string) (Commi
 	if body != "" {
 		args = append(args, "-m", body)
 	}
-	if _, err := gitOutput(absRoot, args...); err != nil {
+	if _, err := gitOutputFor(absRoot, operationMutation, args...); err != nil {
 		return CommitResult{}, err
 	}
-	hash := strings.TrimSpace(mustGitOutput(absRoot, "rev-parse", "HEAD"))
-	shortHash := strings.TrimSpace(mustGitOutput(absRoot, "rev-parse", "--short", "HEAD"))
+	hash := strings.TrimSpace(mustGitOutputFor(absRoot, operationStatus, "rev-parse", "HEAD"))
+	shortHash := strings.TrimSpace(mustGitOutputFor(absRoot, operationStatus, "rev-parse", "--short", "HEAD"))
 	status, err := s.Status(absRoot)
 	if err != nil {
 		return CommitResult{}, err
@@ -200,11 +216,11 @@ func (s *Service) CreateBranch(root string, branchName string, startPoint string
 	if err != nil {
 		return BranchResult{}, err
 	}
-	if _, err := gitOutput(absRoot, "rev-parse", "--show-toplevel"); err != nil {
+	if _, err := gitOutputFor(absRoot, operationStatus, "rev-parse", "--show-toplevel"); err != nil {
 		result.Message = "Workspace is not inside a Git repository."
 		return result, nil
 	}
-	if _, err := gitOutput(absRoot, "check-ref-format", "--branch", branchName); err != nil {
+	if _, err := gitOutputFor(absRoot, operationStatus, "check-ref-format", "--branch", branchName); err != nil {
 		result.Message = "Invalid Git branch name."
 		return result, nil
 	}
@@ -212,17 +228,17 @@ func (s *Service) CreateBranch(root string, branchName string, startPoint string
 		result.Message = "Git branch already exists."
 		return result, nil
 	}
-	startSHA, err := gitOutput(absRoot, "rev-parse", "--verify", "--end-of-options", startPoint+"^{commit}")
+	startSHA, err := gitOutputFor(absRoot, operationStatus, "rev-parse", "--verify", "--end-of-options", startPoint+"^{commit}")
 	if err != nil {
 		result.Message = "Start point is not a valid commit."
 		return result, nil
 	}
 	result.StartPointSHA = strings.TrimSpace(startSHA)
-	if _, err := gitOutput(absRoot, "branch", "--", branchName, result.StartPointSHA); err != nil {
+	if _, err := gitOutputFor(absRoot, operationMutation, "branch", "--", branchName, result.StartPointSHA); err != nil {
 		return BranchResult{}, err
 	}
 	if checkout {
-		if _, err := gitOutput(absRoot, "switch", "--", branchName); err != nil {
+		if _, err := gitOutputFor(absRoot, operationMutation, "switch", "--", branchName); err != nil {
 			return BranchResult{}, err
 		}
 	}
@@ -240,17 +256,17 @@ func (s *Service) CreateBranch(root string, branchName string, startPoint string
 }
 
 func branchExists(root string, branchName string) bool {
-	_, err := gitOutput(root, "show-ref", "--verify", "--quiet", "refs/heads/"+branchName)
+	_, err := gitOutputFor(root, operationStatus, "show-ref", "--verify", "--quiet", "refs/heads/"+branchName)
 	return err == nil
 }
 
 func runFileAction(root string, relPath string, action FileAction) error {
 	switch action {
 	case FileActionStage:
-		_, err := gitOutput(root, "add", "--", relPath)
+		_, err := gitOutputFor(root, operationMutation, "add", "--", relPath)
 		return err
 	case FileActionUnstage:
-		_, err := gitOutput(root, "restore", "--staged", "--", relPath)
+		_, err := gitOutputFor(root, operationMutation, "restore", "--staged", "--", relPath)
 		return err
 	default:
 		return fmt.Errorf("unsupported Git file action %q", action)
@@ -273,14 +289,20 @@ func unavailableStatus(message string) Status {
 }
 
 func gitOutput(root string, args ...string) (string, error) {
-	ctx, cancel := context.WithTimeout(context.Background(), commandTimeout)
+	return gitOutputFor(root, operationStatus, args...)
+}
+
+func gitOutputFor(root string, class operationClass, args ...string) (string, error) {
+	timeout := timeoutForOperation(class)
+	ctx, cancel := context.WithTimeout(context.Background(), timeout)
 	defer cancel()
 	command := exec.CommandContext(ctx, "git", args...)
 	command.Dir = root
+	command.Env = nonInteractiveGitEnv(os.Environ())
 	hideGitCommandWindow(command)
 	output, err := command.CombinedOutput()
 	if ctx.Err() == context.DeadlineExceeded {
-		return "", errors.New("git command timed out")
+		return "", fmt.Errorf("git %s command timed out after %s", class, timeout)
 	}
 	if err != nil {
 		text := strings.TrimSpace(string(output))
@@ -293,7 +315,11 @@ func gitOutput(root string, args ...string) (string, error) {
 }
 
 func mustGitOutput(root string, args ...string) string {
-	output, err := gitOutput(root, args...)
+	return mustGitOutputFor(root, operationStatus, args...)
+}
+
+func mustGitOutputFor(root string, class operationClass, args ...string) string {
+	output, err := gitOutputFor(root, class, args...)
 	if err != nil {
 		return ""
 	}
@@ -301,11 +327,57 @@ func mustGitOutput(root string, args ...string) string {
 }
 
 func cappedGitOutput(root string, args ...string) (string, bool) {
-	output, err := gitOutput(root, args...)
+	return cappedGitOutputFor(root, operationDiff, args...)
+}
+
+func cappedGitOutputFor(root string, class operationClass, args ...string) (string, bool) {
+	output, err := gitOutputFor(root, class, args...)
 	if err != nil {
 		return "", false
 	}
 	return windowUnifiedDiff(output)
+}
+
+func timeoutForOperation(class operationClass) time.Duration {
+	switch class {
+	case operationStatus:
+		return statusTimeout
+	case operationDiff:
+		return diffTimeout
+	case operationHistory:
+		return historyTimeout
+	case operationMutation:
+		return mutationTimeout
+	default:
+		return statusTimeout
+	}
+}
+
+func nonInteractiveGitEnv(base []string) []string {
+	overrides := []string{
+		"GIT_TERMINAL_PROMPT=0",
+		"GIT_ASKPASS=",
+		"SSH_ASKPASS=",
+		"GCM_INTERACTIVE=Never",
+	}
+	overrideKeys := map[string]struct{}{}
+	for _, entry := range overrides {
+		key, _, _ := strings.Cut(entry, "=")
+		overrideKeys[strings.ToUpper(key)] = struct{}{}
+	}
+	env := make([]string, 0, len(base)+len(overrides))
+	for _, entry := range base {
+		key, _, ok := strings.Cut(entry, "=")
+		if !ok {
+			continue
+		}
+		if _, overridden := overrideKeys[strings.ToUpper(key)]; overridden {
+			continue
+		}
+		env = append(env, entry)
+	}
+	env = append(env, overrides...)
+	return env
 }
 
 func statusMessage(branch string, changes []FileChange) string {

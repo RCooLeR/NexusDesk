@@ -219,11 +219,11 @@ Legend:
 
 ### 3.5 Git robustness
 
-- [ ] P1 Split Git timeouts by operation class.
-- [ ] P1 Set non-interactive Git environment.
+- [x] P1 Split Git timeouts by operation class.
+- [x] P1 Set non-interactive Git environment.
 - [ ] P1 Detect ownership/safety errors and show remediation.
 - [ ] P1 Avoid silent fetch/pull/network behavior.
-- [ ] P1 Add tests for timeout class selection.
+- [x] P1 Add tests for timeout class selection.
 - [ ] P1 Add tests for error classification.
 
 ### 3.6 Encoding honesty

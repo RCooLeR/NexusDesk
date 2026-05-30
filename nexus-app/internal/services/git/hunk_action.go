@@ -5,6 +5,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"os"
 	"os/exec"
 	"path/filepath"
 	"strings"
@@ -25,7 +26,7 @@ func (s *Service) ApplyHunkAction(root string, relPath string, kind DiffKind, hu
 	if err != nil {
 		return HunkActionResult{Path: relPath, Action: action, DiffKind: kind, HunkIndex: hunkIndex, Message: err.Error(), GeneratedAt: generatedAt}, nil
 	}
-	if _, err := gitOutput(absRoot, "rev-parse", "--show-toplevel"); err != nil {
+	if _, err := gitOutputFor(absRoot, operationStatus, "rev-parse", "--show-toplevel"); err != nil {
 		return HunkActionResult{Path: cleanPath, Action: action, DiffKind: kind, HunkIndex: hunkIndex, Message: "Workspace is not inside a Git repository.", GeneratedAt: generatedAt}, nil
 	}
 	diff, err := hunkSourceDiff(absRoot, cleanPath, kind)
@@ -62,9 +63,9 @@ func (s *Service) ApplyHunkAction(root string, relPath string, kind DiffKind, hu
 func hunkSourceDiff(root string, relPath string, kind DiffKind) (string, error) {
 	switch kind {
 	case DiffKindUnstaged:
-		return gitOutput(root, "diff", "--no-ext-diff", "--unified="+diffContextLines, "--", relPath)
+		return gitOutputFor(root, operationDiff, "diff", "--no-ext-diff", "--unified="+diffContextLines, "--", relPath)
 	case DiffKindStaged:
-		return gitOutput(root, "diff", "--cached", "--no-ext-diff", "--unified="+diffContextLines, "--", relPath)
+		return gitOutputFor(root, operationDiff, "diff", "--cached", "--no-ext-diff", "--unified="+diffContextLines, "--", relPath)
 	default:
 		return "", fmt.Errorf("unsupported hunk diff kind %q", kind)
 	}
@@ -115,19 +116,22 @@ func extractHunkPatch(diff string, hunkIndex int) (string, error) {
 }
 
 func applyGitPatch(root string, args []string, patch string) error {
-	ctx, cancel := context.WithTimeout(context.Background(), commandTimeout)
+	timeout := timeoutForOperation(operationMutation)
+	ctx, cancel := context.WithTimeout(context.Background(), timeout)
 	defer cancel()
 	command := exec.CommandContext(ctx, "git", append([]string{"apply"}, args...)...)
 	command.Dir = root
+	command.Env = nonInteractiveGitEnv(os.Environ())
 	hideGitCommandWindow(command)
 	command.Stdin = strings.NewReader(patch)
 	var stderr bytes.Buffer
 	command.Stderr = &stderr
-	if err := command.Run(); err != nil {
-		return fmt.Errorf("%w: %s", err, strings.TrimSpace(stderr.String()))
-	}
+	err := command.Run()
 	if ctx.Err() == context.DeadlineExceeded {
-		return errors.New("git apply timed out")
+		return fmt.Errorf("git apply timed out after %s", timeout)
+	}
+	if err != nil {
+		return fmt.Errorf("%w: %s", err, strings.TrimSpace(stderr.String()))
 	}
 	return nil
 }

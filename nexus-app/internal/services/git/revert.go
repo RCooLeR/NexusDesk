@@ -68,7 +68,7 @@ func (s *Service) PlanRevertChanges(root string, relPath string, scope string) (
 		result.Message = fmt.Sprintf("scope=%s is not valid for tracked worktree changes.", scope)
 		return result, nil
 	}
-	content, err := gitOutput(absRoot, "show", "HEAD:"+cleanPath)
+	content, err := gitOutputFor(absRoot, operationDiff, "show", "HEAD:"+cleanPath)
 	if err != nil {
 		result.Message = "Could not read HEAD content for " + cleanPath + ": " + err.Error()
 		return result, nil
@@ -145,7 +145,7 @@ func (s *Service) PlanRevertStagedChanges(root string, relPath string, scope str
 		result.Message = "Staged rename discards are not supported by the safe single-file revert workflow."
 		return result, nil
 	}
-	diff, truncated := cappedGitOutput(absRoot, "diff", "--cached", "--no-ext-diff", "--unified="+diffContextLines, "--", cleanPath)
+	diff, truncated := cappedGitOutputFor(absRoot, operationDiff, "diff", "--cached", "--no-ext-diff", "--unified="+diffContextLines, "--", cleanPath)
 	result.Diff = diff
 	if truncated {
 		result.Message = "Staged diff is too large for a safe discard preview."
@@ -156,7 +156,7 @@ func (s *Service) PlanRevertStagedChanges(root string, relPath string, scope str
 		result.Message = "Prepared to unstage and delete staged added file " + cleanPath + " with rollback."
 		return result, nil
 	}
-	content, err := gitOutput(absRoot, "show", "HEAD:"+cleanPath)
+	content, err := gitOutputFor(absRoot, operationDiff, "show", "HEAD:"+cleanPath)
 	if err != nil {
 		result.Message = "Could not read HEAD content for " + cleanPath + ": " + err.Error()
 		return result, nil

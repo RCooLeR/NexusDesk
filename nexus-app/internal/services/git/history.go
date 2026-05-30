@@ -25,7 +25,7 @@ func (s *Service) History(root string, relPath string, limit int) (HistoryResult
 	if err != nil {
 		return HistoryResult{}, err
 	}
-	if _, err := gitOutput(absRoot, "rev-parse", "--show-toplevel"); err != nil {
+	if _, err := gitOutputFor(absRoot, operationStatus, "rev-parse", "--show-toplevel"); err != nil {
 		result.Message = "Workspace is not inside a Git repository."
 		return result, nil
 	}
@@ -44,7 +44,7 @@ func (s *Service) History(root string, relPath string, limit int) (HistoryResult
 		result.Path = cleanPath
 		args = append(args, "--", cleanPath)
 	}
-	output, err := gitOutput(absRoot, args...)
+	output, err := gitOutputFor(absRoot, operationHistory, args...)
 	if err != nil {
 		result.Message = "Could not read Git history: " + err.Error()
 		return result, nil
@@ -86,7 +86,7 @@ func (s *Service) Blame(root string, relPath string, startLine int, endLine int)
 		return result, nil
 	}
 	result.Path = cleanPath
-	if _, err := gitOutput(absRoot, "rev-parse", "--show-toplevel"); err != nil {
+	if _, err := gitOutputFor(absRoot, operationStatus, "rev-parse", "--show-toplevel"); err != nil {
 		result.Message = "Workspace is not inside a Git repository."
 		return result, nil
 	}
@@ -94,7 +94,7 @@ func (s *Service) Blame(root string, relPath string, startLine int, endLine int)
 	result.StartLine = startLine
 	result.EndLine = endLine
 	args := []string{"blame", "--line-porcelain", "-L", fmt.Sprintf("%d,%d", startLine, endLine), "--", cleanPath}
-	output, err := gitOutput(absRoot, args...)
+	output, err := gitOutputFor(absRoot, operationHistory, args...)
 	if err != nil {
 		result.Message = "Could not read Git blame: " + err.Error()
 		return result, nil
