@@ -567,6 +567,29 @@ func TestAssistantLineagePaneSummarizesLatestAnswer(t *testing.T) {
 	}
 }
 
+func TestAssistantInspectorPaneSummarizesSelectionPinsAndAnswer(t *testing.T) {
+	idle := assistantInspectorPaneStatus(assistantSvc.Result{}, "", nil)
+	if idle != "Inspector: no active assistant answer." {
+		t.Fatalf("unexpected idle inspector status: %q", idle)
+	}
+	selected := assistantInspectorPaneStatus(assistantSvc.Result{}, "README.md", nil)
+	if selected != "Inspector: selected README.md." {
+		t.Fatalf("unexpected selected inspector status: %q", selected)
+	}
+
+	result := assistantSvc.Result{Message: "Answer body", Model: "qwen", ModelRoute: "Main coding model"}
+	status := assistantInspectorPaneStatus(result, "README.md", []string{"docs"})
+	if status != "Inspector: latest assistant answer." {
+		t.Fatalf("unexpected answer inspector status: %q", status)
+	}
+	labels := strings.Join(assistantInspectorPaneLabels(result, "README.md", []string{"docs"}), "\n")
+	for _, expected := range []string{"Selected: README.md", "Pinned roots: 1", "Answer chars: 11", "Model: qwen", "Route: Main coding model"} {
+		if !strings.Contains(labels, expected) {
+			t.Fatalf("expected inspector labels to contain %q, got %q", expected, labels)
+		}
+	}
+}
+
 func TestAssistantCitationSourceCoverageTreatsDirectorySourceAsCovered(t *testing.T) {
 	cited, uncited := assistantCitationSourceCoverage([]string{"docs", "README.md"}, []string{"docs/guide.md:L4"})
 	if strings.Join(cited, "|") != "docs" {

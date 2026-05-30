@@ -54,6 +54,8 @@ type assistantController struct {
 	sourcesList     *fyne.Container
 	lineageStatus   *widget.Label
 	lineageList     *fyne.Container
+	inspectorStatus *widget.Label
+	inspectorList   *fyne.Container
 	historyStatus   *widget.Label
 	historyList     *fyne.Container
 	prompt          *widget.Entry
@@ -93,6 +95,9 @@ func (v *View) newAssistantPanel() fyne.CanvasObject {
 	v.assistant.lineageStatus = widget.NewLabel("")
 	v.assistant.lineageStatus.Wrapping = fyne.TextWrapWord
 	v.assistant.lineageList = container.NewVBox()
+	v.assistant.inspectorStatus = widget.NewLabel("")
+	v.assistant.inspectorStatus.Wrapping = fyne.TextWrapWord
+	v.assistant.inspectorList = container.NewVBox()
 	v.assistant.historyStatus = widget.NewLabel("")
 	v.assistant.historyStatus.Wrapping = fyne.TextWrapWord
 	v.assistant.historyList = container.NewVBox()
@@ -113,6 +118,10 @@ func (v *View) newAssistantPanel() fyne.CanvasObject {
 	lineageBar := container.NewVBox(
 		v.assistant.lineageStatus,
 		v.assistant.lineageList,
+	)
+	inspectorBar := container.NewVBox(
+		v.assistant.inspectorStatus,
+		v.assistant.inspectorList,
 	)
 	historyBar := container.NewVBox(
 		v.assistant.historyStatus,
@@ -173,7 +182,7 @@ func (v *View) newAssistantPanel() fyne.CanvasObject {
 	composerControls := container.NewVBox(mode, modelRoute, agentTaskApproval)
 	composer := container.NewBorder(assistantActions, nil, composerControls, send, prompt)
 	composer = container.NewPadded(composer)
-	sidebar := container.NewVBox(profileBar, widget.NewSeparator(), contextBar, widget.NewSeparator(), sourcesBar, widget.NewSeparator(), lineageBar, widget.NewSeparator(), historyBar)
+	sidebar := container.NewVBox(profileBar, widget.NewSeparator(), contextBar, widget.NewSeparator(), sourcesBar, widget.NewSeparator(), lineageBar, widget.NewSeparator(), inspectorBar, widget.NewSeparator(), historyBar)
 	messageArea := container.NewBorder(v.assistant.sourceDigest, nil, nil, nil, response)
 	panel := newAssistantPanelLayout(header, composer, sidebar, messageArea)
 	v.loadAssistantProfile()
@@ -182,6 +191,7 @@ func (v *View) newAssistantPanel() fyne.CanvasObject {
 	v.refreshAssistantSourceDigest()
 	v.refreshAssistantSourcesPane()
 	v.refreshAssistantLineagePane()
+	v.refreshAssistantInspectorPane()
 	v.refreshAssistantHistory()
 	return container.NewPadded(panel)
 }
@@ -257,6 +267,7 @@ func (v *View) runAssistantRequest(prompt *widget.Entry, response *widget.RichTe
 			v.refreshAssistantSourceDigest()
 			v.refreshAssistantSourcesPane()
 			v.refreshAssistantLineagePane()
+			v.refreshAssistantInspectorPane()
 			v.persistAssistantExchange(text, result, startedAt)
 			v.addActivity("Assistant response completed with " + result.Model + ".")
 		})
@@ -1432,6 +1443,7 @@ func (v *View) refreshAssistantContextPins() {
 		}
 		v.assistant.contextList.Add(widget.NewLabel("No pinned context."))
 		v.assistant.contextList.Refresh()
+		v.refreshAssistantInspectorPane()
 		v.refreshAssistantRunStatus()
 		return
 	}
@@ -1446,6 +1458,7 @@ func (v *View) refreshAssistantContextPins() {
 		v.assistant.contextList.Add(container.NewBorder(nil, nil, nil, remove, label))
 	}
 	v.assistant.contextList.Refresh()
+	v.refreshAssistantInspectorPane()
 	v.refreshAssistantRunStatus()
 }
 
@@ -1583,6 +1596,58 @@ func assistantLineagePaneLabels(result assistantSvc.Result) []string {
 	}
 	if warning := strings.TrimSpace(result.RouteWarning); warning != "" {
 		labels = append(labels, "Route warning: "+warning)
+	}
+	return labels
+}
+
+func (v *View) refreshAssistantInspectorPane() {
+	if v == nil || v.assistant == nil || v.assistant.inspectorStatus == nil || v.assistant.inspectorList == nil {
+		return
+	}
+	selected := selectedPathOrEmpty(v)
+	pins := v.state.AssistantContextPaths()
+	result := v.assistant.lastResult
+	v.assistant.inspectorStatus.SetText(assistantInspectorPaneStatus(result, selected, pins))
+	v.assistant.inspectorList.Objects = nil
+	labels := assistantInspectorPaneLabels(result, selected, pins)
+	for _, value := range labels {
+		label := widget.NewLabel(value)
+		label.Truncation = fyne.TextTruncateEllipsis
+		v.assistant.inspectorList.Add(label)
+	}
+	v.assistant.inspectorList.Refresh()
+}
+
+func assistantInspectorPaneStatus(result assistantSvc.Result, selected string, pins []string) string {
+	if strings.TrimSpace(result.Message) == "" {
+		if strings.TrimSpace(selected) != "" {
+			return "Inspector: selected " + strings.TrimSpace(selected) + "."
+		}
+		if len(pins) > 0 {
+			return fmt.Sprintf("Inspector: %d pinned context root(s).", len(pins))
+		}
+		return "Inspector: no active assistant answer."
+	}
+	return "Inspector: latest assistant answer."
+}
+
+func assistantInspectorPaneLabels(result assistantSvc.Result, selected string, pins []string) []string {
+	labels := []string{}
+	if selected = strings.TrimSpace(selected); selected != "" {
+		labels = append(labels, "Selected: "+selected)
+	}
+	if len(pins) > 0 {
+		labels = append(labels, fmt.Sprintf("Pinned roots: %d", len(pins)))
+	}
+	if strings.TrimSpace(result.Message) != "" {
+		labels = append(labels,
+			fmt.Sprintf("Answer chars: %d", len([]rune(result.Message))),
+			"Model: "+firstNonEmpty(result.Model, "model not reported"),
+			"Route: "+firstNonEmpty(result.ModelRoute, "global fallback"),
+		)
+	}
+	if len(labels) == 0 {
+		return []string{"No selection, pins, or answer yet."}
 	}
 	return labels
 }
