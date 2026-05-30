@@ -4,6 +4,9 @@ import (
 	"strings"
 	"testing"
 
+	"fyne.io/fyne/v2/container"
+	fynetest "fyne.io/fyne/v2/test"
+
 	"nexusdesk/internal/domain"
 	editorSvc "nexusdesk/internal/services/editor"
 )
@@ -53,6 +56,48 @@ func TestEditorSaveAllowedBlocksAmbiguousEncodingUntilExplicit(t *testing.T) {
 	}
 	if !editorSaveAllowed(tab, preview, false, true) {
 		t.Fatal("expected explicit encoding to allow dirty save")
+	}
+}
+
+func TestRefreshEditorAfterSaveUpdatesBindingInPlace(t *testing.T) {
+	_ = fynetest.NewTempApp(t)
+	session := editorSvc.NewSession()
+	tab := session.OpenFileWithSource("notes.txt", "notes.txt", "old")
+	if !session.UpdateDraft(tab.ID, "new") {
+		t.Fatal("expected draft update")
+	}
+	dirty, ok := session.Tab(tab.ID)
+	if !ok {
+		t.Fatal("expected dirty tab")
+	}
+	view := &View{editorSession: session}
+	view.editor = &editorController{
+		openTabs:    map[string]*container.TabItem{},
+		tabIDs:      map[*container.TabItem]string{},
+		previews:    map[string]domain.FilePreview{},
+		textEditors: map[string]*textEditorBinding{},
+	}
+	preview := domain.FilePreview{RelPath: "notes.txt", Kind: domain.PreviewText, Encoding: "utf-8", Text: "new"}
+	content := view.newTextEditor(dirty, preview, func(editorSvc.Tab, bool, bool) {})
+	item := container.NewTabItem("notes.txt", content)
+	view.editor.openTabs[tab.ID] = item
+	view.editor.tabIDs[item] = tab.ID
+	saved, ok := session.MarkDraftSaved(tab.ID)
+	if !ok {
+		t.Fatal("expected saved tab")
+	}
+
+	view.refreshEditorAfterSave(saved, preview)
+
+	if item.Content != content {
+		t.Fatal("expected editor content to be updated in place after save")
+	}
+	editor, ok := view.textEditor(tab.ID)
+	if !ok {
+		t.Fatal("expected text editor binding to remain registered")
+	}
+	if editor.source.Text != "new" || editor.status.Text != "Draft matches source." {
+		t.Fatalf("expected binding state to be refreshed, source=%q status=%q", editor.source.Text, editor.status.Text)
 	}
 }
 

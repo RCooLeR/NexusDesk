@@ -228,16 +228,22 @@ func (v *View) saveEditorDraft(tabID string) {
 	preview.Text = next.SourceText
 	preview.Size = int64(proposal.Size)
 	preview.Encoding = proposal.Encoding
+	v.refreshEditorAfterSave(next, preview)
+	v.updateEditorTabState(next)
+	v.refreshStatusBar()
+	v.addActivity(proposal.Message)
+}
+
+func (v *View) refreshEditorAfterSave(next editorSvc.Tab, preview domain.FilePreview) {
 	v.editor.previews[next.ID] = preview
 	if editor, ok := v.textEditor(next.ID); ok {
-		editor.markEncodingSaved(proposal.Encoding)
+		editor.markEncodingSaved(preview.Encoding)
+		editor.applyTabState(next)
+		return
 	}
 	if item := v.editor.openTabs[next.ID]; item != nil {
 		item.Content = v.newEditorPanel(next, preview)
 	}
-	v.updateEditorTabState(next)
-	v.refreshStatusBar()
-	v.addActivity(proposal.Message)
 }
 
 func (v *View) saveActiveEditorDraft() {
