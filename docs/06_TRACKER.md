@@ -355,10 +355,10 @@ Legend:
 
 ### 4.9 Resize and visual smoke
 
-- [ ] P1 Test 1280 x 820 default.
-- [ ] P1 Test 1024 x 640 minimum working size.
-- [ ] P1 Test 1600 x 900 desktop size.
-- [ ] P1 Test first launch no workspace screenshot.
+- [x] P1 Test 1280 x 820 default. (`TestVisualSmokeSupportedWindowSizes/default` renders the live shell at 1280 x 820.)
+- [x] P1 Test 1024 x 640 minimum working size. (`TestVisualSmokeSupportedWindowSizes/minimum` renders the live shell at 1024 x 640.)
+- [x] P1 Test 1600 x 900 desktop size. (`TestVisualSmokeSupportedWindowSizes/desktop` renders the live shell at 1600 x 900.)
+- [x] P1 Test first launch no workspace screenshot. (`TestVisualSmokeFirstLaunchNoWorkspace` verifies deterministic first-launch render markup and status state.)
 - [ ] P1 Test workspace open screenshot.
 - [ ] P1 Test editor screenshot.
 - [ ] P1 Test assistant streaming screenshot.
