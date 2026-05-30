@@ -52,6 +52,8 @@ type assistantController struct {
 	contextList     *fyne.Container
 	sourcesStatus   *widget.Label
 	sourcesList     *fyne.Container
+	lineageStatus   *widget.Label
+	lineageList     *fyne.Container
 	historyStatus   *widget.Label
 	historyList     *fyne.Container
 	prompt          *widget.Entry
@@ -88,6 +90,9 @@ func (v *View) newAssistantPanel() fyne.CanvasObject {
 	v.assistant.sourcesStatus = widget.NewLabel("")
 	v.assistant.sourcesStatus.Wrapping = fyne.TextWrapWord
 	v.assistant.sourcesList = container.NewVBox()
+	v.assistant.lineageStatus = widget.NewLabel("")
+	v.assistant.lineageStatus.Wrapping = fyne.TextWrapWord
+	v.assistant.lineageList = container.NewVBox()
 	v.assistant.historyStatus = widget.NewLabel("")
 	v.assistant.historyStatus.Wrapping = fyne.TextWrapWord
 	v.assistant.historyList = container.NewVBox()
@@ -104,6 +109,10 @@ func (v *View) newAssistantPanel() fyne.CanvasObject {
 	sourcesBar := container.NewVBox(
 		v.assistant.sourcesStatus,
 		v.assistant.sourcesList,
+	)
+	lineageBar := container.NewVBox(
+		v.assistant.lineageStatus,
+		v.assistant.lineageList,
 	)
 	historyBar := container.NewVBox(
 		v.assistant.historyStatus,
@@ -164,7 +173,7 @@ func (v *View) newAssistantPanel() fyne.CanvasObject {
 	composerControls := container.NewVBox(mode, modelRoute, agentTaskApproval)
 	composer := container.NewBorder(assistantActions, nil, composerControls, send, prompt)
 	composer = container.NewPadded(composer)
-	sidebar := container.NewVBox(profileBar, widget.NewSeparator(), contextBar, widget.NewSeparator(), sourcesBar, widget.NewSeparator(), historyBar)
+	sidebar := container.NewVBox(profileBar, widget.NewSeparator(), contextBar, widget.NewSeparator(), sourcesBar, widget.NewSeparator(), lineageBar, widget.NewSeparator(), historyBar)
 	messageArea := container.NewBorder(v.assistant.sourceDigest, nil, nil, nil, response)
 	panel := newAssistantPanelLayout(header, composer, sidebar, messageArea)
 	v.loadAssistantProfile()
@@ -172,6 +181,7 @@ func (v *View) newAssistantPanel() fyne.CanvasObject {
 	v.refreshAssistantRunStatus()
 	v.refreshAssistantSourceDigest()
 	v.refreshAssistantSourcesPane()
+	v.refreshAssistantLineagePane()
 	v.refreshAssistantHistory()
 	return container.NewPadded(panel)
 }
@@ -246,6 +256,7 @@ func (v *View) runAssistantRequest(prompt *widget.Entry, response *widget.RichTe
 			v.assistant.lastResult = result
 			v.refreshAssistantSourceDigest()
 			v.refreshAssistantSourcesPane()
+			v.refreshAssistantLineagePane()
 			v.persistAssistantExchange(text, result, startedAt)
 			v.addActivity("Assistant response completed with " + result.Model + ".")
 		})
@@ -1525,6 +1536,55 @@ func assistantSourcesPaneStatus(result assistantSvc.Result) string {
 
 func assistantSourcesPaneLabels(result assistantSvc.Result, limit int) []string {
 	return assistantActionableSourcePaths(result, limit)
+}
+
+func (v *View) refreshAssistantLineagePane() {
+	if v == nil || v.assistant == nil || v.assistant.lineageStatus == nil || v.assistant.lineageList == nil {
+		return
+	}
+	result := v.assistant.lastResult
+	v.assistant.lineageStatus.SetText(assistantLineagePaneStatus(result))
+	v.assistant.lineageList.Objects = nil
+	labels := assistantLineagePaneLabels(result)
+	if len(labels) == 0 {
+		v.assistant.lineageList.Add(widget.NewLabel("No assistant lineage yet."))
+		v.assistant.lineageList.Refresh()
+		return
+	}
+	for _, value := range labels {
+		label := widget.NewLabel(value)
+		label.Truncation = fyne.TextTruncateEllipsis
+		v.assistant.lineageList.Add(label)
+	}
+	v.assistant.lineageList.Refresh()
+}
+
+func assistantLineagePaneStatus(result assistantSvc.Result) string {
+	if strings.TrimSpace(result.Message) == "" {
+		return "Lineage: no answer yet."
+	}
+	model := firstNonEmpty(result.Model, "model not reported")
+	route := firstNonEmpty(result.ModelRoute, "global fallback")
+	return fmt.Sprintf("Lineage: answer from %s via %s.", model, route)
+}
+
+func assistantLineagePaneLabels(result assistantSvc.Result) []string {
+	if strings.TrimSpace(result.Message) == "" {
+		return nil
+	}
+	diagnostic := assistantEvidenceDiagnosticForResult(result)
+	labels := []string{
+		fmt.Sprintf("Sources: %d", diagnostic.SourceCount),
+		fmt.Sprintf("Verified refs: %d", diagnostic.CitationCount),
+		fmt.Sprintf("Unverified refs: %d", diagnostic.UnverifiedCitationCount),
+	}
+	if contextPath := strings.TrimSpace(result.ContextRelPath); contextPath != "" && contextPath != "agent" {
+		labels = append([]string{"Context: " + contextPath}, labels...)
+	}
+	if warning := strings.TrimSpace(result.RouteWarning); warning != "" {
+		labels = append(labels, "Route warning: "+warning)
+	}
+	return labels
 }
 
 func (v *View) runAgentRequest(text string, response *widget.RichText, send *widget.Button) {

@@ -539,6 +539,34 @@ func TestAssistantSourcesPaneSummarizesLatestAnswer(t *testing.T) {
 	}
 }
 
+func TestAssistantLineagePaneSummarizesLatestAnswer(t *testing.T) {
+	empty := assistantLineagePaneStatus(assistantSvc.Result{})
+	if empty != "Lineage: no answer yet." {
+		t.Fatalf("unexpected empty lineage status: %q", empty)
+	}
+
+	result := assistantSvc.Result{
+		Message:        "See README.md:12 and missing.md:3.",
+		Model:          "qwen",
+		ModelRoute:     "Main coding model",
+		ContextRelPath: "pack: README.md",
+		SourcePaths:    []string{"README.md"},
+		RouteWarning:   "fallback used",
+	}
+	status := assistantLineagePaneStatus(result)
+	for _, expected := range []string{"qwen", "Main coding model"} {
+		if !strings.Contains(status, expected) {
+			t.Fatalf("expected lineage status to contain %q, got %q", expected, status)
+		}
+	}
+	labels := strings.Join(assistantLineagePaneLabels(result), "\n")
+	for _, expected := range []string{"Context: pack: README.md", "Sources: 1", "Verified refs: 1", "Unverified refs: 1", "Route warning: fallback used"} {
+		if !strings.Contains(labels, expected) {
+			t.Fatalf("expected lineage labels to contain %q, got %q", expected, labels)
+		}
+	}
+}
+
 func TestAssistantCitationSourceCoverageTreatsDirectorySourceAsCovered(t *testing.T) {
 	cited, uncited := assistantCitationSourceCoverage([]string{"docs", "README.md"}, []string{"docs/guide.md:L4"})
 	if strings.Join(cited, "|") != "docs" {

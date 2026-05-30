@@ -311,7 +311,7 @@ Legend:
 - [x] P1 Keep composer pinned to bottom.
 - [x] P1 Add stop/cancel visibility during runs.
 - [x] P1 Add Sources secondary pane.
-- [ ] P1 Add Lineage secondary pane.
+- [x] P1 Add Lineage secondary pane.
 - [ ] P1 Add Inspector secondary pane.
 
 ### 4.6 Remove bottom tool panel
