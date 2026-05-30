@@ -174,10 +174,31 @@ func TestFormatSettingsProbeResultSummarizesProvider(t *testing.T) {
 			LoadedModels:        []llmSvc.RuntimeModel{{Name: "qwen2.5-coder:14b", Model: "qwen2.5-coder:14b", ContextLength: 32768}},
 		},
 	}, nil)
-	for _, part := range []string{"Connected to provider.", "Protocol: ollama-openai-compatible", "Models: 2", "Capabilities:", "Runtime:", "Runtime context: 32768 tokens", "Warnings:", "Guidance:", "ollama pull missing-model:latest"} {
+	for _, part := range []string{"Connected to provider.", "Protocol: ollama-openai-compatible", "Models: 2", "Capabilities:", "Runtime:", "Runtime context: 32768 tokens", "Warnings:", "Suggested detected model: llama3.2:3b", "Guidance:", "ollama pull missing-model:latest"} {
 		if !strings.Contains(message, part) {
 			t.Fatalf("expected probe summary to contain %q, got %q", part, message)
 		}
+	}
+}
+
+func TestSettingsSuggestedDetectedModelUsesProviderSample(t *testing.T) {
+	result := llmSvc.ProbeResult{
+		OK:          true,
+		ModelSample: []string{"qwen3:8b", "llama3.2:3b"},
+	}
+	if got := settingsSuggestedDetectedModel("", result); got != "qwen3:8b" {
+		t.Fatalf("expected first provider model for blank selection, got %q", got)
+	}
+	result.Warnings = []string{"Configured model was not returned by the provider."}
+	if got := settingsSuggestedDetectedModel("missing-model", result); got != "qwen3:8b" {
+		t.Fatalf("expected first provider model for missing configured model, got %q", got)
+	}
+	if got := settingsSuggestedDetectedModel("qwen3:8b", result); got != "" {
+		t.Fatalf("expected no suggestion when configured model is present, got %q", got)
+	}
+	result.OK = false
+	if got := settingsSuggestedDetectedModel("", result); got != "" {
+		t.Fatalf("expected no suggestion for failed probe, got %q", got)
 	}
 }
 

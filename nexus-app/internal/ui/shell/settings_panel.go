@@ -232,7 +232,7 @@ func (c *settingsController) newPanel() fyne.CanvasObject {
 		v.refreshStatusBar()
 		v.addActivity("Settings saved.")
 	}
-	runProbe := func(next settingsSvc.Settings, started string) {
+	runProbe := func(next settingsSvc.Settings, started string, applySuggestedModel func(string)) {
 		next, err := v.settingsStore.ResolveForUse(next)
 		if err != nil {
 			dialog.ShowError(err, v.window)
@@ -259,6 +259,10 @@ func (c *settingsController) newPanel() fyne.CanvasObject {
 						responseReserve.SetText(strconv.Itoa(tuned.ResponseReserveTokens))
 						message += "\nUpdated context tokens from loaded model runtime."
 					}
+					if suggested := settingsSuggestedDetectedModel(next.Model, result); suggested != "" && applySuggestedModel != nil {
+						applySuggestedModel(suggested)
+						message += "\nApplied detected model suggestion: " + suggested
+					}
 				}
 				probeStatus.SetText(message)
 				testConnection.Enable()
@@ -278,7 +282,9 @@ func (c *settingsController) newPanel() fyne.CanvasObject {
 			refreshValidation()
 			return
 		}
-		runProbe(next, "Testing provider connection...")
+		runProbe(next, "Testing provider connection...", func(suggested string) {
+			model.SetText(suggested)
+		})
 	}
 	testRoute.OnTapped = func() {
 		if err := settingsBlockingValidationError(settingsValidationIssues(provider.Selected, protocol.Selected, baseURL.Text, model.Text, contextTokens.Text, responseReserve.Text, modelRoutes)); err != nil {
@@ -297,7 +303,9 @@ func (c *settingsController) newPanel() fyne.CanvasObject {
 			dialog.ShowError(errors.New("Select a task route with a model before testing it."), v.window)
 			return
 		}
-		runProbe(routeSettings, "Testing selected route...")
+		runProbe(routeSettings, "Testing selected route...", func(suggested string) {
+			routeModel.SetText(suggested)
+		})
 	}
 	actions := container.NewHBox(saveSettings)
 	secretNote := widget.NewLabel("API keys are stored in protected OS storage where available (Windows DPAPI, macOS Keychain, Linux Secret Service) and displayed redacted after save.")
@@ -632,8 +640,32 @@ func formatSettingsProbeResultWithConfig(config llmSvc.Config, result llmSvc.Pro
 	if len(result.Warnings) > 0 {
 		parts = append(parts, "Warnings: "+strings.Join(result.Warnings, "; "))
 	}
+	if suggested := settingsSuggestedDetectedModel(config.Model, result); suggested != "" {
+		parts = append(parts, "Suggested detected model: "+suggested)
+	}
 	if guidance := llmSvc.ProviderGuidance(config, result, err); len(guidance) > 0 {
 		parts = append(parts, "Guidance: "+strings.Join(guidance, "; "))
 	}
 	return strings.Join(parts, "\n")
+}
+
+func settingsSuggestedDetectedModel(configuredModel string, result llmSvc.ProbeResult) string {
+	if !result.OK || len(result.ModelSample) == 0 {
+		return ""
+	}
+	configuredModel = strings.TrimSpace(configuredModel)
+	if configuredModel == "" {
+		return strings.TrimSpace(result.ModelSample[0])
+	}
+	for _, model := range result.ModelSample {
+		if strings.EqualFold(strings.TrimSpace(model), configuredModel) {
+			return ""
+		}
+	}
+	for _, warning := range result.Warnings {
+		if strings.Contains(strings.ToLower(warning), "configured model was not returned") {
+			return strings.TrimSpace(result.ModelSample[0])
+		}
+	}
+	return ""
 }

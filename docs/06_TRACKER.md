@@ -487,7 +487,7 @@ Legend:
 
 - [ ] P1 Create first-run onboarding flow.
 - [ ] P1 Add provider setup wizard.
-- [ ] P1 Add model auto-suggestion from detected provider models.
+- [x] P1 Add model auto-suggestion from detected provider models. Evidence: Settings Test connection now suggests the first detected provider model when the chat model is blank or missing, applies that suggestion to the global model field, reports it in the probe summary, and does the same for selected task routes (`go test ./internal/ui/shell -run "Settings"`).
 - [x] P1 Add sample workflow guide. Evidence: Help and the command palette expose Sample Workflow Guide, backed by `userguide.SampleWorkflowMarkdown()` with a safe end-to-end beta path covering workspace readiness, edit/revert, Ask with sources, low-risk Agent, Data/Artifacts, Diagnostics, and redacted issue-report closeout (`go test ./internal/services/userguide ./internal/ui/shell -run "SampleWorkflow|KnownLimitations|CommandPaletteIncludesSafeAgentGuide"`).
 - [x] P1 Add safe-agent user guide. Evidence: Help and the command palette expose Safe Agent Guide, backed by `userguide.SafeAgentMarkdown()` with approval, rollback, secret, connector, job, and diagnostic safety guidance (`go test ./internal/services/userguide ./internal/ui/shell -run "SafeAgent|CommandPaletteIncludesSafeAgentGuide"`).
 - [x] P1 Add beta feedback issue template. Evidence: `.github/ISSUE_TEMPLATE/beta-feedback.yml` captures app version/commit/build date, affected area, goal/expected/actual result, reproduction steps, redacted diagnostics notes, and a required secret/workspace-data redaction checklist.
