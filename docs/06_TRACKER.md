@@ -504,7 +504,7 @@ Legend:
 - [ ] P0 Review all P1 issues and explicitly defer or fix.
 - [ ] P0 Run full test suite in CI.
 - [ ] P0 Run full platform smoke.
-- [ ] P0 Run security/safety review.
+- [x] P0 Run security/safety review. Evidence: `docs/releases/security-safety-review.md` records the v1 security/safety review scope, verified controls, residual release blockers, and pass-with-blockers decision; focused safety matrix passed across security, tools, agent, tasks, workspace, connectors, issue reports, protected secrets, and shell UI (`go test ./internal/services/security ./internal/services/tools ./internal/services/agent ./internal/services/tasks ./internal/services/workspace ./internal/services/dbconnector ./internal/services/issuereport ./internal/services/protectedsecret ./internal/ui/shell -run "Risk|Threat|Control|Approval|Safety|Mutation|Timeout|Loop|Shell|Path|Rollback|Redact|Secret|Plaintext|WorkspaceOpen|ReadOnly|Unsafe"`).
 - [ ] P0 Run performance review.
 - [ ] P0 Run accessibility review.
 - [x] P0 Verify no hidden workspace-open side effects. Evidence: workspace-open policy tests allow only metadata/history/audit/approval/navigator/pin refresh actions, reject slow/heavy workflow kinds, and `TestOpenWorkspaceDoesNotStartHiddenJobs` verifies opening a workspace does not create hidden jobs or job-start activity (`go test ./internal/ui/shell -run "WorkspaceOpen|OpenWorkspace"`).
