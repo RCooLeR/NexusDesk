@@ -219,7 +219,7 @@ func TestFormatSQLiteMetadataIncludesSchemaIndexesSamplesAndRelationships(t *tes
 			Reason:     "Declared by SQLite foreign_key_list metadata.",
 		}},
 	})
-	for _, expected := range []string{"# SQLite Workspace Connector", "Path: data/store.sqlite", "orders | table | 2 row(s)", "Index: idx_orders_customer on customer_id", "Sample: id\tcustomer_id", "orders.customer_id -> customers.id"} {
+	for _, expected := range []string{"# SQLite Workspace Connector", "Path: data/store.sqlite", "Schema Tree", "[T] orders (2 row(s))", "[C] customer_id INTEGER not-null", "[I] idx_orders_customer on customer_id", "[V] order_totals", "orders | table | 2 row(s)", "Index: idx_orders_customer on customer_id", "Sample: id\tcustomer_id", "orders.customer_id -> customers.id"} {
 		if !strings.Contains(output, expected) {
 			t.Fatalf("SQLite metadata output missing %q:\n%s", expected, output)
 		}

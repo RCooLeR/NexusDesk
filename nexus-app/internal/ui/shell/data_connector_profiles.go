@@ -573,6 +573,7 @@ func formatConnectorMetadata(metadata dbconnectorSvc.ConnectorMetadata) string {
 		builder.WriteString(metadata.Message)
 		builder.WriteString("\n")
 	}
+	writeConnectorSchemaTree(&builder, metadata.Tables, metadata.Views, metadata.Relationships)
 	if len(metadata.Tables) > 0 {
 		builder.WriteString("\nTables\n\n")
 		for _, table := range metadata.Tables {
@@ -599,6 +600,68 @@ func formatConnectorMetadata(metadata dbconnectorSvc.ConnectorMetadata) string {
 		}
 	}
 	return builder.String()
+}
+
+func writeConnectorSchemaTree(builder *strings.Builder, tables []dbconnectorSvc.ConnectorTable, views []dbconnectorSvc.ConnectorTable, relationships []dbconnectorSvc.ConnectorRelationship) {
+	builder.WriteString("\nSchema Tree\n")
+	if len(tables) == 0 && len(views) == 0 {
+		builder.WriteString("- [DB] No tables or views discovered.\n")
+		return
+	}
+	relationshipsByTable := map[string][]dbconnectorSvc.ConnectorRelationship{}
+	for _, relationship := range relationships {
+		relationshipsByTable[relationship.FromTable] = append(relationshipsByTable[relationship.FromTable], relationship)
+	}
+	for _, table := range tables {
+		builder.WriteString(fmt.Sprintf("- [T] %s (%d row(s))\n", table.Name, table.RowCount))
+		writeConnectorSchemaColumns(builder, table.Columns)
+		writeConnectorSchemaIndexes(builder, table.Indexes)
+		for _, relationship := range relationshipsByTable[table.Name] {
+			builder.WriteString(fmt.Sprintf("  - [FK] %s -> %s.%s", relationship.FromColumn, relationship.ToTable, relationship.ToColumn))
+			if strings.TrimSpace(relationship.Kind) != "" {
+				builder.WriteString(" | ")
+				builder.WriteString(relationship.Kind)
+			}
+			builder.WriteString("\n")
+		}
+	}
+	for _, view := range views {
+		builder.WriteString(fmt.Sprintf("- [V] %s (%d column(s))\n", view.Name, len(view.Columns)))
+		writeConnectorSchemaColumns(builder, view.Columns)
+	}
+}
+
+func writeConnectorSchemaColumns(builder *strings.Builder, columns []dbconnectorSvc.ConnectorColumn) {
+	for _, column := range columns {
+		builder.WriteString("  - [C] ")
+		builder.WriteString(column.Name)
+		if strings.TrimSpace(column.Type) != "" {
+			builder.WriteString(" ")
+			builder.WriteString(column.Type)
+		}
+		if column.PrimaryKey {
+			builder.WriteString(" pk")
+		}
+		if !column.Nullable {
+			builder.WriteString(" not-null")
+		}
+		builder.WriteString("\n")
+	}
+}
+
+func writeConnectorSchemaIndexes(builder *strings.Builder, indexes []dbconnectorSvc.ConnectorIndex) {
+	for _, index := range indexes {
+		builder.WriteString("  - [I] ")
+		builder.WriteString(index.Name)
+		if index.Unique {
+			builder.WriteString(" unique")
+		}
+		if len(index.Columns) > 0 {
+			builder.WriteString(" on ")
+			builder.WriteString(strings.Join(index.Columns, ", "))
+		}
+		builder.WriteString("\n")
+	}
 }
 
 func datasetsQueryFromConnectorQuery(result dbconnectorSvc.ConnectorQueryResult) datasetsSvc.QueryResult {

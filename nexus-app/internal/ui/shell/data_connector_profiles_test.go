@@ -136,6 +136,11 @@ func TestFormatConnectorMetadata(t *testing.T) {
 	if !strings.Contains(text, "public.orders") {
 		t.Fatalf("missing table details: %q", text)
 	}
+	for _, expected := range []string{"Schema Tree", "[T] public.orders", "[C] id", "[I] idx_orders_id", "[FK] customer_id -> public.customers.id"} {
+		if !strings.Contains(text, expected) {
+			t.Fatalf("connector tree output missing %q:\n%s", expected, text)
+		}
+	}
 	if !strings.Contains(text, "customer_id") {
 		t.Fatalf("missing relationship details: %q", text)
 	}

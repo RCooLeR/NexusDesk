@@ -278,6 +278,7 @@ func formatSQLiteMetadata(metadata dbconnectorSvc.SQLiteMetadata) string {
 		builder.WriteString(metadata.Message)
 		builder.WriteString("\n")
 	}
+	writeSQLiteSchemaTree(&builder, metadata.Tables, metadata.Views, metadata.Relationships)
 	writeSQLiteObjects(&builder, "Tables", metadata.Tables)
 	writeSQLiteObjects(&builder, "Views", metadata.Views)
 	if len(metadata.Relationships) > 0 {
@@ -292,6 +293,68 @@ func formatSQLiteMetadata(metadata dbconnectorSvc.SQLiteMetadata) string {
 		}
 	}
 	return builder.String()
+}
+
+func writeSQLiteSchemaTree(builder *strings.Builder, tables []dbconnectorSvc.SQLiteObject, views []dbconnectorSvc.SQLiteObject, relationships []dbconnectorSvc.SQLiteRelationship) {
+	builder.WriteString("\nSchema Tree\n")
+	if len(tables) == 0 && len(views) == 0 {
+		builder.WriteString("- [DB] No tables or views discovered.\n")
+		return
+	}
+	relationshipsByTable := map[string][]dbconnectorSvc.SQLiteRelationship{}
+	for _, relationship := range relationships {
+		relationshipsByTable[relationship.FromTable] = append(relationshipsByTable[relationship.FromTable], relationship)
+	}
+	for _, table := range tables {
+		builder.WriteString(fmt.Sprintf("- [T] %s (%d row(s))\n", table.Name, table.RowCount))
+		writeSQLiteSchemaColumns(builder, table.Columns)
+		writeSQLiteSchemaIndexes(builder, table.Indexes)
+		for _, relationship := range relationshipsByTable[table.Name] {
+			builder.WriteString(fmt.Sprintf("  - [FK] %s -> %s.%s", relationship.FromColumn, relationship.ToTable, relationship.ToColumn))
+			if strings.TrimSpace(relationship.Kind) != "" {
+				builder.WriteString(" | ")
+				builder.WriteString(relationship.Kind)
+			}
+			builder.WriteString("\n")
+		}
+	}
+	for _, view := range views {
+		builder.WriteString(fmt.Sprintf("- [V] %s (%d column(s))\n", view.Name, len(view.Columns)))
+		writeSQLiteSchemaColumns(builder, view.Columns)
+	}
+}
+
+func writeSQLiteSchemaColumns(builder *strings.Builder, columns []dbconnectorSvc.SQLiteColumn) {
+	for _, column := range columns {
+		builder.WriteString("  - [C] ")
+		builder.WriteString(column.Name)
+		if strings.TrimSpace(column.Type) != "" {
+			builder.WriteString(" ")
+			builder.WriteString(column.Type)
+		}
+		if column.PrimaryKey {
+			builder.WriteString(" pk")
+		}
+		if !column.Nullable {
+			builder.WriteString(" not-null")
+		}
+		builder.WriteString("\n")
+	}
+}
+
+func writeSQLiteSchemaIndexes(builder *strings.Builder, indexes []dbconnectorSvc.SQLiteIndex) {
+	for _, index := range indexes {
+		builder.WriteString("  - [I] ")
+		builder.WriteString(index.Name)
+		if index.Unique {
+			builder.WriteString(" unique")
+		}
+		if len(index.Columns) > 0 {
+			builder.WriteString(" on ")
+			builder.WriteString(strings.Join(index.Columns, ", "))
+		}
+		builder.WriteString("\n")
+	}
 }
 
 func writeSQLiteObjects(builder *strings.Builder, title string, objects []dbconnectorSvc.SQLiteObject) {

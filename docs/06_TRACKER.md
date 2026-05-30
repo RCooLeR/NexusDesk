@@ -372,7 +372,7 @@ Legend:
 
 ### 5.1 Data workbench
 
-- [ ] P1 Improve Data Sources tree icons and hierarchy.
+- [x] P1 Improve Data Sources tree icons and hierarchy. Evidence: SQLite and external connector metadata summaries now include an explicit schema tree with ASCII role markers for tables, views, columns, indexes, and foreign-key relationships; covered by `TestFormatSQLiteMetadataIncludesSchemaIndexesSamplesAndRelationships` and `TestFormatConnectorMetadata`.
 - [x] P1 Add schema/table browser polish. (`formatSQLiteMetadata` and `formatConnectorMetadata` show tables, views, columns, indexes, samples, and relationships with focused tests.)
 - [x] P1 Improve query editor layout. (The query editor now uses a labeled, taller, monospace, no-wrap scrolling surface with tests for the durable editor settings.)
 - [x] P1 Improve result grid scrolling and virtualization. (`data_rows_grid.go` uses a virtualized `widget.Table`, visible-column clipping, row sampling for sizing, density policy, and scroll-to-selection behavior with tests.)
