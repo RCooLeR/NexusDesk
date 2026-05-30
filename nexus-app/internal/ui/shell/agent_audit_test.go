@@ -9,6 +9,14 @@ import (
 	metadataSvc "nexusdesk/internal/services/metadata"
 )
 
+func TestAgentAuditControllerOwnsView(t *testing.T) {
+	view := &View{}
+	controller := newAgentAuditController(view)
+	if controller.view != view {
+		t.Fatalf("expected agent audit controller to retain owning view")
+	}
+}
+
 func TestAgentJobLabelCompactsLongPrompt(t *testing.T) {
 	label := agentJobLabel(strings.Repeat("word ", 30))
 	if len(label) > 80 || strings.Contains(label, "\n") {

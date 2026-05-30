@@ -14,11 +14,27 @@ import (
 	approvalsSvc "nexusdesk/internal/services/approvals"
 )
 
+type approvalsController struct {
+	view *View
+}
+
+func newApprovalsController(view *View) *approvalsController {
+	return &approvalsController{view: view}
+}
+
 func (v *View) newApprovalsPanel() fyne.CanvasObject {
-	refresh := widget.NewButtonWithIcon("Refresh", theme.ViewRefreshIcon(), v.refreshApprovals)
-	grant := widget.NewButtonWithIcon("Grant 1h", theme.ConfirmIcon(), v.confirmGrantFullProjectAccess)
-	revoke := widget.NewButtonWithIcon("Revoke", theme.CancelIcon(), v.revokeFullProjectAccess)
+	if v.approvals == nil {
+		v.approvals = newApprovalsController(v)
+	}
+	return v.approvals.NewPanel()
+}
+
+func (c *approvalsController) NewPanel() fyne.CanvasObject {
+	refresh := widget.NewButtonWithIcon("Refresh", theme.ViewRefreshIcon(), c.Refresh)
+	grant := widget.NewButtonWithIcon("Grant 1h", theme.ConfirmIcon(), c.confirmGrantFullProjectAccess)
+	revoke := widget.NewButtonWithIcon("Revoke", theme.CancelIcon(), c.revokeFullProjectAccess)
 	actions := container.NewHBox(refresh, grant, revoke)
+	v := c.view
 	header := container.NewBorder(nil, nil, container.NewVBox(v.accessStatus, v.approvalStatus), actions)
 	scroll := container.NewScroll(v.approvalResults)
 	scroll.SetMinSize(fyne.NewSize(260, 110))
@@ -26,6 +42,28 @@ func (v *View) newApprovalsPanel() fyne.CanvasObject {
 }
 
 func (v *View) refreshApprovals() {
+	if v.approvals == nil {
+		v.approvals = newApprovalsController(v)
+	}
+	v.approvals.Refresh()
+}
+
+func (v *View) confirmGrantFullProjectAccess() {
+	if v.approvals == nil {
+		v.approvals = newApprovalsController(v)
+	}
+	v.approvals.confirmGrantFullProjectAccess()
+}
+
+func (v *View) revokeFullProjectAccess() {
+	if v.approvals == nil {
+		v.approvals = newApprovalsController(v)
+	}
+	v.approvals.revokeFullProjectAccess()
+}
+
+func (c *approvalsController) Refresh() {
+	v := c.view
 	workspace := v.state.Workspace()
 	if workspace.Root == "" {
 		v.accessStatus.SetText("Full project access: inactive")
@@ -50,7 +88,8 @@ func (v *View) refreshApprovals() {
 	v.approvalResults.Refresh()
 }
 
-func (v *View) confirmGrantFullProjectAccess() {
+func (c *approvalsController) confirmGrantFullProjectAccess() {
+	v := c.view
 	workspace := v.state.Workspace()
 	if workspace.Root == "" {
 		v.addActivity("Open a workspace before changing access policy.")
@@ -68,11 +107,12 @@ func (v *View) confirmGrantFullProjectAccess() {
 			return
 		}
 		v.addActivity(policy.Message)
-		v.refreshApprovals()
+		c.Refresh()
 	}, v.window)
 }
 
-func (v *View) revokeFullProjectAccess() {
+func (c *approvalsController) revokeFullProjectAccess() {
+	v := c.view
 	workspace := v.state.Workspace()
 	if workspace.Root == "" {
 		v.addActivity("Open a workspace before changing access policy.")
@@ -85,7 +125,7 @@ func (v *View) revokeFullProjectAccess() {
 		return
 	}
 	v.addActivity(policy.Message)
-	v.refreshApprovals()
+	c.Refresh()
 }
 
 func approvalRows(records []approvalsSvc.Record) []fyne.CanvasObject {

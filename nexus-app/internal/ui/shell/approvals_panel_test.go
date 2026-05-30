@@ -8,6 +8,14 @@ import (
 	approvalsSvc "nexusdesk/internal/services/approvals"
 )
 
+func TestApprovalsControllerOwnsView(t *testing.T) {
+	view := &View{}
+	controller := newApprovalsController(view)
+	if controller.view != view {
+		t.Fatalf("expected approvals controller to retain owning view")
+	}
+}
+
 func TestPolicyStatusText(t *testing.T) {
 	active := policyStatusText(approvalsSvc.Policy{
 		FullProjectAccess: true,

@@ -100,10 +100,12 @@ type View struct {
 	agentAuditResults       *fyne.Container
 	agentAuditStatus        *widget.Label
 	agentAuditDetail        *widget.Entry
+	agentAudit              *agentAuditController
 	diagnostics             *diagnosticsController
 	approvalResults         *fyne.Container
 	approvalStatus          *widget.Label
 	accessStatus            *widget.Label
+	approvals               *approvalsController
 	assistant               *assistantController
 	diagnosticsProber       diagnosticsProber
 	startupStatus           startupSvc.Status
@@ -240,6 +242,8 @@ func NewWithStartupStatus(window fyne.Window, startupStatus startupSvc.Status) *
 	view.artifacts = newArtifactsController(view)
 	view.assistant = newAssistantController(view)
 	view.settings = newSettingsController(view)
+	view.approvals = newApprovalsController(view)
+	view.agentAudit = newAgentAuditController(view)
 	welcomeItem.Content = view.newWelcomePanel()
 	view.configureEditorTabs()
 	view.refreshStatusBar()

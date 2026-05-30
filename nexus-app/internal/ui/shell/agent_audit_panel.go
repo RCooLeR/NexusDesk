@@ -12,8 +12,24 @@ import (
 	metadataSvc "nexusdesk/internal/services/metadata"
 )
 
+type agentAuditController struct {
+	view *View
+}
+
+func newAgentAuditController(view *View) *agentAuditController {
+	return &agentAuditController{view: view}
+}
+
 func (v *View) newAgentAuditPanel() fyne.CanvasObject {
-	refresh := widget.NewButtonWithIcon("Refresh", theme.ViewRefreshIcon(), v.refreshAgentAudit)
+	if v.agentAudit == nil {
+		v.agentAudit = newAgentAuditController(v)
+	}
+	return v.agentAudit.NewPanel()
+}
+
+func (c *agentAuditController) NewPanel() fyne.CanvasObject {
+	v := c.view
+	refresh := widget.NewButtonWithIcon("Refresh", theme.ViewRefreshIcon(), c.Refresh)
 	header := container.NewBorder(nil, nil, v.agentAuditStatus, refresh)
 	listScroll := container.NewScroll(v.agentAuditResults)
 	listScroll.SetMinSize(fyne.NewSize(260, 110))
@@ -24,6 +40,21 @@ func (v *View) newAgentAuditPanel() fyne.CanvasObject {
 }
 
 func (v *View) refreshAgentAudit() {
+	if v.agentAudit == nil {
+		v.agentAudit = newAgentAuditController(v)
+	}
+	v.agentAudit.Refresh()
+}
+
+func (v *View) previewAgentAuditRun(run metadataSvc.AgentRunRecord) {
+	if v.agentAudit == nil {
+		v.agentAudit = newAgentAuditController(v)
+	}
+	v.agentAudit.previewRun(run)
+}
+
+func (c *agentAuditController) Refresh() {
+	v := c.view
 	if v.metadataStore == nil {
 		v.agentAuditStatus.SetText("Open a workspace before inspecting agent audit history.")
 		v.agentAuditResults.Objects = []fyne.CanvasObject{widget.NewLabel("No workspace metadata store is active.")}
@@ -37,11 +68,12 @@ func (v *View) refreshAgentAudit() {
 		return
 	}
 	v.agentAuditStatus.SetText(fmt.Sprintf("%d persisted agent run(s)", len(runs)))
-	v.agentAuditResults.Objects = agentAuditRows(runs, v.previewAgentAuditRun)
+	v.agentAuditResults.Objects = agentAuditRows(runs, c.previewRun)
 	v.agentAuditResults.Refresh()
 }
 
-func (v *View) previewAgentAuditRun(run metadataSvc.AgentRunRecord) {
+func (c *agentAuditController) previewRun(run metadataSvc.AgentRunRecord) {
+	v := c.view
 	if v.metadataStore == nil {
 		return
 	}
