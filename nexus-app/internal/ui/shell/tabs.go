@@ -33,6 +33,8 @@ type editorController struct {
 	textEditors      map[string]*textEditorBinding
 	savingTabs       map[string]bool
 	splitEnabled     bool
+	splitPane        *container.Split
+	splitOffset      float64
 	secondaryRelPath string
 }
 

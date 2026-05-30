@@ -296,7 +296,7 @@ Legend:
 - [x] P1 Keep tabs compact.
 - [x] P1 Keep breadcrumbs compact.
 - [x] P1 Keep document map optional and unobtrusive.
-- [ ] P1 Add stable split behavior.
+- [x] P1 Add stable split behavior.
 - [x] P1 Show save state in status bar.
 - [x] P1 Show encoding/line endings in status bar.
 - [ ] P1 Keep editor width priority during resize.

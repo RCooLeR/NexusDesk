@@ -166,6 +166,55 @@ func TestEditorSaveAllowedBlocksAmbiguousEncodingUntilExplicit(t *testing.T) {
 	}
 }
 
+func TestEditorSplitOffsetSurvivesRefresh(t *testing.T) {
+	_ = fynetest.NewTempApp(t)
+	session := editorSvc.NewSession()
+	active := session.OpenFileWithSource("a.go", "a.go", "package main\n")
+	secondary := session.OpenFileWithSource("b.go", "b.go", "package main\n")
+	view := &View{editorSession: session}
+	view.editor = &editorController{
+		previews: map[string]domain.FilePreview{
+			secondary.ID: {RelPath: secondary.RelPath, Kind: domain.PreviewText, Encoding: "utf-8", Text: secondary.DraftText},
+		},
+	}
+
+	first, ok := view.newSplitEditorContent(active, widget.NewLabel("primary")).(*container.Split)
+	if !ok {
+		t.Fatal("expected split editor content")
+	}
+	if first.Offset != editorSplitDefaultOffset {
+		t.Fatalf("unexpected default split offset: %v", first.Offset)
+	}
+	first.SetOffset(0.74)
+
+	second, ok := view.newSplitEditorContent(active, widget.NewLabel("primary")).(*container.Split)
+	if !ok {
+		t.Fatal("expected refreshed split editor content")
+	}
+	if second.Offset != 0.74 {
+		t.Fatalf("expected split offset to survive refresh, got %v", second.Offset)
+	}
+}
+
+func TestClampEditorSplitOffset(t *testing.T) {
+	for _, tt := range []struct {
+		name   string
+		offset float64
+		want   float64
+	}{
+		{name: "unset", offset: 0, want: editorSplitDefaultOffset},
+		{name: "too small", offset: 0.2, want: editorSplitMinOffset},
+		{name: "too large", offset: 0.95, want: editorSplitMaxOffset},
+		{name: "valid", offset: 0.7, want: 0.7},
+	} {
+		t.Run(tt.name, func(t *testing.T) {
+			if got := clampEditorSplitOffset(tt.offset); got != tt.want {
+				t.Fatalf("clampEditorSplitOffset(%v) = %v, want %v", tt.offset, got, tt.want)
+			}
+		})
+	}
+}
+
 func TestRefreshEditorAfterSaveUpdatesBindingInPlace(t *testing.T) {
 	_ = fynetest.NewTempApp(t)
 	session := editorSvc.NewSession()

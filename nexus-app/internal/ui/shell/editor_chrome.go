@@ -19,6 +19,9 @@ import (
 const (
 	editorBreadcrumbVisibleLimit = 5
 	editorBreadcrumbLabelLimit   = 28
+	editorSplitDefaultOffset     = 0.66
+	editorSplitMinOffset         = 0.45
+	editorSplitMaxOffset         = 0.85
 )
 
 func (v *View) newEditorPanel(tab editorSvc.Tab, preview domain.FilePreview) fyne.CanvasObject {
@@ -74,14 +77,47 @@ func (v *View) newSplitEditorContent(active editorSvc.Tab, primary fyne.CanvasOb
 		empty := widget.NewLabel("Open another file tab to use split editor.")
 		empty.Wrapping = fyne.TextWrapWord
 		split := container.NewHSplit(primary, container.NewPadded(empty))
-		split.SetOffset(0.66)
+		v.configureEditorSplit(split)
 		return split
 	}
 	v.editor.secondaryRelPath = secondaryTab.RelPath
 	secondary := v.newSecondaryEditorPanel(active.RelPath, secondaryTab)
 	split := container.NewHSplit(primary, secondary)
-	split.SetOffset(0.66)
+	v.configureEditorSplit(split)
 	return split
+}
+
+func (v *View) configureEditorSplit(split *container.Split) {
+	if v == nil || v.editor == nil || split == nil {
+		return
+	}
+	offset := v.editorSplitOffset()
+	split.SetOffset(offset)
+	v.editor.splitPane = split
+	v.editor.splitOffset = offset
+}
+
+func (v *View) editorSplitOffset() float64 {
+	if v == nil || v.editor == nil {
+		return editorSplitDefaultOffset
+	}
+	if v.editor.splitPane != nil {
+		v.editor.splitOffset = clampEditorSplitOffset(v.editor.splitPane.Offset)
+	}
+	return clampEditorSplitOffset(v.editor.splitOffset)
+}
+
+func clampEditorSplitOffset(offset float64) float64 {
+	if offset == 0 {
+		return editorSplitDefaultOffset
+	}
+	if offset < editorSplitMinOffset {
+		return editorSplitMinOffset
+	}
+	if offset > editorSplitMaxOffset {
+		return editorSplitMaxOffset
+	}
+	return offset
 }
 
 func (v *View) newSecondaryEditorPanel(activeRelPath string, secondaryTab editorSvc.Tab) fyne.CanvasObject {
