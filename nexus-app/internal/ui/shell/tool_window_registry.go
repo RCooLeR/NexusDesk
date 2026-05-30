@@ -82,7 +82,7 @@ func (r toolWindowRegistry) Lookup(id string) (toolWindowRegistration, bool) {
 
 func defaultToolWindowRegistry() toolWindowRegistry {
 	return newToolWindowRegistry([]toolWindowRegistration{
-		{ID: "project", Label: "Project", Side: toolWindowSideLeft, Shortcut: "Alt+1", ShortcutKey: fyne.Key1, Activity: "Project selected.", OpenProject: true, Icon: theme.HomeIcon()},
+		{ID: "project", Label: "Project", Side: toolWindowSideLeft, Shortcut: "Alt+1", ShortcutKey: fyne.Key1, TargetTab: "Project", Activity: "Project selected.", OpenProject: true, Icon: theme.HomeIcon()},
 		{ID: "search", Label: "Search", Side: toolWindowSideLeft, Shortcut: "Alt+2", ShortcutKey: fyne.Key2, TargetTab: "Search", Activity: "Search selected.", Icon: theme.SearchIcon()},
 		{ID: "problems", Label: "Problems", Side: toolWindowSideLeft, Shortcut: "Alt+3", ShortcutKey: fyne.Key3, TargetTab: "Problems", Activity: "Problems selected.", Icon: theme.WarningIcon()},
 		{ID: "git", Label: "Git", Side: toolWindowSideLeft, Shortcut: "Alt+4", ShortcutKey: fyne.Key4, TargetTab: "Git", Activity: "Git selected.", Icon: theme.ContentCopyIcon()},
@@ -94,12 +94,12 @@ func defaultToolWindowRegistry() toolWindowRegistry {
 		{ID: "diagnostics", Label: "Diagnostics", Side: toolWindowSideLeft, Shortcut: "Alt+0", ShortcutKey: fyne.Key0, TargetTab: "Diagnostics", Activity: "Diagnostics selected.", Icon: theme.VisibilityIcon()},
 		{ID: "activity", Label: "Activity", Side: toolWindowSideLeft, Shortcut: "Alt+Y", ShortcutKey: fyne.KeyY, TargetTab: "Activity", Activity: "Activity selected.", Icon: theme.HistoryIcon()},
 		{ID: "audit", Label: "Audit", Side: toolWindowSideLeft, Shortcut: "Alt+U", ShortcutKey: fyne.KeyU, TargetTab: "Agent Audit", Activity: "Agent audit selected.", Icon: theme.InfoIcon()},
+		{ID: "history", Label: "History", Side: toolWindowSideLeft, Shortcut: "Alt+H", ShortcutKey: fyne.KeyH, TargetTab: "History", Activity: "History selected.", Icon: theme.InfoIcon()},
+		{ID: "approvals", Label: "Approvals", Side: toolWindowSideLeft, Shortcut: "Alt+P", ShortcutKey: fyne.KeyP, TargetTab: "Approvals", Activity: "Approvals selected.", Icon: theme.ConfirmIcon()},
 		{ID: "assistant", Label: "Assistant", Side: toolWindowSideRight, Shortcut: "Alt+A", ShortcutKey: fyne.KeyA, Activity: "Assistant selected.", FocusAssistant: true, Icon: theme.MailComposeIcon()},
 		{ID: "sources", Label: "Sources", Side: toolWindowSideRight, Shortcut: "Alt+S", ShortcutKey: fyne.KeyS, TargetTab: "Artifacts", Activity: "Assistant sources and artifacts selected.", Icon: theme.SearchIcon()},
 		{ID: "lineage", Label: "Lineage", Side: toolWindowSideRight, Shortcut: "Alt+L", ShortcutKey: fyne.KeyL, TargetTab: "Artifacts", Activity: "Artifact lineage selected.", Icon: theme.DocumentIcon()},
 		{ID: "monitor", Label: "Monitor", Side: toolWindowSideRight, Shortcut: "Alt+M", ShortcutKey: fyne.KeyM, TargetTab: "Jobs", Activity: "Job monitor selected.", Icon: theme.ListIcon()},
 		{ID: "inspector", Label: "Inspector", Side: toolWindowSideRight, Shortcut: "Alt+I", ShortcutKey: fyne.KeyI, TargetTab: "Diagnostics", Activity: "Inspector diagnostics selected.", Icon: theme.VisibilityIcon()},
-		{ID: "history", Label: "History", Side: toolWindowSideBottom, TargetTab: "History", Activity: "History selected.", Icon: theme.InfoIcon()},
-		{ID: "approvals", Label: "Approvals", Side: toolWindowSideBottom, TargetTab: "Approvals", Activity: "Approvals selected.", Icon: theme.ConfirmIcon()},
 	})
 }

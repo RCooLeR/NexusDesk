@@ -8,6 +8,18 @@ func leftRailToolWindows() []leftRailToolWindow {
 
 func (v *View) openLeftRailToolWindow(tool leftRailToolWindow) {
 	if tool.OpenProject {
+		if tool.TargetTab != "" {
+			if v.activeLeftRailTool == tool.Label && v.isBottomTabSelected(tool.TargetTab) && !v.bottomPanelCollapsed {
+				v.collapseBottomPanel()
+				v.addActivity(tool.Label + " collapsed.")
+				return
+			}
+			v.expandBottomPanel()
+			if !v.selectBottomTab(tool.TargetTab) {
+				v.addActivity(tool.Label + " panel is unavailable.")
+				return
+			}
+		}
 		v.openHomeTab()
 		v.setLeftRailActive(tool.Label)
 		v.publishShellEvent(toolWindowSelectedEvent(tool))

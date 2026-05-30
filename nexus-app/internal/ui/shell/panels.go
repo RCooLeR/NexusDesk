@@ -4,7 +4,6 @@ import (
 	"fyne.io/fyne/v2"
 	"fyne.io/fyne/v2/canvas"
 	"fyne.io/fyne/v2/container"
-	"fyne.io/fyne/v2/layout"
 	"fyne.io/fyne/v2/theme"
 	"fyne.io/fyne/v2/widget"
 
@@ -30,13 +29,10 @@ func (v *View) newRail() fyne.CanvasObject {
 	}
 	v.refreshRailActiveState()
 	settingsButton := widget.NewButtonWithIcon("", theme.SettingsIcon(), v.openSettingsTab)
-	return container.NewPadded(container.NewVBox(
-		logo,
-		widget.NewSeparator(),
-		container.NewVBox(railButtons...),
-		layout.NewSpacer(),
-		settingsButton,
-	))
+	buttonList := container.NewVScroll(container.NewVBox(railButtons...))
+	buttonList.SetMinSize(fyne.NewSize(46, 320))
+	header := container.NewVBox(logo, widget.NewSeparator())
+	return container.NewPadded(container.NewBorder(header, settingsButton, nil, nil, buttonList))
 }
 
 func (v *View) newRightRail() fyne.CanvasObject {
@@ -73,6 +69,7 @@ func (v *View) newToolbar() fyne.CanvasObject {
 	openButton := widget.NewButtonWithIcon("Open Workspace", theme.FolderOpenIcon(), v.openWorkspaceDialog)
 	refreshButton := widget.NewButtonWithIcon("Refresh", theme.ViewRefreshIcon(), v.refreshWorkspace)
 	tasksButton := widget.NewButtonWithIcon("Tasks", theme.MediaPlayIcon(), func() {
+		v.expandBottomPanel()
 		if !v.selectBottomTab("Tasks") {
 			v.addActivity("Tasks panel is unavailable.")
 			return
@@ -80,6 +77,7 @@ func (v *View) newToolbar() fyne.CanvasObject {
 		v.addActivity("Tasks selected.")
 	})
 	gitButton := widget.NewButtonWithIcon("Git", theme.ContentCopyIcon(), func() {
+		v.expandBottomPanel()
 		if !v.selectBottomTab("Git") {
 			v.addActivity("Git panel is unavailable.")
 			return
@@ -114,8 +112,11 @@ func (v *View) newToolbar() fyne.CanvasObject {
 func (v *View) newBottomPanel() fyne.CanvasObject {
 	activity := container.NewScroll(v.activityLog)
 	activity.SetMinSize(fyne.NewSize(200, 90))
+	project := container.NewScroll(v.navigator)
+	project.SetMinSize(fyne.NewSize(220, 240))
 	tabs := container.NewAppTabs(
 		v.bottomTabGroup("Workbench", theme.HomeIcon(),
+			container.NewTabItemWithIcon("Project", theme.HomeIcon(), project),
 			container.NewTabItemWithIcon("Activity", theme.HistoryIcon(), activity),
 			container.NewTabItemWithIcon("Search", theme.SearchIcon(), v.newSearchPanel()),
 			container.NewTabItemWithIcon("Problems", theme.WarningIcon(), v.newProblemsPanel()),

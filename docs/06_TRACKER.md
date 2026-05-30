@@ -316,8 +316,8 @@ Legend:
 
 ### 4.6 Remove bottom tool panel
 
-- [ ] P1 Remove horizontal bottom tool panel from the target shell.
-- [ ] P1 Keep the bottom region as status bar only.
+- [x] P1 Remove horizontal bottom tool panel from the target shell. (The utility tabs now live in a collapsible left dock beside the editor instead of a vertical split below the workbench.)
+- [x] P1 Keep the bottom region as status bar only. (`View.Canvas` now returns the workbench with only `newStatusBar()` in the bottom border region.)
 - [x] P1 Move Problems to the left-sidebar tool registry.
 - [x] P1 Move Search Results to the left-sidebar tool registry.
 - [x] P1 Move Git Diff to the left-sidebar tool registry.

@@ -38,11 +38,13 @@ func TestLeftRailToolWindowsCoverProductionTargets(t *testing.T) {
 		"Diagnostics",
 		"Activity",
 		"Audit",
+		"History",
+		"Approvals",
 	}
 	if !reflect.DeepEqual(gotLabels, wantLabels) {
 		t.Fatalf("unexpected rail tools: got %#v want %#v", gotLabels, wantLabels)
 	}
-	for _, target := range []string{"Search", "Problems", "Git", "Tasks", "Jobs", "Data", "Artifacts", "Operations", "Diagnostics", "Activity", "Agent Audit"} {
+	for _, target := range []string{"Project", "Search", "Problems", "Git", "Tasks", "Jobs", "Data", "Artifacts", "Operations", "Diagnostics", "Activity", "Agent Audit", "History", "Approvals"} {
 		if !gotTargets[target] {
 			t.Fatalf("expected rail target %q", target)
 		}

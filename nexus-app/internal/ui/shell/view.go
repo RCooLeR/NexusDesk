@@ -245,9 +245,7 @@ func (v *View) Canvas() fyne.CanvasObject {
 	rail := v.newRail()
 	rightWorkbench := container.NewBorder(nil, nil, nil, v.newRightRail(), v.newAssistantPanel())
 	mainSplit := v.newEditorPrioritySplit(rightWorkbench)
-	workbenchTop := container.NewBorder(v.newToolbar(), nil, v.navigator, nil, mainSplit)
-	workbench := container.NewVSplit(workbenchTop, v.newBottomPanel())
-	v.workbenchSplit = workbench
+	workbench := container.NewBorder(v.newToolbar(), nil, nil, nil, v.newToolPanelSplit(mainSplit))
 	v.expandBottomPanel()
 	return container.NewBorder(nil, v.newStatusBar(), rail, nil, workbench)
 }

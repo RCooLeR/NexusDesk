@@ -8,7 +8,7 @@ import (
 )
 
 const (
-	workbenchExpandedOffset   = 0.68
+	workbenchExpandedOffset   = 0.24
 	editorWidthPriorityOffset = 0.82
 )
 
@@ -30,7 +30,7 @@ func (v *View) collapseBottomPanel() {
 	}
 	v.bottomPanelCollapsed = true
 	if v.workbenchSplit != nil {
-		v.workbenchSplit.SetOffset(1)
+		v.workbenchSplit.SetOffset(0)
 	}
 }
 
@@ -48,6 +48,13 @@ func (v *View) newEditorPrioritySplit(rightWorkbench fyne.CanvasObject) *contain
 	split := container.NewHSplit(v.editor.tabs, rightWorkbench)
 	split.SetOffset(editorWidthPriorityOffset)
 	v.mainSplit = split
+	return split
+}
+
+func (v *View) newToolPanelSplit(workbench fyne.CanvasObject) *container.Split {
+	split := container.NewHSplit(v.newBottomPanel(), workbench)
+	split.SetOffset(workbenchExpandedOffset)
+	v.workbenchSplit = split
 	return split
 }
 

@@ -74,6 +74,26 @@ func TestEditorPrioritySplitKeepsEditorWide(t *testing.T) {
 	}
 }
 
+func TestToolPanelSplitUsesLeftDock(t *testing.T) {
+	app := fynetest.NewTempApp(t)
+	window := app.NewWindow("tool panel")
+	defer window.Close()
+	view := New(window)
+
+	_ = view.Canvas()
+	split := view.workbenchSplit
+
+	if !split.Horizontal {
+		t.Fatal("expected tool panel split to dock horizontally beside the editor")
+	}
+	if split.Offset != workbenchExpandedOffset {
+		t.Fatalf("expected dock offset %v, got %v", workbenchExpandedOffset, split.Offset)
+	}
+	if view.workbenchSplit != split {
+		t.Fatal("expected view to retain the tool panel split")
+	}
+}
+
 func TestSelectBottomTabReassertsEditorWidthPriority(t *testing.T) {
 	_ = fynetest.NewTempApp(t)
 	view := &View{
