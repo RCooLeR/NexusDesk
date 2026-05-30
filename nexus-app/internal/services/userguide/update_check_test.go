@@ -14,6 +14,7 @@ func TestUpdateCheckMarkdownExplainsManualPolicy(t *testing.T) {
 		"Build date: 2026-05-30T12:00:00Z",
 		"does not download update artifacts automatically",
 		"does not install updates automatically",
+		"docs/releases/v1-release-notes.md",
 		"docs/releases/beta-release-notes.md",
 	} {
 		if !strings.Contains(markdown, expected) {

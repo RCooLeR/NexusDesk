@@ -36,6 +36,7 @@ func UpdateCheckGuide(version string, commit string, buildDate string) Guide {
 			{
 				Title: "Release Notes",
 				Body: []string{
+					"Read `docs/releases/v1-release-notes.md` for current release-candidate highlights, validation evidence, trust state, known limitations, and remaining blockers.",
 					"Read `docs/releases/beta-release-notes.md` before upgrading private beta builds.",
 					"Release notes must call out packaging changes, signing/trust state, validation coverage, known limitations, migration notes, and any required user action.",
 				},
