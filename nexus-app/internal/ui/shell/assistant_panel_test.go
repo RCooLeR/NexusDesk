@@ -1,6 +1,7 @@
 package shell
 
 import (
+	"strconv"
 	"strings"
 	"testing"
 	"time"
@@ -72,6 +73,29 @@ func TestAssistantStreamRendererCoalescesDeltasUntilFlush(t *testing.T) {
 	}
 }
 
+func TestAssistantStreamRendererHandlesLongDeltaBurst(t *testing.T) {
+	rendered := make([]string, 0, 1)
+	stream := newAssistantStreamRendererWithRender(func(text string) {
+		rendered = append(rendered, text)
+	}, time.Hour)
+	defer stream.Stop()
+
+	var expected strings.Builder
+	for index := 0; index < 2000; index++ {
+		delta := "chunk-" + strconv.Itoa(index) + "\n"
+		expected.WriteString(delta)
+		stream.Append(delta)
+	}
+	stream.Flush()
+
+	if len(rendered) != 1 {
+		t.Fatalf("expected long stream burst to render once, got %d renders", len(rendered))
+	}
+	if rendered[0] != expected.String() {
+		t.Fatalf("expected rendered stream length %d, got %d", expected.Len(), len(rendered[0]))
+	}
+}
+
 func TestAgentEventRendererCoalescesLinesUntilFlush(t *testing.T) {
 	type renderCall struct {
 		markdown string
@@ -110,6 +134,33 @@ func TestAgentEventRendererCoalescesLinesUntilFlush(t *testing.T) {
 	}
 	if !strings.Contains(calls[1].markdown, "three") || !strings.Contains(calls[1].markdown, "four") {
 		t.Fatalf("expected markdown to keep latest event tail, got %q", calls[1].markdown)
+	}
+}
+
+func TestAgentEventRendererBatchesBurst(t *testing.T) {
+	batchCount := 0
+	lineCount := 0
+	lastMarkdown := ""
+	renderer := newAgentEventRenderer(func(markdown string, lines []string) {
+		batchCount++
+		lineCount += len(lines)
+		lastMarkdown = markdown
+	}, time.Hour)
+	defer renderer.Stop()
+
+	for index := 1; index <= 500; index++ {
+		renderer.Append("event-" + strconv.Itoa(index))
+	}
+	renderer.Flush()
+
+	if batchCount != 1 {
+		t.Fatalf("expected one render batch, got %d", batchCount)
+	}
+	if lineCount != 500 {
+		t.Fatalf("expected all burst lines in batch, got %d", lineCount)
+	}
+	if strings.Contains(lastMarkdown, "event-498") || !strings.Contains(lastMarkdown, "event-499") || !strings.Contains(lastMarkdown, "event-500") {
+		t.Fatalf("expected visible markdown to keep only newest event tail, got %q", lastMarkdown)
 	}
 }
 

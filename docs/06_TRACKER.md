@@ -121,8 +121,8 @@ Legend:
 - [x] P1 Coalesce agent event rendering.
 - [ ] P1 Replace activity markdown rebuild with incremental list rendering.
 - [x] P1 Cap activity display while preserving durable audit elsewhere.
-- [ ] P1 Add long streaming UI stress test or profiling harness.
-- [ ] P1 Add agent-event burst test.
+- [x] P1 Add long streaming UI stress test or profiling harness.
+- [x] P1 Add agent-event burst test.
 
 ### 2.2 Editor save performance
 
