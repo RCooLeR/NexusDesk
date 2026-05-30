@@ -52,6 +52,10 @@ func newEditorController(view *View, initialTabID string, welcomeItem *container
 }
 
 func (v *View) newWelcomePanel() fyne.CanvasObject {
+	recentItems, recentErr := v.listRecentWorkspaces()
+	if showEditorEmptyWelcome(v.state.Workspace(), recentItems, recentErr) {
+		return v.newEditorEmptyWelcomePanel()
+	}
 	title := widget.NewRichTextFromMarkdown("# NexusDesk\n\nNative local-first workbench for code, data, agents, and artifacts.")
 	title.Wrapping = fyne.TextWrapWord
 	openWorkspaceButton := widget.NewButtonWithIcon("Open Workspace", theme.FolderOpenIcon(), v.openWorkspaceDialog)
@@ -64,7 +68,7 @@ func (v *View) newWelcomePanel() fyne.CanvasObject {
 	})
 	readiness := widget.NewRichTextFromMarkdown(v.welcomeReadinessMarkdown())
 	readiness.Wrapping = fyne.TextWrapWord
-	recent := v.recentWorkspaceRows()
+	recent := recentWorkspaceRowsFrom(recentItems, recentErr, v.openWorkspace, v.removeRecentWorkspace, v.clearRecentWorkspaces)
 	content := container.NewVBox(
 		title,
 		container.NewHBox(openWorkspaceButton, openFileButton, settingsButton, diagnosticsButton),
@@ -74,6 +78,62 @@ func (v *View) newWelcomePanel() fyne.CanvasObject {
 		widget.NewCard("Recent Workspaces", "", recent),
 	)
 	return container.NewPadded(container.NewVScroll(content))
+}
+
+func (v *View) newEditorEmptyWelcomePanel() fyne.CanvasObject {
+	title := widget.NewLabel("No file open")
+	title.TextStyle = fyne.TextStyle{Bold: true}
+	subtitle := widget.NewLabel("Open a workspace or file to start.")
+	subtitle.Wrapping = fyne.TextWrapWord
+	openWorkspaceButton := widget.NewButtonWithIcon("Open Workspace", theme.FolderOpenIcon(), v.openWorkspaceDialog)
+	openFileButton := widget.NewButtonWithIcon("Open File", theme.FileTextIcon(), v.openFileDialog)
+	settingsButton := widget.NewButtonWithIcon("Model Settings", theme.SettingsIcon(), v.openSettingsTab)
+	diagnosticsButton := widget.NewButtonWithIcon("Diagnostics", theme.SearchIcon(), func() {
+		if !v.selectBottomTab("Diagnostics") {
+			v.addActivity("Diagnostics panel is unavailable.")
+		}
+	})
+	content := container.NewVBox(
+		title,
+		subtitle,
+		widget.NewSeparator(),
+		welcomeEmptyCommandRows(),
+		widget.NewSeparator(),
+		container.NewHBox(openWorkspaceButton, openFileButton, settingsButton, diagnosticsButton),
+	)
+	return container.NewPadded(container.NewCenter(content))
+}
+
+type welcomeEmptyCommand struct {
+	Label    string
+	Shortcut string
+}
+
+func welcomeEmptyCommands() []welcomeEmptyCommand {
+	return []welcomeEmptyCommand{
+		{Label: "Project View", Shortcut: "Alt+1"},
+		{Label: "Go to File", Shortcut: "Ctrl+P"},
+		{Label: "Search Everywhere", Shortcut: "Ctrl+Shift+P"},
+		{Label: "Recent Files", Shortcut: "Ctrl+E"},
+		{Label: "Command Palette", Shortcut: "Ctrl+Shift+P"},
+		{Label: "Drop files here", Shortcut: ""},
+	}
+}
+
+func welcomeEmptyCommandRows() fyne.CanvasObject {
+	rows := container.NewVBox()
+	for _, command := range welcomeEmptyCommands() {
+		label := widget.NewLabel(command.Label)
+		label.TextStyle = fyne.TextStyle{Monospace: true}
+		shortcut := widget.NewLabel(command.Shortcut)
+		shortcut.TextStyle = fyne.TextStyle{Monospace: true}
+		rows.Add(container.NewBorder(nil, nil, label, nil, shortcut))
+	}
+	return rows
+}
+
+func showEditorEmptyWelcome(workspace domain.Workspace, recentItems []recentWorkspacesSvc.Workspace, recentErr error) bool {
+	return strings.TrimSpace(workspace.Root) == "" && recentErr == nil && len(recentItems) == 0
 }
 
 func (v *View) welcomeReadinessMarkdown() string {
@@ -100,7 +160,7 @@ func (v *View) welcomeReadinessMarkdown() string {
 func formatWelcomeReadinessMarkdown(snapshot readinessSvc.Snapshot) string {
 	var builder strings.Builder
 	builder.WriteString("## First-run readiness\n\n")
-	builder.WriteString("This native workspace cockpit keeps setup gaps visible before long-running agent work starts.\n\n")
+	builder.WriteString("This native workspace keeps setup gaps visible before long-running agent work starts.\n\n")
 	for _, item := range snapshot.Items {
 		builder.WriteString(fmt.Sprintf("- **[%s] %s:** %s", welcomeReadinessStatusLabel(item.Status), item.Label, compactWelcomeReadinessText(item.Detail, 180)))
 		if strings.TrimSpace(item.Action) != "" {
@@ -144,6 +204,10 @@ func compactWelcomeReadinessText(text string, limit int) string {
 
 func (v *View) recentWorkspaceRows() fyne.CanvasObject {
 	items, err := v.listRecentWorkspaces()
+	return recentWorkspaceRowsFrom(items, err, v.openWorkspace, v.removeRecentWorkspace, v.clearRecentWorkspaces)
+}
+
+func recentWorkspaceRowsFrom(items []recentWorkspacesSvc.Workspace, err error, open func(string), remove func(string), clear func()) fyne.CanvasObject {
 	if err != nil {
 		return widget.NewLabel("Recent workspaces are unavailable: " + err.Error())
 	}
@@ -153,20 +217,20 @@ func (v *View) recentWorkspaceRows() fyne.CanvasObject {
 	rows := []fyne.CanvasObject{widget.NewLabel("Recent workspaces")}
 	for _, item := range items {
 		item := item
-		open := widget.NewButtonWithIcon(item.Name, theme.FolderOpenIcon(), func() {
-			v.openWorkspace(item.Path)
+		openButton := widget.NewButtonWithIcon(item.Name, theme.FolderOpenIcon(), func() {
+			open(item.Path)
 		})
-		remove := widget.NewButtonWithIcon("", theme.DeleteIcon(), func() {
-			v.removeRecentWorkspace(item.Path)
+		removeButton := widget.NewButtonWithIcon("", theme.DeleteIcon(), func() {
+			remove(item.Path)
 		})
-		remove.Importance = widget.LowImportance
+		removeButton.Importance = widget.LowImportance
 		pathLabel := widget.NewLabel(item.Path)
 		pathLabel.Truncation = fyne.TextTruncateEllipsis
-		rows = append(rows, container.NewBorder(nil, nil, open, remove, pathLabel))
+		rows = append(rows, container.NewBorder(nil, nil, openButton, removeButton, pathLabel))
 	}
-	clear := widget.NewButtonWithIcon("Clear recent workspaces", theme.DeleteIcon(), v.clearRecentWorkspaces)
-	clear.Importance = widget.LowImportance
-	rows = append(rows, container.NewHBox(layout.NewSpacer(), clear))
+	clearButton := widget.NewButtonWithIcon("Clear recent workspaces", theme.DeleteIcon(), clear)
+	clearButton.Importance = widget.LowImportance
+	rows = append(rows, container.NewHBox(layout.NewSpacer(), clearButton))
 	return container.NewVBox(rows...)
 }
 

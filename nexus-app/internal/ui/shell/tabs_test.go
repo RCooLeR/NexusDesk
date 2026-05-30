@@ -8,7 +8,9 @@ import (
 	fynetest "fyne.io/fyne/v2/test"
 	"fyne.io/fyne/v2/widget"
 
+	"nexusdesk/internal/domain"
 	readinessSvc "nexusdesk/internal/services/readiness"
+	recentWorkspacesSvc "nexusdesk/internal/services/recentworkspaces"
 	settingsSvc "nexusdesk/internal/services/settings"
 	startupSvc "nexusdesk/internal/services/startup"
 )
@@ -55,11 +57,55 @@ func TestFormatWelcomeReadinessMarkdownKeepsHomeSummaryCompact(t *testing.T) {
 	if strings.Contains(text, "workspace/readiness/jobs") || strings.Contains(text, "internal/services/readiness:") {
 		t.Fatalf("home readiness should not include full failure matrix details:\n%s", text)
 	}
+	if strings.Contains(strings.ToLower(text), "cockpit") || strings.Contains(strings.ToLower(text), "dashboard") {
+		t.Fatalf("home readiness should avoid dashboard/cockpit framing:\n%s", text)
+	}
 	for _, line := range strings.Split(text, "\n") {
 		if len(line) > 260 {
 			t.Fatalf("home readiness line is too wide for resizable layout (%d chars): %s", len(line), line)
 		}
 	}
+}
+
+func TestShowEditorEmptyWelcomeOnlyForFirstLaunch(t *testing.T) {
+	if !showEditorEmptyWelcome(domain.Workspace{}, nil, nil) {
+		t.Fatal("expected empty welcome when there is no workspace and no recents")
+	}
+	if showEditorEmptyWelcome(domain.Workspace{Root: "C:/repo"}, nil, nil) {
+		t.Fatal("did not expect empty welcome with an active workspace")
+	}
+	if showEditorEmptyWelcome(domain.Workspace{}, []recentWorkspacesSvc.Workspace{{Name: "repo", Path: "C:/repo"}}, nil) {
+		t.Fatal("did not expect first-launch empty welcome when recents exist")
+	}
+	if showEditorEmptyWelcome(domain.Workspace{}, nil, readinessTestError("recent store unavailable")) {
+		t.Fatal("did not expect first-launch empty welcome when recents cannot be loaded")
+	}
+}
+
+func TestWelcomeEmptyCommandsStayEditorLike(t *testing.T) {
+	commands := welcomeEmptyCommands()
+	if len(commands) != 6 {
+		t.Fatalf("unexpected command count: %d", len(commands))
+	}
+	joined := strings.ToLower(formatWelcomeEmptyCommands(commands))
+	for _, forbidden := range []string{"dashboard", "cockpit", "setup card"} {
+		if strings.Contains(joined, forbidden) {
+			t.Fatalf("empty welcome commands should stay editor-like, got %q", joined)
+		}
+	}
+	for _, expected := range []string{"Project View", "Go to File", "Drop files here"} {
+		if !strings.Contains(formatWelcomeEmptyCommands(commands), expected) {
+			t.Fatalf("empty welcome commands missing %q: %#v", expected, commands)
+		}
+	}
+}
+
+func formatWelcomeEmptyCommands(commands []welcomeEmptyCommand) string {
+	parts := make([]string, 0, len(commands))
+	for _, command := range commands {
+		parts = append(parts, command.Label+" "+command.Shortcut)
+	}
+	return strings.Join(parts, "\n")
 }
 
 type readinessTestError string

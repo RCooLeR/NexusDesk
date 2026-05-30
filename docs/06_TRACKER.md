@@ -292,7 +292,7 @@ Legend:
 
 ### 4.4 Center editor UI
 
-- [ ] P1 Replace first-launch dashboard/cockpit feeling with editor-like empty state.
+- [x] P1 Replace first-launch dashboard/cockpit feeling with editor-like empty state.
 - [x] P1 Keep tabs compact.
 - [x] P1 Keep breadcrumbs compact.
 - [x] P1 Keep document map optional and unobtrusive.
