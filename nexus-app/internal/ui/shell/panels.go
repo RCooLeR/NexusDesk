@@ -112,7 +112,12 @@ func (v *View) newToolbar() fyne.CanvasObject {
 }
 
 func (v *View) newBottomPanel() fyne.CanvasObject {
-	activity := container.NewScroll(v.activityLog)
+	activityList := v.activityList
+	if activityList == nil {
+		activityList = newActivityList(v.recentActivityLines(activityRenderLimit))
+		v.activityList = activityList
+	}
+	activity := container.NewScroll(activityList)
 	activity.SetMinSize(fyne.NewSize(200, 90))
 	project := container.NewScroll(v.navigator)
 	project.SetMinSize(fyne.NewSize(220, 240))

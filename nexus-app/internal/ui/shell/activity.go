@@ -1,6 +1,12 @@
 package shell
 
-import "strings"
+import (
+	"strings"
+
+	"fyne.io/fyne/v2"
+	"fyne.io/fyne/v2/container"
+	"fyne.io/fyne/v2/widget"
+)
 
 const (
 	activityHistoryLimit = 400
@@ -14,9 +20,7 @@ func (v *View) addActivity(message string) {
 	}
 	v.appendActivityLine(message)
 	v.activityText = activityMarkdown(v.recentActivityLines(activityRenderLimit))
-	if v.activityLog != nil {
-		v.activityLog.ParseMarkdown(v.activityText)
-	}
+	v.appendActivityRow(message)
 }
 
 func (v *View) appendActivityLine(message string) {
@@ -44,4 +48,29 @@ func (v *View) recentActivityLines(limit int) []string {
 
 func activityMarkdown(lines []string) string {
 	return strings.Join(lines, "\n\n")
+}
+
+func newActivityList(lines []string) *fyne.Container {
+	rows := make([]fyne.CanvasObject, 0, len(lines))
+	for _, line := range lines {
+		rows = append(rows, newActivityRow(line))
+	}
+	return container.NewVBox(rows...)
+}
+
+func (v *View) appendActivityRow(message string) {
+	if v.activityList == nil {
+		return
+	}
+	for len(v.activityList.Objects) >= activityRenderLimit {
+		v.activityList.Objects = v.activityList.Objects[1:]
+	}
+	v.activityList.Add(newActivityRow(message))
+	v.activityList.Refresh()
+}
+
+func newActivityRow(message string) fyne.CanvasObject {
+	label := widget.NewLabel(message)
+	label.Wrapping = fyne.TextWrapWord
+	return label
 }

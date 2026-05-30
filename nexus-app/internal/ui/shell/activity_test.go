@@ -6,6 +6,7 @@ import (
 	"testing"
 
 	fynetest "fyne.io/fyne/v2/test"
+	"fyne.io/fyne/v2/widget"
 )
 
 func TestAddActivityKeepsBoundedMarkdownBuffer(t *testing.T) {
@@ -31,5 +32,12 @@ func TestAddActivityKeepsBoundedMarkdownBuffer(t *testing.T) {
 	}
 	if sections[len(sections)-1] != "line-"+strconv.Itoa(activityHistoryLimit+25) {
 		t.Fatalf("expected newest line at tail, got %q", sections[len(sections)-1])
+	}
+	if view.activityList == nil || len(view.activityList.Objects) != activityRenderLimit {
+		t.Fatalf("expected incremental activity list to use rendered tail, got %#v", view.activityList)
+	}
+	first, ok := view.activityList.Objects[0].(*widget.Label)
+	if !ok || first.Text != sections[0] {
+		t.Fatalf("expected first rendered row %q, got %#v", sections[0], view.activityList.Objects[0])
 	}
 }

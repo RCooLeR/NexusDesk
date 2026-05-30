@@ -70,6 +70,7 @@ type View struct {
 	bottomTabs              *container.AppTabs
 	navigatorClipboard      navigatorClipboard
 	activityLog             *widget.RichText
+	activityList            *fyne.Container
 	activityText            string
 	activityLines           []string
 	mainSplit               *container.Split
@@ -196,6 +197,7 @@ func NewWithStartupStatus(window fyne.Window, startupStatus startupSvc.Status) *
 		railStateByWorkspace:    map[string]railWorkspaceState{},
 		navigator:               container.NewStack(widget.NewLabel("Open a workspace to browse files.")),
 		activityLog:             widget.NewRichTextFromMarkdown("Ready."),
+		activityList:            newActivityList([]string{"Ready."}),
 		activityText:            "Ready.",
 		activityLines:           []string{"Ready."},
 		problemResults:          container.NewVBox(widget.NewLabel("Run a scan to inspect lightweight workspace problems.")),

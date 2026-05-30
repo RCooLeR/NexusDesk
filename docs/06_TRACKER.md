@@ -117,9 +117,9 @@ Legend:
 ### 2.1 Assistant and activity rendering
 
 - [x] P1 Coalesce assistant stream deltas with a UI refresh ticker.
-- [ ] P1 Parse markdown once at final response where practical.
+- [x] P1 Parse markdown once at final response where practical. Evidence: assistant streaming now renders interim deltas as plain RichText text segments and only parses the final assistant response as markdown; covered by focused assistant stream/response tests.
 - [x] P1 Coalesce agent event rendering.
-- [ ] P1 Replace activity markdown rebuild with incremental list rendering.
+- [x] P1 Replace activity markdown rebuild with incremental list rendering. Evidence: activity UI is now a bounded VBox of label rows updated incrementally per event while preserving the capped text buffer for tests/audit; covered by `TestAddActivityKeepsBoundedMarkdownBuffer`.
 - [x] P1 Cap activity display while preserving durable audit elsewhere.
 - [x] P1 Add long streaming UI stress test or profiling harness.
 - [x] P1 Add agent-event burst test.

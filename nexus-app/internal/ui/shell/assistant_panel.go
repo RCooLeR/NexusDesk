@@ -232,7 +232,7 @@ func (v *View) runAssistantRequest(prompt *widget.Entry, response *widget.RichTe
 	startedAt := time.Now().UTC()
 	send.Disable()
 	v.setAssistantRunStatus(assistantPreRunStatusLine(v.settingsStore, "Ask", selectedAssistantModelRouteOption(v), text, request.ContextPaths, request.SelectedPath))
-	response.ParseMarkdown("Receiving response...")
+	setAssistantStreamText(response, "Receiving response...")
 	v.addActivity("Assistant request started.")
 
 	go func() {
@@ -274,10 +274,6 @@ func (v *View) runAssistantRequest(prompt *widget.Entry, response *widget.RichTe
 	}()
 }
 
-type assistantMarkdownRenderer interface {
-	ParseMarkdown(string)
-}
-
 type assistantStreamRenderer struct {
 	mu       sync.Mutex
 	builder  strings.Builder
@@ -288,15 +284,23 @@ type assistantStreamRenderer struct {
 	stopOnce sync.Once
 }
 
-func newAssistantStreamRenderer(response assistantMarkdownRenderer, interval time.Duration) *assistantStreamRenderer {
+func newAssistantStreamRenderer(response *widget.RichText, interval time.Duration) *assistantStreamRenderer {
 	return newAssistantStreamRendererWithRender(func(text string) {
 		if response == nil {
 			return
 		}
 		fyne.Do(func() {
-			response.ParseMarkdown(text)
+			setAssistantStreamText(response, text)
 		})
 	}, interval)
+}
+
+func setAssistantStreamText(response *widget.RichText, text string) {
+	if response == nil {
+		return
+	}
+	response.Segments = []widget.RichTextSegment{&widget.TextSegment{Text: text}}
+	response.Refresh()
 }
 
 func newAssistantStreamRendererWithRender(render func(string), interval time.Duration) *assistantStreamRenderer {
