@@ -507,7 +507,7 @@ Legend:
 - [ ] P0 Run security/safety review.
 - [ ] P0 Run performance review.
 - [ ] P0 Run accessibility review.
-- [ ] P0 Verify no hidden workspace-open side effects.
+- [x] P0 Verify no hidden workspace-open side effects. Evidence: workspace-open policy tests allow only metadata/history/audit/approval/navigator/pin refresh actions, reject slow/heavy workflow kinds, and `TestOpenWorkspaceDoesNotStartHiddenJobs` verifies opening a workspace does not create hidden jobs or job-start activity (`go test ./internal/ui/shell -run "WorkspaceOpen|OpenWorkspace"`).
 - [ ] P0 Verify no known file data-loss path.
 - [ ] P0 Verify no known plaintext secret storage path.
 - [ ] P0 Verify release artifacts and hashes.

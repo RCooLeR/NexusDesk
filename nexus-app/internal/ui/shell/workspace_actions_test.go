@@ -114,6 +114,38 @@ func TestOpenWorkspaceLoadsMetadataStoreWhenAvailable(t *testing.T) {
 	}
 }
 
+func TestOpenWorkspaceDoesNotStartHiddenJobs(t *testing.T) {
+	root := t.TempDir()
+	if err := os.WriteFile(filepath.Join(root, "README.md"), []byte("# test"), 0o644); err != nil {
+		t.Fatalf("WriteFile failed: %v", err)
+	}
+	app := fynetest.NewTempApp(t)
+	window := app.NewWindow("workspace-open-no-hidden-jobs")
+	defer window.Close()
+	view := New(window)
+	view.recentWorkspaceStore = recentWorkspacesSvc.NewFileStore(filepath.Join(t.TempDir(), "recent.json"))
+	t.Cleanup(func() {
+		if view.metadataStore != nil {
+			_ = view.metadataStore.Close()
+		}
+	})
+	view.compatibilityImportByWS[root] = true
+
+	view.openWorkspace(root)
+
+	if got := view.state.Workspace().Root; got != root {
+		t.Fatalf("expected workspace %q to be open, got %q", root, got)
+	}
+	if jobs := view.jobService.List(); len(jobs) != 0 {
+		t.Fatalf("workspace open should not start hidden jobs, got %#v", jobs)
+	}
+	for _, line := range view.recentActivityLines(30) {
+		if strings.Contains(line, "Started job-") {
+			t.Fatalf("workspace open should not record hidden job startup, activity=%#v", view.recentActivityLines(30))
+		}
+	}
+}
+
 func TestOpenSingleFileOpensParentWorkspaceAndPreview(t *testing.T) {
 	root := t.TempDir()
 	filePath := filepath.Join(root, "notes.md")
