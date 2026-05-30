@@ -33,6 +33,45 @@ func TestDocumentMapItemText(t *testing.T) {
 	}
 }
 
+func TestDocumentMapTabAppearsOnlyWhenLandmarksExist(t *testing.T) {
+	_ = fynetest.NewTempApp(t)
+	session := editorSvc.NewSession()
+	tab := session.OpenFileWithSource("notes.txt", "notes.txt", "plain text")
+	view := &View{editorSession: session}
+	view.editor = &editorController{
+		openTabs:    map[string]*container.TabItem{},
+		tabIDs:      map[*container.TabItem]string{},
+		previews:    map[string]domain.FilePreview{},
+		textEditors: map[string]*textEditorBinding{},
+	}
+	preview := domain.FilePreview{RelPath: "notes.txt", Kind: domain.PreviewText, Encoding: "utf-8", Text: "plain text"}
+	content := view.newTextEditor(tab, preview, func(editorSvc.Tab, bool, bool) {})
+	tabs, ok := content.(*container.AppTabs)
+	if !ok {
+		t.Fatalf("expected app tabs editor, got %T", content)
+	}
+	editor, ok := view.textEditor(tab.ID)
+	if !ok {
+		t.Fatal("expected text editor binding")
+	}
+	if editor.tabs != tabs {
+		t.Fatal("expected binding to keep the editor tabs")
+	}
+	if appTabsContainsItem(editor.tabs, editor.mapTab) {
+		t.Fatal("expected document map tab to start hidden for text without landmarks")
+	}
+
+	editor.source.SetText("plain text\nTODO: wire startup\n")
+	if !appTabsContainsItem(editor.tabs, editor.mapTab) {
+		t.Fatal("expected document map tab to appear when landmarks are added")
+	}
+
+	editor.source.SetText("plain text only")
+	if appTabsContainsItem(editor.tabs, editor.mapTab) {
+		t.Fatal("expected document map tab to hide again when landmarks are removed")
+	}
+}
+
 func TestCompactEditorBreadcrumbsKeepsPathTail(t *testing.T) {
 	crumbs := editorSvc.BuildBreadcrumbs("a/b/c/d/e/file.go", "Workspace")
 	compact := compactEditorBreadcrumbs(crumbs)

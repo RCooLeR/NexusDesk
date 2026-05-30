@@ -23,8 +23,10 @@ type textEditorBinding struct {
 	tabState             *widget.Label
 	saveButton           *widget.Button
 	rendered             *previewPane
+	tabs                 *container.AppTabs
 	outlineStatus        *widget.Label
 	outlineList          *fyne.Container
+	mapTab               *container.TabItem
 	mapStatus            *widget.Label
 	mapList              *fyne.Container
 	diagnosticStatus     *widget.Label
@@ -53,6 +55,7 @@ func (b *textEditorBinding) applyTabState(tab editorSvc.Tab) {
 	b.rendered.SetText(tab.DraftText)
 	b.setOutline(tab.DraftText)
 	b.setDocumentMap(tab.DraftText)
+	b.syncDocumentMapTab(tab.DraftText)
 	b.setSyntax(tab.DraftText)
 	if b.onState != nil {
 		b.onState(tab, b.encodingDirty(), b.encodingExplicit)
@@ -142,6 +145,7 @@ func (v *View) newTextEditor(tab editorSvc.Tab, preview domain.FilePreview, onSt
 			rendered.SetText(next.DraftText)
 			binding.setOutline(next.DraftText)
 			binding.setDocumentMap(next.DraftText)
+			binding.syncDocumentMapTab(next.DraftText)
 			binding.setDiagnostics(next.DraftText)
 			binding.setSyntax(next.DraftText)
 			onState(next, binding.encodingDirty(), binding.encodingExplicit)
@@ -237,14 +241,20 @@ func (v *View) newTextEditor(tab editorSvc.Tab, preview domain.FilePreview, onSt
 	diagnosticsPanel := container.NewBorder(diagnosticStatus, nil, nil, nil, container.NewVScroll(diagnosticList))
 	syntaxDetails := container.NewVScroll(container.NewVBox(languageActions, syntaxPreview))
 	syntaxPanel := container.NewBorder(syntaxStatus, nil, nil, nil, container.NewHSplit(container.NewVScroll(syntaxGrid), syntaxDetails))
-	tabs := container.NewAppTabs(
+	mapTab := container.NewTabItem("Map", mapPanel)
+	items := []*container.TabItem{
 		container.NewTabItem("Source", sourcePanel),
 		container.NewTabItem("Preview", previewPanel),
 		container.NewTabItem("Highlight", syntaxPanel),
 		container.NewTabItem("Diagnostics", diagnosticsPanel),
 		container.NewTabItem("Outline", outlinePanel),
-		container.NewTabItem("Map", mapPanel),
-	)
+	}
+	if editorDocumentMapVisible(tab.RelPath, tab.DraftText) {
+		items = append(items, mapTab)
+	}
+	tabs := container.NewAppTabs(items...)
+	binding.tabs = tabs
+	binding.mapTab = mapTab
 	tabs.SetTabLocation(container.TabLocationTop)
 	return tabs
 }
@@ -371,6 +381,40 @@ func (b *textEditorBinding) setDocumentMap(text string) {
 		b.mapList.Add(button)
 	}
 	b.mapList.Refresh()
+}
+
+func (b *textEditorBinding) syncDocumentMapTab(text string) {
+	if b == nil || b.tabs == nil || b.mapTab == nil {
+		return
+	}
+	visible := editorDocumentMapVisible(b.relPath, text)
+	if visible == appTabsContainsItem(b.tabs, b.mapTab) {
+		return
+	}
+	if visible {
+		b.tabs.Append(b.mapTab)
+		return
+	}
+	if b.tabs.Selected() == b.mapTab {
+		b.tabs.SelectIndex(0)
+	}
+	b.tabs.Remove(b.mapTab)
+}
+
+func editorDocumentMapVisible(relPath string, text string) bool {
+	return len(editorSvc.BuildDocumentMap(relPath, text)) > 0
+}
+
+func appTabsContainsItem(tabs *container.AppTabs, item *container.TabItem) bool {
+	if tabs == nil || item == nil {
+		return false
+	}
+	for _, candidate := range tabs.Items {
+		if candidate == item {
+			return true
+		}
+	}
+	return false
 }
 
 func (b *textEditorBinding) setDiagnostics(text string) {
