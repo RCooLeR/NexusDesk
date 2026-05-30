@@ -131,9 +131,9 @@ Legend:
 - [x] P1 Keep tab dirty marker accurate during save.
 - [x] P1 Avoid rebuilding whole editor panel after save.
 - [x] P1 Preserve cursor after save.
-- [ ] P1 Preserve scroll after save.
+- [x] P1 Preserve scroll after save.
 - [x] P1 Add failure state and retry affordance for failed save.
-- [ ] P1 Add save performance test or benchmark.
+- [x] P1 Add save performance test or benchmark.
 
 ### 2.3 Diff and rollback performance
 

@@ -89,6 +89,7 @@ func TestRefreshEditorAfterSaveUpdatesBindingInPlace(t *testing.T) {
 	}
 	editor.source.CursorRow = 0
 	editor.source.CursorColumn = 2
+	source := editor.source
 	saved, ok := session.MarkDraftSaved(tab.ID)
 	if !ok {
 		t.Fatal("expected saved tab")
@@ -99,11 +100,38 @@ func TestRefreshEditorAfterSaveUpdatesBindingInPlace(t *testing.T) {
 	if item.Content != content {
 		t.Fatal("expected editor content to be updated in place after save")
 	}
+	if editor.source != source {
+		t.Fatal("expected source widget to be preserved so editor scroll state survives save")
+	}
 	if editor.source.Text != "new" || editor.status.Text != "Draft matches source." {
 		t.Fatalf("expected binding state to be refreshed, source=%q status=%q", editor.source.Text, editor.status.Text)
 	}
 	if editor.source.CursorRow != 0 || editor.source.CursorColumn != 2 {
 		t.Fatalf("expected cursor to be preserved, got row=%d column=%d", editor.source.CursorRow, editor.source.CursorColumn)
+	}
+}
+
+func BenchmarkRefreshEditorAfterSaveLargeDraft(b *testing.B) {
+	_ = fynetest.NewTempApp(b)
+	large := strings.Repeat("func item() { println(\"hello\") }\n", 5000)
+	session := editorSvc.NewSession()
+	tab := session.OpenFileWithSource("large.go", "large.go", large)
+	view := &View{editorSession: session}
+	view.editor = &editorController{
+		openTabs:    map[string]*container.TabItem{},
+		tabIDs:      map[*container.TabItem]string{},
+		previews:    map[string]domain.FilePreview{},
+		textEditors: map[string]*textEditorBinding{},
+	}
+	preview := domain.FilePreview{RelPath: "large.go", Kind: domain.PreviewText, Encoding: "utf-8", Text: large}
+	content := view.newTextEditor(tab, preview, func(editorSvc.Tab, bool, bool) {})
+	item := container.NewTabItem("large.go", content)
+	view.editor.openTabs[tab.ID] = item
+	view.editor.tabIDs[item] = tab.ID
+
+	b.ResetTimer()
+	for index := 0; index < b.N; index++ {
+		view.refreshEditorAfterSave(tab, preview)
 	}
 }
 
