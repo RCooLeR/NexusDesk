@@ -21,6 +21,11 @@ func New(settingsStore SettingsStore, client ChatClient, executor ToolExecutor) 
 }
 
 func (s *Service) Run(ctx context.Context, request Request, observe Observer) (Result, error) {
+	if ctx == nil {
+		ctx = context.Background()
+	}
+	runCtx, cancel := context.WithTimeout(ctx, EffectiveRunTimeout(request))
+	defer cancel()
 	request.Prompt = strings.TrimSpace(request.Prompt)
 	if request.Prompt == "" {
 		return Result{}, errors.New("agent prompt is required")
@@ -50,11 +55,14 @@ func (s *Service) Run(ctx context.Context, request Request, observe Observer) (R
 	}, routeInfo))
 
 	for iteration := 1; ; iteration++ {
+		if deadlineExceeded(runCtx) {
+			return s.timeoutResult(config, request, state, routeInfo, observe, iteration-1), nil
+		}
 		if iteration > backendEmergencyGuard {
-			return s.wrapUpStoppedRun(ctx, config, request, state, routeInfo, observe, iteration-1)
+			return s.wrapUpStoppedRun(runCtx, config, request, state, routeInfo, observe, iteration-1)
 		}
 		s.emit(observe, request, Event{Type: "model_request", Iteration: iteration, Message: "Asking model for the next step.", Plan: state.plan})
-		result, err := s.client.Chat(ctx, config, llm.ChatRequest{
+		result, err := s.client.Chat(runCtx, config, llm.ChatRequest{
 			SystemPrompt:   systemPrompt(),
 			Prompt:         runtimePrompt(request, state, tools),
 			Conversation:   request.Conversation,
@@ -63,6 +71,9 @@ func (s *Service) Run(ctx context.Context, request Request, observe Observer) (R
 			SourcePaths:    request.SourcePaths,
 		})
 		if err != nil {
+			if deadlineExceeded(runCtx) {
+				return s.timeoutResult(config, request, state, routeInfo, observe, iteration), nil
+			}
 			s.emit(observe, request, Event{Type: "error", Iteration: iteration, Message: "Model request failed.", Error: err.Error()})
 			return Result{}, err
 		}
@@ -88,13 +99,16 @@ func (s *Service) Run(ctx context.Context, request Request, observe Observer) (R
 			s.emit(observe, request, Event{Type: "final", Iteration: iteration, Message: limitText(message, maxEventBytes), Plan: state.plan})
 			return resultWithRoute(Result{Message: message, Model: result.Model, Plan: state.plan, ToolCalls: state.toolCalls, Iterations: iteration, Truncated: state.truncated}, routeInfo), nil
 		}
-		completed := s.executeTool(ctx, request, call, iteration, observe)
+		completed := s.executeTool(runCtx, request, call, iteration, observe)
 		state.toolCalls = append(state.toolCalls, completed)
 		observation := completed.Observation
 		if completed.Error != "" {
 			observation = "ERROR: " + completed.Error
 		}
 		state.appendHistory("Observation", observation)
+		if deadlineExceeded(runCtx) {
+			return s.timeoutResult(config, request, state, routeInfo, observe, iteration), nil
+		}
 	}
 }
 
@@ -157,6 +171,29 @@ func (s *Service) wrapUpStoppedRun(ctx context.Context, config llm.Config, reque
 	message = appendMutationVerification(message, state)
 	s.emit(observe, request, Event{Type: "stopped_finalized", Iteration: iterations, Message: limitText(message, maxEventBytes), Model: result.Model, Plan: state.plan})
 	return resultWithRoute(Result{Message: message, Model: result.Model, Plan: state.plan, ToolCalls: state.toolCalls, Iterations: iterations, Truncated: state.truncated, StopReason: stopReasonSafetyWrapped}, routeInfo), nil
+}
+
+func (s *Service) timeoutResult(config llm.Config, request Request, state runState, routeInfo agentRouteResolution, observe Observer, iterations int) Result {
+	state.plan = finishPlan(state.plan)
+	timeout := EffectiveRunTimeout(request)
+	message := "Agent run timed out."
+	if timeout > 0 {
+		message = "Agent run timed out after " + timeout.String() + "."
+	}
+	s.emit(observe, request, Event{Type: "stopped", Iteration: iterations, Message: message, Error: context.DeadlineExceeded.Error(), Plan: state.plan})
+	return resultWithRoute(Result{
+		Message:    message,
+		Model:      config.Model,
+		Plan:       state.plan,
+		ToolCalls:  state.toolCalls,
+		Iterations: iterations,
+		Truncated:  state.truncated,
+		StopReason: StopReasonTimeout,
+	}, routeInfo)
+}
+
+func deadlineExceeded(ctx context.Context) bool {
+	return ctx != nil && errors.Is(ctx.Err(), context.DeadlineExceeded)
 }
 
 func (s *Service) emit(observe Observer, request Request, event Event) {

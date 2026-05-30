@@ -5,6 +5,7 @@ import (
 	"errors"
 	"strings"
 	"testing"
+	"time"
 
 	"nexusdesk/internal/services/llm"
 	settingssvc "nexusdesk/internal/services/settings"
@@ -214,6 +215,69 @@ func TestRunFallsBackWhenRequestedModelRouteIsMissing(t *testing.T) {
 	}
 }
 
+func TestRunTimesOutAndPropagatesDeadlineToModel(t *testing.T) {
+	model := &deadlineAwareChatClient{}
+	service := New(fakeSettingsStore{}, model, ToolExecutorFunc(func(ctx context.Context, call ToolCall, request Request) (ToolResult, error) {
+		return ToolResult{}, errors.New("not used")
+	}))
+	result, err := service.Run(context.Background(), Request{Prompt: "Take too long", RunTimeout: time.Millisecond}, nil)
+	if err != nil {
+		t.Fatalf("Run returned error: %v", err)
+	}
+	if result.StopReason != StopReasonTimeout || !strings.Contains(result.Message, "timed out") {
+		t.Fatalf("expected timeout result, got %#v", result)
+	}
+	if !model.deadlineSeen {
+		t.Fatal("expected model call context to include a deadline")
+	}
+}
+
+func TestRunTimesOutAndPropagatesDeadlineToTools(t *testing.T) {
+	model := &fakeChatClient{messages: []string{`Action: read_context({"relPath":"README.md"})`}}
+	toolDeadlineSeen := false
+	service := New(fakeSettingsStore{}, model, ToolExecutorFunc(func(ctx context.Context, call ToolCall, request Request) (ToolResult, error) {
+		if _, ok := ctx.Deadline(); ok {
+			toolDeadlineSeen = true
+		}
+		<-ctx.Done()
+		return ToolResult{Name: call.Name, Args: call.Args, Error: ctx.Err().Error()}, ctx.Err()
+	}))
+	result, err := service.Run(context.Background(), Request{Prompt: "Use a slow tool", RunTimeout: time.Millisecond}, nil)
+	if err != nil {
+		t.Fatalf("Run returned error: %v", err)
+	}
+	if result.StopReason != StopReasonTimeout || len(result.ToolCalls) != 1 {
+		t.Fatalf("expected timeout result with tool audit, got %#v", result)
+	}
+	if !toolDeadlineSeen {
+		t.Fatal("expected tool context to include a deadline")
+	}
+}
+
+func TestRunRepeatedToolLoopUsesPackedHistoryAndSafetyGuard(t *testing.T) {
+	messages := make([]string, 0, backendEmergencyGuard+1)
+	for index := 0; index < backendEmergencyGuard; index++ {
+		messages = append(messages, `Action: read_context({"relPath":"README.md"})`)
+	}
+	messages = append(messages, `Final Answer: Stopped with enough evidence.`)
+	model := &fakeChatClient{messages: messages}
+	service := New(fakeSettingsStore{}, model, ToolExecutorFunc(func(ctx context.Context, call ToolCall, request Request) (ToolResult, error) {
+		return ToolResult{Name: call.Name, Args: call.Args, Observation: strings.Repeat("large observation ", 1200), Risk: "low"}, nil
+	}))
+	result, err := service.Run(context.Background(), Request{Prompt: "Loop until stopped"}, nil)
+	if err != nil {
+		t.Fatalf("Run returned error: %v", err)
+	}
+	if result.StopReason != stopReasonSafetyWrapped || result.Iterations != backendEmergencyGuard || len(result.ToolCalls) != backendEmergencyGuard {
+		t.Fatalf("expected safety guard after repeated tool loop, got %#v", result)
+	}
+	for index, prompt := range model.prompts {
+		if len(prompt) > 80_000 {
+			t.Fatalf("prompt %d was not history-packed: %d bytes", index, len(prompt))
+		}
+	}
+}
+
 type fakeSettingsStore struct {
 	settings settingssvc.Settings
 }
@@ -242,6 +306,16 @@ func (c *fakeChatClient) Chat(ctx context.Context, config llm.Config, request ll
 	message := c.messages[0]
 	c.messages = c.messages[1:]
 	return llm.ChatResult{Message: message, Model: config.Model}, nil
+}
+
+type deadlineAwareChatClient struct {
+	deadlineSeen bool
+}
+
+func (c *deadlineAwareChatClient) Chat(ctx context.Context, config llm.Config, request llm.ChatRequest) (llm.ChatResult, error) {
+	_, c.deadlineSeen = ctx.Deadline()
+	<-ctx.Done()
+	return llm.ChatResult{}, ctx.Err()
 }
 
 type fakeDescribingExecutor struct{}

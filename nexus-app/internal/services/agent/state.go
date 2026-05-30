@@ -3,17 +3,32 @@ package agent
 import (
 	"fmt"
 	"strings"
+	"time"
 	"unicode/utf8"
 )
 
 const (
 	maxObservationBytes     = 24_000
 	maxEventBytes           = 2_000
-	maxHistoryItems         = 10
+	maxHistoryTokens        = 4_096
+	approxCharsPerToken     = 4
 	backendEmergencyGuard   = 64
+	defaultRunTimeout       = 45 * time.Minute
+	StopReasonTimeout       = "timeout"
 	stopReasonSafetyGuard   = "safety_guard"
 	stopReasonSafetyWrapped = "safety_guard_finalized"
 )
+
+func DefaultRunTimeout() time.Duration {
+	return defaultRunTimeout
+}
+
+func EffectiveRunTimeout(request Request) time.Duration {
+	if request.RunTimeout > 0 {
+		return request.RunTimeout
+	}
+	return defaultRunTimeout
+}
 
 type runState struct {
 	plan      []PlanStep
@@ -30,8 +45,70 @@ func (s *runState) appendHistory(label string, content string) {
 	value, truncated := truncateUTF8(label+": "+content, maxObservationBytes, s.truncated)
 	s.truncated = truncated
 	s.history = append(s.history, value)
-	if len(s.history) > maxHistoryItems {
-		s.history = s.history[len(s.history)-maxHistoryItems:]
+	s.packHistory(maxHistoryTokens)
+}
+
+func (s *runState) packHistory(tokenBudget int) {
+	if tokenBudget <= 0 {
+		if len(s.history) > 0 {
+			s.truncated = true
+		}
+		s.history = nil
+		return
+	}
+	remaining := tokenBudget
+	packed := []string{}
+	dropped := 0
+	for index := len(s.history) - 1; index >= 0; index-- {
+		item := strings.TrimSpace(s.history[index])
+		if item == "" {
+			continue
+		}
+		tokens := approxTokenCount(item)
+		if tokens <= remaining {
+			packed = append(packed, item)
+			remaining -= tokens
+			continue
+		}
+		if len(packed) == 0 {
+			limited, truncated := truncateUTF8(item, remaining*approxCharsPerToken, true)
+			if strings.TrimSpace(limited) != "" {
+				packed = append(packed, limited)
+			}
+			s.truncated = s.truncated || truncated
+			dropped = index
+			break
+		}
+		dropped = index + 1
+		break
+	}
+	reverseStrings(packed)
+	if dropped > 0 {
+		s.truncated = true
+		note := fmt.Sprintf("History packing: omitted %d older observation(s) to fit the approximate %d-token context budget.", dropped, tokenBudget)
+		packed = append([]string{note}, packed...)
+	}
+	s.history = packed
+}
+
+func approxTokenCount(value string) int {
+	value = strings.TrimSpace(value)
+	if value == "" {
+		return 0
+	}
+	tokens := len(value) / approxCharsPerToken
+	if len(value)%approxCharsPerToken != 0 {
+		tokens++
+	}
+	if tokens < 1 {
+		return 1
+	}
+	return tokens
+}
+
+func reverseStrings(values []string) {
+	for left, right := 0, len(values)-1; left < right; left, right = left+1, right-1 {
+		values[left], values[right] = values[right], values[left]
 	}
 }
 

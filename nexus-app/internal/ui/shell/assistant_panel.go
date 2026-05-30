@@ -1399,10 +1399,15 @@ func (v *View) runAgentRequest(text string, response *widget.RichText, send *wid
 			if result.RouteWarning != "" {
 				v.addActivity(result.RouteWarning)
 			}
+			status := jobsSvc.StatusSuccess
 			message := fmt.Sprintf("Agent response completed after %d iteration(s).", result.Iterations)
+			if result.StopReason == agentSvc.StopReasonTimeout {
+				status = jobsSvc.StatusTimedOut
+				message = fmt.Sprintf("Agent request timed out after %s.", formatAgentRunTimeout(agentSvc.EffectiveRunTimeout(request)))
+			}
 			v.addActivity(message)
-			v.jobService.Finish(job.ID, jobsSvc.StatusSuccess, message, nil)
-			v.persistAgentRun(job.ID, request, result, "success", result.Message, job.StartedAt)
+			v.jobService.Finish(job.ID, status, message, nil)
+			v.persistAgentRun(job.ID, request, result, string(status), result.Message, job.StartedAt)
 			v.refreshJobs()
 		})
 	}()
@@ -1631,7 +1636,7 @@ func assistantAgentRunningStatusLine(jobID string, request agentSvc.Request) str
 		route = "global fallback"
 	}
 	sourceCount := len(request.SourcePaths)
-	return fmt.Sprintf("Running: Agent job %s. Route: %s. Sources: %d. Writes: %t. Task tool: %t.", jobID, route, sourceCount, request.ApproveWrites, request.ApproveShell)
+	return fmt.Sprintf("Running: Agent job %s. Route: %s. Sources: %d. Writes: %t. Task tool: %t. Timeout: %s.", jobID, route, sourceCount, request.ApproveWrites, request.ApproveShell, formatAgentRunTimeout(agentSvc.EffectiveRunTimeout(request)))
 }
 
 func assistantAgentResultStatusLine(jobID string, result agentSvc.Result) string {
@@ -1651,6 +1656,19 @@ func assistantAgentResultStatusLine(jobID string, result agentSvc.Result) string
 		line += " Route warning: " + result.RouteWarning
 	}
 	return line
+}
+
+func formatAgentRunTimeout(timeout time.Duration) string {
+	if timeout <= 0 {
+		return "not set"
+	}
+	if timeout%time.Minute == 0 {
+		return fmt.Sprintf("%dm", int(timeout/time.Minute))
+	}
+	if timeout%time.Second == 0 {
+		return fmt.Sprintf("%ds", int(timeout/time.Second))
+	}
+	return timeout.String()
 }
 
 func firstNonEmpty(values ...string) string {

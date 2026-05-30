@@ -34,6 +34,8 @@ bin/
 coverage.out
 coverage/
 *.test
+.gocache/
+.gotmp/
 nexus-app/bin/
 nexus-app/build/
 nexus-app/*.exe

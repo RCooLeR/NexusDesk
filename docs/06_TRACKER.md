@@ -191,13 +191,13 @@ Legend:
 
 ### 3.2 Agent bounds and context
 
-- [ ] P1 Add default wall-clock limit for agent runs.
-- [ ] P1 Make wall-clock limit configurable per request or setting.
-- [ ] P1 Propagate context deadline through model calls and tools.
-- [ ] P1 Surface timeout stop reason in UI.
-- [ ] P1 Persist timeout stop reason in audit.
-- [ ] P1 Replace fixed history count with token-aware packing.
-- [ ] P1 Add stress test for repeated tool-request loop.
+- [x] P1 Add default wall-clock limit for agent runs.
+- [x] P1 Make wall-clock limit configurable per request or setting.
+- [x] P1 Propagate context deadline through model calls and tools.
+- [x] P1 Surface timeout stop reason in UI.
+- [x] P1 Persist timeout stop reason in audit.
+- [x] P1 Replace fixed history count with token-aware packing.
+- [x] P1 Add stress test for repeated tool-request loop.
 
 ### 3.3 Job logs
 

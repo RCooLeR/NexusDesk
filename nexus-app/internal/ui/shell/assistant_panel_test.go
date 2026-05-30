@@ -581,7 +581,7 @@ func TestAssistantAgentStatusLinesSummarizeJobSafetyAndResult(t *testing.T) {
 		ApproveWrites: true,
 		ApproveShell:  false,
 	})
-	for _, expected := range []string{"Running: Agent job job-1.", "Route: main-coding", "Sources: 2", "Writes: true", "Task tool: false"} {
+	for _, expected := range []string{"Running: Agent job job-1.", "Route: main-coding", "Sources: 2", "Writes: true", "Task tool: false", "Timeout: 45m"} {
 		if !strings.Contains(running, expected) {
 			t.Fatalf("expected %q in running status %q", expected, running)
 		}

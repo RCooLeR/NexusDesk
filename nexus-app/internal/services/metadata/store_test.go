@@ -451,6 +451,7 @@ func TestSaveAndListAgentRunsAndToolRuns(t *testing.T) {
 		ModelRouteID: "main-coding",
 		ModelRoute:   "Main coding model",
 		Iterations:   2,
+		StopReason:   "timeout",
 		Plan:         []AgentPlanStep{{Step: "Inspect", Status: "completed"}},
 		SourcePaths:  []string{"README.md"},
 		StartedAt:    started,
@@ -479,7 +480,7 @@ func TestSaveAndListAgentRunsAndToolRuns(t *testing.T) {
 	if err != nil {
 		t.Fatalf("ListAgentRuns returned error: %v", err)
 	}
-	if len(runs) != 1 || runs[0].Prompt != "Review project" || runs[0].Model != "qwen3-coder:30b" || runs[0].ModelRoute != "Main coding model" || len(runs[0].Plan) != 1 || len(runs[0].SourcePaths) != 1 {
+	if len(runs) != 1 || runs[0].Prompt != "Review project" || runs[0].Model != "qwen3-coder:30b" || runs[0].ModelRoute != "Main coding model" || runs[0].StopReason != "timeout" || len(runs[0].Plan) != 1 || len(runs[0].SourcePaths) != 1 {
 		t.Fatalf("unexpected agent runs: %#v", runs)
 	}
 	tools, err := store.ListToolRuns(agentRun.ID)

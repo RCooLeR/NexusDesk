@@ -3,6 +3,7 @@ package agent
 
 import (
 	"context"
+	"time"
 
 	"nexusdesk/internal/services/llm"
 	settingssvc "nexusdesk/internal/services/settings"
@@ -80,6 +81,7 @@ type Request struct {
 	ContextRelPath string
 	ContextContent string
 	SourcePaths    []string
+	RunTimeout     time.Duration
 }
 
 type Result struct {
