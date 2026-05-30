@@ -2,8 +2,16 @@ package workspace
 
 import (
 	"errors"
+	"fmt"
 	"os"
 	"strings"
+)
+
+const (
+	writeDiffMaxTotalLines = 5000
+	writeDiffMaxCells      = 2_000_000
+	writeDiffContextLines  = 3
+	writeDiffChangedLimit  = 120
 )
 
 func readExistingWriteTarget(absTarget string) (string, string, error) {
@@ -34,7 +42,9 @@ func buildUnifiedDiff(relPath string, before string, after string) string {
 	builder.WriteString("\n+++ b/")
 	builder.WriteString(relPath)
 	builder.WriteString("\n")
-	for _, line := range lcsDiffLines(splitDiffLines(before), splitDiffLines(after)) {
+	beforeLines := splitDiffLines(before)
+	afterLines := splitDiffLines(after)
+	for _, line := range diffLines(beforeLines, afterLines) {
 		builder.WriteString(line)
 		builder.WriteString("\n")
 	}
@@ -57,6 +67,73 @@ func buildAppendDiff(relPath string, appended string) string {
 		builder.WriteString("+\n")
 	}
 	return builder.String()
+}
+
+func diffLines(beforeLines []string, afterLines []string) []string {
+	if useBoundedDiff(beforeLines, afterLines) {
+		return boundedHunkDiffLines(beforeLines, afterLines)
+	}
+	return lcsDiffLines(beforeLines, afterLines)
+}
+
+func useBoundedDiff(beforeLines []string, afterLines []string) bool {
+	if len(beforeLines)+len(afterLines) > writeDiffMaxTotalLines {
+		return true
+	}
+	return len(beforeLines) > 0 && len(afterLines) > 0 && len(beforeLines) > writeDiffMaxCells/len(afterLines)
+}
+
+func boundedHunkDiffLines(beforeLines []string, afterLines []string) []string {
+	prefix := commonPrefixLines(beforeLines, afterLines)
+	suffix := commonSuffixLines(beforeLines, afterLines, prefix)
+	beforeChangeEnd := len(beforeLines) - suffix
+	afterChangeEnd := len(afterLines) - suffix
+	startContext := maxDiffInt(0, prefix-writeDiffContextLines)
+	endContext := minDiffInt(len(beforeLines), beforeChangeEnd+writeDiffContextLines)
+	lines := []string{
+		fmt.Sprintf("@@ bounded diff: large input, %d removed line(s), %d added line(s) @@", beforeChangeEnd-prefix, afterChangeEnd-prefix),
+	}
+	for index := startContext; index < prefix; index++ {
+		lines = append(lines, " "+beforeLines[index])
+	}
+	lines = appendChangedDiffLines(lines, "-", beforeLines[prefix:beforeChangeEnd])
+	lines = appendChangedDiffLines(lines, "+", afterLines[prefix:afterChangeEnd])
+	for index := beforeChangeEnd; index < endContext; index++ {
+		lines = append(lines, " "+beforeLines[index])
+	}
+	return lines
+}
+
+func appendChangedDiffLines(lines []string, prefix string, changed []string) []string {
+	limit := len(changed)
+	if limit > writeDiffChangedLimit {
+		limit = writeDiffChangedLimit
+	}
+	for index := 0; index < limit; index++ {
+		lines = append(lines, prefix+changed[index])
+	}
+	if len(changed) > limit {
+		lines = append(lines, prefix+fmt.Sprintf("... %d more line(s) omitted by bounded diff", len(changed)-limit))
+	}
+	return lines
+}
+
+func commonPrefixLines(beforeLines []string, afterLines []string) int {
+	limit := minDiffInt(len(beforeLines), len(afterLines))
+	index := 0
+	for index < limit && beforeLines[index] == afterLines[index] {
+		index++
+	}
+	return index
+}
+
+func commonSuffixLines(beforeLines []string, afterLines []string, prefix int) int {
+	limit := minDiffInt(len(beforeLines)-prefix, len(afterLines)-prefix)
+	count := 0
+	for count < limit && beforeLines[len(beforeLines)-1-count] == afterLines[len(afterLines)-1-count] {
+		count++
+	}
+	return count
 }
 
 func lcsDiffLines(beforeLines []string, afterLines []string) []string {
@@ -103,6 +180,20 @@ func lcsDiffLines(beforeLines []string, afterLines []string) []string {
 		right++
 	}
 	return diff
+}
+
+func minDiffInt(left int, right int) int {
+	if left < right {
+		return left
+	}
+	return right
+}
+
+func maxDiffInt(left int, right int) int {
+	if left > right {
+		return left
+	}
+	return right
 }
 
 func splitDiffLines(content string) []string {

@@ -4,6 +4,7 @@ import (
 	"encoding/binary"
 	"os"
 	"path/filepath"
+	"strconv"
 	"strings"
 	"testing"
 )
@@ -48,6 +49,34 @@ func TestApplyFileWriteUpdatesTextFileAndCreatesRollback(t *testing.T) {
 	}
 	if len(rollbacks) != 1 || rollbacks[0].ID != proposal.RollbackID {
 		t.Fatalf("expected committed rollback, got %#v", rollbacks)
+	}
+}
+
+func TestBuildUnifiedDiffUsesBoundedFallbackForLargeLineCount(t *testing.T) {
+	beforeLines := make([]string, 0, 3200)
+	afterLines := make([]string, 0, 3200)
+	for index := 0; index < 3200; index++ {
+		line := "line-" + strconv.Itoa(index)
+		beforeLines = append(beforeLines, line)
+		afterLines = append(afterLines, line)
+	}
+	afterLines[1600] = "line-1600 changed"
+
+	diff := buildUnifiedDiff("docs/large.txt", strings.Join(beforeLines, "\n"), strings.Join(afterLines, "\n"))
+
+	for _, expected := range []string{
+		"@@ bounded diff: large input, 1 removed line(s), 1 added line(s) @@",
+		" line-1599",
+		"-line-1600",
+		"+line-1600 changed",
+		" line-1601",
+	} {
+		if !strings.Contains(diff, expected) {
+			t.Fatalf("expected bounded diff to contain %q:\n%s", expected, diff)
+		}
+	}
+	if len(diff) > 2000 {
+		t.Fatalf("expected bounded diff to stay compact, got %d bytes", len(diff))
 	}
 }
 
