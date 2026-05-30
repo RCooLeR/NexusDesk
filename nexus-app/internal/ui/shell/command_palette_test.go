@@ -73,6 +73,7 @@ func TestCommandPaletteIncludesSafeAgentGuide(t *testing.T) {
 	foundSmokeChecklist := false
 	foundAppDataCleanup := false
 	foundReleaseHygiene := false
+	foundCheckUpdates := false
 	foundPackageOwnership := false
 	foundContributor := false
 	for _, command := range commands {
@@ -117,6 +118,11 @@ func TestCommandPaletteIncludesSafeAgentGuide(t *testing.T) {
 				t.Fatalf("unexpected release-hygiene command: %#v", command)
 			}
 			foundReleaseHygiene = true
+		case "help.check_updates":
+			if command.Title != "Check for Updates" || command.Group != "Help" || command.Run == nil {
+				t.Fatalf("unexpected check-updates command: %#v", command)
+			}
+			foundCheckUpdates = true
 		case "help.package_ownership":
 			if command.Title != "Internal Package Ownership" || command.Group != "Help" || command.Run == nil {
 				t.Fatalf("unexpected package-ownership command: %#v", command)
@@ -129,8 +135,8 @@ func TestCommandPaletteIncludesSafeAgentGuide(t *testing.T) {
 			foundContributor = true
 		}
 	}
-	if !foundProviderSetup || !foundSafeAgent || !foundSampleWorkflow || !foundBetaFeedback || !foundKnownLimitations || !foundSmokeChecklist || !foundAppDataCleanup || !foundReleaseHygiene || !foundPackageOwnership || !foundContributor {
-		t.Fatalf("missing help commands: provider_setup=%t safe_agent=%t sample_workflow=%t beta_feedback=%t known_limitations=%t smoke_checklist=%t app_data_cleanup=%t release_hygiene=%t package_ownership=%t contributor=%t in %#v", foundProviderSetup, foundSafeAgent, foundSampleWorkflow, foundBetaFeedback, foundKnownLimitations, foundSmokeChecklist, foundAppDataCleanup, foundReleaseHygiene, foundPackageOwnership, foundContributor, commands)
+	if !foundProviderSetup || !foundSafeAgent || !foundSampleWorkflow || !foundBetaFeedback || !foundKnownLimitations || !foundSmokeChecklist || !foundAppDataCleanup || !foundReleaseHygiene || !foundCheckUpdates || !foundPackageOwnership || !foundContributor {
+		t.Fatalf("missing help commands: provider_setup=%t safe_agent=%t sample_workflow=%t beta_feedback=%t known_limitations=%t smoke_checklist=%t app_data_cleanup=%t release_hygiene=%t check_updates=%t package_ownership=%t contributor=%t in %#v", foundProviderSetup, foundSafeAgent, foundSampleWorkflow, foundBetaFeedback, foundKnownLimitations, foundSmokeChecklist, foundAppDataCleanup, foundReleaseHygiene, foundCheckUpdates, foundPackageOwnership, foundContributor, commands)
 	}
 }
 

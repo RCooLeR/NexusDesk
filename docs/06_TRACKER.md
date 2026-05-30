@@ -477,11 +477,11 @@ Legend:
 
 ### 6.6 Update visibility
 
-- [ ] P2 Add Help > Check for updates.
-- [ ] P2 Show available update non-modally.
-- [ ] P2 Do not auto-download.
-- [ ] P2 Do not auto-install.
-- [ ] P2 Add release notes link.
+- [x] P2 Add Help > Check for updates. Evidence: Help menu and command palette expose `Check for Updates`, opening a normal Updates guide tab with current version/commit/build-date (`go test ./internal/services/userguide ./internal/ui/shell -run "UpdateCheck|MainMenuHelpGroupExposesUpdateCheck|CommandPaletteIncludesSafeAgentGuide"`).
+- [x] P2 Show available update non-modally. Evidence: update guidance opens through `addPlaceholderTab("Updates", ...)` instead of a blocking dialog, so users can compare release notes without interrupting active work.
+- [x] P2 Do not auto-download. Evidence: `UpdateCheckGuide` explicitly states NexusDesk does not download update artifacts automatically and exposes only manual verification guidance.
+- [x] P2 Do not auto-install. Evidence: `UpdateCheckGuide` explicitly states NexusDesk does not install updates automatically and routes users through release notes plus manifest/SBOM/provenance verification.
+- [x] P2 Add release notes link. Evidence: update guidance points users to `docs/releases/beta-release-notes.md`, and the command palette detail advertises release notes as part of the update-check path.
 
 ## Phase 7: Private Beta
 

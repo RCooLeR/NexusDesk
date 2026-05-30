@@ -49,6 +49,7 @@ func (v *View) mainMenu() *fyne.MainMenu {
 	smokeChecklistGuide := fyne.NewMenuItemWithIcon("Clean-Machine Smoke Checklist", theme.ConfirmIcon(), v.openSmokeChecklistGuideTab)
 	appDataCleanupGuide := fyne.NewMenuItemWithIcon("App Data & Uninstall Cleanup", theme.StorageIcon(), v.openAppDataCleanupGuideTab)
 	releaseHygieneGuide := fyne.NewMenuItemWithIcon("Release Hygiene & Antivirus Notes", theme.WarningIcon(), v.openReleaseHygieneGuideTab)
+	checkUpdates := fyne.NewMenuItemWithIcon("Check for Updates", theme.ViewRefreshIcon(), v.openUpdateCheckTab)
 	packageOwnershipGuide := fyne.NewMenuItemWithIcon("Internal Package Ownership", theme.ListIcon(), v.openPackageOwnershipGuideTab)
 	contributorGuide := fyne.NewMenuItemWithIcon("Contributor Setup & Standards", theme.DocumentIcon(), v.openContributorGuideTab)
 	about := fyne.NewMenuItemWithIcon("About Nexus", theme.InfoIcon(), v.showAbout)
@@ -96,7 +97,7 @@ func (v *View) mainMenu() *fyne.MainMenu {
 			fyne.NewMenuItem("Refresh Activity", func() { v.activityLog.Refresh() }),
 			menuItem("Command Palette", shortcutCommandPalette(), v.openCommandPaletteDialog),
 		),
-		fyne.NewMenu("Help", providerSetupGuide, safeAgentGuide, sampleWorkflowGuide, betaFeedbackGuide, knownLimitationsGuide, smokeChecklistGuide, appDataCleanupGuide, releaseHygieneGuide, packageOwnershipGuide, contributorGuide, fyne.NewMenuItemSeparator(), about),
+		fyne.NewMenu("Help", providerSetupGuide, safeAgentGuide, sampleWorkflowGuide, betaFeedbackGuide, knownLimitationsGuide, smokeChecklistGuide, appDataCleanupGuide, releaseHygieneGuide, checkUpdates, packageOwnershipGuide, contributorGuide, fyne.NewMenuItemSeparator(), about),
 	)
 }
 
@@ -148,6 +149,11 @@ func (v *View) openAppDataCleanupGuideTab() {
 
 func (v *View) openReleaseHygieneGuideTab() {
 	v.addPlaceholderTab("Release Hygiene", userGuideSvc.ReleaseHygieneMarkdown())
+}
+
+func (v *View) openUpdateCheckTab() {
+	info := buildinfo.Current()
+	v.addPlaceholderTab("Updates", userGuideSvc.UpdateCheckMarkdown(info.Version, info.Commit, info.BuildDate))
 }
 
 func (v *View) openPackageOwnershipGuideTab() {

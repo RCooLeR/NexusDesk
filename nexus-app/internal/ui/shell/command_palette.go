@@ -232,6 +232,13 @@ func (v *View) commandPaletteActions() []commandPaletteAction {
 			Run:    v.openReleaseHygieneGuideTab,
 		},
 		{
+			ID:     "help.check_updates",
+			Title:  "Check for Updates",
+			Detail: "Open non-modal update guidance with current build identity, release notes, and no auto-download or auto-install behavior.",
+			Group:  "Help",
+			Run:    v.openUpdateCheckTab,
+		},
+		{
 			ID:     "help.package_ownership",
 			Title:  "Internal Package Ownership",
 			Detail: "Open contributor guidance for package boundaries, service ownership, UI responsibilities, and safety rules.",

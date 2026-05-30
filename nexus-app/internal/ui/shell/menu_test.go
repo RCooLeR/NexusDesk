@@ -48,6 +48,22 @@ func TestMainMenuRunGroupExposesTaskSurfaces(t *testing.T) {
 	}
 }
 
+func TestMainMenuHelpGroupExposesUpdateCheck(t *testing.T) {
+	view := &View{state: NewState()}
+	menu := view.mainMenu()
+	help := menuByLabel(menu, "Help")
+	if help == nil {
+		t.Fatal("expected Help menu")
+	}
+	labels := make([]string, 0, len(help.Items))
+	for _, item := range help.Items {
+		labels = append(labels, item.Label)
+	}
+	if !containsString(labels, "Check for Updates") {
+		t.Fatalf("expected Help menu to include Check for Updates, got %#v", labels)
+	}
+}
+
 func menuByLabel(menu *fyne.MainMenu, label string) *fyne.Menu {
 	for _, item := range menu.Items {
 		if item.Label == label {
