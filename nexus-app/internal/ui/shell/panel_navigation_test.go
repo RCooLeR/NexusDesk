@@ -3,9 +3,12 @@ package shell
 import (
 	"testing"
 
+	"fyne.io/fyne/v2"
 	"fyne.io/fyne/v2/container"
 	fynetest "fyne.io/fyne/v2/test"
 	"fyne.io/fyne/v2/widget"
+
+	uiTheme "nexusdesk/internal/ui/theme"
 )
 
 func TestSelectBottomTabFindsNestedTabs(t *testing.T) {
@@ -119,6 +122,33 @@ func TestToolPanelOffsetIsRememberedPerTool(t *testing.T) {
 	view.expandToolPanelFor("Git")
 	if view.workbenchSplit.Offset != 0.19 {
 		t.Fatalf("expected remembered Git width, got %v", view.workbenchSplit.Offset)
+	}
+}
+
+func TestToolPanelResizeHandleUsesDensityHitZoneAndStoresOffset(t *testing.T) {
+	_ = fynetest.NewTempApp(t)
+	view := &View{
+		workbenchSplit:        container.NewHSplit(widget.NewLabel("tools"), widget.NewLabel("editor")),
+		activeToolPanelKey:    "Search",
+		toolPanelOffsetByTool: map[string]float64{},
+	}
+	view.workbenchSplit.Resize(fyne.NewSize(1000, 500))
+	view.workbenchSplit.SetOffset(0.24)
+	handle := newToolPanelResizeHandle(view)
+
+	if handle.MinSize().Width != uiTheme.DensityForMode(uiTheme.DensityCompact).ResizeHandleHitWidth {
+		t.Fatalf("expected density hit width, got %v", handle.MinSize().Width)
+	}
+	handle.Dragged(&fyne.DragEvent{Dragged: fyne.NewDelta(100, 0)})
+	if view.workbenchSplit.Offset < 0.339 || view.workbenchSplit.Offset > 0.341 {
+		t.Fatalf("expected drag to widen tool panel, got %v", view.workbenchSplit.Offset)
+	}
+	if view.toolPanelOffsetByTool["Search"] < 0.339 || view.toolPanelOffsetByTool["Search"] > 0.341 {
+		t.Fatalf("expected offset to be remembered, got %#v", view.toolPanelOffsetByTool)
+	}
+	handle.Dragged(&fyne.DragEvent{Dragged: fyne.NewDelta(1000, 0)})
+	if view.workbenchSplit.Offset != maxToolPanelOffset {
+		t.Fatalf("expected max clamp, got %v", view.workbenchSplit.Offset)
 	}
 }
 

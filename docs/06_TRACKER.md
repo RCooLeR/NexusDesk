@@ -287,7 +287,7 @@ Legend:
 - [x] P1 Add keyboard navigation.
 - [x] P1 Remember active tool per workspace.
 - [x] P1 Remember width per tool window. (The dock split stores/restores validated offsets by active tool key so each tool reopens at its last useful width.)
-- [ ] P1 Add resize handle with enlarged hit zone.
+- [x] P1 Add resize handle with enlarged hit zone. Evidence: the left dock now wraps tool content with a draggable edge handle using the density `ResizeHandleHitWidth` token, clamps offsets to the existing safe range, and remembers per-tool widths; covered by `TestToolPanelResizeHandleUsesDensityHitZoneAndStoresOffset`.
 - [x] P1 Add tests for rail state mapping.
 
 ### 4.4 Center editor UI
