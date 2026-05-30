@@ -214,6 +214,14 @@ Workspace-local rules:
 - Mutations must write enough metadata for audit, rollback, or recovery.
 - Metadata corruption recovery must preserve the damaged file and explain the action.
 
+Rollback retention policy:
+
+- Workspace rollback metadata is stored in `.nexusdesk/rollbacks/log.json`; backup payloads are stored under `.nexusdesk/rollbacks/<rollback-id>/`.
+- The rollback index retains the newest 120 committed records. Applied records remain in the index until normal rollover so the user can see what happened.
+- A single rollback entry is capped at 32 MiB before snapshotting. Larger targets must fail before mutation instead of creating a partial rollback.
+- The Rollbacks panel reports record counts, active/applied counts, path snapshot counts, stored bytes, and original source bytes so users can decide when workspace cleanup is needed.
+- Physical pruning, content-addressed storage, and deduplication are planned follow-ups; until those land, diagnostics must not claim that old payload directories are automatically reclaimed.
+
 ### 5.2 User-level storage
 
 User-level storage belongs under the OS user config directory, using a NexusDesk-specific folder.
