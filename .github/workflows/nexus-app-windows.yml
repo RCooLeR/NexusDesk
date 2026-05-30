@@ -4,12 +4,14 @@ on:
   workflow_dispatch:
   push:
     paths:
+      - ".gitattributes"
       - ".github/workflows/nexus-app-windows.yml"
       - "nexus-app/**"
       - "docs/**"
       - "tracker.md"
   pull_request:
     paths:
+      - ".gitattributes"
       - ".github/workflows/nexus-app-windows.yml"
       - "nexus-app/**"
       - "docs/**"
