@@ -508,7 +508,7 @@ Legend:
 - [ ] P0 Run performance review.
 - [ ] P0 Run accessibility review.
 - [x] P0 Verify no hidden workspace-open side effects. Evidence: workspace-open policy tests allow only metadata/history/audit/approval/navigator/pin refresh actions, reject slow/heavy workflow kinds, and `TestOpenWorkspaceDoesNotStartHiddenJobs` verifies opening a workspace does not create hidden jobs or job-start activity (`go test ./internal/ui/shell -run "WorkspaceOpen|OpenWorkspace"`).
-- [ ] P0 Verify no known file data-loss path.
+- [x] P0 Verify no known file data-loss path. Evidence: focused file-safety matrix passed for safe write proposals, rollback creation/application, unsafe target rejection, full safe text reads, partial-preview save blocking, ambiguous-encoding save blocking, encoding state tracking, save-state visibility, and in-place post-save refresh (`go test ./internal/services/workspace ./internal/ui/shell -run "ApplyFileWrite|ApplyRollback|PreviewFileWrite|PreviewFileAppend|ReadTextFile|EditorSaveAllowed|TextEditorBinding|EditorSaveState|RefreshEditorAfterSave"`).
 - [ ] P0 Verify no known plaintext secret storage path.
 - [ ] P0 Verify release artifacts and hashes.
 - [ ] P0 Verify docs match shipped behavior.
