@@ -77,34 +77,18 @@ type View struct {
 	workbenchSplit          *container.Split
 	bottomPanelCollapsed    bool
 	search                  *searchController
-	problemResults          *fyne.Container
-	problemStatus           *widget.Label
+	toolPanelWidgets
 	data                    *dataController
 	compatibilityImportMu   sync.Mutex
 	compatibilityImportByWS map[string]bool
 	operations              *operationsController
 	git                     *gitController
 	gitFileBadges           map[string]string
-	taskResults             *fyne.Container
-	taskStatus              *widget.Label
-	taskOutput              *widget.Entry
 	jobs                    *jobsController
 	rollbacks               *rollbackController
 	artifacts               *artifactsController
-	chatHistoryResults      *fyne.Container
-	chatHistoryStatus       *widget.Label
-	chatHistoryDetail       *widget.Entry
-	historyResults          *fyne.Container
-	historyStatus           *widget.Label
-	historyDetail           *widget.Entry
-	agentAuditResults       *fyne.Container
-	agentAuditStatus        *widget.Label
-	agentAuditDetail        *widget.Entry
 	agentAudit              *agentAuditController
 	diagnostics             *diagnosticsController
-	approvalResults         *fyne.Container
-	approvalStatus          *widget.Label
-	accessStatus            *widget.Label
 	approvals               *approvalsController
 	assistant               *assistantController
 	diagnosticsProber       diagnosticsProber
@@ -135,22 +119,6 @@ func NewWithStartupStatus(window fyne.Window, startupStatus startupSvc.Status) *
 	if err != nil {
 		recentWorkspaceStore = recentWorkspacesSvc.NewFileStore("nexus-recent-workspaces.json")
 	}
-	taskOutput := widget.NewMultiLineEntry()
-	taskOutput.TextStyle = fyne.TextStyle{Monospace: true}
-	taskOutput.Wrapping = fyne.TextWrapOff
-	taskOutput.Disable()
-	chatHistoryDetail := widget.NewMultiLineEntry()
-	chatHistoryDetail.TextStyle = fyne.TextStyle{Monospace: true}
-	chatHistoryDetail.Wrapping = fyne.TextWrapWord
-	chatHistoryDetail.Disable()
-	historyDetail := widget.NewMultiLineEntry()
-	historyDetail.TextStyle = fyne.TextStyle{Monospace: true}
-	historyDetail.Wrapping = fyne.TextWrapWord
-	historyDetail.Disable()
-	agentAuditDetail := widget.NewMultiLineEntry()
-	agentAuditDetail.TextStyle = fyne.TextStyle{Monospace: true}
-	agentAuditDetail.Wrapping = fyne.TextWrapWord
-	agentAuditDetail.Disable()
 	workspaceService := workspaceSvc.New()
 	llmClient := llmSvc.NewClient()
 	assistantService := assistantSvc.New(settingsStore, workspaceService, llmClient)
@@ -202,34 +170,12 @@ func NewWithStartupStatus(window fyne.Window, startupStatus startupSvc.Status) *
 		activityList:            newActivityList([]string{"Ready."}),
 		activityText:            "Ready.",
 		activityLines:           []string{"Ready."},
-		problemResults:          container.NewVBox(widget.NewLabel("Run a scan to inspect lightweight workspace problems.")),
-		problemStatus:           widget.NewLabel("No problem scan yet."),
+		toolPanelWidgets:        newToolPanelWidgets(),
 		compatibilityImportByWS: map[string]bool{},
 		gitFileBadges:           map[string]string{},
-		taskResults:             container.NewVBox(widget.NewLabel("Discover workspace tasks to run tests, scripts, or Compose checks.")),
-		taskStatus:              widget.NewLabel("No tasks discovered."),
-		taskOutput:              taskOutput,
-		chatHistoryResults: container.NewVBox(
-			widget.NewLabel("Open a workspace to search persisted chat messages."),
-		),
-		chatHistoryStatus: widget.NewLabel("Chat history has not been loaded."),
-		chatHistoryDetail: chatHistoryDetail,
-		historyResults: container.NewVBox(
-			widget.NewLabel("Open a workspace to inspect unified history."),
-		),
-		historyStatus: widget.NewLabel("History has not been loaded."),
-		historyDetail: historyDetail,
-		agentAuditResults: container.NewVBox(
-			widget.NewLabel("Open a workspace to inspect persisted agent runs."),
-		),
-		agentAuditStatus:    widget.NewLabel("Agent audit has not been loaded."),
-		agentAuditDetail:    agentAuditDetail,
-		approvalResults:     container.NewVBox(widget.NewLabel("Open a workspace to inspect approval records.")),
-		approvalStatus:      widget.NewLabel("Approval records have not been loaded."),
-		accessStatus:        widget.NewLabel("Full project access: inactive"),
-		diagnosticsProber:   llmClient,
-		startupStatus:       startupStatus,
-		performanceRecorder: perfSvc.NewRecorder(64),
+		diagnosticsProber:       llmClient,
+		startupStatus:           startupStatus,
+		performanceRecorder:     perfSvc.NewRecorder(64),
 	}
 	view.editor = newEditorController(view, welcome.ID, welcomeItem)
 	view.search = newSearchController(view)

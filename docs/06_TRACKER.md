@@ -257,7 +257,7 @@ Legend:
 - [x] P1 Extract jobs controller. Evidence: `jobs_panel.go` defines `jobsController` with job list/status/output controls and tests cover initial state, empty refresh, and missing output handling.
 - [x] P1 Extract diagnostics controller. Evidence: `diagnostics_panel.go` defines `diagnosticsController` with panel state and refresh/export actions, with diagnostics controller tests covering initial and workspace-required states.
 - [x] P1 Extract approvals/audit controller. Evidence: approvals and agent-audit panels now have dedicated `approvalsController` and `agentAuditController` ownership, with `View` retaining thin compatibility wrappers for workspace-open refresh paths (`go test ./internal/ui/shell -run "Approval|AgentAudit|Audit"`).
-- [ ] P1 Shrink `View` to layout and registry ownership.
+- [x] P1 Shrink `View` to layout and registry ownership. Evidence: remaining shared tool-window widgets now live behind the embedded `toolPanelWidgets` owner and `newToolPanelWidgets` factory instead of being hand-built in `NewWithStartupStatus`, keeping `View` focused on service wiring, layout state, and controller/registry setup (`go test ./internal/ui/shell -run "View|Controller|Tool|Panel|Task|History|Approval|AgentAudit"`).
 - [x] P1 Add tests for controller event flow.
 
 ### 4.2 Tool-window framework
