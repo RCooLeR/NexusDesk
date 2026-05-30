@@ -17,6 +17,15 @@ import (
 
 const workspaceDefinitionSearchLimit = 60
 
+const (
+	editorSourceTabLabel      = "Src"
+	editorPreviewTabLabel     = "View"
+	editorSyntaxTabLabel      = "Syntax"
+	editorDiagnosticsTabLabel = "Issues"
+	editorOutlineTabLabel     = "Outline"
+	editorMapTabLabel         = "Map"
+)
+
 type textEditorBinding struct {
 	source               *widget.Entry
 	status               *widget.Label
@@ -241,13 +250,13 @@ func (v *View) newTextEditor(tab editorSvc.Tab, preview domain.FilePreview, onSt
 	diagnosticsPanel := container.NewBorder(diagnosticStatus, nil, nil, nil, container.NewVScroll(diagnosticList))
 	syntaxDetails := container.NewVScroll(container.NewVBox(languageActions, syntaxPreview))
 	syntaxPanel := container.NewBorder(syntaxStatus, nil, nil, nil, container.NewHSplit(container.NewVScroll(syntaxGrid), syntaxDetails))
-	mapTab := container.NewTabItem("Map", mapPanel)
+	mapTab := container.NewTabItem(editorMapTabLabel, mapPanel)
 	items := []*container.TabItem{
-		container.NewTabItem("Source", sourcePanel),
-		container.NewTabItem("Preview", previewPanel),
-		container.NewTabItem("Highlight", syntaxPanel),
-		container.NewTabItem("Diagnostics", diagnosticsPanel),
-		container.NewTabItem("Outline", outlinePanel),
+		container.NewTabItem(editorSourceTabLabel, sourcePanel),
+		container.NewTabItem(editorPreviewTabLabel, previewPanel),
+		container.NewTabItem(editorSyntaxTabLabel, syntaxPanel),
+		container.NewTabItem(editorDiagnosticsTabLabel, diagnosticsPanel),
+		container.NewTabItem(editorOutlineTabLabel, outlinePanel),
 	}
 	if editorDocumentMapVisible(tab.RelPath, tab.DraftText) {
 		items = append(items, mapTab)

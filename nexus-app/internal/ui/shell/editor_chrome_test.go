@@ -72,6 +72,45 @@ func TestDocumentMapTabAppearsOnlyWhenLandmarksExist(t *testing.T) {
 	}
 }
 
+func TestEditorTabLabelsStayCompact(t *testing.T) {
+	_ = fynetest.NewTempApp(t)
+	session := editorSvc.NewSession()
+	text := "plain text\nTODO: wire startup\n"
+	tab := session.OpenFileWithSource("notes.txt", "notes.txt", text)
+	view := &View{editorSession: session}
+	view.editor = &editorController{
+		openTabs:    map[string]*container.TabItem{},
+		tabIDs:      map[*container.TabItem]string{},
+		previews:    map[string]domain.FilePreview{},
+		textEditors: map[string]*textEditorBinding{},
+	}
+	preview := domain.FilePreview{RelPath: "notes.txt", Kind: domain.PreviewText, Encoding: "utf-8", Text: text}
+	content := view.newTextEditor(tab, preview, func(editorSvc.Tab, bool, bool) {})
+	tabs, ok := content.(*container.AppTabs)
+	if !ok {
+		t.Fatalf("expected app tabs editor, got %T", content)
+	}
+
+	labels := editorTabLabels(tabs)
+	want := []string{"Src", "View", "Syntax", "Issues", "Outline", "Map"}
+	if strings.Join(labels, "|") != strings.Join(want, "|") {
+		t.Fatalf("unexpected editor tab labels: got %#v want %#v", labels, want)
+	}
+	for _, label := range labels {
+		if len(label) > len("Outline") {
+			t.Fatalf("expected compact tab label, got %q", label)
+		}
+	}
+}
+
+func editorTabLabels(tabs *container.AppTabs) []string {
+	labels := make([]string, 0, len(tabs.Items))
+	for _, item := range tabs.Items {
+		labels = append(labels, item.Text)
+	}
+	return labels
+}
+
 func TestCompactEditorBreadcrumbsKeepsPathTail(t *testing.T) {
 	crumbs := editorSvc.BuildBreadcrumbs("a/b/c/d/e/file.go", "Workspace")
 	compact := compactEditorBreadcrumbs(crumbs)
