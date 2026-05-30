@@ -485,7 +485,7 @@ Legend:
 
 ## Phase 7: Private Beta
 
-- [ ] P1 Create first-run onboarding flow.
+- [x] P1 Create first-run onboarding flow. Evidence: Welcome now includes a compact First Run flow with provider setup/Test connection, trusted workspace, Sample Workflow, and Diagnostics/redacted issue-report steps, plus direct action buttons for Model Settings, Sample Workflow, workspace/file open, and Diagnostics (`go test ./internal/ui/shell -run "Welcome|Settings"`).
 - [ ] P1 Add provider setup wizard.
 - [x] P1 Add model auto-suggestion from detected provider models. Evidence: Settings Test connection now suggests the first detected provider model when the chat model is blank or missing, applies that suggestion to the global model field, reports it in the probe summary, and does the same for selected task routes (`go test ./internal/ui/shell -run "Settings"`).
 - [x] P1 Add sample workflow guide. Evidence: Help and the command palette expose Sample Workflow Guide, backed by `userguide.SampleWorkflowMarkdown()` with a safe end-to-end beta path covering workspace readiness, edit/revert, Ask with sources, low-risk Agent, Data/Artifacts, Diagnostics, and redacted issue-report closeout (`go test ./internal/services/userguide ./internal/ui/shell -run "SampleWorkflow|KnownLimitations|CommandPaletteIncludesSafeAgentGuide"`).

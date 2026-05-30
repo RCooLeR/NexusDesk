@@ -61,17 +61,22 @@ func (v *View) newWelcomePanel() fyne.CanvasObject {
 	openWorkspaceButton := widget.NewButtonWithIcon("Open Workspace", theme.FolderOpenIcon(), v.openWorkspaceDialog)
 	openFileButton := widget.NewButtonWithIcon("Open File", theme.FileTextIcon(), v.openFileDialog)
 	settingsButton := widget.NewButtonWithIcon("Model Settings", theme.SettingsIcon(), v.openSettingsTab)
+	sampleWorkflowButton := widget.NewButtonWithIcon("Sample Workflow", theme.MediaPlayIcon(), v.openSampleWorkflowGuideTab)
 	diagnosticsButton := widget.NewButtonWithIcon("Diagnostics", theme.SearchIcon(), func() {
 		if !v.selectBottomTab("Diagnostics") {
 			v.addActivity("Diagnostics panel is unavailable.")
 		}
 	})
+	onboarding := widget.NewRichTextFromMarkdown(v.welcomeOnboardingMarkdown())
+	onboarding.Wrapping = fyne.TextWrapWord
 	readiness := widget.NewRichTextFromMarkdown(v.welcomeReadinessMarkdown())
 	readiness.Wrapping = fyne.TextWrapWord
 	recent := recentWorkspaceRowsFrom(recentItems, recentErr, v.openWorkspace, v.removeRecentWorkspace, v.clearRecentWorkspaces)
 	content := container.NewVBox(
 		title,
-		container.NewHBox(openWorkspaceButton, openFileButton, settingsButton, diagnosticsButton),
+		container.NewHBox(openWorkspaceButton, openFileButton, settingsButton, sampleWorkflowButton, diagnosticsButton),
+		widget.NewSeparator(),
+		widget.NewCard("First Run", "", onboarding),
 		widget.NewSeparator(),
 		widget.NewCard("Setup", "", readiness),
 		widget.NewSeparator(),
@@ -88,18 +93,23 @@ func (v *View) newEditorEmptyWelcomePanel() fyne.CanvasObject {
 	openWorkspaceButton := widget.NewButtonWithIcon("Open Workspace", theme.FolderOpenIcon(), v.openWorkspaceDialog)
 	openFileButton := widget.NewButtonWithIcon("Open File", theme.FileTextIcon(), v.openFileDialog)
 	settingsButton := widget.NewButtonWithIcon("Model Settings", theme.SettingsIcon(), v.openSettingsTab)
+	sampleWorkflowButton := widget.NewButtonWithIcon("Sample Workflow", theme.MediaPlayIcon(), v.openSampleWorkflowGuideTab)
 	diagnosticsButton := widget.NewButtonWithIcon("Diagnostics", theme.SearchIcon(), func() {
 		if !v.selectBottomTab("Diagnostics") {
 			v.addActivity("Diagnostics panel is unavailable.")
 		}
 	})
+	onboarding := widget.NewRichTextFromMarkdown(v.welcomeOnboardingMarkdown())
+	onboarding.Wrapping = fyne.TextWrapWord
 	content := container.NewVBox(
 		title,
 		subtitle,
 		widget.NewSeparator(),
+		widget.NewCard("First Run", "", onboarding),
+		widget.NewSeparator(),
 		welcomeEmptyCommandRows(),
 		widget.NewSeparator(),
-		container.NewHBox(openWorkspaceButton, openFileButton, settingsButton, diagnosticsButton),
+		container.NewHBox(openWorkspaceButton, openFileButton, settingsButton, sampleWorkflowButton, diagnosticsButton),
 	)
 	return container.NewPadded(container.NewCenter(content))
 }
@@ -134,6 +144,43 @@ func welcomeEmptyCommandRows() fyne.CanvasObject {
 
 func showEditorEmptyWelcome(workspace domain.Workspace, recentItems []recentWorkspacesSvc.Workspace, recentErr error) bool {
 	return strings.TrimSpace(workspace.Root) == "" && recentErr == nil && len(recentItems) == 0
+}
+
+func (v *View) welcomeOnboardingMarkdown() string {
+	current := settingsSvc.Defaults()
+	settingsError := ""
+	if v.settingsStore != nil {
+		loaded, err := v.settingsStore.LoadForDisplay()
+		if err != nil {
+			settingsError = err.Error()
+		} else {
+			current = loaded
+		}
+	}
+	return formatWelcomeOnboardingMarkdown(v.state.Workspace(), current, settingsError)
+}
+
+func formatWelcomeOnboardingMarkdown(workspace domain.Workspace, settings settingsSvc.Settings, settingsError string) string {
+	providerStatus := "ACTION"
+	providerDetail := "Open Model Settings, choose provider/base URL/model, then run Test connection."
+	if strings.TrimSpace(settingsError) != "" {
+		providerDetail = "Settings could not be loaded: " + compactWelcomeReadinessText(settingsError, 120)
+	} else if strings.TrimSpace(settings.Provider) != "" && strings.TrimSpace(settings.BaseURL) != "" && strings.TrimSpace(settings.Model) != "" {
+		providerStatus = "OK"
+		providerDetail = fmt.Sprintf("%s/%s configured; run Test connection before long Ask or Agent workflows.", settings.Provider, settings.Model)
+	}
+	workspaceStatus := "ACTION"
+	workspaceDetail := "Open a trusted sample workspace before running assistant, data, or artifact workflows."
+	if strings.TrimSpace(workspace.Root) != "" {
+		workspaceStatus = "OK"
+		workspaceDetail = fmt.Sprintf("%s is open; keep heavy work explicit and use Jobs/Diagnostics for long runs.", firstNonEmptyString(workspace.Name, filepath.Base(workspace.Root)))
+	}
+	return strings.Join([]string{
+		fmt.Sprintf("- **[%s] Provider setup:** %s", providerStatus, providerDetail),
+		fmt.Sprintf("- **[%s] Workspace:** %s", workspaceStatus, workspaceDetail),
+		"- **[NEXT] Sample workflow:** Open the Sample Workflow guide for a safe edit, Ask, Agent, Data, Artifacts, and Diagnostics path.",
+		"- **[VERIFY] Diagnostics:** Run Diagnostics after setup changes and export a redacted issue report if anything fails.",
+	}, "\n")
 }
 
 func (v *View) welcomeReadinessMarkdown() string {

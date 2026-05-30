@@ -67,6 +67,34 @@ func TestFormatWelcomeReadinessMarkdownKeepsHomeSummaryCompact(t *testing.T) {
 	}
 }
 
+func TestFormatWelcomeOnboardingMarkdownShowsFirstRunFlow(t *testing.T) {
+	text := formatWelcomeOnboardingMarkdown(domain.Workspace{}, settingsSvc.Settings{}, "")
+	for _, expected := range []string{
+		"Provider setup",
+		"Open Model Settings",
+		"Test connection",
+		"Workspace",
+		"Open a trusted sample workspace",
+		"Sample workflow",
+		"Diagnostics",
+		"redacted issue report",
+	} {
+		if !strings.Contains(text, expected) {
+			t.Fatalf("expected onboarding text to contain %q:\n%s", expected, text)
+		}
+	}
+	ready := formatWelcomeOnboardingMarkdown(
+		domain.Workspace{Name: "repo", Root: "C:/repo"},
+		settingsSvc.Settings{Provider: "ollama", BaseURL: "http://localhost:11434/v1", Model: "qwen3:8b"},
+		"",
+	)
+	for _, expected := range []string{"**[OK] Provider setup:** ollama/qwen3:8b configured", "**[OK] Workspace:** repo is open"} {
+		if !strings.Contains(ready, expected) {
+			t.Fatalf("expected ready onboarding text to contain %q:\n%s", expected, ready)
+		}
+	}
+}
+
 func TestShowEditorEmptyWelcomeOnlyForFirstLaunch(t *testing.T) {
 	if !showEditorEmptyWelcome(domain.Workspace{}, nil, nil) {
 		t.Fatal("expected empty welcome when there is no workspace and no recents")
