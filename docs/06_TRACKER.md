@@ -452,16 +452,16 @@ Legend:
 
 ### 6.4 CI matrix
 
-- [x] P1 Windows CI: gofmt check. (`scripts/ci-windows.ps1` passed gofmt verification on Windows in iteration 80.)
-- [x] P1 Windows CI: tests. (`scripts/ci-windows.ps1` ran `go test ./...` successfully on Windows in iteration 80.)
-- [x] P1 Windows CI: build check. (`scripts/ci-windows.ps1` built the native Windows executable successfully on Windows in iteration 80.)
-- [x] P1 Windows CI: release manifest check. (`scripts/ci-windows.ps1` generated the release manifest successfully on Windows in iteration 80.)
+- [x] P1 Windows CI: gofmt check. Evidence: `scripts/ci-windows.ps1` passed gofmt verification in the iteration 140 full Windows checkpoint.
+- [x] P1 Windows CI: tests. Evidence: `scripts/ci-windows.ps1` ran `go test ./...` successfully in the iteration 140 full Windows checkpoint.
+- [x] P1 Windows CI: build check. Evidence: `scripts/ci-windows.ps1` built the native Windows executable successfully in the iteration 140 full Windows checkpoint.
+- [x] P1 Windows CI: release manifest check. Evidence: `scripts/ci-windows.ps1` generated manifest/SBOM/provenance release evidence successfully in the iteration 140 full Windows checkpoint.
 - [ ] P1 Linux CI: tests.
 - [ ] P1 Linux CI: build/package smoke.
 - [ ] P1 macOS CI: tests.
 - [ ] P1 macOS CI: build/package smoke.
 - [ ] P1 Cross-platform protected secret smoke.
-- [ ] P1 CI avoids leaving generated binaries in workspace.
+- [x] P1 CI avoids leaving generated binaries in workspace. Evidence: iteration 140 full Windows checkpoint completed and the cleanup block removed `build/nexusdesk.exe`, `build/nexusdesk-windows-manifest.json`, `build/nexusdesk-windows-sbom.json`, and `build/nexusdesk-windows-provenance.json`; only the tracked `build/windows-resource` directory remained.
 
 ### 6.5 Clean-machine smoke
 
