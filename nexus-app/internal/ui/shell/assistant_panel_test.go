@@ -434,6 +434,23 @@ func TestAssistantEvidenceDiagnosticReportsPartialCitationCoverage(t *testing.T)
 	}
 }
 
+func TestAssistantVisibleSourceDigestSummarizesLatestAnswer(t *testing.T) {
+	empty := assistantVisibleSourceDigest(assistantSvc.Result{})
+	if empty != "Source digest: no answer yet." {
+		t.Fatalf("unexpected empty digest: %q", empty)
+	}
+
+	digest := assistantVisibleSourceDigest(assistantSvc.Result{
+		Message:     "See README.md:12.",
+		SourcePaths: []string{"README.md", "docs/guide.md"},
+	})
+	for _, expected := range []string{"Source digest:", "line-cited", "Sources: 2", "Verified refs: 1", "Unverified refs: 0"} {
+		if !strings.Contains(digest, expected) {
+			t.Fatalf("expected digest to contain %q, got %q", expected, digest)
+		}
+	}
+}
+
 func TestAssistantCitationSourceCoverageTreatsDirectorySourceAsCovered(t *testing.T) {
 	cited, uncited := assistantCitationSourceCoverage([]string{"docs", "README.md"}, []string{"docs/guide.md:L4"})
 	if strings.Join(cited, "|") != "docs" {

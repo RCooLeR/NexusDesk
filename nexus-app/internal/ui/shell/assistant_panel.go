@@ -59,6 +59,7 @@ type assistantController struct {
 	profileSelect   *widget.Select
 	modelRoute      *widget.Select
 	runStatus       *widget.Label
+	sourceDigest    *widget.Label
 	memory          *widget.Entry
 	lastPrompt      string
 	lastResult      assistantSvc.Result
@@ -75,6 +76,8 @@ func (v *View) newAssistantPanel() fyne.CanvasObject {
 	prompt.SetMinRowsVisible(3)
 	v.assistant.prompt = prompt
 	response := widget.NewRichTextFromMarkdown("Assistant output will stream here.")
+	v.assistant.sourceDigest = widget.NewLabel("")
+	v.assistant.sourceDigest.Wrapping = fyne.TextWrapWord
 	v.assistant.contextStatus = widget.NewLabel("")
 	v.assistant.contextStatus.Wrapping = fyne.TextWrapWord
 	v.assistant.contextList = container.NewVBox()
@@ -147,10 +150,12 @@ func (v *View) newAssistantPanel() fyne.CanvasObject {
 	composer := container.NewBorder(assistantActions, nil, composerControls, send, prompt)
 	composer = container.NewPadded(composer)
 	sidebar := container.NewVBox(profileBar, widget.NewSeparator(), contextBar, widget.NewSeparator(), historyBar)
-	panel := container.NewBorder(header, composer, sidebar, nil, response)
+	messageArea := container.NewBorder(v.assistant.sourceDigest, nil, nil, nil, response)
+	panel := container.NewBorder(header, composer, sidebar, nil, messageArea)
 	v.loadAssistantProfile()
 	v.refreshAssistantContextPins()
 	v.refreshAssistantRunStatus()
+	v.refreshAssistantSourceDigest()
 	v.refreshAssistantHistory()
 	return container.NewPadded(panel)
 }
@@ -219,6 +224,7 @@ func (v *View) runAssistantRequest(prompt *widget.Entry, response *widget.RichTe
 			}
 			v.assistant.lastPrompt = text
 			v.assistant.lastResult = result
+			v.refreshAssistantSourceDigest()
 			v.persistAssistantExchange(text, result, startedAt)
 			v.addActivity("Assistant response completed with " + result.Model + ".")
 		})
@@ -1441,6 +1447,27 @@ func (v *View) setAssistantRunStatus(status string) {
 		return
 	}
 	v.assistant.runStatus.SetText(strings.TrimSpace(status))
+}
+
+func (v *View) refreshAssistantSourceDigest() {
+	if v == nil || v.assistant == nil || v.assistant.sourceDigest == nil {
+		return
+	}
+	v.assistant.sourceDigest.SetText(assistantVisibleSourceDigest(v.assistant.lastResult))
+}
+
+func assistantVisibleSourceDigest(result assistantSvc.Result) string {
+	if strings.TrimSpace(result.Message) == "" {
+		return "Source digest: no answer yet."
+	}
+	diagnostic := assistantEvidenceDiagnosticForResult(result)
+	return fmt.Sprintf(
+		"Source digest: %s Sources: %d. Verified refs: %d. Unverified refs: %d.",
+		firstNonEmpty(diagnostic.Summary, "not classified."),
+		diagnostic.SourceCount,
+		diagnostic.CitationCount,
+		diagnostic.UnverifiedCitationCount,
+	)
 }
 
 func (v *View) runAgentRequest(text string, response *widget.RichText, send *widget.Button) {

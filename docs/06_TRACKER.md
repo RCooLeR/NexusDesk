@@ -305,7 +305,7 @@ Legend:
 
 - [x] P1 Redesign assistant header hierarchy.
 - [x] P1 Add visible mode/model/route state.
-- [ ] P1 Add source digest above composer or messages.
+- [x] P1 Add source digest above composer or messages.
 - [ ] P1 Add clearer tool timeline.
 - [ ] P1 Add approval cards with details.
 - [ ] P1 Keep composer pinned to bottom.
