@@ -16,6 +16,7 @@ import (
 	readinessSvc "nexusdesk/internal/services/readiness"
 	recentWorkspacesSvc "nexusdesk/internal/services/recentworkspaces"
 	settingsSvc "nexusdesk/internal/services/settings"
+	startupSvc "nexusdesk/internal/services/startup"
 )
 
 func newEditorTabs(welcomeItem *container.TabItem) *container.DocTabs {
@@ -72,16 +73,22 @@ func (v *View) newWelcomePanel() fyne.CanvasObject {
 	readiness := widget.NewRichTextFromMarkdown(v.welcomeReadinessMarkdown())
 	readiness.Wrapping = fyne.TextWrapWord
 	recent := recentWorkspaceRowsFrom(recentItems, recentErr, v.openWorkspace, v.removeRecentWorkspace, v.clearRecentWorkspaces)
-	content := container.NewVBox(
+	contentObjects := []fyne.CanvasObject{
 		title,
 		container.NewHBox(openWorkspaceButton, openFileButton, providerSetupButton, sampleWorkflowButton, diagnosticsButton),
 		widget.NewSeparator(),
+	}
+	if recovery := v.welcomeCrashRecoveryBanner(); recovery != nil {
+		contentObjects = append(contentObjects, recovery, widget.NewSeparator())
+	}
+	contentObjects = append(contentObjects,
 		widget.NewCard("First Run", "", onboarding),
 		widget.NewSeparator(),
 		widget.NewCard("Setup", "", readiness),
 		widget.NewSeparator(),
 		widget.NewCard("Recent Workspaces", "", recent),
 	)
+	content := container.NewVBox(contentObjects...)
 	return container.NewPadded(container.NewVScroll(content))
 }
 
@@ -101,16 +108,22 @@ func (v *View) newEditorEmptyWelcomePanel() fyne.CanvasObject {
 	})
 	onboarding := widget.NewRichTextFromMarkdown(v.welcomeOnboardingMarkdown())
 	onboarding.Wrapping = fyne.TextWrapWord
-	content := container.NewVBox(
+	contentObjects := []fyne.CanvasObject{
 		title,
 		subtitle,
 		widget.NewSeparator(),
+	}
+	if recovery := v.welcomeCrashRecoveryBanner(); recovery != nil {
+		contentObjects = append(contentObjects, recovery, widget.NewSeparator())
+	}
+	contentObjects = append(contentObjects,
 		widget.NewCard("First Run", "", onboarding),
 		widget.NewSeparator(),
 		welcomeEmptyCommandRows(),
 		widget.NewSeparator(),
 		container.NewHBox(openWorkspaceButton, openFileButton, providerSetupButton, sampleWorkflowButton, diagnosticsButton),
 	)
+	content := container.NewVBox(contentObjects...)
 	return container.NewPadded(container.NewCenter(content))
 }
 
@@ -144,6 +157,47 @@ func welcomeEmptyCommandRows() fyne.CanvasObject {
 
 func showEditorEmptyWelcome(workspace domain.Workspace, recentItems []recentWorkspacesSvc.Workspace, recentErr error) bool {
 	return strings.TrimSpace(workspace.Root) == "" && recentErr == nil && len(recentItems) == 0
+}
+
+func (v *View) welcomeCrashRecoveryBanner() fyne.CanvasObject {
+	if v == nil || !v.startupStatus.PreviousUnclean {
+		return nil
+	}
+	text := widget.NewRichTextFromMarkdown(formatWelcomeCrashRecoveryMarkdown(v.startupStatus))
+	text.Wrapping = fyne.TextWrapWord
+	return widget.NewCard("Crash Recovery", "", container.NewVBox(
+		text,
+		container.NewHBox(
+			welcomeBottomTabButton("Diagnostics", theme.SearchIcon(), v),
+			welcomeBottomTabButton("Jobs", theme.ListIcon(), v),
+			welcomeBottomTabButton("Agent Audit", theme.HistoryIcon(), v),
+			welcomeBottomTabButton("History", theme.DocumentIcon(), v),
+		),
+	))
+}
+
+func welcomeBottomTabButton(label string, icon fyne.Resource, view *View) *widget.Button {
+	return widget.NewButtonWithIcon(label, icon, func() {
+		if view == nil || !view.selectBottomTab(label) {
+			if view != nil {
+				view.addActivity(label + " panel is unavailable.")
+			}
+			return
+		}
+		view.addActivity(label + " selected for crash recovery review.")
+	})
+}
+
+func formatWelcomeCrashRecoveryMarkdown(status startupSvc.Status) string {
+	detail := firstNonEmptyString(status.Message, "Previous NexusDesk run did not record a clean exit.")
+	if !status.PreviousStartedAt.IsZero() {
+		detail += " Previous start: " + status.PreviousStartedAt.Local().Format("2006-01-02 15:04:05") + "."
+	}
+	return strings.Join([]string{
+		"- **[ACTION] Previous session:** " + compactWelcomeReadinessText(detail, 220),
+		"- Review Diagnostics, Jobs, Agent Audit, and History before repeating long workflows.",
+		"- Export a redacted issue report from Diagnostics if metadata, provider, or job state looks suspicious.",
+	}, "\n")
 }
 
 func (v *View) welcomeOnboardingMarkdown() string {

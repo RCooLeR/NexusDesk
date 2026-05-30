@@ -3,6 +3,7 @@ package shell
 import (
 	"strings"
 	"testing"
+	"time"
 
 	"fyne.io/fyne/v2/container"
 	fynetest "fyne.io/fyne/v2/test"
@@ -91,6 +92,28 @@ func TestFormatWelcomeOnboardingMarkdownShowsFirstRunFlow(t *testing.T) {
 	for _, expected := range []string{"**[OK] Provider setup:** ollama/qwen3:8b configured", "**[OK] Workspace:** repo is open"} {
 		if !strings.Contains(ready, expected) {
 			t.Fatalf("expected ready onboarding text to contain %q:\n%s", expected, ready)
+		}
+	}
+}
+
+func TestFormatWelcomeCrashRecoveryMarkdownIncludesActions(t *testing.T) {
+	text := formatWelcomeCrashRecoveryMarkdown(startupSvc.Status{
+		PreviousUnclean:   true,
+		Message:           "Previous NexusDesk run did not record a clean exit.",
+		PreviousStartedAt: time.Date(2026, 5, 30, 8, 0, 0, 0, time.UTC),
+	})
+	for _, expected := range []string{
+		"Previous session",
+		"did not record a clean exit",
+		"Previous start",
+		"Diagnostics",
+		"Jobs",
+		"Agent Audit",
+		"History",
+		"redacted issue report",
+	} {
+		if !strings.Contains(text, expected) {
+			t.Fatalf("expected crash recovery text to contain %q:\n%s", expected, text)
 		}
 	}
 }
