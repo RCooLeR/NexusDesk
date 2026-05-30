@@ -29,3 +29,27 @@ func TestApprovalRowsEmpty(t *testing.T) {
 		t.Fatalf("expected one empty row, got %d", len(rows))
 	}
 }
+
+func TestApprovalRecordCardDetails(t *testing.T) {
+	record := approvalsSvc.Record{
+		Action:    "agent-tool:write_file",
+		Target:    "docs/report.md",
+		Risk:      "high",
+		Decision:  "approved",
+		Message:   "Per-call agent tool approval",
+		CreatedAt: time.Date(2026, 5, 30, 12, 34, 0, 0, time.UTC),
+	}
+
+	subtitle := approvalRecordSubtitle(record)
+	for _, expected := range []string{"target: docs/report.md", "decision: approved", "2026-05-30 12:34:00"} {
+		if !strings.Contains(subtitle, expected) {
+			t.Fatalf("expected approval card subtitle to contain %q, got %q", expected, subtitle)
+		}
+	}
+	details := approvalRecordDetails(record)
+	for _, expected := range []string{"Risk: high", "Details: Per-call agent tool approval"} {
+		if !strings.Contains(details, expected) {
+			t.Fatalf("expected approval card details to contain %q, got %q", expected, details)
+		}
+	}
+}

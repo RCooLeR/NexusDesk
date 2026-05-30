@@ -2,6 +2,7 @@ package shell
 
 import (
 	"fmt"
+	"strings"
 	"time"
 
 	"fyne.io/fyne/v2"
@@ -99,14 +100,41 @@ func approvalRows(records []approvalsSvc.Record) []fyne.CanvasObject {
 }
 
 func approvalRow(record approvalsSvc.Record) fyne.CanvasObject {
-	title := widget.NewLabel(fmt.Sprintf("%s - %s", record.Action, record.Target))
-	title.TextStyle = fyne.TextStyle{Bold: true}
-	title.Truncation = fyne.TextTruncateEllipsis
-	meta := widget.NewLabel(fmt.Sprintf("%s / %s - %s", record.Risk, record.Decision, record.CreatedAt.Format("2006-01-02 15:04:05")))
-	meta.Truncation = fyne.TextTruncateEllipsis
-	message := widget.NewLabel(record.Message)
-	message.Truncation = fyne.TextTruncateEllipsis
-	return container.NewVBox(title, meta, message)
+	details := widget.NewLabel(approvalRecordDetails(record))
+	details.Wrapping = fyne.TextWrapWord
+	return widget.NewCard(
+		firstNonEmpty(record.Action, "approval"),
+		approvalRecordSubtitle(record),
+		details,
+	)
+}
+
+func approvalRecordSubtitle(record approvalsSvc.Record) string {
+	parts := []string{}
+	if target := strings.TrimSpace(record.Target); target != "" {
+		parts = append(parts, "target: "+target)
+	}
+	if decision := strings.TrimSpace(record.Decision); decision != "" {
+		parts = append(parts, "decision: "+decision)
+	}
+	if !record.CreatedAt.IsZero() {
+		parts = append(parts, record.CreatedAt.Format("2006-01-02 15:04:05"))
+	}
+	return strings.Join(parts, " - ")
+}
+
+func approvalRecordDetails(record approvalsSvc.Record) string {
+	lines := []string{}
+	if risk := strings.TrimSpace(record.Risk); risk != "" {
+		lines = append(lines, "Risk: "+risk)
+	}
+	if message := strings.TrimSpace(record.Message); message != "" {
+		lines = append(lines, "Details: "+message)
+	}
+	if len(lines) == 0 {
+		return "No additional details recorded."
+	}
+	return strings.Join(lines, "\n")
 }
 
 func policyStatusText(policy approvalsSvc.Policy) string {

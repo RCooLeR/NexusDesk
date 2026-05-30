@@ -1561,9 +1561,7 @@ func (v *View) assistantRunTaskApprovalChecked() bool {
 func (v *View) confirmAgentToolApproval(ctx context.Context, request agentSvc.ToolApprovalRequest) bool {
 	result := make(chan bool, 1)
 	fyne.Do(func() {
-		message := widget.NewLabel(agentToolApprovalMessage(request))
-		message.Wrapping = fyne.TextWrapWord
-		dialog.ShowCustomConfirm("Approve agent tool", "Approve once", "Deny", container.NewPadded(message), func(confirm bool) {
+		dialog.ShowCustomConfirm("Approve agent tool", "Approve once", "Deny", container.NewPadded(agentToolApprovalCard(request)), func(confirm bool) {
 			v.recordAgentToolApproval(request, confirm)
 			result <- confirm
 		}, v.window)
@@ -1596,6 +1594,23 @@ func (v *View) recordAgentToolApproval(request agentSvc.ToolApprovalRequest, app
 		return
 	}
 	v.refreshApprovals()
+}
+
+func agentToolApprovalCard(request agentSvc.ToolApprovalRequest) fyne.CanvasObject {
+	message := widget.NewLabel(agentToolApprovalMessage(request))
+	message.Wrapping = fyne.TextWrapWord
+	return widget.NewCard("Agent tool approval", agentToolApprovalSubtitle(request), message)
+}
+
+func agentToolApprovalSubtitle(request agentSvc.ToolApprovalRequest) string {
+	parts := []string{firstNonEmpty(request.Name, "unknown tool")}
+	if risk := strings.TrimSpace(request.Risk); risk != "" {
+		parts = append(parts, "risk: "+risk)
+	}
+	if target := agentToolApprovalTarget(request); target != "" {
+		parts = append(parts, "target: "+target)
+	}
+	return strings.Join(parts, " - ")
 }
 
 func agentToolApprovalMessage(request agentSvc.ToolApprovalRequest) string {

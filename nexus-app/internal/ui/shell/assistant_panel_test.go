@@ -250,6 +250,16 @@ func TestAgentToolApprovalMessageSummarizesRiskAndTarget(t *testing.T) {
 			t.Fatalf("expected approval message to contain %q, got %q", expected, message)
 		}
 	}
+	subtitle := agentToolApprovalSubtitle(agentSvc.ToolApprovalRequest{
+		Name: "write_file",
+		Risk: "high",
+		Args: map[string]string{"relPath": "docs/report.md"},
+	})
+	for _, expected := range []string{"write_file", "risk: high", "target: docs/report.md"} {
+		if !strings.Contains(subtitle, expected) {
+			t.Fatalf("expected approval card subtitle to contain %q, got %q", expected, subtitle)
+		}
+	}
 }
 
 func TestAgentFinalMarkdownIncludesStopReason(t *testing.T) {
