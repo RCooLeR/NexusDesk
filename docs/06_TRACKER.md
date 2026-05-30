@@ -429,7 +429,7 @@ Legend:
 - [ ] P1 Produce Windows installer artifact.
 - [ ] P1 Produce macOS app/package artifact.
 - [ ] P1 Produce Linux package artifact.
-- [ ] P1 Generate SHA-256 manifest.
+- [x] P1 Generate SHA-256 manifest. (`scripts/ci-windows.ps1` generated `build/nexusdesk-windows-manifest.json` with artifact SHA-256 during the iteration 80 Windows checkpoint.)
 - [ ] P1 Embed version metadata.
 - [ ] P1 Add About dialog version string.
 
@@ -452,10 +452,10 @@ Legend:
 
 ### 6.4 CI matrix
 
-- [ ] P1 Windows CI: gofmt check.
-- [ ] P1 Windows CI: tests.
-- [ ] P1 Windows CI: build check.
-- [ ] P1 Windows CI: release manifest check.
+- [x] P1 Windows CI: gofmt check. (`scripts/ci-windows.ps1` passed gofmt verification on Windows in iteration 80.)
+- [x] P1 Windows CI: tests. (`scripts/ci-windows.ps1` ran `go test ./...` successfully on Windows in iteration 80.)
+- [x] P1 Windows CI: build check. (`scripts/ci-windows.ps1` built the native Windows executable successfully on Windows in iteration 80.)
+- [x] P1 Windows CI: release manifest check. (`scripts/ci-windows.ps1` generated the release manifest successfully on Windows in iteration 80.)
 - [ ] P1 Linux CI: tests.
 - [ ] P1 Linux CI: build/package smoke.
 - [ ] P1 macOS CI: tests.
