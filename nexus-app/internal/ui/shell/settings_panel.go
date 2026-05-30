@@ -168,6 +168,7 @@ func (c *settingsController) newPanel() fyne.CanvasObject {
 	probeStatus := widget.NewLabel("Connection test has not run.")
 	probeStatus.Wrapping = fyne.TextWrapWord
 	testConnection := widget.NewButtonWithIcon("Test connection", theme.SearchIcon(), nil)
+	testRoute := widget.NewButtonWithIcon("Test selected route", theme.SearchIcon(), nil)
 	saveSettings := widget.NewButtonWithIcon("Save settings", theme.DocumentSaveIcon(), nil)
 	saveSettings.Importance = widget.HighImportance
 	validationStatus := widget.NewLabel("")
@@ -231,25 +232,15 @@ func (c *settingsController) newPanel() fyne.CanvasObject {
 		v.refreshStatusBar()
 		v.addActivity("Settings saved.")
 	}
-	testConnection.OnTapped = func() {
-		if err := settingsBlockingValidationError(settingsValidationIssues(provider.Selected, protocol.Selected, baseURL.Text, model.Text, contextTokens.Text, responseReserve.Text, modelRoutes)); err != nil {
-			dialog.ShowError(err, v.window)
-			refreshValidation()
-			return
-		}
-		next, err := settingsFromForm(provider.Selected, protocol.Selected, baseURL.Text, model.Text, apiKey.Text, contextTokens.Text, responseReserve.Text)
-		if err != nil {
-			dialog.ShowError(err, v.window)
-			refreshValidation()
-			return
-		}
-		next, err = v.settingsStore.ResolveForUse(next)
+	runProbe := func(next settingsSvc.Settings, started string) {
+		next, err := v.settingsStore.ResolveForUse(next)
 		if err != nil {
 			dialog.ShowError(err, v.window)
 			return
 		}
 		testConnection.Disable()
-		probeStatus.SetText("Testing provider connection...")
+		testRoute.Disable()
+		probeStatus.SetText(started)
 		go func() {
 			ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 			prober := v.diagnosticsProber
@@ -271,12 +262,62 @@ func (c *settingsController) newPanel() fyne.CanvasObject {
 				}
 				probeStatus.SetText(message)
 				testConnection.Enable()
+				testRoute.Enable()
 			})
 		}()
 	}
-	actions := container.NewHBox(saveSettings, testConnection)
+	testConnection.OnTapped = func() {
+		if err := settingsBlockingValidationError(settingsValidationIssues(provider.Selected, protocol.Selected, baseURL.Text, model.Text, contextTokens.Text, responseReserve.Text, modelRoutes)); err != nil {
+			dialog.ShowError(err, v.window)
+			refreshValidation()
+			return
+		}
+		next, err := settingsFromForm(provider.Selected, protocol.Selected, baseURL.Text, model.Text, apiKey.Text, contextTokens.Text, responseReserve.Text)
+		if err != nil {
+			dialog.ShowError(err, v.window)
+			refreshValidation()
+			return
+		}
+		runProbe(next, "Testing provider connection...")
+	}
+	testRoute.OnTapped = func() {
+		if err := settingsBlockingValidationError(settingsValidationIssues(provider.Selected, protocol.Selected, baseURL.Text, model.Text, contextTokens.Text, responseReserve.Text, modelRoutes)); err != nil {
+			dialog.ShowError(err, v.window)
+			refreshValidation()
+			return
+		}
+		next, err := settingsFromFormWithRoutes(provider.Selected, protocol.Selected, baseURL.Text, model.Text, apiKey.Text, contextTokens.Text, responseReserve.Text, modelRoutes)
+		if err != nil {
+			dialog.ShowError(err, v.window)
+			refreshValidation()
+			return
+		}
+		routeSettings, ok := settingsSvc.SettingsForModelRoute(next, selectedRouteID)
+		if !ok || strings.TrimSpace(routeSettings.Model) == "" {
+			dialog.ShowError(errors.New("Select a task route with a model before testing it."), v.window)
+			return
+		}
+		runProbe(routeSettings, "Testing selected route...")
+	}
+	actions := container.NewHBox(saveSettings)
 	secretNote := widget.NewLabel("API keys are stored in protected OS storage where available (Windows DPAPI, macOS Keychain, Linux Secret Service) and displayed redacted after save.")
 	secretNote.Wrapping = fyne.TextWrapWord
+	connectorNote := widget.NewLabel("Connector profile editing is managed from the Data tool so database testing stays next to query and schema workflows.")
+	connectorNote.Wrapping = fyne.TextWrapWord
+	connectorButton := widget.NewButtonWithIcon("Open Data", theme.StorageIcon(), func() {
+		if tool, ok := defaultToolWindowRegistry().Lookup("data"); ok {
+			v.openToolWindow(tool)
+		}
+	})
+	approvalNote := widget.NewLabel("Approval records and policy review live in the Approvals tool. Agent actions continue to require explicit approval where configured.")
+	approvalNote.Wrapping = fyne.TextWrapWord
+	approvalButton := widget.NewButtonWithIcon("Open Approvals", theme.ConfirmIcon(), func() {
+		if tool, ok := defaultToolWindowRegistry().Lookup("approvals"); ok {
+			v.openToolWindow(tool)
+		}
+	})
+	uiNote := widget.NewLabel("The desktop theme currently follows Fyne/system theme tokens, with compact editor and dock spacing tuned for the v1 shell.")
+	uiNote.Wrapping = fyne.TextWrapWord
 	sectionContainer := container.NewVBox()
 	search := widget.NewEntry()
 	search.SetPlaceHolder("Search settings (provider, API key, route, context...)")
@@ -298,6 +339,30 @@ func (c *settingsController) newPanel() fyne.CanvasObject {
 			Summary:  "Choose default models for coding, data, research, vision, and balanced reasoning workflows.",
 			Keywords: []string{"route", "task", "coding", "data", "database", "research", "vision", "screenshot", "analytics", "balanced"},
 			Content:  routeForm,
+		},
+		{
+			Title:    "Connector Profiles",
+			Summary:  "Jump to database connector profiles and schema/query testing from the Data tool.",
+			Keywords: []string{"connector", "profile", "database", "sql", "schema", "data source"},
+			Content:  container.NewVBox(connectorNote, connectorButton),
+		},
+		{
+			Title:    "Safety & Approvals",
+			Summary:  "Review approval policy entry points and persisted approval records.",
+			Keywords: []string{"safety", "approval", "permission", "agent", "policy", "audit"},
+			Content:  container.NewVBox(approvalNote, approvalButton),
+		},
+		{
+			Title:    "UI Density & Theme",
+			Summary:  "Surface shell density and theme behavior while full customization remains intentionally disabled.",
+			Keywords: []string{"theme", "density", "ui", "spacing", "compact", "disabled"},
+			Content:  uiNote,
+		},
+		{
+			Title:    "Diagnostics & Tests",
+			Summary:  "Run provider and selected task-route checks; disabled or missing-route states explain what to fix.",
+			Keywords: []string{"diagnostics", "test", "connection", "route test", "disabled", "provider health"},
+			Content:  container.NewVBox(container.NewHBox(testConnection, testRoute), probeStatus),
 		},
 	}
 	var applySearch func(string)

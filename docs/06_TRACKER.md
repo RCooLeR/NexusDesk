@@ -331,16 +331,16 @@ Legend:
 
 ### 4.7 Settings UI
 
-- [ ] P1 Add searchable settings shell.
-- [ ] P1 Add provider settings category.
-- [ ] P1 Add task model routing category.
-- [ ] P1 Add credentials category.
-- [ ] P1 Add connector profiles category.
-- [ ] P1 Add safety/approval category.
-- [ ] P1 Add UI density/theme category.
-- [ ] P1 Add diagnostics/test category.
-- [ ] P1 Add route test actions.
-- [ ] P1 Add disabled-state explanations.
+- [x] P1 Add searchable settings shell. (`settings_panel.go` filters titled settings sections by title, summary, and keywords.)
+- [x] P1 Add provider settings category. (Provider/runtime endpoint, protocol, model, and token budget controls live under Provider & Runtime.)
+- [x] P1 Add task model routing category. (Task Model Routes edits per-route model defaults and detail text.)
+- [x] P1 Add credentials category. (Secrets & Credentials owns the redacted API-key field and protected-storage note.)
+- [x] P1 Add connector profiles category. (Connector Profiles links users to the Data tool where connector editing and schema/query testing live.)
+- [x] P1 Add safety/approval category. (Safety & Approvals links to approval records and explains approval policy entry points.)
+- [x] P1 Add UI density/theme category. (UI Density & Theme documents the current Fyne/system-theme behavior and disabled customization state.)
+- [x] P1 Add diagnostics/test category. (Diagnostics & Tests now groups provider and route probe actions with shared probe status.)
+- [x] P1 Add route test actions. (Settings can test the currently selected task route using that route's model/budget overrides.)
+- [x] P1 Add disabled-state explanations. (Validation, route-test errors, and category notes explain missing model, disabled customization, and delegated connector/profile actions.)
 
 ### 4.8 Theme and visual polish
 
