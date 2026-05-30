@@ -375,10 +375,10 @@ Legend:
 - [ ] P1 Improve Data Sources tree icons and hierarchy.
 - [ ] P1 Add schema/table browser polish.
 - [ ] P1 Improve query editor layout.
-- [ ] P1 Improve result grid scrolling and virtualization.
-- [ ] P1 Add result copy/export polish.
-- [ ] P1 Improve query history UX.
-- [ ] P1 Add connector profile inspector.
+- [x] P1 Improve result grid scrolling and virtualization. (`data_rows_grid.go` uses a virtualized `widget.Table`, visible-column clipping, row sampling for sizing, density policy, and scroll-to-selection behavior with tests.)
+- [x] P1 Add result copy/export polish. (Data actions expose copy cell/row, CSV/SQL/SQLite exports, and status copy guidance; `data_rows_grid_test.go` covers copy/status behavior.)
+- [x] P1 Improve query history UX. (The History tab exposes SQL history, latest-query reuse/rerun, saved SQLite queries, and dependency rebuild actions.)
+- [x] P1 Add connector profile inspector. (External DB actions include Inspect profile, metadata formatting, audit records, and connector inspect tests.)
 - [ ] P2 Add saved query folders/tags.
 
 ### 5.2 Dump import and sync jobs
