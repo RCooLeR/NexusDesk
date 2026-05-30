@@ -1,6 +1,7 @@
 package git
 
 import (
+	"errors"
 	"os"
 	"strings"
 	"testing"
@@ -42,6 +43,23 @@ func TestNonInteractiveGitEnvDisablesPrompts(t *testing.T) {
 		if !hasEnvEntry(env, expected) {
 			t.Fatalf("non-interactive env missing %q in %#v", expected, env)
 		}
+	}
+}
+
+func TestRepositoryUnavailableMessageClassifiesOwnershipSafety(t *testing.T) {
+	err := errors.New("fatal: detected dubious ownership in repository at 'C:/work/repo'\nTo add an exception for this directory, call:\n\n\tgit config --global --add safe.directory C:/work/repo")
+	message := repositoryUnavailableMessage(`C:\work\repo`, err)
+	for _, expected := range []string{"ownership is not trusted", "safe.directory", `"C:\work\repo"`} {
+		if !strings.Contains(message, expected) {
+			t.Fatalf("ownership message missing %q:\n%s", expected, message)
+		}
+	}
+}
+
+func TestRepositoryUnavailableMessageKeepsNonRepoFallback(t *testing.T) {
+	message := repositoryUnavailableMessage(`C:\work\repo`, errors.New("fatal: not a git repository"))
+	if message != "Workspace is not inside a Git repository." {
+		t.Fatalf("unexpected non-repo message: %q", message)
 	}
 }
 

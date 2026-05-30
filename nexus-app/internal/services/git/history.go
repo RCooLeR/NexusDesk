@@ -26,7 +26,7 @@ func (s *Service) History(root string, relPath string, limit int) (HistoryResult
 		return HistoryResult{}, err
 	}
 	if _, err := gitOutputFor(absRoot, operationStatus, "rev-parse", "--show-toplevel"); err != nil {
-		result.Message = "Workspace is not inside a Git repository."
+		result.Message = repositoryUnavailableMessage(absRoot, err)
 		return result, nil
 	}
 	args := []string{
@@ -87,7 +87,7 @@ func (s *Service) Blame(root string, relPath string, startLine int, endLine int)
 	}
 	result.Path = cleanPath
 	if _, err := gitOutputFor(absRoot, operationStatus, "rev-parse", "--show-toplevel"); err != nil {
-		result.Message = "Workspace is not inside a Git repository."
+		result.Message = repositoryUnavailableMessage(absRoot, err)
 		return result, nil
 	}
 	startLine, endLine = boundedBlameRange(startLine, endLine)

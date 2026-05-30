@@ -27,7 +27,7 @@ func (s *Service) ApplyHunkAction(root string, relPath string, kind DiffKind, hu
 		return HunkActionResult{Path: relPath, Action: action, DiffKind: kind, HunkIndex: hunkIndex, Message: err.Error(), GeneratedAt: generatedAt}, nil
 	}
 	if _, err := gitOutputFor(absRoot, operationStatus, "rev-parse", "--show-toplevel"); err != nil {
-		return HunkActionResult{Path: cleanPath, Action: action, DiffKind: kind, HunkIndex: hunkIndex, Message: "Workspace is not inside a Git repository.", GeneratedAt: generatedAt}, nil
+		return HunkActionResult{Path: cleanPath, Action: action, DiffKind: kind, HunkIndex: hunkIndex, Message: repositoryUnavailableMessage(absRoot, err), GeneratedAt: generatedAt}, nil
 	}
 	diff, err := hunkSourceDiff(absRoot, cleanPath, kind)
 	if err != nil {

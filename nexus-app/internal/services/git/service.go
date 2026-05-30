@@ -50,7 +50,7 @@ func (s *Service) Status(root string) (Status, error) {
 	}
 	repoRoot, err := gitOutputFor(absRoot, operationStatus, "rev-parse", "--show-toplevel")
 	if err != nil {
-		return unavailableStatus("Workspace is not inside a Git repository."), nil
+		return unavailableStatus(repositoryUnavailableMessage(absRoot, err)), nil
 	}
 	branch := strings.TrimSpace(mustGitOutputFor(absRoot, operationStatus, "branch", "--show-current"))
 	if branch == "" {
@@ -90,7 +90,7 @@ func (s *Service) FileDiff(root string, relPath string) (FileDiff, error) {
 		return FileDiff{Path: relPath, Message: err.Error(), GeneratedAt: generatedAt}, nil
 	}
 	if _, err := gitOutputFor(absRoot, operationStatus, "rev-parse", "--show-toplevel"); err != nil {
-		return FileDiff{Path: cleanPath, Message: "Workspace is not inside a Git repository.", GeneratedAt: generatedAt}, nil
+		return FileDiff{Path: cleanPath, Message: repositoryUnavailableMessage(absRoot, err), GeneratedAt: generatedAt}, nil
 	}
 	unstagedDiff, unstagedTruncated := cappedGitOutputFor(absRoot, operationDiff, "diff", "--no-ext-diff", "--unified="+diffContextLines, "--", cleanPath)
 	stagedDiff, stagedTruncated := cappedGitOutputFor(absRoot, operationDiff, "diff", "--cached", "--no-ext-diff", "--unified="+diffContextLines, "--", cleanPath)
@@ -126,7 +126,7 @@ func (s *Service) ApplyFileAction(root string, relPath string, action FileAction
 		return FileActionResult{Path: relPath, Action: action, Message: err.Error(), GeneratedAt: generatedAt}, nil
 	}
 	if _, err := gitOutputFor(absRoot, operationStatus, "rev-parse", "--show-toplevel"); err != nil {
-		return FileActionResult{Path: cleanPath, Action: action, Message: "Workspace is not inside a Git repository.", GeneratedAt: generatedAt}, nil
+		return FileActionResult{Path: cleanPath, Action: action, Message: repositoryUnavailableMessage(absRoot, err), GeneratedAt: generatedAt}, nil
 	}
 	if err := runFileAction(absRoot, cleanPath, action); err != nil {
 		return FileActionResult{}, err
@@ -160,7 +160,7 @@ func (s *Service) CommitChanges(root string, message string, body string) (Commi
 		return CommitResult{}, err
 	}
 	if _, err := gitOutputFor(absRoot, operationStatus, "rev-parse", "--show-toplevel"); err != nil {
-		return CommitResult{Subject: subject, Body: body, Message: "Workspace is not inside a Git repository.", GeneratedAt: generatedAt}, nil
+		return CommitResult{Subject: subject, Body: body, Message: repositoryUnavailableMessage(absRoot, err), GeneratedAt: generatedAt}, nil
 	}
 	stagedStat := strings.TrimSpace(mustGitOutputFor(absRoot, operationDiff, "diff", "--cached", "--stat"))
 	if stagedStat == "" {
@@ -217,7 +217,7 @@ func (s *Service) CreateBranch(root string, branchName string, startPoint string
 		return BranchResult{}, err
 	}
 	if _, err := gitOutputFor(absRoot, operationStatus, "rev-parse", "--show-toplevel"); err != nil {
-		result.Message = "Workspace is not inside a Git repository."
+		result.Message = repositoryUnavailableMessage(absRoot, err)
 		return result, nil
 	}
 	if _, err := gitOutputFor(absRoot, operationStatus, "check-ref-format", "--branch", branchName); err != nil {
@@ -378,6 +378,29 @@ func nonInteractiveGitEnv(base []string) []string {
 	}
 	env = append(env, overrides...)
 	return env
+}
+
+func repositoryUnavailableMessage(root string, err error) string {
+	if isOwnershipSafetyError(err) {
+		return fmt.Sprintf("Git blocked this repository because its ownership is not trusted. Review the workspace path, then run: git config --global --add safe.directory %s", shellQuote(root))
+	}
+	return "Workspace is not inside a Git repository."
+}
+
+func isOwnershipSafetyError(err error) bool {
+	if err == nil {
+		return false
+	}
+	text := strings.ToLower(err.Error())
+	return strings.Contains(text, "dubious ownership") || strings.Contains(text, "safe.directory")
+}
+
+func shellQuote(value string) string {
+	value = strings.TrimSpace(value)
+	if value == "" {
+		return `""`
+	}
+	return `"` + strings.ReplaceAll(value, `"`, `\"`) + `"`
 }
 
 func statusMessage(branch string, changes []FileChange) string {

@@ -221,10 +221,10 @@ Legend:
 
 - [x] P1 Split Git timeouts by operation class.
 - [x] P1 Set non-interactive Git environment.
-- [ ] P1 Detect ownership/safety errors and show remediation.
+- [x] P1 Detect ownership/safety errors and show remediation.
 - [ ] P1 Avoid silent fetch/pull/network behavior.
 - [x] P1 Add tests for timeout class selection.
-- [ ] P1 Add tests for error classification.
+- [x] P1 Add tests for error classification.
 
 ### 3.6 Encoding honesty
 
