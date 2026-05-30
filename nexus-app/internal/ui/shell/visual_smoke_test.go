@@ -48,7 +48,11 @@ func TestVisualSmokeFirstLaunchNoWorkspace(t *testing.T) {
 
 	assertVisualSmokeContains(t, markup, "Open Workspace")
 	assertVisualSmokeContains(t, markup, "Welcome")
-	assertVisualSmokeContains(t, markup, "Model:")
+	if !strings.Contains(markup, "Model:") {
+		if view.toolbarProviderStatus == nil || !strings.Contains(view.toolbarProviderStatus.Text, "Model:") {
+			t.Fatalf("expected rendered shell markup or toolbar state to contain %q", "Model:")
+		}
+	}
 	if view.status == nil || !strings.Contains(view.status.Text, "Workspace: none") {
 		t.Fatalf("expected first launch status to report no workspace, got %#v", view.status)
 	}

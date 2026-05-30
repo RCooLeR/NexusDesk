@@ -165,6 +165,10 @@ func (s *Service) dependencyGraphFiles(absRoot string, cleanRelPath string, maxF
 	if err != nil {
 		return nil, 0, false, err
 	}
+	walkRelRoot := absRoot
+	if resolvedRoot, err := filepath.EvalSymlinks(absRoot); err == nil {
+		walkRelRoot = resolvedRoot
+	}
 	if !info.IsDir() {
 		if !isDependencyGraphFile(cleanRelPath) {
 			return nil, 1, false, nil
@@ -182,7 +186,7 @@ func (s *Service) dependencyGraphFiles(absRoot string, cleanRelPath string, maxF
 		if path == resolvedTarget {
 			return nil
 		}
-		relPath, err := filepath.Rel(absRoot, path)
+		relPath, err := filepath.Rel(walkRelRoot, path)
 		if err != nil {
 			skipped++
 			if entry.IsDir() {

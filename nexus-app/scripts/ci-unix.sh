@@ -7,6 +7,13 @@ REPO_ROOT="$(cd "${APP_ROOT}/.." && pwd)"
 
 export CGO_ENABLED=1
 export GOFLAGS="-mod=readonly"
+if [[ "$(uname -s)" == "Linux" ]]; then
+  export LANG="C.UTF-8"
+  export LC_ALL="C.UTF-8"
+else
+  export LANG="en_US.UTF-8"
+  export LC_ALL="en_US.UTF-8"
+fi
 
 cd "${APP_ROOT}"
 

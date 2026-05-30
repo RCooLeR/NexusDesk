@@ -19,6 +19,10 @@ static void secure_free(void *p, size_t n) {
 	}
 	free(p);
 }
+
+static SecKeychainRef default_keychain_ref(void) {
+	return NULL;
+}
 */
 import "C"
 
@@ -38,7 +42,7 @@ func (nativeDarwinKeychain) Store(service string, account string, secret []byte)
 	defer secureFree(secretPointer, secretLength)
 
 	status := C.SecKeychainAddGenericPassword(
-		nil,
+		C.default_keychain_ref(),
 		C.UInt32(len(service)),
 		serviceCString,
 		C.UInt32(len(account)),
@@ -62,7 +66,7 @@ func (nativeDarwinKeychain) Lookup(service string, account string) ([]byte, erro
 	var passwordLength C.UInt32
 	var passwordData unsafe.Pointer
 	status := C.SecKeychainFindGenericPassword(
-		nil,
+		C.default_keychain_ref(),
 		C.UInt32(len(service)),
 		serviceCString,
 		C.UInt32(len(account)),
@@ -90,7 +94,7 @@ func (nativeDarwinKeychain) Delete(service string, account string) error {
 
 	var item C.SecKeychainItemRef
 	status := C.SecKeychainFindGenericPassword(
-		nil,
+		C.default_keychain_ref(),
 		C.UInt32(len(service)),
 		serviceCString,
 		C.UInt32(len(account)),
@@ -113,7 +117,7 @@ func (nativeDarwinKeychain) Available() bool {
 func updateGenericPassword(service *C.char, serviceLength int, account *C.char, accountLength int, secret unsafe.Pointer, secretLength uintptr) error {
 	var item C.SecKeychainItemRef
 	status := C.SecKeychainFindGenericPassword(
-		nil,
+		C.default_keychain_ref(),
 		C.UInt32(serviceLength),
 		service,
 		C.UInt32(accountLength),
