@@ -50,12 +50,35 @@ func TestRailIconButtonIsIconFirst(t *testing.T) {
 	if !ok {
 		t.Fatal("expected search tool registration")
 	}
-	button := newRailIconButton(search, nil)
+	button := newRailIconButton(search, nil, nil, nil)
 	if button.Text != "" {
 		t.Fatalf("expected icon-first rail button without visible text, got %q", button.Text)
 	}
 	if button.Icon == nil {
 		t.Fatal("expected rail button icon")
+	}
+}
+
+func TestRailIconButtonShowsTooltipOnHover(t *testing.T) {
+	search, ok := defaultToolWindowRegistry().Lookup("search")
+	if !ok {
+		t.Fatal("expected search tool registration")
+	}
+	hovered := ""
+	left := false
+	button := newRailIconButton(search, nil, func(text string) {
+		hovered = text
+	}, func() {
+		left = true
+	})
+
+	button.MouseIn(nil)
+	if hovered != "Search (Alt+2)" {
+		t.Fatalf("expected rail tooltip text on hover, got %q", hovered)
+	}
+	button.MouseOut()
+	if !left {
+		t.Fatal("expected hover leave callback")
 	}
 }
 

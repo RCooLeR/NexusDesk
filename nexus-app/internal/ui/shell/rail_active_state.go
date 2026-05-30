@@ -40,7 +40,7 @@ func (v *View) refreshRailActiveState() {
 	applyRailButtonImportance(v.rightRailButtons, v.activeRightRailTool)
 }
 
-func applyRailButtonImportance(buttons map[string]*widget.Button, active string) {
+func applyRailButtonImportance(buttons map[string]*railToolButton, active string) {
 	for label, button := range buttons {
 		if button == nil {
 			continue

@@ -12,9 +12,9 @@ import (
 
 func TestApplyRailButtonImportanceMarksOnlyActiveButton(t *testing.T) {
 	_ = fynetest.NewTempApp(t)
-	buttons := map[string]*widget.Button{
-		"Search":   widget.NewButton("Search", nil),
-		"Problems": widget.NewButton("Problems", nil),
+	buttons := map[string]*railToolButton{
+		"Search":   newRailIconButton(toolWindowRegistration{Label: "Search"}, nil, nil, nil),
+		"Problems": newRailIconButton(toolWindowRegistration{Label: "Problems"}, nil, nil, nil),
 	}
 
 	applyRailButtonImportance(buttons, "Problems")
@@ -30,14 +30,14 @@ func TestApplyRailButtonImportanceMarksOnlyActiveButton(t *testing.T) {
 func TestUpdateRailActiveStateForTabMapsLeftAndRightRails(t *testing.T) {
 	_ = fynetest.NewTempApp(t)
 	view := &View{
-		leftRailButtons: map[string]*widget.Button{
-			"Artifacts": widget.NewButton("Artifacts", nil),
-			"Jobs":      widget.NewButton("Jobs", nil),
+		leftRailButtons: map[string]*railToolButton{
+			"Artifacts": newRailIconButton(toolWindowRegistration{Label: "Artifacts"}, nil, nil, nil),
+			"Jobs":      newRailIconButton(toolWindowRegistration{Label: "Jobs"}, nil, nil, nil),
 		},
-		rightRailButtons: map[string]*widget.Button{
-			"Sources":   widget.NewButton("Sources", nil),
-			"Monitor":   widget.NewButton("Monitor", nil),
-			"Inspector": widget.NewButton("Inspector", nil),
+		rightRailButtons: map[string]*railToolButton{
+			"Sources":   newRailIconButton(toolWindowRegistration{Label: "Sources"}, nil, nil, nil),
+			"Monitor":   newRailIconButton(toolWindowRegistration{Label: "Monitor"}, nil, nil, nil),
+			"Inspector": newRailIconButton(toolWindowRegistration{Label: "Inspector"}, nil, nil, nil),
 		},
 	}
 
@@ -65,12 +65,12 @@ func TestSelectBottomTabRefreshesRailActiveState(t *testing.T) {
 	)
 	view := &View{
 		bottomTabs: container.NewAppTabs(container.NewTabItem("Data Studio", dataTabs)),
-		leftRailButtons: map[string]*widget.Button{
-			"Data":      widget.NewButton("Data", nil),
-			"Artifacts": widget.NewButton("Artifacts", nil),
+		leftRailButtons: map[string]*railToolButton{
+			"Data":      newRailIconButton(toolWindowRegistration{Label: "Data"}, nil, nil, nil),
+			"Artifacts": newRailIconButton(toolWindowRegistration{Label: "Artifacts"}, nil, nil, nil),
 		},
-		rightRailButtons: map[string]*widget.Button{
-			"Sources": widget.NewButton("Sources", nil),
+		rightRailButtons: map[string]*railToolButton{
+			"Sources": newRailIconButton(toolWindowRegistration{Label: "Sources"}, nil, nil, nil),
 		},
 	}
 
@@ -93,8 +93,8 @@ func TestActiveRailClickCollapsesBottomPanel(t *testing.T) {
 		bottomTabs:           container.NewAppTabs(container.NewTabItem("Workbench", childTabs)),
 		workbenchSplit:       split,
 		activeLeftRailTool:   "Search",
-		leftRailButtons:      map[string]*widget.Button{"Search": widget.NewButton("", nil)},
-		rightRailButtons:     map[string]*widget.Button{},
+		leftRailButtons:      map[string]*railToolButton{"Search": newRailIconButton(toolWindowRegistration{Label: "Search"}, nil, nil, nil)},
+		rightRailButtons:     map[string]*railToolButton{},
 		activityLog:          widget.NewRichTextFromMarkdown("Ready."),
 		activityText:         "Ready.",
 		activityLines:        []string{"Ready."},
@@ -118,8 +118,8 @@ func TestRailActiveStateRestoresPerWorkspace(t *testing.T) {
 	view := &View{
 		state:                NewState(),
 		railStateByWorkspace: map[string]railWorkspaceState{},
-		leftRailButtons:      map[string]*widget.Button{},
-		rightRailButtons:     map[string]*widget.Button{},
+		leftRailButtons:      map[string]*railToolButton{},
+		rightRailButtons:     map[string]*railToolButton{},
 	}
 	view.state.SetWorkspace(domain.Workspace{Root: "C:/one"})
 	view.setLeftRailActive("Git")

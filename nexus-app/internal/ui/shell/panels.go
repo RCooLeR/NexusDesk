@@ -16,13 +16,13 @@ func (v *View) newRail() fyne.CanvasObject {
 	logo.FillMode = canvas.ImageFillContain
 	logo.SetMinSize(fyne.NewSize(42, 42))
 	railButtons := make([]fyne.CanvasObject, 0, len(leftRailToolWindows())+4)
-	v.leftRailButtons = map[string]*widget.Button{}
+	v.leftRailButtons = map[string]*railToolButton{}
 	if v.activeLeftRailTool == "" {
 		v.activeLeftRailTool = defaultLeftRailTool
 	}
 	for _, tool := range leftRailToolWindows() {
 		tool := tool
-		button := newRailIconButton(tool, func() {
+		button := v.newRailIconButton(tool, func() {
 			v.openLeftRailToolWindow(tool)
 		})
 		v.leftRailButtons[tool.Label] = button
@@ -41,13 +41,13 @@ func (v *View) newRail() fyne.CanvasObject {
 
 func (v *View) newRightRail() fyne.CanvasObject {
 	railButtons := make([]fyne.CanvasObject, 0, len(rightRailToolWindows())+1)
-	v.rightRailButtons = map[string]*widget.Button{}
+	v.rightRailButtons = map[string]*railToolButton{}
 	if v.activeRightRailTool == "" {
 		v.activeRightRailTool = defaultRightRailTool
 	}
 	for _, tool := range rightRailToolWindows() {
 		tool := tool
-		button := newRailIconButton(tool, func() {
+		button := v.newRailIconButton(tool, func() {
 			v.openRightRailToolWindow(tool)
 		})
 		v.rightRailButtons[tool.Label] = button
@@ -57,10 +57,16 @@ func (v *View) newRightRail() fyne.CanvasObject {
 	return container.NewPadded(container.NewVBox(railButtons...))
 }
 
-func newRailIconButton(tool toolWindowRegistration, action func()) *widget.Button {
-	button := widget.NewButtonWithIcon("", tool.Icon, action)
-	button.Importance = widget.LowImportance
-	return button
+func (v *View) newRailIconButton(tool toolWindowRegistration, action func()) *railToolButton {
+	return newRailIconButton(tool, action, func(text string) {
+		if v != nil && v.status != nil {
+			v.status.SetText("Tool: " + text)
+		}
+	}, func() {
+		if v != nil {
+			v.refreshStatusBar()
+		}
+	})
 }
 
 func (v *View) newToolbar() fyne.CanvasObject {

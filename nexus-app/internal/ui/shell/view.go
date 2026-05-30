@@ -55,8 +55,8 @@ type View struct {
 	toolbarWorkspaceStatus  *widget.Label
 	toolbarBranchStatus     *widget.Label
 	toolbarProviderStatus   *widget.Label
-	leftRailButtons         map[string]*widget.Button
-	rightRailButtons        map[string]*widget.Button
+	leftRailButtons         map[string]*railToolButton
+	rightRailButtons        map[string]*railToolButton
 	activeLeftRailTool      string
 	activeRightRailTool     string
 	railStateByWorkspace    map[string]railWorkspaceState
