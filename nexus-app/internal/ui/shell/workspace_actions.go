@@ -91,6 +91,7 @@ func (v *View) openWorkspace(root string) {
 		return
 	}
 	v.state.SetWorkspace(workspace)
+	v.restoreActiveRailTools(workspace.Root)
 	if err := v.jobService.SetLogRoot(workspace.Root); err != nil {
 		v.addActivity("Job full-log directory unavailable: " + err.Error())
 	}

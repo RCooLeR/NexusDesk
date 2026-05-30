@@ -17,7 +17,9 @@ func (v *View) newRail() fyne.CanvasObject {
 	logo.SetMinSize(fyne.NewSize(42, 42))
 	railButtons := make([]fyne.CanvasObject, 0, len(leftRailToolWindows())+4)
 	v.leftRailButtons = map[string]*widget.Button{}
-	v.activeLeftRailTool = "Project"
+	if v.activeLeftRailTool == "" {
+		v.activeLeftRailTool = defaultLeftRailTool
+	}
 	for _, tool := range leftRailToolWindows() {
 		tool := tool
 		button := newRailIconButton(tool, func() {
@@ -40,7 +42,9 @@ func (v *View) newRail() fyne.CanvasObject {
 func (v *View) newRightRail() fyne.CanvasObject {
 	railButtons := make([]fyne.CanvasObject, 0, len(rightRailToolWindows())+1)
 	v.rightRailButtons = map[string]*widget.Button{}
-	v.activeRightRailTool = "Assistant"
+	if v.activeRightRailTool == "" {
+		v.activeRightRailTool = defaultRightRailTool
+	}
 	for _, tool := range rightRailToolWindows() {
 		tool := tool
 		button := newRailIconButton(tool, func() {

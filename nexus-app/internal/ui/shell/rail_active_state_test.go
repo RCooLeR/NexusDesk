@@ -6,6 +6,8 @@ import (
 	"fyne.io/fyne/v2/container"
 	fynetest "fyne.io/fyne/v2/test"
 	"fyne.io/fyne/v2/widget"
+
+	"nexusdesk/internal/domain"
 )
 
 func TestApplyRailButtonImportanceMarksOnlyActiveButton(t *testing.T) {
@@ -109,5 +111,28 @@ func TestActiveRailClickCollapsesBottomPanel(t *testing.T) {
 	}
 	if got := view.activityLines[len(view.activityLines)-1]; got != "Search collapsed." {
 		t.Fatalf("expected collapse activity, got %q", got)
+	}
+}
+
+func TestRailActiveStateRestoresPerWorkspace(t *testing.T) {
+	view := &View{
+		state:                NewState(),
+		railStateByWorkspace: map[string]railWorkspaceState{},
+		leftRailButtons:      map[string]*widget.Button{},
+		rightRailButtons:     map[string]*widget.Button{},
+	}
+	view.state.SetWorkspace(domain.Workspace{Root: "C:/one"})
+	view.setLeftRailActive("Git")
+	view.setRightRailActive("Monitor")
+
+	view.state.SetWorkspace(domain.Workspace{Root: "C:/two"})
+	view.restoreActiveRailTools("C:/two")
+	if view.activeLeftRailTool != defaultLeftRailTool || view.activeRightRailTool != defaultRightRailTool {
+		t.Fatalf("expected defaults for unseen workspace, got left=%q right=%q", view.activeLeftRailTool, view.activeRightRailTool)
+	}
+
+	view.restoreActiveRailTools("C:/one")
+	if view.activeLeftRailTool != "Git" || view.activeRightRailTool != "Monitor" {
+		t.Fatalf("expected remembered workspace rail state, got left=%q right=%q", view.activeLeftRailTool, view.activeRightRailTool)
 	}
 }

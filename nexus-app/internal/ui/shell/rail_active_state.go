@@ -2,13 +2,25 @@ package shell
 
 import "fyne.io/fyne/v2/widget"
 
+const (
+	defaultLeftRailTool  = "Project"
+	defaultRightRailTool = "Assistant"
+)
+
+type railWorkspaceState struct {
+	LeftTool  string
+	RightTool string
+}
+
 func (v *View) setLeftRailActive(label string) {
 	v.activeLeftRailTool = label
+	v.rememberActiveRailTools()
 	v.refreshRailActiveState()
 }
 
 func (v *View) setRightRailActive(label string) {
 	v.activeRightRailTool = label
+	v.rememberActiveRailTools()
 	v.refreshRailActiveState()
 }
 
@@ -19,6 +31,7 @@ func (v *View) updateRailActiveStateForTab(title string) {
 	if label := rightRailLabelForTab(title); label != "" {
 		v.activeRightRailTool = label
 	}
+	v.rememberActiveRailTools()
 	v.refreshRailActiveState()
 }
 
@@ -39,6 +52,36 @@ func applyRailButtonImportance(buttons map[string]*widget.Button, active string)
 		}
 		button.Refresh()
 	}
+}
+
+func (v *View) rememberActiveRailTools() {
+	if v == nil || v.state == nil {
+		return
+	}
+	root := v.state.Workspace().Root
+	if root == "" {
+		return
+	}
+	if v.railStateByWorkspace == nil {
+		v.railStateByWorkspace = map[string]railWorkspaceState{}
+	}
+	v.railStateByWorkspace[root] = railWorkspaceState{
+		LeftTool:  firstNonEmptyString(v.activeLeftRailTool, defaultLeftRailTool),
+		RightTool: firstNonEmptyString(v.activeRightRailTool, defaultRightRailTool),
+	}
+}
+
+func (v *View) restoreActiveRailTools(root string) {
+	if v == nil {
+		return
+	}
+	state, ok := v.railStateByWorkspace[root]
+	if !ok {
+		state = railWorkspaceState{LeftTool: defaultLeftRailTool, RightTool: defaultRightRailTool}
+	}
+	v.activeLeftRailTool = firstNonEmptyString(state.LeftTool, defaultLeftRailTool)
+	v.activeRightRailTool = firstNonEmptyString(state.RightTool, defaultRightRailTool)
+	v.refreshRailActiveState()
 }
 
 func leftRailLabelForTab(title string) string {

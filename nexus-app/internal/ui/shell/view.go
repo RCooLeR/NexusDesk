@@ -59,6 +59,7 @@ type View struct {
 	rightRailButtons        map[string]*widget.Button
 	activeLeftRailTool      string
 	activeRightRailTool     string
+	railStateByWorkspace    map[string]railWorkspaceState
 	navigator               *fyne.Container
 	navigatorTree           *widget.Tree
 	navigatorStore          *treeStore
@@ -188,6 +189,7 @@ func NewWithStartupStatus(window fyne.Window, startupStatus startupSvc.Status) *
 		editorSession:           editorSession,
 		events:                  newShellEventBus(),
 		status:                  widget.NewLabel("No workspace open"),
+		railStateByWorkspace:    map[string]railWorkspaceState{},
 		navigator:               container.NewStack(widget.NewLabel("Open a workspace to browse files.")),
 		activityLog:             widget.NewRichTextFromMarkdown("Ready."),
 		activityText:            "Ready.",

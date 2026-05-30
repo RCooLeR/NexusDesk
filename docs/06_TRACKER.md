@@ -285,10 +285,10 @@ Legend:
 - [x] P1 Add collapse on active-icon click.
 - [ ] P1 Add hover tooltips.
 - [x] P1 Add keyboard navigation.
-- [ ] P1 Remember active tool per workspace.
+- [x] P1 Remember active tool per workspace.
 - [ ] P1 Remember width per tool window.
 - [ ] P1 Add resize handle with enlarged hit zone.
-- [ ] P1 Add tests for rail state mapping.
+- [x] P1 Add tests for rail state mapping.
 
 ### 4.4 Center editor UI
 
