@@ -310,7 +310,7 @@ Legend:
 - [x] P1 Add approval cards with details.
 - [x] P1 Keep composer pinned to bottom.
 - [x] P1 Add stop/cancel visibility during runs.
-- [ ] P1 Add Sources secondary pane.
+- [x] P1 Add Sources secondary pane.
 - [ ] P1 Add Lineage secondary pane.
 - [ ] P1 Add Inspector secondary pane.
 

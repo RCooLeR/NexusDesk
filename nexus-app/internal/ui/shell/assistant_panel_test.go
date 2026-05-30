@@ -517,6 +517,28 @@ func TestAssistantVisibleSourceDigestSummarizesLatestAnswer(t *testing.T) {
 	}
 }
 
+func TestAssistantSourcesPaneSummarizesLatestAnswer(t *testing.T) {
+	empty := assistantSourcesPaneStatus(assistantSvc.Result{})
+	if empty != "Sources: no answer yet." {
+		t.Fatalf("unexpected empty sources status: %q", empty)
+	}
+
+	result := assistantSvc.Result{
+		Message:     "See README.md:12.",
+		SourcePaths: []string{"README.md", "docs/guide.md", "README.md"},
+	}
+	status := assistantSourcesPaneStatus(result)
+	for _, expected := range []string{"Sources: 2 source", "line-cited"} {
+		if !strings.Contains(status, expected) {
+			t.Fatalf("expected sources status to contain %q, got %q", expected, status)
+		}
+	}
+	labels := assistantSourcesPaneLabels(result, 8)
+	if strings.Join(labels, "|") != "README.md|docs/guide.md" {
+		t.Fatalf("unexpected source labels: %#v", labels)
+	}
+}
+
 func TestAssistantCitationSourceCoverageTreatsDirectorySourceAsCovered(t *testing.T) {
 	cited, uncited := assistantCitationSourceCoverage([]string{"docs", "README.md"}, []string{"docs/guide.md:L4"})
 	if strings.Join(cited, "|") != "docs" {

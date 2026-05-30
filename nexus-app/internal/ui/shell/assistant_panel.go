@@ -50,6 +50,8 @@ type assistantController struct {
 	view            *View
 	contextStatus   *widget.Label
 	contextList     *fyne.Container
+	sourcesStatus   *widget.Label
+	sourcesList     *fyne.Container
 	historyStatus   *widget.Label
 	historyList     *fyne.Container
 	prompt          *widget.Entry
@@ -83,6 +85,9 @@ func (v *View) newAssistantPanel() fyne.CanvasObject {
 	v.assistant.contextStatus = widget.NewLabel("")
 	v.assistant.contextStatus.Wrapping = fyne.TextWrapWord
 	v.assistant.contextList = container.NewVBox()
+	v.assistant.sourcesStatus = widget.NewLabel("")
+	v.assistant.sourcesStatus.Wrapping = fyne.TextWrapWord
+	v.assistant.sourcesList = container.NewVBox()
 	v.assistant.historyStatus = widget.NewLabel("")
 	v.assistant.historyStatus.Wrapping = fyne.TextWrapWord
 	v.assistant.historyList = container.NewVBox()
@@ -95,6 +100,10 @@ func (v *View) newAssistantPanel() fyne.CanvasObject {
 		container.NewHBox(pinSelection, pinProject, clearPins),
 		v.assistant.contextStatus,
 		v.assistant.contextList,
+	)
+	sourcesBar := container.NewVBox(
+		v.assistant.sourcesStatus,
+		v.assistant.sourcesList,
 	)
 	historyBar := container.NewVBox(
 		v.assistant.historyStatus,
@@ -155,13 +164,14 @@ func (v *View) newAssistantPanel() fyne.CanvasObject {
 	composerControls := container.NewVBox(mode, modelRoute, agentTaskApproval)
 	composer := container.NewBorder(assistantActions, nil, composerControls, send, prompt)
 	composer = container.NewPadded(composer)
-	sidebar := container.NewVBox(profileBar, widget.NewSeparator(), contextBar, widget.NewSeparator(), historyBar)
+	sidebar := container.NewVBox(profileBar, widget.NewSeparator(), contextBar, widget.NewSeparator(), sourcesBar, widget.NewSeparator(), historyBar)
 	messageArea := container.NewBorder(v.assistant.sourceDigest, nil, nil, nil, response)
 	panel := newAssistantPanelLayout(header, composer, sidebar, messageArea)
 	v.loadAssistantProfile()
 	v.refreshAssistantContextPins()
 	v.refreshAssistantRunStatus()
 	v.refreshAssistantSourceDigest()
+	v.refreshAssistantSourcesPane()
 	v.refreshAssistantHistory()
 	return container.NewPadded(panel)
 }
@@ -235,6 +245,7 @@ func (v *View) runAssistantRequest(prompt *widget.Entry, response *widget.RichTe
 			v.assistant.lastPrompt = text
 			v.assistant.lastResult = result
 			v.refreshAssistantSourceDigest()
+			v.refreshAssistantSourcesPane()
 			v.persistAssistantExchange(text, result, startedAt)
 			v.addActivity("Assistant response completed with " + result.Model + ".")
 		})
@@ -1478,6 +1489,42 @@ func assistantVisibleSourceDigest(result assistantSvc.Result) string {
 		diagnostic.CitationCount,
 		diagnostic.UnverifiedCitationCount,
 	)
+}
+
+func (v *View) refreshAssistantSourcesPane() {
+	if v == nil || v.assistant == nil || v.assistant.sourcesStatus == nil || v.assistant.sourcesList == nil {
+		return
+	}
+	result := v.assistant.lastResult
+	v.assistant.sourcesStatus.SetText(assistantSourcesPaneStatus(result))
+	v.assistant.sourcesList.Objects = nil
+	labels := assistantSourcesPaneLabels(result, assistantSourceActionLimit)
+	if len(labels) == 0 {
+		v.assistant.sourcesList.Add(widget.NewLabel("No assistant sources yet."))
+		v.assistant.sourcesList.Refresh()
+		return
+	}
+	for _, value := range labels {
+		label := widget.NewLabel(value)
+		label.Truncation = fyne.TextTruncateEllipsis
+		v.assistant.sourcesList.Add(label)
+	}
+	v.assistant.sourcesList.Refresh()
+}
+
+func assistantSourcesPaneStatus(result assistantSvc.Result) string {
+	if strings.TrimSpace(result.Message) == "" {
+		return "Sources: no answer yet."
+	}
+	diagnostic := assistantEvidenceDiagnosticForResult(result)
+	if diagnostic.SourceCount == 0 {
+		return "Sources: no explicit source context attached."
+	}
+	return fmt.Sprintf("Sources: %d source(s). Evidence: %s", diagnostic.SourceCount, firstNonEmpty(diagnostic.Summary, "not classified."))
+}
+
+func assistantSourcesPaneLabels(result assistantSvc.Result, limit int) []string {
+	return assistantActionableSourcePaths(result, limit)
 }
 
 func (v *View) runAgentRequest(text string, response *widget.RichText, send *widget.Button) {
