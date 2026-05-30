@@ -344,14 +344,14 @@ Legend:
 
 ### 4.8 Theme and visual polish
 
-- [ ] P1 Replace hardcoded colors with theme tokens.
-- [ ] P1 Define panel/editor/raised/status colors.
-- [ ] P1 Define semantic success/warning/error colors.
-- [ ] P1 Normalize spacing and row height.
-- [ ] P1 Normalize focus rings.
-- [ ] P1 Normalize active tab underline.
-- [ ] P1 Audit contrast.
-- [ ] P1 Add theme drift check or diagnostic.
+- [x] P1 Replace hardcoded colors with theme tokens. (Shell syntax highlighting now consumes `internal/ui/theme` palette tokens; the remaining `color.NRGBA` literals are centralized theme definitions/tests.)
+- [x] P1 Define panel/editor/raised/status colors. (`Palette` includes background, panel, raised panel, editor, status bar, border, and shadow tokens.)
+- [x] P1 Define semantic success/warning/error colors. (`Palette` includes success/warning/error foreground and background pairs mapped through the Fyne theme adapter.)
+- [x] P1 Normalize spacing and row height. (`Density` now carries padding, inner padding, row height, and resize-hit-width tokens for compact/comfortable modes.)
+- [x] P1 Normalize focus rings. (`Density` and `Palette` expose focus ring width/color tokens.)
+- [x] P1 Normalize active tab underline. (`Palette` and `Density` expose active-tab underline color/height tokens.)
+- [x] P1 Audit contrast. (`PaletteDiagnostics` checks core text, semantic, and syntax contrast ratios.)
+- [x] P1 Add theme drift check or diagnostic. (`PaletteDiagnostics(JetBrainsDarkPalette())` is covered by production palette tests.)
 
 ### 4.9 Resize and visual smoke
 

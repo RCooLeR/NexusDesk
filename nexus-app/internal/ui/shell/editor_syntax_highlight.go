@@ -1,32 +1,34 @@
 package shell
 
 import (
-	"image/color"
 	"strings"
 
 	"fyne.io/fyne/v2"
 	"fyne.io/fyne/v2/widget"
 
 	editorSvc "nexusdesk/internal/services/editor"
+	nexusTheme "nexusdesk/internal/ui/theme"
 )
+
+var syntaxPalette = nexusTheme.JetBrainsDarkPalette()
 
 var syntaxHighlightStyles = map[string]widget.TextGridStyle{
 	"active-line": &widget.CustomTextGridStyle{
-		BGColor: color.NRGBA{R: 0xe0, G: 0xec, B: 0xff, A: 0xff},
+		BGColor: syntaxPalette.SyntaxActiveLine,
 	},
 	"comment": &widget.CustomTextGridStyle{
 		TextStyle: fyne.TextStyle{Italic: true},
-		FGColor:   color.NRGBA{R: 0x64, G: 0x74, B: 0x8b, A: 0xff},
+		FGColor:   syntaxPalette.SyntaxComment,
 	},
 	"keyword": &widget.CustomTextGridStyle{
 		TextStyle: fyne.TextStyle{Bold: true},
-		FGColor:   color.NRGBA{R: 0x1d, G: 0x4e, B: 0xd8, A: 0xff},
+		FGColor:   syntaxPalette.SyntaxKeyword,
 	},
 	"number": &widget.CustomTextGridStyle{
-		FGColor: color.NRGBA{R: 0xb4, G: 0x53, B: 0x09, A: 0xff},
+		FGColor: syntaxPalette.SyntaxNumber,
 	},
 	"string": &widget.CustomTextGridStyle{
-		FGColor: color.NRGBA{R: 0x15, G: 0x80, B: 0x3d, A: 0xff},
+		FGColor: syntaxPalette.SyntaxString,
 	},
 }
 

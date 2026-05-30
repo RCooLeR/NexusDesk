@@ -12,13 +12,17 @@ func TestJetBrainsDarkPaletteDefinesCoreTokens(t *testing.T) {
 	palette := JetBrainsDarkPalette()
 	assertOpaque(t, "background", palette.Background)
 	assertOpaque(t, "panel", palette.Panel)
+	assertOpaque(t, "raised panel", palette.PanelRaised)
 	assertOpaque(t, "editor", palette.Editor)
+	assertOpaque(t, "status bar", palette.StatusBar)
 	assertOpaque(t, "text primary", palette.TextPrimary)
 	assertOpaque(t, "accent", palette.Accent)
+	assertOpaque(t, "active tab underline", palette.ActiveTabUnderline)
 	assertOpaque(t, "selection", palette.Selection)
 	assertOpaque(t, "success", palette.Success)
 	assertOpaque(t, "warning", palette.Warning)
 	assertOpaque(t, "error", palette.Error)
+	assertOpaque(t, "syntax keyword", palette.SyntaxKeyword)
 	if palette.Background == palette.Panel || palette.Panel == palette.Editor {
 		t.Fatalf("expected layered backgrounds, got %#v", palette)
 	}
@@ -59,6 +63,9 @@ func TestNexusThemeDensitySizesStayCompact(t *testing.T) {
 	if got := nexusTheme.Size(fynetheme.SizeNameInnerPadding); got != 6 {
 		t.Fatalf("expected compact inner padding 6, got %f", got)
 	}
+	if density := DensityForMode(DensityCompact); density.RowHeight != 28 || density.FocusRing != 2 || density.ActiveTabUnderline != 2 {
+		t.Fatalf("unexpected compact density tokens: %#v", density)
+	}
 }
 
 func TestNexusThemeComfortableDensitySizes(t *testing.T) {
@@ -69,11 +76,31 @@ func TestNexusThemeComfortableDensitySizes(t *testing.T) {
 	if got := nexusTheme.Size(fynetheme.SizeNameInnerPadding); got != 8 {
 		t.Fatalf("expected comfortable inner padding 8, got %f", got)
 	}
+	if density := DensityForMode(DensityComfortable); density.RowHeight != 34 || density.ResizeHandleHitWidth != 12 {
+		t.Fatalf("unexpected comfortable density tokens: %#v", density)
+	}
 }
 
 func TestDensityForModeFallsBackToCompact(t *testing.T) {
 	if got := DensityForMode(DensityMode("unknown")); got != DensityForMode(DensityCompact) {
 		t.Fatalf("expected unknown density to fall back to compact, got %#v", got)
+	}
+}
+
+func TestPaletteDiagnosticsPassForProductionPalette(t *testing.T) {
+	if issues := PaletteDiagnostics(JetBrainsDarkPalette()); len(issues) != 0 {
+		t.Fatalf("expected production palette to pass diagnostics, got %#v", issues)
+	}
+}
+
+func TestContrastRatioFlagsLowContrastPairs(t *testing.T) {
+	low := ContrastRatio(color.NRGBA{R: 20, G: 20, B: 20, A: 255}, color.NRGBA{R: 21, G: 21, B: 21, A: 255})
+	if low >= 3 {
+		t.Fatalf("expected near-identical colors to have low contrast, got %f", low)
+	}
+	high := ContrastRatio(color.NRGBA{R: 255, G: 255, B: 255, A: 255}, color.NRGBA{R: 0, G: 0, B: 0, A: 255})
+	if high < 21 {
+		t.Fatalf("expected white on black contrast near 21, got %f", high)
 	}
 }
 
