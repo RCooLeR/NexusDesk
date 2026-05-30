@@ -20,6 +20,8 @@ cleanup() {
   rm -f "${APP_ROOT}/nexusdesk" "${APP_ROOT}/nexusdesk.exe"
   rm -f "${APP_ROOT}/build/nexusdesk" "${APP_ROOT}/build/nexusdesk.exe"
   rm -f "${APP_ROOT}/build/nexusdesk-"*-manifest.json
+  rm -f "${APP_ROOT}/build/nexusdesk-"*-sbom.json
+  rm -f "${APP_ROOT}/build/nexusdesk-"*-provenance.json
 }
 trap cleanup EXIT
 
@@ -48,11 +50,15 @@ mkdir -p build
 artifact_path="${APP_ROOT}/build/nexusdesk"
 manifest_platform="$(go env GOOS)"
 manifest_path="${APP_ROOT}/build/nexusdesk-${manifest_platform}-manifest.json"
+sbom_path="${APP_ROOT}/build/nexusdesk-${manifest_platform}-sbom.json"
+provenance_path="${APP_ROOT}/build/nexusdesk-${manifest_platform}-provenance.json"
 go build -ldflags "${ldflags}" -o "${artifact_path}" .
 
-echo "Generating release manifest..."
-go run ./cmd/release-manifest -artifact "${artifact_path}" -output "${manifest_path}" -platform "${manifest_platform}" -version "${version}" -commit "${commit}" -build-date "${build_date}"
+echo "Generating release evidence..."
+go run ./cmd/release-manifest -artifact "${artifact_path}" -output "${manifest_path}" -platform "${manifest_platform}" -version "${version}" -commit "${commit}" -build-date "${build_date}" -repository "RCooLeR/NexusDesk" -workflow "scripts/ci-unix.sh" -source-commit-full "${commit}"
 test -s "${manifest_path}"
+test -s "${sbom_path}"
+test -s "${provenance_path}"
 
 echo "Checking diff whitespace..."
 git -C "${REPO_ROOT}" diff --check

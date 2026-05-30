@@ -445,9 +445,9 @@ Legend:
 
 ### 6.3 SBOM and provenance
 
-- [ ] P1 Generate SBOM for release.
-- [ ] P1 Generate provenance evidence.
-- [ ] P1 Store release evidence next to artifacts.
+- [x] P1 Generate SBOM for release. Evidence: `cmd/release-manifest` now writes a CycloneDX 1.5 JSON SBOM from Go build info embedded in the release artifact, including the application component, artifact SHA-256, and Go module components (`go test ./internal/release ./cmd/release-manifest -run "Evidence|SBOM|Provenance|Manifest"`; CLI smoke generated `nexusdesk-windows-sbom.json`).
+- [x] P1 Generate provenance evidence. Evidence: `release.WriteEvidenceSet` writes provenance JSON with subject build metadata, artifact hash/size, repository/workflow/source commit fields, and hashed manifest/SBOM evidence entries; the release-manifest CLI smoke generated `nexusdesk-windows-provenance.json`.
+- [x] P1 Store release evidence next to artifacts. Evidence: manifest, SBOM, and provenance paths derive from the manifest path (`nexusdesk-<platform>-manifest.json`, `nexusdesk-<platform>-sbom.json`, `nexusdesk-<platform>-provenance.json`), and both Windows/Unix CI scripts verify and clean the sidecar evidence files.
 - [ ] P1 Document verification steps.
 
 ### 6.4 CI matrix

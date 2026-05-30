@@ -112,12 +112,20 @@ try {
         New-Item -ItemType Directory -Force -Path build | Out-Null
         $artifactPath = Join-Path $appRoot 'build\nexusdesk.exe'
         $manifestPath = Join-Path $appRoot 'build\nexusdesk-windows-manifest.json'
+        $sbomPath = Join-Path $appRoot 'build\nexusdesk-windows-sbom.json'
+        $provenancePath = Join-Path $appRoot 'build\nexusdesk-windows-provenance.json'
         Invoke-Checked 'go' @('build', '-ldflags', $buildLdflags, '-o', $artifactPath, '.')
 
-        Write-Host 'Generating release manifest...'
-        Invoke-Checked 'go' @('run', './cmd/release-manifest', '-artifact', $artifactPath, '-output', $manifestPath, '-platform', 'windows', '-version', $version, '-commit', $commit, '-build-date', $buildDate)
+        Write-Host 'Generating release evidence...'
+        Invoke-Checked 'go' @('run', './cmd/release-manifest', '-artifact', $artifactPath, '-output', $manifestPath, '-platform', 'windows', '-version', $version, '-commit', $commit, '-build-date', $buildDate, '-repository', 'RCooLeR/NexusDesk', '-workflow', 'scripts/ci-windows.ps1', '-source-commit-full', $commit)
         if (-not (Test-Path $manifestPath)) {
             throw 'Release manifest was not generated.'
+        }
+        if (-not (Test-Path $sbomPath)) {
+            throw 'Release SBOM was not generated.'
+        }
+        if (-not (Test-Path $provenancePath)) {
+            throw 'Release provenance was not generated.'
         }
     }
 
@@ -127,5 +135,7 @@ try {
     Remove-Item -LiteralPath (Join-Path $appRoot 'nexusdesk.exe') -Force -ErrorAction SilentlyContinue
     Remove-Item -LiteralPath (Join-Path $appRoot 'build\nexusdesk.exe') -Force -ErrorAction SilentlyContinue
     Remove-Item -LiteralPath (Join-Path $appRoot 'build\nexusdesk-windows-manifest.json') -Force -ErrorAction SilentlyContinue
+    Remove-Item -LiteralPath (Join-Path $appRoot 'build\nexusdesk-windows-sbom.json') -Force -ErrorAction SilentlyContinue
+    Remove-Item -LiteralPath (Join-Path $appRoot 'build\nexusdesk-windows-provenance.json') -Force -ErrorAction SilentlyContinue
     Pop-Location
 }
