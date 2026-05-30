@@ -9,6 +9,8 @@ import (
 	"testing"
 	"time"
 
+	"fyne.io/fyne/v2"
+
 	artifactsSvc "nexusdesk/internal/services/artifacts"
 	datasetsSvc "nexusdesk/internal/services/datasets"
 	dbconnectorSvc "nexusdesk/internal/services/dbconnector"
@@ -36,6 +38,9 @@ func TestNewDataControllerOwnsInitialPanelState(t *testing.T) {
 	}
 	if controller.dataConnectorOptions == nil {
 		t.Fatal("expected connector option map to be initialized")
+	}
+	if !controller.dataQueryEntry.TextStyle.Monospace || controller.dataQueryEntry.Wrapping != fyne.TextWrapOff || controller.dataQueryEntry.Scroll != fyne.ScrollBoth {
+		t.Fatalf("expected query editor to use monospace no-wrap scrolling, got style=%#v wrapping=%v scroll=%v", controller.dataQueryEntry.TextStyle, controller.dataQueryEntry.Wrapping, controller.dataQueryEntry.Scroll)
 	}
 }
 

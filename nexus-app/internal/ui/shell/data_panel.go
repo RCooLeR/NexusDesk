@@ -105,7 +105,10 @@ func newDataController(view *View) *dataController {
 	dataChartDetail.Disable()
 
 	dataQueryEntry := widget.NewMultiLineEntry()
-	dataQueryEntry.SetMinRowsVisible(2)
+	dataQueryEntry.TextStyle = fyne.TextStyle{Monospace: true}
+	dataQueryEntry.Wrapping = fyne.TextWrapOff
+	dataQueryEntry.Scroll = fyne.ScrollBoth
+	dataQueryEntry.SetMinRowsVisible(4)
 	dataQueryEntry.SetPlaceHolder("Search/filter, SQL, or notebook cells. Use -- cell: Label and -- chart: Label to save multiple cells.")
 
 	return &dataController{
@@ -213,7 +216,7 @@ func (v *View) newDataPanel() fyne.CanvasObject {
 		container.NewTabItem("External DB", externalConnectorControls),
 	)
 	actions.SetTabLocation(container.TabLocationTop)
-	queryBar := container.NewBorder(nil, nil, nil, nil, v.data.dataQueryEntry)
+	queryBar := container.NewBorder(widget.NewLabelWithStyle("Query", fyne.TextAlignLeading, fyne.TextStyle{Bold: true}), nil, nil, nil, v.data.dataQueryEntry)
 	header := container.NewVBox(v.data.dataProfileStatus, queryBar, actions)
 	summary := container.NewScroll(v.data.dataProfileDetail)
 	v.data.dataRowsContainer = container.NewMax(v.data.dataRowsDetail)
