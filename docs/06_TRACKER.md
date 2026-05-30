@@ -430,8 +430,8 @@ Legend:
 - [ ] P1 Produce macOS app/package artifact.
 - [ ] P1 Produce Linux package artifact.
 - [x] P1 Generate SHA-256 manifest. (`scripts/ci-windows.ps1` generated `build/nexusdesk-windows-manifest.json` with artifact SHA-256 during the iteration 80 Windows checkpoint.)
-- [ ] P1 Embed version metadata.
-- [ ] P1 Add About dialog version string.
+- [x] P1 Embed version metadata. Evidence: `internal/buildinfo` owns version/commit/build-date metadata, Windows CI injects it through `-ldflags`, build metadata validation runs in `scripts/ci-windows.ps1`, and status bar text includes the active version.
+- [x] P1 Add About dialog version string. Evidence: Help > About calls `buildinfo.AboutText()`, which includes Version, Commit, and Build fields; covered by `TestAboutTextIncludesReleaseIdentity`.
 
 ### 6.2 Signing and trust
 
