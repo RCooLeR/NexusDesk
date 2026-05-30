@@ -2,7 +2,10 @@ package shell
 
 import "strings"
 
-const activityHistoryLimit = 400
+const (
+	activityHistoryLimit = 400
+	activityRenderLimit  = 120
+)
 
 func (v *View) addActivity(message string) {
 	message = strings.TrimSpace(message)
@@ -10,8 +13,10 @@ func (v *View) addActivity(message string) {
 		return
 	}
 	v.appendActivityLine(message)
-	v.activityText = strings.Join(v.activityLines, "\n\n")
-	v.activityLog.ParseMarkdown(v.activityText)
+	v.activityText = activityMarkdown(v.recentActivityLines(activityRenderLimit))
+	if v.activityLog != nil {
+		v.activityLog.ParseMarkdown(v.activityText)
+	}
 }
 
 func (v *View) appendActivityLine(message string) {
@@ -35,4 +40,8 @@ func (v *View) recentActivityLines(limit int) []string {
 	tail := make([]string, len(v.activityLines)-start)
 	copy(tail, v.activityLines[start:])
 	return tail
+}
+
+func activityMarkdown(lines []string) string {
+	return strings.Join(lines, "\n\n")
 }

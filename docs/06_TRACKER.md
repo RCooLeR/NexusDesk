@@ -120,7 +120,7 @@ Legend:
 - [ ] P1 Parse markdown once at final response where practical.
 - [ ] P1 Coalesce agent event rendering.
 - [ ] P1 Replace activity markdown rebuild with incremental list rendering.
-- [ ] P1 Cap activity display while preserving durable audit elsewhere.
+- [x] P1 Cap activity display while preserving durable audit elsewhere.
 - [ ] P1 Add long streaming UI stress test or profiling harness.
 - [ ] P1 Add agent-event burst test.
 

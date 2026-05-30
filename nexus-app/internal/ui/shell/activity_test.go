@@ -22,11 +22,12 @@ func TestAddActivityKeepsBoundedMarkdownBuffer(t *testing.T) {
 		t.Fatalf("expected bounded activity lines, got %d", len(view.activityLines))
 	}
 	sections := strings.Split(view.activityText, "\n\n")
-	if len(sections) != activityHistoryLimit {
-		t.Fatalf("expected markdown buffer to mirror bounded line history, got %d sections", len(sections))
+	if len(sections) != activityRenderLimit {
+		t.Fatalf("expected markdown buffer to use rendered tail, got %d sections", len(sections))
 	}
-	if sections[0] != "line-26" {
-		t.Fatalf("expected first retained line to be line-26, got %q", sections[0])
+	expectedFirstRendered := activityHistoryLimit + 25 - activityRenderLimit + 1
+	if sections[0] != "line-"+strconv.Itoa(expectedFirstRendered) {
+		t.Fatalf("expected first rendered line to be line-%d, got %q", expectedFirstRendered, sections[0])
 	}
 	if sections[len(sections)-1] != "line-"+strconv.Itoa(activityHistoryLimit+25) {
 		t.Fatalf("expected newest line at tail, got %q", sections[len(sections)-1])
