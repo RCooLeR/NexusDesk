@@ -1805,21 +1805,21 @@ func (t agentActivityTail) Markdown() string {
 func agentEventLine(event agentSvc.Event) string {
 	switch event.Type {
 	case "start":
-		return firstNonEmpty(event.Message, "Agent started.")
+		return "Timeline: started - " + firstNonEmpty(event.Message, "Agent started.")
 	case "model_request":
-		return fmt.Sprintf("Thinking, step %d...", event.Iteration)
+		return fmt.Sprintf("Timeline: step %d - asking model for the next action.", event.Iteration)
 	case "tool_start":
-		return "Tool requested: " + firstNonEmpty(event.ToolName, "unknown tool")
+		return fmt.Sprintf("Timeline: step %d - tool requested: %s.", event.Iteration, firstNonEmpty(event.ToolName, "unknown tool"))
 	case "tool_done":
-		return "Tool completed: " + firstNonEmpty(event.ToolName, "unknown tool")
+		return fmt.Sprintf("Timeline: step %d - tool completed: %s.", event.Iteration, firstNonEmpty(event.ToolName, "unknown tool"))
 	case "tool_error":
-		return "Tool failed: " + firstNonEmpty(event.ToolName, event.Error, "unknown tool")
+		return fmt.Sprintf("Timeline: step %d - tool failed: %s. %s", event.Iteration, firstNonEmpty(event.ToolName, "unknown tool"), firstNonEmpty(event.Error, "No error detail reported."))
 	case "plan_update":
-		return "Plan updated."
+		return fmt.Sprintf("Timeline: step %d - plan updated.", event.Iteration)
 	case "finalizing":
-		return "Wrapping up agent run..."
+		return "Timeline: finalizing - wrapping up agent run."
 	case "stopped", "error":
-		return firstNonEmpty(event.Message, event.Error)
+		return "Timeline: stopped - " + firstNonEmpty(event.Message, event.Error)
 	default:
 		return ""
 	}

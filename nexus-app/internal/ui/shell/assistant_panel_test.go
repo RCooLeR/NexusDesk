@@ -216,9 +216,10 @@ func TestAgentEventLineFormatsUsefulEvents(t *testing.T) {
 		event agentSvc.Event
 		want  string
 	}{
-		{event: agentSvc.Event{Type: "model_request", Iteration: 2}, want: "Thinking, step 2"},
-		{event: agentSvc.Event{Type: "tool_start", ToolName: "read_context"}, want: "Tool requested: read_context"},
-		{event: agentSvc.Event{Type: "plan_update"}, want: "Plan updated."},
+		{event: agentSvc.Event{Type: "model_request", Iteration: 2}, want: "Timeline: step 2 - asking model"},
+		{event: agentSvc.Event{Type: "tool_start", Iteration: 2, ToolName: "read_context"}, want: "Timeline: step 2 - tool requested: read_context."},
+		{event: agentSvc.Event{Type: "tool_error", Iteration: 3, ToolName: "write_file", Error: "denied"}, want: "Timeline: step 3 - tool failed: write_file. denied"},
+		{event: agentSvc.Event{Type: "plan_update", Iteration: 4}, want: "Timeline: step 4 - plan updated."},
 	}
 	for _, tt := range cases {
 		got := agentEventLine(tt.event)
