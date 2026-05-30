@@ -52,6 +52,29 @@ func TestApplyFileWriteUpdatesTextFileAndCreatesRollback(t *testing.T) {
 	}
 }
 
+func TestRollbackStorageUsageSummarizesSnapshots(t *testing.T) {
+	root := t.TempDir()
+	service := New()
+	writeFile(t, filepath.Join(root, "docs", "notes.md"), "old\n")
+
+	if _, err := service.ApplyFileWrite(root, FileWriteRequest{RelPath: "docs/notes.md", Content: "new\n"}); err != nil {
+		t.Fatalf("ApplyFileWrite returned error: %v", err)
+	}
+	usage, err := service.RollbackStorageUsage(root)
+	if err != nil {
+		t.Fatalf("RollbackStorageUsage returned error: %v", err)
+	}
+	if usage.Records != 1 || usage.ActiveRecords != 1 || usage.Entries != 1 {
+		t.Fatalf("unexpected rollback usage counts: %#v", usage)
+	}
+	if usage.SnapshotBytes != int64(len("old\n")) {
+		t.Fatalf("expected source snapshot bytes, got %#v", usage)
+	}
+	if usage.StoredBytes < usage.SnapshotBytes {
+		t.Fatalf("expected stored bytes to include snapshot/log bytes, got %#v", usage)
+	}
+}
+
 func TestBuildUnifiedDiffUsesBoundedFallbackForLargeLineCount(t *testing.T) {
 	beforeLines := make([]string, 0, 3200)
 	afterLines := make([]string, 0, 3200)

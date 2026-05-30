@@ -140,7 +140,7 @@ Legend:
 - [x] P1 Replace large-file LCS diff with bounded hunk diff.
 - [x] P1 Add deadline or size fallback for diff generation.
 - [x] P1 Add tests for large-line-count diff.
-- [ ] P1 Add rollback storage usage diagnostics.
+- [x] P1 Add rollback storage usage diagnostics.
 - [ ] P1 Add rollback retention policy documentation.
 - [ ] P2 Add content-addressed rollback storage.
 - [ ] P2 Add deduplication tests for identical snapshots.

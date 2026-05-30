@@ -86,3 +86,20 @@ func TestRollbackRecordBodyAcceptsTimestamps(t *testing.T) {
 		t.Fatal("expected rollback record body")
 	}
 }
+
+func TestRollbackStorageStatusIncludesUsage(t *testing.T) {
+	status := rollbackStorageStatus(workspaceSvc.RollbackStorageUsage{
+		Records:        3,
+		ActiveRecords:  2,
+		AppliedRecords: 1,
+		Entries:        4,
+		StoredBytes:    2048,
+		SnapshotBytes:  1024,
+	})
+
+	for _, expected := range []string{"3 rollback record", "2 active", "1 applied", "4 path snapshot", "2.0 KiB stored", "1.0 KiB source"} {
+		if !strings.Contains(status, expected) {
+			t.Fatalf("expected rollback storage status to contain %q, got %q", expected, status)
+		}
+	}
+}

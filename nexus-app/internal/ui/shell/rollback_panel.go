@@ -58,10 +58,15 @@ func (c *rollbackController) Refresh() {
 		dialog.ShowError(err, c.view.window)
 		return
 	}
-	c.status.SetText(fmt.Sprintf("%d rollback record(s)", len(records)))
+	usage, err := c.view.workspaceService.RollbackStorageUsage(workspace.Root)
+	if err != nil {
+		dialog.ShowError(err, c.view.window)
+		return
+	}
+	c.status.SetText(rollbackStorageStatus(usage))
 	c.results.Objects = rollbackRows(records, c.Confirm)
 	c.results.Refresh()
-	c.view.addActivity(fmt.Sprintf("Loaded %d rollback record(s).", len(records)))
+	c.view.addActivity("Loaded rollback records. " + rollbackStorageStatus(usage))
 }
 
 func (c *rollbackController) Confirm(record workspaceSvc.RollbackRecord) {
@@ -120,4 +125,15 @@ func rollbackRecordBody(record workspaceSvc.RollbackRecord) fyne.CanvasObject {
 
 func rollbackConfirmText(record workspaceSvc.RollbackRecord) string {
 	return fmt.Sprintf("Restore/remove %d path(s) for %s?\n\n%s", len(record.Entries), record.Target, record.Message)
+}
+
+func rollbackStorageStatus(usage workspaceSvc.RollbackStorageUsage) string {
+	return fmt.Sprintf("%d rollback record(s), %d active, %d applied, %d path snapshot(s), %s stored (%s source bytes).",
+		usage.Records,
+		usage.ActiveRecords,
+		usage.AppliedRecords,
+		usage.Entries,
+		formatDiagnosticsBytes(usage.StoredBytes),
+		formatDiagnosticsBytes(usage.SnapshotBytes),
+	)
 }

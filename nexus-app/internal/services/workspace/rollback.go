@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"io/fs"
 	"os"
 	"path/filepath"
 	"strings"
@@ -47,6 +48,15 @@ type RollbackApplyResult struct {
 	AppliedAt time.Time
 }
 
+type RollbackStorageUsage struct {
+	Records        int
+	ActiveRecords  int
+	AppliedRecords int
+	Entries        int
+	SnapshotBytes  int64
+	StoredBytes    int64
+}
+
 func (s *Service) ListRollbacks(root string) ([]RollbackRecord, error) {
 	absRoot, err := cleanRoot(root)
 	if err != nil {
@@ -65,6 +75,51 @@ func (s *Service) ListRollbacks(root string) ([]RollbackRecord, error) {
 		return nil, err
 	}
 	return records, nil
+}
+
+func (s *Service) RollbackStorageUsage(root string) (RollbackStorageUsage, error) {
+	absRoot, err := cleanRoot(root)
+	if err != nil {
+		return RollbackStorageUsage{}, err
+	}
+	records, err := s.ListRollbacks(root)
+	if err != nil {
+		return RollbackStorageUsage{}, err
+	}
+	usage := RollbackStorageUsage{Records: len(records)}
+	for _, record := range records {
+		switch record.Status {
+		case "applied":
+			usage.AppliedRecords++
+		default:
+			usage.ActiveRecords++
+		}
+		usage.Entries += len(record.Entries)
+		for _, entry := range record.Entries {
+			usage.SnapshotBytes += entry.Size
+		}
+	}
+	rollbackDir := filepath.Join(absRoot, filepath.FromSlash(rollbackDirRelPath))
+	if err := filepath.WalkDir(rollbackDir, func(path string, entry fs.DirEntry, walkErr error) error {
+		if walkErr != nil {
+			if os.IsNotExist(walkErr) {
+				return nil
+			}
+			return walkErr
+		}
+		if entry.IsDir() {
+			return nil
+		}
+		info, err := entry.Info()
+		if err != nil {
+			return err
+		}
+		usage.StoredBytes += info.Size()
+		return nil
+	}); err != nil && !os.IsNotExist(err) {
+		return RollbackStorageUsage{}, err
+	}
+	return usage, nil
 }
 
 func (s *Service) ApplyRollback(root string, id string) (RollbackApplyResult, error) {
