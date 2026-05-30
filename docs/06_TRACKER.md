@@ -373,7 +373,7 @@ Legend:
 ### 5.1 Data workbench
 
 - [ ] P1 Improve Data Sources tree icons and hierarchy.
-- [ ] P1 Add schema/table browser polish.
+- [x] P1 Add schema/table browser polish. (`formatSQLiteMetadata` and `formatConnectorMetadata` show tables, views, columns, indexes, samples, and relationships with focused tests.)
 - [x] P1 Improve query editor layout. (The query editor now uses a labeled, taller, monospace, no-wrap scrolling surface with tests for the durable editor settings.)
 - [x] P1 Improve result grid scrolling and virtualization. (`data_rows_grid.go` uses a virtualized `widget.Table`, visible-column clipping, row sampling for sizing, density policy, and scroll-to-selection behavior with tests.)
 - [x] P1 Add result copy/export polish. (Data actions expose copy cell/row, CSV/SQL/SQLite exports, and status copy guidance; `data_rows_grid_test.go` covers copy/status behavior.)
