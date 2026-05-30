@@ -1323,8 +1323,15 @@ func TestRegenerateArtifactDocumentExtractTool(t *testing.T) {
 	if err != nil {
 		t.Fatalf("regenerate_artifact returned error: %v", err)
 	}
-	if !result.Mutated || !strings.Contains(result.Observation, "Regenerated document-extract artifact") || !strings.Contains(result.Observation, "guide.md") {
+	if !result.Mutated || !strings.Contains(result.Observation, "Regenerated document-extract artifact") || !strings.Contains(result.Observation, "guide.md") || !strings.Contains(result.Observation, "Rollback snapshot:") {
 		t.Fatalf("unexpected regeneration result: %#v", result)
+	}
+	snapshots, err := store.ListRollbackSnapshots()
+	if err != nil {
+		t.Fatalf("ListRollbackSnapshots returned error: %v", err)
+	}
+	if len(snapshots) != 1 || snapshots[0].Action != "regenerate" || snapshots[0].OriginalRelPath != original.RelPath {
+		t.Fatalf("expected regenerate rollback snapshot for %s, got %#v", original.RelPath, snapshots)
 	}
 	matches, err := store.ListArtifacts(artifactsSvc.ListOptions{Query: "kind:document-extract"})
 	if err != nil {

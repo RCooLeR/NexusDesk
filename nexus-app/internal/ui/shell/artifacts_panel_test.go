@@ -1018,6 +1018,31 @@ func TestBuildChatAnswerRefreshArtifactHonorsCancelledContext(t *testing.T) {
 	}
 }
 
+func TestBuildRegeneratedArtifactHonorsCancelledContextBeforeSnapshot(t *testing.T) {
+	root := t.TempDir()
+	store, err := artifactsSvc.NewStore(root)
+	if err != nil {
+		t.Fatalf("NewStore() error = %v", err)
+	}
+	artifact, err := store.WriteChatAnswer(artifactsSvc.ChatAnswerReport{Prompt: "Q", Content: "A"})
+	if err != nil {
+		t.Fatalf("WriteChatAnswer() error = %v", err)
+	}
+	ctx, cancel := context.WithCancel(context.Background())
+	cancel()
+	view := &View{}
+	if _, err := view.buildRegeneratedArtifact(ctx, root, artifact); err == nil {
+		t.Fatal("expected cancelled context to stop artifact regeneration")
+	}
+	snapshots, err := store.ListRollbackSnapshots()
+	if err != nil {
+		t.Fatalf("ListRollbackSnapshots() error = %v", err)
+	}
+	if len(snapshots) != 0 {
+		t.Fatalf("cancelled regeneration should not create rollback snapshots: %#v", snapshots)
+	}
+}
+
 func TestArtifactRegenerationJobLabelUsesTitle(t *testing.T) {
 	if got := artifactRegenerationJobLabel(artifactsSvc.Artifact{Kind: "scan-report", Title: "Workspace Scan"}); got != "Regenerate artifact (Workspace Scan)" {
 		t.Fatalf("unexpected regeneration label: %q", got)
@@ -1083,6 +1108,29 @@ func TestFormatArtifactComparison(t *testing.T) {
 		if !strings.Contains(text, expected) {
 			t.Fatalf("comparison text missing %q:\n%s", expected, text)
 		}
+	}
+}
+
+func TestFormatArtifactRollbackSnapshots(t *testing.T) {
+	text := formatArtifactRollbackSnapshots([]artifactsSvc.RollbackSnapshot{{
+		Action:              "delete",
+		OriginalRelPath:     ".nexusdesk/artifacts/task-runs/report.md",
+		ArtifactSnapshotRel: ".nexusdesk/artifacts/rollback/1/report.md",
+		MetadataSnapshotRel: ".nexusdesk/artifacts/rollback/1/report.md.json",
+		ManifestRelPath:     ".nexusdesk/artifacts/rollback/1/rollback.json",
+		CreatedAt:           time.Date(2026, 5, 30, 10, 0, 0, 0, time.UTC),
+	}})
+	for _, expected := range []string{"Artifact Recovery Snapshots", "delete", "report.md", "rollback.json", "Metadata:"} {
+		if !strings.Contains(text, expected) {
+			t.Fatalf("rollback snapshot text missing %q:\n%s", expected, text)
+		}
+	}
+}
+
+func TestFormatArtifactRollbackSnapshotsEmpty(t *testing.T) {
+	text := formatArtifactRollbackSnapshots(nil)
+	if !strings.Contains(text, "No artifact recovery snapshots") {
+		t.Fatalf("unexpected empty rollback snapshot text: %q", text)
 	}
 }
 

@@ -67,6 +67,7 @@ func (v *View) newArtifactsPanel() fyne.CanvasObject {
 	exportComparison := widget.NewButtonWithIcon("Export compare", theme.DocumentSaveIcon(), v.exportArtifactComparison)
 	exportLineage := widget.NewButtonWithIcon("Export lineage", theme.DocumentSaveIcon(), v.exportArtifactLineageGraph)
 	importLineage := widget.NewButtonWithIcon("Import lineage", theme.FolderOpenIcon(), v.importArtifactLineageGraph)
+	recovery := widget.NewButtonWithIcon("Recovery", theme.HistoryIcon(), v.showArtifactRollbackSnapshots)
 	showArchived := widget.NewCheck("Show archived", func(include bool) {
 		v.artifacts.includeArchived = include
 		v.refreshArtifactsWithQuery(search.Text)
@@ -78,7 +79,7 @@ func (v *View) newArtifactsPanel() fyne.CanvasObject {
 	search.OnSubmitted = func(string) {
 		v.refreshArtifactsWithQuery(search.Text)
 	}
-	header := container.NewBorder(nil, nil, v.artifacts.status, container.NewHBox(documentReport, documentExtract, scanReport, exportComparison, exportLineage, importLineage, showArchived, refresh), search)
+	header := container.NewBorder(nil, nil, v.artifacts.status, container.NewHBox(documentReport, documentExtract, scanReport, exportComparison, exportLineage, importLineage, recovery, showArchived, refresh), search)
 	listScroll := container.NewScroll(v.artifacts.results)
 	listScroll.SetMinSize(fyne.NewSize(260, 110))
 	sourceScroll := container.NewVScroll(v.artifacts.sources)
@@ -1060,6 +1061,16 @@ func (v *View) regenerateArtifact(artifact artifactsSvc.Artifact) {
 }
 
 func (v *View) buildRegeneratedArtifact(ctx context.Context, workspaceRoot string, artifact artifactsSvc.Artifact) (artifactsSvc.Artifact, error) {
+	if err := ctx.Err(); err != nil {
+		return artifactsSvc.Artifact{}, err
+	}
+	store, err := artifactsSvc.NewStore(workspaceRoot)
+	if err != nil {
+		return artifactsSvc.Artifact{}, err
+	}
+	if _, err := store.SnapshotArtifact(artifact.RelPath, "regenerate"); err != nil {
+		return artifactsSvc.Artifact{}, err
+	}
 	switch strings.TrimSpace(artifact.Kind) {
 	case "scan-report":
 		return v.buildWorkspaceScanReportArtifact(ctx, workspaceRoot)
@@ -1103,6 +1114,44 @@ func (v *View) buildRegeneratedArtifact(ctx context.Context, workspaceRoot strin
 	default:
 		return artifactsSvc.Artifact{}, fmt.Errorf("artifact kind %q cannot be regenerated yet", artifact.Kind)
 	}
+}
+
+func (v *View) showArtifactRollbackSnapshots() {
+	workspace := v.state.Workspace()
+	if workspace.Root == "" {
+		v.artifacts.status.SetText("Open a workspace before viewing artifact recovery snapshots.")
+		return
+	}
+	store, err := artifactsSvc.NewStore(workspace.Root)
+	if err != nil {
+		dialog.ShowError(err, v.window)
+		return
+	}
+	snapshots, err := store.ListRollbackSnapshots()
+	if err != nil {
+		dialog.ShowError(err, v.window)
+		return
+	}
+	v.artifacts.preview.SetText(formatArtifactRollbackSnapshots(snapshots))
+	v.artifacts.status.SetText(fmt.Sprintf("%d artifact recovery snapshot(s).", len(snapshots)))
+}
+
+func formatArtifactRollbackSnapshots(snapshots []artifactsSvc.RollbackSnapshot) string {
+	if len(snapshots) == 0 {
+		return "No artifact recovery snapshots are available yet."
+	}
+	var builder strings.Builder
+	builder.WriteString("Artifact Recovery Snapshots\n\n")
+	for _, snapshot := range snapshots {
+		created := snapshot.CreatedAt.Local().Format("2006-01-02 15:04:05")
+		builder.WriteString(fmt.Sprintf("- %s %s %s\n", created, snapshot.Action, snapshot.OriginalRelPath))
+		builder.WriteString("  Manifest: " + snapshot.ManifestRelPath + "\n")
+		builder.WriteString("  Artifact: " + snapshot.ArtifactSnapshotRel + "\n")
+		if strings.TrimSpace(snapshot.MetadataSnapshotRel) != "" {
+			builder.WriteString("  Metadata: " + snapshot.MetadataSnapshotRel + "\n")
+		}
+	}
+	return strings.TrimSpace(builder.String())
 }
 
 func buildChatAnswerRefreshArtifact(ctx context.Context, workspaceRoot string, artifact artifactsSvc.Artifact) (artifactsSvc.Artifact, error) {

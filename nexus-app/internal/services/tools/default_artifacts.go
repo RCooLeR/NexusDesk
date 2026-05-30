@@ -36,6 +36,10 @@ func (h defaultHandlers) regenerateArtifact(ctx context.Context, call agent.Tool
 		err := errors.New("archived artifacts cannot be regenerated")
 		return toolError(call, "high", err), err
 	}
+	snapshot, err := store.SnapshotArtifact(original.RelPath, "regenerate")
+	if err != nil {
+		return toolError(call, "high", err), err
+	}
 	rebuilt, err := h.rebuildArtifact(ctx, root, store, original)
 	if err != nil {
 		return toolError(call, "high", err), err
@@ -46,9 +50,10 @@ func (h defaultHandlers) regenerateArtifact(ctx context.Context, call agent.Tool
 		Risk:    "high",
 		Mutated: true,
 		Observation: fmt.Sprintf(
-			"Regenerated %s artifact.\nOriginal: %s\nCreated: %s\nSources: %s",
+			"Regenerated %s artifact.\nOriginal: %s\nRollback snapshot: %s\nCreated: %s\nSources: %s",
 			rebuilt.Kind,
 			original.RelPath,
+			snapshot.ManifestRelPath,
 			rebuilt.RelPath,
 			strings.Join(rebuilt.SourcePaths, ", "),
 		),

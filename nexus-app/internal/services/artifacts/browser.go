@@ -27,6 +27,9 @@ func (s *Store) ListArtifacts(options ListOptions) ([]Artifact, error) {
 			return nil
 		}
 		if entry.IsDir() {
+			if entry.Name() == "rollback" {
+				return filepath.SkipDir
+			}
 			if !options.IncludeArchived && entry.Name() == "archive" {
 				return filepath.SkipDir
 			}

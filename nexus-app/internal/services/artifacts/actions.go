@@ -13,6 +13,9 @@ func (s *Store) ArchiveArtifact(relPath string) (Artifact, error) {
 	if err != nil {
 		return Artifact{}, err
 	}
+	if _, err := s.SnapshotArtifact(artifact.RelPath, "archive"); err != nil {
+		return Artifact{}, err
+	}
 	stamp := artifactTimestamp(time.Now().UTC())
 	targetRel := s.relPath("archive", stamp+"-"+filepath.Base(artifact.RelPath))
 	targetAbs := s.absPath(targetRel)
@@ -37,6 +40,9 @@ func (s *Store) RestoreArtifact(relPath string) (Artifact, error) {
 	if !artifact.Archived {
 		return Artifact{}, errors.New("artifact is not archived")
 	}
+	if _, err := s.SnapshotArtifact(artifact.RelPath, "restore"); err != nil {
+		return Artifact{}, err
+	}
 	targetRel := s.restoreTargetRelPath(artifact)
 	targetAbs := s.absPath(targetRel)
 	if err := os.MkdirAll(filepath.Dir(targetAbs), 0o755); err != nil {
@@ -55,6 +61,9 @@ func (s *Store) RestoreArtifact(relPath string) (Artifact, error) {
 func (s *Store) DeleteArtifact(relPath string) error {
 	artifact, err := s.artifactByPath(relPath)
 	if err != nil {
+		return err
+	}
+	if _, err := s.SnapshotArtifact(artifact.RelPath, "delete"); err != nil {
 		return err
 	}
 	if err := os.Remove(artifact.AbsPath); err != nil {

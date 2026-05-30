@@ -209,13 +209,13 @@ Legend:
 
 ### 3.4 Artifact audit and rollback
 
-- [ ] P1 Snapshot artifact before archive where needed.
-- [ ] P1 Snapshot artifact before restore where needed.
-- [ ] P1 Snapshot artifact before delete.
-- [ ] P1 Snapshot artifact before regenerate.
-- [ ] P1 Persist artifact rollback metadata.
-- [ ] P1 Add UI recovery affordance.
-- [ ] P1 Add tests for artifact destructive flows.
+- [x] P1 Snapshot artifact before archive where needed.
+- [x] P1 Snapshot artifact before restore where needed.
+- [x] P1 Snapshot artifact before delete.
+- [x] P1 Snapshot artifact before regenerate.
+- [x] P1 Persist artifact rollback metadata.
+- [x] P1 Add UI recovery affordance.
+- [x] P1 Add tests for artifact destructive flows.
 
 ### 3.5 Git robustness
 

@@ -21,6 +21,16 @@ type Artifact struct {
 	Archived     bool
 }
 
+type RollbackSnapshot struct {
+	ID                  string    `json:"id"`
+	Action              string    `json:"action"`
+	OriginalRelPath     string    `json:"originalRelPath"`
+	ArtifactSnapshotRel string    `json:"artifactSnapshotRelPath"`
+	MetadataSnapshotRel string    `json:"metadataSnapshotRelPath,omitempty"`
+	ManifestRelPath     string    `json:"manifestRelPath"`
+	CreatedAt           time.Time `json:"createdAt"`
+}
+
 type TaskRunReport struct {
 	ID          string
 	JobID       string

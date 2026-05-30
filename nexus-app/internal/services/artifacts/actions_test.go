@@ -24,9 +24,26 @@ func TestRestoreArtifactMovesArchivedArtifactToOriginalPath(t *testing.T) {
 	if err != nil {
 		t.Fatalf("ArchiveArtifact returned error: %v", err)
 	}
+	snapshots, err := store.ListRollbackSnapshots()
+	if err != nil {
+		t.Fatalf("ListRollbackSnapshots returned error: %v", err)
+	}
+	if len(snapshots) != 1 || snapshots[0].Action != "archive" || snapshots[0].OriginalRelPath != report.RelPath || snapshots[0].ArtifactSnapshotRel == "" || snapshots[0].MetadataSnapshotRel == "" {
+		t.Fatalf("expected archive snapshot with metadata, got %#v", snapshots)
+	}
+	if _, err := os.Stat(store.absPath(snapshots[0].ArtifactSnapshotRel)); err != nil {
+		t.Fatalf("expected archive snapshot artifact file: %v", err)
+	}
 	restored, err := store.RestoreArtifact(archived.RelPath)
 	if err != nil {
 		t.Fatalf("RestoreArtifact returned error: %v", err)
+	}
+	snapshots, err = store.ListRollbackSnapshots()
+	if err != nil {
+		t.Fatalf("ListRollbackSnapshots after restore returned error: %v", err)
+	}
+	if len(snapshots) != 2 || snapshots[0].Action != "restore" {
+		t.Fatalf("expected restore snapshot to be newest, got %#v", snapshots)
 	}
 	if restored.RelPath != report.RelPath || restored.Archived {
 		t.Fatalf("unexpected restored artifact: %#v", restored)
@@ -130,5 +147,36 @@ func TestReadArtifactMetadataRejectsMissingSidecar(t *testing.T) {
 	}
 	if _, err := store.ReadArtifactMetadata(report.RelPath); err == nil {
 		t.Fatal("expected missing sidecar to be rejected")
+	}
+}
+
+func TestDeleteArtifactCreatesRollbackSnapshotAndHidesRollbackFiles(t *testing.T) {
+	store, err := NewStore(t.TempDir())
+	if err != nil {
+		t.Fatal(err)
+	}
+	report, err := store.WriteTaskRunReport(TaskRunReport{ID: "task", Label: "Task", Command: "go test", Cwd: ".", Status: "success"})
+	if err != nil {
+		t.Fatalf("WriteTaskRunReport returned error: %v", err)
+	}
+	if err := store.DeleteArtifact(report.RelPath); err != nil {
+		t.Fatalf("DeleteArtifact returned error: %v", err)
+	}
+	snapshots, err := store.ListRollbackSnapshots()
+	if err != nil {
+		t.Fatalf("ListRollbackSnapshots returned error: %v", err)
+	}
+	if len(snapshots) != 1 || snapshots[0].Action != "delete" || snapshots[0].OriginalRelPath != report.RelPath {
+		t.Fatalf("expected delete rollback snapshot, got %#v", snapshots)
+	}
+	if _, err := os.Stat(store.absPath(snapshots[0].ArtifactSnapshotRel)); err != nil {
+		t.Fatalf("expected delete snapshot artifact file: %v", err)
+	}
+	artifacts, err := store.ListArtifacts(ListOptions{IncludeArchived: true})
+	if err != nil {
+		t.Fatalf("ListArtifacts returned error: %v", err)
+	}
+	if len(artifacts) != 0 {
+		t.Fatalf("rollback snapshots should not appear as artifacts: %#v", artifacts)
 	}
 }
