@@ -441,7 +441,7 @@ Legend:
 - [ ] P1 Decide macOS signing/notarization strategy.
 - [ ] P1 Implement macOS signing/notarization if chosen.
 - [ ] P1 Document Linux trust/package dependencies.
-- [ ] P1 Add release trust diagnostics.
+- [x] P1 Add release trust diagnostics. Evidence: `release.RuntimeTrustDiagnostics` now reports unstamped build metadata plus missing manifest/signing/trust/smoke/SBOM/provenance evidence, and Diagnostics renders a Release trust health card plus report section (`go test ./internal/release ./internal/ui/shell -run "ReleaseTrust|RuntimeTrust|PackagingReadiness|Diagnostics"`).
 
 ### 6.3 SBOM and provenance
 

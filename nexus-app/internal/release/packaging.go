@@ -112,6 +112,41 @@ func EvaluatePackagingReadiness(e PackagingEvidence) PackagingReadiness {
 	return readiness
 }
 
+func RuntimeTrustDiagnostics(platform string, info buildinfo.Info) PackagingReadiness {
+	platform = normalizePlatform(platform)
+	readiness := PackagingReadiness{
+		Platform:       platform,
+		ArtifactFormat: "runtime",
+	}
+
+	if platform == "" {
+		readiness.addBlocker("release platform is required", "record the current runtime platform before evaluating release trust")
+	} else if !supportedPlatform(platform) {
+		readiness.addBlocker(fmt.Sprintf("unsupported release platform %q", platform), "define packaging rules before shipping this platform")
+	}
+
+	if err := info.Validate(); err != nil {
+		readiness.addBlocker("runtime build metadata is invalid: "+err.Error(), "stamp release builds with semantic version, commit, and RFC3339 build date metadata")
+	}
+	if strings.EqualFold(strings.TrimSpace(info.Commit), "unknown") {
+		readiness.addBlocker("runtime commit metadata is not stamped", "build release artifacts with the exact source commit")
+	}
+	if strings.EqualFold(strings.TrimSpace(info.BuildDate), "unknown") {
+		readiness.addBlocker("runtime build date metadata is not stamped", "build release artifacts with an RFC3339 UTC build date")
+	}
+	if strings.Contains(strings.ToLower(strings.TrimSpace(info.Version)), "dev") {
+		readiness.addBlocker("development version metadata is active", "stamp release artifacts with the target semantic version")
+	}
+
+	readiness.addBlocker("packaged artifact manifest is not attached to this runtime", "generate a release artifact manifest with size, SHA-256, platform, and build metadata")
+	readiness.addBlocker("code-signing, notarization, or package trust evidence is not attached", "record platform-specific signing, notarization, or Linux trust evidence next to the artifact")
+	readiness.addBlocker("clean-machine, update, uninstall, and protected-secret smoke evidence is not attached", "run and archive the release smoke checklist for the target platform")
+	readiness.addBlocker("SBOM and provenance evidence is not attached", "generate SBOM and provenance files and store them with the release artifact")
+
+	readiness.Ready = len(readiness.Blockers) == 0
+	return readiness
+}
+
 func (r *PackagingReadiness) addBlocker(blocker string, action string) {
 	r.Blockers = append(r.Blockers, blocker)
 	r.Actions = append(r.Actions, action)

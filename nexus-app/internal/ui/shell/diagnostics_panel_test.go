@@ -10,6 +10,7 @@ import (
 
 	fynetest "fyne.io/fyne/v2/test"
 
+	releaseSvc "nexusdesk/internal/release"
 	artifactsSvc "nexusdesk/internal/services/artifacts"
 	dbconnectorSvc "nexusdesk/internal/services/dbconnector"
 	llmSvc "nexusdesk/internal/services/llm"
@@ -132,6 +133,12 @@ func TestFormatDiagnosticsSnapshotIncludesCoreSections(t *testing.T) {
 				WithinBudget: true,
 			},
 		},
+		ReleaseTrust: releaseSvc.PackagingReadiness{
+			Platform:       "windows",
+			ArtifactFormat: "msix",
+			Blockers:       []string{"release manifest is missing"},
+			Actions:        []string{"Generate release manifest before shipping."},
+		},
 		RecommendedActions: []string{
 			"Open Jobs and Agent Audit tabs to inspect recent failures and retry safe workloads.",
 		},
@@ -159,6 +166,8 @@ func TestFormatDiagnosticsSnapshotIncludesCoreSections(t *testing.T) {
 		"planned tools are roadmap-only",
 		"## Artifact Provenance",
 		"No native artifacts are present yet.",
+		"## Release Trust",
+		"release manifest is missing",
 		"## Protected Secrets",
 		"## Connector Transport",
 		"Warehouse [postgres]: encrypted transport required",
@@ -177,6 +186,38 @@ func TestFormatDiagnosticsSnapshotIncludesCoreSections(t *testing.T) {
 	} {
 		if !strings.Contains(text, expected) {
 			t.Fatalf("expected %q in diagnostics text:\n%s", expected, text)
+		}
+	}
+}
+
+func TestDiagnosticsReleaseTrustHealthAndReport(t *testing.T) {
+	readiness := releaseSvc.PackagingReadiness{
+		Platform:       "darwin",
+		ArtifactFormat: "dmg",
+		Blockers: []string{
+			"macOS package is not notarized",
+			"SBOM and provenance evidence is not attached",
+		},
+		Actions: []string{
+			"notarize the macOS package and staple the ticket where applicable",
+			"generate SBOM and provenance files",
+		},
+	}
+	card := diagnosticsReleaseTrustHealthCard(readiness)
+	if card.Status != "warning" || !strings.Contains(card.Detail, "2 blocker(s) remain") || !strings.Contains(card.Action, "notarize") {
+		t.Fatalf("unexpected release trust card: %+v", card)
+	}
+	report := formatDiagnosticsReleaseTrust(readiness)
+	for _, expected := range []string{
+		"Status: warning - 2 blocker(s) remain.",
+		"Platform: darwin",
+		"Artifact format: dmg",
+		"macOS package is not notarized",
+		"SBOM and provenance evidence is not attached",
+		"generate SBOM and provenance files",
+	} {
+		if !strings.Contains(report, expected) {
+			t.Fatalf("expected %q in release trust report:\n%s", expected, report)
 		}
 	}
 }

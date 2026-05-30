@@ -3,6 +3,8 @@ package release
 import (
 	"strings"
 	"testing"
+
+	"nexusdesk/internal/buildinfo"
 )
 
 func TestEvaluatePackagingReadinessWindowsReady(t *testing.T) {
@@ -154,6 +156,41 @@ func TestEvaluatePackagingReadinessBlocksInvalidManifestBuildMetadata(t *testing
 	t.Fatalf("expected build metadata blocker, got %v", got.Blockers)
 }
 
+func TestRuntimeTrustDiagnosticsRequiresReleaseEvidence(t *testing.T) {
+	got := RuntimeTrustDiagnostics("windows", buildinfo.Info{
+		AppID:     buildinfo.AppID,
+		AppName:   buildinfo.AppName,
+		Version:   "0.0.0-dev",
+		Commit:    "unknown",
+		BuildDate: "unknown",
+	})
+	if got.Ready {
+		t.Fatal("expected runtime diagnostics to require attached release evidence")
+	}
+	if got.Platform != "windows" || got.ArtifactFormat != "runtime" {
+		t.Fatalf("unexpected runtime trust target: %+v", got)
+	}
+	for _, blocker := range []string{
+		"runtime commit metadata is not stamped",
+		"runtime build date metadata is not stamped",
+		"development version metadata is active",
+		"packaged artifact manifest is not attached to this runtime",
+		"code-signing, notarization, or package trust evidence is not attached",
+		"clean-machine, update, uninstall, and protected-secret smoke evidence is not attached",
+		"SBOM and provenance evidence is not attached",
+	} {
+		expectBlocker(t, got, blocker)
+	}
+}
+
+func TestRuntimeTrustDiagnosticsRejectsUnsupportedPlatform(t *testing.T) {
+	got := RuntimeTrustDiagnostics("plan9", testBuildInfo())
+	if got.Ready {
+		t.Fatal("expected unsupported platform to block runtime trust diagnostics")
+	}
+	expectBlocker(t, got, `unsupported release platform "plan9"`)
+}
+
 func testPackagingManifest(platform string) Manifest {
 	return Manifest{
 		SchemaVersion:  "1",
@@ -167,6 +204,16 @@ func testPackagingManifest(platform string) Manifest {
 		ArtifactSize:   42,
 		ArtifactSHA256: strings.Repeat("a", 64),
 		GeneratedAt:    "2026-05-28T12:00:00Z",
+	}
+}
+
+func testBuildInfo() buildinfo.Info {
+	return buildinfo.Info{
+		AppID:     buildinfo.AppID,
+		AppName:   buildinfo.AppName,
+		Version:   "1.2.3",
+		Commit:    "abcdef123456",
+		BuildDate: "2026-05-28T11:59:00Z",
 	}
 }
 

@@ -3,6 +3,7 @@ package shell
 import (
 	"context"
 	"fmt"
+	"runtime"
 	"strings"
 	"time"
 
@@ -11,6 +12,8 @@ import (
 	"fyne.io/fyne/v2/theme"
 	"fyne.io/fyne/v2/widget"
 
+	"nexusdesk/internal/buildinfo"
+	releaseSvc "nexusdesk/internal/release"
 	artifactsSvc "nexusdesk/internal/services/artifacts"
 	dbconnectorSvc "nexusdesk/internal/services/dbconnector"
 	externalagentsSvc "nexusdesk/internal/services/externalagents"
@@ -64,6 +67,7 @@ type diagnosticsSnapshot struct {
 	ToolCatalogHealth       toolsSvc.ToolCatalogHealth
 	ArtifactProvenance      artifactsSvc.ProvenanceSummary
 	ArtifactProvenanceError string
+	ReleaseTrust            releaseSvc.PackagingReadiness
 	ProtectedSecretStatus   protectedsecretSvc.BackendStatus
 	ConnectorProfiles       []dbconnectorSvc.ConnectorProfile
 	ConnectorProfilesError  string
@@ -277,6 +281,7 @@ func (v *View) collectDiagnosticsSnapshot(root string, activityTail []string) di
 		PerformanceTimings:    v.performanceTimings(diagnosticsPerformanceLimit),
 		FailureScenarios:      readinessSvc.ProductionFailureScenarios(),
 		ToolCatalogHealth:     toolsSvc.ValidateDefaultToolCatalog(),
+		ReleaseTrust:          releaseSvc.RuntimeTrustDiagnostics(runtime.GOOS, buildinfo.Current()),
 		ExternalAgentTools:    externalagentsSvc.Probe(externalagentsSvc.Options{}),
 		ProtectedSecretStatus: protectedsecretSvc.Status(),
 	}
@@ -305,6 +310,9 @@ func (v *View) collectDiagnosticsSnapshot(root string, activityTail []string) di
 	}
 	if !snapshot.ToolCatalogHealth.OK() {
 		snapshot.Warnings = append(snapshot.Warnings, "Tool registry warning: "+strings.Join(snapshot.ToolCatalogHealth.Violations, "; "))
+	}
+	if !snapshot.ReleaseTrust.Ready {
+		snapshot.Warnings = append(snapshot.Warnings, fmt.Sprintf("Release trust warning: %d blocker(s) remain; first blocker: %s", len(snapshot.ReleaseTrust.Blockers), firstNonEmptyString(firstString(snapshot.ReleaseTrust.Blockers), "release evidence is incomplete")))
 	}
 	if store, err := artifactsSvc.NewStore(root); err == nil {
 		if provenance, err := store.InspectProvenance(artifactsSvc.ListOptions{}); err == nil {
@@ -618,6 +626,9 @@ func formatDiagnosticsSnapshot(snapshot diagnosticsSnapshot) string {
 	builder.WriteString("\n## Artifact Provenance\n")
 	builder.WriteString(formatDiagnosticsArtifactProvenance(snapshot))
 
+	builder.WriteString("\n## Release Trust\n")
+	builder.WriteString(formatDiagnosticsReleaseTrust(snapshot.ReleaseTrust))
+
 	builder.WriteString("\n## Protected Secrets\n")
 	builder.WriteString("Backend: ")
 	builder.WriteString(firstNonEmptyString(snapshot.ProtectedSecretStatus.Backend, "unknown"))
@@ -716,6 +727,7 @@ func diagnosticsHealthCards(snapshot diagnosticsSnapshot) []diagnosticsHealthCar
 		diagnosticsFailureGatesHealthCard(snapshot),
 		diagnosticsToolCatalogHealthCard(snapshot),
 		diagnosticsArtifactProvenanceHealthCard(snapshot),
+		diagnosticsReleaseTrustHealthCard(snapshot.ReleaseTrust),
 		diagnosticsProtectedSecretHealthCard(snapshot),
 		diagnosticsConnectorTransportHealthCard(snapshot),
 		diagnosticsStartupHealthCard(snapshot),
@@ -891,6 +903,77 @@ func formatDiagnosticsArtifactProvenance(snapshot diagnosticsSnapshot) string {
 		return "Status: warning - " + snapshot.ArtifactProvenanceError + "\n"
 	}
 	return artifactsSvc.FormatProvenanceSummary(snapshot.ArtifactProvenance, diagnosticsFailureDetailLimit)
+}
+
+func diagnosticsReleaseTrustHealthCard(readiness releaseSvc.PackagingReadiness) diagnosticsHealthCard {
+	readiness = diagnosticsReleaseTrustReadiness(readiness)
+	if readiness.Ready {
+		return diagnosticsHealthCard{
+			Label:  "Release trust",
+			Status: "ok",
+			Detail: fmt.Sprintf("%s %s release evidence is complete.", firstNonEmptyString(readiness.Platform, "target"), firstNonEmptyString(readiness.ArtifactFormat, "artifact")),
+			Action: "Keep manifest, signing/trust, SBOM, provenance, and smoke evidence with release artifacts.",
+		}
+	}
+	blocker := firstNonEmptyString(firstString(readiness.Blockers), "release evidence is incomplete")
+	return diagnosticsHealthCard{
+		Label:  "Release trust",
+		Status: "warning",
+		Detail: fmt.Sprintf("%d blocker(s) remain: %s", len(readiness.Blockers), compactDiagnosticsLine(blocker, diagnosticsCompactMessageLimit)),
+		Action: firstNonEmptyString(firstString(readiness.Actions), "Generate release evidence and rerun diagnostics before shipping."),
+	}
+}
+
+func formatDiagnosticsReleaseTrust(readiness releaseSvc.PackagingReadiness) string {
+	readiness = diagnosticsReleaseTrustReadiness(readiness)
+	var builder strings.Builder
+	if readiness.Ready {
+		builder.WriteString("Status: ok - release evidence is complete.\n")
+	} else {
+		builder.WriteString(fmt.Sprintf("Status: warning - %d blocker(s) remain.\n", len(readiness.Blockers)))
+	}
+	builder.WriteString("Platform: ")
+	builder.WriteString(firstNonEmptyString(readiness.Platform, "unknown"))
+	builder.WriteString("\nArtifact format: ")
+	builder.WriteString(firstNonEmptyString(readiness.ArtifactFormat, "unknown"))
+	builder.WriteString("\n")
+	if len(readiness.Blockers) > 0 {
+		builder.WriteString("Blockers:\n")
+		for _, blocker := range readiness.Blockers {
+			builder.WriteString("- ")
+			builder.WriteString(blocker)
+			builder.WriteString("\n")
+		}
+	}
+	if len(readiness.Warnings) > 0 {
+		builder.WriteString("Warnings:\n")
+		for _, warning := range readiness.Warnings {
+			builder.WriteString("- ")
+			builder.WriteString(warning)
+			builder.WriteString("\n")
+		}
+	}
+	if len(readiness.Actions) > 0 {
+		builder.WriteString("Actions:\n")
+		for _, action := range uniqueDiagnosticsLines(readiness.Actions) {
+			builder.WriteString("- ")
+			builder.WriteString(action)
+			builder.WriteString("\n")
+		}
+	}
+	return builder.String()
+}
+
+func diagnosticsReleaseTrustReadiness(readiness releaseSvc.PackagingReadiness) releaseSvc.PackagingReadiness {
+	if readiness.Ready ||
+		strings.TrimSpace(readiness.Platform) != "" ||
+		strings.TrimSpace(readiness.ArtifactFormat) != "" ||
+		len(readiness.Blockers) > 0 ||
+		len(readiness.Warnings) > 0 ||
+		len(readiness.Actions) > 0 {
+		return readiness
+	}
+	return releaseSvc.RuntimeTrustDiagnostics(runtime.GOOS, buildinfo.Current())
 }
 
 func diagnosticsToolCatalogHealthCard(snapshot diagnosticsSnapshot) diagnosticsHealthCard {
@@ -1206,6 +1289,32 @@ func appendDiagnosticsDetail(existing []string, limit int, value string) []strin
 	return append(existing, value)
 }
 
+func firstString(values []string) string {
+	for _, value := range values {
+		if strings.TrimSpace(value) != "" {
+			return value
+		}
+	}
+	return ""
+}
+
+func uniqueDiagnosticsLines(values []string) []string {
+	seen := map[string]struct{}{}
+	unique := make([]string, 0, len(values))
+	for _, value := range values {
+		value = strings.TrimSpace(value)
+		if value == "" {
+			continue
+		}
+		if _, ok := seen[value]; ok {
+			continue
+		}
+		seen[value] = struct{}{}
+		unique = append(unique, value)
+	}
+	return unique
+}
+
 func formatJobFailureDetail(job jobsSvc.Job) string {
 	reason := firstNonEmptyString(job.Error, job.Message)
 	if len(job.LogTail) > 0 {
@@ -1291,6 +1400,9 @@ func diagnosticsRecommendedActions(snapshot diagnosticsSnapshot) []string {
 	}
 	if !snapshot.ProtectedSecretStatus.Available {
 		actions = append(actions, firstNonEmptyString(snapshot.ProtectedSecretStatus.Action, "Fix protected credential storage before saving provider keys or connector credentials."))
+	}
+	if !snapshot.ReleaseTrust.Ready {
+		actions = append(actions, uniqueDiagnosticsLines(snapshot.ReleaseTrust.Actions)...)
 	}
 	if strings.TrimSpace(snapshot.ConnectorProfilesError) != "" {
 		actions = append(actions, "Open Data Sources and verify connector profile storage before release smoke.")
