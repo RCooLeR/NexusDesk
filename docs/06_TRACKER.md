@@ -284,7 +284,7 @@ Legend:
 - [x] P1 Add active icon state.
 - [x] P1 Add collapse on active-icon click.
 - [ ] P1 Add hover tooltips.
-- [ ] P1 Add keyboard navigation.
+- [x] P1 Add keyboard navigation.
 - [ ] P1 Remember active tool per workspace.
 - [ ] P1 Remember width per tool window.
 - [ ] P1 Add resize handle with enlarged hit zone.

@@ -77,3 +77,16 @@ func TestToolWindowRegistryShortcutRoutingUsesAltModifier(t *testing.T) {
 		t.Fatalf("expected Alt+2 search shortcut, got key=%s modifier=%v", shortcut.KeyName, shortcut.Modifier)
 	}
 }
+
+func TestToolWindowRegistryCoversRailKeyboardNavigation(t *testing.T) {
+	registry := defaultToolWindowRegistry()
+	shortcutTools := map[string]bool{}
+	for _, tool := range registry.ShortcutTools() {
+		shortcutTools[tool.ID] = true
+	}
+	for _, tool := range append(leftRailToolWindows(), rightRailToolWindows()...) {
+		if !shortcutTools[tool.ID] {
+			t.Fatalf("expected rail tool %q to be reachable by keyboard shortcut", tool.ID)
+		}
+	}
+}
