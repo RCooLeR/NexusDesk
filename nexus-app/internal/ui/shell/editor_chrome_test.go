@@ -33,6 +33,34 @@ func TestDocumentMapItemText(t *testing.T) {
 	}
 }
 
+func TestCompactEditorBreadcrumbsKeepsPathTail(t *testing.T) {
+	crumbs := editorSvc.BuildBreadcrumbs("a/b/c/d/e/file.go", "Workspace")
+	compact := compactEditorBreadcrumbs(crumbs)
+
+	got := make([]string, 0, len(compact))
+	for _, crumb := range compact {
+		got = append(got, crumb.Label+"="+crumb.RelPath)
+	}
+	want := []string{
+		"Workspace=",
+		"...=",
+		"d=a/b/c/d",
+		"e=a/b/c/d/e",
+		"file.go=a/b/c/d/e/file.go",
+	}
+	if strings.Join(got, "|") != strings.Join(want, "|") {
+		t.Fatalf("unexpected compact breadcrumbs:\n got: %#v\nwant: %#v", got, want)
+	}
+}
+
+func TestCompactEditorBreadcrumbLabelShortensLongSegments(t *testing.T) {
+	long := "this-is-a-very-long-folder-name-for-display"
+	got := compactEditorBreadcrumbLabel(long)
+	if len(got) != editorBreadcrumbLabelLimit || !strings.HasSuffix(got, "...") {
+		t.Fatalf("expected compact label with ellipsis, got %q", got)
+	}
+}
+
 func TestEditorSaveAllowedBlocksTruncatedPreview(t *testing.T) {
 	tab := editorSvc.Tab{Dirty: true}
 	preview := domain.FilePreview{Kind: domain.PreviewText, Truncated: true}

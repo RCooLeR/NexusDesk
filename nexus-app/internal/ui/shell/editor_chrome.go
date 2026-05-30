@@ -3,6 +3,7 @@ package shell
 import (
 	"path"
 	"path/filepath"
+	"strings"
 
 	"fyne.io/fyne/v2"
 	"fyne.io/fyne/v2/container"
@@ -13,6 +14,11 @@ import (
 	"nexusdesk/internal/domain"
 	editorSvc "nexusdesk/internal/services/editor"
 	workspaceSvc "nexusdesk/internal/services/workspace"
+)
+
+const (
+	editorBreadcrumbVisibleLimit = 5
+	editorBreadcrumbLabelLimit   = 28
 )
 
 func (v *View) newEditorPanel(tab editorSvc.Tab, preview domain.FilePreview) fyne.CanvasObject {
@@ -142,14 +148,14 @@ func (v *View) refreshEditorTabPanel(tabID string) {
 
 func (v *View) newEditorBreadcrumbs(relPath string) fyne.CanvasObject {
 	workspace := v.state.Workspace()
-	crumbs := editorSvc.BuildBreadcrumbs(relPath, workspace.Name)
+	crumbs := compactEditorBreadcrumbs(editorSvc.BuildBreadcrumbs(relPath, workspace.Name))
 	row := container.NewHBox()
 	for index, crumb := range crumbs {
 		current := crumb
 		if index > 0 {
-			row.Add(widget.NewLabel(">"))
+			row.Add(widget.NewLabel("/"))
 		}
-		button := widget.NewButton(current.Label, func() {
+		button := widget.NewButton(compactEditorBreadcrumbLabel(current.Label), func() {
 			v.openEditorBreadcrumb(current.RelPath)
 		})
 		button.Importance = widget.LowImportance
@@ -159,6 +165,24 @@ func (v *View) newEditorBreadcrumbs(relPath string) fyne.CanvasObject {
 		row.Add(button)
 	}
 	return container.NewHScroll(row)
+}
+
+func compactEditorBreadcrumbs(crumbs []editorSvc.Breadcrumb) []editorSvc.Breadcrumb {
+	if len(crumbs) <= editorBreadcrumbVisibleLimit {
+		return append([]editorSvc.Breadcrumb{}, crumbs...)
+	}
+	compact := []editorSvc.Breadcrumb{crumbs[0], {Label: "..."}}
+	tailCount := editorBreadcrumbVisibleLimit - len(compact)
+	compact = append(compact, crumbs[len(crumbs)-tailCount:]...)
+	return compact
+}
+
+func compactEditorBreadcrumbLabel(label string) string {
+	label = strings.TrimSpace(label)
+	if len(label) <= editorBreadcrumbLabelLimit {
+		return label
+	}
+	return label[:editorBreadcrumbLabelLimit-3] + "..."
 }
 
 func (v *View) openEditorBreadcrumb(relPath string) {
