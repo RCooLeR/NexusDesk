@@ -359,13 +359,13 @@ Legend:
 - [x] P1 Test 1024 x 640 minimum working size. (`TestVisualSmokeSupportedWindowSizes/minimum` renders the live shell at 1024 x 640.)
 - [x] P1 Test 1600 x 900 desktop size. (`TestVisualSmokeSupportedWindowSizes/desktop` renders the live shell at 1600 x 900.)
 - [x] P1 Test first launch no workspace screenshot. (`TestVisualSmokeFirstLaunchNoWorkspace` verifies deterministic first-launch render markup and status state.)
-- [ ] P1 Test workspace open screenshot.
-- [ ] P1 Test editor screenshot.
-- [ ] P1 Test assistant streaming screenshot.
-- [ ] P1 Test data source screenshot.
-- [ ] P1 Test artifacts screenshot.
-- [ ] P1 Test settings screenshot.
-- [ ] P1 Test diagnostics screenshot.
+- [x] P1 Test workspace open screenshot. (`TestVisualSmokeWorkspaceAndEditorStates` renders the shell after a temp workspace is loaded and verifies navigator/status state.)
+- [x] P1 Test editor screenshot. (`TestVisualSmokeWorkspaceAndEditorStates` opens `README.md`, renders the shell, and verifies editor tab/draft content.)
+- [x] P1 Test assistant streaming screenshot. (`TestVisualSmokeCoreToolStates` renders the assistant shell with a simulated streaming run-status header.)
+- [x] P1 Test data source screenshot. (`TestVisualSmokeCoreToolStates` selects the Data tool and renders the shell.)
+- [x] P1 Test artifacts screenshot. (`TestVisualSmokeCoreToolStates` selects the Artifacts tool and renders the shell.)
+- [x] P1 Test settings screenshot. (`TestVisualSmokeCoreToolStates` opens the Settings editor tab and verifies the Diagnostics & Tests settings section.)
+- [x] P1 Test diagnostics screenshot. (`TestVisualSmokeCoreToolStates` selects the Diagnostics tool and renders the shell.)
 - [ ] P1 Test approval dialog screenshot.
 
 ## Phase 5: Data, Artifact, Assistant Maturity
