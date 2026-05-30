@@ -37,6 +37,7 @@ const assistantCitationSnippetLineMaxChars = 180
 const assistantSourceActionLimit = 8
 const assistantSourceDigestListLimit = 24
 const assistantStreamRefreshInterval = 80 * time.Millisecond
+const agentEventRefreshInterval = 120 * time.Millisecond
 
 var assistantCitationPattern = regexp.MustCompile(`(?i)([\w./\\-]+\.[A-Za-z0-9]{1,12})(?:(?:#L|:)(\d+)(?:[-:L]+(\d+))?)`)
 var assistantCitationRefPattern = regexp.MustCompile(`^(.+):L(\d+)(?:-L(\d+))?$`)
@@ -1456,21 +1457,25 @@ func (v *View) runAgentRequest(text string, response *widget.RichText, send *wid
 	v.addActivity("Agent request started as " + job.ID + ".")
 	v.refreshJobs()
 	go func() {
-		tail := agentActivityTail{}
+		events := newAgentEventRenderer(func(markdown string, lines []string) {
+			fyne.Do(func() {
+				response.ParseMarkdown(markdown)
+				for _, line := range lines {
+					v.addActivity(line)
+					v.jobService.AppendLog(job.ID, line)
+				}
+				v.refreshJobs()
+			})
+		}, agentEventRefreshInterval)
 		result, err := v.agentService.Run(ctx, request, func(event agentSvc.Event) {
 			line := agentEventLine(event)
 			if line == "" {
 				return
 			}
-			tail.Add(line)
-			current := tail.Markdown()
-			fyne.Do(func() {
-				response.ParseMarkdown(current)
-				v.addActivity(line)
-				v.jobService.AppendLog(job.ID, line)
-				v.refreshJobs()
-			})
+			events.Append(line)
 		})
+		events.Flush()
+		events.Stop()
 		fyne.Do(func() {
 			defer send.Enable()
 			if v.assistant.runTaskApproval != nil && !v.approvalService.HasFullProjectAccess(workspace.Root) {
@@ -1659,6 +1664,86 @@ func agentJobLabel(prompt string) string {
 
 type agentActivityTail struct {
 	items []string
+}
+
+type agentEventRenderer struct {
+	mu       sync.Mutex
+	tail     agentActivityTail
+	pending  []string
+	render   func(string, []string)
+	stop     chan struct{}
+	stopped  chan struct{}
+	stopOnce sync.Once
+}
+
+func newAgentEventRenderer(render func(string, []string), interval time.Duration) *agentEventRenderer {
+	if interval <= 0 {
+		interval = agentEventRefreshInterval
+	}
+	renderer := &agentEventRenderer{
+		render:  render,
+		stop:    make(chan struct{}),
+		stopped: make(chan struct{}),
+	}
+	go renderer.run(interval)
+	return renderer
+}
+
+func (r *agentEventRenderer) Append(line string) {
+	line = strings.TrimSpace(line)
+	if r == nil || line == "" {
+		return
+	}
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	r.tail.Add(line)
+	r.pending = append(r.pending, line)
+}
+
+func (r *agentEventRenderer) Flush() {
+	if r == nil {
+		return
+	}
+	markdown, lines, ok := r.consume()
+	if ok && r.render != nil {
+		r.render(markdown, lines)
+	}
+}
+
+func (r *agentEventRenderer) Stop() {
+	if r == nil {
+		return
+	}
+	r.stopOnce.Do(func() {
+		close(r.stop)
+		<-r.stopped
+	})
+}
+
+func (r *agentEventRenderer) run(interval time.Duration) {
+	ticker := time.NewTicker(interval)
+	defer ticker.Stop()
+	defer close(r.stopped)
+	for {
+		select {
+		case <-ticker.C:
+			r.Flush()
+		case <-r.stop:
+			r.Flush()
+			return
+		}
+	}
+}
+
+func (r *agentEventRenderer) consume() (string, []string, bool) {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	if len(r.pending) == 0 {
+		return "", nil, false
+	}
+	lines := append([]string{}, r.pending...)
+	r.pending = nil
+	return r.tail.Markdown(), lines, true
 }
 
 func (t *agentActivityTail) Add(message string) {

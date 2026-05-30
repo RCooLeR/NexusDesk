@@ -118,7 +118,7 @@ Legend:
 
 - [x] P1 Coalesce assistant stream deltas with a UI refresh ticker.
 - [ ] P1 Parse markdown once at final response where practical.
-- [ ] P1 Coalesce agent event rendering.
+- [x] P1 Coalesce agent event rendering.
 - [ ] P1 Replace activity markdown rebuild with incremental list rendering.
 - [x] P1 Cap activity display while preserving durable audit elsewhere.
 - [ ] P1 Add long streaming UI stress test or profiling harness.

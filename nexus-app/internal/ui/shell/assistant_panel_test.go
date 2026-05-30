@@ -72,6 +72,47 @@ func TestAssistantStreamRendererCoalescesDeltasUntilFlush(t *testing.T) {
 	}
 }
 
+func TestAgentEventRendererCoalescesLinesUntilFlush(t *testing.T) {
+	type renderCall struct {
+		markdown string
+		lines    []string
+	}
+	calls := make([]renderCall, 0, 2)
+	renderer := newAgentEventRenderer(func(markdown string, lines []string) {
+		calls = append(calls, renderCall{markdown: markdown, lines: lines})
+	}, time.Hour)
+	defer renderer.Stop()
+
+	renderer.Append("one")
+	renderer.Append("two")
+	renderer.Append("three")
+	if len(calls) != 0 {
+		t.Fatalf("expected no render before flush, got %#v", calls)
+	}
+	renderer.Flush()
+	if len(calls) != 1 {
+		t.Fatalf("expected one coalesced render, got %#v", calls)
+	}
+	if got := strings.Join(calls[0].lines, ","); got != "one,two,three" {
+		t.Fatalf("expected all pending lines in first batch, got %q", got)
+	}
+	if strings.Contains(calls[0].markdown, "one") || !strings.Contains(calls[0].markdown, "two") || !strings.Contains(calls[0].markdown, "three") {
+		t.Fatalf("expected markdown to show latest tail, got %q", calls[0].markdown)
+	}
+	renderer.Flush()
+	if len(calls) != 1 {
+		t.Fatalf("expected clean flush to skip duplicate render, got %#v", calls)
+	}
+	renderer.Append("four")
+	renderer.Flush()
+	if len(calls) != 2 || strings.Join(calls[1].lines, ",") != "four" {
+		t.Fatalf("expected second batch to include new line only, got %#v", calls)
+	}
+	if !strings.Contains(calls[1].markdown, "three") || !strings.Contains(calls[1].markdown, "four") {
+		t.Fatalf("expected markdown to keep latest event tail, got %q", calls[1].markdown)
+	}
+}
+
 func TestAgentEventLineFormatsUsefulEvents(t *testing.T) {
 	cases := []struct {
 		event agentSvc.Event
