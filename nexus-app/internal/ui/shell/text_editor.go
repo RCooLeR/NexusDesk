@@ -18,26 +18,28 @@ import (
 const workspaceDefinitionSearchLimit = 60
 
 type textEditorBinding struct {
-	source           *widget.Entry
-	status           *widget.Label
-	rendered         *previewPane
-	outlineStatus    *widget.Label
-	outlineList      *fyne.Container
-	mapStatus        *widget.Label
-	mapList          *fyne.Container
-	diagnosticStatus *widget.Label
-	diagnosticList   *fyne.Container
-	syntaxStatus     *widget.Label
-	syntaxPreview    *widget.Label
-	languageActions  *widget.Label
-	syntaxGrid       *widget.TextGrid
-	syntaxText       string
-	syntaxAnalysis   editorSvc.SyntaxAnalysis
-	relPath          string
-	sourceEncoding   string
-	saveEncoding     string
-	onEncoding       func()
-	onState          func(editorSvc.Tab, bool)
+	source               *widget.Entry
+	status               *widget.Label
+	rendered             *previewPane
+	outlineStatus        *widget.Label
+	outlineList          *fyne.Container
+	mapStatus            *widget.Label
+	mapList              *fyne.Container
+	diagnosticStatus     *widget.Label
+	diagnosticList       *fyne.Container
+	syntaxStatus         *widget.Label
+	syntaxPreview        *widget.Label
+	languageActions      *widget.Label
+	syntaxGrid           *widget.TextGrid
+	syntaxText           string
+	syntaxAnalysis       editorSvc.SyntaxAnalysis
+	relPath              string
+	sourceEncoding       string
+	saveEncoding         string
+	encodingExplicit     bool
+	initializingEncoding bool
+	onEncoding           func()
+	onState              func(editorSvc.Tab, bool, bool)
 }
 
 func (b *textEditorBinding) applyTabState(tab editorSvc.Tab) {
@@ -50,11 +52,11 @@ func (b *textEditorBinding) applyTabState(tab editorSvc.Tab) {
 	b.setDocumentMap(tab.DraftText)
 	b.setSyntax(tab.DraftText)
 	if b.onState != nil {
-		b.onState(tab, b.encodingDirty())
+		b.onState(tab, b.encodingDirty(), b.encodingExplicit)
 	}
 }
 
-func (v *View) newTextEditor(tab editorSvc.Tab, preview domain.FilePreview, onState func(editorSvc.Tab, bool)) fyne.CanvasObject {
+func (v *View) newTextEditor(tab editorSvc.Tab, preview domain.FilePreview, onState func(editorSvc.Tab, bool, bool)) fyne.CanvasObject {
 	source := widget.NewMultiLineEntry()
 	source.SetText(tab.DraftText)
 	source.Wrapping = fyne.TextWrapOff
@@ -96,25 +98,33 @@ func (v *View) newTextEditor(tab editorSvc.Tab, preview domain.FilePreview, onSt
 		relPath:          tab.RelPath,
 		sourceEncoding:   initialEncoding,
 		saveEncoding:     initialEncoding,
+		encodingExplicit: !preview.EncodingAmbiguous,
 		onState:          onState,
 	}
 	encodingSelect := widget.NewSelect(editorEncodingOptions(), func(value string) {
 		binding.saveEncoding = editorWriteEncoding(value)
-		status.SetText(draftStatusTextWithEncoding(tab, binding.encodingDirty()))
+		if !binding.initializingEncoding {
+			binding.encodingExplicit = true
+		}
+		status.SetText(draftStatusTextWithEncoding(tab, binding.encodingDirty(), !binding.encodingExplicit))
 		if binding.onEncoding != nil {
 			binding.onEncoding()
 		}
 	})
+	binding.initializingEncoding = true
 	encodingSelect.SetSelected(initialEncoding)
+	binding.initializingEncoding = false
 	binding.onEncoding = func() {
 		if next, ok := v.editorSession.Tab(tab.ID); ok {
-			onState(next, binding.encodingDirty())
+			onState(next, binding.encodingDirty(), binding.encodingExplicit)
 		}
 	}
 	if preview.Truncated {
 		source.Disable()
 		encodingSelect.Disable()
 		status.SetText("Read-only partial preview. Inline editing is disabled to protect the full file.")
+	} else if preview.EncodingAmbiguous {
+		status.SetText(ambiguousEncodingStatusText())
 	}
 	binding.setOutline(tab.DraftText)
 	binding.setDocumentMap(tab.DraftText)
@@ -125,13 +135,13 @@ func (v *View) newTextEditor(tab editorSvc.Tab, preview domain.FilePreview, onSt
 			return
 		}
 		if next, ok := v.editorSession.Tab(tab.ID); ok {
-			status.SetText(draftStatusTextWithEncoding(next, binding.encodingDirty()))
+			status.SetText(draftStatusTextWithEncoding(next, binding.encodingDirty(), !binding.encodingExplicit))
 			rendered.SetText(next.DraftText)
 			binding.setOutline(next.DraftText)
 			binding.setDocumentMap(next.DraftText)
 			binding.setDiagnostics(next.DraftText)
 			binding.setSyntax(next.DraftText)
-			onState(next, binding.encodingDirty())
+			onState(next, binding.encodingDirty(), binding.encodingExplicit)
 		}
 	}
 	source.OnCursorChanged = func() {
@@ -265,6 +275,13 @@ func (b *textEditorBinding) encodingDirty() bool {
 	return editorWriteEncoding(b.sourceEncoding) != editorWriteEncoding(b.saveEncoding)
 }
 
+func (b *textEditorBinding) hasExplicitEncoding() bool {
+	if b == nil {
+		return true
+	}
+	return b.encodingExplicit
+}
+
 func (b *textEditorBinding) markEncodingSaved(encoding string) {
 	if b == nil {
 		return
@@ -272,6 +289,7 @@ func (b *textEditorBinding) markEncodingSaved(encoding string) {
 	next := editorWriteEncoding(encoding)
 	b.sourceEncoding = next
 	b.saveEncoding = next
+	b.encodingExplicit = true
 }
 
 func editorEncodingOptions() []string {
@@ -610,10 +628,13 @@ func compactSyntaxToken(value string) string {
 }
 
 func draftStatusText(tab editorSvc.Tab) string {
-	return draftStatusTextWithEncoding(tab, false)
+	return draftStatusTextWithEncoding(tab, false, false)
 }
 
-func draftStatusTextWithEncoding(tab editorSvc.Tab, encodingDirty bool) string {
+func draftStatusTextWithEncoding(tab editorSvc.Tab, encodingDirty bool, encodingBlocked bool) string {
+	if encodingBlocked {
+		return ambiguousEncodingStatusText()
+	}
 	if encodingDirty && tab.Dirty {
 		return "Draft modified and save encoding changed. Save applies through the safe write service and creates a rollback snapshot."
 	}
@@ -624,6 +645,10 @@ func draftStatusTextWithEncoding(tab editorSvc.Tab, encodingDirty bool) string {
 		return "Draft modified. Save applies through the safe write service and creates a rollback snapshot."
 	}
 	return "Draft matches source."
+}
+
+func ambiguousEncodingStatusText() string {
+	return "Encoding is ambiguous. Choose a save encoding before saving changes."
 }
 
 func (v *View) bindTextEditor(tabID string, binding *textEditorBinding) {

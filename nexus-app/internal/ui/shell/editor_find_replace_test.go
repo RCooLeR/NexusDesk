@@ -81,7 +81,7 @@ func TestEditorWriteEncodingNormalizesLegacyOptions(t *testing.T) {
 }
 
 func TestTextEditorBindingTracksEncodingDirty(t *testing.T) {
-	binding := &textEditorBinding{sourceEncoding: "utf-8", saveEncoding: "utf-8-bom"}
+	binding := &textEditorBinding{sourceEncoding: "utf-8", saveEncoding: "utf-8-bom", encodingExplicit: true}
 	if !binding.encodingDirty() {
 		t.Fatalf("expected changed save encoding to mark editor dirty")
 	}

@@ -23,7 +23,7 @@ func (v *View) newEditorPanel(tab editorSvc.Tab, preview domain.FilePreview) fyn
 		v.saveEditorDraft(tab.ID)
 	})
 	save.Importance = widget.MediumImportance
-	setSaveEnabled(save, editorSaveAllowed(tab, preview, false))
+	setSaveEnabled(save, editorSaveAllowed(tab, preview, false, !preview.EncodingAmbiguous))
 	pin := widget.NewButtonWithIcon("", theme.ConfirmIcon(), func() {
 		if next, ok := v.editorSession.TogglePinned(tab.ID); ok {
 			state.SetText(editorStateText(next))
@@ -33,9 +33,9 @@ func (v *View) newEditorPanel(tab editorSvc.Tab, preview domain.FilePreview) fyn
 	})
 	pin.Importance = widget.LowImportance
 	if preview.Kind == domain.PreviewText {
-		content = v.newTextEditor(tab, preview, func(next editorSvc.Tab, encodingDirty bool) {
+		content = v.newTextEditor(tab, preview, func(next editorSvc.Tab, encodingDirty bool, encodingExplicit bool) {
 			state.SetText(editorStateText(next))
-			setSaveEnabled(save, editorSaveAllowed(next, preview, encodingDirty))
+			setSaveEnabled(save, editorSaveAllowed(next, preview, encodingDirty, encodingExplicit))
 			v.updateEditorTabState(next)
 		})
 	} else {
@@ -183,8 +183,10 @@ func (v *View) saveEditorDraft(tabID string) {
 		return
 	}
 	encodingDirty := false
+	encodingExplicit := true
 	if editor, ok := v.textEditor(tab.ID); ok {
 		encodingDirty = editor.encodingDirty()
+		encodingExplicit = editor.hasExplicitEncoding()
 	}
 	if !tab.Dirty && !encodingDirty {
 		v.addActivity("No draft changes to save.")
@@ -198,6 +200,11 @@ func (v *View) saveEditorDraft(tabID string) {
 	if preview.Truncated {
 		v.addActivity("Save blocked for " + tab.RelPath + ": preview is truncated, so inline editing is read-only.")
 		dialog.ShowInformation("Save blocked", "This file preview is truncated. Inline editing is disabled so NexusDesk does not overwrite the full file with a capped prefix.", v.window)
+		return
+	}
+	if preview.EncodingAmbiguous && !encodingExplicit {
+		v.addActivity("Save blocked for " + tab.RelPath + ": choose an explicit encoding before saving.")
+		dialog.ShowInformation("Save blocked", "NexusDesk detected this file with low charset confidence. Choose a save encoding before saving so the file is not rewritten with an unintended encoding.", v.window)
 		return
 	}
 	encoding := preview.Encoding
@@ -273,8 +280,8 @@ func setSaveEnabled(button *widget.Button, enabled bool) {
 	button.Disable()
 }
 
-func editorSaveAllowed(tab editorSvc.Tab, preview domain.FilePreview, encodingDirty bool) bool {
-	return !preview.Truncated && (tab.Dirty || encodingDirty)
+func editorSaveAllowed(tab editorSvc.Tab, preview domain.FilePreview, encodingDirty bool, encodingExplicit bool) bool {
+	return !preview.Truncated && (!preview.EncodingAmbiguous || encodingExplicit) && (tab.Dirty || encodingDirty)
 }
 
 func (v *View) updateEditorTabState(tab editorSvc.Tab) {

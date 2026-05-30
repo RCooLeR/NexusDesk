@@ -33,14 +33,26 @@ func TestEditorSaveAllowedBlocksTruncatedPreview(t *testing.T) {
 	tab := editorSvc.Tab{Dirty: true}
 	preview := domain.FilePreview{Kind: domain.PreviewText, Truncated: true}
 
-	if editorSaveAllowed(tab, preview, false) {
+	if editorSaveAllowed(tab, preview, false, true) {
 		t.Fatal("expected save to be blocked for truncated preview")
 	}
-	if editorSaveAllowed(editorSvc.Tab{}, preview, true) {
+	if editorSaveAllowed(editorSvc.Tab{}, preview, true, true) {
 		t.Fatal("expected encoding-only save to be blocked for truncated preview")
 	}
-	if !editorSaveAllowed(tab, domain.FilePreview{Kind: domain.PreviewText}, false) {
+	if !editorSaveAllowed(tab, domain.FilePreview{Kind: domain.PreviewText}, false, true) {
 		t.Fatal("expected dirty full preview to be saveable")
+	}
+}
+
+func TestEditorSaveAllowedBlocksAmbiguousEncodingUntilExplicit(t *testing.T) {
+	tab := editorSvc.Tab{Dirty: true}
+	preview := domain.FilePreview{Kind: domain.PreviewText, EncodingAmbiguous: true}
+
+	if editorSaveAllowed(tab, preview, false, false) {
+		t.Fatal("expected ambiguous encoding save to be blocked until explicit")
+	}
+	if !editorSaveAllowed(tab, preview, false, true) {
+		t.Fatal("expected explicit encoding to allow dirty save")
 	}
 }
 
