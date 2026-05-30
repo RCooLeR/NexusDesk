@@ -440,7 +440,7 @@ Legend:
 - [ ] P1 Sign Windows installer.
 - [ ] P1 Decide macOS signing/notarization strategy.
 - [ ] P1 Implement macOS signing/notarization if chosen.
-- [ ] P1 Document Linux trust/package dependencies.
+- [x] P1 Document Linux trust/package dependencies. Evidence: Help > Release Hygiene now includes Linux Package Trust and Linux Runtime Dependencies sections covering hash-first manifest/SBOM/provenance verification, package format recording, repository-signing state, OpenGL/Wayland/X11 expectations, Secret Service/libsecret/secret-tool behavior, desktop entry/icon behavior, and package-level dependency notes (`go test ./internal/services/userguide -run "ReleaseHygiene"`).
 - [x] P1 Add release trust diagnostics. Evidence: `release.RuntimeTrustDiagnostics` now reports unstamped build metadata plus missing manifest/signing/trust/smoke/SBOM/provenance evidence, and Diagnostics renders a Release trust health card plus report section (`go test ./internal/release ./internal/ui/shell -run "ReleaseTrust|RuntimeTrust|PackagingReadiness|Diagnostics"`).
 
 ### 6.3 SBOM and provenance
@@ -448,7 +448,7 @@ Legend:
 - [x] P1 Generate SBOM for release. Evidence: `cmd/release-manifest` now writes a CycloneDX 1.5 JSON SBOM from Go build info embedded in the release artifact, including the application component, artifact SHA-256, and Go module components (`go test ./internal/release ./cmd/release-manifest -run "Evidence|SBOM|Provenance|Manifest"`; CLI smoke generated `nexusdesk-windows-sbom.json`).
 - [x] P1 Generate provenance evidence. Evidence: `release.WriteEvidenceSet` writes provenance JSON with subject build metadata, artifact hash/size, repository/workflow/source commit fields, and hashed manifest/SBOM evidence entries; the release-manifest CLI smoke generated `nexusdesk-windows-provenance.json`.
 - [x] P1 Store release evidence next to artifacts. Evidence: manifest, SBOM, and provenance paths derive from the manifest path (`nexusdesk-<platform>-manifest.json`, `nexusdesk-<platform>-sbom.json`, `nexusdesk-<platform>-provenance.json`), and both Windows/Unix CI scripts verify and clean the sidecar evidence files.
-- [ ] P1 Document verification steps.
+- [x] P1 Document verification steps. Evidence: Help > Release Hygiene now includes Release Verification Steps covering About metadata matching, artifact SHA256 manifest verification, SBOM/provenance review, sidecar archiving, clean-machine smoke, protected-secret smoke, uninstall/app-data cleanup smoke, and Diagnostics release trust checks (`go test ./internal/services/userguide -run "ReleaseHygiene"`).
 
 ### 6.4 CI matrix
 
