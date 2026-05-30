@@ -12,23 +12,22 @@ import (
 )
 
 func (v *View) newRail() fyne.CanvasObject {
-	logo := canvas.NewImageFromResource(brand.HorizontalLogo())
+	logo := canvas.NewImageFromResource(brand.AppIcon())
 	logo.FillMode = canvas.ImageFillContain
-	logo.SetMinSize(fyne.NewSize(128, 38))
+	logo.SetMinSize(fyne.NewSize(42, 42))
 	railButtons := make([]fyne.CanvasObject, 0, len(leftRailToolWindows())+4)
 	v.leftRailButtons = map[string]*widget.Button{}
 	v.activeLeftRailTool = "Project"
-	railButtons = append(railButtons, widget.NewLabelWithStyle("Tool Windows", fyne.TextAlignLeading, fyne.TextStyle{Bold: true}))
 	for _, tool := range leftRailToolWindows() {
 		tool := tool
-		button := widget.NewButtonWithIcon(tool.ButtonLabel(), tool.Icon, func() {
+		button := newRailIconButton(tool, func() {
 			v.openLeftRailToolWindow(tool)
 		})
 		v.leftRailButtons[tool.Label] = button
 		railButtons = append(railButtons, button)
 	}
 	v.refreshRailActiveState()
-	settingsButton := widget.NewButtonWithIcon("Settings", theme.SettingsIcon(), v.openSettingsTab)
+	settingsButton := widget.NewButtonWithIcon("", theme.SettingsIcon(), v.openSettingsTab)
 	return container.NewPadded(container.NewVBox(
 		logo,
 		widget.NewSeparator(),
@@ -42,10 +41,9 @@ func (v *View) newRightRail() fyne.CanvasObject {
 	railButtons := make([]fyne.CanvasObject, 0, len(rightRailToolWindows())+1)
 	v.rightRailButtons = map[string]*widget.Button{}
 	v.activeRightRailTool = "Assistant"
-	railButtons = append(railButtons, widget.NewLabelWithStyle("AI Tools", fyne.TextAlignCenter, fyne.TextStyle{Bold: true}))
 	for _, tool := range rightRailToolWindows() {
 		tool := tool
-		button := widget.NewButtonWithIcon(tool.ButtonLabel(), tool.Icon, func() {
+		button := newRailIconButton(tool, func() {
 			v.openRightRailToolWindow(tool)
 		})
 		v.rightRailButtons[tool.Label] = button
@@ -53,6 +51,12 @@ func (v *View) newRightRail() fyne.CanvasObject {
 	}
 	v.refreshRailActiveState()
 	return container.NewPadded(container.NewVBox(railButtons...))
+}
+
+func newRailIconButton(tool toolWindowRegistration, action func()) *widget.Button {
+	button := widget.NewButtonWithIcon("", tool.Icon, action)
+	button.Importance = widget.LowImportance
+	return button
 }
 
 func (v *View) newToolbar() fyne.CanvasObject {

@@ -280,8 +280,8 @@ Legend:
 
 ### 4.3 Left rail
 
-- [ ] P1 Implement thin icon-first rail.
-- [ ] P1 Add active icon state.
+- [x] P1 Implement thin icon-first rail.
+- [x] P1 Add active icon state.
 - [ ] P1 Add collapse on active-icon click.
 - [ ] P1 Add hover tooltips.
 - [ ] P1 Add keyboard navigation.

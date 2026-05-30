@@ -45,6 +45,20 @@ func TestRailToolWindowsReadFromRegistry(t *testing.T) {
 	}
 }
 
+func TestRailIconButtonIsIconFirst(t *testing.T) {
+	search, ok := defaultToolWindowRegistry().Lookup("search")
+	if !ok {
+		t.Fatal("expected search tool registration")
+	}
+	button := newRailIconButton(search, nil)
+	if button.Text != "" {
+		t.Fatalf("expected icon-first rail button without visible text, got %q", button.Text)
+	}
+	if button.Icon == nil {
+		t.Fatal("expected rail button icon")
+	}
+}
+
 func TestToolWindowRegistryShortcutRoutingUsesAltModifier(t *testing.T) {
 	registry := defaultToolWindowRegistry()
 	tools := registry.ShortcutTools()
