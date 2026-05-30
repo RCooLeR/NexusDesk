@@ -39,15 +39,12 @@ Implemented:
 - Startup readiness summary.
 - Diagnostics entry points.
 - Workspace open policy that keeps open cheap and side-effect-free.
-
-Needs finish:
-
-- Final JetBrains-style shell layout.
-- Thin icon-first rails.
-- Move Problems, Search, Git, Tasks, Jobs, Audit, Diagnostics, and Activity fully into left-sidebar tool windows.
-- Stronger resize behavior.
-- Visual smoke coverage.
-- Controller extraction from large UI objects.
+- JetBrains-style editor-centered shell layout.
+- Thin icon-first rails with keyboard routing, active state, collapse behavior, and hover tooltips.
+- Problems, Search, Git, Tasks, Jobs, Audit, Diagnostics, and Activity in left-sidebar tool windows.
+- Stable split/resize behavior and per-tool width memory.
+- Visual smoke coverage for supported shell states and sizes.
+- Shell controller extraction for editor, assistant, data, Git, artifacts, jobs, diagnostics, approvals, and audit surfaces.
 
 ### 2.2 Editor and file operations
 
@@ -78,14 +75,14 @@ Implemented:
 - Diagnostics for markers, merge conflicts, JSON, Go, YAML, TOML, XML.
 - Preview support for text, code, images, CSV/TSV, DOCX text, PDF text, XLSX-derived content, and binary metadata.
 - Encoding handling for common text formats.
+- Save guard for partial/truncated previews.
+- Off-UI-thread save flow with visible saving state.
+- Cursor/scroll preservation and in-place editor refresh after save.
+- Bounded hunk-based diffs for large files.
+- Ambiguous encoding warning and explicit encoding selection before save.
 
 Planned:
 
-- FilePreview top-level truncation flag and save guard for partial previews.
-- Off-UI-thread save/diff/rollback flow.
-- Cursor/scroll preservation after save.
-- Hunk-based diff for large files.
-- Ambiguous encoding warning and explicit encoding selection before save.
 - Optional inline editable syntax styling after accessibility/performance proof.
 - Feature-flagged LSP provider spike.
 - Rename/code actions/test navigation after LSP design.
@@ -102,14 +99,14 @@ Implemented:
 - Conflict marker detection.
 - Syntax diagnostics integration.
 - Search/problem context for assistant.
+- Streaming byte-level content and regex search that does not run full preview for every file.
+- Cancellation/singleflight behavior while typing.
+- Known-binary pre-skip list.
+- Larger bounded per-file search cap.
+- Incremental result streaming to the UI.
 
 Planned:
 
-- Streaming byte-level content search that does not run full preview for every file.
-- Singleflight/cancel-old-query behavior while typing.
-- Better binary skip list.
-- Larger but bounded per-file search cap.
-- Search result virtualization for large result sets.
 - Saved search scopes.
 - Semantic search after deterministic search is fast and trustworthy.
 
@@ -139,6 +136,9 @@ Implemented:
 - Save assistant answer as artifact.
 - Prompt profile and memory baseline.
 - Task-aware model routing.
+- Coalesced streaming render with final markdown parse.
+- Source digest, source pane, lineage pane, inspector pane, tool timeline, and approval-card UI.
+- Context budget visualization and route/model readiness guidance.
 
 Task-aware model routing includes routes for:
 
@@ -158,12 +158,6 @@ Task-aware model routing includes routes for:
 
 Planned:
 
-- Better retrieval and ranking beyond deterministic citations.
-- Richer source diagnostics UI.
-- Stream render coalescing and final markdown parse only once.
-- Tool timeline redesign.
-- Better approval recovery UI.
-- Better context budget controls.
 - Image/screenshot understanding once model and UI policy are complete.
 - Browser automation only after safety policy.
 - MCP and plugin tool calls only after trust and approval model.
@@ -246,14 +240,13 @@ Implemented:
 - SQLite query history.
 - SQLite cancellation.
 - Result export paths.
+- Schema tree browser with tables, views, columns, indexes, samples, and relationships.
+- Query editor polish.
+- Virtualized result grid with copy/export actions.
+- Query history and profile inspector.
 
 Planned:
 
-- Zip/decompression caps across spreadsheet and document containers.
-- More DataGrip-like schema browser.
-- Query editor polish.
-- Result grid virtualization.
-- Query explain/read-only diagnostics.
 - Dump import as an isolated durable job.
 - Connector sync jobs.
 - Better chart theming.
@@ -277,14 +270,14 @@ Implemented:
 - Query history.
 - Encrypted transport defaults for PostgreSQL, MySQL/MariaDB, and SQL Server profiles.
 - Explicit `development-plaintext` opt-in for local non-production database connections.
+- Audited development-only plaintext opt-in.
+- Connector pool reuse with cancellation, invalidation, and bounded idle lifetime.
+- Profile inspector and Diagnostics transport status showing resolved TLS/read-only/plaintext state.
+- Connection diagnostics and remediation hints.
 
 Planned:
 
-- Audited development-only plaintext opt-in.
-- Connector pool reuse with short TTL.
-- Better profile inspector showing resolved TLS/read-only mode.
 - Cross-platform credential smoke.
-- Connection diagnostics and remediation hints.
 
 ### 2.8 Artifacts and documents
 
@@ -316,16 +309,16 @@ Implemented:
 - PPTX deck outputs.
 - Document text extraction.
 - DOCX/PPTX package validation and theme metadata.
+- Rollback/recovery snapshots for destructive artifact archive/restore/delete/regenerate flows.
+- Expanded regeneration coverage.
+- Polished DOCX templates.
+- Polished PPTX templates.
+- Cross-suite DOCX/PPTX smoke coverage in service and shell tests.
+- Improved artifact freshness and lineage visualization.
 
 Planned:
 
-- Artifact rollback parity for archive/restore/delete/regenerate.
-- More regeneration coverage.
-- Richer DOCX templates.
-- Richer PPTX templates.
-- Cross-suite smoke for Word/PowerPoint/LibreOffice.
 - OCR/scanned PDF/image extraction through jobs.
-- Better artifact gallery and lineage visualization.
 
 ### 2.9 Operations
 
@@ -358,16 +351,16 @@ Implemented:
 - Time-boxed full-project access policy.
 - Approval UI baseline.
 - Agent audit surface.
+- Full log files for long outputs.
+- Higher visible log tail cap.
+- Open-full-log action and redacted issue-report log inclusion.
+- Approval cards with details.
+- Agent wall-clock limits, timeout UI/audit state, and repeated tool-loop stress coverage.
 
 Planned:
 
-- Full job log files for long outputs.
-- Higher visible tail cap.
 - Better job progress modeling.
 - Better cancel/retry semantics per job kind.
-- Better approval details and recovery UI.
-- Long agent run wall-clock limits.
-- Stress tests for long sessions.
 
 ### 2.11 Settings and model routing
 
@@ -382,16 +375,15 @@ Implemented:
 - Curated model catalog.
 - Connector profiles.
 - Protected secrets baseline.
+- Searchable settings shell with provider, route, credentials, connector, safety, UI, and diagnostics categories.
+- Recommended model selectors and task-route test actions.
+- Disabled-state explanations.
+- First-run provider setup wizard and provider model auto-suggestion.
 
 Planned:
 
-- Searchable Settings dialog with categories.
-- Per-task default model UI polish.
 - Model capability badges.
 - Vision-capability gating.
-- Route test actions.
-- Better disabled-state explanations.
-- First-run provider setup wizard.
 
 ### 2.12 Diagnostics and release readiness
 
@@ -405,17 +397,19 @@ Implemented:
 - Packaging readiness evaluator.
 - Release manifest support.
 - CI scripts for platform checks.
+- Diagnostics health cards and report sections.
+- Metadata WAL, busy-timeout, foreign-key, and connection-pool visibility.
+- Protected secret backend status.
+- Release trust diagnostics.
+- Windows zip and installer packaging.
+- Release manifest, SBOM, provenance, and artifact evidence verification.
+- Manual update check with no auto-download or auto-install.
 
 Planned:
 
-- Diagnostics health cards redesign.
-- Metadata WAL/busy-timeout visibility.
-- Tool registry drift visibility.
 - Protected secret smoke on each platform.
 - Signed release evidence.
-- SBOM/provenance evidence.
-- Clean-machine smoke evidence.
-- Update check with no auto-install.
+- macOS/Linux package and clean-machine smoke evidence.
 
 ## 3. Intentional Non-Goals For v1
 
@@ -440,11 +434,11 @@ These are not v1 product goals:
 Approximate planning assessment:
 
 - Native app foundation: very strong.
-- Core workbench functionality: strong but UI layout needs polish.
-- Editor functionality: broad, needs performance and truncation/encoding hardening.
-- Assistant functionality: broad, needs smoother streaming and better source/tool timeline UX.
-- Agent toolbelt: broad, needs remaining high-risk safety polish and planned tools kept non-executable until ready.
-- Data functionality: strong, needs zip caps, grid polish, and connector TLS/pool hardening.
-- Artifact functionality: broad, needs rollback parity and template polish.
-- Jobs/approvals: functional, needs long-run stress and better log/progress UX.
-- Packaging: not production-complete until signing, notarization/package strategy, SBOM/provenance, and clean-machine smoke are done.
+- Core workbench functionality: strong; remaining blockers are release validation, not the shell target.
+- Editor functionality: broad and safety-hardened; final release still depends on clean-machine smoke and accessibility review.
+- Assistant functionality: broad with source/trust UI; image/browser/MCP/plugin capabilities remain post-v1 unless separately designed.
+- Agent toolbelt: broad for deterministic local tools; planned high-risk tools remain non-executable until design approval and tests.
+- Data functionality: strong for v1 local/read-only workflows; dump import and connector sync remain post-v1.
+- Artifact functionality: broad with DOCX/PPTX, lineage, freshness, regeneration, and rollback-aware destructive flows.
+- Jobs/approvals: functional with durable logs, audit, approvals, and timeout coverage; richer progress modeling remains post-v1.
+- Packaging: Windows zip/installer and release evidence exist; production release still needs signing, macOS/Linux artifacts, platform CI/smoke, and beta validation.

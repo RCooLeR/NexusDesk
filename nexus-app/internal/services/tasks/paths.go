@@ -39,10 +39,7 @@ func shouldSkipDir(name string, relPath string) bool {
 	case ".git", ".idea", ".nexusdesk", "node_modules", "dist", "build", "vendor":
 		return true
 	}
-	normalized := strings.ToLower(filepath.ToSlash(relPath))
-	return strings.HasPrefix(normalized, "app/frontend/node_modules") ||
-		strings.HasPrefix(normalized, "app/frontend/dist") ||
-		strings.HasPrefix(normalized, "app/build")
+	return false
 }
 
 func relDir(root string, dir string) string {

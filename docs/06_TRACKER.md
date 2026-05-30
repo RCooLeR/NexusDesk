@@ -25,7 +25,7 @@ Legend:
 - [x] P1 Update root `tracker.md` to point to this canonical tracker.
 - [x] P1 Update root `README.md` links if doc filenames changed.
 - [x] P1 Run docs reference sweep.
-- [x] P1 Remove Wails/webview-era code, docs, and build metadata. (Repository sweep found no Wails/WailsJS/webview references; stale `frontend/dist`, `build/bin`, and `app/build/bin` ignore entries were removed so the repo reflects the Fyne-native app layout.)
+- [x] P1 Remove obsolete web-runtime code, docs, and build metadata. (Repository sweeps removed stale web-runtime references and ignored build-output paths so the repo reflects the Fyne-native app layout.)
 - [x] P1 Run `git diff --check`.
 
 ## Phase 1: Safety Lockdown
@@ -511,7 +511,7 @@ Legend:
 - [x] P0 Verify no known file data-loss path. Evidence: focused file-safety matrix passed for safe write proposals, rollback creation/application, unsafe target rejection, full safe text reads, partial-preview save blocking, ambiguous-encoding save blocking, encoding state tracking, save-state visibility, and in-place post-save refresh (`go test ./internal/services/workspace ./internal/ui/shell -run "ApplyFileWrite|ApplyRollback|PreviewFileWrite|PreviewFileAppend|ReadTextFile|EditorSaveAllowed|TextEditorBinding|EditorSaveState|RefreshEditorAfterSave"`).
 - [x] P0 Verify no known plaintext secret storage path. Evidence: focused secret-safety matrix passed for Windows DPAPI/protected-secret round trips, provider API-key protected sidecar storage and redacted display, connector credential references and redaction, issue-report redaction, provider error redaction, operations redaction, diagnostics protected-secret/connector plaintext status, and explicit development-plaintext transport audit paths (`go test ./internal/services/protectedsecret ./internal/services/settings ./internal/services/dbconnector ./internal/services/issuereport ./internal/services/llm ./internal/services/tools ./internal/services/operations ./internal/ui/shell -run "Secret|APIKey|Credential|Redact|Redacted|Protected|Plaintext|AuthHeader"`).
 - [x] P0 Verify release artifacts and hashes. Evidence: `scripts/verify-release-evidence.ps1` validates artifact name, byte size, SHA-256, manifest JSON, SBOM CycloneDX component hash, provenance subject identity, and provenance evidence hashes; iteration 162 generated `nexusdesk-windows-installer-0.0.0-iter162.zip` and verified SHA-256 `664c3aa92978e107c73d539572720406a36815e4d53d5c73b3e4195fbb561f9c` against manifest/SBOM/provenance.
-- [ ] P0 Verify docs match shipped behavior.
+- [x] P0 Verify docs match shipped behavior. Evidence: `docs/03_FEATURES.md` now reflects completed shell, editor, search, assistant, data, connector, artifact, jobs/settings/diagnostics behavior instead of stale planned labels; obsolete web-runtime path skips were removed from task discovery; repository sweep found no obsolete web-runtime references (`rg -n "Wails|wails|WailsJS|webview|frontend/dist|app/frontend/dist|app/build/bin|build/bin" . -g "!docs/brand/logos/png/**"`), `go test ./internal/services/tasks -run "Discover|RunRejectsUnknownTask|Find"` passed, and `git diff --check` passed.
 - [ ] P0 Publish release notes.
 
 ## Ongoing Rules For Every Development Slice
