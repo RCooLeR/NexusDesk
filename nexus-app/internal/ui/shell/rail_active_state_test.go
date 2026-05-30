@@ -80,3 +80,34 @@ func TestSelectBottomTabRefreshesRailActiveState(t *testing.T) {
 		t.Fatalf("unexpected rail active state: left=%q right=%q", view.activeLeftRailTool, view.activeRightRailTool)
 	}
 }
+
+func TestActiveRailClickCollapsesBottomPanel(t *testing.T) {
+	_ = fynetest.NewTempApp(t)
+	childTabs := container.NewAppTabs(
+		container.NewTabItem("Search", widget.NewLabel("search")),
+	)
+	split := container.NewVSplit(widget.NewLabel("top"), widget.NewLabel("bottom"))
+	view := &View{
+		bottomTabs:           container.NewAppTabs(container.NewTabItem("Workbench", childTabs)),
+		workbenchSplit:       split,
+		activeLeftRailTool:   "Search",
+		leftRailButtons:      map[string]*widget.Button{"Search": widget.NewButton("", nil)},
+		rightRailButtons:     map[string]*widget.Button{},
+		activityLog:          widget.NewRichTextFromMarkdown("Ready."),
+		activityText:         "Ready.",
+		activityLines:        []string{"Ready."},
+		bottomPanelCollapsed: false,
+	}
+	if !view.selectBottomTab("Search") {
+		t.Fatal("expected Search tab to be selected")
+	}
+
+	view.openLeftRailToolWindow(leftRailToolWindow{Label: "Search", TargetTab: "Search", Activity: "Search selected."})
+
+	if !view.bottomPanelCollapsed {
+		t.Fatal("expected active rail click to collapse bottom panel")
+	}
+	if got := view.activityLines[len(view.activityLines)-1]; got != "Search collapsed." {
+		t.Fatalf("expected collapse activity, got %q", got)
+	}
+}

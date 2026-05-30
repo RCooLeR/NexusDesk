@@ -282,7 +282,7 @@ Legend:
 
 - [x] P1 Implement thin icon-first rail.
 - [x] P1 Add active icon state.
-- [ ] P1 Add collapse on active-icon click.
+- [x] P1 Add collapse on active-icon click.
 - [ ] P1 Add hover tooltips.
 - [ ] P1 Add keyboard navigation.
 - [ ] P1 Remember active tool per workspace.

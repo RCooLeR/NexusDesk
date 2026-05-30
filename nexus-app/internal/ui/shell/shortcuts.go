@@ -156,6 +156,7 @@ func (v *View) openToolWindow(tool toolWindowRegistration) {
 			v.addActivity(tool.Label + " panel is unavailable.")
 			return
 		}
+		v.expandBottomPanel()
 		if !v.selectBottomTab(tool.TargetTab) {
 			v.addActivity(tool.Label + " panel is unavailable.")
 			return

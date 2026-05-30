@@ -20,6 +20,12 @@ func (v *View) openRightRailToolWindow(tool rightRailToolWindow) {
 		v.addActivity(tool.Label + " is unavailable.")
 		return
 	}
+	if v.activeRightRailTool == tool.Label && v.isBottomTabSelected(tool.TargetTab) && !v.bottomPanelCollapsed {
+		v.collapseBottomPanel()
+		v.addActivity(tool.Label + " collapsed.")
+		return
+	}
+	v.expandBottomPanel()
 	if !v.selectBottomTab(tool.TargetTab) {
 		v.addActivity(tool.Label + " panel is unavailable.")
 		return

@@ -69,6 +69,8 @@ type View struct {
 	activityLog             *widget.RichText
 	activityText            string
 	activityLines           []string
+	workbenchSplit          *container.Split
+	bottomPanelCollapsed    bool
 	search                  *searchController
 	problemResults          *fyne.Container
 	problemStatus           *widget.Label
@@ -243,7 +245,8 @@ func (v *View) Canvas() fyne.CanvasObject {
 	mainSplit.SetOffset(0.82)
 	workbenchTop := container.NewBorder(v.newToolbar(), nil, v.navigator, nil, mainSplit)
 	workbench := container.NewVSplit(workbenchTop, v.newBottomPanel())
-	workbench.SetOffset(0.68)
+	v.workbenchSplit = workbench
+	v.expandBottomPanel()
 	return container.NewBorder(nil, v.newStatusBar(), rail, nil, workbench)
 }
 

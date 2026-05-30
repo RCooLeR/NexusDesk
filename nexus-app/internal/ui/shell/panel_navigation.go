@@ -6,6 +6,8 @@ import (
 	"fyne.io/fyne/v2/container"
 )
 
+const workbenchExpandedOffset = 0.68
+
 func (v *View) selectBottomTab(title string) bool {
 	if v.bottomTabs == nil {
 		return false
@@ -15,6 +17,26 @@ func (v *View) selectBottomTab(title string) bool {
 	}
 	v.updateRailActiveStateForTab(title)
 	return true
+}
+
+func (v *View) collapseBottomPanel() {
+	if v == nil {
+		return
+	}
+	v.bottomPanelCollapsed = true
+	if v.workbenchSplit != nil {
+		v.workbenchSplit.SetOffset(1)
+	}
+}
+
+func (v *View) expandBottomPanel() {
+	if v == nil {
+		return
+	}
+	v.bottomPanelCollapsed = false
+	if v.workbenchSplit != nil {
+		v.workbenchSplit.SetOffset(workbenchExpandedOffset)
+	}
 }
 
 func selectAppTabByTitle(tabs *container.AppTabs, title string) bool {
