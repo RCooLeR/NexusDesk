@@ -133,6 +133,24 @@ func TestShowEditorEmptyWelcomeOnlyForFirstLaunch(t *testing.T) {
 	}
 }
 
+func TestRecentWorkspaceLabelsMarkMissingPaths(t *testing.T) {
+	item := recentWorkspacesSvc.Workspace{Name: "missing-repo", Path: "C:/missing-repo", Missing: true}
+	if got := recentWorkspaceButtonLabel(item); got != "missing-repo (missing)" {
+		t.Fatalf("unexpected missing button label: %q", got)
+	}
+	if got := recentWorkspacePathLabel(item); got != "Missing: C:/missing-repo" {
+		t.Fatalf("unexpected missing path label: %q", got)
+	}
+
+	present := recentWorkspacesSvc.Workspace{Name: "repo", Path: "C:/repo", Exists: true}
+	if got := recentWorkspaceButtonLabel(present); got != "repo" {
+		t.Fatalf("unexpected present button label: %q", got)
+	}
+	if got := recentWorkspacePathLabel(present); got != "C:/repo" {
+		t.Fatalf("unexpected present path label: %q", got)
+	}
+}
+
 func TestWelcomeEmptyCommandsStayEditorLike(t *testing.T) {
 	commands := welcomeEmptyCommands()
 	if len(commands) != 6 {

@@ -238,10 +238,10 @@ Legend:
 
 ### 3.7 Recent workspace correctness
 
-- [ ] P2 Stat recent workspace paths on list.
-- [ ] P2 Mark missing paths.
-- [ ] P2 Add remove missing workspace action.
-- [ ] P2 Add tests for missing recent path.
+- [x] P2 Stat recent workspace paths on list. Evidence: `services/recentworkspaces.Store.List` enriches returned rows with filesystem path status without persisting transient fields; `go test ./internal/services/recentworkspaces ./internal/ui/shell -run "RecentWorkspace|StoreMarksMissing"` passed.
+- [x] P2 Mark missing paths. Evidence: Home recent workspace rows disable missing entries and render `(missing)` / `Missing:` labels while preserving present workspace behavior; `go test ./internal/ui/shell -run RecentWorkspace` passed.
+- [x] P2 Add remove missing workspace action. Evidence: `Store.RemoveMissing` prunes only paths that no longer exist, and Home recent workspace rows expose a low-importance `Remove missing` action when stale entries are present; `go test ./internal/services/recentworkspaces -run StoreMarksMissing` passed.
+- [x] P2 Add tests for missing recent path. Evidence: `store_test.go` covers missing-path status and `RemoveMissing`; `tabs_test.go` covers missing/present recent workspace labels.
 
 ## Phase 4: JetBrains-Style UI Refactor
 

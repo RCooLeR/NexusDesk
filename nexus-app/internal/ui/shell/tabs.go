@@ -72,7 +72,7 @@ func (v *View) newWelcomePanel() fyne.CanvasObject {
 	onboarding.Wrapping = fyne.TextWrapWord
 	readiness := widget.NewRichTextFromMarkdown(v.welcomeReadinessMarkdown())
 	readiness.Wrapping = fyne.TextWrapWord
-	recent := recentWorkspaceRowsFrom(recentItems, recentErr, v.openWorkspace, v.removeRecentWorkspace, v.clearRecentWorkspaces)
+	recent := recentWorkspaceRowsFrom(recentItems, recentErr, v.openWorkspace, v.removeRecentWorkspace, v.removeMissingRecentWorkspaces, v.clearRecentWorkspaces)
 	contentObjects := []fyne.CanvasObject{
 		title,
 		container.NewHBox(openWorkspaceButton, openFileButton, providerSetupButton, sampleWorkflowButton, diagnosticsButton),
@@ -305,10 +305,10 @@ func compactWelcomeReadinessText(text string, limit int) string {
 
 func (v *View) recentWorkspaceRows() fyne.CanvasObject {
 	items, err := v.listRecentWorkspaces()
-	return recentWorkspaceRowsFrom(items, err, v.openWorkspace, v.removeRecentWorkspace, v.clearRecentWorkspaces)
+	return recentWorkspaceRowsFrom(items, err, v.openWorkspace, v.removeRecentWorkspace, v.removeMissingRecentWorkspaces, v.clearRecentWorkspaces)
 }
 
-func recentWorkspaceRowsFrom(items []recentWorkspacesSvc.Workspace, err error, open func(string), remove func(string), clear func()) fyne.CanvasObject {
+func recentWorkspaceRowsFrom(items []recentWorkspacesSvc.Workspace, err error, open func(string), remove func(string), removeMissing func(), clear func()) fyne.CanvasObject {
 	if err != nil {
 		return widget.NewLabel("Recent workspaces are unavailable: " + err.Error())
 	}
@@ -316,23 +316,53 @@ func recentWorkspaceRowsFrom(items []recentWorkspacesSvc.Workspace, err error, o
 		return widget.NewLabel("No recent workspaces yet.")
 	}
 	rows := []fyne.CanvasObject{widget.NewLabel("Recent workspaces")}
+	hasMissing := false
 	for _, item := range items {
 		item := item
-		openButton := widget.NewButtonWithIcon(item.Name, theme.FolderOpenIcon(), func() {
+		if item.Missing {
+			hasMissing = true
+		}
+		openButton := widget.NewButtonWithIcon(recentWorkspaceButtonLabel(item), theme.FolderOpenIcon(), func() {
 			open(item.Path)
 		})
+		if item.Missing {
+			openButton.Disable()
+		}
 		removeButton := widget.NewButtonWithIcon("", theme.DeleteIcon(), func() {
 			remove(item.Path)
 		})
 		removeButton.Importance = widget.LowImportance
-		pathLabel := widget.NewLabel(item.Path)
+		pathLabel := widget.NewLabel(recentWorkspacePathLabel(item))
 		pathLabel.Truncation = fyne.TextTruncateEllipsis
 		rows = append(rows, container.NewBorder(nil, nil, openButton, removeButton, pathLabel))
+	}
+	if hasMissing {
+		removeMissingButton := widget.NewButtonWithIcon("Remove missing", theme.DeleteIcon(), removeMissing)
+		removeMissingButton.Importance = widget.LowImportance
+		rows = append(rows, container.NewHBox(layout.NewSpacer(), removeMissingButton))
 	}
 	clearButton := widget.NewButtonWithIcon("Clear recent workspaces", theme.DeleteIcon(), clear)
 	clearButton.Importance = widget.LowImportance
 	rows = append(rows, container.NewHBox(layout.NewSpacer(), clearButton))
 	return container.NewVBox(rows...)
+}
+
+func recentWorkspaceButtonLabel(item recentWorkspacesSvc.Workspace) string {
+	name := strings.TrimSpace(item.Name)
+	if name == "" {
+		name = filepath.Base(item.Path)
+	}
+	if item.Missing {
+		return name + " (missing)"
+	}
+	return name
+}
+
+func recentWorkspacePathLabel(item recentWorkspacesSvc.Workspace) string {
+	if item.Missing {
+		return "Missing: " + item.Path
+	}
+	return item.Path
 }
 
 func (v *View) listRecentWorkspaces() ([]recentWorkspacesSvc.Workspace, error) {
@@ -360,6 +390,20 @@ func (v *View) removeRecentWorkspace(root string) {
 		v.addActivity("Could not remove recent workspace: " + err.Error())
 		return
 	}
+	v.refreshWelcomeTabs()
+}
+
+func (v *View) removeMissingRecentWorkspaces() {
+	if v.recentWorkspaceStore == nil {
+		v.addActivity("Recent workspace store is unavailable.")
+		return
+	}
+	items, err := v.recentWorkspaceStore.RemoveMissing()
+	if err != nil {
+		v.addActivity("Could not remove missing recent workspaces: " + err.Error())
+		return
+	}
+	v.addActivity(fmt.Sprintf("Removed missing recent workspaces; %d recent workspace(s) remain.", len(items)))
 	v.refreshWelcomeTabs()
 }
 

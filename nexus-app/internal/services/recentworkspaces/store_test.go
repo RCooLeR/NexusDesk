@@ -71,3 +71,39 @@ func TestStoreLimitsRecentWorkspaces(t *testing.T) {
 		t.Fatalf("expected %d items, got %d", Limit, len(items))
 	}
 }
+
+func TestStoreMarksMissingRecentPathsAndRemovesThem(t *testing.T) {
+	store := NewFileStore(filepath.Join(t.TempDir(), "recent.json"))
+	existing := t.TempDir()
+	missing := filepath.Join(t.TempDir(), "missing-workspace")
+
+	if _, err := store.Add(existing); err != nil {
+		t.Fatalf("Add existing failed: %v", err)
+	}
+	if _, err := store.Add(missing); err != nil {
+		t.Fatalf("Add missing failed: %v", err)
+	}
+
+	items, err := store.List()
+	if err != nil {
+		t.Fatalf("List failed: %v", err)
+	}
+	byPath := map[string]Workspace{}
+	for _, item := range items {
+		byPath[item.Path] = item
+	}
+	if !byPath[existing].Exists || byPath[existing].Missing {
+		t.Fatalf("expected existing workspace to be marked present, got %#v", byPath[existing])
+	}
+	if byPath[missing].Exists || !byPath[missing].Missing {
+		t.Fatalf("expected missing workspace to be marked missing, got %#v", byPath[missing])
+	}
+
+	items, err = store.RemoveMissing()
+	if err != nil {
+		t.Fatalf("RemoveMissing failed: %v", err)
+	}
+	if len(items) != 1 || items[0].Path != existing || !items[0].Exists || items[0].Missing {
+		t.Fatalf("expected only existing workspace after RemoveMissing, got %#v", items)
+	}
+}
