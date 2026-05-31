@@ -6,11 +6,25 @@ param(
 
 $ErrorActionPreference = 'Stop'
 
-$iconPngPath = Resolve-Path $IconPng
-New-Item -ItemType Directory -Force -Path $OutDir | Out-Null
+$appRoot = (Resolve-Path (Join-Path $PSScriptRoot '..')).Path
 
-$icoPath = Join-Path $OutDir 'nexus-app-icon.ico'
-$rcPath = Join-Path $OutDir 'nexus-app-icon.rc'
+function Resolve-AppPath {
+    param([string]$Path)
+
+    if ([System.IO.Path]::IsPathRooted($Path)) {
+        return $Path
+    }
+
+    return (Join-Path $appRoot $Path)
+}
+
+$iconPngPath = (Resolve-Path (Resolve-AppPath $IconPng)).Path
+$outDirPath = Resolve-AppPath $OutDir
+$sysoPathValue = Resolve-AppPath $SysoPath
+New-Item -ItemType Directory -Force -Path $outDirPath | Out-Null
+
+$icoPath = Join-Path $outDirPath 'nexus-app-icon.ico'
+$rcPath = Join-Path $outDirPath 'nexus-app-icon.rc'
 
 Add-Type -AssemblyName System.Drawing
 
@@ -81,13 +95,22 @@ if ($null -eq $windres) {
     throw 'windres.exe was not found on PATH. Run scripts\dev-env.ps1 so MSYS2 UCRT64 bin is available.'
 }
 
-$windresArgs = @('-O', 'coff', '-F', 'pe-x86-64', '-i', $rcPath, '-o', $SysoPath)
+$windresVersionOutput = & $windres.Source --version 2>&1
+if ($LASTEXITCODE -ne 0) {
+    $windresMessage = ($windresVersionOutput | Out-String).Trim()
+    if ([string]::IsNullOrWhiteSpace($windresMessage)) {
+        $windresMessage = "windres.exe exited with code $LASTEXITCODE before printing diagnostics."
+    }
+    throw "windres.exe is installed but cannot start. Repair MSYS2 UCRT64 packages mingw-w64-ucrt-x86_64-binutils and mingw-w64-ucrt-x86_64-zlib, then open a fresh PowerShell. Details: $windresMessage"
+}
+
+$windresArgs = @('-O', 'coff', '-F', 'pe-x86-64', '-i', $rcPath, '-o', $sysoPathValue)
 if (-not [string]::IsNullOrWhiteSpace($env:CC)) {
-    $windresArgs = @("--preprocessor=$env:CC") + $windresArgs
+    $windresArgs = @("--preprocessor=$env:CC -E -xc-header -DRC_INVOKED") + $windresArgs
 }
 
 & $windres.Source @windresArgs
 if ($LASTEXITCODE -ne 0) {
     throw "windres.exe failed with exit code $LASTEXITCODE."
 }
-Write-Host "Windows icon resource generated at $SysoPath"
+Write-Host "Windows icon resource generated at $sysoPathValue"

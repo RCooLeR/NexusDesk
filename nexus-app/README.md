@@ -14,12 +14,21 @@ This is the active Fyne-native desktop application.
 
 Fyne desktop builds need CGO and a native C compiler. On Windows, use MSYS2 UCRT64 GCC; the default expected install root is `C:\msys64`, with the compiler at `C:\msys64\ucrt64\bin\gcc.exe` or `C:\msys64\ucrt64\bin\x86_64-w64-mingw32-gcc.exe`.
 
+The Go installation must include the standard CGO tool. Verify it before chasing MSYS2 issues:
+
+```powershell
+go tool cgo -V
+Test-Path "$(go env GOTOOLDIR)\cgo.exe"
+```
+
+If the second command returns `False` or builds fail with `go: no such tool "cgo"`, repair or reinstall Go from the official Windows installer, then open a fresh PowerShell.
+
 Install or repair the Windows compiler prerequisite before running native builds:
 
 ```powershell
 winget install MSYS2.MSYS2
 C:\msys64\usr\bin\bash.exe -lc "pacman -Syu --noconfirm"
-C:\msys64\usr\bin\bash.exe -lc "pacman -S --needed --noconfirm mingw-w64-ucrt-x86_64-gcc"
+C:\msys64\usr\bin\bash.exe -lc "pacman -S --needed --noconfirm mingw-w64-ucrt-x86_64-gcc mingw-w64-ucrt-x86_64-binutils mingw-w64-ucrt-x86_64-zlib"
 ```
 
 Restart PowerShell after installing MSYS2. If MSYS2 is installed somewhere other than `C:\msys64`, set `MSYS2_ROOT` for the current session:

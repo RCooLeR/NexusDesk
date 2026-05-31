@@ -34,6 +34,11 @@ $version = if ([string]::IsNullOrWhiteSpace($env:NEXUSDESK_VERSION)) { '0.0.0-de
 $commit = if ([string]::IsNullOrWhiteSpace($env:NEXUSDESK_COMMIT)) { (git rev-parse --short HEAD) } else { $env:NEXUSDESK_COMMIT }
 $buildDate = if ([string]::IsNullOrWhiteSpace($env:NEXUSDESK_BUILD_DATE)) { (Get-Date).ToUniversalTime().ToString('yyyy-MM-ddTHH:mm:ssZ') } else { $env:NEXUSDESK_BUILD_DATE }
 $ldflags = "-X nexusdesk/internal/buildinfo.Version=$version -X nexusdesk/internal/buildinfo.Commit=$commit -X nexusdesk/internal/buildinfo.BuildDate=$buildDate"
+$goToolDir = (& go env GOTOOLDIR).Trim()
+$cgoTool = Join-Path $goToolDir 'cgo.exe'
+if (-not (Test-Path $cgoTool)) {
+    throw "Go CGO tool was not found at $cgoTool. Repair or reinstall Go for Windows, then open a fresh PowerShell."
+}
 
 function Invoke-Checked {
     param(

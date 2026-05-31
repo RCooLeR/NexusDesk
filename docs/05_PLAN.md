@@ -462,10 +462,14 @@ cd nexus-app
 Windows native build prerequisite:
 
 ```powershell
+go tool cgo -V
+Test-Path "$(go env GOTOOLDIR)\cgo.exe"
 winget install MSYS2.MSYS2
 C:\msys64\usr\bin\bash.exe -lc "pacman -Syu --noconfirm"
-C:\msys64\usr\bin\bash.exe -lc "pacman -S --needed --noconfirm mingw-w64-ucrt-x86_64-gcc"
+C:\msys64\usr\bin\bash.exe -lc "pacman -S --needed --noconfirm mingw-w64-ucrt-x86_64-gcc mingw-w64-ucrt-x86_64-binutils mingw-w64-ucrt-x86_64-zlib"
 ```
+
+If `Test-Path "$(go env GOTOOLDIR)\cgo.exe"` returns `False`, repair or reinstall Go before running the native build. A missing `cgo.exe` means the build will fail with `go: no such tool "cgo"` even when MSYS2 GCC is present.
 
 If MSYS2 is not installed at `C:\msys64`, set `MSYS2_ROOT` before invoking the helper scripts. The expected compiler path is `C:\msys64\ucrt64\bin\gcc.exe` or `C:\msys64\ucrt64\bin\x86_64-w64-mingw32-gcc.exe`, with the same paths under `$env:MSYS2_ROOT` when overridden.
 
@@ -476,7 +480,7 @@ cd nexus-app
 .\scripts\ci-windows.ps1
 ```
 
-`ci-windows.ps1` runs gofmt verification, `go test ./...`, `go vet ./...`, build metadata validation, native executable build, release manifest generation, and `git diff --check`. It removes generated unsigned artifacts in its cleanup block. If MSYS2 UCRT64 GCC is missing, the script fails before tests and compilation; install `mingw-w64-ucrt-x86_64-gcc` rather than trying `CGO_ENABLED=0`.
+`ci-windows.ps1` runs gofmt verification, `go test ./...`, `go vet ./...`, build metadata validation, native executable build, release manifest generation, and `git diff --check`. It removes generated unsigned artifacts in its cleanup block. If MSYS2 UCRT64 GCC or the Windows resource tools are missing, the script fails before tests and compilation; install `mingw-w64-ucrt-x86_64-gcc`, `mingw-w64-ucrt-x86_64-binutils`, and `mingw-w64-ucrt-x86_64-zlib` rather than trying `CGO_ENABLED=0`.
 
 ## 13. Risk Management
 
