@@ -15,6 +15,7 @@ import (
 
 const (
 	rollbackDirRelPath      = ".nexusdesk/rollbacks"
+	rollbackBlobDirRelPath  = ".nexusdesk/rollbacks/blobs"
 	rollbackLogName         = "log.json"
 	rollbackMaxRecords      = 120
 	rollbackMaxSnapshotSize = 32 * 1024 * 1024
@@ -283,6 +284,9 @@ func (s *Service) commitRollback(root string, record RollbackRecord) (RollbackRe
 	if err := writeRollbackLog(root, records); err != nil {
 		return RollbackRecord{}, err
 	}
+	if err := pruneUnreferencedRollbackBlobs(root, records); err != nil {
+		return RollbackRecord{}, err
+	}
 	return record, nil
 }
 
@@ -294,7 +298,14 @@ func (s *Service) discardPreparedRollback(root string, record RollbackRecord) er
 	if err != nil {
 		return err
 	}
-	return os.RemoveAll(filepath.Join(absRoot, filepath.FromSlash(rollbackDirRelPath), record.ID))
+	if err := os.RemoveAll(filepath.Join(absRoot, filepath.FromSlash(rollbackDirRelPath), record.ID)); err != nil {
+		return err
+	}
+	records, err := s.ListRollbacks(root)
+	if err != nil {
+		return err
+	}
+	return pruneUnreferencedRollbackBlobs(root, records)
 }
 
 func snapshotRollbackPath(absRoot string, id string, relPath string) (RollbackEntry, error) {
@@ -327,19 +338,16 @@ func snapshotRollbackPath(absRoot string, id string, relPath string) (RollbackEn
 		return RollbackEntry{}, err
 	}
 	sum := sha256.Sum256(content)
-	backupRelPath := filepath.ToSlash(filepath.Join(rollbackDirRelPath, id, encodedRollbackPath(relPath)+".bin"))
-	backupAbsPath := filepath.Join(absRoot, filepath.FromSlash(backupRelPath))
-	if err := os.MkdirAll(filepath.Dir(backupAbsPath), 0o755); err != nil {
-		return RollbackEntry{}, err
-	}
-	if err := os.WriteFile(backupAbsPath, content, info.Mode().Perm()); err != nil {
+	sha := hex.EncodeToString(sum[:])
+	backupRelPath := rollbackBlobRelPath(sha)
+	if err := writeRollbackBlob(absRoot, backupRelPath, content, info.Mode().Perm()); err != nil {
 		return RollbackEntry{}, err
 	}
 	entry.Existed = true
 	entry.BackupRelPath = backupRelPath
 	entry.Mode = uint32(info.Mode().Perm())
 	entry.Size = info.Size()
-	entry.SHA256 = hex.EncodeToString(sum[:])
+	entry.SHA256 = sha
 	return entry, nil
 }
 
@@ -384,9 +392,90 @@ func verifyRollbackChecksum(entry RollbackEntry, content []byte) error {
 	return nil
 }
 
-func encodedRollbackPath(relPath string) string {
-	sum := sha256.Sum256([]byte(filepath.ToSlash(relPath)))
-	return hex.EncodeToString(sum[:])
+func rollbackBlobRelPath(sha string) string {
+	prefix := "00"
+	if len(sha) >= 2 {
+		prefix = sha[:2]
+	}
+	return filepath.ToSlash(filepath.Join(rollbackBlobDirRelPath, prefix, sha+".bin"))
+}
+
+func writeRollbackBlob(absRoot string, backupRelPath string, content []byte, mode os.FileMode) error {
+	backupAbsPath := filepath.Join(absRoot, filepath.FromSlash(backupRelPath))
+	if existing, err := os.ReadFile(backupAbsPath); err == nil {
+		sum := sha256.Sum256(existing)
+		expectedSHA := strings.TrimSuffix(filepath.Base(backupRelPath), ".bin")
+		if hex.EncodeToString(sum[:]) == expectedSHA {
+			return nil
+		}
+		return fmt.Errorf("rollback blob collision for %s", backupRelPath)
+	} else if !os.IsNotExist(err) {
+		return err
+	}
+	if err := os.MkdirAll(filepath.Dir(backupAbsPath), 0o755); err != nil {
+		return err
+	}
+	return os.WriteFile(backupAbsPath, content, mode.Perm())
+}
+
+func pruneUnreferencedRollbackBlobs(root string, records []RollbackRecord) error {
+	absRoot, err := cleanRoot(root)
+	if err != nil {
+		return err
+	}
+	blobRoot := filepath.Join(absRoot, filepath.FromSlash(rollbackBlobDirRelPath))
+	referenced := map[string]bool{}
+	for _, record := range records {
+		for _, entry := range record.Entries {
+			if strings.HasPrefix(filepath.ToSlash(entry.BackupRelPath), rollbackBlobDirRelPath+"/") {
+				referenced[filepath.Clean(filepath.Join(absRoot, filepath.FromSlash(entry.BackupRelPath)))] = true
+			}
+		}
+	}
+	if err := filepath.WalkDir(blobRoot, func(path string, entry fs.DirEntry, walkErr error) error {
+		if walkErr != nil {
+			if os.IsNotExist(walkErr) {
+				return nil
+			}
+			return walkErr
+		}
+		if entry.IsDir() {
+			return nil
+		}
+		if !referenced[filepath.Clean(path)] {
+			return os.Remove(path)
+		}
+		return nil
+	}); err != nil && !os.IsNotExist(err) {
+		return err
+	}
+	return removeEmptyRollbackBlobDirs(blobRoot)
+}
+
+func removeEmptyRollbackBlobDirs(root string) error {
+	entries, err := os.ReadDir(root)
+	if os.IsNotExist(err) {
+		return nil
+	}
+	if err != nil {
+		return err
+	}
+	for _, entry := range entries {
+		if !entry.IsDir() {
+			continue
+		}
+		dir := filepath.Join(root, entry.Name())
+		children, err := os.ReadDir(dir)
+		if err != nil {
+			return err
+		}
+		if len(children) == 0 {
+			if err := os.Remove(dir); err != nil && !os.IsNotExist(err) {
+				return err
+			}
+		}
+	}
+	return nil
 }
 
 func slugRollback(value string) string {

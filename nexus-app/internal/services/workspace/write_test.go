@@ -75,6 +75,54 @@ func TestRollbackStorageUsageSummarizesSnapshots(t *testing.T) {
 	}
 }
 
+func TestRollbackSnapshotsUseContentAddressedStorageForIdenticalContent(t *testing.T) {
+	root := t.TempDir()
+	service := New()
+	path := filepath.Join(root, "docs", "notes.md")
+	writeFile(t, path, "same\n")
+
+	first, err := service.ApplyFileWrite(root, FileWriteRequest{RelPath: "docs/notes.md", Content: "first change\n"})
+	if err != nil {
+		t.Fatalf("first ApplyFileWrite returned error: %v", err)
+	}
+	writeFile(t, path, "same\n")
+	second, err := service.ApplyFileWrite(root, FileWriteRequest{RelPath: "docs/notes.md", Content: "second change\n"})
+	if err != nil {
+		t.Fatalf("second ApplyFileWrite returned error: %v", err)
+	}
+
+	records, err := service.ListRollbacks(root)
+	if err != nil {
+		t.Fatalf("ListRollbacks returned error: %v", err)
+	}
+	if len(records) != 2 {
+		t.Fatalf("expected two rollback records, got %#v", records)
+	}
+	if records[0].ID != second.RollbackID || records[1].ID != first.RollbackID {
+		t.Fatalf("unexpected rollback order: %#v", records)
+	}
+	firstBackup := records[1].Entries[0].BackupRelPath
+	secondBackup := records[0].Entries[0].BackupRelPath
+	if firstBackup == "" || firstBackup != secondBackup {
+		t.Fatalf("expected identical snapshots to share one backup blob, got %q and %q", firstBackup, secondBackup)
+	}
+	if !strings.HasPrefix(firstBackup, rollbackBlobDirRelPath+"/") {
+		t.Fatalf("expected content-addressed rollback blob path, got %q", firstBackup)
+	}
+	if got := countRollbackBlobFiles(t, root); got != 1 {
+		t.Fatalf("expected one deduplicated rollback blob, got %d", got)
+	}
+
+	result, err := service.ApplyRollback(root, second.RollbackID)
+	if err != nil {
+		t.Fatalf("ApplyRollback returned error: %v", err)
+	}
+	if len(result.Restored) != 1 || result.Restored[0] != "docs/notes.md" {
+		t.Fatalf("unexpected rollback result: %#v", result)
+	}
+	assertFileContent(t, path, "same\n")
+}
+
 func TestBuildUnifiedDiffUsesBoundedFallbackForLargeLineCount(t *testing.T) {
 	beforeLines := make([]string, 0, 3200)
 	afterLines := make([]string, 0, 3200)
@@ -348,4 +396,23 @@ func assertFileContent(t *testing.T, path string, want string) {
 	if string(content) != want {
 		t.Fatalf("expected %q, got %q", want, string(content))
 	}
+}
+
+func countRollbackBlobFiles(t *testing.T, root string) int {
+	t.Helper()
+	blobRoot := filepath.Join(root, filepath.FromSlash(rollbackBlobDirRelPath))
+	count := 0
+	err := filepath.WalkDir(blobRoot, func(_ string, entry os.DirEntry, walkErr error) error {
+		if walkErr != nil {
+			return walkErr
+		}
+		if !entry.IsDir() {
+			count++
+		}
+		return nil
+	})
+	if err != nil {
+		t.Fatalf("WalkDir rollback blobs failed: %v", err)
+	}
+	return count
 }

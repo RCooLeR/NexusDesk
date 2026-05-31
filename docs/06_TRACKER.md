@@ -142,8 +142,8 @@ Legend:
 - [x] P1 Add tests for large-line-count diff.
 - [x] P1 Add rollback storage usage diagnostics.
 - [x] P1 Add rollback retention policy documentation.
-- [ ] P2 Add content-addressed rollback storage.
-- [ ] P2 Add deduplication tests for identical snapshots.
+- [x] P2 Add content-addressed rollback storage. Evidence: workspace rollback backups now write new file snapshots into `.nexusdesk/rollbacks/blobs/<sha-prefix>/<sha>.bin`, keep existing rollback records readable through their stored `BackupRelPath`, and prune unreferenced hash blobs after commit/discard; `go test ./internal/services/workspace -run "Rollback|ApplyFileWrite|ApplyFileAppend|File" -count=1` passed.
+- [x] P2 Add deduplication tests for identical snapshots. Evidence: `TestRollbackSnapshotsUseContentAddressedStorageForIdenticalContent` creates two rollback records for identical source content, asserts both records share one blob path, counts one stored blob, and applies the rollback successfully.
 
 ### 2.4 Workspace search performance
 
