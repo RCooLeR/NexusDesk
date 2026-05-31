@@ -20,6 +20,7 @@ $repoRoot = (Resolve-Path (Join-Path $appRoot '..')).Path
 if ([string]::IsNullOrWhiteSpace($OutputDir)) {
     $OutputDir = Join-Path $appRoot 'dist'
 }
+$OutputDir = [System.IO.Path]::GetFullPath($OutputDir)
 if ([string]::IsNullOrWhiteSpace($Version)) {
     $Version = '0.0.0-ci'
 }
@@ -41,6 +42,7 @@ $installerZipPath = Join-Path $OutputDir ("nexusdesk-windows-installer-" + $safe
 $manifestPath = Join-Path $OutputDir 'nexusdesk-windows-installer-manifest.json'
 $sbomPath = Join-Path $OutputDir 'nexusdesk-windows-installer-sbom.json'
 $provenancePath = Join-Path $OutputDir 'nexusdesk-windows-installer-provenance.json'
+$installerSigningEvidencePath = Join-Path $staging 'nexusdesk-windows-installer-signing.json'
 
 function Invoke-Checked {
     param(
@@ -181,6 +183,7 @@ Uninstall application files:
 
 The payload archive includes nexusdesk.exe plus manifest, SBOM, and provenance sidecars.
 This installer bundle has its own manifest, SBOM, and provenance files next to the artifact.
+When signing is enabled, signing evidence JSON files are included for the executable and installer scripts.
 "@
 
 Set-Content -LiteralPath (Join-Path $staging 'install-nexusdesk.ps1') -Value $installerScript -Encoding UTF8
@@ -188,9 +191,12 @@ Set-Content -LiteralPath (Join-Path $staging 'uninstall-nexusdesk.ps1') -Value $
 Set-Content -LiteralPath (Join-Path $staging 'README.txt') -Value $readme -Encoding UTF8
 
 if ($Sign) {
-    & (Join-Path $PSScriptRoot 'sign-windows-artifacts.ps1') -FilePath @((Join-Path $staging 'install-nexusdesk.ps1'), (Join-Path $staging 'uninstall-nexusdesk.ps1')) -CertificateThumbprint $CertificateThumbprint -PfxPath $PfxPath -PfxPassword $PfxPassword -TimestampUrl $TimestampUrl
+    & (Join-Path $PSScriptRoot 'sign-windows-artifacts.ps1') -FilePath @((Join-Path $staging 'install-nexusdesk.ps1'), (Join-Path $staging 'uninstall-nexusdesk.ps1')) -CertificateThumbprint $CertificateThumbprint -PfxPath $PfxPath -PfxPassword $PfxPassword -TimestampUrl $TimestampUrl -EvidencePath $installerSigningEvidencePath
     if ($LASTEXITCODE -ne 0) {
         throw "sign-windows-artifacts.ps1 failed with exit code $LASTEXITCODE."
+    }
+    if (-not (Test-Path -LiteralPath $installerSigningEvidencePath)) {
+        throw "Expected Windows installer signing evidence was not generated: $installerSigningEvidencePath"
     }
 }
 
@@ -215,5 +221,5 @@ foreach ($path in @($installerZipPath, $manifestPath, $sbomPath, $provenancePath
 $installerInfo = Get-Item -LiteralPath $installerZipPath
 Write-Host "Wrote Windows installer package: $installerZipPath"
 Write-Host "Installer bytes: $($installerInfo.Length)"
-Write-Host "Included: install-nexusdesk.ps1, uninstall-nexusdesk.ps1, README.txt, $payloadName"
+Write-Host "Included: install-nexusdesk.ps1, uninstall-nexusdesk.ps1, README.txt, $payloadName$(if ($Sign) { ', nexusdesk-windows-installer-signing.json' } else { '' })"
 Write-Host "Installer script signing: $(if ($Sign) { 'signed before installer evidence generation' } else { 'not signed' })"

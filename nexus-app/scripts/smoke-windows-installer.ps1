@@ -14,6 +14,7 @@ $repoRoot = (Resolve-Path (Join-Path $appRoot '..')).Path
 if ([string]::IsNullOrWhiteSpace($OutputDir)) {
     $OutputDir = Join-Path $appRoot 'dist-smoke'
 }
+$OutputDir = [System.IO.Path]::GetFullPath($OutputDir)
 if ([string]::IsNullOrWhiteSpace($Version)) {
     $Version = '0.0.0-smoke'
 }

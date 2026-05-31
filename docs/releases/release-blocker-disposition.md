@@ -27,8 +27,8 @@ Use `docs/releases/clean-machine-smoke-report-template.md` or `.github/ISSUE_TEM
 
 | Tracker item | Current disposition | Evidence required to close |
 |---|---|---|
-| Sign Windows executable | Open; signing hooks exist, certificate-backed signing has not run. | Signed `nexusdesk.exe`, valid Authenticode verification, timestamp evidence, artifact SHA-256, manifest/SBOM/provenance, and signer identity recorded. |
-| Sign Windows installer | Open; installer script signing hooks exist, certificate-backed signing has not run. | Signed installer scripts or chosen installer artifact, valid Authenticode verification, timestamp evidence, artifact SHA-256, manifest/SBOM/provenance, and signer identity recorded. |
+| Sign Windows executable | Open; signing hooks and JSON evidence sidecar generation exist, but certificate-backed signing has not run. | Signed `nexusdesk.exe`, valid Authenticode verification, timestamp evidence, artifact SHA-256, manifest/SBOM/provenance, and signer identity recorded. |
+| Sign Windows installer | Open; installer script signing hooks and JSON evidence sidecar generation exist, but certificate-backed signing has not run. | Signed installer scripts or chosen installer artifact, valid Authenticode verification, timestamp evidence, artifact SHA-256, manifest/SBOM/provenance, and signer identity recorded. |
 | Windows clean-machine launch smoke | Open; CI installer smoke is not a clean machine. | Fresh Windows 11 user/VM install, normal launch path, About metadata, icon/window title, first-run Home readiness, trust prompts recorded. |
 | Windows open workspace smoke | Open. | Fresh Windows workspace-open run with project tree, recent workspace, quick-open/search basics, and no hidden side effects recorded. |
 | Windows edit/save/revert smoke | Open. | Fresh Windows editor run showing preview, edit, save, dirty guard, rollback/revert, and retained file contents evidence. |

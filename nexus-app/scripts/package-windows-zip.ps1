@@ -22,6 +22,7 @@ if ([string]::IsNullOrWhiteSpace($MsysRoot)) {
 if ([string]::IsNullOrWhiteSpace($OutputDir)) {
     $OutputDir = Join-Path $appRoot 'dist'
 }
+$OutputDir = [System.IO.Path]::GetFullPath($OutputDir)
 if ([string]::IsNullOrWhiteSpace($Version)) {
     $Version = '0.0.0-ci'
 }
@@ -78,6 +79,7 @@ $artifactPath = Join-Path $staging 'nexusdesk.exe'
 $manifestPath = Join-Path $staging 'nexusdesk-windows-manifest.json'
 $sbomPath = Join-Path $staging 'nexusdesk-windows-sbom.json'
 $provenancePath = Join-Path $staging 'nexusdesk-windows-provenance.json'
+$signingEvidencePath = Join-Path $staging 'nexusdesk-windows-signing.json'
 $ldflags = "-linkmode=internal -X nexusdesk/internal/buildinfo.Version=$Version -X nexusdesk/internal/buildinfo.Commit=$Commit -X nexusdesk/internal/buildinfo.BuildDate=$BuildDate"
 
 function Invoke-Checked {
@@ -121,7 +123,7 @@ Push-Location $appRoot
 try {
     Invoke-Checked 'go' @('build', '-ldflags', $ldflags, '-o', $artifactPath, '.')
     if ($Sign) {
-        & (Join-Path $PSScriptRoot 'sign-windows-artifacts.ps1') -FilePath $artifactPath -CertificateThumbprint $CertificateThumbprint -PfxPath $PfxPath -PfxPassword $PfxPassword -TimestampUrl $TimestampUrl
+        & (Join-Path $PSScriptRoot 'sign-windows-artifacts.ps1') -FilePath $artifactPath -CertificateThumbprint $CertificateThumbprint -PfxPath $PfxPath -PfxPassword $PfxPassword -TimestampUrl $TimestampUrl -EvidencePath $signingEvidencePath
         if ($LASTEXITCODE -ne 0) {
             throw "sign-windows-artifacts.ps1 failed with exit code $LASTEXITCODE."
         }
@@ -136,6 +138,9 @@ foreach ($path in @($artifactPath, $manifestPath, $sbomPath, $provenancePath)) {
         throw "Expected package input was not generated: $path"
     }
 }
+if ($Sign -and -not (Test-Path -LiteralPath $signingEvidencePath)) {
+    throw "Expected Windows signing evidence was not generated: $signingEvidencePath"
+}
 
 Compress-Archive -Path (Join-Path $staging '*') -DestinationPath $zipPath -CompressionLevel Optimal
 if (-not (Test-Path $zipPath)) {
@@ -145,5 +150,5 @@ if (-not (Test-Path $zipPath)) {
 $zipInfo = Get-Item $zipPath
 Write-Host "Wrote Windows zip package: $zipPath"
 Write-Host "Package bytes: $($zipInfo.Length)"
-Write-Host "Included: nexusdesk.exe, nexusdesk-windows-manifest.json, nexusdesk-windows-sbom.json, nexusdesk-windows-provenance.json"
+Write-Host "Included: nexusdesk.exe, nexusdesk-windows-manifest.json, nexusdesk-windows-sbom.json, nexusdesk-windows-provenance.json$(if ($Sign) { ', nexusdesk-windows-signing.json' } else { '' })"
 Write-Host "Executable signing: $(if ($Sign) { 'signed before release evidence generation' } else { 'not signed' })"
