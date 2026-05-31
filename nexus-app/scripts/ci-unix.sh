@@ -29,6 +29,8 @@ cleanup() {
   rm -f "${APP_ROOT}/build/nexusdesk-"*-manifest.json
   rm -f "${APP_ROOT}/build/nexusdesk-"*-sbom.json
   rm -f "${APP_ROOT}/build/nexusdesk-"*-provenance.json
+  rm -f "${APP_ROOT}/build/nexusdesk-"*.tar.gz
+  rm -rf "${APP_ROOT}/build/nexusdesk-linux-"* "${APP_ROOT}/build/nexusdesk-macos-"*
 }
 trap cleanup EXIT
 
@@ -66,6 +68,9 @@ go run ./cmd/release-manifest -artifact "${artifact_path}" -output "${manifest_p
 test -s "${manifest_path}"
 test -s "${sbom_path}"
 test -s "${provenance_path}"
+
+echo "Packaging native Unix artifact..."
+bash scripts/package-unix.sh --output-dir build --version "${version}" --commit "${commit}" --build-date "${build_date}"
 
 echo "Checking diff whitespace..."
 git -C "${REPO_ROOT}" diff --check
