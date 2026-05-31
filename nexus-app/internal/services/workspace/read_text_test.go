@@ -53,6 +53,21 @@ func TestReadTextFileDetectsWindows1251WithCyrillicSignal(t *testing.T) {
 	}
 }
 
+func TestReadTextFileReadsUTF16BEText(t *testing.T) {
+	root := t.TempDir()
+	if err := os.WriteFile(filepath.Join(root, "notes.txt"), []byte{0xfe, 0xff, 0, 'H', 0, 'i'}, 0o644); err != nil {
+		t.Fatal(err)
+	}
+
+	read, err := New().ReadTextFile(root, "notes.txt")
+	if err != nil {
+		t.Fatalf("ReadTextFile returned error: %v", err)
+	}
+	if read.Content != "Hi" || read.Encoding != encodingUTF16BE || read.EncodingAmbiguous {
+		t.Fatalf("expected UTF-16BE text read, got %#v", read)
+	}
+}
+
 func TestReadTextFileRejectsUnsafeTargets(t *testing.T) {
 	root := t.TempDir()
 	if err := os.WriteFile(filepath.Join(root, "blob.bin"), []byte{'a', 0x00, 'b'}, 0o644); err != nil {

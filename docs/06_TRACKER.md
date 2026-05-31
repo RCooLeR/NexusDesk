@@ -234,7 +234,7 @@ Legend:
 - [x] P1 Disable save until encoding is explicit when ambiguity risks data loss.
 - [x] P1 Add tests for Latin-1.
 - [x] P1 Add tests for Windows-1251.
-- [ ] P2 Add tests for Shift-JIS or other common encoding.
+- [x] P2 Add tests for Shift-JIS or other common encoding. Evidence: added UTF-16BE coverage for preview, full safe text read, and explicit safe write round-trip; `go test ./internal/services/workspace -run "UTF16BE|Encoding" -count=1` passed.
 
 ### 3.7 Recent workspace correctness
 

@@ -60,6 +60,19 @@ func TestPreviewFileReadsUTF16LEText(t *testing.T) {
 	}
 }
 
+func TestPreviewFileReadsUTF16BEText(t *testing.T) {
+	root := t.TempDir()
+	writeBytes(t, filepath.Join(root, "notes.txt"), []byte{0xfe, 0xff, 0, 'H', 0, 'i'})
+
+	preview, err := New().PreviewFile(root, "notes.txt")
+	if err != nil {
+		t.Fatalf("PreviewFile returned error: %v", err)
+	}
+	if preview.Text != "Hi" || preview.Encoding != encodingUTF16BE {
+		t.Fatalf("unexpected UTF-16BE preview: %#v", preview)
+	}
+}
+
 func TestPreviewFileReadsWindows1251Text(t *testing.T) {
 	root := t.TempDir()
 	writeBytes(t, filepath.Join(root, "notes.txt"), []byte{0xcf, 0xf0, 0xe8, 0xe2, 0xb3, 0xf2})

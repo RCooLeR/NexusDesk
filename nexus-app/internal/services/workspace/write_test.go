@@ -325,6 +325,37 @@ func TestApplyFileWritePreservesRequestedUTF16LEEncoding(t *testing.T) {
 	}
 }
 
+func TestApplyFileWritePreservesRequestedUTF16BEEncoding(t *testing.T) {
+	root := t.TempDir()
+
+	proposal, err := New().ApplyFileWrite(root, FileWriteRequest{
+		RelPath:  "docs/notes.txt",
+		Content:  "hello\n",
+		Encoding: "utf-16be",
+	})
+	if err != nil {
+		t.Fatalf("ApplyFileWrite returned error: %v", err)
+	}
+	if proposal.Encoding != encodingUTF16BE {
+		t.Fatalf("expected utf-16-be proposal encoding, got %q", proposal.Encoding)
+	}
+
+	content, err := os.ReadFile(filepath.Join(root, "docs", "notes.txt"))
+	if err != nil {
+		t.Fatalf("ReadFile failed: %v", err)
+	}
+	if len(content) < 4 || content[0] != 0xfe || content[1] != 0xff || content[2] != 0x00 || content[3] != 'h' {
+		t.Fatalf("expected utf-16be content with BOM, got %#v", content)
+	}
+	text, encoding, err := decodeText(content)
+	if err != nil {
+		t.Fatalf("decodeText failed: %v", err)
+	}
+	if encoding != encodingUTF16BE || text != "hello\n" {
+		t.Fatalf("unexpected UTF-16BE round trip: encoding=%s text=%q bytes=%#v", encoding, text, content)
+	}
+}
+
 func TestApplyFileWritePreservesRequestedWindows1252Encoding(t *testing.T) {
 	root := t.TempDir()
 
