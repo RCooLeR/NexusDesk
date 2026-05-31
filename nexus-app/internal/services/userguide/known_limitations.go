@@ -8,7 +8,7 @@ func KnownLimitationsGuide() Guide {
 			{
 				Title: "Packaging And Trust",
 				Body: []string{
-					"Public distribution is not complete until Windows signing, installer signing, macOS signing/notarization, Linux package strategy, release evidence, and clean-machine smoke are all recorded for the release.",
+					"Public distribution is not complete until Windows signing, installer signing, macOS signing/notarization, Linux clean-machine trust validation, release evidence, and clean-machine smoke are all recorded for the release.",
 					"Unsigned local builds and fresh beta artifacts may trigger operating-system or antivirus reputation prompts. Use release manifest, SBOM, provenance, and release notes for verification.",
 				},
 			},
@@ -36,7 +36,7 @@ func KnownLimitationsGuide() Guide {
 			{
 				Title: "Platform Coverage",
 				Body: []string{
-					"Windows has the strongest current build coverage. macOS and Linux package/build smoke must still be recorded on supported target machines before a production release.",
+					"CI package smoke covers Windows, macOS, and Linux artifacts. Clean-machine desktop launch, trust prompts, protected-secret behavior, and uninstall/app-data expectations must still be recorded on supported target machines before a production release.",
 					"Protected-secret support depends on the platform backend: Windows DPAPI, macOS Keychain, or Linux Secret Service. Missing backends should fail clearly instead of silently storing secrets unsafely.",
 				},
 			},

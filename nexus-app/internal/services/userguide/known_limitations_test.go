@@ -11,6 +11,7 @@ func TestKnownLimitationsGuideCoversBetaBoundaries(t *testing.T) {
 		"Known Limitations",
 		"Packaging And Trust",
 		"Windows signing",
+		"Linux clean-machine trust validation",
 		"SBOM",
 		"Provider And Model Setup",
 		"source warnings",
@@ -19,6 +20,7 @@ func TestKnownLimitationsGuideCoversBetaBoundaries(t *testing.T) {
 		"Data And Connectors",
 		"read-only inspection",
 		"Platform Coverage",
+		"CI package smoke covers Windows, macOS, and Linux artifacts",
 		"Secret Service",
 	} {
 		if !strings.Contains(markdown, expected) {
