@@ -24,11 +24,11 @@ Use trusted sample workspaces first. Do not test with production secrets, custom
 
 - Windows native build validation passed in the iteration 140 checkpoint, including gofmt, tests, vet, build metadata validation, native build, manifest, SBOM, provenance, and cleanup.
 - Windows installer bundle generation is available through `nexus-app/scripts/package-windows-installer.ps1`; the bundle includes install/uninstall PowerShell scripts, the Windows payload zip, and installer-level manifest/SBOM/provenance sidecars.
-- Windows installer uninstall/app-data behavior has a scripted smoke path through `nexus-app/scripts/smoke-windows-installer.ps1`; the smoke verifies app files are removed and workspace `.nexusdesk/` data is preserved.
+- Windows installer uninstall/app-data behavior has a scripted smoke path through `nexus-app/scripts/smoke-windows-installer.ps1`; the smoke verifies the installed executable, core workspace/data/artifact/diagnostics flows, app-file removal, and workspace `.nexusdesk/` data preservation.
 - Release artifact evidence can be checked with `nexus-app/scripts/verify-release-evidence.ps1`, which verifies artifact size, SHA256, manifest, SBOM component hash, provenance subject, and provenance evidence hashes.
 - Public Windows code signing and installer signing are not complete.
-- macOS signing/notarization and macOS package smoke are not complete.
-- Linux package strategy is documented, but Linux package smoke is not complete.
+- macOS package smoke is CI-backed, but signing/notarization and clean-machine Gatekeeper behavior are not complete.
+- Linux package smoke is CI-backed, but clean-machine desktop/runtime dependency validation is not complete.
 - Treat unsigned beta artifacts as private test builds. Verify artifact SHA256 against the release manifest and keep the SBOM/provenance sidecars with the artifact.
 
 ## Validation To Run

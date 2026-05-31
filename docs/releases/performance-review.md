@@ -57,12 +57,11 @@ This review does not clear release blockers that require external execution envi
 - Full CI is still not proven for the latest release candidate.
 - Full platform smoke is still open.
 - Windows clean-machine launch, workspace, edit/save/revert, assistant, data/artifact, and diagnostics smokes are still open.
-- macOS and Linux package artifacts, CI, and clean-machine smokes are still open.
-- Cross-platform protected-secret smoke is still open.
-- Accessibility release review, release notes publication, signing, and beta install validation are still open.
+- macOS and Linux clean-machine smokes are still open.
+- Signing and beta install validation are still open.
 
 ## Decision
 
 Performance review status for the current local candidate: pass with release blockers.
 
-The reviewed implementation and focused verification support closing the P0 performance review item because the current local candidate has deterministic performance controls, diagnostics visibility, and regression coverage for the v1 risk areas. Production release remains blocked until platform CI/smoke, signing, beta validation, accessibility review, and release-note publication are completed or explicitly dispositioned in the tracker.
+The reviewed implementation and focused verification support closing the P0 performance review item because the current local candidate has deterministic performance controls, diagnostics visibility, and regression coverage for the v1 risk areas. Production release remains blocked until signing, clean-machine platform smoke, beta validation, and final P0/P1 disposition are completed or explicitly deferred in the tracker.

@@ -58,15 +58,14 @@ This review does not clear release blockers that require external validation:
 
 - Full platform smoke is still open.
 - Windows clean-machine UI smoke is still open.
-- macOS and Linux package/UI smoke evidence is missing.
-- Cross-platform protected-secret smoke is still open.
+- macOS and Linux clean-machine UI smoke is still open.
 - No independent screen-reader pass has been completed.
 - No assistive-technology beta feedback has been collected.
 - App-specific text zoom beyond Fyne/system scaling has not been validated as a v1-supported control.
-- Signing, release notes publication, and five-user beta install validation are still open.
+- Signing and five-user beta install validation are still open.
 
 ## Decision
 
 Accessibility review status for the current local candidate: pass with release blockers.
 
-The reviewed implementation and focused verification support closing the P0 accessibility review item because the local candidate has readable theme diagnostics, keyboard-reachable main surfaces, tooltip coverage for icon rails, text-backed warnings/status, visible long-running-work states, and visual smoke for key layouts. Production release remains blocked until platform smoke, beta validation, signing, release-note publication, and any required assistive-technology follow-up are completed or explicitly dispositioned in the tracker.
+The reviewed implementation and focused verification support closing the P0 accessibility review item because the local candidate has readable theme diagnostics, keyboard-reachable main surfaces, tooltip coverage for icon rails, text-backed warnings/status, visible long-running-work states, and visual smoke for key layouts. Production release remains blocked until signing, clean-machine platform smoke, beta validation, and any required assistive-technology follow-up are completed or explicitly deferred in the tracker.

@@ -407,9 +407,8 @@ Implemented:
 
 Planned:
 
-- Protected secret smoke on each platform.
 - Signed release evidence.
-- macOS/Linux package and clean-machine smoke evidence.
+- Clean-machine smoke evidence on Windows, macOS, and Linux.
 
 ## 3. Intentional Non-Goals For v1
 
@@ -441,4 +440,4 @@ Approximate planning assessment:
 - Data functionality: strong for v1 local/read-only workflows; dump import and connector sync remain post-v1.
 - Artifact functionality: broad with DOCX/PPTX, lineage, freshness, regeneration, and rollback-aware destructive flows.
 - Jobs/approvals: functional with durable logs, audit, approvals, and timeout coverage; richer progress modeling remains post-v1.
-- Packaging: Windows zip/installer and release evidence exist; production release still needs signing, macOS/Linux artifacts, platform CI/smoke, and beta validation.
+- Packaging: Windows zip/installer, macOS/Linux package artifacts, release evidence, and CI package smoke exist; production release still needs signing, clean-machine platform smoke, and beta validation.

@@ -2,7 +2,7 @@
 
 Date: 2026-05-30
 
-Status: release security/safety review complete for the current v1 candidate. This review did not sign artifacts, replace platform smoke testing, or prove macOS/Linux release readiness.
+Status: release security/safety review complete for the current v1 candidate. This review did not sign artifacts, replace clean-machine platform smoke testing, or prove public distribution trust.
 
 ## Scope
 
@@ -59,17 +59,12 @@ The current candidate has strong local controls for high-risk behavior:
 This review does not clear the remaining release blockers:
 
 - Windows executable and installer signing are not complete.
-- macOS and Linux package artifacts are not complete.
-- macOS and Linux CI/package smoke evidence is missing.
-- Cross-platform protected-secret smoke evidence is missing.
 - Windows clean-machine launch, workspace, edit/save/revert, assistant, data/artifact, and diagnostics smokes are missing.
 - macOS and Linux clean-machine smokes are missing.
-- Performance and accessibility release reviews are still open.
 - Five-user beta install validation and feedback triage are still open.
-- Public release notes publication is still open.
 
 ## Decision
 
 Security/safety review status for the current local candidate: pass with release blockers.
 
-The reviewed code and tests support closing the P0 security/safety review item because the current local candidate has no known unaddressed P0 safety defect in the covered areas. The app is still not production-release complete until signing, platform packaging, CI, platform smoke, protected-secret smoke, beta validation, performance review, accessibility review, and release-notes publication are completed or explicitly dispositioned in the tracker.
+The reviewed code and tests support closing the P0 security/safety review item because the current local candidate has no known unaddressed P0 safety defect in the covered areas. The app is still not production-release complete until signing, clean-machine platform smoke, beta validation, and final P0/P1 disposition are completed or explicitly deferred in the tracker.

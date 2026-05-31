@@ -7,7 +7,7 @@ Channel: v1 release candidate notes
 
 NexusDesk v1 is a Fyne-native local desktop workbench for code, data, documents, databases, artifacts, operations evidence, and safe AI-assisted work.
 
-These release notes are published for the current v1 release candidate. They are not a claim that production distribution is complete. Public production release remains blocked until the tracker closes signing, platform packages, CI, clean-machine smoke, protected-secret smoke, beta validation, and final P0/P1 disposition.
+These release notes are published for the current v1 release candidate. They are not a claim that production distribution is complete. Public production release remains blocked until the tracker closes signing, clean-machine smoke, beta validation, and final P0/P1 disposition.
 
 ## Highlights
 
@@ -35,11 +35,11 @@ These release notes are published for the current v1 release candidate. They are
 ## Install And Trust State
 
 - Windows native build and installer packaging are available from repository scripts.
+- macOS and Linux package artifacts are available from repository scripts and run packaged-app smoke in CI.
 - Release evidence sidecars are generated next to artifacts: manifest, SBOM, and provenance.
 - Artifact hashes must be checked against the release manifest before use.
 - Windows executable and installer signing are not complete.
 - macOS package/signing/notarization work is not complete.
-- Linux package work is not complete.
 - Unsigned or freshly built artifacts may trigger operating-system or antivirus reputation warnings. Treat those prompts as release risks and verify artifacts with manifest/SBOM/provenance evidence.
 
 ## Known Limitations
@@ -66,12 +66,8 @@ The release candidate is not complete while these tracker items remain open:
 
 - Close all remaining P0 issues.
 - Review all remaining P1 issues and explicitly defer or fix them.
-- Run full test suite in CI.
 - Run full platform smoke.
-- Produce macOS and Linux artifacts.
 - Sign Windows executable and installer.
 - Complete macOS signing/notarization if macOS remains in the supported target set.
-- Complete Linux/macOS CI and package smoke.
-- Complete cross-platform protected-secret smoke.
 - Complete Windows/macOS/Linux clean-machine smoke.
 - Complete five-user beta install validation and feedback triage.
