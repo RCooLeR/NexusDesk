@@ -2,6 +2,12 @@
 
 Use this template once per beta tester/install. The five-user beta install test is complete only when five separate reports exist and every reported issue has been triaged within 48 hours.
 
+Before closing the related tracker rows, save the completed reports and verify them from the repo root:
+
+```powershell
+.\nexus-app\scripts\verify-release-validation-reports.ps1 -BetaInstallReport path\to\beta-1.md,path\to\beta-2.md,path\to\beta-3.md,path\to\beta-4.md,path\to\beta-5.md -RequireFiveBetaReports
+```
+
 ## Tester And Build
 
 - Tester:

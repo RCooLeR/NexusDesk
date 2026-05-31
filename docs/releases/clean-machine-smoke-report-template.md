@@ -2,6 +2,12 @@
 
 Use this template once per clean Windows, macOS, or Linux machine. A clean-machine smoke is valid only when it starts from a fresh user profile or clean VM without a NexusDesk source checkout, developer environment variables, or previous NexusDesk app data unless the run is explicitly marked as an upgrade test.
 
+Before closing the related tracker rows, save the completed report and verify it from the repo root:
+
+```powershell
+.\nexus-app\scripts\verify-release-validation-reports.ps1 -CleanMachineReport path\to\windows-report.md,path\to\macos-report.md,path\to\linux-report.md -RequireAllCleanMachinePlatforms
+```
+
 ## Run Identity
 
 - Tester:

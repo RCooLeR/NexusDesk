@@ -24,6 +24,11 @@ Release-specific notes:
 - [Beta Install Report Template](releases/beta-install-report-template.md): required report format for the five-user beta install test and 48-hour feedback triage.
 - [Beta Release Notes](releases/beta-release-notes.md): private beta scope, trust state, validation path, known limitations, and feedback instructions.
 
+Release validation helpers:
+
+- `nexus-app/scripts/verify-release-evidence.ps1`: verifies artifact hashes, manifest, SBOM, and provenance sidecars.
+- `nexus-app/scripts/verify-release-validation-reports.ps1`: verifies completed clean-machine and beta install reports before closing release validation blockers.
+
 ## Documentation Rules
 
 - These files replace scattered planning notes. If a plan is not reflected here, it is not the active plan.
