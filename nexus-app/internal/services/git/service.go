@@ -174,14 +174,13 @@ func (s *Service) CommitChanges(root string, message string, body string) (Commi
 		return CommitResult{}, err
 	}
 	hash := strings.TrimSpace(mustGitOutputFor(absRoot, operationStatus, "rev-parse", "HEAD"))
-	shortHash := strings.TrimSpace(mustGitOutputFor(absRoot, operationStatus, "rev-parse", "--short", "HEAD"))
 	status, err := s.Status(absRoot)
 	if err != nil {
 		return CommitResult{}, err
 	}
 	return CommitResult{
 		Hash:        hash,
-		ShortHash:   shortHash,
+		ShortHash:   shortHash(hash),
 		Subject:     subject,
 		Body:        body,
 		StagedStat:  stagedStat,
