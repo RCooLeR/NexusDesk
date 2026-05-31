@@ -456,11 +456,11 @@ Legend:
 - [x] P1 Windows CI: tests. Evidence: `scripts/ci-windows.ps1` ran `go test ./...` successfully in the iteration 140 full Windows checkpoint.
 - [x] P1 Windows CI: build check. Evidence: `scripts/ci-windows.ps1` built the native Windows executable successfully in the iteration 140 full Windows checkpoint.
 - [x] P1 Windows CI: release manifest check. Evidence: `scripts/ci-windows.ps1` generated manifest/SBOM/provenance release evidence successfully in the iteration 140 full Windows checkpoint.
-- [ ] P1 Linux CI: tests.
-- [ ] P1 Linux CI: build/package smoke.
-- [ ] P1 macOS CI: tests.
-- [ ] P1 macOS CI: build/package smoke.
-- [ ] P1 Cross-platform protected secret smoke.
+- [x] P1 Linux CI: tests. Evidence: hosted native CI run 26706060998 passed the Linux native Fyne smoke job on commit `7cb8fbc`, including `go test ./...` through `scripts/ci-unix.sh`.
+- [x] P1 Linux CI: build/package smoke. Evidence: hosted native CI run 26706060998 passed the Linux native Fyne smoke job on commit `7cb8fbc`, including native executable build plus manifest/SBOM/provenance generation through `scripts/ci-unix.sh`.
+- [x] P1 macOS CI: tests. Evidence: hosted native CI run 26706060998 passed the macOS native Fyne smoke job on commit `7cb8fbc`, including `go test ./...` through `scripts/ci-unix.sh`.
+- [x] P1 macOS CI: build/package smoke. Evidence: hosted native CI run 26706060998 passed the macOS native Fyne smoke job on commit `7cb8fbc`, including native executable build plus manifest/SBOM/provenance generation through `scripts/ci-unix.sh`.
+- [x] P1 Cross-platform protected secret smoke. Evidence: hosted native CI run 26706060998 passed Windows, Linux, and macOS jobs on commit `7cb8fbc`; the matrix includes `go test ./...`, covering DPAPI, Keychain, and Linux explicit-backend behavior in `internal/services/protectedsecret`.
 - [x] P1 CI avoids leaving generated binaries in workspace. Evidence: iteration 140 full Windows checkpoint completed and the cleanup block removed `build/nexusdesk.exe`, `build/nexusdesk-windows-manifest.json`, `build/nexusdesk-windows-sbom.json`, and `build/nexusdesk-windows-provenance.json`; only the tracked `build/windows-resource` directory remained.
 
 ### 6.5 Clean-machine smoke
@@ -502,7 +502,7 @@ Legend:
 - [x] P0 Freeze v1 feature scope. Evidence: `docs/releases/v1-scope-freeze.md` freezes the v1 promise, in-scope surface, post-v1 deferrals, release blockers that do not expand scope, and change-control rule; docs index links it as release-specific source of truth.
 - [ ] P0 Close all P0 issues.
 - [ ] P0 Review all P1 issues and explicitly defer or fix.
-- [ ] P0 Run full test suite in CI.
+- [x] P0 Run full test suite in CI. Evidence: hosted native CI run 26706060998 passed the Windows, Linux, and macOS native Fyne smoke jobs on commit `7cb8fbc`; the jobs run gofmt, `go test ./...`, static analysis/build metadata checks where scripted, native executable builds, and release-evidence generation.
 - [ ] P0 Run full platform smoke.
 - [x] P0 Run security/safety review. Evidence: `docs/releases/security-safety-review.md` records the v1 security/safety review scope, verified controls, residual release blockers, and pass-with-blockers decision; focused safety matrix passed across security, tools, agent, tasks, workspace, connectors, issue reports, protected secrets, and shell UI (`go test ./internal/services/security ./internal/services/tools ./internal/services/agent ./internal/services/tasks ./internal/services/workspace ./internal/services/dbconnector ./internal/services/issuereport ./internal/services/protectedsecret ./internal/ui/shell -run "Risk|Threat|Control|Approval|Safety|Mutation|Timeout|Loop|Shell|Path|Rollback|Redact|Secret|Plaintext|WorkspaceOpen|ReadOnly|Unsafe"`).
 - [x] P0 Run performance review. Evidence: `docs/releases/performance-review.md` records the v1 performance review scope, deterministic performance controls, residual release blockers, and pass-with-blockers decision; focused performance matrix passed across perf harness, workspace search, metadata, connectors, tasks, and shell diagnostics/rendering (`go test ./internal/services/perf ./internal/services/workspace ./internal/services/metadata ./internal/services/dbconnector ./internal/services/agent ./internal/services/tasks ./internal/ui/shell -run "Performance|QuickProfile|Timing|Large|Search|Concurrent|Pool|Timeout|Activity|Stream|Save|Diff|Log|Cap|WorkspaceOpen" -count=1`); quick-profile benchmark completed on Windows amd64 (`go test ./internal/services/perf -run '^$' -bench BenchmarkRunQuickProfile -benchtime=1x -count=1`, `BenchmarkRunQuickProfile-32 59069900 ns/op`).
