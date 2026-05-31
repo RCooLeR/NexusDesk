@@ -30,6 +30,7 @@ cleanup() {
   rm -f "${APP_ROOT}/build/nexusdesk-"*-sbom.json
   rm -f "${APP_ROOT}/build/nexusdesk-"*-provenance.json
   rm -f "${APP_ROOT}/build/nexusdesk-"*.tar.gz
+  rm -f "${APP_ROOT}/build/nexusdesk-"*.zip
   rm -rf "${APP_ROOT}/build/nexusdesk-linux-"* "${APP_ROOT}/build/nexusdesk-macos-"*
 }
 trap cleanup EXIT

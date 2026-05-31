@@ -9,6 +9,8 @@ output_dir="${APP_ROOT}/dist"
 version="${NEXUSDESK_VERSION:-0.0.0-ci}"
 commit="${GITHUB_SHA:-}"
 build_date="${NEXUSDESK_BUILD_DATE:-}"
+macos_sign_identity="${NEXUSDESK_MACOS_CODESIGN_IDENTITY:-}"
+macos_notary_profile="${NEXUSDESK_MACOS_NOTARY_PROFILE:-}"
 
 while [[ $# -gt 0 ]]; do
   case "$1" in
@@ -26,6 +28,14 @@ while [[ $# -gt 0 ]]; do
       ;;
     -d|--build-date)
       build_date="$2"
+      shift 2
+      ;;
+    --macos-sign-identity)
+      macos_sign_identity="$2"
+      shift 2
+      ;;
+    --macos-notary-profile)
+      macos_notary_profile="$2"
       shift 2
       ;;
     *)
@@ -66,7 +76,13 @@ package_base="nexusdesk-${platform}-${goarch}-${safe_version}"
 mkdir -p "${output_dir}"
 output_root="$(cd "${output_dir}" && pwd -P)"
 staging="${output_root}/${package_base}"
-package_path="${output_root}/${package_base}.tar.gz"
+if [[ "${platform}" == "macos" ]]; then
+  package_path="${output_root}/${package_base}.zip"
+  notary_upload_path="${output_root}/${package_base}-notary-upload.zip"
+else
+  package_path="${output_root}/${package_base}.tar.gz"
+  notary_upload_path=""
+fi
 manifest_path="${output_root}/${package_base}-manifest.json"
 sbom_path="${output_root}/${package_base}-sbom.json"
 provenance_path="${output_root}/${package_base}-provenance.json"
@@ -82,7 +98,10 @@ assert_under_output() {
   esac
 }
 
-for path in "${staging}" "${package_path}" "${manifest_path}" "${sbom_path}" "${provenance_path}"; do
+for path in "${staging}" "${package_path}" "${notary_upload_path}" "${manifest_path}" "${sbom_path}" "${provenance_path}"; do
+  if [[ -z "${path}" ]]; then
+    continue
+  fi
   if [[ -e "${path}" ]]; then
     assert_under_output "${path}"
     rm -rf "${path}"
@@ -131,6 +150,19 @@ PLIST
   if [[ -f "${APP_ROOT}/internal/brand/assets/nexus-app-icon-transparent.png" ]]; then
     cp "${APP_ROOT}/internal/brand/assets/nexus-app-icon-transparent.png" "${app_dir}/Contents/Resources/nexusdesk.png"
   fi
+  if [[ -n "${macos_sign_identity}" ]]; then
+    codesign --force --timestamp --options runtime --sign "${macos_sign_identity}" "${app_dir}"
+  fi
+  if [[ -n "${macos_notary_profile}" ]]; then
+    if [[ -z "${macos_sign_identity}" ]]; then
+      echo "--macos-notary-profile requires --macos-sign-identity or NEXUSDESK_MACOS_CODESIGN_IDENTITY." >&2
+      exit 2
+    fi
+    ditto -c -k --sequesterRsrc --keepParent "${app_dir}" "${notary_upload_path}"
+    xcrun notarytool submit "${notary_upload_path}" --keychain-profile "${macos_notary_profile}" --wait
+    xcrun stapler staple "${app_dir}"
+    rm -f "${notary_upload_path}"
+  fi
   cat > "${staging}/README.txt" <<README
 NexusDesk macOS package
 Version: ${version}
@@ -138,7 +170,10 @@ Commit: ${commit}
 Build date: ${build_date}
 
 Open NexusDesk.app after verifying the package manifest, SBOM, and provenance sidecars.
-Public releases still require Developer ID signing, notarization, and stapling before broad distribution.
+Signing identity: ${macos_sign_identity:-not signed}
+Notarization profile: ${macos_notary_profile:-not notarized}
+
+Public releases require Developer ID signing, notarization, and stapling before broad distribution.
 README
 else
   mkdir -p "${staging}/bin" "${staging}/share/applications" "${staging}/share/icons/hicolor/256x256/apps"
@@ -168,7 +203,11 @@ Verify the package manifest, SBOM, and provenance sidecars before installing.
 README
 fi
 
-tar -C "${output_root}" -czf "${package_path}" "${package_base}"
+if [[ "${platform}" == "macos" ]]; then
+  ditto -c -k --sequesterRsrc --keepParent "${staging}" "${package_path}"
+else
+  tar -C "${output_root}" -czf "${package_path}" "${package_base}"
+fi
 
 go run ./cmd/release-manifest \
   -artifact "${package_path}" \
