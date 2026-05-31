@@ -20,6 +20,14 @@ func CleanMachineSmokeChecklistGuide() Guide {
 				},
 			},
 			{
+				Title: "Packaged App Smoke Command",
+				Body: []string{
+					"Before manual UI checks, run the packaged executable with `--version` and confirm it matches the release manifest.",
+					"Run `nexusdesk --smoke-check <empty-test-workspace>` from the installed or unpacked package location. The command should report passing workspace-open, file-preview, workspace-search, edit-save-revert, assistant-settings, dataset-profile, artifact-write-read, and diagnostics-export checks.",
+					"On Windows, run the command from the installer target directory. On macOS, run `NexusDesk.app/Contents/MacOS/nexusdesk --smoke-check <empty-test-workspace>`. On Linux, run `bin/nexusdesk --smoke-check <empty-test-workspace>` from the unpacked package.",
+				},
+			},
+			{
 				Title: "Workspace And Editor",
 				Body: []string{
 					"Open a small trusted sample workspace, verify the project tree, recent workspace list, quick open, preview, search, Problems, and safe text edit/save/rollback flows.",

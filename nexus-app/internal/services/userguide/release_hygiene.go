@@ -62,7 +62,7 @@ func ReleaseHygieneGuide() Guide {
 				Body: []string{
 					"Before publishing, verify the built artifact launches on the target platform and that About shows the same version, commit, and build date recorded in the release manifest.",
 					"Verify the artifact hash against the manifest, open the SBOM to confirm dependency evidence exists, open provenance to confirm manifest/SBOM hashes are recorded, and archive all three sidecars with the release artifact.",
-					"Run clean-machine smoke, protected-secret smoke, uninstall/app-data cleanup smoke, and Diagnostics release trust checks. Record any remaining blocker as a known limitation or do not ship the artifact.",
+					"Run the packaged executable's `--version` and `--smoke-check` commands before manual UI smoke, then run clean-machine smoke, protected-secret smoke, uninstall/app-data cleanup smoke, and Diagnostics release trust checks. Record any remaining blocker as a known limitation or do not ship the artifact.",
 				},
 			},
 			{

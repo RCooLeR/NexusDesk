@@ -21,6 +21,7 @@ func TestReleaseHygieneGuideCoversProductionTrustTopics(t *testing.T) {
 		"Wayland/X11",
 		"Secret Service",
 		"Release Verification Steps",
+		"--smoke-check",
 		"provenance",
 		"Antivirus False-Positive Triage",
 		"Never ask users to disable antivirus globally",
