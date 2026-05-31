@@ -19,6 +19,7 @@ Release-specific notes:
 
 - [v1 Scope Freeze](releases/v1-scope-freeze.md): the frozen v1 promise, in-scope product surface, post-v1 deferrals, and release blockers that do not expand scope.
 - [v1 Release Notes](releases/v1-release-notes.md): release candidate highlights, validation evidence, trust state, known limitations, required user actions, and remaining release blockers.
+- [Release Blocker Disposition](releases/release-blocker-disposition.md): current open P0/P1 disposition, required evidence, and items that must not be closed from automation alone.
 - [Beta Release Notes](releases/beta-release-notes.md): private beta scope, trust state, validation path, known limitations, and feedback instructions.
 
 ## Documentation Rules
