@@ -1,7 +1,11 @@
 package main
 
-import "nexusdesk/internal/app"
+import (
+	"os"
+
+	"nexusdesk/internal/app"
+)
 
 func main() {
-	app.Run()
+	os.Exit(app.RunWithArgs(os.Args[1:]))
 }

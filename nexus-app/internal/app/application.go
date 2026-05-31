@@ -1,6 +1,9 @@
 package app
 
 import (
+	"fmt"
+	"os"
+	"strings"
 	"time"
 
 	"fyne.io/fyne/v2"
@@ -12,6 +15,28 @@ import (
 	"nexusdesk/internal/ui/shell"
 	nexustheme "nexusdesk/internal/ui/theme"
 )
+
+func RunWithArgs(args []string) int {
+	if len(args) > 0 {
+		switch strings.TrimSpace(args[0]) {
+		case "--version":
+			fmt.Fprintln(os.Stdout, buildinfo.AboutText())
+			return 0
+		case "--smoke-check":
+			if len(args) < 2 || strings.TrimSpace(args[1]) == "" {
+				fmt.Fprintln(os.Stderr, "--smoke-check requires a workspace directory")
+				return 2
+			}
+			if err := RunSmokeCheck(args[1], os.Stdout); err != nil {
+				fmt.Fprintln(os.Stderr, "NexusDesk smoke check failed:", err)
+				return 1
+			}
+			return 0
+		}
+	}
+	Run()
+	return 0
+}
 
 func Run() {
 	started := time.Now().UTC()

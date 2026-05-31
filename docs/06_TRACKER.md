@@ -473,7 +473,7 @@ Legend:
 - [ ] P1 Windows diagnostics/export smoke.
 - [ ] P1 macOS clean-machine smoke.
 - [ ] P1 Linux clean-machine smoke.
-- [x] P1 Uninstall/app-data cleanup smoke. Evidence: `scripts/smoke-windows-installer.ps1` builds the installer bundle, installs into an isolated temp directory without Start Menu shortcuts, verifies executable/release-evidence files, runs the uninstaller, confirms application files are removed, and confirms workspace `.nexusdesk` data is preserved; iteration 156 smoke passed with `nexusdesk-windows-installer-0.0.0-iter156.zip`.
+- [x] P1 Uninstall/app-data cleanup smoke. Evidence: `scripts/smoke-windows-installer.ps1` builds the installer bundle, installs into an isolated temp directory without Start Menu shortcuts, verifies executable/release-evidence files, runs installed `nexusdesk.exe --version`, runs installed `nexusdesk.exe --smoke-check` against an isolated workspace, verifies workspace open, file preview, search, edit/save/rollback, provider settings, dataset profile, artifact write/read, and diagnostics export checks, runs the uninstaller, confirms application files are removed, and confirms workspace `.nexusdesk` data is preserved; iteration platform-smoke passed with `nexusdesk-windows-installer-0.0.0-platform-smoke.zip` and installer SHA-256 `92ae161bd870ea23e4afb89d1ad3446f99aa286ac5b7753ff4dfc26d323dcaee`.
 
 ### 6.6 Update visibility
 

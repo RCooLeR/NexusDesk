@@ -82,6 +82,37 @@ foreach ($name in @('nexusdesk.exe', 'nexusdesk-windows-manifest.json', 'nexusde
     }
 }
 
+$installedExe = Join-Path $installDir 'nexusdesk.exe'
+$versionOutput = & $installedExe --version
+if ($LASTEXITCODE -ne 0) {
+    throw "Installed nexusdesk.exe --version failed with exit code $LASTEXITCODE."
+}
+if (($versionOutput | Out-String) -notmatch [regex]::Escape($Version)) {
+    throw "Installed nexusdesk.exe --version did not include expected version $Version. Output: $($versionOutput | Out-String)"
+}
+
+$smokeOutput = & $installedExe --smoke-check $workspaceDir
+if ($LASTEXITCODE -ne 0) {
+    throw "Installed nexusdesk.exe --smoke-check failed with exit code $LASTEXITCODE."
+}
+$smokeReport = $smokeOutput | Out-String | ConvertFrom-Json
+$requiredSmokeChecks = @(
+    'workspace-open',
+    'file-preview',
+    'workspace-search',
+    'edit-save-revert',
+    'assistant-settings',
+    'dataset-profile',
+    'artifact-write-read',
+    'diagnostics-export'
+)
+foreach ($checkName in $requiredSmokeChecks) {
+    $match = @($smokeReport.checks | Where-Object { $_.name -eq $checkName -and $_.status -eq 'ok' })
+    if ($match.Count -ne 1) {
+        throw "Installed app smoke check missing or failed: $checkName"
+    }
+}
+
 & powershell -NoProfile -ExecutionPolicy Bypass -File (Join-Path $extractDir 'uninstall-nexusdesk.ps1') -InstallDir $installDir
 if ($LASTEXITCODE -ne 0) {
     throw "uninstall-nexusdesk.ps1 failed with exit code $LASTEXITCODE."
@@ -95,5 +126,6 @@ if (-not (Test-Path -LiteralPath $workspaceData)) {
 
 Write-Host "Windows installer smoke passed."
 Write-Host "Installer artifact: $installerZipPath"
+Write-Host "Installed app smoke checks: $($requiredSmokeChecks -join ', ')"
 Write-Host "Install directory removed: $installDir"
 Write-Host "Workspace data preserved: $workspaceData"
