@@ -5,6 +5,8 @@ Status: current open P0/P1 release-blocker review.
 
 This document records the remaining release blockers after CI package smoke and documentation reconciliation. It does not close any tracker item by itself; a row closes only when the required evidence exists in `docs/06_TRACKER.md`.
 
+Use `docs/releases/clean-machine-smoke-report-template.md` for every clean-machine smoke run and `docs/releases/beta-install-report-template.md` for every beta install report.
+
 ## Current State
 
 - Tracker progress: 324 of 374 complete, 86.6%.
@@ -19,7 +21,7 @@ This document records the remaining release blockers after CI package smoke and 
 |---|---|---|
 | Close all P0 issues | Open; depends on the rows below. | All remaining P0 rows closed with evidence. |
 | Review all P1 issues and explicitly defer or fix | Open; no remaining P1 is safely deferrable for a production release without an explicit release-owner decision. | Each open P1 either fixed with evidence or marked deferred in tracker/release notes with owner approval and user-visible risk text. |
-| Run full platform smoke | Open; CI package smoke exists, but clean-machine smoke is not complete. | Windows, macOS, and Linux clean-machine smoke evidence covering install/launch/workspace/editor/assistant/data/artifact/diagnostics, plus any platform-specific trust prompts. |
+| Run full platform smoke | Open; CI package smoke exists, but clean-machine smoke is not complete. | Windows, macOS, and Linux clean-machine smoke reports covering install/launch/workspace/editor/assistant/data/artifact/diagnostics, plus any platform-specific trust prompts. |
 
 ## P1 Disposition
 
@@ -35,8 +37,8 @@ This document records the remaining release blockers after CI package smoke and 
 | Windows diagnostics/export smoke | Open. | Fresh Windows Diagnostics run and redacted issue-report export with no default workspace contents or secrets. |
 | macOS clean-machine smoke | Open; CI app-bundle smoke is not clean-machine Gatekeeper validation. | Fresh macOS account/VM package verification, quarantine/Gatekeeper/signing state, launch, workspace/editor/assistant/data/artifact/diagnostics smoke, Keychain behavior. |
 | Linux clean-machine smoke | Open; CI package smoke is not desktop/runtime validation. | Fresh supported Linux distro install/unpack, runtime dependency notes, Wayland/X11 launch, desktop entry/icon behavior, workspace/editor/assistant/data/artifact/diagnostics smoke, Secret Service behavior. |
-| Run five-user beta install test | Open; requires external beta users or machines. | Five separate install reports with OS, artifact hash, trust prompt state, core-flow outcome, diagnostics notes, and retained app-data expectations. |
-| Triage beta feedback within 48 hours | Open; depends on beta feedback arriving. | Feedback log showing every beta install issue reviewed, labeled, fixed/deferred, or documented within 48 hours. |
+| Run five-user beta install test | Open; requires external beta users or machines. | Five separate beta install reports with OS, artifact hash, trust prompt state, core-flow outcome, diagnostics notes, and retained app-data expectations. |
+| Triage beta feedback within 48 hours | Open; depends on beta feedback arriving. | Beta install reports and feedback log showing every issue reviewed, labeled, fixed/deferred, or documented within 48 hours. |
 
 ## Do Not Close From Automation Alone
 
