@@ -32,6 +32,7 @@ cleanup() {
   rm -f "${APP_ROOT}/build/nexusdesk-"*.tar.gz
   rm -f "${APP_ROOT}/build/nexusdesk-"*.zip
   rm -rf "${APP_ROOT}/build/nexusdesk-linux-"* "${APP_ROOT}/build/nexusdesk-macos-"*
+  rm -rf "${APP_ROOT}/build/package-smoke-nexusdesk-linux-"* "${APP_ROOT}/build/package-smoke-nexusdesk-macos-"*
 }
 trap cleanup EXIT
 
@@ -72,6 +73,9 @@ test -s "${provenance_path}"
 
 echo "Packaging native Unix artifact..."
 bash scripts/package-unix.sh --output-dir build --version "${version}" --commit "${commit}" --build-date "${build_date}"
+
+echo "Running packaged app smoke..."
+bash scripts/smoke-unix-package.sh --output-dir build --version "${version}"
 
 echo "Checking diff whitespace..."
 git -C "${REPO_ROOT}" diff --check
