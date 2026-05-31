@@ -56,7 +56,7 @@ if ($null -eq $gcc) {
 
 if ($null -eq $gcc) {
     $searched = ($candidateRoots | Where-Object { -not [string]::IsNullOrWhiteSpace($_) } | Select-Object -Unique) -join ', '
-    throw "MSYS2 UCRT64 gcc.exe was not found. Searched roots: $searched. In GitHub Actions, pass MSYS2_ROOT from msys2/setup-msys2's msys2-location output; locally, install MSYS2 and mingw-w64-ucrt-x86_64-gcc."
+    throw "MSYS2 UCRT64 gcc.exe was not found. Searched roots: $searched. In GitHub Actions, pass MSYS2_ROOT from msys2/setup-msys2's msys2-location output; locally, install MSYS2 plus mingw-w64-ucrt-x86_64-gcc, mingw-w64-ucrt-x86_64-binutils, and mingw-w64-ucrt-x86_64-zlib."
 }
 
 $env:PATH = "$ucrtBin;$usrBin;$env:PATH"
@@ -127,6 +127,13 @@ try {
         if (-not (Test-Path $provenancePath)) {
             throw 'Release provenance was not generated.'
         }
+
+        Write-Host 'Running Windows installer smoke...'
+        $smokeOutputDir = Join-Path $appRoot 'build\installer-smoke'
+        & (Join-Path $PSScriptRoot 'smoke-windows-installer.ps1') -MsysRoot $MsysRoot -OutputDir $smokeOutputDir -Version $version -Commit $commit -BuildDate $buildDate
+        if ($LASTEXITCODE -ne 0) {
+            throw "smoke-windows-installer.ps1 failed with exit code $LASTEXITCODE."
+        }
     }
 
     Write-Host 'Checking diff whitespace...'
@@ -137,5 +144,6 @@ try {
     Remove-Item -LiteralPath (Join-Path $appRoot 'build\nexusdesk-windows-manifest.json') -Force -ErrorAction SilentlyContinue
     Remove-Item -LiteralPath (Join-Path $appRoot 'build\nexusdesk-windows-sbom.json') -Force -ErrorAction SilentlyContinue
     Remove-Item -LiteralPath (Join-Path $appRoot 'build\nexusdesk-windows-provenance.json') -Force -ErrorAction SilentlyContinue
+    Remove-Item -LiteralPath (Join-Path $appRoot 'build\installer-smoke') -Recurse -Force -ErrorAction SilentlyContinue
     Pop-Location
 }

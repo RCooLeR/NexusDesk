@@ -453,9 +453,9 @@ Legend:
 ### 6.4 CI matrix
 
 - [x] P1 Windows CI: gofmt check. Evidence: `scripts/ci-windows.ps1` passed gofmt verification in the iteration 140 full Windows checkpoint.
-- [x] P1 Windows CI: tests. Evidence: `scripts/ci-windows.ps1` ran `go test ./...` successfully in the iteration 140 full Windows checkpoint.
-- [x] P1 Windows CI: build check. Evidence: `scripts/ci-windows.ps1` built the native Windows executable successfully in the iteration 140 full Windows checkpoint.
-- [x] P1 Windows CI: release manifest check. Evidence: `scripts/ci-windows.ps1` generated manifest/SBOM/provenance release evidence successfully in the iteration 140 full Windows checkpoint.
+- [x] P1 Windows CI: tests. Evidence: `scripts/ci-windows.ps1` ran `go test ./...` successfully in the Windows CI smoke hardening checkpoint, including `internal/app` smoke-command coverage.
+- [x] P1 Windows CI: build check. Evidence: `scripts/ci-windows.ps1` built the native Windows executable successfully, then ran `scripts/smoke-windows-installer.ps1` so the installed app executes `--version` and `--smoke-check` before uninstall cleanup.
+- [x] P1 Windows CI: release manifest check. Evidence: `scripts/ci-windows.ps1` generated manifest/SBOM/provenance release evidence for the native executable, and the nested Windows installer smoke generated and verified package-side manifest/SBOM/provenance evidence before running installed-app smoke.
 - [x] P1 Linux CI: tests. Evidence: hosted native CI run 26706060998 passed the Linux native Fyne smoke job on commit `7cb8fbc`, including `go test ./...` through `scripts/ci-unix.sh`.
 - [x] P1 Linux CI: build/package smoke. Evidence: hosted native CI run 26706060998 passed the Linux native Fyne smoke job on commit `7cb8fbc`, including native executable build plus manifest/SBOM/provenance generation through `scripts/ci-unix.sh`.
 - [x] P1 macOS CI: tests. Evidence: hosted native CI run 26706060998 passed the macOS native Fyne smoke job on commit `7cb8fbc`, including `go test ./...` through `scripts/ci-unix.sh`.
