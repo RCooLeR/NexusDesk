@@ -1,0 +1,95 @@
+name: Beta install report
+description: Record one beta tester install report for the five-user beta gate.
+title: "[Beta install] "
+labels:
+  - beta-install
+  - beta-feedback
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Use this form with `docs/releases/beta-install-report-template.md`. Do not include API keys, bearer tokens, DSNs, connector credentials, private workspace files, production logs, customer data, or screenshots with secrets.
+  - type: input
+    id: tester
+    attributes:
+      label: Tester and report date
+      placeholder: "Name or handle, 2026-05-31"
+    validations:
+      required: true
+  - type: input
+    id: platform
+    attributes:
+      label: Platform, OS version, architecture, and machine type
+      placeholder: "Windows 11 x64 laptop, macOS 15 arm64 VM, Ubuntu 24.04 x64 desktop"
+    validations:
+      required: true
+  - type: input
+    id: artifact
+    attributes:
+      label: Artifact filename and SHA-256
+      placeholder: "nexusdesk-... / sha256..."
+    validations:
+      required: true
+  - type: input
+    id: build_identity
+    attributes:
+      label: App version, commit, and build date
+      placeholder: "Version 1.0.0-beta.1, commit abcdef123456, build 2026-05-31T08:00:00Z"
+    validations:
+      required: true
+  - type: textarea
+    id: install_experience
+    attributes:
+      label: Install, first launch, trust prompts, and time to first usable window
+      description: Include signing/notarization/package trust state and any antivirus/reputation warning.
+    validations:
+      required: true
+  - type: checkboxes
+    id: core_flow
+    attributes:
+      label: Core flow coverage
+      options:
+        - label: Launch and About metadata passed.
+          required: true
+        - label: Open workspace passed.
+          required: true
+        - label: Preview/edit/save/revert file passed.
+          required: true
+        - label: Workspace search passed.
+          required: true
+        - label: Provider setup and Test connection passed or produced clear remediation.
+          required: true
+        - label: Ask with source context and citations passed.
+          required: true
+        - label: Low-risk Agent with approval/audit/jobs passed.
+          required: true
+        - label: Dataset/SQLite profile or query passed.
+          required: true
+        - label: Artifact generation and preview passed.
+          required: true
+        - label: Diagnostics and redacted issue-report export passed.
+          required: true
+        - label: Uninstall/remove app files and user data retention expectations were understood.
+          required: true
+  - type: textarea
+    id: feedback
+    attributes:
+      label: Feedback
+      description: Top positive signal, confusing moment, blocker, data-loss concern, security/trust concern, accessibility concern, performance concern, and documentation gap.
+    validations:
+      required: true
+  - type: textarea
+    id: triage
+    attributes:
+      label: Triage notes
+      description: Maintainers fill this with received time, due-by time, owner, issues filed, decision, release-note update, and whether triage completed within 48 hours.
+      placeholder: "Received: ... Due by: ... Owner: ... Decision: ..."
+  - type: checkboxes
+    id: safety
+    attributes:
+      label: Safety checklist
+      options:
+        - label: I removed secrets and private workspace data.
+          required: true
+        - label: I used a trusted sample workspace or confirmed any private workspace details were redacted.
+          required: true

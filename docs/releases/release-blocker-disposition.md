@@ -5,7 +5,7 @@ Status: current open P0/P1 release-blocker review.
 
 This document records the remaining release blockers after CI package smoke and documentation reconciliation. It does not close any tracker item by itself; a row closes only when the required evidence exists in `docs/06_TRACKER.md`.
 
-Use `docs/releases/clean-machine-smoke-report-template.md` for every clean-machine smoke run and `docs/releases/beta-install-report-template.md` for every beta install report.
+Use `docs/releases/clean-machine-smoke-report-template.md` or `.github/ISSUE_TEMPLATE/clean-machine-smoke.yml` for every clean-machine smoke run. Use `docs/releases/beta-install-report-template.md` or `.github/ISSUE_TEMPLATE/beta-install-report.yml` for every beta install report.
 
 ## Current State
 

@@ -1,0 +1,101 @@
+name: Clean-machine smoke report
+description: Record release-machine smoke evidence for Windows, macOS, or Linux.
+title: "[Smoke] "
+labels:
+  - release-smoke
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Use this form after running the clean-machine smoke path from `docs/releases/clean-machine-smoke-report-template.md`. Start from a fresh user profile or clean VM with no source checkout or previous NexusDesk app data unless this is explicitly an upgrade test.
+  - type: dropdown
+    id: platform
+    attributes:
+      label: Platform
+      options:
+        - Windows
+        - macOS
+        - Linux
+    validations:
+      required: true
+  - type: input
+    id: os_version
+    attributes:
+      label: OS version, architecture, and machine type
+      placeholder: "Windows 11 23H2 x64 VM, macOS 15 arm64 physical, Ubuntu 24.04 x64 VM"
+    validations:
+      required: true
+  - type: input
+    id: artifact
+    attributes:
+      label: Artifact filename and SHA-256
+      placeholder: "nexusdesk-windows-installer-1.0.0.zip / sha256..."
+    validations:
+      required: true
+  - type: input
+    id: build_identity
+    attributes:
+      label: App version, commit, and build date
+      placeholder: "Version 1.0.0, commit abcdef123456, build 2026-05-31T08:00:00Z"
+    validations:
+      required: true
+  - type: textarea
+    id: trust_state
+    attributes:
+      label: Signing, notarization, package trust, and prompt state
+      description: Record Authenticode, Gatekeeper, package-manager, antivirus, or reputation prompts exactly as observed.
+    validations:
+      required: true
+  - type: checkboxes
+    id: automated_smoke
+    attributes:
+      label: Packaged smoke command evidence
+      options:
+        - label: Artifact SHA-256 matched the manifest.
+          required: true
+        - label: Packaged executable `--version` matched the manifest.
+          required: true
+        - label: Packaged executable `--smoke-check <empty-test-workspace>` passed.
+          required: true
+        - label: Smoke output or JSON was archived with the report.
+          required: true
+  - type: checkboxes
+    id: manual_smoke
+    attributes:
+      label: Manual UI smoke coverage
+      options:
+        - label: Normal launch path opened NexusDesk and About metadata matched the manifest.
+          required: true
+        - label: Fresh workspace open showed project tree/recent workspace/quick-open/search basics.
+          required: true
+        - label: Editor preview/edit/save/dirty guard/rollback or revert path passed.
+          required: true
+        - label: Provider setup/Test connection/model suggestion/protected-secret status passed or produced clear remediation.
+          required: true
+        - label: Data profile/query and artifact generation/preview/lineage/freshness passed.
+          required: true
+        - label: Diagnostics and redacted issue-report export passed without default workspace contents or secrets.
+          required: true
+        - label: Uninstall/remove path behaved as documented and retained expected user data only.
+          required: true
+  - type: textarea
+    id: platform_specific
+    attributes:
+      label: Platform-specific checks
+      description: Windows DPAPI/installer/AV notes, macOS Keychain/Gatekeeper/quarantine notes, or Linux Secret Service/desktop entry/Wayland-X11/runtime dependency notes.
+    validations:
+      required: true
+  - type: textarea
+    id: failures
+    attributes:
+      label: Failures, logs, screenshots, diagnostics bundle paths, and follow-up issues
+      description: Redact secrets and private workspace data.
+  - type: dropdown
+    id: result
+    attributes:
+      label: Overall result
+      options:
+        - pass
+        - fail
+    validations:
+      required: true

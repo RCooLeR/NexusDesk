@@ -50,6 +50,6 @@ Use trusted sample workspaces first. Do not test with production secrets, custom
 
 ## Feedback
 
-Use the beta feedback issue template. Include app version, commit, build date, OS, provider, model, affected area, expected result, actual result, reproduction steps, and redacted diagnostics.
+Use the beta install report issue template for install validation and the beta feedback issue template for follow-up defects. Include app version, commit, build date, OS, provider, model, affected area, expected result, actual result, reproduction steps, and redacted diagnostics.
 
 Do not include API keys, bearer tokens, DSNs, connector credentials, private workspace files, production logs, customer data, or screenshots with secrets.
