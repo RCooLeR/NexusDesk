@@ -4,7 +4,12 @@ param(
     [string]$Version = $env:NEXUSDESK_VERSION,
     [string]$Commit = "",
     [string]$BuildDate = $env:NEXUSDESK_BUILD_DATE,
-    [string]$PayloadZip = ""
+    [string]$PayloadZip = "",
+    [switch]$Sign,
+    [string]$CertificateThumbprint = $env:NEXUSDESK_WINDOWS_CERT_THUMBPRINT,
+    [string]$PfxPath = $env:NEXUSDESK_WINDOWS_PFX_PATH,
+    [string]$PfxPassword = $env:NEXUSDESK_WINDOWS_PFX_PASSWORD,
+    [string]$TimestampUrl = $(if ([string]::IsNullOrWhiteSpace($env:NEXUSDESK_WINDOWS_TIMESTAMP_URL)) { 'http://timestamp.digicert.com' } else { $env:NEXUSDESK_WINDOWS_TIMESTAMP_URL })
 )
 
 $ErrorActionPreference = 'Stop'
@@ -66,7 +71,21 @@ New-Item -ItemType Directory -Force -Path $OutputDir | Out-Null
 $outputRoot = (Resolve-Path -LiteralPath $OutputDir).Path
 
 if ([string]::IsNullOrWhiteSpace($PayloadZip)) {
-    & (Join-Path $PSScriptRoot 'package-windows-zip.ps1') -MsysRoot $MsysRoot -OutputDir $OutputDir -Version $Version -Commit $Commit -BuildDate $BuildDate
+    $packageArgs = @{
+        MsysRoot              = $MsysRoot
+        OutputDir             = $OutputDir
+        Version               = $Version
+        Commit                = $Commit
+        BuildDate             = $BuildDate
+        CertificateThumbprint = $CertificateThumbprint
+        PfxPath               = $PfxPath
+        PfxPassword           = $PfxPassword
+        TimestampUrl          = $TimestampUrl
+    }
+    if ($Sign) {
+        $packageArgs.Sign = $true
+    }
+    & (Join-Path $PSScriptRoot 'package-windows-zip.ps1') @packageArgs
     if ($LASTEXITCODE -ne 0) {
         throw "package-windows-zip.ps1 failed with exit code $LASTEXITCODE."
     }
@@ -168,6 +187,13 @@ Set-Content -LiteralPath (Join-Path $staging 'install-nexusdesk.ps1') -Value $in
 Set-Content -LiteralPath (Join-Path $staging 'uninstall-nexusdesk.ps1') -Value $uninstallerScript -Encoding UTF8
 Set-Content -LiteralPath (Join-Path $staging 'README.txt') -Value $readme -Encoding UTF8
 
+if ($Sign) {
+    & (Join-Path $PSScriptRoot 'sign-windows-artifacts.ps1') -FilePath @((Join-Path $staging 'install-nexusdesk.ps1'), (Join-Path $staging 'uninstall-nexusdesk.ps1')) -CertificateThumbprint $CertificateThumbprint -PfxPath $PfxPath -PfxPassword $PfxPassword -TimestampUrl $TimestampUrl
+    if ($LASTEXITCODE -ne 0) {
+        throw "sign-windows-artifacts.ps1 failed with exit code $LASTEXITCODE."
+    }
+}
+
 Compress-Archive -Path (Join-Path $staging '*') -DestinationPath $installerZipPath -CompressionLevel Optimal
 if (-not (Test-Path -LiteralPath $installerZipPath)) {
     throw "Windows installer package was not generated: $installerZipPath"
@@ -190,3 +216,4 @@ $installerInfo = Get-Item -LiteralPath $installerZipPath
 Write-Host "Wrote Windows installer package: $installerZipPath"
 Write-Host "Installer bytes: $($installerInfo.Length)"
 Write-Host "Included: install-nexusdesk.ps1, uninstall-nexusdesk.ps1, README.txt, $payloadName"
+Write-Host "Installer script signing: $(if ($Sign) { 'signed before installer evidence generation' } else { 'not signed' })"

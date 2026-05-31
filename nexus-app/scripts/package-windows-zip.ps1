@@ -3,7 +3,12 @@ param(
     [string]$OutputDir = "",
     [string]$Version = $env:NEXUSDESK_VERSION,
     [string]$Commit = "",
-    [string]$BuildDate = $env:NEXUSDESK_BUILD_DATE
+    [string]$BuildDate = $env:NEXUSDESK_BUILD_DATE,
+    [switch]$Sign,
+    [string]$CertificateThumbprint = $env:NEXUSDESK_WINDOWS_CERT_THUMBPRINT,
+    [string]$PfxPath = $env:NEXUSDESK_WINDOWS_PFX_PATH,
+    [string]$PfxPassword = $env:NEXUSDESK_WINDOWS_PFX_PASSWORD,
+    [string]$TimestampUrl = $(if ([string]::IsNullOrWhiteSpace($env:NEXUSDESK_WINDOWS_TIMESTAMP_URL)) { 'http://timestamp.digicert.com' } else { $env:NEXUSDESK_WINDOWS_TIMESTAMP_URL })
 )
 
 $ErrorActionPreference = 'Stop'
@@ -115,6 +120,12 @@ New-Item -ItemType Directory -Force -Path $staging | Out-Null
 Push-Location $appRoot
 try {
     Invoke-Checked 'go' @('build', '-ldflags', $ldflags, '-o', $artifactPath, '.')
+    if ($Sign) {
+        & (Join-Path $PSScriptRoot 'sign-windows-artifacts.ps1') -FilePath $artifactPath -CertificateThumbprint $CertificateThumbprint -PfxPath $PfxPath -PfxPassword $PfxPassword -TimestampUrl $TimestampUrl
+        if ($LASTEXITCODE -ne 0) {
+            throw "sign-windows-artifacts.ps1 failed with exit code $LASTEXITCODE."
+        }
+    }
     Invoke-Checked 'go' @('run', './cmd/release-manifest', '-artifact', $artifactPath, '-output', $manifestPath, '-platform', 'windows', '-version', $Version, '-commit', $Commit, '-build-date', $BuildDate, '-repository', 'RCooLeR/NexusDesk', '-workflow', 'scripts/package-windows-zip.ps1', '-source-commit-full', $Commit)
 } finally {
     Pop-Location
@@ -135,3 +146,4 @@ $zipInfo = Get-Item $zipPath
 Write-Host "Wrote Windows zip package: $zipPath"
 Write-Host "Package bytes: $($zipInfo.Length)"
 Write-Host "Included: nexusdesk.exe, nexusdesk-windows-manifest.json, nexusdesk-windows-sbom.json, nexusdesk-windows-provenance.json"
+Write-Host "Executable signing: $(if ($Sign) { 'signed before release evidence generation' } else { 'not signed' })"
